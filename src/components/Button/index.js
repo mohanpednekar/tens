@@ -10,6 +10,6 @@ const Button = styled.button`
   background: dimgrey;
 `
 Button.defaultProps = {
-  color: 'palevioletred',
+  color: 'grey',
 }
 export default Button
