@@ -2,31 +2,32 @@
   "name": "tens",
   "version": "0.1.0",
   "private": true,
-  "installConfig": {
-    "pnp": true
-  },
+  "type": "module",
+  "packageManager": "yarn@2.4.0",
   "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-is": "^17.0.1",
-    "react-scripts": "4.0.3",
-    "styled-components": "^5.2.1",
-    "web-vitals": "^1.0.1"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-is": "^19.2.7",
+    "styled-components": "^6.4.3",
+    "web-vitals": "^5.1.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^6.0.3",
+    "jsdom": "^29.1.1",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "start": "vite --host 127.0.0.1",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest --host 127.0.0.1",
+    "audit": "yarn npm audit --all --recursive"
   },
   "browserslist": {
     "production": [
@@ -39,12 +40,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "resolutions": {
-    "styled-components": "^5"
-  },
-  "devDependencies": {
-    "eslint-config-react-app": "^6.0.0",
-    "eslint-scope": "^5.1.1"
   }
 }
