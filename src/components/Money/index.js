@@ -2,9 +2,8 @@ import styled from 'styled-components'
 
 const Money = styled.b`
   color: white;
-  font-size: 1em;
-  margin: auto;
-  padding: 0.25em 1em;
+  font-size: 1.25em;
+  padding: 0.25em 0;
 `
 Money.defaultProps = {}
 export default Money
