@@ -16,7 +16,7 @@ page; no routing.
 | Vite | 8 | OXC-based; JSX files **must** use `.jsx` extension |
 | Vitest | 4 | Runs via `yarn test` |
 | styled-components | 6 | All component styling |
-| Yarn | 2 (Berry) | PnP disabled; `.yarnrc.yml` present |
+| Yarn | 2 (Berry) | PnP **disabled** (`nodeLinker: node-modules` in `.yarnrc.yml`); `.pnp.*`/`.pnp/` in `.gitignore` are precautionary |
 
 ## Commands
 
