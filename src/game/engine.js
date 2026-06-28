@@ -1,18 +1,23 @@
-import { LAYER_DEFINITIONS } from './layers'
+import { MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
+const allResourceIds = () => [MONEY_ID, ...TIER_DEFINITIONS.map(t => t.id)]
+
 export const createInitialGameState = () => ({
-  layers: LAYER_DEFINITIONS.reduce((layers, layer) => ({
-    ...layers,
-    [layer.id]: {
-      amount: layer.startingAmount,
-      generators: layer.generators.reduce((generators, generator) => ({
-        ...generators,
-        [generator.id]: 0,
-      }), {}),
-    },
+  resources: allResourceIds().reduce((acc, id) => ({
+    ...acc,
+    [id]: id === MONEY_ID ? MONEY_STARTING_AMOUNT : 0,
   }), {}),
+  owned: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: 0,
+  }), {}),
+  prestige: {
+    pp: 0,
+    level: 0,
+    highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
+  },
 })
 
 export const formatAmount = value => {
@@ -23,71 +28,87 @@ export const formatAmount = value => {
   }).format(safeValue)
 }
 
-export const getGeneratorCost = (generator, owned) => Math.ceil(
-  generator.baseCost * generator.growthRate ** clampNonNegative(owned),
-)
+// Linear cost: baseCost * (1 + 0.1 * owned) — adds 10% of base per purchase
+export const getTierCost = (tier, owned) =>
+  tier.baseCost * (1 + 0.1 * clampNonNegative(owned))
 
-export const getLayerProduction = layerState => layerDefinition => (
-  layerDefinition.generators.reduce((total, generator) => {
-    const owned = layerState.generators[generator.id] ?? 0
+// Each Prestige Level doubles production at every tier
+export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
-    return total + owned * generator.producesPerSecond
-  }, 0)
-)
-
-export const isLayerUnlocked = state => layer => {
-  if (!layer.unlockAt) {
-    return true
-  }
-
-  return (state.layers[layer.unlockAt.layerId]?.amount ?? 0) >= layer.unlockAt.amount
+// First tier is always unlocked; each subsequent tier unlocks when you own ≥1 of the tier below
+export const isTierUnlocked = state => tier => {
+  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
+  if (tierIndex === 0) return true
+  const prevTier = TIER_DEFINITIONS[tierIndex - 1]
+  return (state.owned[prevTier.id] ?? 0) >= 1
 }
 
-export const tickGame = elapsedSeconds => state => ({
-  layers: LAYER_DEFINITIONS.reduce((layers, layer) => {
-    const layerState = state.layers[layer.id]
-    const production = isLayerUnlocked(state)(layer)
-      ? getLayerProduction(layerState)(layer) * elapsedSeconds
-      : 0
+const checkMilestones = (resources, prestige) => {
+  const money = clampNonNegative(resources[MONEY_ID])
+  if (money < 10) return prestige
 
+  const currentMilestone = Math.floor(Math.log10(money))
+  if (currentMilestone <= prestige.highestMilestone) return prestige
+
+  return {
+    ...prestige,
+    pp: prestige.pp + (currentMilestone - prestige.highestMilestone),
+    highestMilestone: currentMilestone,
+  }
+}
+
+export const tickGame = elapsedSeconds => state => {
+  const multiplier = productionMultiplier(state.prestige.level)
+
+  const newResources = TIER_DEFINITIONS.reduce((resources, tier) => {
+    if (!isTierUnlocked(state)(tier)) return resources
+    const production = (state.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
     return {
-      ...layers,
-      [layer.id]: {
-        ...layerState,
-        amount: clampNonNegative(layerState.amount + production),
-      },
+      ...resources,
+      [tier.producesResourceId]: clampNonNegative(resources[tier.producesResourceId] + production),
     }
-  }, {}),
-})
-
-export const buyGenerator = (layerId, generatorId) => state => {
-  const layer = LAYER_DEFINITIONS.find(candidate => candidate.id === layerId)
-  const generator = layer?.generators.find(candidate => candidate.id === generatorId)
-  const layerState = state.layers[layerId]
-
-  if (!layer || !generator || !layerState || !isLayerUnlocked(state)(layer)) {
-    return state
-  }
-
-  const owned = layerState.generators[generatorId] ?? 0
-  const cost = getGeneratorCost(generator, owned)
-
-  if (layerState.amount < cost) {
-    return state
-  }
+  }, { ...state.resources })
 
   return {
     ...state,
-    layers: {
-      ...state.layers,
-      [layerId]: {
-        ...layerState,
-        amount: clampNonNegative(layerState.amount - cost),
-        generators: {
-          ...layerState.generators,
-          [generatorId]: owned + 1,
-        },
-      },
+    resources: newResources,
+    prestige: checkMilestones(newResources, state.prestige),
+  }
+}
+
+export const buyTier = tierId => state => {
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier || !isTierUnlocked(state)(tier)) return state
+
+  const owned = state.owned[tierId] ?? 0
+  const cost = getTierCost(tier, owned)
+
+  if ((state.resources[tier.costResourceId] ?? 0) < cost) return state
+
+  return {
+    ...state,
+    resources: {
+      ...state.resources,
+      [tier.costResourceId]: clampNonNegative(state.resources[tier.costResourceId] - cost),
+    },
+    owned: {
+      ...state.owned,
+      [tierId]: owned + 1,
+    },
+  }
+}
+
+// Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress
+export const prestigeGame = state => {
+  if (state.prestige.pp < PRESTIGE_PP_COST) return state
+
+  const initial = createInitialGameState()
+  return {
+    ...initial,
+    prestige: {
+      ...initial.prestige,
+      pp: state.prestige.pp - PRESTIGE_PP_COST,
+      level: state.prestige.level + 1,
     },
   }
 }
