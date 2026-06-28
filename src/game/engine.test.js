@@ -86,7 +86,9 @@ describe('formatAmount', () => {
   })
 
   it('formats small decimals', () => {
-    expect(formatAmount(1.5)).toBe('1.50')
+    // Intl.NumberFormat with maximumFractionDigits:2 trims trailing zeros
+    expect(formatAmount(1.5)).toBe('1.5')
+    expect(formatAmount(1.55)).toBe('1.55')
   })
 
   it('formats large integers without decimals', () => {

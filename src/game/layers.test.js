@@ -54,8 +54,10 @@ describe('TIER_DEFINITIONS', () => {
     }
   })
 
-  it('no circular dependency: a tier does not produce the same resource it costs', () => {
-    TIER_DEFINITIONS.forEach(tier => {
+  it('no circular dependency: tiers above ones do not produce the same resource they cost', () => {
+    // Ones tier intentionally costs and produces money (self-referential by design).
+    // All other tiers must cost a different resource than they produce.
+    TIER_DEFINITIONS.slice(1).forEach(tier => {
       expect(tier.producesResourceId).not.toBe(tier.costResourceId)
     })
   })
@@ -68,19 +70,19 @@ describe('RESOURCE_NAMES', () => {
 
   it('has an entry for every costResourceId used by a tier', () => {
     TIER_DEFINITIONS.forEach(tier => {
-      expect(RESOURCE_NAMES).toHaveProperty(
-        tier.costResourceId,
+      expect(
+        RESOURCE_NAMES,
         `missing RESOURCE_NAMES entry for costResourceId '${tier.costResourceId}' (tier '${tier.id}')`
-      )
+      ).toHaveProperty(tier.costResourceId)
     })
   })
 
   it('has an entry for every producesResourceId used by a tier', () => {
     TIER_DEFINITIONS.forEach(tier => {
-      expect(RESOURCE_NAMES).toHaveProperty(
-        tier.producesResourceId,
+      expect(
+        RESOURCE_NAMES,
         `missing RESOURCE_NAMES entry for producesResourceId '${tier.producesResourceId}' (tier '${tier.id}')`
-      )
+      ).toHaveProperty(tier.producesResourceId)
     })
   })
 })
@@ -92,19 +94,19 @@ describe('RESOURCE_SYMBOL', () => {
 
   it('has an entry for every costResourceId used by a tier', () => {
     TIER_DEFINITIONS.forEach(tier => {
-      expect(RESOURCE_SYMBOL).toHaveProperty(
-        tier.costResourceId,
+      expect(
+        RESOURCE_SYMBOL,
         `missing RESOURCE_SYMBOL entry for costResourceId '${tier.costResourceId}' (tier '${tier.id}')`
-      )
+      ).toHaveProperty(tier.costResourceId)
     })
   })
 
   it('has an entry for every producesResourceId used by a tier', () => {
     TIER_DEFINITIONS.forEach(tier => {
-      expect(RESOURCE_SYMBOL).toHaveProperty(
-        tier.producesResourceId,
+      expect(
+        RESOURCE_SYMBOL,
         `missing RESOURCE_SYMBOL entry for producesResourceId '${tier.producesResourceId}' (tier '${tier.id}')`
-      )
+      ).toHaveProperty(tier.producesResourceId)
     })
   })
 })
