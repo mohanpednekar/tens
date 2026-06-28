@@ -7,7 +7,7 @@ export const TIER_DEFINITIONS = [
   { id: 'hundreds',         name: 'Hundreds',         baseCost: 10, costResourceId: 'ones',            producesResourceId: 'tens' },
   { id: 'thousands',        name: 'Thousands',        baseCost: 10, costResourceId: 'tens',            producesResourceId: 'hundreds' },
   { id: 'ten_thousands',    name: 'Ten-Thousands',    baseCost: 10, costResourceId: 'hundreds',        producesResourceId: 'thousands' },
-  { id: 'hundred_thousands',name: 'Hundred-Thousands',baseCost: 10, costResourceId: 'thousands',       producesResourceId: 'ten_thousands' },
+  { id: 'hundred_thousands', name: 'Hundred-Thousands', baseCost: 10, costResourceId: 'thousands',       producesResourceId: 'ten_thousands' },
   { id: 'millions',         name: 'Millions',         baseCost: 10, costResourceId: 'ten_thousands',   producesResourceId: 'hundred_thousands' },
   { id: 'ten_millions',     name: 'Ten-Millions',     baseCost: 10, costResourceId: 'hundred_thousands',producesResourceId: 'millions' },
   { id: 'hundred_millions', name: 'Hundred-Millions', baseCost: 10, costResourceId: 'millions',        producesResourceId: 'ten_millions' },
