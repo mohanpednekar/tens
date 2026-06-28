@@ -1,8 +1,16 @@
-import { MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_PP_COST_BASE, MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
-const allResourceIds = () => [MONEY_ID, ...TIER_DEFINITIONS.map(t => t.id)]
+// Collect all unique resource IDs referenced by the tier definitions
+const allResourceIds = () => {
+  const ids = new Set([MONEY_ID])
+  TIER_DEFINITIONS.forEach(t => {
+    ids.add(t.costResourceId)
+    ids.add(t.producesResourceId)
+  })
+  return [...ids]
+}
 
 export const createInitialGameState = () => ({
   resources: allResourceIds().reduce((acc, id) => ({
@@ -12,6 +20,10 @@ export const createInitialGameState = () => ({
   owned: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: 0,
+  }), {}),
+  autobuyers: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
   }), {}),
   prestige: {
     pp: 0,
@@ -28,9 +40,19 @@ export const formatAmount = value => {
   }).format(safeValue)
 }
 
-// Linear cost: baseCost * (1 + 0.1 * owned) — adds 10% of base per purchase
-export const getTierCost = (tier, owned) =>
-  tier.baseCost * (1 + 0.1 * clampNonNegative(owned))
+// Cost doubles the per-purchase increment every 10 upgrades.
+// epoch = floor(owned / 10), within = owned % 10
+// cost = baseCost * 2^epoch * (1 + 0.1 * within)
+export const getTierCost = (tier, owned) => {
+  const n = clampNonNegative(owned)
+  const epoch = Math.floor(n / 10)
+  const within = n % 10
+  return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
+}
+
+// PP cost for an autobuyer doubles with each layer index
+export const getAutobuyerCost = layerIndex =>
+  AUTOBUYER_PP_COST_BASE * (2 ** clampNonNegative(layerIndex))
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
@@ -60,19 +82,25 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = elapsedSeconds => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
+  // Apply autobuyers: each active autobuyer attempts to buy 1 unit per second
+  const stateAfterAutobuyers = TIER_DEFINITIONS.reduce((s, tier) => {
+    if (!s.autobuyers[tier.id]) return s
+    return buyTier(tier.id)(s)
+  }, state)
+
   const newResources = TIER_DEFINITIONS.reduce((resources, tier) => {
-    if (!isTierUnlocked(state)(tier)) return resources
-    const production = (state.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
+    if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return resources
+    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
     return {
       ...resources,
       [tier.producesResourceId]: clampNonNegative(resources[tier.producesResourceId] + production),
     }
-  }, { ...state.resources })
+  }, { ...stateAfterAutobuyers.resources })
 
   return {
-    ...state,
+    ...stateAfterAutobuyers,
     resources: newResources,
-    prestige: checkMilestones(newResources, state.prestige),
+    prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
   }
 }
 
@@ -98,13 +126,37 @@ export const buyTier = tierId => state => {
   }
 }
 
-// Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress
+// Spend PP to buy a permanent autobuyer for a tier (persists through prestige)
+export const buyAutobuyer = tierId => state => {
+  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tierId)
+  if (tierIndex === -1) return state
+  if (state.autobuyers[tierId]) return state
+
+  const cost = getAutobuyerCost(tierIndex)
+  if (state.prestige.pp < cost) return state
+
+  return {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      pp: state.prestige.pp - cost,
+    },
+    autobuyers: {
+      ...state.autobuyers,
+      [tierId]: true,
+    },
+  }
+}
+
+// Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress.
+// Autobuyers are permanent — they survive the reset.
 export const prestigeGame = state => {
   if (state.prestige.pp < PRESTIGE_PP_COST) return state
 
   const initial = createInitialGameState()
   return {
     ...initial,
+    autobuyers: { ...state.autobuyers },
     prestige: {
       ...initial.prestige,
       pp: state.prestige.pp - PRESTIGE_PP_COST,

@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, getTierCost, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, getAutobuyerCost, getTierCost, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { MONEY_ID, PRESTIGE_PP_COST, RESOURCE_NAMES, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled from 'styled-components'
@@ -47,6 +47,11 @@ const GoldText = styled.b`
   font-size: 1.1em;
 `
 
+const GreenText = styled.span`
+  color: #4ade80;
+  font-size: 0.85em;
+`
+
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
@@ -79,7 +84,7 @@ const MainPage = () => {
       </StatCard>
 
       <TierGrid>
-        {TIER_DEFINITIONS.map(tier => {
+        {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
           if (!unlocked) return null
 
@@ -88,11 +93,14 @@ const MainPage = () => {
           const costResource = state.resources[tier.costResourceId] ?? 0
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
+          const hasAutobuyer = state.autobuyers[tier.id]
+          const autobuyerCost = getAutobuyerCost(tierIndex)
+          const canBuyAutobuyer = !hasAutobuyer && prestige.pp >= autobuyerCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
               <div>
-                <h2>{tier.name}</h2>
+                <h2>{tier.name}{hasAutobuyer && <GreenText> ⚙ Auto</GreenText>}</h2>
                 <MutedText>
                   Produces 1 {RESOURCE_NAMES[tier.producesResourceId]}/sec · costs{' '}
                   {RESOURCE_NAMES[tier.costResourceId]}
@@ -118,6 +126,19 @@ const MainPage = () => {
                   Buy {formatCost(cost, tier.costResourceId)}
                 </Button>
               </TierRow>
+
+              {!hasAutobuyer && (
+                <TierRow>
+                  <MutedText>Autobuyer: {autobuyerCost} PP</MutedText>
+                  <Button
+                    color={canBuyAutobuyer ? '#4ade80' : 'darkgrey'}
+                    disabled={!canBuyAutobuyer}
+                    onClick={() => actions.buyAutobuyer(tier.id)}
+                  >
+                    Buy Autobuyer
+                  </Button>
+                </TierRow>
+              )}
             </StatCard>
           )
         })}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { buyTier, createInitialGameState, prestigeGame, tickGame } from './engine'
+import { buyAutobuyer, buyTier, createInitialGameState, prestigeGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 
 export const useIncrementalGame = () => {
@@ -15,6 +15,7 @@ export const useIncrementalGame = () => {
 
   const actions = useMemo(() => ({
     buyTier: tierId => setState(buyTier(tierId)),
+    buyAutobuyer: tierId => setState(buyAutobuyer(tierId)),
     prestige: () => setState(prestigeGame),
   }), [])
 
