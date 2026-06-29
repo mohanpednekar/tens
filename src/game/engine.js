@@ -57,10 +57,12 @@ export const getAutobuyerCost = layerIndex =>
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
-// First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below
+// First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
+// Already-owned tiers stay unlocked so older saves remain playable after rule changes.
 export const isTierUnlocked = state => tier => {
   const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
   if (tierIndex === 0) return true
+  if ((state.owned[tier.id] ?? 0) > 0) return true
   const prevTier = TIER_DEFINITIONS[tierIndex - 1]
   return (state.owned[prevTier.id] ?? 0) >= 10
 }
