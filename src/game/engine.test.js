@@ -196,8 +196,15 @@ describe('isTierUnlocked', () => {
   })
 
   it('unlocks tier 2 only after tier 1 is owned ≥ 10', () => {
-    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 10)
-    expect(isTierUnlocked(state)(TIER_DEFINITIONS[2])).toBe(true)
+    const lockedState = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 9)
+    const unlockedState = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 10)
+    expect(isTierUnlocked(lockedState)(TIER_DEFINITIONS[2])).toBe(false)
+    expect(isTierUnlocked(unlockedState)(TIER_DEFINITIONS[2])).toBe(true)
+  })
+
+  it('keeps an already-owned tier unlocked for older saves', () => {
+    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1)
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
   })
 })
 
