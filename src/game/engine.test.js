@@ -185,13 +185,18 @@ describe('isTierUnlocked', () => {
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
 
-  it('unlocks tier 1 when tier 0 is owned ≥ 1', () => {
-    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 1)
+  it('keeps tier 1 locked when tier 0 is owned < 10', () => {
+    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 9)
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
+  })
+
+  it('unlocks tier 1 when tier 0 is owned ≥ 10', () => {
+    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 10)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
-  it('unlocks tier 2 only after tier 1 is owned', () => {
-    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1)
+  it('unlocks tier 2 only after tier 1 is owned ≥ 10', () => {
+    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 10)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[2])).toBe(true)
   })
 })
@@ -236,11 +241,11 @@ describe('buyTier', () => {
     expect(state.owned[onesTier.id]).toBe(2)
   })
 
-  it('tens tier is purchasable with money after owning ones', () => {
+  it('tens tier is purchasable with money after owning 10 ones', () => {
     const tensTier = TIER_DEFINITIONS[1]
     const state = withOwned(
       withMoney(createInitialGameState(), 10),
-      onesTier.id, 1
+      onesTier.id, 10
     )
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
@@ -281,7 +286,7 @@ describe('tickGame', () => {
 
   it('tens generators produce ones resource', () => {
     const state = withOwned(
-      withOwned(createInitialGameState(), 'ones', 1),
+      withOwned(createInitialGameState(), 'ones', 10),
       'tens', 2
     )
     const after = tickGame(1)(state)
