@@ -1,19 +1,17 @@
-// Each tier costs what the previous tier PRODUCES, so the chain is always obtainable.
-// Tier 'ones' and 'tens' both cost money (ones produces money; tens is the first "upper" layer).
-// From 'hundreds' onward each tier costs the resource produced by the tier below it.
+// Each tier above Ones spends the immediately lower resource it produces.
 export const TIER_DEFINITIONS = [
   // 'ones' intentionally has costResourceId === producesResourceId: it is the
   // entry-level money generator, bought with money to produce more money.
   { id: 'ones',             name: 'Ones',             baseCost: 10, costResourceId: 'money',           producesResourceId: 'money' },
-  { id: 'tens',             name: 'Tens',             baseCost: 10, costResourceId: 'money',           producesResourceId: 'ones' },
-  { id: 'hundreds',         name: 'Hundreds',         baseCost: 10, costResourceId: 'ones',            producesResourceId: 'tens' },
-  { id: 'thousands',        name: 'Thousands',        baseCost: 10, costResourceId: 'tens',            producesResourceId: 'hundreds' },
-  { id: 'ten_thousands',    name: 'Ten-Thousands',    baseCost: 10, costResourceId: 'hundreds',        producesResourceId: 'thousands' },
-  { id: 'hundred_thousands', name: 'Hundred-Thousands', baseCost: 10, costResourceId: 'thousands',       producesResourceId: 'ten_thousands' },
-  { id: 'millions',         name: 'Millions',         baseCost: 10, costResourceId: 'ten_thousands',   producesResourceId: 'hundred_thousands' },
-  { id: 'ten_millions',     name: 'Ten-Millions',     baseCost: 10, costResourceId: 'hundred_thousands',producesResourceId: 'millions' },
-  { id: 'hundred_millions', name: 'Hundred-Millions', baseCost: 10, costResourceId: 'millions',        producesResourceId: 'ten_millions' },
-  { id: 'billions',         name: 'Billions',         baseCost: 10, costResourceId: 'ten_millions',    producesResourceId: 'hundred_millions' },
+  { id: 'tens',             name: 'Tens',             baseCost: 10, costResourceId: 'ones',            producesResourceId: 'ones' },
+  { id: 'hundreds',         name: 'Hundreds',         baseCost: 10, costResourceId: 'tens',            producesResourceId: 'tens' },
+  { id: 'thousands',        name: 'Thousands',        baseCost: 10, costResourceId: 'hundreds',        producesResourceId: 'hundreds' },
+  { id: 'ten_thousands',    name: 'Ten-Thousands',    baseCost: 10, costResourceId: 'thousands',       producesResourceId: 'thousands' },
+  { id: 'hundred_thousands', name: 'Hundred-Thousands', baseCost: 10, costResourceId: 'ten_thousands',   producesResourceId: 'ten_thousands' },
+  { id: 'millions',         name: 'Millions',         baseCost: 10, costResourceId: 'hundred_thousands',producesResourceId: 'hundred_thousands' },
+  { id: 'ten_millions',     name: 'Ten-Millions',     baseCost: 10, costResourceId: 'millions',        producesResourceId: 'millions' },
+  { id: 'hundred_millions', name: 'Hundred-Millions', baseCost: 10, costResourceId: 'ten_millions',    producesResourceId: 'ten_millions' },
+  { id: 'billions',         name: 'Billions',         baseCost: 10, costResourceId: 'hundred_millions',producesResourceId: 'hundred_millions' },
 ]
 
 export const RESOURCE_NAMES = {
