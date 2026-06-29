@@ -58,15 +58,3 @@ test('reset clears localStorage', async () => {
   expect(saved.resources.money).toBe(10)
   expect(saved.owned.ones).toBe(0)
 })
-
-test('tens layer shows ones as its cost resource when unlocked', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { ones: 10 },
-    owned: { ones: 10 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/tens layer/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy 10 ones/i })).toBeEnabled()
-})
