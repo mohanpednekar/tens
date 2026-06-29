@@ -40,25 +40,17 @@ describe('TIER_DEFINITIONS', () => {
     expect(TIER_DEFINITIONS[0].costResourceId).toBe('money')
   })
 
-  it('tens tier costs money (not ones) so it is purchasable with accumulated money', () => {
+  it('tens tier costs ones', () => {
     const tens = TIER_DEFINITIONS.find(t => t.id === 'tens')
-    expect(tens.costResourceId).toBe('money')
+    expect(tens.costResourceId).toBe('ones')
   })
 
-  it('each tier from index 2 onward costs the resource produced by the tier below it', () => {
-    for (let i = 2; i < TIER_DEFINITIONS.length; i++) {
-      expect(TIER_DEFINITIONS[i].costResourceId).toBe(
-        TIER_DEFINITIONS[i - 1].producesResourceId,
-        `tier ${TIER_DEFINITIONS[i].id} should cost ${TIER_DEFINITIONS[i - 1].producesResourceId}`
-      )
-    }
-  })
-
-  it('no circular dependency: tiers above ones do not produce the same resource they cost', () => {
-    // Ones tier intentionally costs and produces money (self-referential by design).
-    // All other tiers must cost a different resource than they produce.
+  it('each tier above ones costs the same lower-layer resource it produces', () => {
     TIER_DEFINITIONS.slice(1).forEach(tier => {
-      expect(tier.producesResourceId).not.toBe(tier.costResourceId)
+      expect(tier.costResourceId).toBe(
+        tier.producesResourceId,
+        `tier ${tier.id} should cost and produce ${tier.producesResourceId}`
+      )
     })
   })
 })
