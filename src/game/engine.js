@@ -84,8 +84,9 @@ export const tickGame = elapsedSeconds => state => {
 
   // Apply autobuyers: evaluate affordability against the pre-tick state snapshot
   // so every active autobuyer gets a fair opportunity regardless of evaluation
-  // order. buyTier re-validates internally, so a tier will simply be skipped if
-  // a shared cost resource was exhausted by an earlier purchase in the same tick.
+  // order. buyTier re-validates internally and returns the state unchanged when
+  // a purchase fails, so a tier is safely skipped if a shared cost resource was
+  // exhausted by an earlier purchase in the same tick.
   const affordableTiers = TIER_DEFINITIONS.filter(tier =>
     state.autobuyers[tier.id] &&
     isTierUnlocked(state)(tier) &&
