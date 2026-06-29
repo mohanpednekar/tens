@@ -82,11 +82,16 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = elapsedSeconds => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: each active autobuyer attempts to buy 1 unit per second
-  const stateAfterAutobuyers = TIER_DEFINITIONS.reduce((s, tier) => {
-    if (!s.autobuyers[tier.id]) return s
-    return buyTier(tier.id)(s)
-  }, state)
+  // Apply autobuyers: evaluate affordability against the pre-tick state snapshot
+  // so every active autobuyer gets a fair opportunity regardless of evaluation
+  // order. buyTier re-validates internally, so a tier will simply be skipped if
+  // a shared cost resource was exhausted by an earlier purchase in the same tick.
+  const affordableTiers = TIER_DEFINITIONS.filter(tier =>
+    state.autobuyers[tier.id] &&
+    isTierUnlocked(state)(tier) &&
+    (state.resources[tier.costResourceId] ?? 0) >= getTierCost(tier, state.owned[tier.id] ?? 0)
+  )
+  const stateAfterAutobuyers = affordableTiers.reduce((s, tier) => buyTier(tier.id)(s), state)
 
   const newResources = TIER_DEFINITIONS.reduce((resources, tier) => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return resources

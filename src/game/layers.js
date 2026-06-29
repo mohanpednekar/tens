@@ -2,6 +2,8 @@
 // Tier 'ones' and 'tens' both cost money (ones produces money; tens is the first "upper" layer).
 // From 'hundreds' onward each tier costs the resource produced by the tier below it.
 export const TIER_DEFINITIONS = [
+  // 'ones' intentionally has costResourceId === producesResourceId: it is the
+  // entry-level money generator — bought with money to produce more money.
   { id: 'ones',             name: 'Ones',             baseCost: 10, costResourceId: 'money',           producesResourceId: 'money' },
   { id: 'tens',             name: 'Tens',             baseCost: 10, costResourceId: 'money',           producesResourceId: 'ones' },
   { id: 'hundreds',         name: 'Hundreds',         baseCost: 10, costResourceId: 'ones',            producesResourceId: 'tens' },
