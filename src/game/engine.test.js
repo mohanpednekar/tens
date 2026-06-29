@@ -248,18 +248,25 @@ describe('buyTier', () => {
     expect(state.owned[onesTier.id]).toBe(2)
   })
 
-  it('tens tier is purchasable with ones after owning 10 ones', () => {
+  it('tens tier is purchasable by spending owned ones after owning 10 ones', () => {
     const tensTier = TIER_DEFINITIONS[1]
-    const state = withOwned(
-      {
-        ...createInitialGameState(),
-        resources: { ...createInitialGameState().resources, ones: 10 },
-      },
-      onesTier.id, 10
-    )
+    const state = withOwned(createInitialGameState(), onesTier.id, 10)
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.resources.ones).toBe(0)
+    expect(after.owned[onesTier.id]).toBe(0)
+  })
+
+  it('higher tiers are purchasable by spending owned generators from the previous tier', () => {
+    const tensTier = TIER_DEFINITIONS[1]
+    const hundredsTier = TIER_DEFINITIONS[2]
+    const state = withOwned(
+      withOwned(createInitialGameState(), onesTier.id, 10),
+      tensTier.id,
+      10
+    )
+    const after = buyTier(hundredsTier.id)(state)
+    expect(after.owned[hundredsTier.id]).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(0)
   })
 })
 
