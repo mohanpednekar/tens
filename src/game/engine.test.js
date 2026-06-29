@@ -248,14 +248,18 @@ describe('buyTier', () => {
     expect(state.owned[onesTier.id]).toBe(2)
   })
 
-  it('tens tier is purchasable with money after owning 10 ones', () => {
+  it('tens tier is purchasable with ones after owning 10 ones', () => {
     const tensTier = TIER_DEFINITIONS[1]
     const state = withOwned(
-      withMoney(createInitialGameState(), 10),
+      {
+        ...createInitialGameState(),
+        resources: { ...createInitialGameState().resources, ones: 10 },
+      },
       onesTier.id, 10
     )
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.resources.ones).toBe(0)
   })
 })
 
