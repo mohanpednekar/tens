@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { buyTier, createInitialGameState, prestigeGame, tickGame } from './engine'
+import { buyAutobuyer, buyTier, createInitialGameState, prestigeGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
+import { clearGameState, loadGameState, saveGameState } from './storage'
 
 export const useIncrementalGame = () => {
-  const [state, setState] = useState(createInitialGameState)
+  const [state, setState] = useState(() => loadGameState() ?? createInitialGameState())
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -13,12 +14,21 @@ export const useIncrementalGame = () => {
     return () => window.clearInterval(intervalId)
   }, [])
 
+  // Persist to localStorage whenever state changes
+  useEffect(() => {
+    saveGameState(state)
+  }, [state])
+
   const actions = useMemo(() => ({
     buyTier: tierId => setState(buyTier(tierId)),
+    buyAutobuyer: tierId => setState(buyAutobuyer(tierId)),
     prestige: () => setState(prestigeGame),
   }), [])
 
-  const resetGame = useCallback(() => setState(createInitialGameState()), [])
+  const resetGame = useCallback(() => {
+    clearGameState()
+    setState(createInitialGameState())
+  }, [])
 
   return { actions, resetGame, state }
 }
