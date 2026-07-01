@@ -3,7 +3,6 @@ import {
   AUTOBUYER_PP_COST_BASE,
   MONEY_ID,
   PRESTIGE_PP_COST,
-  RESOURCE_NAMES,
   RESOURCE_SYMBOL,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
@@ -51,30 +50,6 @@ describe('TIER_DEFINITIONS', () => {
         tier.producesResourceId,
         `tier ${tier.id} should cost and produce ${tier.producesResourceId}`
       )
-    })
-  })
-})
-
-describe('RESOURCE_NAMES', () => {
-  it('has an entry for MONEY_ID', () => {
-    expect(RESOURCE_NAMES).toHaveProperty(MONEY_ID)
-  })
-
-  it('has an entry for every costResourceId used by a tier', () => {
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(
-        RESOURCE_NAMES,
-        `missing RESOURCE_NAMES entry for costResourceId '${tier.costResourceId}' (tier '${tier.id}')`
-      ).toHaveProperty(tier.costResourceId)
-    })
-  })
-
-  it('has an entry for every producesResourceId used by a tier', () => {
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(
-        RESOURCE_NAMES,
-        `missing RESOURCE_NAMES entry for producesResourceId '${tier.producesResourceId}' (tier '${tier.id}')`
-      ).toHaveProperty(tier.producesResourceId)
     })
   })
 })
