@@ -48,9 +48,7 @@ export const formatAmount = value => {
 // cost = baseCost * 2^epoch * (1 + 0.1 * within)
 export const getTierCost = (tier, owned) => {
   const n = clampNonNegative(owned)
-  const epoch = Math.floor(n / 10)
-  const within = n % 10
-  return tier.baseCost * (owned + 1)
+  return tier.baseCost * (n + 1)
 }
 
 // PP cost for an autobuyer doubles with each layer index
