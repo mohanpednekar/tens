@@ -6,6 +6,7 @@ import {
   formatAmount,
   getAutobuyerCost,
   getTierCost,
+  getTierSpendableAmount,
   isTierUnlocked,
   prestigeGame,
   productionMultiplier,
@@ -18,6 +19,11 @@ import { MONEY_ID, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
 const withMoney = (state, amount) => ({
   ...state,
   resources: { ...state.resources, [MONEY_ID]: amount },
+})
+
+const withResource = (state, resourceId, amount) => ({
+  ...state,
+  resources: { ...state.resources, [resourceId]: amount },
 })
 
 const withOwned = (state, tierId, count) => ({
@@ -248,25 +254,41 @@ describe('buyTier', () => {
     expect(state.owned[onesTier.id]).toBe(2)
   })
 
-  it('tens tier is purchasable by spending owned ones after owning 10 ones', () => {
+  it('uses generated lower-tier resources as the spendable amount', () => {
     const tensTier = TIER_DEFINITIONS[1]
-    const state = withOwned(createInitialGameState(), onesTier.id, 10)
-    const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[onesTier.id]).toBe(0)
+    const state = withResource(createInitialGameState(), 'ones', 7)
+    expect(getTierSpendableAmount(state, tensTier)).toBe(7)
   })
 
-  it('higher tiers are purchasable by spending owned generators from the previous tier', () => {
+  it('tens tier is purchasable by spending ones resources after owning 10 ones', () => {
+    const tensTier = TIER_DEFINITIONS[1]
+    const state = withResource(
+      withOwned(createInitialGameState(), onesTier.id, 10),
+      onesTier.id,
+      10
+    )
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[onesTier.id]).toBe(10)
+    expect(after.resources[onesTier.id]).toBe(0)
+  })
+
+  it('higher tiers are purchasable by spending produced resources from the previous tier', () => {
     const tensTier = TIER_DEFINITIONS[1]
     const hundredsTier = TIER_DEFINITIONS[2]
-    const state = withOwned(
-      withOwned(createInitialGameState(), onesTier.id, 10),
+    const state = withResource(
+      withOwned(
+        withOwned(createInitialGameState(), onesTier.id, 10),
+        tensTier.id,
+        10
+      ),
       tensTier.id,
       10
     )
     const after = buyTier(hundredsTier.id)(state)
     expect(after.owned[hundredsTier.id]).toBe(1)
-    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.owned[tensTier.id]).toBe(10)
+    expect(after.resources[tensTier.id]).toBe(0)
   })
 })
 
