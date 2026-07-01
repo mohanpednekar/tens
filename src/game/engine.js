@@ -40,7 +40,7 @@ export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
   if (safeValue < 1000000000) return new Intl.NumberFormat('en-US').format(safeValue)
-  return new Intl.NumberFormat('en-US', { notation: 'scientific } ).format(safeValue)
+  return new Intl.NumberFormat('en-US', { notation: 'scientific' }).format(safeValue)
 }
 
 // Cost doubles the per-purchase increment every 10 upgrades.
