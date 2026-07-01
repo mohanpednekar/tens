@@ -104,7 +104,6 @@ export const tickGame = elapsedSeconds => state => {
     const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
     
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
-    
     // If the produced resource is also a tier (generator), add to owned count
     if (tier.producesResourceId !== MONEY_ID) {
       newOwned[tier.producesResourceId] = clampNonNegative((newOwned[tier.producesResourceId] ?? 0) + production)
