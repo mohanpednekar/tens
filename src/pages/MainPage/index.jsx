@@ -160,7 +160,7 @@ const MainPage = () => {
             <MutedText>×{prestigeBonus} production bonus</MutedText>
           )}
           <MutedText>
-            Next PP at ${formatAmount(10 ** (prestige.highestMilestone + 1))} Money
+            Next PP at ${formatAmount(10 ** ((prestige.pp + 1) * 3))} Money
           </MutedText>
         </div>
         <Button
