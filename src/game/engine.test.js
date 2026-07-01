@@ -283,7 +283,7 @@ describe('buyTier', () => {
     )
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[onesTier.id]).toBe(10)
+    expect(after.owned[onesTier.id]).toBe(0)
     expect(after.resources[onesTier.id]).toBe(0)
   })
 
@@ -300,7 +300,7 @@ describe('buyTier', () => {
 
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[onesTier.id]).toBe(10)
+    expect(after.owned[onesTier.id]).toBe(0)
     expect(after.resources[onesTier.id]).toBe(0)
   })
 
@@ -318,8 +318,26 @@ describe('buyTier', () => {
     )
     const after = buyTier(hundredsTier.id)(state)
     expect(after.owned[hundredsTier.id]).toBe(1)
-    expect(after.owned[tensTier.id]).toBe(10)
+    expect(after.owned[tensTier.id]).toBe(0)
     expect(after.resources[tensTier.id]).toBe(0)
+  })
+
+  it('deducts scaled higher-tier costs from the previous layer owned count', () => {
+    const tensTier = TIER_DEFINITIONS[1]
+    const state = withPurchased(
+      withResource(
+        withOwned(createInitialGameState(), onesTier.id, 11),
+        onesTier.id,
+        11
+      ),
+      tensTier.id,
+      1
+    )
+
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[onesTier.id]).toBeCloseTo(0)
+    expect(after.resources[onesTier.id]).toBeCloseTo(0)
   })
 
   it('uses purchased count for cost when owned is higher from generation', () => {
