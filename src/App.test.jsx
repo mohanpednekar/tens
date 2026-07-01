@@ -71,7 +71,7 @@ test('tens layer shows ones as its cost resource when unlocked', () => {
   expect(screen.getByRole('button', { name: /buy 10 ones/i })).toBeEnabled()
 })
 
-test('hundreds layer can be bought with produced Tens', async () => {
+test('buying hundreds also deducts the spent tens from the previous layer', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -87,5 +87,5 @@ test('hundreds layer can be bought with produced Tens', async () => {
   await user.click(buyHundreds)
 
   expect(screen.getByLabelText(/hundreds layer/i)).toHaveTextContent(/owned: 1/i)
-  expect(screen.getByLabelText(/tens layer/i)).toHaveTextContent(/owned: 10/i)
+  expect(screen.getByLabelText(/tens layer/i)).toHaveTextContent(/owned: 0/i)
 })
