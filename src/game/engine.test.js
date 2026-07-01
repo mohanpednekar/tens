@@ -273,6 +273,23 @@ describe('buyTier', () => {
     expect(after.resources[onesTier.id]).toBe(0)
   })
 
+  it('fresh-game progression: buying 10 ones credits spendable ones, enabling first tens purchase', () => {
+    const tensTier = TIER_DEFINITIONS[1]
+    // Total cost to buy 10 ones: $10 + $11 + … + $19 = $145
+    let state = withMoney(createInitialGameState(), 145)
+    for (let i = 0; i < 10; i++) {
+      state = buyTier(onesTier.id)(state)
+    }
+    expect(state.owned[onesTier.id]).toBe(10)
+    expect(state.resources[onesTier.id]).toBe(10)
+    expect(isTierUnlocked(state)(tensTier)).toBe(true)
+
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[onesTier.id]).toBe(10)
+    expect(after.resources[onesTier.id]).toBe(0)
+  })
+
   it('higher tiers are purchasable by spending produced resources from the previous tier', () => {
     const tensTier = TIER_DEFINITIONS[1]
     const hundredsTier = TIER_DEFINITIONS[2]

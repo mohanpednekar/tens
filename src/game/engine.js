@@ -129,6 +129,7 @@ export const buyTier = tierId => state => {
     resources: {
       ...state.resources,
       [tier.costResourceId]: clampNonNegative((state.resources[tier.costResourceId] ?? 0) - cost),
+      [tierId]: (state.resources[tierId] ?? 0) + 1,
     },
     owned: {
       ...state.owned,
