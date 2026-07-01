@@ -61,6 +61,7 @@ test('reset clears localStorage', async () => {
 
 test('tens layer shows ones as its cost resource when unlocked', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { ones: 10 },
     owned: { ones: 10 },
   }))
 
@@ -70,11 +71,11 @@ test('tens layer shows ones as its cost resource when unlocked', () => {
   expect(screen.getByRole('button', { name: /buy 10 ones/i })).toBeEnabled()
 })
 
-
-test('hundreds layer can be bought with owned Tens', async () => {
+test('hundreds layer can be bought with produced Tens', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { tens: 10 },
     owned: { ones: 10, tens: 10 },
   }))
 
@@ -86,5 +87,5 @@ test('hundreds layer can be bought with owned Tens', async () => {
   await user.click(buyHundreds)
 
   expect(screen.getByLabelText(/hundreds layer/i)).toHaveTextContent(/owned: 1/i)
-  expect(screen.getByLabelText(/tens layer/i)).toHaveTextContent(/owned: 0/i)
+  expect(screen.getByLabelText(/tens layer/i)).toHaveTextContent(/owned: 10/i)
 })
