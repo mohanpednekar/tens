@@ -126,7 +126,9 @@ export const getTierSpendableAmount = (state, tier) =>
   state.resources[tier.costResourceId] ?? 0
 
 export const getTierPurchasedCount = (state, tierId) =>
-  state.purchased?.[tierId] ?? state.owned[tierId] ?? 0
+  state.purchased
+    ? (state.purchased[tierId] ?? 0)
+    : (state.owned[tierId] ?? 0)
 
 export const buyTier = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)

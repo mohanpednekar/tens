@@ -322,7 +322,7 @@ describe('buyTier', () => {
     expect(after.resources[tensTier.id]).toBe(0)
   })
 
-  it('scales cost from purchased count, not generated owned count', () => {
+  it('uses purchased count for cost when owned is higher from generation', () => {
     const state = withMoney(
       withPurchased(
         withOwned(createInitialGameState(), onesTier.id, 50),
