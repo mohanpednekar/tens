@@ -113,9 +113,7 @@ export const tickGame = elapsedSeconds => state => {
 }
 
 export const getTierSpendableAmount = (state, tier) =>
-  tier.costResourceId === MONEY_ID
-    ? (state.resources[tier.costResourceId] ?? 0)
-    : (state.owned[tier.costResourceId] ?? 0)
+  state.resources[tier.costResourceId] ?? 0
 
 export const buyTier = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
@@ -126,25 +124,14 @@ export const buyTier = tierId => state => {
 
   if (getTierSpendableAmount(state, tier) < cost) return state
 
-  if (tier.costResourceId === MONEY_ID) {
-    return {
-      ...state,
-      resources: {
-        ...state.resources,
-        [tier.costResourceId]: clampNonNegative(state.resources[tier.costResourceId] - cost),
-      },
-      owned: {
-        ...state.owned,
-        [tierId]: owned + 1,
-      },
-    }
-  }
-
   return {
     ...state,
+    resources: {
+      ...state.resources,
+      [tier.costResourceId]: clampNonNegative((state.resources[tier.costResourceId] ?? 0) - cost),
+    },
     owned: {
       ...state.owned,
-      [tier.costResourceId]: clampNonNegative((state.owned[tier.costResourceId] ?? 0) - cost),
       [tierId]: owned + 1,
     },
   }
