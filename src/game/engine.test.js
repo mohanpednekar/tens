@@ -377,6 +377,20 @@ describe('buyTier', () => {
     expect(buyTier(tensTier.id)(state)).toBe(state)
   })
 
+  it('clamps the previous layer owned count at zero when legacy state has more spendable resources than owned units', () => {
+    const tensTier = TIER_DEFINITIONS[1]
+    const state = withResource(
+      withOwned(createInitialGameState(), onesTier.id, 5),
+      onesTier.id,
+      10
+    )
+
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[onesTier.id]).toBe(0)
+    expect(after.resources[onesTier.id]).toBe(0)
+  })
+
   it('uses purchased count for cost when owned is higher from generation', () => {
     const state = withMoney(
       withPurchased(
