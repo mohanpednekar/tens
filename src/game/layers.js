@@ -14,19 +14,6 @@ export const TIER_DEFINITIONS = [
   { id: 'billions',         name: 'Billions',         baseCost: 10, costResourceId: 'hundred_millions',producesResourceId: 'hundred_millions' },
 ]
 
-export const RESOURCE_NAMES = {
-  money:             'Money',
-  ones:              'Ones',
-  tens:              'Tens',
-  hundreds:          'Hundreds',
-  thousands:         'Thousands',
-  ten_thousands:     'Ten-Thousands',
-  hundred_thousands: 'Hundred-Thousands',
-  millions:          'Millions',
-  ten_millions:      'Ten-Millions',
-  hundred_millions:  'Hundred-Millions',
-}
-
 export const RESOURCE_SYMBOL = {
   money:             '$',
   ones:              '1s',
@@ -45,5 +32,5 @@ export const MONEY_STARTING_AMOUNT = 10
 export const PRESTIGE_PP_COST = 10
 export const TICK_RATE_MS = 1000
 
-// Autobuyer PP cost doubles per layer: layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
+// Autobuyer PP cost increases per layer: layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
 export const AUTOBUYER_PP_COST_BASE = 1
