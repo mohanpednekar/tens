@@ -11,6 +11,7 @@ const migrateState = saved => {
     ...saved,
     resources: { ...fresh.resources, ...saved.resources },
     owned:     { ...fresh.owned,     ...saved.owned },
+    purchased: { ...fresh.purchased, ...(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...(saved.autobuyers ?? {}) },
     prestige:  { ...fresh.prestige,  ...saved.prestige },
   }

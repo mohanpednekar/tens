@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, getAutobuyerCost, getTierCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, getAutobuyerCost, getTierCost, getTierPurchasedCount, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { MONEY_ID, PRESTIGE_PP_COST, RESOURCE_NAMES, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled from 'styled-components'
@@ -89,7 +89,8 @@ const MainPage = () => {
           if (!unlocked) return null
 
           const owned = state.owned[tier.id] ?? 0
-          const cost = getTierCost(tier, owned)
+          const purchased = getTierPurchasedCount(state, tier.id)
+          const cost = getTierCost(tier, purchased)
           const costResource = getTierSpendableAmount(state, tier)
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
