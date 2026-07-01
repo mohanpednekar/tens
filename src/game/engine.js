@@ -39,9 +39,8 @@ export const createInitialGameState = () => ({
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: safeValue < 100 ? 2 : 0,
-  }).format(safeValue)
+  if (safeValue < 1000000000) return new Intl.NumberFormat('en-US').format(safeValue)
+  return new Intl.NumberFormat('en-US', { notation: 'scientific } ).format(safeValue)
 }
 
 // Cost doubles the per-purchase increment every 10 upgrades.
@@ -51,12 +50,12 @@ export const getTierCost = (tier, owned) => {
   const n = clampNonNegative(owned)
   const epoch = Math.floor(n / 10)
   const within = n % 10
-  return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
+  return tier.baseCost * (owned + 1)
 }
 
 // PP cost for an autobuyer doubles with each layer index
 export const getAutobuyerCost = layerIndex =>
-  AUTOBUYER_PP_COST_BASE * (2 ** clampNonNegative(layerIndex))
+  AUTOBUYER_PP_COST_BASE * (2 + 2 * clampNonNegative(layerIndex))
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
