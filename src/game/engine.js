@@ -134,7 +134,7 @@ export const buyTier = tierId => state => {
 
   const purchased = getTierPurchasedCount(state, tierId)
   const cost = getTierCost(tier, purchased)
-  const previousLayerOwned = state.owned[tier.costResourceId]
+  const costResourceOwned = state.owned[tier.costResourceId]
 
   if (getTierSpendableAmount(state, tier) < cost) return state
 
@@ -147,10 +147,10 @@ export const buyTier = tierId => state => {
     },
     owned: {
       ...state.owned,
-      ...(previousLayerOwned === undefined
+      ...(costResourceOwned === undefined
         ? {}
         : {
-            [tier.costResourceId]: clampNonNegative(previousLayerOwned - cost),
+            [tier.costResourceId]: clampNonNegative(costResourceOwned - cost),
           }),
       [tierId]: (state.owned[tierId] ?? 0) + 1,
     },
