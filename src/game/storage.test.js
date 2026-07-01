@@ -104,7 +104,7 @@ describe('schema migration', () => {
   })
 
   it('adds purchased from owned for older saves missing purchased', () => {
-    const { purchased: _dropped, ...oldSave } = {
+    const { purchased: _removedForTest, ...oldSave } = {
       ...createInitialGameState(),
       owned: { ...createInitialGameState().owned, ones: 7 },
     }
