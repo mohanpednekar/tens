@@ -134,6 +134,9 @@ export const buyTier = tierId => state => {
 
   const purchased = getTierPurchasedCount(state, tierId)
   const cost = getTierCost(tier, purchased)
+
+  if (getTierSpendableAmount(state, tier) < cost) return state
+
   const costResourceOwned = state.owned[tier.costResourceId]
   const ownedUpdates = {
     [tierId]: (state.owned[tierId] ?? 0) + 1,
@@ -142,8 +145,6 @@ export const buyTier = tierId => state => {
   if (costResourceOwned !== undefined) {
     ownedUpdates[tier.costResourceId] = clampNonNegative(costResourceOwned - cost)
   }
-
-  if (getTierSpendableAmount(state, tier) < cost) return state
 
   return {
     ...state,
