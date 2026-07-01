@@ -6,6 +6,7 @@ import {
   formatAmount,
   getAutobuyerCost,
   getTierCost,
+  getTierPurchasedCount,
   getTierSpendableAmount,
   isTierUnlocked,
   prestigeGame,
@@ -29,6 +30,11 @@ const withResource = (state, resourceId, amount) => ({
 const withOwned = (state, tierId, count) => ({
   ...state,
   owned: { ...state.owned, [tierId]: count },
+})
+
+const withPurchased = (state, tierId, count) => ({
+  ...state,
+  purchased: { ...state.purchased, [tierId]: count },
 })
 
 const withPP = (state, pp) => ({
@@ -58,6 +64,13 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.owned[tier.id]).toBe(0)
+    })
+  })
+
+  it('initialises all tiers with purchased = 0', () => {
+    const state = createInitialGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(state.purchased[tier.id]).toBe(0)
     })
   })
 
@@ -223,6 +236,7 @@ describe('buyTier', () => {
     const state = createInitialGameState() // $10
     const after = buyTier(onesTier.id)(state)
     expect(after.owned[onesTier.id]).toBe(1)
+    expect(after.purchased[onesTier.id]).toBe(1)
     expect(after.resources[MONEY_ID]).toBe(0)
   })
 
@@ -306,6 +320,25 @@ describe('buyTier', () => {
     expect(after.owned[hundredsTier.id]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.resources[tensTier.id]).toBe(0)
+  })
+
+  it('scales cost from purchased count, not generated owned count', () => {
+    const state = withMoney(
+      withPurchased(
+        withOwned(createInitialGameState(), onesTier.id, 50),
+        onesTier.id,
+        0
+      ),
+      10
+    )
+
+    expect(getTierPurchasedCount(state, onesTier.id)).toBe(0)
+    expect(getTierCost(onesTier, getTierPurchasedCount(state, onesTier.id))).toBe(10)
+
+    const after = buyTier(onesTier.id)(state)
+    expect(after.resources[MONEY_ID]).toBe(0)
+    expect(after.owned[onesTier.id]).toBe(51)
+    expect(after.purchased[onesTier.id]).toBe(1)
   })
 })
 

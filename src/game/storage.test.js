@@ -37,6 +37,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().owned.ones).toBe(42)
   })
 
+  it('preserves purchased counts', () => {
+    const state = {
+      ...createInitialGameState(),
+      purchased: { ...createInitialGameState().purchased, ones: 12 },
+    }
+    saveGameState(state)
+    expect(loadGameState().purchased.ones).toBe(12)
+  })
+
   it('preserves prestige level and PP', () => {
     const state = {
       ...createInitialGameState(),
@@ -92,6 +101,16 @@ describe('schema migration', () => {
       expect(loaded.owned).toHaveProperty(tier.id)
     })
     expect(loaded.owned.ones).toBe(5) // existing value preserved
+  })
+
+  it('adds purchased from owned for older saves missing purchased', () => {
+    const { purchased: _dropped, ...oldSave } = {
+      ...createInitialGameState(),
+      owned: { ...createInitialGameState().owned, ones: 7 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.purchased.ones).toBe(7)
   })
 })
 

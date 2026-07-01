@@ -21,6 +21,10 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
+  purchased: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: 0,
+  }), {}),
   autobuyers: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: false,
@@ -92,7 +96,7 @@ export const tickGame = elapsedSeconds => state => {
   const affordableTiers = TIER_DEFINITIONS.filter(tier =>
     state.autobuyers[tier.id] &&
     isTierUnlocked(state)(tier) &&
-    getTierSpendableAmount(state, tier) >= getTierCost(tier, state.owned[tier.id] ?? 0)
+    getTierSpendableAmount(state, tier) >= getTierCost(tier, getTierPurchasedCount(state, tier.id))
   )
   const stateAfterAutobuyers = affordableTiers.reduce((s, tier) => buyTier(tier.id)(s), state)
 
@@ -121,12 +125,15 @@ export const tickGame = elapsedSeconds => state => {
 export const getTierSpendableAmount = (state, tier) =>
   state.resources[tier.costResourceId] ?? 0
 
+export const getTierPurchasedCount = (state, tierId) =>
+  state.purchased?.[tierId] ?? state.owned[tierId] ?? 0
+
 export const buyTier = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
-  const owned = state.owned[tierId] ?? 0
-  const cost = getTierCost(tier, owned)
+  const purchased = getTierPurchasedCount(state, tierId)
+  const cost = getTierCost(tier, purchased)
 
   if (getTierSpendableAmount(state, tier) < cost) return state
 
@@ -139,7 +146,11 @@ export const buyTier = tierId => state => {
     },
     owned: {
       ...state.owned,
-      [tierId]: owned + 1,
+      [tierId]: (state.owned[tierId] ?? 0) + 1,
+    },
+    purchased: {
+      ...state.purchased,
+      [tierId]: purchased + 1,
     },
   }
 }
