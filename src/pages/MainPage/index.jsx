@@ -55,7 +55,7 @@ const GreenText = styled.span`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
-    : `${formatAmount(amount)} ${RESOURCE_NAMES[resourceId]}`
+    : `${formatAmount(amount)} ${RESOURCE_SYMBOL[resourceId]}`
 
 const MainPage = () => {
   const { actions, resetGame, state } = useIncrementalGame()
@@ -103,8 +103,8 @@ const MainPage = () => {
               <div>
                 <h2>{tier.name}{hasAutobuyer && <GreenText> ⚙ Auto</GreenText>}</h2>
                 <MutedText>
-                  Produces 1 {RESOURCE_NAMES[tier.producesResourceId]}/sec · costs{' '}
-                  {RESOURCE_NAMES[tier.costResourceId]}
+                  Produces 1 {RESOURCE_SYMBOL[tier.producesResourceId]}/sec · costs{' '}
+                  {RESOURCE_SYMBOL[tier.costResourceId]}
                 </MutedText>
               </div>
 
@@ -112,9 +112,9 @@ const MainPage = () => {
                 <Money>
                   {RESOURCE_SYMBOL[tier.costResourceId]}
                   {formatAmount(costResource)}{' '}
-                  {RESOURCE_NAMES[tier.costResourceId]}
+                  {RESOURCE_SYMBOL[tier.costResourceId]}
                 </Money>
-                <MutedText>+{formatAmount(production)} {RESOURCE_NAMES[tier.producesResourceId]}/sec</MutedText>
+                <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL[tier.producesResourceId]}/sec</MutedText>
               </div>
 
               <TierRow>
