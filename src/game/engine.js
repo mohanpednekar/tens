@@ -77,7 +77,7 @@ const checkMilestones = (resources, prestige) => {
 
   return {
     ...prestige,
-    pp: prestige.pp + Math.floor(currentMilestone - prestige.highestMilestone)/3),
+    pp: prestige.pp + Math.floor((currentMilestone - prestige.highestMilestone)/3),
     highestMilestone: currentMilestone,
   }
 }
