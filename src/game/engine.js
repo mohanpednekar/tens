@@ -53,7 +53,7 @@ export const getTierCost = (tier, owned) => {
 
 // PP cost for an autobuyer doubles with each layer index
 export const getAutobuyerCost = layerIndex =>
-  AUTOBUYER_PP_COST_BASE * (2 + 2 * clampNonNegative(layerIndex))
+  AUTOBUYER_PP_COST_BASE * (1 + clampNonNegative(layerIndex))
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
@@ -77,7 +77,7 @@ const checkMilestones = (resources, prestige) => {
 
   return {
     ...prestige,
-    pp: prestige.pp + (currentMilestone - prestige.highestMilestone),
+    pp: prestige.pp + Math.floor(currentMilestone - prestige.highestMilestone)/3),
     highestMilestone: currentMilestone,
   }
 }
