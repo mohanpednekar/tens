@@ -96,18 +96,25 @@ export const tickGame = elapsedSeconds => state => {
   )
   const stateAfterAutobuyers = affordableTiers.reduce((s, tier) => buyTier(tier.id)(s), state)
 
-  const newResources = TIER_DEFINITIONS.reduce((resources, tier) => {
-    if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return resources
+  const newResources = { ...stateAfterAutobuyers.resources }
+  const newOwned = { ...stateAfterAutobuyers.owned }
+
+  TIER_DEFINITIONS.forEach(tier => {
+    if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
     const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
-    return {
-      ...resources,
-      [tier.producesResourceId]: clampNonNegative(resources[tier.producesResourceId] + production),
+    
+    newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
+    
+    // If the produced resource is also a tier (generator), add to owned count
+    if (tier.producesResourceId !== MONEY_ID) {
+      newOwned[tier.producesResourceId] = clampNonNegative((newOwned[tier.producesResourceId] ?? 0) + production)
     }
-  }, { ...stateAfterAutobuyers.resources })
+  })
 
   return {
     ...stateAfterAutobuyers,
     resources: newResources,
+    owned: newOwned,
     prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
   }
 }
