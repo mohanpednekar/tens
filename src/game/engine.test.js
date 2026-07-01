@@ -341,13 +341,14 @@ describe('tickGame', () => {
     )
   })
 
-  it('tens generators produce ones resource', () => {
+  it('tens generators produce ones resource and owned generators', () => {
     const state = withOwned(
       withOwned(createInitialGameState(), 'ones', 10),
       'tens', 2
     )
     const after = tickGame(1)(state)
     expect(after.resources.ones).toBe(2)
+    expect(after.owned.ones).toBe(12) // 10 initial + 2 produced
   })
 
   it('awards a PP when money crosses a power-of-10 milestone', () => {
