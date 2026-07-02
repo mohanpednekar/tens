@@ -127,7 +127,7 @@ const MainPage = () => {
                   disabled={!canAfford}
                   onClick={() => actions.buyTier(tier.id)}
                 >
-                  Buy {formatCost(cost, tier.costResourceId)}
+                  Buy for {formatCost(cost, tier.costResourceId)}
                 </Button>
               </TierRow>
 
