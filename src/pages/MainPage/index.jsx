@@ -98,8 +98,8 @@ const MainPage = () => {
           const costResource = getTierSpendableAmount(state, tier)
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
-          const autobuyerLevel = state.autobuyers[tier.id] ?? 0
-          const isAutobuyerLocked = autobuyerLevel === 0
+          const autobuyerLevel = state.autobuyers[tier.id] ?? null
+          const isAutobuyerLocked = autobuyerLevel === null
           const autobuyerUnlockPPCost = getAutobuyerUnlockPPCost(tierIndex)
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           const canUpgradeAutobuyer = isAutobuyerLocked
