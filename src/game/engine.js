@@ -53,7 +53,7 @@ export const getTierCost = (tier, owned) => {
   return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
 }
 
-// PP cost to unlock an autobuyer (level 0→1). Doubles per tier layer.
+// PP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
 // Layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
 export const getAutobuyerUnlockPPCost = tierIndex =>
   AUTOBUYER_PP_COST_BASE * (2 ** clampNonNegative(tierIndex))

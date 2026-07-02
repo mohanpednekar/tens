@@ -136,7 +136,7 @@ const MainPage = () => {
               </TierRow>
 
               <TierRow>
-                <MutedText>Autobuyer Lv.{autobuyerLevel}</MutedText>
+                <MutedText>Autobuyer Lv.{autobuyerLevel ?? 'Locked'}</MutedText>
                 <Button
                   color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                   disabled={!canUpgradeAutobuyer}
