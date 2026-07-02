@@ -96,6 +96,7 @@ const MainPage = () => {
           const purchased = getTierPurchasedCount(state, tier.id)
           const cost = getTierCost(tier, purchased)
           const costResource = getTierSpendableAmount(state, tier)
+          const producesResource = getTierSpendableAmount(state, tier)
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
@@ -104,7 +105,7 @@ const MainPage = () => {
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           const canUpgradeAutobuyer = isAutobuyerLocked
             ? prestige.pp >= autobuyerUnlockPPCost
-            : costResource >= autobuyerUpgradeCost
+            : producesResource >= autobuyerUpgradeCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
