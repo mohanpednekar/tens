@@ -1,4 +1,4 @@
-import { MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_PP_COST_BASE, MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -53,10 +53,15 @@ export const getTierCost = (tier, owned) => {
   return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
 }
 
-// Resource cost to upgrade an autobuyer from currentLevel to currentLevel+1.
-// Level 0→1 costs 10, level 1→2 costs 100, level 2→3 costs 1000, …
+// PP cost to unlock an autobuyer (level 0→1). Doubles per tier layer.
+// Layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
+export const getAutobuyerUnlockPPCost = tierIndex =>
+  AUTOBUYER_PP_COST_BASE * (2 ** clampNonNegative(tierIndex))
+
+// Resource cost to upgrade an already-unlocked autobuyer from currentLevel to currentLevel+1.
+// Level 1→2 costs 10, level 2→3 costs 100, level 3→4 costs 1000, …  (10^currentLevel)
 export const getAutobuyerCost = currentLevel =>
-  10 ** (clampNonNegative(currentLevel) + 1)
+  10 ** clampNonNegative(currentLevel)
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
@@ -164,14 +169,34 @@ export const buyTier = tierId => state => {
   }
 }
 
-// Spend the tier's own cost-resource to unlock or upgrade the autobuyer for a tier.
-// Level 0→1 costs 10, level 1→2 costs 100, … (10^(level+1) of tier.costResourceId).
-// Autobuyers reset on prestige since they are funded by in-run resources.
+// Unlock the autobuyer for a tier by spending PP (level 0→1), then upgrade it
+// by spending the tier's own cost-resource in powers of 10 (level N→N+1, N≥1).
+// Autobuyers reset on prestige since they depend on in-run resources for upgrades.
 export const buyAutobuyer = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
+  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tierId)
   const currentLevel = state.autobuyers[tierId] ?? 0
+
+  if (currentLevel === 0) {
+    // Unlock: spend PP
+    const ppCost = getAutobuyerUnlockPPCost(tierIndex)
+    if ((state.prestige.pp ?? 0) < ppCost) return state
+    return {
+      ...state,
+      prestige: {
+        ...state.prestige,
+        pp: (state.prestige.pp ?? 0) - ppCost,
+      },
+      autobuyers: {
+        ...state.autobuyers,
+        [tierId]: 1,
+      },
+    }
+  }
+
+  // Upgrade: spend cost resource (10^currentLevel)
   const cost = getAutobuyerCost(currentLevel)
   const available = state.resources[tier.costResourceId] ?? 0
   if (available < cost) return state

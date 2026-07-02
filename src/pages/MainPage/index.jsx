@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, getAutobuyerCost, getTierCost, getTierPurchasedCount, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, getAutobuyerCost, getAutobuyerUnlockPPCost, getTierCost, getTierPurchasedCount, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { MONEY_ID, PRESTIGE_PP_COST, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled from 'styled-components'
@@ -88,7 +88,7 @@ const MainPage = () => {
       </StatCard>
 
       <TierGrid>
-        {TIER_DEFINITIONS.map((tier) => {
+        {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
           if (!unlocked) return null
 
@@ -99,8 +99,12 @@ const MainPage = () => {
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? 0
-          const autobuyerCost = getAutobuyerCost(autobuyerLevel)
-          const canUpgradeAutobuyer = costResource >= autobuyerCost
+          const isAutobuyerLocked = autobuyerLevel === 0
+          const autobuyerUnlockPPCost = getAutobuyerUnlockPPCost(tierIndex)
+          const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
+          const canUpgradeAutobuyer = isAutobuyerLocked
+            ? prestige.pp >= autobuyerUnlockPPCost
+            : costResource >= autobuyerUpgradeCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
@@ -132,16 +136,15 @@ const MainPage = () => {
               </TierRow>
 
               <TierRow>
-                <MutedText>
-                  Autobuyer unlock cost: {formatCost(autobuyerCost, tier.costResourceId)}
-                  {autobuyerLevel > 0 && ` (Level ${autobuyerLevel})`}
-                </MutedText>
+                <MutedText>Autobuyer Lv.{autobuyerLevel}</MutedText>
                 <Button
                   color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                   disabled={!canUpgradeAutobuyer}
                   onClick={() => actions.buyAutobuyer(tier.id)}
                 >
-                  {autobuyerLevel === 0 ? 'Unlock Autobuyer' : 'Upgrade Autobuyer'}
+                  {isAutobuyerLocked
+                    ? `Upgrade for ${autobuyerUnlockPPCost} PP`
+                    : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.costResourceId)}`}
                 </Button>
               </TierRow>
             </StatCard>
