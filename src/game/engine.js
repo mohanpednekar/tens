@@ -207,6 +207,10 @@ export const buyAutobuyer = tierId => state => {
       ...state.resources,
       [tier.id]: clampNonNegative(available - cost),
     },
+    owned: {
+      ...state.owned,
+      [tier.id]: clampNonNegative(available - cost),
+    },
     autobuyers: {
       ...state.autobuyers,
       [tierId]: currentLevel + 1,
