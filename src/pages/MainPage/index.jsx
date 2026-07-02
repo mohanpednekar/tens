@@ -105,7 +105,7 @@ const MainPage = () => {
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           const canUpgradeAutobuyer = isAutobuyerLocked
             ? prestige.pp >= autobuyerUnlockPPCost
-            : rosources >= autobuyerUpgradeCost
+            : resources >= autobuyerUpgradeCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
