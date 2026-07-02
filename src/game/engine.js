@@ -1,4 +1,4 @@
-import { AUTOBUYER_PP_COST_BASE, MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
+import { MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -27,7 +27,7 @@ export const createInitialGameState = () => ({
   }), {}),
   autobuyers: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
-    [tier.id]: false,
+    [tier.id]: 0,
   }), {}),
   prestige: {
     pp: 0,
@@ -48,12 +48,15 @@ export const formatAmount = value => {
 // cost = baseCost * 2^epoch * (1 + 0.1 * within)
 export const getTierCost = (tier, owned) => {
   const n = clampNonNegative(owned)
-  return tier.baseCost * (n + 1)
+  const epoch = Math.floor(n / 10)
+  const within = n % 10
+  return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
 }
 
-// PP cost for an autobuyer doubles with each layer index
-export const getAutobuyerCost = layerIndex =>
-  AUTOBUYER_PP_COST_BASE * (1 + clampNonNegative(layerIndex))
+// Resource cost to upgrade an autobuyer from currentLevel to currentLevel+1.
+// Level 0→1 costs 10, level 1→2 costs 100, level 2→3 costs 1000, …
+export const getAutobuyerCost = currentLevel =>
+  10 ** (clampNonNegative(currentLevel) + 1)
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
@@ -77,7 +80,7 @@ const checkMilestones = (resources, prestige) => {
 
   return {
     ...prestige,
-    pp: prestige.pp + Math.floor((currentMilestone - prestige.highestMilestone)/3),
+    pp: prestige.pp + (currentMilestone - prestige.highestMilestone),
     highestMilestone: currentMilestone,
   }
 }
@@ -85,17 +88,20 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = elapsedSeconds => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: evaluate affordability against the pre-tick state snapshot
-  // so every active autobuyer gets a fair opportunity regardless of evaluation
-  // order. buyTier re-validates internally and returns the state unchanged when
-  // a purchase fails, so a tier is safely skipped if a shared cost resource was
-  // exhausted by an earlier purchase in the same tick.
-  const affordableTiers = TIER_DEFINITIONS.filter(tier =>
-    state.autobuyers[tier.id] &&
-    isTierUnlocked(state)(tier) &&
-    getTierSpendableAmount(state, tier) >= getTierCost(tier, getTierPurchasedCount(state, tier.id))
-  )
-  const stateAfterAutobuyers = affordableTiers.reduce((s, tier) => buyTier(tier.id)(s), state)
+  // Apply autobuyers: for each tier, attempt to purchase `level` generators per tick.
+  // buyTier re-validates internally and returns the state unchanged when a purchase fails,
+  // so a tier is safely skipped if a shared cost resource was exhausted.
+  const stateAfterAutobuyers = TIER_DEFINITIONS.reduce((s, tier) => {
+    const level = s.autobuyers[tier.id] ?? 0
+    if (!level || !isTierUnlocked(s)(tier)) return s
+    let result = s
+    for (let i = 0; i < level; i++) {
+      const next = buyTier(tier.id)(result)
+      if (next === result) break // can no longer afford
+      result = next
+    }
+    return result
+  }, state)
 
   const newResources = { ...stateAfterAutobuyers.resources }
   const newOwned = { ...stateAfterAutobuyers.owned }
@@ -158,37 +164,39 @@ export const buyTier = tierId => state => {
   }
 }
 
-// Spend PP to buy a permanent autobuyer for a tier (persists through prestige)
+// Spend the tier's own cost-resource to unlock or upgrade the autobuyer for a tier.
+// Level 0→1 costs 10, level 1→2 costs 100, … (10^(level+1) of tier.costResourceId).
+// Autobuyers reset on prestige since they are funded by in-run resources.
 export const buyAutobuyer = tierId => state => {
-  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tierId)
-  if (tierIndex === -1) return state
-  if (state.autobuyers[tierId]) return state
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier) return state
 
-  const cost = getAutobuyerCost(tierIndex)
-  if (state.prestige.pp < cost) return state
+  const currentLevel = state.autobuyers[tierId] ?? 0
+  const cost = getAutobuyerCost(currentLevel)
+  const available = state.resources[tier.costResourceId] ?? 0
+  if (available < cost) return state
 
   return {
     ...state,
-    prestige: {
-      ...state.prestige,
-      pp: state.prestige.pp - cost,
+    resources: {
+      ...state.resources,
+      [tier.costResourceId]: clampNonNegative(available - cost),
     },
     autobuyers: {
       ...state.autobuyers,
-      [tierId]: true,
+      [tierId]: currentLevel + 1,
     },
   }
 }
 
 // Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress.
-// Autobuyers are permanent — they survive the reset.
+// Autobuyers are funded by in-run resources and reset with everything else.
 export const prestigeGame = state => {
   if (state.prestige.pp < PRESTIGE_PP_COST) return state
 
   const initial = createInitialGameState()
   return {
     ...initial,
-    autobuyers: { ...state.autobuyers },
     prestige: {
       ...initial.prestige,
       pp: state.prestige.pp - PRESTIGE_PP_COST,

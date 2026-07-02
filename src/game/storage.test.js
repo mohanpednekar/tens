@@ -57,13 +57,22 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loaded.prestige.pp).toBe(7)
   })
 
-  it('preserves autobuyer flags', () => {
+  it('preserves autobuyer levels', () => {
     const state = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, ones: 2 },
+    }
+    saveGameState(state)
+    expect(loadGameState().autobuyers.ones).toBe(2)
+  })
+
+  it('migrates legacy boolean autobuyer true to level 1', () => {
+    const rawState = {
       ...createInitialGameState(),
       autobuyers: { ...createInitialGameState().autobuyers, ones: true },
     }
-    saveGameState(state)
-    expect(loadGameState().autobuyers.ones).toBe(true)
+    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
+    expect(loadGameState().autobuyers.ones).toBe(1)
   })
 })
 
