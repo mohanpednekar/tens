@@ -172,7 +172,6 @@ export const buyTier = tierId => state => {
 // Unlock the autobuyer for a tier by spending PP (null → 0, inactive).
 // Then upgrade it by spending the tier's own cost-resource in powers of 10
 // (level N → N+1: costs 10^(N+1), so 0→1=10, 1→2=100, …).
-// Autobuyers reset to null on prestige.
 export const buyAutobuyer = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
@@ -216,13 +215,21 @@ export const buyAutobuyer = tierId => state => {
 }
 
 // Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress.
-// Autobuyers are funded by in-run resources and reset with everything else.
+// PP unlocks are permanent across prestige (non-null stays unlocked at level 0),
+// while run-funded autobuyer levels reset to 0.
 export const prestigeGame = state => {
   if (state.prestige.pp < PRESTIGE_PP_COST) return state
 
   const initial = createInitialGameState()
+  const preservedAutobuyers = Object.fromEntries(
+    Object.entries(initial.autobuyers).map(([tierId]) => {
+      const level = state.autobuyers[tierId] ?? null
+      return [tierId, level === null ? null : 0]
+    })
+  )
   return {
     ...initial,
+    autobuyers: preservedAutobuyers,
     prestige: {
       ...initial.prestige,
       pp: state.prestige.pp - PRESTIGE_PP_COST,

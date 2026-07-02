@@ -614,12 +614,21 @@ describe('prestigeGame', () => {
     })
   })
 
-  it('resets autobuyers to null (locked) on prestige', () => {
+  it('keeps unlocked autobuyers unlocked (level 0) on prestige', () => {
     const state = withPP(
       withAutobuyer(createInitialGameState(), 'ones'),
       PRESTIGE_PP_COST
     )
     const after = prestigeGame(state)
-    expect(after.autobuyers.ones).toBeNull()
+    expect(after.autobuyers.ones).toBe(0)
+  })
+
+  it('resets active autobuyer levels back to 0 on prestige', () => {
+    const state = withPP(
+      withAutobuyer(createInitialGameState(), 'ones', 2),
+      PRESTIGE_PP_COST
+    )
+    const after = prestigeGame(state)
+    expect(after.autobuyers.ones).toBe(0)
   })
 })
