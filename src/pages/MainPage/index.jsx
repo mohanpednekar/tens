@@ -55,7 +55,7 @@ const GreenText = styled.span`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
-    : `${formatAmount(amount)} ${RESOURCE_SYMBOL[resourceId]}`
+    : `${formatAmount(amount)} ${TIER_DEFINITIONS.find(tier => tier.id === resourceId)?.name ?? resourceId}`
 
 const MainPage = () => {
   const { actions, resetGame, state } = useIncrementalGame()
@@ -123,13 +123,13 @@ const MainPage = () => {
                   disabled={!canAfford}
                   onClick={() => actions.buyTier(tier.id)}
                 >
-                  Buy for {formatCost(cost, tier.costResourceId)}
+                  Buy {formatCost(cost, tier.costResourceId)}
                 </Button>
               </TierRow>
 
               <TierRow>
                 <MutedText>
-                  Auto buyer unlock cost: {formatCost(autobuyerCost, tier.costResourceId)}
+                  Autobuyer unlock cost: {formatCost(autobuyerCost, tier.costResourceId)}
                   {autobuyerLevel > 0 && ` (Level ${autobuyerLevel})`}
                 </MutedText>
                 <Button
