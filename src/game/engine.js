@@ -198,14 +198,14 @@ export const buyAutobuyer = tierId => state => {
 
   // Upgrade: spend cost resource (10^(currentLevel+1))
   const cost = getAutobuyerCost(currentLevel)
-  const available = state.resources[tier.costResourceId] ?? 0
+  const available = state.resources[tier.producesResourceId] ?? 0
   if (available < cost) return state
 
   return {
     ...state,
     resources: {
       ...state.resources,
-      [tier.costResourceId]: clampNonNegative(available - cost),
+      [tier.producesResourceId]: clampNonNegative(available - cost),
     },
     autobuyers: {
       ...state.autobuyers,
