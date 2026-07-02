@@ -145,7 +145,7 @@ const MainPage = () => {
                 >
                   {isAutobuyerLocked
                     ? `Unlock for ${autobuyerUnlockPPCost} PP`
-                    : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.producesResourceId)}`}
+                    : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`}
                 </Button>
               </TierRow>
             </StatCard>
