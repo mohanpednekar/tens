@@ -169,7 +169,7 @@ export const buyTier = tierId => state => {
 // Autobuyers reset on prestige since they are funded by in-run resources.
 export const buyAutobuyer = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier) return state
+  if (!tier || !isTierUnlocked(state)(tier)) return state
 
   const currentLevel = state.autobuyers[tierId] ?? 0
   const cost = getAutobuyerCost(currentLevel)

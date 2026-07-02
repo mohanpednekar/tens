@@ -517,6 +517,11 @@ describe('buyAutobuyer', () => {
     expect(buyAutobuyer('does_not_exist')(state)).toBe(state)
   })
 
+  it('returns the same state for a locked tier even when the cost resource is available', () => {
+    const state = withResource(createInitialGameState(), 'ones', 10)
+    expect(buyAutobuyer(TIER_DEFINITIONS[1].id)(state)).toBe(state)
+  })
+
   it('costs tier cost-resource (ones) for a higher-layer autobuyer', () => {
     // Tens tier costs 'ones'; unlocking its autobuyer costs 10 ones
     const state = withResource(
