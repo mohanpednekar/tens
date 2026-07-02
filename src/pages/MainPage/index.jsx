@@ -55,7 +55,7 @@ const GreenText = styled.span`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
-    : `${formatAmount(amount)} ${RESOURCE_SYMBOL[resourceId]}`
+    : `${formatAmount(amount)} ${TIER_DEFINITIONS.find(t => t.id === resourceId)?.name ?? RESOURCE_SYMBOL[resourceId]}`
 
 const MainPage = () => {
   const { actions, resetGame, state } = useIncrementalGame()
@@ -72,7 +72,7 @@ const MainPage = () => {
 
       <StatCard aria-label="money display">
         <div>
-          <Money>{RESOURCE_SYMBOL[MONEY_ID]}{formatAmount(state.resources[MONEY_ID])} Money</Money>
+          <Money>{formatAmount(state.resources[MONEY_ID])} Money</Money>
           <MutedText>
             +{formatAmount(
               TIER_DEFINITIONS
@@ -84,7 +84,7 @@ const MainPage = () => {
       </StatCard>
 
       <TierGrid>
-        {TIER_DEFINITIONS.map((tier, tierIndex) => {
+        {TIER_DEFINITIONS.map((tier) => {
           const unlocked = isTierUnlocked(state)(tier)
           if (!unlocked) return null
 
@@ -94,14 +94,14 @@ const MainPage = () => {
           const costResource = getTierSpendableAmount(state, tier)
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
-          const hasAutobuyer = state.autobuyers[tier.id]
-          const autobuyerCost = getAutobuyerCost(tierIndex)
-          const canBuyAutobuyer = !hasAutobuyer && prestige.pp >= autobuyerCost
+          const autobuyerLevel = state.autobuyers[tier.id] ?? 0
+          const autobuyerCost = getAutobuyerCost(autobuyerLevel)
+          const canUpgradeAutobuyer = costResource >= autobuyerCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
               <div>
-                <h2>{tier.name}{hasAutobuyer && <GreenText> ⚙ Auto</GreenText>}</h2>
+                <h2>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</h2>
                 <MutedText>
                   Produces 1 {RESOURCE_SYMBOL[tier.producesResourceId]}/sec · costs{' '}
                   {RESOURCE_SYMBOL[tier.costResourceId]}
@@ -110,7 +110,6 @@ const MainPage = () => {
 
               <div>
                 <Money>
-                  {RESOURCE_SYMBOL[tier.costResourceId]}
                   {formatAmount(costResource)}{' '}
                   {RESOURCE_SYMBOL[tier.costResourceId]}
                 </Money>
@@ -124,22 +123,23 @@ const MainPage = () => {
                   disabled={!canAfford}
                   onClick={() => actions.buyTier(tier.id)}
                 >
-                  Buy for {formatCost(cost, tier.costResourceId)}
+                  Buy {formatCost(cost, tier.costResourceId)}
                 </Button>
               </TierRow>
 
-              {!hasAutobuyer && (
-                <TierRow>
-                  <MutedText>Autobuyer: {autobuyerCost} PP</MutedText>
-                  <Button
-                    color={canBuyAutobuyer ? '#4ade80' : 'darkgrey'}
-                    disabled={!canBuyAutobuyer}
-                    onClick={() => actions.buyAutobuyer(tier.id)}
-                  >
-                    Buy Autobuyer
-                  </Button>
-                </TierRow>
-              )}
+              <TierRow>
+                <MutedText>
+                  Auto buyer unlock cost: {formatCost(autobuyerCost, tier.costResourceId)}
+                  {autobuyerLevel > 0 && ` (Level ${autobuyerLevel})`}
+                </MutedText>
+                <Button
+                  color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
+                  disabled={!canUpgradeAutobuyer}
+                  onClick={() => actions.buyAutobuyer(tier.id)}
+                >
+                  {autobuyerLevel === 0 ? 'Unlock Autobuyer' : 'Upgrade Autobuyer'}
+                </Button>
+              </TierRow>
             </StatCard>
           )
         })}
@@ -160,7 +160,7 @@ const MainPage = () => {
             <MutedText>×{prestigeBonus} production bonus</MutedText>
           )}
           <MutedText>
-            Next PP at ${formatAmount(10 ** ((prestige.pp + 1) * 3))} Money
+            Next PP at {formatAmount(10 ** (prestige.highestMilestone + 1))} Money
           </MutedText>
         </div>
         <Button
