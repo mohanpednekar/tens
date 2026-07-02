@@ -52,15 +52,14 @@ const GreenText = styled.span`
   font-size: 0.85em;
 `
 
-const RESOURCE_NAME_BY_ID = TIER_DEFINITIONS.reduce((names, tier) => ({
-  ...names,
-  [tier.id]: tier.name,
-}), {})
+const RESOURCE_NAME_BY_ID = Object.fromEntries(
+  TIER_DEFINITIONS.map(tier => [tier.id, tier.name])
+)
 
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
-    : `${formatAmount(amount)} ${RESOURCE_NAME_BY_ID[resourceId] ?? resourceId}`
+    : `${formatAmount(amount)} ${RESOURCE_NAME_BY_ID[resourceId]}`
 
 const MainPage = () => {
   const { actions, resetGame, state } = useIncrementalGame()
