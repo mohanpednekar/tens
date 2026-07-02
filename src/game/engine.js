@@ -221,7 +221,7 @@ export const prestigeGame = state => {
   if (state.prestige.pp < PRESTIGE_PP_COST) return state
 
   const initial = createInitialGameState()
-  const persistedAutobuyerUnlocks = Object.fromEntries(
+  const resetAutobuyers = Object.fromEntries(
     Object.entries(initial.autobuyers).map(([tierId]) => {
       const level = state.autobuyers[tierId] ?? null
       return [tierId, level === null ? null : 0]
@@ -229,7 +229,7 @@ export const prestigeGame = state => {
   )
   return {
     ...initial,
-    autobuyers: persistedAutobuyerUnlocks,
+    autobuyers: resetAutobuyers,
     prestige: {
       ...initial.prestige,
       pp: state.prestige.pp - PRESTIGE_PP_COST,
