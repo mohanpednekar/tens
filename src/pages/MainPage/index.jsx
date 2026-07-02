@@ -144,7 +144,7 @@ const MainPage = () => {
                   onClick={() => actions.buyAutobuyer(tier.id)}
                 >
                   {isAutobuyerLocked
-                    ? `Upgrade for ${autobuyerUnlockPPCost} PP`
+                    ? `Unlock for ${autobuyerUnlockPPCost} PP`
                     : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.producesResourceId)}`}
                 </Button>
               </TierRow>
