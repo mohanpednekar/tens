@@ -91,7 +91,7 @@ const MainPage = () => {
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
           if (!unlocked) return null
-
+          const resources = state.resources[tier.id] ?? 0
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const cost = getTierCost(tier, purchased)
@@ -105,7 +105,7 @@ const MainPage = () => {
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           const canUpgradeAutobuyer = isAutobuyerLocked
             ? prestige.pp >= autobuyerUnlockPPCost
-            : owned >= autobuyerUpgradeCost
+            : rosources >= autobuyerUpgradeCost
 
           return (
             <StatCard key={tier.id} aria-label={`${tier.name} layer`}>
