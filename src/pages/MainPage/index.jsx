@@ -55,7 +55,7 @@ const GreenText = styled.span`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? `$${formatAmount(amount)}`
-    : `${formatAmount(amount)} ${TIER_DEFINITIONS.find(t => t.id === resourceId)?.name ?? RESOURCE_SYMBOL[resourceId]}`
+    : `${formatAmount(amount)} ${RESOURCE_SYMBOL[resourceId]}`
 
 const MainPage = () => {
   const { actions, resetGame, state } = useIncrementalGame()
@@ -123,7 +123,7 @@ const MainPage = () => {
                   disabled={!canAfford}
                   onClick={() => actions.buyTier(tier.id)}
                 >
-                  Buy {formatCost(cost, tier.costResourceId)}
+                  Buy for {formatCost(cost, tier.costResourceId)}
                 </Button>
               </TierRow>
 
