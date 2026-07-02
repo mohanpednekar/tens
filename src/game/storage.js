@@ -6,10 +6,10 @@ const STORAGE_KEY = 'tens_game_state'
 // and old save files remain playable after schema changes.
 const migrateState = saved => {
   const fresh = createInitialGameState()
-  // Convert legacy boolean autobuyers to level numbers (true → 1, false → 0)
+  // Convert legacy boolean autobuyers to level numbers (true → 1, false/0 → null for locked)
   const rawAutobuyers = saved.autobuyers ?? {}
   const migratedAutobuyers = Object.fromEntries(
-    Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? 0 : v])
+    Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : (v === false || v === 0) ? null : v])
   )
   return {
     ...fresh,

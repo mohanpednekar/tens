@@ -75,10 +75,10 @@ describe('createInitialGameState', () => {
     })
   })
 
-  it('initialises all autobuyers at level 0', () => {
+  it('initialises all autobuyers as null (locked)', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
-      expect(state.autobuyers[tier.id]).toBe(0)
+      expect(state.autobuyers[tier.id]).toBeNull()
     })
   })
 
@@ -179,20 +179,20 @@ describe('getAutobuyerUnlockPPCost', () => {
 // ─── getAutobuyerCost ────────────────────────────────────────────────────────
 
 describe('getAutobuyerCost', () => {
-  it('costs 10 resources for level 1 → 2 (first upgrade)', () => {
-    expect(getAutobuyerCost(1)).toBe(10)
+  it('costs 10 resources for level 0 → 1 (first upgrade after unlock)', () => {
+    expect(getAutobuyerCost(0)).toBe(10)
   })
 
-  it('costs 100 resources for level 2 → 3', () => {
-    expect(getAutobuyerCost(2)).toBe(100)
+  it('costs 100 resources for level 1 → 2', () => {
+    expect(getAutobuyerCost(1)).toBe(100)
   })
 
-  it('costs 1000 resources for level 3 → 4', () => {
-    expect(getAutobuyerCost(3)).toBe(1000)
+  it('costs 1000 resources for level 2 → 3', () => {
+    expect(getAutobuyerCost(2)).toBe(1000)
   })
 
-  it('treats negative level as 0 (returns 1)', () => {
-    expect(getAutobuyerCost(-1)).toBe(1)
+  it('treats negative level as 0 (returns 10)', () => {
+    expect(getAutobuyerCost(-1)).toBe(10)
   })
 })
 
@@ -514,10 +514,10 @@ describe('tickGame', () => {
 // ─── buyAutobuyer ────────────────────────────────────────────────────────────
 
 describe('buyAutobuyer', () => {
-  it('unlocks level 1 by spending PP (layer 0 costs 1 PP)', () => {
+  it('unlocks to level 0 (inactive) by spending PP (layer 0 costs 1 PP)', () => {
     const state = withPP(createInitialGameState(), 1)
     const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(0)
     expect(after.prestige.pp).toBe(0)
   })
 
@@ -526,8 +526,15 @@ describe('buyAutobuyer', () => {
     expect(buyAutobuyer(TIER_DEFINITIONS[0].id)(state)).toBe(state)
   })
 
-  it('upgrades from level 1 to 2 and deducts 10 of cost resource', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 10), TIER_DEFINITIONS[0].id)
+  it('upgrades from level 0 to 1 and deducts 10 of cost resource', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 10), TIER_DEFINITIONS[0].id, 0)
+    const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
+    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(0)
+  })
+
+  it('upgrades from level 1 to 2 and deducts 100 of cost resource', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 100), TIER_DEFINITIONS[0].id)
     const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(2)
     expect(after.resources[MONEY_ID]).toBe(0)
@@ -543,29 +550,29 @@ describe('buyAutobuyer', () => {
     expect(buyAutobuyer(TIER_DEFINITIONS[1].id)(state)).toBe(state)
   })
 
-  it('unlocks higher-layer autobuyer (layer 1 costs 2 PP)', () => {
-    // Tens tier is layer 1 → unlock costs 2 PP
+  it('unlocks higher-layer autobuyer to level 0 (layer 1 costs 2 PP)', () => {
     const state = withPP(
       withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 10),
       2
     )
     const after = buyAutobuyer(TIER_DEFINITIONS[1].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
+    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(0)
     expect(after.prestige.pp).toBe(0)
   })
 
-  it('upgrades higher-layer autobuyer using tier cost-resource (ones)', () => {
-    // Tens tier costs 'ones'; upgrading level 1→2 costs getAutobuyerCost(1) = 10 ones
+  it('upgrades higher-layer autobuyer from 0 to 1 using tier cost-resource (ones)', () => {
+    // Tens tier costs 'ones'; upgrading level 0→1 costs getAutobuyerCost(0) = 10 ones
     const state = withResource(
       withAutobuyer(
         withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 10),
-        TIER_DEFINITIONS[1].id
+        TIER_DEFINITIONS[1].id,
+        0
       ),
       'ones',
       10
     )
     const after = buyAutobuyer(TIER_DEFINITIONS[1].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(2)
+    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
     expect(after.resources.ones).toBe(0)
   })
 })
@@ -607,12 +614,12 @@ describe('prestigeGame', () => {
     })
   })
 
-  it('resets autobuyers to level 0 on prestige', () => {
+  it('resets autobuyers to null (locked) on prestige', () => {
     const state = withPP(
       withAutobuyer(createInitialGameState(), 'ones'),
       PRESTIGE_PP_COST
     )
     const after = prestigeGame(state)
-    expect(after.autobuyers.ones).toBe(0)
+    expect(after.autobuyers.ones).toBeNull()
   })
 })
