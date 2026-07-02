@@ -74,6 +74,24 @@ describe('saveGameState / loadGameState round-trip', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
     expect(loadGameState().autobuyers.ones).toBe(1)
   })
+
+  it('migrates legacy boolean autobuyer false to null (locked)', () => {
+    const rawState = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, ones: false },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
+    expect(loadGameState().autobuyers.ones).toBeNull()
+  })
+
+  it('migrates legacy numeric autobuyer 0 to null (locked)', () => {
+    const rawState = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, ones: 0 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
+    expect(loadGameState().autobuyers.ones).toBeNull()
+  })
 })
 
 describe('schema migration', () => {
