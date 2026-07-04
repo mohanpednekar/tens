@@ -7,13 +7,13 @@ export const TIER_DEFINITIONS = [
   { id: 'Millions',        symbol:'Ms', baseCost: 1E6, costResourceId: 'ones', producesResourceId: 'Thousands' },
   { id: 'Billions',         symbol:'Bs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Millions' },
   { id: 'Trillions',       symbol:'Ts', baseCost: 1E12,costResourceId: 'ones',  producesResourceId: 'Billions' },
-  { id: 'Quadrillions',     symbol:'Qs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Trillions' },
-  { id: 'Pentillions',      symbol:'Ps', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Quadrillions' },
-  { id: 'Hexillions',       symbol:'Hs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Pentillions' },
-    { id: 'Septillions',       symbol:'Ss', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Hexillions' },
-      { id: 'Octillions',       symbol:'Os', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Septillions' },
-        { id: 'Nonillions',       symbol:'Ns', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Octillions' },
-          { id: 'Decillions',       symbol:'Ds', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Nonillions' },
+  { id: 'Quadrillions',     symbol:'Qs', baseCost: 1E15,  costResourceId: 'ones',  producesResourceId: 'Trillions' },
+  { id: 'Pentillions',      symbol:'Ps', baseCost: 1E18,  costResourceId: 'ones',  producesResourceId: 'Quadrillions' },
+  { id: 'Hexillions',       symbol:'Hs', baseCost: 1E21,  costResourceId: 'ones',  producesResourceId: 'Pentillions' },
+  { id: 'Septillions',       symbol:'Ss', baseCost: 1E24,  costResourceId: 'ones',  producesResourceId: 'Hexillions' },
+  { id: 'Octillions',       symbol:'Os', baseCost: 1E27,  costResourceId: 'ones',  producesResourceId: 'Septillions' },
+  { id: 'Nonillions',       symbol:'Ns', baseCost: 1E30,  costResourceId: 'ones',  producesResourceId: 'Octillions' },
+  { id: 'Decillions',       symbol:'Ds', baseCost: 1E33,  costResourceId: 'ones',  producesResourceId: 'Nonillions' },
 ]
 
 export const MONEY_ID = 'ones'
