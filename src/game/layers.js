@@ -2,7 +2,6 @@
 export const TIER_DEFINITIONS = [
   // 'tens' intentionally has costResourceId === producesResourceId: it is the
   // entry-level money generator, bought with Ones to produce more Ones.
-  { id: 'Ones',            symbol:'$', baseCost: 1,  costResourceId: 'Ones', producesResourceId: 'Cents' },
   { id: 'Tens',            symbol:'Tens', baseCost: 10,  costResourceId: 'Ones', producesResourceId: 'Ones' },
   { id: 'Thousands',       symbol:'Ks', baseCost: 1E3, costResourceId: 'Ones', producesResourceId: 'Tens' },
   { id: 'Millions',        symbol:'Ms', baseCost: 1E6, costResourceId: 'Ones', producesResourceId: 'Thousands' },
