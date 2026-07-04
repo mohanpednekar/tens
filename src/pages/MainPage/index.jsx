@@ -112,17 +112,17 @@ const MainPage = () => {
               <div>
                 <h2>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</h2>
                 <MutedText>
-                  Produces 1 {RESOURCE_SYMBOL[tier.producesResourceId]}/sec · costs{' '}
-                  {RESOURCE_SYMBOL[tier.costResourceId]}
+                  Produces 1 {RESOURCE_SYMBOL(tier.producesResourceId)}/sec · costs{' '}
+                  {RESOURCE_SYMBOL(tier.costResourceId)}
                 </MutedText>
               </div>
 
               <div>
                 <Money>
                   {formatAmount(costResource)}{' '}
-                  {RESOURCE_SYMBOL[tier.costResourceId]}
+                  {RESOURCE_SYMBOL(tier.costResourceId)}
                 </Money>
-                <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL[tier.producesResourceId]}/sec</MutedText>
+                <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</MutedText>
               </div>
 
               <TierRow>
