@@ -39,18 +39,18 @@ export const createInitialGameState = () => ({
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
-  if (safeValue < 1000000000) return new Intl.NumberFormat('en-US').format(safeValue)
+  if (safeValue < 1000000) return new Intl.NumberFormat('en-US').format(safeValue)
   return new Intl.NumberFormat('en-US', { notation: 'scientific' }).format(safeValue)
 }
 
-// Cost doubles the per-purchase increment every 10 upgrades.
+// Cost is 10x the per-purchase increment every 10 upgrades.
 // epoch = floor(owned / 10), within = owned % 10
-// cost = baseCost * 2^epoch * (1 + 0.1 * within)
+// cost = baseCost * 10^epoch * (1 + 0.1 * within)
 export const getTierCost = (tier, owned) => {
   const n = clampNonNegative(owned)
   const epoch = Math.floor(n / 10)
   const within = n % 10
-  return tier.baseCost * (2 ** epoch) * (1 + 0.1 * within)
+  return tier.baseCost * (10 ** epoch) * (1 + 0.1 * within)
 }
 
 // PP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
