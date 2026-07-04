@@ -16,6 +16,8 @@ export const TIER_DEFINITIONS = [
   { id: 'Decillions',       symbol:'Ds', baseCost: 1E33,  costResourceId: 'ones',  producesResourceId: 'Nonillions' },
 ]
 
+
+export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id = tierId).symbol ?: '$'
 export const MONEY_ID = 'ones'
 export const MONEY_STARTING_AMOUNT = 10
 export const PRESTIGE_PP_COST = 10
