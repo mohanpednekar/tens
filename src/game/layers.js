@@ -1,33 +1,22 @@
 // Each tier above Ones spends the immediately lower resource it produces.
 export const TIER_DEFINITIONS = [
-  // 'ones' intentionally has costResourceId === producesResourceId: it is the
-  // entry-level money generator, bought with money to produce more money.
-  { id: 'ones',             name: 'Ones',             baseCost: 10, costResourceId: 'money',           producesResourceId: 'money' },
-  { id: 'tens',             name: 'Tens',             baseCost: 10, costResourceId: 'ones',            producesResourceId: 'ones' },
-  { id: 'hundreds',         name: 'Hundreds',         baseCost: 10, costResourceId: 'tens',            producesResourceId: 'tens' },
-  { id: 'thousands',        name: 'Thousands',        baseCost: 10, costResourceId: 'hundreds',        producesResourceId: 'hundreds' },
-  { id: 'ten_thousands',    name: 'Ten-Thousands',    baseCost: 10, costResourceId: 'thousands',       producesResourceId: 'thousands' },
-  { id: 'hundred_thousands', name: 'Hundred-Thousands', baseCost: 10, costResourceId: 'ten_thousands',   producesResourceId: 'ten_thousands' },
-  { id: 'millions',         name: 'Millions',         baseCost: 10, costResourceId: 'hundred_thousands',producesResourceId: 'hundred_thousands' },
-  { id: 'ten_millions',     name: 'Ten-Millions',     baseCost: 10, costResourceId: 'millions',        producesResourceId: 'millions' },
-  { id: 'hundred_millions', name: 'Hundred-Millions', baseCost: 10, costResourceId: 'ten_millions',    producesResourceId: 'ten_millions' },
-  { id: 'billions',         name: 'Billions',         baseCost: 10, costResourceId: 'hundred_millions',producesResourceId: 'hundred_millions' },
+  // 'tens' intentionally has costResourceId === producesResourceId: it is the
+  // entry-level money generator, bought with ones to produce more ones.
+  { id: 'Tens',            symbol:'Tens', baseCost: 10,  costResourceId: 'ones', producesResourceId: 'Ones' },
+  { id: 'Thousands',       symbol:'Ks', baseCost: 1E3, costResourceId: 'ones', producesResourceId: 'Tens' },
+  { id: 'Millions',        symbol:'Ms', baseCost: 1E6, costResourceId: 'ones', producesResourceId: 'Thousands' },
+  { id: 'Billions',         symbol:'Bs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Millions' },
+  { id: 'Trillions',       symbol:'Ts', baseCost: 1E12,costResourceId: 'ones',  producesResourceId: 'Billions' },
+  { id: 'Quadrillions',     symbol:'Qs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Trillions' },
+  { id: 'Pentillions',      symbol:'Ps', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Quadrillions' },
+  { id: 'Hexillions',       symbol:'Hs', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Pentillions' },
+    { id: 'Septillions',       symbol:'Ss', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Hexillions' },
+      { id: 'Octillions',       symbol:'Os', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Septillions' },
+        { id: 'Nonillions',       symbol:'Ns', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Octillions' },
+          { id: 'Decillions',       symbol:'Ds', baseCost: 1E9,  costResourceId: 'ones',  producesResourceId: 'Nonillions' },
 ]
 
-export const RESOURCE_SYMBOL = {
-  money:             '$',
-  ones:              '1s',
-  tens:              '10s',
-  hundreds:          '100s',
-  thousands:         '1Ks',
-  ten_thousands:     '10Ks',
-  hundred_thousands: '100Ks',
-  millions:          '1Ms',
-  ten_millions:      '10Ms',
-  hundred_millions:  '100Ms',
-}
-
-export const MONEY_ID = 'money'
+export const MONEY_ID = 'ones'
 export const MONEY_STARTING_AMOUNT = 10
 export const PRESTIGE_PP_COST = 10
 export const TICK_RATE_MS = 1000
