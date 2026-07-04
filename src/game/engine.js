@@ -7,7 +7,6 @@ const allResourceIds = () => {
   const ids = new Set([MONEY_ID])
   TIER_DEFINITIONS.forEach(t => {
     ids.add(t.costResourceId)
-    ids.add(t.producesResourceId)
   })
   return [...ids]
 }
