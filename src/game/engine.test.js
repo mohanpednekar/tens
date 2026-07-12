@@ -8,6 +8,7 @@ import {
   formatCurrency,
   getAutobuyerCost,
   getAutobuyerUnlockXPCost,
+  getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
   getTierPurchasedCount,
@@ -215,6 +216,27 @@ describe('getTierQuantityCost', () => {
     expect(getTierQuantityCost(tier, 0, 10)).toBe(100)
     expect(getTierQuantityCost(tier, 5, 10)).toBe(50) // only 5 fit in the current block
     expect(getTierQuantityCost(tier, 10, 10)).toBe(1000) // next block, flat cost 100 × 10
+  })
+})
+
+describe('getTierAffordableQuantity', () => {
+  const tier = { baseCost: 10 }
+
+  it('returns the full block-capped quantity when fully affordable', () => {
+    expect(getTierAffordableQuantity(tier, 0, 1000, 10)).toBe(10)
+  })
+
+  it('caps at what can actually be afforded, partial-filling a bulk request', () => {
+    // $35 at $10/unit affords 3, even though 10 were requested
+    expect(getTierAffordableQuantity(tier, 0, 35, 10)).toBe(3)
+  })
+
+  it('returns 0 when nothing is affordable', () => {
+    expect(getTierAffordableQuantity(tier, 0, 5, 10)).toBe(0)
+  })
+
+  it('never exceeds the block boundary even with unlimited funds', () => {
+    expect(getTierAffordableQuantity(tier, 5, 1_000_000, 10)).toBe(5)
   })
 })
 
