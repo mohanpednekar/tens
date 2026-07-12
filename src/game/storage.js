@@ -11,6 +11,12 @@ const migrateState = saved => {
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : (v === false || v === 0) ? null : v])
   )
+  // Carry forward legacy prestige.pp (renamed to prestige.xp) so old saves don't lose points
+  const rawPrestige = saved.prestige ?? {}
+  const { pp: legacyPP, ...migratedPrestige } = rawPrestige
+  if (migratedPrestige.xp === undefined && legacyPP !== undefined) {
+    migratedPrestige.xp = legacyPP
+  }
   return {
     ...fresh,
     ...saved,
@@ -18,7 +24,7 @@ const migrateState = saved => {
     owned:     { ...fresh.owned,     ...saved.owned },
     purchased: { ...fresh.purchased, ...(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
-    prestige:  { ...fresh.prestige,  ...saved.prestige },
+    prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
 }
 

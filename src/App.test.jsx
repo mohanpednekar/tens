@@ -110,6 +110,46 @@ test('the ×10 toggle bulk-buys up to 10 units at the same flat cost', async () 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
+test('the ×10 toggle partially fills a bulk buy when funds only cover some of the block', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 35 }, // affords 3 at $10/unit, not the full 10 requested
+  }))
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: '×10' }))
+
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for \$30\b/i })
+  expect(buyButton).toBeEnabled()
+
+  await user.click(buyButton)
+
+  expect(screen.getByText(/owned: 3/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
+})
+
+test('the quantity toggle marks the active option with aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(screen.getByRole('button', { name: '×10' }))
+
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('each tier name is rendered as a heading for screen-reader navigation', () => {
+  render(<App />)
+
+  expect(screen.getByRole('heading', { level: 3, name: /^tens$/i })).toBeInTheDocument()
+})
+
 test('prestige becomes available once money reaches a googol and resets progress', async () => {
   const user = userEvent.setup()
 

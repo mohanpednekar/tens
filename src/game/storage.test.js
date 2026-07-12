@@ -141,6 +141,27 @@ describe('schema migration', () => {
     const loaded = loadGameState()
     expect(loaded.purchased[tensTier.id]).toBe(7)
   })
+
+  it('migrates a legacy save\'s prestige.pp into prestige.xp', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      prestige: { pp: 5, level: 2, highestMilestone: 3 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.prestige.xp).toBe(5)
+    expect(loaded.prestige.level).toBe(2)
+  })
+
+  it('prefers an explicit xp value over a legacy pp value when both are present', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      prestige: { pp: 5, xp: 9, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.prestige.xp).toBe(9)
+  })
 })
 
 describe('clearGameState', () => {

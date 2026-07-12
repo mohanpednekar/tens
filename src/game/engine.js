@@ -36,16 +36,22 @@ export const createInitialGameState = () => ({
   },
 })
 
+// Cached at module scope — Intl.NumberFormat construction is relatively expensive and these
+// run many times per render/tick.
+const plainNumberFormatter = new Intl.NumberFormat('en-US')
+const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'scientific' })
+const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
-  if (safeValue < 1000000) return new Intl.NumberFormat('en-US').format(safeValue)
-  return new Intl.NumberFormat('en-US', { notation: 'scientific' }).format(safeValue)
+  if (safeValue < 1000000) return plainNumberFormatter.format(safeValue)
+  return scientificNumberFormatter.format(safeValue)
 }
 
 // Full comma-grouped currency string; never switches to scientific notation, unlike formatAmount.
 export const formatCurrency = value =>
-  `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(clampNonNegative(value))}`
+  `$${currencyNumberFormatter.format(clampNonNegative(value))}`
 
 // Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
 // epoch = floor(purchased / 10); cost = baseCost * 10^epoch
@@ -63,6 +69,17 @@ export const getTierBulkQuantity = (tier, purchased, requestedQuantity) => {
 
 export const getTierQuantityCost = (tier, purchased, requestedQuantity) =>
   getTierCost(tier, purchased) * getTierBulkQuantity(tier, purchased, requestedQuantity)
+
+// How many units are actually affordable: capped by the block boundary (getTierBulkQuantity)
+// and further capped by what `spendable` can pay for at the flat per-unit price. This is what
+// buyTierQuantity will actually purchase (it stops as soon as a unit becomes unaffordable), so
+// UI previews should use this rather than getTierBulkQuantity alone.
+export const getTierAffordableQuantity = (tier, purchased, spendable, requestedQuantity) => {
+  const blockCapped = getTierBulkQuantity(tier, purchased, requestedQuantity)
+  const unitCost = getTierCost(tier, purchased)
+  if (unitCost <= 0) return blockCapped
+  return Math.min(blockCapped, Math.floor(clampNonNegative(spendable) / unitCost))
+}
 
 // XP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
 // Layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …

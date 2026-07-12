@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierBulkQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
@@ -69,6 +69,11 @@ const GreenText = styled.span`
   font-size: 0.85em;
 `
 
+const TierName = styled.h3`
+  font-size: 1em;
+  margin: 0;
+`
+
 const RESOURCE_NAME_BY_ID = Object.fromEntries(
   TIER_DEFINITIONS.map(tier => [tier.id, tier.name])
 )
@@ -101,10 +106,24 @@ const MainPage = () => {
             <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
             <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
           </div>
-          <QuantityToggle>
+          <QuantityToggle role="group" aria-label="Buy quantity">
             <MutedText>Buy:</MutedText>
-            <Button color={quantity === 1 ? 'white' : 'darkgrey'} onClick={() => setQuantity(1)} type="button">×1</Button>
-            <Button color={quantity === 10 ? 'white' : 'darkgrey'} onClick={() => setQuantity(10)} type="button">×10</Button>
+            <Button
+              aria-pressed={quantity === 1}
+              color={quantity === 1 ? 'white' : 'darkgrey'}
+              onClick={() => setQuantity(1)}
+              type="button"
+            >
+              ×1
+            </Button>
+            <Button
+              aria-pressed={quantity === 10}
+              color={quantity === 10 ? 'white' : 'darkgrey'}
+              onClick={() => setQuantity(10)}
+              type="button"
+            >
+              ×10
+            </Button>
           </QuantityToggle>
         </TopRow>
       </StatCard>
@@ -124,9 +143,12 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
-          const bulkQuantity = getTierBulkQuantity(tier, purchased, quantity)
-          const bulkCost = getTierQuantityCost(tier, purchased, quantity)
-          const canAfford = bulkQuantity > 0 && costResource >= bulkCost
+          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, quantity)
+          const unitCost = getTierQuantityCost(tier, purchased, 1)
+          // When nothing is affordable, show the price of 1 unit so the player knows what's
+          // needed rather than the misleading $0 that pricing a 0-quantity purchase would give.
+          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
+          const canAfford = affordableQuantity > 0
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
@@ -138,7 +160,7 @@ const MainPage = () => {
 
           return (
             <TierLine key={tier.id} aria-label={`${tier.name} layer`}>
-              <b>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</b>
+              <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</TierName>
               <MutedText>Owned: {owned}</MutedText>
               <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</MutedText>
               <Button
@@ -146,7 +168,7 @@ const MainPage = () => {
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id, quantity)}
               >
-                Buy{bulkQuantity > 1 ? ` ×${bulkQuantity}` : ''} for {formatCurrency(bulkCost)}
+                Buy{affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for {formatCurrency(displayCost)}
               </Button>
               <Button
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
