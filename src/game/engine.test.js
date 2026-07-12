@@ -157,6 +157,12 @@ describe('formatCurrency', () => {
   it('treats negative values as 0', () => {
     expect(formatCurrency(-5)).toBe('$0')
   })
+
+  it('floors fractional amounts instead of rounding, so it never overstates the balance', () => {
+    expect(formatCurrency(1.6)).toBe('$1')
+    expect(formatCurrency(1.999)).toBe('$1')
+    expect(formatCurrency(2)).toBe('$2')
+  })
 })
 
 // ─── getTierCost ─────────────────────────────────────────────────────────────
