@@ -1,4 +1,4 @@
-import { AUTOBUYER_PP_COST_BASE, MONEY_ID, MONEY_STARTING_AMOUNT, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_XP_COST_BASE, GOOGOL, MONEY_ID, MONEY_STARTING_AMOUNT, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -30,7 +30,7 @@ export const createInitialGameState = () => ({
     [tier.id]: null,
   }), {}),
   prestige: {
-    pp: 0,
+    xp: 0,
     level: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
   },
@@ -43,20 +43,31 @@ export const formatAmount = value => {
   return new Intl.NumberFormat('en-US', { notation: 'scientific' }).format(safeValue)
 }
 
-// Cost is 10x the per-purchase increment every 10 upgrades.
-// epoch = floor(owned / 10), within = owned % 10
-// cost = baseCost * 10^epoch * (1 + 0.1 * within)
+// Full comma-grouped currency string; never switches to scientific notation, unlike formatAmount.
+export const formatCurrency = value =>
+  `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(clampNonNegative(value))}`
+
+// Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
+// epoch = floor(purchased / 10); cost = baseCost * 10^epoch
 export const getTierCost = (tier, owned) => {
-  const n = clampNonNegative(owned)
-  const epoch = Math.floor(n / 10)
-  const within = n % 10
-  return tier.baseCost * (10 ** epoch) * (1 + 0.1 * within)
+  const epoch = Math.floor(clampNonNegative(owned) / 10)
+  return tier.baseCost * (10 ** epoch)
 }
 
-// PP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
-// Layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
-export const getAutobuyerUnlockPPCost = tierIndex =>
-  AUTOBUYER_PP_COST_BASE * (2 ** clampNonNegative(tierIndex))
+// How many units a bulk purchase actually buys: capped by the requested quantity and by the
+// units remaining in the current cost block (so every unit bought is at the same price).
+export const getTierBulkQuantity = (tier, purchased, requestedQuantity) => {
+  const within = clampNonNegative(purchased) % 10
+  return Math.max(0, Math.min(clampNonNegative(requestedQuantity), 10 - within))
+}
+
+export const getTierQuantityCost = (tier, purchased, requestedQuantity) =>
+  getTierCost(tier, purchased) * getTierBulkQuantity(tier, purchased, requestedQuantity)
+
+// XP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
+// Layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
+export const getAutobuyerUnlockXPCost = tierIndex =>
+  AUTOBUYER_XP_COST_BASE * (2 ** clampNonNegative(tierIndex))
 
 // Resource cost to upgrade an autobuyer from currentLevel to currentLevel+1.
 // Level 0→1 costs 10, level 1→2 costs 100, level 2→3 costs 1000, …  (10^(level+1))
@@ -85,7 +96,7 @@ const checkMilestones = (resources, prestige) => {
 
   return {
     ...prestige,
-    pp: prestige.pp + (currentMilestone - prestige.highestMilestone),
+    xp: prestige.xp + (currentMilestone - prestige.highestMilestone),
     highestMilestone: currentMilestone,
   }
 }
@@ -169,7 +180,25 @@ export const buyTier = tierId => state => {
   }
 }
 
-// Unlock the autobuyer for a tier by spending PP (null → 0, inactive).
+// Buys up to `quantity` units of a tier, capped at the current cost-block boundary so every
+// unit purchased is at the same price. Stops early if a purchase becomes unaffordable.
+export const buyTierQuantity = (tierId, quantity) => state => {
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier || !isTierUnlocked(state)(tier)) return state
+
+  const purchased = getTierPurchasedCount(state, tierId)
+  const cappedQuantity = getTierBulkQuantity(tier, purchased, quantity)
+
+  let result = state
+  for (let i = 0; i < cappedQuantity; i++) {
+    const next = buyTier(tierId)(result)
+    if (next === result) break // can no longer afford
+    result = next
+  }
+  return result
+}
+
+// Unlock the autobuyer for a tier by spending XP (null → 0, inactive).
 // Then upgrade it by spending the tier's own cost-resource in powers of 10
 // (level N → N+1: costs 10^(N+1), so 0→1=10, 1→2=100, …).
 export const buyAutobuyer = tierId => state => {
@@ -180,14 +209,14 @@ export const buyAutobuyer = tierId => state => {
   const currentLevel = state.autobuyers[tierId] ?? null
 
   if (currentLevel === null) {
-    // Unlock: spend PP → level becomes 0 (inactive)
-    const ppCost = getAutobuyerUnlockPPCost(tierIndex)
-    if ((state.prestige.pp ?? 0) < ppCost) return state
+    // Unlock: spend XP → level becomes 0 (inactive)
+    const xpCost = getAutobuyerUnlockXPCost(tierIndex)
+    if ((state.prestige.xp ?? 0) < xpCost) return state
     return {
       ...state,
       prestige: {
         ...state.prestige,
-        pp: (state.prestige.pp ?? 0) - ppCost,
+        xp: (state.prestige.xp ?? 0) - xpCost,
       },
       autobuyers: {
         ...state.autobuyers,
@@ -218,11 +247,12 @@ export const buyAutobuyer = tierId => state => {
   }
 }
 
-// Spending PRESTIGE_PP_COST PP gains 1 Prestige Level and resets all progress.
-// PP unlocks are permanent across prestige (non-null stays unlocked at level 0),
+// Reaching GOOGOL money gains 1 Prestige Level and resets all progress.
+// XP is untouched by prestige (it only ever gated autobuyer unlocks, not prestige).
+// Autobuyer unlocks are permanent across prestige (non-null stays unlocked at level 0),
 // while run-funded autobuyer levels reset to 0.
 export const prestigeGame = state => {
-  if (state.prestige.pp < PRESTIGE_PP_COST) return state
+  if (state.resources[MONEY_ID] < GOOGOL) return state
 
   const initial = createInitialGameState()
   const resetAutobuyers = Object.fromEntries(
@@ -236,7 +266,7 @@ export const prestigeGame = state => {
     autobuyers: resetAutobuyers,
     prestige: {
       ...initial.prestige,
-      pp: state.prestige.pp - PRESTIGE_PP_COST,
+      xp: state.prestige.xp,
       level: state.prestige.level + 1,
     },
   }

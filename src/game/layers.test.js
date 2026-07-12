@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AUTOBUYER_PP_COST_BASE,
+  AUTOBUYER_XP_COST_BASE,
+  GOOGOL,
   MONEY_ID,
-  PRESTIGE_PP_COST,
   RESOURCE_SYMBOL,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
@@ -87,16 +87,15 @@ describe('constants', () => {
     expect(MONEY_ID).toBe('Ones')
   })
 
-  it('PRESTIGE_PP_COST is a positive integer', () => {
-    expect(PRESTIGE_PP_COST).toBeGreaterThan(0)
-    expect(Number.isInteger(PRESTIGE_PP_COST)).toBe(true)
+  it('GOOGOL is 10^100', () => {
+    expect(GOOGOL).toBe(1e100)
   })
 
   it('TICK_RATE_MS is a positive number', () => {
     expect(TICK_RATE_MS).toBeGreaterThan(0)
   })
 
-  it('AUTOBUYER_PP_COST_BASE is a positive number', () => {
-    expect(AUTOBUYER_PP_COST_BASE).toBeGreaterThan(0)
+  it('AUTOBUYER_XP_COST_BASE is a positive number', () => {
+    expect(AUTOBUYER_XP_COST_BASE).toBeGreaterThan(0)
   })
 })

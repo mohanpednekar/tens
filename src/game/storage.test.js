@@ -48,15 +48,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().purchased[tensTier.id]).toBe(12)
   })
 
-  it('preserves prestige level and PP', () => {
+  it('preserves prestige level and XP', () => {
     const state = {
       ...createInitialGameState(),
-      prestige: { pp: 7, level: 3, highestMilestone: 5 },
+      prestige: { xp: 7, level: 3, highestMilestone: 5 },
     }
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.prestige.level).toBe(3)
-    expect(loaded.prestige.pp).toBe(7)
+    expect(loaded.prestige.xp).toBe(7)
   })
 
   it('preserves autobuyer levels', () => {
