@@ -46,6 +46,11 @@ There is no configured lint script (`yarn lint` does not exist) and no CI job fo
 `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. `.github/workflows/copilot-review.yml` triggers an automated Copilot review on non-draft PRs.
 
+## Pull requests
+
+Always create a pull request after pushing changes to a branch — do not ask the user whether to
+create one first. This applies to every change made in this repo, not just specific tasks.
+
 ## Repo layout
 
 ```
