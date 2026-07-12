@@ -51,6 +51,14 @@ push to `main`. `.github/workflows/copilot-review.yml` triggers an automated Cop
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
+Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
+bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
+confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
+again, since new pushes can draw new comments. Keep repeating check → address → push until reaching
+status quo (a pass with no new actionable comments and CI green, or only pre-existing/out-of-scope
+failures left). Don't stop after a single round just because the latest round of comments was
+addressed — the loop isn't done until nothing new shows up.
+
 ## Repo layout
 
 ```
