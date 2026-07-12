@@ -21,8 +21,8 @@ export const TIER_DEFINITIONS = [
 export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || '$'
 export const MONEY_ID = 'Ones'
 export const MONEY_STARTING_AMOUNT = 10
-export const PRESTIGE_PP_COST = 10
+export const GOOGOL = 1e100
 export const TICK_RATE_MS = 1000
 
-// Autobuyer PP cost increases per layer: layer 0 → 1 PP, layer 1 → 2 PP, layer 2 → 4 PP, …
-export const AUTOBUYER_PP_COST_BASE = 1
+// Autobuyer XP cost increases per layer: layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
+export const AUTOBUYER_XP_COST_BASE = 1

@@ -2,19 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   buyAutobuyer,
   buyTier,
+  buyTierQuantity,
   createInitialGameState,
   formatAmount,
+  formatCurrency,
   getAutobuyerCost,
-  getAutobuyerUnlockPPCost,
+  getAutobuyerUnlockXPCost,
+  getTierBulkQuantity,
   getTierCost,
   getTierPurchasedCount,
+  getTierQuantityCost,
   getTierSpendableAmount,
   isTierUnlocked,
   prestigeGame,
   productionMultiplier,
   tickGame,
 } from './engine'
-import { MONEY_ID, PRESTIGE_PP_COST, TIER_DEFINITIONS } from './layers'
+import { GOOGOL, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -38,9 +42,9 @@ const withPurchased = (state, tierId, count) => ({
   purchased: { ...state.purchased, [tierId]: count },
 })
 
-const withPP = (state, pp) => ({
+const withXP = (state, xp) => ({
   ...state,
-  prestige: { ...state.prestige, pp },
+  prestige: { ...state.prestige, xp },
 })
 
 const withAutobuyer = (state, tierId, level = 1) => ({
@@ -88,10 +92,10 @@ describe('createInitialGameState', () => {
     })
   })
 
-  it('starts at prestige level 0 with 0 PP', () => {
+  it('starts at prestige level 0 with 0 XP', () => {
     const { prestige } = createInitialGameState()
     expect(prestige.level).toBe(0)
-    expect(prestige.pp).toBe(0)
+    expect(prestige.xp).toBe(0)
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -131,6 +135,29 @@ describe('formatAmount', () => {
   })
 })
 
+// ─── formatCurrency ──────────────────────────────────────────────────────────
+
+describe('formatCurrency', () => {
+  it('formats zero', () => {
+    expect(formatCurrency(0)).toBe('$0')
+  })
+
+  it('formats a comma-grouped mid-size amount with a $ prefix', () => {
+    expect(formatCurrency(1234567)).toBe('$1,234,567')
+  })
+
+  it('never switches to scientific notation, even at huge magnitudes', () => {
+    const result = formatCurrency(1e21)
+    expect(result.startsWith('$')).toBe(true)
+    expect(result).not.toMatch(/e/i)
+    expect(result).toMatch(/^\$[\d,]+$/)
+  })
+
+  it('treats negative values as 0', () => {
+    expect(formatCurrency(-5)).toBe('$0')
+  })
+})
+
 // ─── getTierCost ─────────────────────────────────────────────────────────────
 
 describe('getTierCost', () => {
@@ -140,21 +167,20 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 0)).toBe(10)
   })
 
-  it('increases 10 % per purchase within the first epoch (0 – 9)', () => {
-    expect(getTierCost(tier, 1)).toBeCloseTo(11)
-    expect(getTierCost(tier, 9)).toBeCloseTo(19)
+  it('stays flat within the first epoch (0 – 9)', () => {
+    expect(getTierCost(tier, 1)).toBe(10)
+    expect(getTierCost(tier, 9)).toBe(10)
   })
 
-  it('scales 10x starting at owned = 10 (epoch 1)', () => {
-    // epoch=1, within=0 → 10 * 10 * 1.0 = 100
-    expect(getTierCost(tier, 10)).toBeCloseTo(100)
-    // epoch=1, within=9 → 10 * 10 * 1.9 = 190
-    expect(getTierCost(tier, 19)).toBeCloseTo(190)
+  it('scales 10x starting at owned = 10 (epoch 1), then stays flat within it', () => {
+    // epoch=1 → 10 * 10 = 100, flat for owned 10-19
+    expect(getTierCost(tier, 10)).toBe(100)
+    expect(getTierCost(tier, 19)).toBe(100)
   })
 
   it('scales 10x again at owned = 20 (epoch 2)', () => {
-    // epoch=2, within=0 → 10 * 100 * 1.0 = 1000
-    expect(getTierCost(tier, 20)).toBeCloseTo(1000)
+    // epoch=2 → 10 * 100 = 1000
+    expect(getTierCost(tier, 20)).toBe(1000)
   })
 
   it('treats negative owned as 0', () => {
@@ -162,23 +188,53 @@ describe('getTierCost', () => {
   })
 })
 
-// ─── getAutobuyerUnlockPPCost ─────────────────────────────────────────────────
+// ─── getTierBulkQuantity / getTierQuantityCost ────────────────────────────────
 
-describe('getAutobuyerUnlockPPCost', () => {
-  it('costs 1 PP for layer 0', () => {
-    expect(getAutobuyerUnlockPPCost(0)).toBe(1)
+describe('getTierBulkQuantity', () => {
+  const tier = { baseCost: 10 }
+
+  it('returns the requested quantity when it fits entirely in the current block', () => {
+    expect(getTierBulkQuantity(tier, 0, 10)).toBe(10)
+    expect(getTierBulkQuantity(tier, 0, 1)).toBe(1)
   })
 
-  it('costs 2 PP for layer 1', () => {
-    expect(getAutobuyerUnlockPPCost(1)).toBe(2)
+  it('caps at the units remaining in the current block', () => {
+    expect(getTierBulkQuantity(tier, 5, 10)).toBe(5)
+    expect(getTierBulkQuantity(tier, 9, 10)).toBe(1)
   })
 
-  it('costs 4 PP for layer 2', () => {
-    expect(getAutobuyerUnlockPPCost(2)).toBe(4)
+  it('returns 0 when nothing was requested', () => {
+    expect(getTierBulkQuantity(tier, 0, 0)).toBe(0)
+  })
+})
+
+describe('getTierQuantityCost', () => {
+  const tier = { baseCost: 10 }
+
+  it('multiplies the flat per-unit cost by the capped bulk quantity', () => {
+    expect(getTierQuantityCost(tier, 0, 10)).toBe(100)
+    expect(getTierQuantityCost(tier, 5, 10)).toBe(50) // only 5 fit in the current block
+    expect(getTierQuantityCost(tier, 10, 10)).toBe(1000) // next block, flat cost 100 × 10
+  })
+})
+
+// ─── getAutobuyerUnlockXPCost ─────────────────────────────────────────────────
+
+describe('getAutobuyerUnlockXPCost', () => {
+  it('costs 1 XP for layer 0', () => {
+    expect(getAutobuyerUnlockXPCost(0)).toBe(1)
+  })
+
+  it('costs 2 XP for layer 1', () => {
+    expect(getAutobuyerUnlockXPCost(1)).toBe(2)
+  })
+
+  it('costs 4 XP for layer 2', () => {
+    expect(getAutobuyerUnlockXPCost(2)).toBe(4)
   })
 
   it('treats negative index as 0', () => {
-    expect(getAutobuyerUnlockPPCost(-1)).toBe(1)
+    expect(getAutobuyerUnlockXPCost(-1)).toBe(1)
   })
 })
 
@@ -293,10 +349,12 @@ describe('buyTier', () => {
     expect(buyTier('does_not_exist')(state)).toBe(state)
   })
 
-  it('cost increases after each purchase', () => {
+  it('cost stays flat within a block of 10, then jumps 10x at the boundary', () => {
     const costAt0 = getTierCost(tensTier, 0)
-    const costAt1 = getTierCost(tensTier, 1)
-    expect(costAt1).toBeGreaterThan(costAt0)
+    const costAt9 = getTierCost(tensTier, 9)
+    const costAt10 = getTierCost(tensTier, 10)
+    expect(costAt9).toBe(costAt0)
+    expect(costAt10).toBe(costAt0 * 10)
   })
 
   it('can chain multiple purchases', () => {
@@ -336,13 +394,13 @@ describe('buyTier', () => {
     expect(buyTier(thousandsTier.id)(state)).toBe(state)
   })
 
-  it('deducts the current scaled cost on each consecutive purchase', () => {
+  it('deducts the current flat cost on each consecutive purchase within a block', () => {
     let state = withMoney(createInitialGameState(), 1000)
     state = buyTier(tensTier.id)(state) // cost 10, purchased 0→1
-    state = buyTier(tensTier.id)(state) // cost 11, purchased 1→2
+    state = buyTier(tensTier.id)(state) // cost 10 (flat), purchased 1→2
     expect(state.owned[tensTier.id]).toBe(2)
     expect(state.purchased[tensTier.id]).toBe(2)
-    expect(state.resources[MONEY_ID]).toBe(1000 - 10 - 11)
+    expect(state.resources[MONEY_ID]).toBe(1000 - 10 - 10)
   })
 
   it('uses purchased count (not owned) for cost scaling', () => {
@@ -362,6 +420,44 @@ describe('buyTier', () => {
     expect(after.resources[MONEY_ID]).toBe(0)
     expect(after.owned[tensTier.id]).toBe(51)
     expect(after.purchased[tensTier.id]).toBe(1)
+  })
+})
+
+// ─── buyTierQuantity ─────────────────────────────────────────────────────────
+
+describe('buyTierQuantity', () => {
+  it('buys the full requested quantity when affordable and within the same block', () => {
+    const state = withMoney(createInitialGameState(), 1000)
+    const after = buyTierQuantity(tensTier.id, 10)(state)
+    expect(after.owned[tensTier.id]).toBe(10)
+    expect(after.purchased[tensTier.id]).toBe(10)
+    expect(after.resources[MONEY_ID]).toBe(1000 - 10 * 10)
+  })
+
+  it('caps the purchase at the block boundary even with unlimited funds', () => {
+    const state = withMoney(
+      withPurchased(createInitialGameState(), tensTier.id, 5),
+      1_000_000
+    )
+    const after = buyTierQuantity(tensTier.id, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(10) // only 5 more fit in the block
+  })
+
+  it('stops early when funds run out partway through', () => {
+    const state = withMoney(createInitialGameState(), 35) // affords 3 at cost 10 each
+    const after = buyTierQuantity(tensTier.id, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(3)
+    expect(after.resources[MONEY_ID]).toBe(5)
+  })
+
+  it('returns the same state object for a locked tier', () => {
+    const state = createInitialGameState()
+    expect(buyTierQuantity(thousandsTier.id, 10)(state)).toBe(state)
+  })
+
+  it('returns the same state object for an unknown tier ID', () => {
+    const state = createInitialGameState()
+    expect(buyTierQuantity('does_not_exist', 10)(state)).toBe(state)
   })
 })
 
@@ -407,14 +503,14 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(12) // 10 initial + 2 produced
   })
 
-  it('awards a PP when money crosses a power-of-10 milestone', () => {
+  it('awards XP when money crosses a power-of-10 milestone', () => {
     const state = {
       ...withOwned(createInitialGameState(), tensTier.id, 10),
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 95 },
-      prestige: { pp: 0, level: 0, highestMilestone: 1 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
     }
     const after = tickGame(1)(state) // +10 money → crosses 100
-    expect(after.prestige.pp).toBeGreaterThan(0)
+    expect(after.prestige.xp).toBeGreaterThan(0)
   })
 
   it('active autobuyer (level 1) purchases 1 generator per tick', () => {
@@ -440,15 +536,15 @@ describe('tickGame', () => {
 // ─── buyAutobuyer ────────────────────────────────────────────────────────────
 
 describe('buyAutobuyer', () => {
-  it('unlocks to level 0 (inactive) by spending PP (layer 0 costs 1 PP)', () => {
-    const state = withPP(createInitialGameState(), 1)
+  it('unlocks to level 0 (inactive) by spending XP (layer 0 costs 1 XP)', () => {
+    const state = withXP(createInitialGameState(), 1)
     const after = buyAutobuyer(tensTier.id)(state)
     expect(after.autobuyers[tensTier.id]).toBe(0)
-    expect(after.prestige.pp).toBe(0)
+    expect(after.prestige.xp).toBe(0)
   })
 
-  it('returns the same state when PP is insufficient for unlock', () => {
-    const state = withPP(createInitialGameState(), 0)
+  it('returns the same state when XP is insufficient for unlock', () => {
+    const state = withXP(createInitialGameState(), 0)
     expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
   })
 
@@ -479,19 +575,19 @@ describe('buyAutobuyer', () => {
     expect(buyAutobuyer('does_not_exist')(state)).toBe(state)
   })
 
-  it('returns the same state for a locked tier even when PP is available', () => {
-    const state = withPP(createInitialGameState(), 10)
+  it('returns the same state for a locked tier even when XP is available', () => {
+    const state = withXP(createInitialGameState(), 10)
     expect(buyAutobuyer(thousandsTier.id)(state)).toBe(state)
   })
 
-  it('unlocks higher-layer autobuyer to level 0 (layer 1 costs 2 PP)', () => {
-    const state = withPP(
+  it('unlocks higher-layer autobuyer to level 0 (layer 1 costs 2 XP)', () => {
+    const state = withXP(
       withOwned(createInitialGameState(), tensTier.id, 10),
       2
     )
     const after = buyAutobuyer(thousandsTier.id)(state)
     expect(after.autobuyers[thousandsTier.id]).toBe(0)
-    expect(after.prestige.pp).toBe(0)
+    expect(after.prestige.xp).toBe(0)
   })
 
   it('upgrades higher-layer autobuyer from 0 to 1 using the tier\'s own resource', () => {
@@ -513,33 +609,35 @@ describe('buyAutobuyer', () => {
 // ─── prestigeGame ────────────────────────────────────────────────────────────
 
 describe('prestigeGame', () => {
-  it('does nothing when PP < PRESTIGE_PP_COST', () => {
-    const state = withPP(createInitialGameState(), PRESTIGE_PP_COST - 1)
+  it('does nothing when money < GOOGOL', () => {
+    // GOOGOL - 1 rounds back to GOOGOL at this magnitude (float precision), so use a value
+    // that's meaningfully smaller instead of relying on an off-by-one difference.
+    const state = withMoney(createInitialGameState(), GOOGOL / 10)
     expect(prestigeGame(state)).toBe(state)
   })
 
   it('increments prestige level by 1', () => {
-    const state = withPP(createInitialGameState(), PRESTIGE_PP_COST)
+    const state = withMoney(createInitialGameState(), GOOGOL)
     const after = prestigeGame(state)
     expect(after.prestige.level).toBe(1)
   })
 
-  it('deducts PRESTIGE_PP_COST from PP', () => {
-    const state = withPP(createInitialGameState(), PRESTIGE_PP_COST + 3)
+  it('leaves XP untouched', () => {
+    const state = withXP(withMoney(createInitialGameState(), GOOGOL), 7)
     const after = prestigeGame(state)
-    expect(after.prestige.pp).toBe(3)
+    expect(after.prestige.xp).toBe(7)
   })
 
   it('resets money to starting amount', () => {
-    const state = withPP(withMoney(createInitialGameState(), 99999), PRESTIGE_PP_COST)
+    const state = withMoney(createInitialGameState(), GOOGOL + 99999)
     const after = prestigeGame(state)
     expect(after.resources[MONEY_ID]).toBe(10)
   })
 
   it('resets all owned counts to 0', () => {
-    const state = withPP(
-      withOwned(createInitialGameState(), tensTier.id, 50),
-      PRESTIGE_PP_COST
+    const state = withOwned(
+      withMoney(createInitialGameState(), GOOGOL),
+      tensTier.id, 50
     )
     const after = prestigeGame(state)
     TIER_DEFINITIONS.forEach(tier => {
@@ -548,18 +646,18 @@ describe('prestigeGame', () => {
   })
 
   it('keeps unlocked autobuyers unlocked (level 0) on prestige', () => {
-    const state = withPP(
-      withAutobuyer(createInitialGameState(), tensTier.id, 0),
-      PRESTIGE_PP_COST
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), GOOGOL),
+      tensTier.id, 0
     )
     const after = prestigeGame(state)
     expect(after.autobuyers[tensTier.id]).toBe(0)
   })
 
   it('resets active autobuyer levels back to 0 on prestige', () => {
-    const state = withPP(
-      withAutobuyer(createInitialGameState(), tensTier.id, 2),
-      PRESTIGE_PP_COST
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), GOOGOL),
+      tensTier.id, 2
     )
     const after = prestigeGame(state)
     expect(after.autobuyers[tensTier.id]).toBe(0)
