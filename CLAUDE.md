@@ -73,7 +73,7 @@ src/
     Money/index.js          ← styled money/amount display
     StatCard/index.js       ← styled card container used for every panel
   pages/
-    MainPage/index.jsx      ← single page; renders every tier data-driven from TIER_DEFINITIONS
+    MainPage/index.jsx      ← single page; compact one-line-per-tier layout, data-driven from TIER_DEFINITIONS
   App.jsx                   ← root component, renders MainPage
   index.jsx                 ← ReactDOM.createRoot entry point
 vite.config.js               ← path aliases + dev/test server config
@@ -89,7 +89,10 @@ Strict three-layer separation:
    autobuyer loop, which breaks as soon as `buyTier` returns the same object back).
 2. **`useIncrementalGame.js`** — the only place holding React state. Owns the `setInterval` tick timer, the
    localStorage persistence effect, and exposes `{ state, actions, resetGame }`.
-3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`.
+3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
+   renders each unlocked tier as a single compact row rather than separate cards. Money is displayed once,
+   at the top, via `formatCurrency` (full `$`-comma format, never scientific notation); a global ×1/×10
+   toggle controls how many units the "Buy" button on each row purchases.
 
 ### Economy model
 
@@ -116,7 +119,8 @@ need changing — the page and engine are meant to be fully data-driven from tha
   owned:      { Tens: 0, Thousands: 0, … },    // generator count per tier id (drives production)
   purchased:  { Tens: 0, Thousands: 0, … },    // lifetime purchase count per tier id (drives cost scaling)
   autobuyers: { Tens: null, Thousands: null, … }, // null = locked; number = active level (0 = unlocked but idle)
-  prestige:   { pp: 0, level: 0, highestMilestone: 1 },
+  prestige:   { xp: 0, level: 0, highestMilestone: 1 }, // xp only funds autobuyer unlocks — prestige itself
+                                                          // is gated on Money ≥ GOOGOL, not xp
 }
 ```
 
@@ -131,27 +135,32 @@ increases and is what `getTierCost` scales against, so passively-produced `owned
 | Function | Signature | Purpose |
 |----------|-----------|---------|
 | `createInitialGameState` | `() → state` | Fresh state derived from `TIER_DEFINITIONS`; `resources` is pre-populated with every `costResourceId`/`producesResourceId`, not just money |
-| `getTierCost` | `(tier, purchasedCount) → number` | `baseCost * 10^epoch * (1 + 0.1*within)`, epoch = `floor(purchased/10)` |
+| `getTierCost` | `(tier, purchasedCount) → number` | `baseCost * 10^epoch`, epoch = `floor(purchased/10)` — flat across each block of 10 purchases, jumps 10x at each block boundary |
+| `getTierBulkQuantity` | `(tier, purchased, requestedQuantity) → number` | Caps a bulk purchase at the current cost-block boundary, so every unit bought is the same price |
+| `getTierQuantityCost` | `(tier, purchased, requestedQuantity) → number` | `getTierCost(...) * getTierBulkQuantity(...)` |
+| `getTierAffordableQuantity` | `(tier, purchased, spendable, requestedQuantity) → number` | Further caps `getTierBulkQuantity` by what `spendable` can actually pay for — what `buyTierQuantity` will actually purchase |
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `Ones`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
 | `tickGame` | `(elapsedSeconds) → state → state` | Runs autobuyers, then produces resources for every unlocked tier, then checks milestones |
 | `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` |
-| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends PP, level → 0); subsequent calls upgrade the level (spends the tier's own resource) |
-| `prestigeGame` | `state → state` | Requires `PRESTIGE_PP_COST` PP; resets resources/owned/purchased, keeps autobuyer *unlock* status (levels reset to 0), increments prestige level |
+| `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable |
+| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0); subsequent calls upgrade the level (spends the tier's own resource) |
+| `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *unlock* status (levels reset to 0), leaves XP untouched, increments prestige level |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `productionMultiplier` | `prestigeLevel → number` | `2 ** prestigeLevel` |
-| `getAutobuyerUnlockPPCost` | `tierIndex → number` | `AUTOBUYER_PP_COST_BASE * 2^tierIndex` |
+| `getAutobuyerUnlockXPCost` | `tierIndex → number` | `AUTOBUYER_XP_COST_BASE * 2^tierIndex` |
 | `getAutobuyerCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` |
-| `formatAmount` | `value → string` | Locale-formatted integer below 1,000,000; scientific notation at/above |
+| `formatAmount` | `value → string` | Locale-formatted integer below 1,000,000; scientific notation at/above — used for non-money amounts (owned counts, production rates) |
+| `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string, floored (never rounds up), never switches to scientific notation — used for all Money amounts |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'$'` fallback for `MONEY_ID`/unknown ids |
 
 ### Constants (`src/game/layers.js`)
 
 - `MONEY_ID = 'Ones'` — id of the base/root resource
 - `MONEY_STARTING_AMOUNT = 10`
-- `PRESTIGE_PP_COST = 10`
+- `GOOGOL = 1e100` — money balance required to prestige
 - `TICK_RATE_MS = 1000`
-- `AUTOBUYER_PP_COST_BASE = 1` (doubles per tier index)
+- `AUTOBUYER_XP_COST_BASE = 1` (doubles per tier index)
 
 ### Path aliases (`vite.config.js`)
 
@@ -166,7 +175,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (105 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (132 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
