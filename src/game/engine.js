@@ -50,8 +50,10 @@ export const formatAmount = value => {
 }
 
 // Full comma-grouped currency string; never switches to scientific notation, unlike formatAmount.
+// Floors rather than rounds so a displayed amount never overstates the actual spendable balance
+// (e.g. a fractional 1.6 balance from a non-integer tick shows as $1, not a misleading $2).
 export const formatCurrency = value =>
-  `$${currencyNumberFormatter.format(clampNonNegative(value))}`
+  `$${currencyNumberFormatter.format(Math.floor(clampNonNegative(value)))}`
 
 // Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
 // epoch = floor(purchased / 10); cost = baseCost * 10^epoch
