@@ -57,37 +57,61 @@ vite.config.js          ← aliases: components/, game/, pages/ → src/* equiva
 owns all React state and side-effects (timer, localStorage). The page
 (`MainPage/index.jsx`) is a pure renderer.
 
+There are 12 tiers (Tens → Decillions). **Every tier is bought directly with
+Ones (money)** — `costResourceId` is `'Ones'` for all of them. Once owned, a
+tier produces the tier immediately below it (`producesResourceId`), which
+cascades production down to Ones. `Tens` is the special case:
+`costResourceId === producesResourceId === 'Ones'`, since it's the
+entry-level generator bought with money to produce more money.
+
+A tier unlocks once you own **≥ 10** of the tier below it (already-owned
+tiers stay unlocked even if the rule changes, so old saves stay playable).
+
 ### Adding a new tier
 
-Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js`. No other file
-needs changing — the page and engine are fully data-driven from that array.
+Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` (needs `id`,
+`name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`, and
+`producesResourceId` set to the previous tier's `id`). No other file needs
+changing — the page and engine are fully data-driven from that array.
 
 ### Game state shape
 
 ```js
 {
-  resources: { money: 10, ones: 0, tens: 0, … },   // all resource IDs from layers.js
-  owned:     { ones: 0, tens: 0, … },               // count per tier id
-  autobuyers:{ ones: false, tens: false, … },       // permanent, survive prestige
+  resources: { Ones: 10, Tens: 0, Thousands: 0, … },   // spendable balance per resource id
+  owned:     { Tens: 0, Thousands: 0, … },              // generator count per tier id
+  purchased: { Tens: 0, Thousands: 0, … },              // lifetime purchase count per tier id (drives cost scaling)
+  autobuyers:{ Tens: null, Thousands: null, … },        // null = locked; number = active level, survives prestige unlock
   prestige: { pp: 0, level: 0, highestMilestone: 1 }
 }
 ```
+
+`owned[tierId]` and `resources[tierId]` for the same tier id always move
+together (buying, producing, and autobuyer-upgrading a tier update both by
+the same amount) — they represent "how many generators you have" and "how
+much of that tier's resource you can spend" respectively, which happen to be
+the same number by design.
 
 ### Key engine functions
 
 | Function | Signature | Purpose |
 |----------|-----------|---------|
-| `getTierCost` | `(tier, owned) → number` | Scaled cost with epoch doubling every 10 |
-| `tickGame` | `(elapsedSecs) → state → state` | Produce resources + run autobuyers |
-| `buyTier` | `(tierId) → state → state` | Validates & deducts cost |
-| `buyAutobuyer` | `(tierId) → state → state` | Spends PP for permanent autobuyer |
-| `prestigeGame` | `state → state` | Resets progress, keeps autobuyers, increments level |
-| `isTierUnlocked` | `(state) → tier → bool` | Tier 0 always unlocked; others need 1 of tier below |
+| `getTierCost` | `(tier, purchasedCount) → number` | Scaled cost: `baseCost * 10^epoch * (1 + 0.1*within)`, epoch = `floor(purchased/10)` |
+| `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` |
+| `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
+| `tickGame` | `(elapsedSecs) → state → state` | Runs autobuyers, then produces resources for unlocked tiers, then checks milestones |
+| `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` |
+| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends PP); later calls upgrade the level (spends the tier's own resource) |
+| `getAutobuyerUnlockPPCost` | `(tierIndex) → number` | `AUTOBUYER_PP_COST_BASE * 2^tierIndex` |
+| `getAutobuyerCost` | `(currentLevel) → number` | `10^(currentLevel+1)` |
+| `prestigeGame` | `state → state` | Resets progress, keeps autobuyer *unlock* status (levels reset to 0), increments level |
+| `isTierUnlocked` | `(state) → tier → bool` | Tier 0 always unlocked; others need ≥10 owned of the tier below (or already owned) |
 | `productionMultiplier` | `(level) → number` | `2^level` |
-| `formatAmount` | `(value) → string` | 2 decimals below 100, integer above |
+| `formatAmount` | `(value) → string` | Locale integer below 1,000,000; scientific notation at/above |
 
 ### Constants (all in `src/game/layers.js`)
 
+- `MONEY_ID = 'Ones'`
 - `PRESTIGE_PP_COST = 10`
 - `TICK_RATE_MS = 1000`
 - `MONEY_STARTING_AMOUNT = 10`

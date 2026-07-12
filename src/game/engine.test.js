@@ -53,6 +53,12 @@ const withPrestigeLevel = (state, level) => ({
   prestige: { ...state.prestige, level },
 })
 
+// TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
+// entry-level generator. TIER_DEFINITIONS[1] ('Thousands') is the first
+// tier that needs unlocking (10 Tens owned) and produces Tens.
+const tensTier = TIER_DEFINITIONS[0]
+const thousandsTier = TIER_DEFINITIONS[1]
+
 // ─── createInitialGameState ─────────────────────────────────────────────────
 
 describe('createInitialGameState', () => {
@@ -139,16 +145,16 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 9)).toBeCloseTo(19)
   })
 
-  it('doubles the increment starting at owned = 10 (epoch 1)', () => {
-    // epoch=1, within=0 → 10 * 2 * 1.0 = 20
-    expect(getTierCost(tier, 10)).toBeCloseTo(20)
-    // epoch=1, within=9 → 10 * 2 * 1.9 = 38
-    expect(getTierCost(tier, 19)).toBeCloseTo(38)
+  it('scales 10x starting at owned = 10 (epoch 1)', () => {
+    // epoch=1, within=0 → 10 * 10 * 1.0 = 100
+    expect(getTierCost(tier, 10)).toBeCloseTo(100)
+    // epoch=1, within=9 → 10 * 10 * 1.9 = 190
+    expect(getTierCost(tier, 19)).toBeCloseTo(190)
   })
 
-  it('doubles again at owned = 20 (epoch 2)', () => {
-    // epoch=2, within=0 → 10 * 4 * 1.0 = 40
-    expect(getTierCost(tier, 20)).toBeCloseTo(40)
+  it('scales 10x again at owned = 20 (epoch 2)', () => {
+    // epoch=2, within=0 → 10 * 100 * 1.0 = 1000
+    expect(getTierCost(tier, 20)).toBeCloseTo(1000)
   })
 
   it('treats negative owned as 0', () => {
@@ -159,15 +165,15 @@ describe('getTierCost', () => {
 // ─── getAutobuyerUnlockPPCost ─────────────────────────────────────────────────
 
 describe('getAutobuyerUnlockPPCost', () => {
-  it('costs 1 PP for layer 0 (ones)', () => {
+  it('costs 1 PP for layer 0', () => {
     expect(getAutobuyerUnlockPPCost(0)).toBe(1)
   })
 
-  it('costs 2 PP for layer 1 (tens)', () => {
+  it('costs 2 PP for layer 1', () => {
     expect(getAutobuyerUnlockPPCost(1)).toBe(2)
   })
 
-  it('costs 4 PP for layer 2 (hundreds)', () => {
+  it('costs 4 PP for layer 2', () => {
     expect(getAutobuyerUnlockPPCost(2)).toBe(4)
   })
 
@@ -217,7 +223,7 @@ describe('productionMultiplier', () => {
 // ─── isTierUnlocked ──────────────────────────────────────────────────────────
 
 describe('isTierUnlocked', () => {
-  it('always unlocks tier 0 (ones)', () => {
+  it('always unlocks tier 0', () => {
     const state = createInitialGameState()
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[0])).toBe(true)
   })
@@ -250,27 +256,36 @@ describe('isTierUnlocked', () => {
   })
 })
 
+// ─── getTierSpendableAmount ──────────────────────────────────────────────────
+
+describe('getTierSpendableAmount', () => {
+  it('returns the balance of the tier\'s cost resource (Ones, for every tier)', () => {
+    const state = withMoney(createInitialGameState(), 42)
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(getTierSpendableAmount(state, tier)).toBe(42)
+    })
+  })
+})
+
 // ─── buyTier ─────────────────────────────────────────────────────────────────
 
 describe('buyTier', () => {
-  const onesTier = TIER_DEFINITIONS[0]
-
-  it('deducts cost and increments owned', () => {
+  it('deducts cost and increments owned/purchased', () => {
     const state = createInitialGameState() // $10
-    const after = buyTier(onesTier.id)(state)
-    expect(after.owned[onesTier.id]).toBe(1)
-    expect(after.purchased[onesTier.id]).toBe(1)
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.resources[MONEY_ID]).toBe(0)
   })
 
   it('returns the same state object when funds are insufficient', () => {
     const state = withMoney(createInitialGameState(), 5)
-    expect(buyTier(onesTier.id)(state)).toBe(state)
+    expect(buyTier(tensTier.id)(state)).toBe(state)
   })
 
   it('returns the same state object for a locked tier', () => {
     const state = createInitialGameState()
-    expect(buyTier(TIER_DEFINITIONS[1].id)(state)).toBe(state)
+    expect(buyTier(thousandsTier.id)(state)).toBe(state)
   })
 
   it('returns the same state object for an unknown tier ID', () => {
@@ -279,171 +294,82 @@ describe('buyTier', () => {
   })
 
   it('cost increases after each purchase', () => {
-    const costAt0 = getTierCost(onesTier, 0) // 10
-    const costAt1 = getTierCost(onesTier, 1) // 11
+    const costAt0 = getTierCost(tensTier, 0)
+    const costAt1 = getTierCost(tensTier, 1)
     expect(costAt1).toBeGreaterThan(costAt0)
   })
 
   it('can chain multiple purchases', () => {
     let state = withMoney(createInitialGameState(), 1000)
-    state = buyTier(onesTier.id)(state)
-    state = buyTier(onesTier.id)(state)
-    expect(state.owned[onesTier.id]).toBe(2)
-  })
-
-  it('uses generated lower-tier resources as the spendable amount', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const state = withResource(createInitialGameState(), 'ones', 7)
-    expect(getTierSpendableAmount(state, tensTier)).toBe(7)
-  })
-
-  it('tens tier is purchasable by spending ones resources after owning 10 ones', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const state = withResource(
-      withOwned(createInitialGameState(), onesTier.id, 10),
-      onesTier.id,
-      10
-    )
-    const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[onesTier.id]).toBe(0)
-    expect(after.resources[onesTier.id]).toBe(0)
-  })
-
-  it('fresh-game progression: buying 10 ones credits spendable ones, enabling first tens purchase', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    // Total cost to buy 10 ones: $10 + $11 + … + $19 = $145
-    let state = withMoney(createInitialGameState(), 145)
-    for (let i = 0; i < 10; i++) {
-      state = buyTier(onesTier.id)(state)
-    }
-    expect(state.owned[onesTier.id]).toBe(10)
-    expect(state.resources[onesTier.id]).toBe(10)
-    expect(isTierUnlocked(state)(tensTier)).toBe(true)
-
-    const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[onesTier.id]).toBe(0)
-    expect(after.resources[onesTier.id]).toBe(0)
-  })
-
-  it('higher tiers are purchasable by spending produced resources from the previous tier', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const hundredsTier = TIER_DEFINITIONS[2]
-    const state = withResource(
-      withOwned(
-        withOwned(createInitialGameState(), onesTier.id, 10),
-        tensTier.id,
-        10
-      ),
-      tensTier.id,
-      10
-    )
-    const after = buyTier(hundredsTier.id)(state)
-    expect(after.owned[hundredsTier.id]).toBe(1)
-    expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.resources[tensTier.id]).toBe(0)
-  })
-
-  it('deducts scaled higher-tier costs from the previous layer owned count', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const state = withPurchased(
-      withResource(
-        withOwned(createInitialGameState(), onesTier.id, 11),
-        onesTier.id,
-        11
-      ),
-      tensTier.id,
-      1
-    )
-
-    const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.purchased[tensTier.id]).toBe(2)
-    expect(after.owned[onesTier.id]).toBe(0)
-    expect(after.resources[onesTier.id]).toBe(0)
-  })
-
-  it('deducts the current scaled cost on each consecutive higher-tier purchase', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    let state = withPurchased(
-      withResource(
-        withOwned(createInitialGameState(), onesTier.id, 33),
-        onesTier.id,
-        33
-      ),
-      tensTier.id,
-      1
-    )
-
     state = buyTier(tensTier.id)(state)
     state = buyTier(tensTier.id)(state)
-
     expect(state.owned[tensTier.id]).toBe(2)
-    expect(state.purchased[tensTier.id]).toBe(3)
-    expect(state.owned[onesTier.id]).toBe(10)
-    expect(state.resources[onesTier.id]).toBe(10)
   })
 
-  it('does not buy a higher tier when the scaled previous-layer cost is unavailable', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const state = withPurchased(
-      withResource(
-        withOwned(createInitialGameState(), onesTier.id, 10),
-        onesTier.id,
-        10
-      ),
-      tensTier.id,
-      1
+  it('an unlocked higher tier is purchasable directly with Ones', () => {
+    const cost = getTierCost(thousandsTier, 0)
+    const state = withMoney(
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      cost
     )
-
-    expect(buyTier(tensTier.id)(state)).toBe(state)
+    const after = buyTier(thousandsTier.id)(state)
+    expect(after.owned[thousandsTier.id]).toBe(1)
+    expect(after.purchased[thousandsTier.id]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(0)
   })
 
-  it('clamps the previous layer owned count at zero when legacy state has more spendable resources than owned units', () => {
-    const tensTier = TIER_DEFINITIONS[1]
-    const hundredsTier = TIER_DEFINITIONS[2]
-    const state = withResource(
-      withOwned(
-        withOwned(createInitialGameState(), tensTier.id, 5),
-        hundredsTier.id,
-        1
-      ),
-      tensTier.id,
-      10
+  it('buying a higher tier does not touch the tier below\'s owned/resource count', () => {
+    const cost = getTierCost(thousandsTier, 0)
+    const state = withMoney(
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      cost
     )
-
-    const after = buyTier(hundredsTier.id)(state)
-    expect(after.owned[hundredsTier.id]).toBe(2)
-    expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.resources[tensTier.id]).toBe(0)
+    const after = buyTier(thousandsTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(10)
   })
 
-  it('uses purchased count for cost when owned is higher from generation', () => {
+  it('does not buy an unlocked tier when funds are insufficient', () => {
+    const state = withMoney(
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      getTierCost(thousandsTier, 0) - 1
+    )
+    expect(buyTier(thousandsTier.id)(state)).toBe(state)
+  })
+
+  it('deducts the current scaled cost on each consecutive purchase', () => {
+    let state = withMoney(createInitialGameState(), 1000)
+    state = buyTier(tensTier.id)(state) // cost 10, purchased 0→1
+    state = buyTier(tensTier.id)(state) // cost 11, purchased 1→2
+    expect(state.owned[tensTier.id]).toBe(2)
+    expect(state.purchased[tensTier.id]).toBe(2)
+    expect(state.resources[MONEY_ID]).toBe(1000 - 10 - 11)
+  })
+
+  it('uses purchased count (not owned) for cost scaling', () => {
     const state = withMoney(
       withPurchased(
-        withOwned(createInitialGameState(), onesTier.id, 50),
-        onesTier.id,
+        withOwned(createInitialGameState(), tensTier.id, 50),
+        tensTier.id,
         0
       ),
       10
     )
 
-    expect(getTierPurchasedCount(state, onesTier.id)).toBe(0)
-    expect(getTierCost(onesTier, getTierPurchasedCount(state, onesTier.id))).toBe(10)
+    expect(getTierPurchasedCount(state, tensTier.id)).toBe(0)
+    expect(getTierCost(tensTier, getTierPurchasedCount(state, tensTier.id))).toBe(10)
 
-    const after = buyTier(onesTier.id)(state)
+    const after = buyTier(tensTier.id)(state)
     expect(after.resources[MONEY_ID]).toBe(0)
-    expect(after.owned[onesTier.id]).toBe(51)
-    expect(after.purchased[onesTier.id]).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(51)
+    expect(after.purchased[tensTier.id]).toBe(1)
   })
 })
 
 // ─── tickGame ────────────────────────────────────────────────────────────────
 
 describe('tickGame', () => {
-  it('produces money from Ones generators over 1 second', () => {
-    const state = withOwned(createInitialGameState(), 'ones', 5)
+  it('produces money from Tens generators over 1 second', () => {
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
     const after = tickGame(1)(state)
     // 5 generators × 1 sec = +5 money
     expect(after.resources[MONEY_ID]).toBe(
@@ -458,32 +384,32 @@ describe('tickGame', () => {
   })
 
   it('scales production with elapsed time', () => {
-    const state = withOwned(createInitialGameState(), 'ones', 1)
+    const state = withOwned(createInitialGameState(), tensTier.id, 1)
     const after = tickGame(3)(state)
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 3)
   })
 
   it('applies prestige multiplier to production', () => {
-    const base = withOwned(createInitialGameState(), 'ones', 1)
+    const base = withOwned(createInitialGameState(), tensTier.id, 1)
     const boosted = withPrestigeLevel(base, 1) // ×2
     expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(
       base.resources[MONEY_ID] + 2
     )
   })
 
-  it('tens generators produce ones resource and owned generators', () => {
+  it('Thousands generators produce Tens resource and owned generators', () => {
     const state = withOwned(
-      withOwned(createInitialGameState(), 'ones', 10),
-      'tens', 2
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      thousandsTier.id, 2
     )
     const after = tickGame(1)(state)
-    expect(after.resources.ones).toBe(2)
-    expect(after.owned.ones).toBe(12) // 10 initial + 2 produced
+    expect(after.resources[tensTier.id]).toBe(2)
+    expect(after.owned[tensTier.id]).toBe(12) // 10 initial + 2 produced
   })
 
   it('awards a PP when money crosses a power-of-10 milestone', () => {
     const state = {
-      ...withOwned(createInitialGameState(), 'ones', 10),
+      ...withOwned(createInitialGameState(), tensTier.id, 10),
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 95 },
       prestige: { pp: 0, level: 0, highestMilestone: 1 },
     }
@@ -494,20 +420,20 @@ describe('tickGame', () => {
   it('active autobuyer (level 1) purchases 1 generator per tick', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 100),
-      'ones'
+      tensTier.id
     )
     const after = tickGame(1)(state)
-    expect(after.owned.ones).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(1)
     expect(after.resources[MONEY_ID]).toBeLessThan(100)
   })
 
   it('autobuyer does not purchase when funds are insufficient', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 0),
-      'ones'
+      tensTier.id
     )
     const after = tickGame(1)(state)
-    expect(after.owned.ones).toBe(0)
+    expect(after.owned[tensTier.id]).toBe(0)
   })
 })
 
@@ -516,28 +442,36 @@ describe('tickGame', () => {
 describe('buyAutobuyer', () => {
   it('unlocks to level 0 (inactive) by spending PP (layer 0 costs 1 PP)', () => {
     const state = withPP(createInitialGameState(), 1)
-    const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(0)
+    const after = buyAutobuyer(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(0)
     expect(after.prestige.pp).toBe(0)
   })
 
   it('returns the same state when PP is insufficient for unlock', () => {
     const state = withPP(createInitialGameState(), 0)
-    expect(buyAutobuyer(TIER_DEFINITIONS[0].id)(state)).toBe(state)
+    expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
   })
 
-  it('upgrades from level 0 to 1 and deducts 10 of cost resource', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 10), TIER_DEFINITIONS[0].id, 0)
-    const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
-    expect(after.resources[MONEY_ID]).toBe(0)
+  it('upgrades from level 0 to 1 and deducts 10 of the tier\'s own resource', () => {
+    const state = withResource(
+      withAutobuyer(createInitialGameState(), tensTier.id, 0),
+      tensTier.id,
+      10
+    )
+    const after = buyAutobuyer(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.resources[tensTier.id]).toBe(0)
   })
 
-  it('upgrades from level 1 to 2 and deducts 100 of cost resource', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 100), TIER_DEFINITIONS[0].id)
-    const after = buyAutobuyer(TIER_DEFINITIONS[0].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(2)
-    expect(after.resources[MONEY_ID]).toBe(0)
+  it('upgrades from level 1 to 2 and deducts 100 of the tier\'s own resource', () => {
+    const state = withResource(
+      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+      tensTier.id,
+      100
+    )
+    const after = buyAutobuyer(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(2)
+    expect(after.resources[tensTier.id]).toBe(0)
   })
 
   it('returns the same state for an unknown tier ID', () => {
@@ -547,33 +481,32 @@ describe('buyAutobuyer', () => {
 
   it('returns the same state for a locked tier even when PP is available', () => {
     const state = withPP(createInitialGameState(), 10)
-    expect(buyAutobuyer(TIER_DEFINITIONS[1].id)(state)).toBe(state)
+    expect(buyAutobuyer(thousandsTier.id)(state)).toBe(state)
   })
 
   it('unlocks higher-layer autobuyer to level 0 (layer 1 costs 2 PP)', () => {
     const state = withPP(
-      withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 10),
+      withOwned(createInitialGameState(), tensTier.id, 10),
       2
     )
-    const after = buyAutobuyer(TIER_DEFINITIONS[1].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(0)
+    const after = buyAutobuyer(thousandsTier.id)(state)
+    expect(after.autobuyers[thousandsTier.id]).toBe(0)
     expect(after.prestige.pp).toBe(0)
   })
 
-  it('upgrades higher-layer autobuyer from 0 to 1 using tier cost-resource (ones)', () => {
-    // Tens tier costs 'ones'; upgrading level 0→1 costs getAutobuyerCost(0) = 10 ones
+  it('upgrades higher-layer autobuyer from 0 to 1 using the tier\'s own resource', () => {
     const state = withResource(
       withAutobuyer(
-        withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 10),
-        TIER_DEFINITIONS[1].id,
+        withOwned(createInitialGameState(), tensTier.id, 10),
+        thousandsTier.id,
         0
       ),
-      'ones',
+      thousandsTier.id,
       10
     )
-    const after = buyAutobuyer(TIER_DEFINITIONS[1].id)(state)
-    expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
-    expect(after.resources.ones).toBe(0)
+    const after = buyAutobuyer(thousandsTier.id)(state)
+    expect(after.autobuyers[thousandsTier.id]).toBe(1)
+    expect(after.resources[thousandsTier.id]).toBe(0)
   })
 })
 
@@ -605,7 +538,7 @@ describe('prestigeGame', () => {
 
   it('resets all owned counts to 0', () => {
     const state = withPP(
-      withOwned(createInitialGameState(), 'ones', 50),
+      withOwned(createInitialGameState(), tensTier.id, 50),
       PRESTIGE_PP_COST
     )
     const after = prestigeGame(state)
@@ -616,19 +549,19 @@ describe('prestigeGame', () => {
 
   it('keeps unlocked autobuyers unlocked (level 0) on prestige', () => {
     const state = withPP(
-      withAutobuyer(createInitialGameState(), 'ones'),
+      withAutobuyer(createInitialGameState(), tensTier.id, 0),
       PRESTIGE_PP_COST
     )
     const after = prestigeGame(state)
-    expect(after.autobuyers.ones).toBe(0)
+    expect(after.autobuyers[tensTier.id]).toBe(0)
   })
 
   it('resets active autobuyer levels back to 0 on prestige', () => {
     const state = withPP(
-      withAutobuyer(createInitialGameState(), 'ones', 2),
+      withAutobuyer(createInitialGameState(), tensTier.id, 2),
       PRESTIGE_PP_COST
     )
     const after = prestigeGame(state)
-    expect(after.autobuyers.ones).toBe(0)
+    expect(after.autobuyers[tensTier.id]).toBe(0)
   })
 })

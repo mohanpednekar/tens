@@ -96,7 +96,6 @@ const MainPage = () => {
           const purchased = getTierPurchasedCount(state, tier.id)
           const cost = getTierCost(tier, purchased)
           const costResource = getTierSpendableAmount(state, tier)
-          const producesResource = getTierSpendableAmount(state, tier)
           const canAfford = costResource >= cost
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? null

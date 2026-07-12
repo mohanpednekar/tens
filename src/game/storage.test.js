@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createInitialGameState } from './engine'
-import { TIER_DEFINITIONS } from './layers'
+import { MONEY_ID, TIER_DEFINITIONS } from './layers'
 import { clearGameState, loadGameState, saveGameState } from './storage'
+
+const tensTier = TIER_DEFINITIONS[0]
 
 beforeEach(() => {
   localStorage.clear()
@@ -22,28 +24,28 @@ describe('saveGameState / loadGameState round-trip', () => {
   it('preserves money', () => {
     const state = {
       ...createInitialGameState(),
-      resources: { ...createInitialGameState().resources, money: 12345 },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 12345 },
     }
     saveGameState(state)
-    expect(loadGameState().resources.money).toBe(12345)
+    expect(loadGameState().resources[MONEY_ID]).toBe(12345)
   })
 
   it('preserves owned counts', () => {
     const state = {
       ...createInitialGameState(),
-      owned: { ...createInitialGameState().owned, ones: 42 },
+      owned: { ...createInitialGameState().owned, [tensTier.id]: 42 },
     }
     saveGameState(state)
-    expect(loadGameState().owned.ones).toBe(42)
+    expect(loadGameState().owned[tensTier.id]).toBe(42)
   })
 
   it('preserves purchased counts', () => {
     const state = {
       ...createInitialGameState(),
-      purchased: { ...createInitialGameState().purchased, ones: 12 },
+      purchased: { ...createInitialGameState().purchased, [tensTier.id]: 12 },
     }
     saveGameState(state)
-    expect(loadGameState().purchased.ones).toBe(12)
+    expect(loadGameState().purchased[tensTier.id]).toBe(12)
   })
 
   it('preserves prestige level and PP', () => {
@@ -60,37 +62,37 @@ describe('saveGameState / loadGameState round-trip', () => {
   it('preserves autobuyer levels', () => {
     const state = {
       ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, ones: 2 },
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 2 },
     }
     saveGameState(state)
-    expect(loadGameState().autobuyers.ones).toBe(2)
+    expect(loadGameState().autobuyers[tensTier.id]).toBe(2)
   })
 
   it('migrates legacy boolean autobuyer true to level 1', () => {
     const rawState = {
       ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, ones: true },
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: true },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers.ones).toBe(1)
+    expect(loadGameState().autobuyers[tensTier.id]).toBe(1)
   })
 
   it('migrates legacy boolean autobuyer false to null (locked)', () => {
     const rawState = {
       ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, ones: false },
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: false },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers.ones).toBeNull()
+    expect(loadGameState().autobuyers[tensTier.id]).toBeNull()
   })
 
   it('migrates legacy numeric autobuyer 0 to null (locked)', () => {
     const rawState = {
       ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, ones: 0 },
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 0 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers.ones).toBeNull()
+    expect(loadGameState().autobuyers[tensTier.id]).toBeNull()
   })
 })
 
@@ -108,7 +110,7 @@ describe('schema migration', () => {
   it('fills in missing resource keys from newer tiers', () => {
     const partial = {
       ...createInitialGameState(),
-      resources: { money: 10 }, // only money, missing all others
+      resources: { [MONEY_ID]: 10 }, // only money, missing all others
     }
     localStorage.setItem('tens_game_state', JSON.stringify(partial))
     const loaded = loadGameState()
@@ -120,24 +122,24 @@ describe('schema migration', () => {
   it('fills in missing owned keys for newer tiers', () => {
     const partial = {
       ...createInitialGameState(),
-      owned: { ones: 5 }, // only ones, missing others
+      owned: { [tensTier.id]: 5 }, // only the first tier, missing others
     }
     localStorage.setItem('tens_game_state', JSON.stringify(partial))
     const loaded = loadGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.owned).toHaveProperty(tier.id)
     })
-    expect(loaded.owned.ones).toBe(5) // existing value preserved
+    expect(loaded.owned[tensTier.id]).toBe(5) // existing value preserved
   })
 
   it('adds purchased from owned for older saves missing purchased', () => {
     const { purchased: _removedForTest, ...oldSave } = {
       ...createInitialGameState(),
-      owned: { ...createInitialGameState().owned, ones: 7 },
+      owned: { ...createInitialGameState().owned, [tensTier.id]: 7 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.purchased.ones).toBe(7)
+    expect(loaded.purchased[tensTier.id]).toBe(7)
   })
 })
 

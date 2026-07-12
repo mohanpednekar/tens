@@ -7,24 +7,24 @@ beforeEach(() => {
   localStorage.clear()
 })
 
-test('renders the game title and the Ones tier', () => {
+test('renders the game title and the Tens tier', () => {
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/ones layer/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for \$10/i })).toBeEnabled()
+  expect(screen.getByLabelText(/^tens layer$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
-test('buying Ones deducts cost and increases owned count', async () => {
+test('buying Tens deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for \$10/i }))
+  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
 
   expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
-  // After spending $10 on the first Ones (cost=$10), money=$0. Next cost=$11 — button disabled.
-  expect(screen.getByRole('button', { name: /buy for \$11/i })).toBeDisabled()
+  // After spending $10 on the first Tens (cost=$10), money=$0. Next cost=$11 — button disabled.
+  expect(screen.getByRole('button', { name: /buy for \$11\b/i })).toBeDisabled()
 })
 
 test('reset game restores starting state', async () => {
@@ -32,15 +32,15 @@ test('reset game restores starting state', async () => {
 
   render(<App />)
 
-  // Buy an Ones generator to dirty the state
-  await user.click(screen.getByRole('button', { name: /buy for \$10/i }))
+  // Buy a Tens generator to dirty the state
+  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
   expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
 
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(screen.getByText(/owned: 0/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for \$10/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
 test('reset clears localStorage', async () => {
@@ -48,44 +48,41 @@ test('reset clears localStorage', async () => {
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for \$10/i }))
+  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
 
   // After reset the save-effect fires with fresh state, so money should be back to 10
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved).not.toBeNull()
-  expect(saved.resources.money).toBe(10)
-  expect(saved.owned.ones).toBe(0)
+  expect(saved.resources.Ones).toBe(10)
+  expect(saved.owned.Tens).toBe(0)
 })
 
-test('tens layer shows ones as its cost resource when unlocked', () => {
+test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { ones: 10 },
-    owned: { ones: 10 },
+    resources: { Ones: 1000 },
+    owned: { Tens: 10 },
   }))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/tens layer/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for 10 ones/i })).toBeEnabled()
+  expect(screen.getByLabelText(/^thousands layer$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /buy for \$1,000\b/i })).toBeEnabled()
 })
 
-test('buying hundreds also deducts the spent tens from the previous layer', async () => {
+test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { tens: 10 },
-    owned: { ones: 10, tens: 10 },
+    resources: { Ones: 1000 },
+    owned: { Tens: 10 },
   }))
 
   render(<App />)
 
-  const buyHundreds = screen.getByRole('button', { name: /buy for 10 tens/i })
-  expect(buyHundreds).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: /buy for \$1,000\b/i }))
 
-  await user.click(buyHundreds)
-
-  expect(screen.getByLabelText(/hundreds layer/i)).toHaveTextContent(/owned: 1/i)
-  expect(screen.getByLabelText(/tens layer/i)).toHaveTextContent(/owned: 0/i)
+  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent(/owned: 1/i)
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 10/i)
 })
