@@ -638,6 +638,14 @@ describe('prestigeGame', () => {
     expect(prestigeGame(state)).toBe(state)
   })
 
+  it('does nothing when money is undefined or non-finite (corrupted save)', () => {
+    const undefinedMoney = withMoney(createInitialGameState(), undefined)
+    expect(prestigeGame(undefinedMoney)).toBe(undefinedMoney)
+
+    const nanMoney = withMoney(createInitialGameState(), NaN)
+    expect(prestigeGame(nanMoney)).toBe(nanMoney)
+  })
+
   it('increments prestige level by 1', () => {
     const state = withMoney(createInitialGameState(), GOOGOL)
     const after = prestigeGame(state)
