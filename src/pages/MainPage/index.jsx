@@ -131,7 +131,7 @@ const MainPage = () => {
       <StatCard aria-label="exponent points display">
         <MutedText>
           <GoldText>{prestige.xp} XP</GoldText>
-          {' · '}Next XP at {formatAmount(10 ** (prestige.highestMilestone + 1))} Money
+          {' · '}Next XP at {formatCurrency(10 ** (prestige.highestMilestone + 1))}
         </MutedText>
       </StatCard>
 
