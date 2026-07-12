@@ -55,8 +55,8 @@ export const formatCurrency = value =>
 
 // Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
 // epoch = floor(purchased / 10); cost = baseCost * 10^epoch
-export const getTierCost = (tier, owned) => {
-  const epoch = Math.floor(clampNonNegative(owned) / 10)
+export const getTierCost = (tier, purchased) => {
+  const epoch = Math.floor(clampNonNegative(purchased) / 10)
   return tier.baseCost * (10 ** epoch)
 }
 
@@ -269,7 +269,7 @@ export const buyAutobuyer = tierId => state => {
 // Autobuyer unlocks are permanent across prestige (non-null stays unlocked at level 0),
 // while run-funded autobuyer levels reset to 0.
 export const prestigeGame = state => {
-  if (state.resources[MONEY_ID] < GOOGOL) return state
+  if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
   const initial = createInitialGameState()
   const resetAutobuyers = Object.fromEntries(
