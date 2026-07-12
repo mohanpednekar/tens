@@ -59,6 +59,14 @@ status quo (a pass with no new actionable comments and CI green, or only pre-exi
 failures left). Don't stop after a single round just because the latest round of comments was
 addressed — the loop isn't done until nothing new shows up.
 
+## Documentation
+
+Always update this file (`CLAUDE.md`) in the same change/commit as any code change it describes —
+don't leave it as a follow-up. If a change touches function signatures, constants, state shape,
+economy/game-rule behavior, file layout, or test counts documented below, update the corresponding
+section here before considering the change done. A code change and a stale doc describing the old
+behavior should never ship together.
+
 ## Repo layout
 
 ```
