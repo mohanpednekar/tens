@@ -1,10 +1,11 @@
-import Button, { VisuallyHiddenProgress } from 'components/Button'
+import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
-import styled, { css } from 'styled-components'
+import { useState } from 'react'
+import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -55,6 +56,14 @@ const TierList = styled.div`
 // white/green/gold/darkgrey coloring used for affordability elsewhere in the row.
 const TIER_ACCENT_COLORS = ['#60a5fa', '#f472b6', '#a78bfa', '#fb923c', '#22d3ee', '#38bdf8', '#f87171', '#818cf8']
 
+// One-shot entrance for a tier row that unlocks during the current session (see
+// $animateReveal below) — never replays on ordinary re-renders since it's a mount-time
+// CSS animation, not a transition tied to any prop.
+const reveal = keyframes`
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+`
+
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
 // Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
@@ -69,10 +78,15 @@ const TierLine = styled(StatCard)`
   padding: 0.5rem 0.85rem;
   border-left: 3px solid ${props => props.$accent};
   transition: border-color 0.15s ease;
+  animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
   &:hover {
     border-color: #444;
     border-left-color: ${props => props.$accent};
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 
   @media (max-width: 40rem) {
@@ -197,6 +211,13 @@ const MainPage = () => {
   const prestigeBonus = productionMultiplier(prestige.level)
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
+  // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
+  // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
+  // load never plays the reveal animation, even though every unlocked row technically "mounts"
+  // fresh on every load; only a tier unlocking during this session (not in the snapshot) does.
+  const [initialUnlockedIds] = useState(() =>
+    new Set(TIER_DEFINITIONS.filter(tier => isTierUnlocked(state)(tier)).map(tier => tier.id))
+  )
   const moneyPerSec = TIER_DEFINITIONS
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
@@ -285,7 +306,12 @@ const MainPage = () => {
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
 
           return (
-            <TierLine key={tier.id} aria-label={`${tier.name} layer`} $accent={accent}>
+            <TierLine
+              key={tier.id}
+              aria-label={`${tier.name} layer`}
+              $accent={accent}
+              $animateReveal={!initialUnlockedIds.has(tier.id)}
+            >
               <TierName>
                 {tier.name}
                 {autobuyerLevel > 0 && (
@@ -312,7 +338,7 @@ const MainPage = () => {
                 $pulse={canAfford}
               >
                 {buyLabel}
-                <VisuallyHiddenProgress
+                <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
                   aria-valuenow={doneInBlock}
@@ -330,7 +356,7 @@ const MainPage = () => {
                 $pulse={canUpgradeAutobuyer}
               >
                 {upgradeLabel}
-                <VisuallyHiddenProgress
+                <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} autobuyer progress`}
                   aria-valuenow={autobuyerProgressPercent}
@@ -346,8 +372,9 @@ const MainPage = () => {
       <PrestigeCard aria-label="prestige panel">
         <div>
           <h2>Prestige</h2>
-          <MutedText>
-            Reach 1 Googol Money to gain 1 Prestige Level, doubling all production.
+          <MutedText id="prestige-description">
+            Reach 1 Googol Money to gain 1 Prestige Level, doubling all production. Resets your
+            resources when reached.
           </MutedText>
         </div>
         <div>
@@ -360,6 +387,7 @@ const MainPage = () => {
           </MutedText>
         </div>
         <Button
+          aria-describedby="prestige-description"
           aria-label={prestigeLabel}
           color={canPrestige ? '#fbbf24' : 'darkgrey'}
           disabled={!canPrestige}
@@ -371,7 +399,7 @@ const MainPage = () => {
           $pulse={canPrestige}
         >
           {prestigeLabel}
-          <VisuallyHiddenProgress
+          <VisuallyHidden
             role="progressbar"
             aria-label="Prestige progress"
             aria-valuenow={prestigeProgressPercent}
@@ -381,7 +409,17 @@ const MainPage = () => {
         </Button>
       </PrestigeCard>
 
-      <Button type="button" onClick={resetGame} title="Erases all progress and starts over">Reset game</Button>
+      <Button
+        aria-describedby="reset-description"
+        aria-label="Reset game"
+        color="#a3a3a3"
+        type="button"
+        onClick={resetGame}
+        title="Erases all progress and starts over"
+      >
+        Reset game
+        <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
+      </Button>
     </RootDiv>
   )
 }
