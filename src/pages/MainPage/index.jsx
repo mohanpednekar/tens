@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled, { css } from 'styled-components'
@@ -139,6 +139,7 @@ const MainPage = () => {
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   const prestigeBonus = productionMultiplier(prestige.level)
+  const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const moneyPerSec = TIER_DEFINITIONS
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
@@ -248,7 +249,7 @@ const MainPage = () => {
             <MutedText>×{prestigeBonus} production bonus</MutedText>
           )}
           <MutedText>
-            {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money
+            {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
           </MutedText>
         </div>
         <Button
