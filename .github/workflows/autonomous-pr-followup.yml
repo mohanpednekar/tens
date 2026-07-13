@@ -77,8 +77,9 @@ jobs:
           # check_suite can all fire for PRs opened from a fork, and a fork branch can be
           # named anything, including something that *looks* like claude/auto-*. Only ever
           # check out a branch that actually lives in this repository, not a fork.
-          pr_json=$(gh pr view "$number" --json headRefName,isCrossRepository)
+          pr_json=$(gh pr view "$number" --json headRefName,headRefOid,isCrossRepository)
           branch=$(jq -r '.headRefName' <<<"$pr_json")
+          sha=$(jq -r '.headRefOid' <<<"$pr_json")
           is_cross_repo=$(jq -r '.isCrossRepository' <<<"$pr_json")
 
           if [ "$is_cross_repo" = "true" ]; then
@@ -96,11 +97,17 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         if: steps.pr.outputs.skip != 'true'
         with:
-          ref: ${{ steps.pr.outputs.branch }}
+          # Pin to the exact commit resolved above, not the branch name: the branch is
+          # mutable, so re-resolving "the current tip of claude/auto-*" at checkout time
+          # would reopen a TOCTOU window between the authorization check above and the
+          # code we actually run — someone could push different content to the branch in
+          # between. A SHA is immutable, so this checks out exactly what was authorized.
+          ref: ${{ steps.pr.outputs.sha }}
           fetch-depth: 0
 
       - name: Enable Corepack
@@ -159,8 +166,12 @@ jobs:
             - If there's actionable review feedback (human or bot — Copilot, Codex, etc.), address
               it directly if you're confident, matching CLAUDE.md's Pull requests section.
             - If CI is failing, fix the real underlying cause.
-            - Push your fix to the EXISTING branch (${{ steps.pr.outputs.branch }}) — never create a
-              new branch or a new PR for this.
+            - The checkout is pinned to a specific commit, so you're on a detached HEAD. Before
+              committing, run `git checkout -B ${{ steps.pr.outputs.branch }}` to attach to the real
+              branch, then commit and push normally to the EXISTING branch
+              (${{ steps.pr.outputs.branch }}) — never create a new branch or a new PR for this. If
+              the push is rejected as non-fast-forward, someone else changed the branch since this
+              run started — stop rather than force-pushing over it.
             - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
               disable a check to route around it — fixes must be genuine.
             - Never force-push, never push to main, never modify anything under .github/workflows/.
