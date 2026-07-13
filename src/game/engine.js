@@ -106,6 +106,13 @@ export const getAutobuyerCost = currentLevel =>
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
+// Each Upgrade level (the autobuyer's level) also doubles that tier's own production: level 0
+// (unlocked but idle) is a no-op multiplier (2^0 = 1), so the visible effect only starts once a
+// level is actually purchased — the same level also grants another auto-purchase attempt per
+// tick (see tickGame).
+export const getAutobuyerProductionMultiplier = autobuyerLevel =>
+  2 ** clampNonNegative(autobuyerLevel ?? 0)
+
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
 // Already-owned tiers stay unlocked so older saves remain playable after rule changes.
 export const isTierUnlocked = state => tier => {
@@ -177,8 +184,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
-    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
-    
+    const tierMultiplier = getAutobuyerProductionMultiplier(stateAfterAutobuyers.autobuyers[tier.id])
+    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier * tierMultiplier
+
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
     if (tier.producesResourceId !== MONEY_ID) {
