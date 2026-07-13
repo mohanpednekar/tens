@@ -593,6 +593,20 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(3)
     expect(after.resources[MONEY_ID]).toBe(3)
   })
+
+  it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
+    // $1,000 affords exactly one of: 1 Thousands ($1,000) or 1 Tens ($10) — not both.
+    const state = withAutobuyer(
+      withAutobuyer(
+        withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 1000),
+        tensTier.id
+      ),
+      thousandsTier.id
+    )
+    const after = tickGame(1)(state)
+    expect(after.purchased[thousandsTier.id]).toBe(1)
+    expect(after.purchased[tensTier.id]).toBe(0)
+  })
 })
 
 // ─── buyAutobuyer ────────────────────────────────────────────────────────────

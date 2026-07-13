@@ -160,7 +160,7 @@ increases and is what `getTierCost` scales against, so passively-produced `owned
 | `getTierAffordableQuantity` | `(tier, purchased, spendable, requestedQuantity) → number` | Further caps `getTierBulkQuantity` by what `spendable` can actually pay for — what `buyTierQuantity` will actually purchase |
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `Ones`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | Runs autobuyers, then produces resources for every unlocked tier, then checks milestones. Each active autobuyer attempts up to `level` purchases; at `autobuyerBatchSize` 1 (default) each attempt buys 1 unit as soon as affordable (unchanged legacy behavior); above 1 (the ×10 toggle) each attempt only buys once the tier can afford the *entire* current cost block up to that size — it holds and waits rather than buying a partial batch |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | Runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier, then checks milestones. Each active autobuyer attempts up to `level` purchases; at `autobuyerBatchSize` 1 (default) each attempt buys 1 unit as soon as affordable (unchanged legacy behavior); above 1 (the ×10 toggle) each attempt only buys once the tier can afford the *entire* current cost block up to that size — it holds and waits rather than buying a partial batch |
 | `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` — this is what the manual "Buy" button always calls (1 unit), regardless of the ×1/×10 toggle |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; used internally by `tickGame`'s autobuyer batching, not called directly by the UI |
 | `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0); subsequent calls upgrade the level (spends the tier's own resource) |
@@ -194,7 +194,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (135 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (136 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
