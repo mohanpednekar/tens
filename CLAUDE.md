@@ -86,12 +86,17 @@ step fails immediately with "Could not fetch an OIDC token" before ever reaching
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
 constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token
-API billing): bounded per-run by `--max-turns` (25 for `autonomous-maintenance.yml`, 20 for
+API billing): bounded per-run by `--max-turns` (40 for `autonomous-maintenance.yml`, 20 for
 `autonomous-pr-followup.yml`) as a best-effort proxy since there's no hard programmatic budget cutoff,
 and naturally self-limited further by the PR-dedup guard (see below), which caps the number of
-concurrently-open autonomous PRs. Watch actual usage against your plan's weekly quota and
-tighten `--max-turns` (or pin a cheaper model via `claude_args`) further if runs consistently use too
-much. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dependency caching before
+concurrently-open autonomous PRs. `autonomous-maintenance.yml`'s cap started at 25 but was raised to 40
+after the first live run under the Phase A/B prompt (see Orchestration model below) hit `error_max_turns`
+and failed outright at only 26 turns / ~$0.79 of cost — the extra `gh issue` lookups and the full
+read-CLAUDE.md → choose → implement → test → commit → push → open-PR round trip genuinely need more
+headroom than a bare menu pick did, and the observed cost-per-turn leaves ample room within the weekly
+quota. Watch actual usage against your plan's weekly quota and tighten `--max-turns` (or pin a cheaper
+model via `claude_args`) further if runs consistently use too much. Both Claude-invoking workflows set
+up Node 22 + Yarn via Corepack with dependency caching before
 invoking Claude (matching `ci.yml`), so `yarn install`/`yarn test` inside the agentic run don't waste
 turn budget on toolchain setup.
 
@@ -108,7 +113,7 @@ auto-merge workflows carry each PR to merge.
 In an interactive session, when the user is discussing features, strategy, or a body of work, the
 default deliverable is well-specified `claude-task` issues (created through the GitHub tooling), not
 direct implementation — implement live only when the user explicitly asks for that. Write each issue
-so an unattended 25-turn run can complete it without asking questions: one issue = one PR = one run.
+so an unattended 40-turn run can complete it without asking questions: one issue = one PR = one run.
 Split anything bigger into a sequence of issues ordered with "Blocked by #N" lines in the Dependencies
 section. An issue's optional "Explicit authorizations" section is the maintainer's written sign-off
 for changes the workflow otherwise hard-bans (e.g. adding a tier to `TIER_DEFINITIONS`); security
@@ -146,10 +151,11 @@ single most valuable applicable task from:
 Adding new tiers to `TIER_DEFINITIONS` (and game-design/economy changes generally) is banned during
 Phase B menu runs, and allowed in Phase A only when the task issue's "Explicit authorizations"
 section explicitly permits that specific change — see the Orchestration model above. `--max-turns`
-is capped (currently 25) as a best-effort approximation of "no more than roughly 5% of weekly Claude
-usage quota per run" — Claude Code has no hard programmatic budget cutoff, so this is a turn-count
-proxy, not a guarantee; watch actual usage against your plan's weekly quota and tighten the cap
-further if a run is consistently using too much.
+is capped (currently 40, raised from an initial 25 — see the Cost implications note above) as a
+best-effort approximation of a small, bounded fraction of weekly Claude usage quota per run — Claude
+Code has no hard programmatic budget cutoff, so this is a turn-count proxy, not a guarantee; watch
+actual usage against your plan's weekly quota and tighten the cap further if a run is consistently
+using too much.
 
 PRs are minimised for *similar* work but not capped to one at a time: the guard step passes the list
 of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Claude is instructed to
