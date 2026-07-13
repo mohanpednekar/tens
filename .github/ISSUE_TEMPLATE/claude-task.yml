@@ -1,0 +1,84 @@
+name: Claude task
+description: >-
+  A well-defined, run-sized task for the autonomous maintenance workflow to implement.
+  One issue = one PR, completed in a single scheduled run — split bigger features into
+  multiple issues ordered with "Blocked by #N".
+labels: ["claude-task"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      description: One sentence — what exists after this task that doesn't exist now.
+      placeholder: e.g. The Prestige panel shows projected XP gain before the player commits.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / why
+      description: Why this task matters, plus links to any strategy discussion behind it.
+    validations:
+      required: false
+
+  - type: textarea
+    id: spec
+    attributes:
+      label: Spec / acceptance criteria
+      description: >-
+        Concrete, testable checklist. The implementing run is unattended and cannot ask
+        questions — anything ambiguous here will be guessed at.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files likely touched
+      description: Optional hints, one per line.
+      placeholder: |
+        src/game/engine.js
+        src/pages/MainPage/index.jsx
+    validations:
+      required: false
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Explicit non-goals, to stop scope creep during the unattended run.
+    validations:
+      required: false
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: What to run or observe beyond `yarn test` to confirm the task is done.
+    validations:
+      required: false
+
+  - type: textarea
+    id: authorizations
+    attributes:
+      label: Explicit authorizations
+      description: >-
+        Changes this issue explicitly permits that the workflow otherwise hard-bans — e.g.
+        "may add a tier to TIER_DEFINITIONS". Leave empty to keep all standard bans in force.
+        Security constraints (no --no-verify, no other-workflow edits, never push to main,
+        never self-merge) can never be authorized away.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: 'Optional ordering, one per line: "Blocked by #N". The workflow skips this task while any blocking issue is still open.'
+      placeholder: "Blocked by #42"
+    validations:
+      required: false
