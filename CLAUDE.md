@@ -87,8 +87,10 @@ step fails immediately with "Could not fetch an OIDC token" before ever reaching
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
 constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token
-API billing): bounded per-run by `--max-turns` (40 for `autonomous-maintenance.yml`, 20 for
-`autonomous-pr-followup.yml`) as a best-effort proxy since there's no hard programmatic budget cutoff,
+API billing): bounded per-run by `--max-turns` (50 for `autonomous-maintenance.yml`, 30 for
+`autonomous-pr-followup.yml` — every tool call counts as a turn, and a real implementation run
+needs 30–50 of them; the original caps of 25/20 made runs fail with `error_max_turns` before
+finishing) as a best-effort proxy since there's no hard programmatic budget cutoff,
 and naturally self-limited further by the PR-dedup guard (see below), which caps the number of
 concurrently-open autonomous PRs. `autonomous-maintenance.yml`'s cap started at 25 but was raised to 40
 after the first live run under the Phase A/B prompt (see Orchestration model below) hit `error_max_turns`
@@ -114,7 +116,7 @@ auto-merge workflows carry each PR to merge.
 In an interactive session, when the user is discussing features, strategy, or a body of work, the
 default deliverable is well-specified `claude-task` issues (created through the GitHub tooling), not
 direct implementation — implement live only when the user explicitly asks for that. Write each issue
-so an unattended 40-turn run can complete it without asking questions: one issue = one PR = one run.
+so an unattended 50-turn run can complete it without asking questions: one issue = one PR = one run.
 Split anything bigger into a sequence of issues ordered with "Blocked by #N" lines in the Dependencies
 section. An issue's optional "Explicit authorizations" section is the maintainer's written sign-off
 for changes the workflow otherwise hard-bans (e.g. adding a tier to `TIER_DEFINITIONS`); security
@@ -174,11 +176,11 @@ single most valuable applicable task from:
 Adding new tiers to `TIER_DEFINITIONS` (and game-design/economy changes generally) is banned during
 Phase B menu runs, and allowed in Phase A only when the task issue's "Explicit authorizations"
 section explicitly permits that specific change — see the Orchestration model above. `--max-turns`
-is capped (currently 40, raised from an initial 25 — see the Cost implications note above) as a
-best-effort approximation of a small, bounded fraction of weekly Claude usage quota per run — Claude
-Code has no hard programmatic budget cutoff, so this is a turn-count proxy, not a guarantee; watch
-actual usage against your plan's weekly quota and tighten the cap further if a run is consistently
-using too much.
+is capped (currently 50) as a best-effort budget proxy — sized so a full implement-test-PR run fits,
+since every tool call counts as a turn; Claude Code has no hard programmatic budget cutoff, so watch
+actual usage against your plan's weekly quota and tighten the cap if runs consistently use too much,
+but not below what a real task run needs (~30–50 turns), or every Phase A run will fail with
+`error_max_turns` before opening its PR.
 
 PRs are minimised for *similar* work but not capped to one at a time: the guard step passes the list
 of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Claude is instructed to
@@ -196,7 +198,7 @@ denied to Claude's Edit/Write tools, even during the self-improvement task — o
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
 the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
 failing check suites, filters to PRs on `claude/auto-*` branches only, and re-invokes Claude
-(`--max-turns 20`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
+(`--max-turns 30`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
 branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files).
 

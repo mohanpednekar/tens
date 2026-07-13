@@ -94,7 +94,7 @@ jobs:
           base_branch: main
           branch_prefix: claude/auto-
           claude_args: |
-            --max-turns 40
+            --max-turns 50
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh label create:*)"
           settings: |
             {
@@ -117,8 +117,9 @@ jobs:
             You are running as a scheduled, unattended maintenance job on this repository
             (REPO: ${{ github.repository }}). Nobody is watching this run, so only make changes
             you are confident are safe, small, and correct. Your turn budget is deliberately capped
-            (--max-turns 40) to keep each run to a small fraction of the weekly Claude usage quota —
-            work efficiently and don't try to raise that cap yourself.
+            (--max-turns 50; every tool call counts as a turn) to keep each run to a small fraction
+            of the weekly Claude usage quota — work efficiently, avoid redundant reads and
+            re-checks, and don't try to raise that cap yourself.
 
             Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
             setup, and you must follow it exactly.
