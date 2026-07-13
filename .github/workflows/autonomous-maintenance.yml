@@ -1,0 +1,105 @@
+name: Autonomous maintenance
+
+on:
+  schedule:
+    - cron: "0 */5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: autonomous-maintenance
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for an already-open autonomous PR
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count=$(gh pr list --state open --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("claude/auto-"))] | length')
+          if [ "$count" -gt 0 ]; then
+            echo "An autonomous maintenance PR is already open — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run autonomous maintenance task
+        if: steps.guard.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          base_branch: main
+          branch_prefix: claude/auto-
+          claude_args: |
+            --max-turns 60
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*)"
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Edit(.github/workflows/**)",
+                  "Write(.github/workflows/**)"
+                ]
+              }
+            }
+          prompt: |
+            You are running as a scheduled, unattended maintenance job on this repository
+            (REPO: ${{ github.repository }}). Nobody is watching this run, so only make changes
+            you are confident are safe, small, and correct.
+
+            Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
+            setup, and you must follow it exactly.
+
+            Pick exactly ONE of the following tasks this run — whichever is most valuable given the
+            current state of the repo. Look at recent commit history and any currently-open PRs
+            first so you don't redo work already in flight.
+
+            1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
+               src/game/layers.js, or src/game/storage.js and add tests for them.
+            2. Dependency & security maintenance — run `yarn audit`, and if there are safe patch or
+               minor version bumps available, apply them via `yarn install` (respecting yarn.lock,
+               Yarn Classic v1 format) and confirm nothing breaks.
+            3. Code quality / simplification — look for dead code, duplicated logic, or drift from
+               CLAUDE.md's documented three-layer architecture (engine.js / useIncrementalGame.js /
+               MainPage) and fix it.
+            4. CLAUDE.md documentation sync — compare CLAUDE.md's documented function signatures,
+               constants, state shape, and test counts against the real source, and correct any
+               drift you find.
+
+            Hard constraints, no exceptions:
+            - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js) —
+              adding new tiers is a game-design decision reserved for the human maintainer.
+            - Never modify anything under .github/workflows/, including this workflow file.
+            - Never change the dev/test server host binding away from 127.0.0.1.
+            - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
+              force-push, and never push directly to main.
+            - If a change touches anything CLAUDE.md documents (function signatures, constants,
+              state shape, economy/game-rule behavior, file layout, or test counts), update
+              CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
+            - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
+              before doing anything else.
+
+            If, after surveying the repo, none of the four tasks has anything safe and meaningful to
+            do this run, make no changes and end without creating a branch or PR — do not force a
+            change just to have something to show.
+
+            If you do make a change: create a branch named `claude/auto-<short-task-slug>`, commit,
+            push it, and open a pull request against main using `gh pr create`. Structure the PR body
+            to match .github/pull_request_template.md (Summary / Test plan / Documentation sections),
+            filling in the checkboxes truthfully based on what you actually ran.

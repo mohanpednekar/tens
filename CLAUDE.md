@@ -60,6 +60,19 @@ status quo (a pass with no new actionable comments and CI green, or only pre-exi
 failures left). Don't stop after a single round just because the latest round of comments was
 addressed — the loop isn't done until nothing new shows up.
 
+## Autonomous maintenance workflow
+
+`.github/workflows/autonomous-maintenance.yml` runs Claude Code unattended every 5 hours (cron
+`0 */5 * * *`, plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. Each run it
+picks the single most valuable applicable task from a fixed menu — test coverage gaps, dependency/
+security maintenance (`yarn audit` + safe patch/minor bumps), code quality/simplification, or
+CLAUDE.md documentation sync — makes the smallest safe change, verifies with `yarn test`
+(and `yarn build` for dependency bumps), and opens a PR through the normal review flow (it never
+auto-merges). Adding new tiers to `TIER_DEFINITIONS` is deliberately excluded from this menu — that
+stays a human decision. If no task applies, or a PR from a previous autonomous run (branch prefix
+`claude/auto-`) is still open, the run makes no changes. Requires a `CLAUDE_CODE_OAUTH_TOKEN` repo
+secret to authenticate.
+
 ## Documentation
 
 Always update this file (`CLAUDE.md`) in the same change/commit as any code change it describes —
