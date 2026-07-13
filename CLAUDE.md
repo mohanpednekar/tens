@@ -77,6 +77,12 @@ safeguard) — with the default token, `ci.yml` would silently stop re-running o
 fixes, and `deploy.yml` would silently stop firing when the bot's PRs get merged to `main`. Using a PAT
 for these specific operations avoids that gap without any workaround.
 
+The two Claude-invoking workflows (`autonomous-maintenance.yml`, `autonomous-pr-followup.yml`) also
+need `id-token: write` in their `permissions:` block — `claude-code-action`'s `claude_code_oauth_token`
+auth path requests a GitHub Actions OIDC token as part of its setup, and without that permission the
+step fails immediately with "Could not fetch an OIDC token" before ever reaching the actual task.
+`pr-auto-merge.yml` doesn't invoke Claude, so it doesn't need this.
+
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
 constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token

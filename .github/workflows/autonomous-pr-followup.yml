@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 concurrency:
   group: autonomous-pr-followup-${{ github.event.pull_request.number || github.event.issue.number || github.event.check_suite.head_branch }}
