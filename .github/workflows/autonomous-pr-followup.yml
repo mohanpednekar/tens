@@ -1,0 +1,130 @@
+name: Autonomous PR follow-up
+
+on:
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: autonomous-pr-followup-${{ github.event.pull_request.number || github.event.issue.number || github.event.check_suite.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Resolve target PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${{ github.event_name }}" in
+            pull_request_review)
+              branch="${{ github.event.pull_request.head.ref }}"
+              number="${{ github.event.pull_request.number }}"
+              ;;
+            issue_comment)
+              if [ -z "${{ github.event.issue.pull_request.url || '' }}" ]; then
+                echo "Not a PR comment, skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              number="${{ github.event.issue.number }}"
+              branch=$(gh pr view "$number" --json headRefName --jq .headRefName)
+              ;;
+            check_suite)
+              if [ "${{ github.event.check_suite.conclusion }}" != "failure" ]; then
+                echo "Check suite did not fail, nothing to do."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              branch="${{ github.event.check_suite.head_branch }}"
+              number=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+              if [ -z "$number" ]; then
+                echo "No open PR for this branch, skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              ;;
+          esac
+
+          if [[ "$branch" != claude/auto-* ]]; then
+            echo "Not an autonomous-maintenance PR (branch: $branch), skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          ref: ${{ steps.pr.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Address feedback / fix CI on the PR
+        if: steps.pr.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          claude_args: |
+            --max-turns 20
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Edit(.github/workflows/ci.yml)",
+                  "Write(.github/workflows/ci.yml)",
+                  "Edit(.github/workflows/deploy.yml)",
+                  "Write(.github/workflows/deploy.yml)",
+                  "Edit(.github/workflows/dependabot-lockfile.yml)",
+                  "Write(.github/workflows/dependabot-lockfile.yml)",
+                  "Edit(.github/workflows/autonomous-maintenance.yml)",
+                  "Write(.github/workflows/autonomous-maintenance.yml)",
+                  "Edit(.github/workflows/pr-auto-merge.yml)",
+                  "Write(.github/workflows/pr-auto-merge.yml)"
+                ]
+              }
+            }
+          prompt: |
+            You are following up, unattended, on PR #${{ steps.pr.outputs.number }}
+            (branch ${{ steps.pr.outputs.branch }}) in ${{ github.repository }}. This PR was opened by
+            the autonomous maintenance workflow, and this run was triggered by new review activity, a
+            new comment, or a failing check on it. Your turn budget is capped
+            (--max-turns 20) — work efficiently.
+
+            Read CLAUDE.md first and follow it exactly.
+
+            Use `gh pr view ${{ steps.pr.outputs.number }} --comments` and
+            `gh pr view ${{ steps.pr.outputs.number }} --json reviews` (or equivalent) to see the
+            latest review comments, and check recent CI runs, to figure out what actually needs
+            fixing right now.
+
+            - If there's actionable review feedback (human or bot — Copilot, Codex, etc.), address
+              it directly if you're confident, matching CLAUDE.md's Pull requests section.
+            - If CI is failing, fix the real underlying cause.
+            - Push your fix to the EXISTING branch (${{ steps.pr.outputs.branch }}) — never create a
+              new branch or a new PR for this.
+            - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
+              disable a check to route around it — fixes must be genuine.
+            - Never force-push, never push to main, never modify anything under .github/workflows/.
+            - Run `yarn test` (and `yarn build` if relevant) and confirm it is green before pushing.
+            - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same commit.
+            - Never merge or approve this PR yourself.
+
+            If nothing here is actually actionable (e.g. a comment is just a question, or CI is
+            already green), make no changes.

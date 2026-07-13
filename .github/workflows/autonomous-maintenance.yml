@@ -40,28 +40,38 @@ jobs:
         if: steps.guard.outputs.skip != 'true'
         uses: anthropics/claude-code-action@v1
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           base_branch: main
           branch_prefix: claude/auto-
           claude_args: |
-            --max-turns 60
+            --max-turns 25
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*)"
           settings: |
             {
               "permissions": {
                 "deny": [
-                  "Edit(.github/workflows/**)",
-                  "Write(.github/workflows/**)"
+                  "Edit(.github/workflows/ci.yml)",
+                  "Write(.github/workflows/ci.yml)",
+                  "Edit(.github/workflows/deploy.yml)",
+                  "Write(.github/workflows/deploy.yml)",
+                  "Edit(.github/workflows/dependabot-lockfile.yml)",
+                  "Write(.github/workflows/dependabot-lockfile.yml)",
+                  "Edit(.github/workflows/autonomous-pr-followup.yml)",
+                  "Write(.github/workflows/autonomous-pr-followup.yml)",
+                  "Edit(.github/workflows/pr-auto-merge.yml)",
+                  "Write(.github/workflows/pr-auto-merge.yml)"
                 ]
               }
             }
           prompt: |
             You are running as a scheduled, unattended maintenance job on this repository
             (REPO: ${{ github.repository }}). Nobody is watching this run, so only make changes
-            you are confident are safe, small, and correct.
+            you are confident are safe, small, and correct. Your turn budget is deliberately capped
+            (--max-turns 25) to keep each run to a small fraction of the weekly Claude usage quota —
+            work efficiently and don't try to raise that cap yourself.
 
             Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
             setup, and you must follow it exactly.
@@ -81,11 +91,21 @@ jobs:
             4. CLAUDE.md documentation sync — compare CLAUDE.md's documented function signatures,
                constants, state shape, and test counts against the real source, and correct any
                drift you find.
+            5. Workflow self-improvement — review this task menu and this workflow file
+               (.github/workflows/autonomous-maintenance.yml) itself: tighten a task description,
+               add a new low-risk task type, or retire one that repeatedly finds nothing to do. You
+               may edit ONLY .github/workflows/autonomous-maintenance.yml for this task — no other
+               file under .github/workflows/. You must NOT weaken or remove, even in the name of
+               "improving" it: the duplicate-PR guard step, the --max-turns budget cap, the
+               settings.permissions.deny list protecting the other workflow files, the requirement
+               that you never merge your own PR, or the requirement to always open a PR for human
+               review instead of pushing straight to main.
 
             Hard constraints, no exceptions:
             - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js) —
               adding new tiers is a game-design decision reserved for the human maintainer.
-            - Never modify anything under .github/workflows/, including this workflow file.
+            - Never modify .github/workflows/ci.yml, deploy.yml, dependabot-lockfile.yml,
+              autonomous-pr-followup.yml, or pr-auto-merge.yml.
             - Never change the dev/test server host binding away from 127.0.0.1.
             - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
               force-push, and never push directly to main.
@@ -95,7 +115,7 @@ jobs:
             - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
               before doing anything else.
 
-            If, after surveying the repo, none of the four tasks has anything safe and meaningful to
+            If, after surveying the repo, none of the five tasks has anything safe and meaningful to
             do this run, make no changes and end without creating a branch or PR — do not force a
             change just to have something to show.
 

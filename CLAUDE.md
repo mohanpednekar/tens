@@ -60,18 +60,70 @@ status quo (a pass with no new actionable comments and CI green, or only pre-exi
 failures left). Don't stop after a single round just because the latest round of comments was
 addressed — the loop isn't done until nothing new shows up.
 
-## Autonomous maintenance workflow
+Keep PRs green through genuine fixes only — never `--no-verify`, never disable or delete a failing
+test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
+needs updating, fix the workflow/check definition instead of routing around it. This matters
+increasingly as more of the merge process comes to rely on status checks being trustworthy (see
+below).
 
-`.github/workflows/autonomous-maintenance.yml` runs Claude Code unattended every 5 hours (cron
-`0 */5 * * *`, plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. Each run it
-picks the single most valuable applicable task from a fixed menu — test coverage gaps, dependency/
-security maintenance (`yarn audit` + safe patch/minor bumps), code quality/simplification, or
-CLAUDE.md documentation sync — makes the smallest safe change, verifies with `yarn test`
-(and `yarn build` for dependency bumps), and opens a PR through the normal review flow (it never
-auto-merges). Adding new tiers to `TIER_DEFINITIONS` is deliberately excluded from this menu — that
-stays a human decision. If no task applies, or a PR from a previous autonomous run (branch prefix
-`claude/auto-`) is still open, the run makes no changes. Requires a `CLAUDE_CODE_OAUTH_TOKEN` repo
-secret to authenticate.
+## Automation workflows
+
+Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working
+together to open, fix up, and merge PRs with no human in the loop until an approval is needed. All
+three authenticate git/GitHub operations with a `GH_AUTOMATION_PAT` repo secret (a personal access
+token) instead of the default `GITHUB_TOKEN`. This isn't optional: GitHub does not let commits, pushes,
+or merges authored by the default `GITHUB_TOKEN` trigger other workflows (an anti-recursion
+safeguard) — with the default token, `ci.yml` would silently stop re-running on the bot's own pushed
+fixes, and `deploy.yml` would silently stop firing when the bot's PRs get merged to `main`. Using a PAT
+for these specific operations avoids that gap without any workaround.
+
+### Scheduled maintenance (`autonomous-maintenance.yml`)
+
+Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
+`anthropics/claude-code-action@v1`. Each run picks the single most valuable applicable task from:
+
+1. Test coverage gaps
+2. Dependency & security maintenance (`yarn audit` + safe patch/minor bumps)
+3. Code quality / simplification
+4. CLAUDE.md documentation sync
+5. Workflow self-improvement — refine this task menu or the workflow file itself; scoped to editing
+   `autonomous-maintenance.yml` only, and may not weaken the duplicate-PR guard, the turn/budget cap,
+   the never-self-merge rule, or the requirement to always open a PR
+
+Adding new tiers to `TIER_DEFINITIONS` stays excluded from the menu — a human decision. `--max-turns`
+is capped (currently 25) as a best-effort approximation of "no more than roughly 5% of weekly Claude
+usage quota per run" — Claude Code has no hard programmatic budget cutoff, so this is a turn-count
+proxy, not a guarantee; watch actual usage against your plan's weekly quota and tighten the cap
+further if a run is consistently using too much. If no task applies, or a PR from a previous
+autonomous run (branch prefix `claude/auto-`) is still open, the run makes no changes and opens no
+PR. `ci.yml`, `deploy.yml`, `dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and
+`pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write tools, even during the
+self-improvement task — only `autonomous-maintenance.yml` may edit itself.
+
+### PR follow-up (`autonomous-pr-followup.yml`)
+
+Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
+the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
+failing check suites, filters to PRs on `claude/auto-*` branches only, and re-invokes Claude
+(`--max-turns 20`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
+branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
+workflow (no `--no-verify`, no faking a check green, no touching other workflow files).
+
+### Auto-merge on approval (`pr-auto-merge.yml`)
+
+Fires on `pull_request_review: submitted`. If the review is an approval from the repo owner or a
+collaborator/member, it runs `gh pr merge --auto --squash`, which enables GitHub's native auto-merge —
+the PR merges by itself as soon as its required status checks pass, with no human needing to come back
+and click merge. This applies repo-wide, not just to autonomous PRs.
+
+**Two one-time manual prerequisites**, since neither is settable through the tools available to a
+Claude Code session:
+- Add the `GH_AUTOMATION_PAT` repo secret described above (fine-grained PAT scoped to this repo,
+  Contents: read/write, Pull requests: read/write), alongside the existing `CLAUDE_CODE_OAUTH_TOKEN`.
+- Enable "Allow auto-merge" in repo Settings → General, and add branch protection on `main` that
+  requires the `test` check from `ci.yml` to pass before merging. Without a required check,
+  `gh pr merge --auto` has nothing to wait on and may merge immediately rather than "once green" —
+  the whole point of this workflow depends on `ci.yml` actually being wired up as a required check.
 
 ## Documentation
 
