@@ -98,9 +98,10 @@ Strict three-layer separation:
 2. **`useIncrementalGame.js`** — the only place holding React state. Owns the `setInterval` tick timer, the
    localStorage persistence effect, and exposes `{ state, actions, resetGame }`.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
-   renders each unlocked tier as a single compact row rather than separate cards. Money is displayed once,
-   at the top, via `formatCurrency` (full `$`-comma format, never scientific notation); a global ×1/×10
-   toggle controls how many units the "Buy" button on each row purchases.
+   renders each unlocked tier as a single compact row rather than separate cards, showing `Owned` (current
+   amount, drives production) and `Purchased` (lifetime buy count, drives cost) as two separate figures.
+   Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
+   exponential above); a global ×1/×10 toggle controls how many units the "Buy" button on each row purchases.
 
 ### Economy model
 
@@ -158,8 +159,8 @@ increases and is what `getTierCost` scales against, so passively-produced `owned
 | `productionMultiplier` | `prestigeLevel → number` | `2 ** prestigeLevel` |
 | `getAutobuyerUnlockXPCost` | `tierIndex → number` | `AUTOBUYER_XP_COST_BASE * 2^tierIndex` |
 | `getAutobuyerCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` |
-| `formatAmount` | `value → string` | Locale-formatted integer below 1,000,000; scientific notation at/above — used for non-money amounts (owned counts, production rates) |
-| `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string, floored (never rounds up), never switches to scientific notation — used for all Money amounts |
+| `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, production rates) |
+| `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'$'` fallback for `MONEY_ID`/unknown ids |
 
 ### Constants (`src/game/layers.js`)
@@ -183,7 +184,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (132 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (133 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.

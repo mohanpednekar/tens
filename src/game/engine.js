@@ -42,18 +42,28 @@ const plainNumberFormatter = new Intl.NumberFormat('en-US')
 const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'scientific' })
 const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
+// Values at/above this switch from plain comma-grouped digits to exponential notation
+// (e.g. "6.5E13") for readability, shared by formatAmount and formatCurrency.
+const EXPONENTIAL_NOTATION_THRESHOLD = 1_000_000
+
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
-  if (safeValue < 1000000) return plainNumberFormatter.format(safeValue)
+  if (safeValue < EXPONENTIAL_NOTATION_THRESHOLD) return plainNumberFormatter.format(safeValue)
   return scientificNumberFormatter.format(safeValue)
 }
 
-// Full comma-grouped currency string; never switches to scientific notation, unlike formatAmount.
-// Floors rather than rounds so a displayed amount never overstates the actual spendable balance
-// (e.g. a fractional 1.6 balance from a non-integer tick shows as $1, not a misleading $2).
-export const formatCurrency = value =>
-  `$${currencyNumberFormatter.format(Math.floor(clampNonNegative(value)))}`
+// Comma-grouped currency string below the threshold, exponential above it (same threshold and
+// notation as formatAmount) — money can reach 100+ digit balances near the Googol prestige
+// requirement, so it can't stay full-digit forever. Floors rather than rounds so a displayed
+// amount never overstates the actual spendable balance (e.g. a fractional 1.6 balance from a
+// non-integer tick shows as $1, not a misleading $2).
+export const formatCurrency = value => {
+  const safeValue = Math.floor(clampNonNegative(value))
+  return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
+    ? `$${currencyNumberFormatter.format(safeValue)}`
+    : `$${scientificNumberFormatter.format(safeValue)}`
+}
 
 // Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
 // epoch = floor(purchased / 10); cost = baseCost * 10^epoch
