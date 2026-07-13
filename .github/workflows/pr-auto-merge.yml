@@ -3,14 +3,19 @@ name: Auto-merge on approval
 on:
   pull_request_review:
     types: [submitted]
+  check_suite:
+    types: [completed]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  auto-merge:
+  # Path 1: a human owner/collaborator/member approves the PR — unconditional, any PR,
+  # any size, matching the original behavior.
+  auto-merge-on-approval:
     if: >
+      github.event_name == 'pull_request_review' &&
       github.event.review.state == 'approved' &&
       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association)
     runs-on: ubuntu-latest
@@ -22,3 +27,98 @@ jobs:
         run: |
           gh pr merge --auto --squash "${{ github.event.pull_request.number }}" \
             -R "${{ github.repository }}"
+
+  # Path 2: no human approval yet, but checks just went green on a bot-authored branch and
+  # the diff meets a conservative "low risk" bar. Skips the approval wait for routine,
+  # easy-to-verify-after-the-fact changes; everything else (including any workflow-file
+  # change, at any size) still needs a human to approve via Path 1.
+  auto-merge-low-risk:
+    if: github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+      CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
+    steps:
+      - name: Merge if the PR on this branch meets the low-risk bar
+        run: |
+          # Only our own automation's branches are eligible for approval-free merge —
+          # never a human contributor's branch, bot or not.
+          case "$CHECK_SUITE_BRANCH" in
+            claude/auto-*|claude/self-heal-*|claude/heal-main-*|dependabot/*) ;;
+            *)
+              echo "Not a bot-authored branch ($CHECK_SUITE_BRANCH), skipping."
+              exit 0
+              ;;
+          esac
+
+          number=$(gh pr list --head "$CHECK_SUITE_BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            echo "No open PR for this branch, skipping."
+            exit 0
+          fi
+
+          pr_json=$(gh pr view "$number" --json title,additions,deletions,files,isCrossRepository)
+
+          # A fork branch could be named anything, including something that merely looks
+          # like one of the prefixes above — never treat a fork PR as ours.
+          is_cross_repo=$(jq -r '.isCrossRepository' <<<"$pr_json")
+          if [ "$is_cross_repo" = "true" ]; then
+            echo "PR head is in a fork, refusing to treat as low-risk. Skipping."
+            exit 0
+          fi
+
+          files=$(jq -r '.files[].path' <<<"$pr_json")
+
+          # A change to any workflow file always needs a human's eyes, regardless of size
+          # or how "small" the diff looks — this is the CI/CD trust boundary itself.
+          if grep -q '^\.github/workflows/' <<<"$files"; then
+            echo "PR #$number touches .github/workflows/, requires human approval. Skipping."
+            exit 0
+          fi
+
+          docs_tests_only=true
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              CLAUDE.md|*.test.js|*.test.jsx) ;;
+              *) docs_tests_only=false ;;
+            esac
+          done <<<"$files"
+
+          additions=$(jq -r '.additions' <<<"$pr_json")
+          deletions=$(jq -r '.deletions' <<<"$pr_json")
+          total=$((additions + deletions))
+
+          eligible=false
+          reason=""
+
+          if [ "$docs_tests_only" = "true" ]; then
+            eligible=true
+            reason="docs/tests-only diff"
+          elif [ "$total" -le 50 ]; then
+            eligible=true
+            reason="small diff ($total changed lines)"
+          fi
+
+          if [ "$eligible" = "false" ] && [[ "$CHECK_SUITE_BRANCH" == dependabot/* ]]; then
+            title=$(jq -r '.title' <<<"$pr_json")
+            # Dependabot PR titles look like "Bump <pkg> from X.Y.Z to A.B.C".
+            from_ver=$(grep -oP 'from \K[0-9]+\.[0-9]+\.[0-9]+' <<<"$title" || true)
+            to_ver=$(grep -oP 'to \K[0-9]+\.[0-9]+\.[0-9]+' <<<"$title" || true)
+            if [ -n "$from_ver" ] && [ -n "$to_ver" ]; then
+              from_major=$(cut -d. -f1 <<<"$from_ver")
+              to_major=$(cut -d. -f1 <<<"$to_ver")
+              if [ "$from_major" = "$to_major" ]; then
+                eligible=true
+                reason="Dependabot patch/minor bump ($from_ver -> $to_ver)"
+              fi
+            fi
+          fi
+
+          if [ "$eligible" = "true" ]; then
+            echo "Auto-merging PR #$number without waiting for approval: $reason"
+            gh pr merge --auto --squash "$number" -R "${{ github.repository }}"
+          else
+            echo "PR #$number doesn't meet the low-risk bar, leaving for human approval."
+          fi
