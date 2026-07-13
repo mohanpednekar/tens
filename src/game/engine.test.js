@@ -8,6 +8,8 @@ import {
   formatCurrency,
   getAutobuyerCost,
   getAutobuyerUnlockXPCost,
+  getMoneyExponent,
+  getPrestigeProgressPercent,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -338,6 +340,54 @@ describe('isTierUnlocked', () => {
   it('keeps an already-owned tier unlocked for older saves', () => {
     const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
+  })
+})
+
+// ─── getMoneyExponent ──────────────────────────────────────────────────────────
+
+describe('getMoneyExponent', () => {
+  it('reads as 0 below 1', () => {
+    expect(getMoneyExponent(0)).toBe(0)
+    expect(getMoneyExponent(0.5)).toBe(0)
+  })
+
+  it('floors to the order of magnitude', () => {
+    expect(getMoneyExponent(1)).toBe(0)
+    expect(getMoneyExponent(9.999)).toBe(0)
+    expect(getMoneyExponent(10)).toBe(1)
+    expect(getMoneyExponent(999)).toBe(2)
+    expect(getMoneyExponent(1000)).toBe(3)
+  })
+
+  it('reaches 100 at a Googol', () => {
+    expect(getMoneyExponent(GOOGOL)).toBe(100)
+  })
+
+  it('treats negative and non-finite values as 0', () => {
+    expect(getMoneyExponent(-5)).toBe(0)
+    expect(getMoneyExponent(NaN)).toBe(0)
+  })
+})
+
+// ─── getPrestigeProgressPercent ─────────────────────────────────────────────────
+
+describe('getPrestigeProgressPercent', () => {
+  it('is 0% below an exponent of 1', () => {
+    expect(getPrestigeProgressPercent(0)).toBe(0)
+    expect(getPrestigeProgressPercent(5)).toBe(0)
+  })
+
+  it('is 100% at a Googol', () => {
+    expect(getPrestigeProgressPercent(GOOGOL)).toBe(100)
+  })
+
+  it('never exceeds 100% beyond a Googol', () => {
+    expect(getPrestigeProgressPercent(GOOGOL * 1e10)).toBe(100)
+  })
+
+  it('scales linearly with the exponent (Googol is exponent 100)', () => {
+    expect(getPrestigeProgressPercent(1e50)).toBe(50)
+    expect(getPrestigeProgressPercent(1e25)).toBe(25)
   })
 })
 

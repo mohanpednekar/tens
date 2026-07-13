@@ -116,11 +116,24 @@ export const isTierUnlocked = state => tier => {
   return (state.owned[prevTier.id] ?? 0) >= 10
 }
 
+// Money's order of magnitude, floored (money < 1 has no positive exponent, so reads as 0).
+export const getMoneyExponent = money => {
+  const safeMoney = clampNonNegative(money)
+  return safeMoney < 1 ? 0 : Math.floor(Math.log10(safeMoney))
+}
+
+// How far the current money exponent is toward GOOGOL's exponent (100), as a whole percent.
+export const getPrestigeProgressPercent = money => {
+  const googolExponent = Math.floor(Math.log10(GOOGOL))
+  const percent = (getMoneyExponent(money) / googolExponent) * 100
+  return Math.min(100, Math.max(0, Math.round(percent)))
+}
+
 const checkMilestones = (resources, prestige) => {
   const money = clampNonNegative(resources[MONEY_ID])
   if (money < 10) return prestige
 
-  const currentMilestone = Math.floor(Math.log10(money))
+  const currentMilestone = getMoneyExponent(money)
   if (currentMilestone <= prestige.highestMilestone) return prestige
 
   return {
