@@ -126,7 +126,13 @@ resolves the target branch via `gh pr view --json headRefName,isCrossRepository`
 `github.event.*` fields directly, and refuses to check out anything where `isCrossRepository` is true
 — a fork branch can be named anything, including something that merely looks like `claude/auto-*`.
 All untrusted event fields are passed through `env:` rather than interpolated straight into the shell
-script, to avoid script injection via a crafted branch/comment.
+script, to avoid script injection via a crafted branch/comment. On top of that, the job itself has a
+native `if:` gate requiring the triggering `issue_comment`/`pull_request_review` author to have write
+access (`author_association` in `OWNER`/`COLLABORATOR`/`MEMBER`) before checkout ever runs — on a
+public repo, anyone can comment on or review a PR without write access, which is the standard "pwn
+request" surface for privileged workflows on these trigger types; a runtime bash check alone isn't
+visible to CodeQL's static analysis, so this authorization check needs to live in the workflow YAML's
+`if:` to actually register as a mitigation.
 
 ### Auto-merge on approval (`pr-auto-merge.yml`)
 

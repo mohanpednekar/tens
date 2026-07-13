@@ -18,6 +18,17 @@ concurrency:
 
 jobs:
   followup:
+    # On a public repo, anyone can leave a PR comment or review, even without write access —
+    # this is the classic "pwn request" surface for privileged workflows triggered by
+    # issue_comment/pull_request_review. Only let a comment/review from someone with write
+    # access reach the checkout-and-execute steps below (check_suite has no such actor, so
+    # it isn't gated here — it's already restricted by the same-repo + branch-prefix checks
+    # inside the "Resolve target PR" step).
+    if: >
+      (github.event_name != 'issue_comment' ||
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association)) &&
+      (github.event_name != 'pull_request_review' ||
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
