@@ -22,19 +22,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for an already-open autonomous PR
+      - name: Check open autonomous PRs
         id: guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count=$(gh pr list --state open --json headRefName \
-            --jq '[.[] | select(.headRefName | startswith("claude/auto-"))] | length')
-          if [ "$count" -gt 0 ]; then
-            echo "An autonomous maintenance PR is already open — skipping this run."
+          # Don't block on *any* open autonomous PR — only skip once every task slot is
+          # taken (a hard safety net against runaway PR count). Otherwise pass the list of
+          # currently-open autonomous PRs to the prompt so Claude can avoid opening a
+          # second PR for the same task while still opening a separate PR for a genuinely
+          # independent one.
+          open_prs=$(gh pr list --state open --json headRefName,title \
+            --jq '[.[] | select(.headRefName | startswith("claude/auto-"))]')
+          count=$(jq 'length' <<<"$open_prs")
+
+          if [ "$count" -ge 5 ]; then
+            echo "5 autonomous PRs already open (one per task slot) — skipping this run."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+
+          summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")
+          {
+            echo "open_prs<<PR_EOF"
+            echo "$summary"
+            echo "PR_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Enable Corepack
         if: steps.guard.outputs.skip != 'true'
@@ -87,9 +101,18 @@ jobs:
             Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
             setup, and you must follow it exactly.
 
+            Currently-open autonomous PRs (branch: title):
+            ${{ steps.guard.outputs.open_prs || '(none)' }}
+
             Pick exactly ONE of the following tasks this run — whichever is most valuable given the
-            current state of the repo. Look at recent commit history and any currently-open PRs
-            first so you don't redo work already in flight.
+            current state of the repo. Minimise PRs for similar work: if one of the open PRs above
+            already covers the same task/purpose you were about to pursue (e.g. another test-coverage
+            PR while a test-coverage PR is already open), don't open a duplicate — either pick a
+            different, genuinely independent task from the menu instead, or if every applicable task
+            already has a matching open PR, make no changes this run. Conversely, do open a separate
+            PR for a task that's genuinely independent of what's already open (e.g. a dependency bump
+            alongside an already-open docs-sync PR) — the goal is avoiding redundant PRs, not
+            minimising the total PR count.
 
             1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
                src/game/layers.js, or src/game/storage.js and add tests for them.

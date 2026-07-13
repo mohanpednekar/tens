@@ -82,8 +82,8 @@ unlimited — revisit this if the repo ever goes private, since minutes would th
 constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token
 API billing): bounded per-run by `--max-turns` (25 for `autonomous-maintenance.yml`, 20 for
 `autonomous-pr-followup.yml`) as a best-effort proxy since there's no hard programmatic budget cutoff,
-and naturally self-limited further by the duplicate-PR guard, which skips a scheduled run entirely
-whenever a `claude/auto-*` PR is already open. Watch actual usage against your plan's weekly quota and
+and naturally self-limited further by the PR-dedup guard (see below), which caps the number of
+concurrently-open autonomous PRs. Watch actual usage against your plan's weekly quota and
 tighten `--max-turns` (or pin a cheaper model via `claude_args`) further if runs consistently use too
 much. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dependency caching before
 invoking Claude (matching `ci.yml`), so `yarn install`/`yarn test` inside the agentic run don't waste
@@ -106,11 +106,18 @@ Adding new tiers to `TIER_DEFINITIONS` stays excluded from the menu — a human 
 is capped (currently 25) as a best-effort approximation of "no more than roughly 5% of weekly Claude
 usage quota per run" — Claude Code has no hard programmatic budget cutoff, so this is a turn-count
 proxy, not a guarantee; watch actual usage against your plan's weekly quota and tighten the cap
-further if a run is consistently using too much. If no task applies, or a PR from a previous
-autonomous run (branch prefix `claude/auto-`) is still open, the run makes no changes and opens no
-PR. `ci.yml`, `deploy.yml`, `dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and
-`pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write tools, even during the
-self-improvement task — only `autonomous-maintenance.yml` may edit itself.
+further if a run is consistently using too much.
+
+PRs are minimised for *similar* work but not capped to one at a time: the guard step passes the list
+of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Claude is instructed to
+skip opening a PR that duplicates an already-open one's purpose, while still opening a separate PR for
+a genuinely independent task (e.g. a dependency bump alongside an open docs-sync PR). A hard ceiling
+of 5 concurrently-open autonomous PRs (one per task slot) is a safety net against runaway PR count,
+skipping the run entirely once hit. If no applicable task remains (all either done or already covered
+by an open PR), the run makes no changes and opens no PR. `ci.yml`, `deploy.yml`,
+`dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly
+denied to Claude's Edit/Write tools, even during the self-improvement task — only
+`autonomous-maintenance.yml` may edit itself.
 
 ### PR follow-up (`autonomous-pr-followup.yml`)
 
