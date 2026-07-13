@@ -161,7 +161,8 @@ const MainPage = () => {
           return (
             <TierLine key={tier.id} aria-label={`${tier.name} layer`}>
               <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</TierName>
-              <MutedText>Owned: {owned}</MutedText>
+              <MutedText>Owned: {formatAmount(owned)}</MutedText>
+              <MutedText>Purchased: {formatAmount(purchased)}</MutedText>
               <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</MutedText>
               <Button
                 color={canAfford ? 'white' : 'darkgrey'}

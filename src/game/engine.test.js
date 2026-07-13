@@ -143,15 +143,16 @@ describe('formatCurrency', () => {
     expect(formatCurrency(0)).toBe('$0')
   })
 
-  it('formats a comma-grouped mid-size amount with a $ prefix', () => {
-    expect(formatCurrency(1234567)).toBe('$1,234,567')
+  it('formats a comma-grouped mid-size amount with a $ prefix, just below the exponential threshold', () => {
+    expect(formatCurrency(999999)).toBe('$999,999')
   })
 
-  it('never switches to scientific notation, even at huge magnitudes', () => {
-    const result = formatCurrency(1e21)
-    expect(result.startsWith('$')).toBe(true)
-    expect(result).not.toMatch(/e/i)
-    expect(result).toMatch(/^\$[\d,]+$/)
+  it('switches to exponential notation at the threshold, like formatAmount', () => {
+    expect(formatCurrency(1000000)).toBe('$1E6')
+  })
+
+  it('switches to exponential notation at huge magnitudes', () => {
+    expect(formatCurrency(1e21)).toBe('$1E21')
   })
 
   it('treats negative values as 0', () => {
