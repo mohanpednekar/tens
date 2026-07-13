@@ -106,7 +106,7 @@ test('a money-producing tier shows its production rate with a $ prefix, consiste
   expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('$/sec')
 })
 
-test('an Upgrade level doubles that tier\'s production', () => {
+test('an Upgrade level shows its autobuyer purchase-yield bonus without changing the displayed production rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { Tens: 5 },
@@ -115,8 +115,11 @@ test('an Upgrade level doubles that tier\'s production', () => {
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
+  // Production reflects owned count only — the Upgrade level boosts autobuyer purchase yield,
+  // not the passive per-unit production rate, so this stays owned(5) × $1/sec.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.1')
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('×2/buy')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {

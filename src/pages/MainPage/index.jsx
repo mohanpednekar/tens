@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerProductionMultiplier, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled, { css } from 'styled-components'
@@ -255,8 +255,8 @@ const MainPage = () => {
           const availablePercent = (availableInBlock / 10) * 100
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
-          const tierProductionMultiplier = getAutobuyerProductionMultiplier(autobuyerLevel)
-          const production = owned * prestigeBonus * tierProductionMultiplier
+          const autobuyerYieldMultiplier = getAutobuyerYieldMultiplier(autobuyerLevel)
+          const production = owned * prestigeBonus
           const autobuyerUnlockXPCost = getAutobuyerUnlockXPCost(tierIndex)
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           const canUpgradeAutobuyer = isAutobuyerLocked
@@ -265,7 +265,7 @@ const MainPage = () => {
 
           return (
             <TierLine key={tier.id} aria-label={`${tier.name} layer`}>
-              <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Lv.{autobuyerLevel} (×{tierProductionMultiplier})</GreenText>}</TierName>
+              <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Lv.{autobuyerLevel} (×{autobuyerYieldMultiplier}/buy)</GreenText>}</TierName>
               <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
               <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
               <ProductionText>
