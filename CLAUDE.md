@@ -44,7 +44,8 @@ yarn test -t "buyTier"                     # filter by test name
 
 There is no configured lint script (`yarn lint` does not exist) and no CI job for linting — CI only runs
 `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
-push to `main`. `.github/workflows/copilot-review.yml` triggers an automated Copilot review on non-draft PRs.
+push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
+an explicit workflow file.
 
 ## Pull requests
 
