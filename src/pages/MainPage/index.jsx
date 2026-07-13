@@ -1,4 +1,4 @@
-import Button from 'components/Button'
+import Button, { VisuallyHiddenProgress } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
@@ -50,6 +50,11 @@ const TierList = styled.div`
   gap: 0.4rem;
 `
 
+// One accent hue per tier (cycled by index), applied as a thin left-edge stripe on the row —
+// purely cosmetic scanability, kept off text/buttons so it never collides with the semantic
+// white/green/gold/darkgrey coloring used for affordability elsewhere in the row.
+const TIER_ACCENT_COLORS = ['#60a5fa', '#f472b6', '#a78bfa', '#fb923c', '#22d3ee', '#38bdf8', '#f87171', '#818cf8']
+
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
 const TierLine = styled(StatCard)`
@@ -59,21 +64,23 @@ const TierLine = styled(StatCard)`
   align-items: center;
   column-gap: 0.6rem;
   padding: 0.5rem 0.85rem;
+  border-left: 3px solid ${props => props.$accent};
   transition: border-color 0.15s ease;
 
   &:hover {
     border-color: #444;
+    border-left-color: ${props => props.$accent};
   }
 
   @media (max-width: 40rem) {
     grid-template-areas:
-      'name name'
-      'owned purchased'
-      'production production'
-      'buy buy'
-      'upgrade upgrade';
-    grid-template-columns: 1fr 1fr;
-    row-gap: 0.4rem;
+      'name name name name name name'
+      'owned owned purchased purchased production production'
+      'buy buy buy upgrade upgrade upgrade';
+    grid-template-columns: repeat(6, 1fr);
+    row-gap: 0.35rem;
+    column-gap: 0.4rem;
+    padding: 0.5rem 0.65rem;
   }
 `
 
@@ -107,61 +114,55 @@ const TierName = styled.h3`
   margin: 0;
   grid-area: name;
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.95em;
+  }
 `
 
 const OwnedText = styled(MutedText)`
   grid-area: owned;
   font-size: 0.85em;
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.78em;
+  }
 `
 
 const PurchasedText = styled(MutedText)`
   grid-area: purchased;
   font-size: 0.85em;
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.78em;
+  }
 `
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
   font-size: 0.85em;
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.78em;
+  }
 `
 
-const BuyCell = styled.div`
-  grid-area: buy;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-`
-
+// The fill (green = already bought this cost block, amber = affordable but not yet bought)
+// renders directly on the button via $progress/$secondaryProgress instead of a separate bar.
 const BuyButton = styled(Button)`
+  grid-area: buy;
   width: 100%;
   font-size: 0.85em;
   padding: 0.5em 0.6em;
   ${gridCell}
-`
 
-// Shows how many of the current cost-block's 10 same-price units are already bought (done,
-// green) vs currently affordable but not yet bought (available, amber) — the rest of the
-// block's price stays flat, so this is a preview of how much runway is left before the next
-// 10x cost jump.
-const BlockProgressTrack = styled.div`
-  height: 0.3rem;
-  border-radius: 999px;
-  background: #2a2a2a;
-  overflow: hidden;
-  display: flex;
-`
-
-const BlockProgressDone = styled.div`
-  width: ${props => props.$percent}%;
-  background: #4ade80;
-`
-
-const BlockProgressAvailable = styled.div`
-  width: ${props => props.$percent}%;
-  background: #fbbf24;
+  @media (max-width: 40rem) {
+    font-size: 0.8em;
+    padding: 0.45em 0.5em;
+  }
 `
 
 const UpgradeButton = styled(Button)`
@@ -170,6 +171,11 @@ const UpgradeButton = styled(Button)`
   font-size: 0.85em;
   padding: 0.5em 0.6em;
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.8em;
+    padding: 0.45em 0.5em;
+  }
 `
 
 const RESOURCE_NAME_BY_ID = Object.fromEntries(
@@ -187,6 +193,7 @@ const MainPage = () => {
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   const prestigeBonus = productionMultiplier(prestige.level)
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  const prestigeLabel = 'Prestige (requires 1 Googol Money)'
   const moneyPerSec = TIER_DEFINITIONS
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
@@ -210,6 +217,7 @@ const MainPage = () => {
               aria-pressed={quantity === 1}
               color={quantity === 1 ? 'white' : 'darkgrey'}
               onClick={() => setQuantity(1)}
+              title="Buy one unit per click"
               type="button"
             >
               ×1
@@ -218,6 +226,7 @@ const MainPage = () => {
               aria-pressed={quantity === 10}
               color={quantity === 10 ? 'white' : 'darkgrey'}
               onClick={() => setQuantity(10)}
+              title="Buy up to a full 10-unit price block per click"
               type="button"
             >
               ×10
@@ -247,7 +256,7 @@ const MainPage = () => {
           const unitCost = getTierQuantityCost(tier, purchased, 1)
           const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
           const canAfford = affordableQuantity > 0
-          // The cost-block progress bar always previews the full 10-unit block, independent of
+          // The cost-block progress fill always previews the full 10-unit block, independent of
           // the Bulk toggle — it shows how much runway is left before the next 10x cost jump.
           const doneInBlock = purchased % 10
           const availableInBlock = getTierAffordableQuantity(tier, purchased, costResource, 10)
@@ -262,10 +271,26 @@ const MainPage = () => {
           const canUpgradeAutobuyer = isAutobuyerLocked
             ? prestige.xp >= autobuyerUnlockXPCost
             : resources >= autobuyerUpgradeCost
+          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
+          const upgradeLabel = isAutobuyerLocked
+            ? `Unlock for ${autobuyerUnlockXPCost} XP`
+            : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`
+          // Live "how close am I" meter for the Upgrade/Unlock button, even while disabled.
+          const autobuyerProgressPercent = Math.min(100, Math.round(
+            (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / autobuyerUpgradeCost) * 100
+          ))
+          const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
 
           return (
-            <TierLine key={tier.id} aria-label={`${tier.name} layer`}>
-              <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Lv.{autobuyerLevel} (×{autobuyerYieldMultiplier}/buy)</GreenText>}</TierName>
+            <TierLine key={tier.id} aria-label={`${tier.name} layer`} $accent={accent}>
+              <TierName>
+                {tier.name}
+                {autobuyerLevel > 0 && (
+                  <GreenText title={`Autobuyer level ${autobuyerLevel} — automatic purchases yield ×${autobuyerYieldMultiplier} units per buy`}>
+                    {' '}⚙ Lv.{autobuyerLevel} (×{autobuyerYieldMultiplier}/buy)
+                  </GreenText>
+                )}
+              </TierName>
               <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
               <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
               <ProductionText>
@@ -273,33 +298,42 @@ const MainPage = () => {
                   ? formatCurrency(production)
                   : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}/sec
               </ProductionText>
-              <BuyCell>
-                <BuyButton
-                  color={canAfford ? 'white' : 'darkgrey'}
-                  disabled={!canAfford}
-                  onClick={() => actions.buyTierQuantity(tier.id, quantity)}
-                >
-                  Buy{affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for {formatCurrency(displayCost)}
-                </BuyButton>
-                <BlockProgressTrack
+              <BuyButton
+                aria-label={buyLabel}
+                color={canAfford ? 'white' : 'darkgrey'}
+                disabled={!canAfford}
+                onClick={() => actions.buyTierQuantity(tier.id, quantity)}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production`}
+                $progress={donePercent}
+                $secondaryProgress={availablePercent}
+                $pulse={canAfford}
+              >
+                {buyLabel}
+                <VisuallyHiddenProgress
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
                   aria-valuenow={doneInBlock}
                   aria-valuemin={0}
                   aria-valuemax={10}
-                >
-                  <BlockProgressDone $percent={donePercent} />
-                  <BlockProgressAvailable $percent={availablePercent} />
-                </BlockProgressTrack>
-              </BuyCell>
+                />
+              </BuyButton>
               <UpgradeButton
+                aria-label={upgradeLabel}
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeAutobuyer}
                 onClick={() => actions.buyAutobuyer(tier.id)}
+                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : "Doubles this autobuyer's purchase yield"}
+                $progress={autobuyerProgressPercent}
+                $pulse={canUpgradeAutobuyer}
               >
-                {isAutobuyerLocked
-                  ? `Unlock for ${autobuyerUnlockXPCost} XP`
-                  : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`}
+                {upgradeLabel}
+                <VisuallyHiddenProgress
+                  role="progressbar"
+                  aria-label={`${tier.name} autobuyer progress`}
+                  aria-valuenow={autobuyerProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
               </UpgradeButton>
             </TierLine>
           )
@@ -323,16 +357,28 @@ const MainPage = () => {
           </MutedText>
         </div>
         <Button
+          aria-label={prestigeLabel}
           color={canPrestige ? '#fbbf24' : 'darkgrey'}
           disabled={!canPrestige}
           onClick={actions.prestige}
+          title="Resets resources and doubles all future production permanently"
           type="button"
+          $progress={prestigeProgressPercent}
+          $progressColor="#fbbf24"
+          $pulse={canPrestige}
         >
-          Prestige (requires 1 Googol Money)
+          {prestigeLabel}
+          <VisuallyHiddenProgress
+            role="progressbar"
+            aria-label="Prestige progress"
+            aria-valuenow={prestigeProgressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          />
         </Button>
       </PrestigeCard>
 
-      <Button type="button" onClick={resetGame}>Reset game</Button>
+      <Button type="button" onClick={resetGame} title="Erases all progress and starts over">Reset game</Button>
     </RootDiv>
   )
 }
