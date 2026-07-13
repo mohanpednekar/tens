@@ -18,23 +18,33 @@ const clampPercent = value => Math.min(100, Math.max(0, value ?? 0))
 // Renders $progress/$secondaryProgress as a two-stop gradient fill painted behind the
 // button's own text — a live "how close am I" meter on the control itself rather than a
 // separate bar. Absent both props this contributes nothing and the button stays flat.
-const progressFill = ({ $progress, $secondaryProgress, $progressColor = '#4ade80', $secondaryProgressColor = '#fbbf24' }) => {
+// Disabled buttons always render their text in `darkgrey`; a full-strength fill would drag
+// that text's contrast below WCAG AA (measured ~2.6:1 at the normal alpha), so disabled fills
+// use a much lower alpha that keeps darkgrey text >=4.5:1 against the blended background.
+const progressFill = ({ disabled, $progress, $secondaryProgress, $progressColor = '#4ade80', $secondaryProgressColor = '#fbbf24' }) => {
   if ($progress == null && $secondaryProgress == null) return null
   const start = clampPercent($progress)
   const end = clampPercent(start + ($secondaryProgress ?? 0))
+  const primaryAlpha = disabled ? '20' : '61'
+  const secondaryAlpha = disabled ? '20' : '52'
   return css`
     background: linear-gradient(
       to right,
-      ${$progressColor}61 0%,
-      ${$progressColor}61 ${start}%,
-      ${$secondaryProgressColor}52 ${start}%,
-      ${$secondaryProgressColor}52 ${end}%,
+      ${$progressColor}${primaryAlpha} 0%,
+      ${$progressColor}${primaryAlpha} ${start}%,
+      ${$secondaryProgressColor}${secondaryAlpha} ${start}%,
+      ${$secondaryProgressColor}${secondaryAlpha} ${end}%,
       transparent ${end}%,
       transparent 100%
     ), #262626;
   `
 }
 
+// Disabled state is signaled by color (every caller pairs `disabled` with a darkgrey `color`)
+// and cursor alone, deliberately NOT by dimming overall opacity — group opacity blends both the
+// text and its background toward the same backdrop, which compresses their contrast ratio no
+// matter how light the text color is (measured: darkgrey text on a disabled button already fell
+// to ~3.2:1 at the previous opacity:0.6, below WCAG AA, even with no progress fill involved).
 const Button = styled.button`
   position: relative;
   font-size: 0.95em;
@@ -47,7 +57,6 @@ const Button = styled.button`
   background: #262626;
   ${progressFill}
   cursor: ${props => (props.disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${props => (props.disabled ? 0.6 : 1)};
   --glow-rgb: ${props => GLOW_RGB[props.color] ?? '255, 255, 255'};
   animation: ${props => (props.$pulse && !props.disabled ? css`${pulse} 1.8s ease-in-out infinite` : 'none')};
   transition: filter 0.15s ease, transform 0.05s ease;
@@ -60,17 +69,20 @@ const Button = styled.button`
     transform: scale(0.97);
   }
 
+  &:focus-visible {
+    outline: 2px solid ${props => props.color};
+    outline-offset: 2px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
 `
-Button.defaultProps = {
-  color: 'grey',
-}
 
-// Visually hidden (clip-rect, not display/visibility) so a button can carry real
-// role="progressbar" semantics for assistive tech without a second, separately-positioned bar.
-export const VisuallyHiddenProgress = styled.span`
+// Visually hidden (clip-rect, not display/visibility) so an element can carry real
+// accessibility semantics (a role="progressbar", or supplementary descriptive text via
+// aria-describedby) without a second, separately-positioned visible node.
+export const VisuallyHidden = styled.span`
   position: absolute;
   width: 1px;
   height: 1px;

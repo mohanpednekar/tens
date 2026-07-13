@@ -185,10 +185,17 @@ src/
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration
   components/
-    Button/index.js        ← styled button; accepts a `color` prop, disabled styling, plus optional
-                               progress-fill props (`$progress`, `$secondaryProgress`, `$progressColor`,
-                               `$secondaryProgressColor`, `$pulse`) rendered as an on-button gradient fill;
-                               also exports `VisuallyHiddenProgress`, a clip-hidden `role="progressbar"` node
+    Button/index.js        ← styled button; every caller passes `color` explicitly (no defaultProps —
+                               React 19 dropped defaultProps support for function components, so it's a
+                               silent no-op there), plus optional progress-fill props (`$progress`,
+                               `$secondaryProgress`, `$progressColor`, `$secondaryProgressColor`, `$pulse`)
+                               rendered as an on-button gradient fill (reduced alpha when `disabled`, see
+                               below), a `:focus-visible` outline colored from the button's own `color`
+                               prop, and no opacity-based disabled dimming (color + cursor signal disabled
+                               state instead — opacity dimming compresses text/background contrast
+                               together, regardless of color choice); also exports `VisuallyHidden`, a
+                               clip-hidden node used both for a nested `role="progressbar"` and for
+                               supplementary `aria-describedby` text
     Money/index.js          ← styled money/amount display
     StatCard/index.js       ← styled card container used for every panel
   pages/
@@ -227,13 +234,23 @@ Strict three-layer separation:
    how much a single click will buy. The Upgrade/Unlock button and the Prestige button carry the same
    fill treatment (single-tone: spendable-resource-or-XP ÷ cost for Upgrade/Unlock, `prestigeProgressPercent`
    for Prestige), and all three also pulse (`$pulse`) when currently actionable. Because each of these
-   buttons nests a `VisuallyHiddenProgress` span carrying the real `role="progressbar"` (`aria-valuenow`/
+   buttons nests a `VisuallyHidden` span carrying the real `role="progressbar"` (`aria-valuenow`/
    `aria-valuemax`) for assistive tech, each button also sets an explicit `aria-label` matching its visible
    text — without it, the accessible-name computation would recurse into the nested node and pick up its
    label too. Buy/Upgrade/Unlock/Prestige/Bulk/Reset and the autobuyer badge all carry a `title` tooltip
-   explaining their effect in plain language. Each `TierLine` also gets a thin `border-left` accent color
-   cycled from a fixed palette by `tierIndex % length` — cosmetic scanability only, kept off text/button
-   colors so it never collides with the white/green/gold/darkgrey affordability semantics.
+   explaining their effect in plain language; the Prestige and Reset buttons additionally wire
+   `aria-describedby` to a visible (Prestige) or `VisuallyHidden` (Reset) description, since those two are
+   the app's only irreversible actions and their most important fact (resources get wiped) previously lived
+   only in a mouse-hover `title` — the other four `title` usages genuinely just restate what's already
+   visible/in the `aria-label`, so they were left as-is. Each `TierLine` also gets a thin `border-left`
+   accent color cycled from a fixed palette by `tierIndex % length` — cosmetic scanability only, kept off
+   text/button colors so it never collides with the white/green/gold/darkgrey affordability semantics — and
+   plays a one-shot CSS "reveal" animation (`$animateReveal`) when a tier unlocks *during the current
+   session*, but not for tiers already unlocked before page load: since locked tiers render `null`, every
+   unlocked row technically "mounts" on every page load, so a `useState(() => new Set(...))` baseline
+   snapshot of which tier ids were already unlocked at mount time (captured once, from whatever
+   `loadGameState()` returned) is compared against on each row to decide whether to animate, rather than
+   relying on mount timing alone.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
    `40rem` breakpoint, a denser 3-row set below it — name full-width, then owned/purchased/production
    sharing one row, then upgrade/buy side by side — rather than flexbox content-based sizing, so a field's
@@ -330,7 +347,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
-  row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHiddenProgress`) with
+  row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
   `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
   the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` matching their visible text,
   so `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
