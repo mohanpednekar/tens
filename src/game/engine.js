@@ -130,19 +130,28 @@ const checkMilestones = (resources, prestige) => {
   }
 }
 
-export const tickGame = elapsedSeconds => state => {
+// autobuyerBatchSize mirrors the manual ×1/×10 toggle, but only governs autobuyer purchases
+// (the manual Buy button always buys 1 — see buyTier). At 1 (default), each attempt buys a
+// single unit as soon as it's affordable, same as always. Above 1, each attempt only buys once
+// the tier can afford the *entire* current cost block up to that size — it holds and waits
+// rather than trickling in a partial purchase.
+export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: for each tier, attempt to purchase `level` generators per tick.
-  // buyTier re-validates internally and returns the state unchanged when a purchase fails,
-  // so a tier is safely skipped if a shared cost resource was exhausted.
+  // Apply autobuyers: for each tier, attempt up to `level` purchases per tick. buyTierQuantity
+  // re-validates internally and returns the state unchanged when a purchase fails, so a tier is
+  // safely skipped if a shared cost resource was exhausted.
   const stateAfterAutobuyers = TIER_DEFINITIONS.reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? 0
     if (!level || !isTierUnlocked(s)(tier)) return s
     let result = s
     for (let i = 0; i < level; i++) {
-      const next = buyTier(tier.id)(result)
-      if (next === result) break // can no longer afford
+      const purchased = getTierPurchasedCount(result, tier.id)
+      const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
+      const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
+      if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold
+      const next = buyTierQuantity(tier.id, blockMax)(result)
+      if (next === result) break
       result = next
     }
     return result

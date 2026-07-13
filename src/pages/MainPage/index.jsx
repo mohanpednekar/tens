@@ -1,10 +1,9 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
-import { useState } from 'react'
 import styled, { css } from 'styled-components'
 
 const RootDiv = styled.main`
@@ -136,9 +135,8 @@ const formatCost = (amount, resourceId) =>
     : `${formatAmount(amount)} ${RESOURCE_NAME_BY_ID[resourceId]}`
 
 const MainPage = () => {
-  const { actions, resetGame, state } = useIncrementalGame()
+  const { actions, quantity, resetGame, setQuantity, state } = useIncrementalGame()
   const { prestige } = state
-  const [quantity, setQuantity] = useState(1)
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   const prestigeBonus = productionMultiplier(prestige.level)
   const moneyPerSec = TIER_DEFINITIONS
@@ -158,8 +156,8 @@ const MainPage = () => {
             <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
             <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
           </div>
-          <QuantityToggle role="group" aria-label="Buy quantity">
-            <MutedText>Buy:</MutedText>
+          <QuantityToggle role="group" aria-label="Autobuyer batch size">
+            <MutedText>Autobuyer:</MutedText>
             <Button
               aria-pressed={quantity === 1}
               color={quantity === 1 ? 'white' : 'darkgrey'}
@@ -195,12 +193,8 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
-          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, quantity)
           const unitCost = getTierQuantityCost(tier, purchased, 1)
-          // When nothing is affordable, show the price of 1 unit so the player knows what's
-          // needed rather than the misleading $0 that pricing a 0-quantity purchase would give.
-          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
-          const canAfford = affordableQuantity > 0
+          const canAfford = costResource >= unitCost
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
@@ -219,9 +213,9 @@ const MainPage = () => {
               <BuyButton
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
-                onClick={() => actions.buyTierQuantity(tier.id, quantity)}
+                onClick={() => actions.buyTier(tier.id)}
               >
-                Buy{affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for {formatCurrency(displayCost)}
+                Buy for {formatCurrency(unitCost)}
               </BuyButton>
               <UpgradeButton
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
