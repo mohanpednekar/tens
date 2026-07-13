@@ -131,7 +131,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           claude_args: |
-            --max-turns 20
+            --max-turns 30
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
           settings: |
             {
@@ -155,7 +155,7 @@ jobs:
             (branch ${{ steps.pr.outputs.branch }}) in ${{ github.repository }}. This PR was opened by
             the autonomous maintenance workflow, and this run was triggered by new review activity, a
             new comment, or a failing check on it. Your turn budget is capped
-            (--max-turns 20) — work efficiently.
+            (--max-turns 30; every tool call counts as a turn) — work efficiently.
 
             Read CLAUDE.md first and follow it exactly.
 
