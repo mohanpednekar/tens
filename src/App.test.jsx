@@ -106,6 +106,32 @@ test('a money-producing tier shows its production rate with a $ prefix, consiste
   expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('$/sec')
 })
 
+test('an Upgrade level doubles that tier\'s production', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { Tens: 5 },
+    autobuyers: { Tens: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.1')
+})
+
+test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { Tens: 4 },
+  }))
+
+  render(<App />)
+
+  const progressBar = screen.getByRole('progressbar', { name: /tens cost-block progress/i })
+  expect(progressBar).toHaveAttribute('aria-valuenow', '4')
+  expect(progressBar).toHaveAttribute('aria-valuemax', '10')
+})
+
 test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {
   const user = userEvent.setup()
 
@@ -142,7 +168,7 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
 })
 
-test('the ×1/×10 autobuyer toggle does not affect the manual Buy button', async () => {
+test('the ×1/×10 bulk toggle affects the manual Buy button', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -151,9 +177,13 @@ test('the ×1/×10 autobuyer toggle does not affect the manual Buy button', asyn
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: '×10' }))
-
+  // Default bulk mode is ×10 — Buy grabs the full affordable block.
   expect(screen.getByRole('button', { name: /buy ×10 for \$100\b/i })).toBeEnabled()
+
+  // Switching to ×1 limits manual Buy to a single unit.
+  await user.click(screen.getByRole('button', { name: '×1' }))
+
+  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
 test('the quantity toggle marks the active option with aria-pressed', async () => {
@@ -161,13 +191,14 @@ test('the quantity toggle marks the active option with aria-pressed', async () =
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(screen.getByRole('button', { name: '×10' }))
-
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'false')
+  // Default bulk mode is ×10.
   expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(screen.getByRole('button', { name: '×1' }))
+
+  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
