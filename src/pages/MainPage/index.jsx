@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import styled, { css } from 'styled-components'
@@ -193,8 +193,12 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
+          // Manual buy always grabs as many units as are currently affordable, capped at the
+          // 10-unit cost block boundary (the same block getTierCost prices flat within).
+          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, 10)
           const unitCost = getTierQuantityCost(tier, purchased, 1)
-          const canAfford = costResource >= unitCost
+          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
+          const canAfford = affordableQuantity > 0
           const production = owned * prestigeBonus
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
@@ -213,9 +217,9 @@ const MainPage = () => {
               <BuyButton
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
-                onClick={() => actions.buyTier(tier.id)}
+                onClick={() => actions.buyTierQuantity(tier.id, 10)}
               >
-                Buy for {formatCurrency(unitCost)}
+                Buy{affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for {formatCurrency(displayCost)}
               </BuyButton>
               <UpgradeButton
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}

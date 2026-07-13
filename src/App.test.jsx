@@ -94,7 +94,43 @@ test('money balance is shown once at the top in full currency format', () => {
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
-test('the ×10 toggle does not change the manual Buy button — it always buys 1 unit', async () => {
+test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 100 },
+  }))
+
+  render(<App />)
+
+  const buyButton = screen.getByRole('button', { name: /buy ×10 for \$100\b/i })
+  expect(buyButton).toBeEnabled()
+
+  await user.click(buyButton)
+
+  expect(screen.getByText(/owned: 10/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
+})
+
+test('manual Buy partially fills when funds only cover part of the cost block', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 35 }, // affords 3 at $10/unit, not the full 10
+  }))
+
+  render(<App />)
+
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for \$30\b/i })
+  expect(buyButton).toBeEnabled()
+
+  await user.click(buyButton)
+
+  expect(screen.getByText(/owned: 3/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
+})
+
+test('the ×1/×10 autobuyer toggle does not affect the manual Buy button', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -105,13 +141,7 @@ test('the ×10 toggle does not change the manual Buy button — it always buys 1
 
   await user.click(screen.getByRole('button', { name: '×10' }))
 
-  const buyButton = screen.getByRole('button', { name: /buy for \$10\b/i })
-  expect(buyButton).toBeEnabled()
-
-  await user.click(buyButton)
-
-  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$90')
+  expect(screen.getByRole('button', { name: /buy ×10 for \$100\b/i })).toBeEnabled()
 })
 
 test('the quantity toggle marks the active option with aria-pressed', async () => {
