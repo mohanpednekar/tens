@@ -121,6 +121,13 @@ failing check suites, filters to PRs on `claude/auto-*` branches only, and re-in
 branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files).
 
+Because it's triggered by events that can fire on any PR (including one opened from a fork), it
+resolves the target branch via `gh pr view --json headRefName,isCrossRepository` rather than trusting
+`github.event.*` fields directly, and refuses to check out anything where `isCrossRepository` is true
+— a fork branch can be named anything, including something that merely looks like `claude/auto-*`.
+All untrusted event fields are passed through `env:` rather than interpolated straight into the shell
+script, to avoid script injection via a crafted branch/comment.
+
 ### Auto-merge on approval (`pr-auto-merge.yml`)
 
 Fires on `pull_request_review: submitted`. If the review is an approval from the repo owner or a

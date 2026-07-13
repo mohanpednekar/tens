@@ -25,29 +25,34 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_IS_PR: ${{ github.event.issue.pull_request.url }}
+          CHECK_SUITE_CONCLUSION: ${{ github.event.check_suite.conclusion }}
+          CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
         run: |
-          case "${{ github.event_name }}" in
+          # All untrusted github.event.* values arrive via env vars above, never spliced
+          # directly into this script, so a crafted branch/comment/etc. can't inject shell.
+          case "$EVENT_NAME" in
             pull_request_review)
-              branch="${{ github.event.pull_request.head.ref }}"
-              number="${{ github.event.pull_request.number }}"
+              number="$REVIEW_PR_NUMBER"
               ;;
             issue_comment)
-              if [ -z "${{ github.event.issue.pull_request.url || '' }}" ]; then
+              if [ -z "$ISSUE_IS_PR" ]; then
                 echo "Not a PR comment, skipping."
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
-              number="${{ github.event.issue.number }}"
-              branch=$(gh pr view "$number" --json headRefName --jq .headRefName)
+              number="$ISSUE_NUMBER"
               ;;
             check_suite)
-              if [ "${{ github.event.check_suite.conclusion }}" != "failure" ]; then
+              if [ "$CHECK_SUITE_CONCLUSION" != "failure" ]; then
                 echo "Check suite did not fail, nothing to do."
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
-              branch="${{ github.event.check_suite.head_branch }}"
-              number=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+              number=$(gh pr list --head "$CHECK_SUITE_BRANCH" --state open --json number --jq '.[0].number // empty')
               if [ -z "$number" ]; then
                 echo "No open PR for this branch, skipping."
                 echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -55,6 +60,21 @@ jobs:
               fi
               ;;
           esac
+
+          # Re-resolve the branch (and whether it's a same-repo branch) from the GitHub API
+          # rather than trusting event payload fields: pull_request_review/issue_comment/
+          # check_suite can all fire for PRs opened from a fork, and a fork branch can be
+          # named anything, including something that *looks* like claude/auto-*. Only ever
+          # check out a branch that actually lives in this repository, not a fork.
+          pr_json=$(gh pr view "$number" --json headRefName,isCrossRepository)
+          branch=$(jq -r '.headRefName' <<<"$pr_json")
+          is_cross_repo=$(jq -r '.isCrossRepository' <<<"$pr_json")
+
+          if [ "$is_cross_repo" = "true" ]; then
+            echo "PR head is in a fork, not this repository — refusing to check it out. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           if [[ "$branch" != claude/auto-* ]]; then
             echo "Not an autonomous-maintenance PR (branch: $branch), skipping."
