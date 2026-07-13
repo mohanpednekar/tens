@@ -102,6 +102,12 @@ Strict three-layer separation:
    amount, drives production) and `Purchased` (lifetime buy count, drives cost) as two separate figures.
    Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
    exponential above); a global ×1/×10 toggle controls how many units the "Buy" button on each row purchases.
+   Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
+   `40rem` breakpoint, a stacked set below it) rather than flexbox content-based sizing, so a field's
+   on-screen position depends only on viewport width, never on how many digits its value has; grid cells use
+   a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
+   as a safety net against content forcing a column wider than its track. `RootDiv` sets
+   `font-variant-numeric: tabular-nums` so digits render at a uniform width.
 
 ### Economy model
 
