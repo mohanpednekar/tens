@@ -185,7 +185,10 @@ src/
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration
   components/
-    Button/index.js        ← styled button; accepts a `color` prop, disabled styling
+    Button/index.js        ← styled button; accepts a `color` prop, disabled styling, plus optional
+                               progress-fill props (`$progress`, `$secondaryProgress`, `$progressColor`,
+                               `$secondaryProgressColor`, `$pulse`) rendered as an on-button gradient fill;
+                               also exports `VisuallyHiddenProgress`, a clip-hidden `role="progressbar"` node
     Money/index.js          ← styled money/amount display
     StatCard/index.js       ← styled card container used for every panel
   pages/
@@ -215,18 +218,25 @@ Strict three-layer separation:
    exponential above). The global ×1/×10 toggle (labeled "Bulk:") governs the batch size for *both* the
    manual "Buy" button and autobuyer ticks (see `tickGame` below) — at ×10 (the default) Buy grabs as many
    units as are currently affordable up to the 10-unit cost-block boundary (via
-   `getTierAffordableQuantity`/`buyTierQuantity`); at ×1 it buys a single unit at a time. Each row also
-   renders a two-color progress bar under the Buy button (green = units already bought in the current
-   10-unit cost block, `purchased % 10`; amber = units affordable right now but not yet bought,
-   `getTierAffordableQuantity(tier, purchased, spendable, 10)`) — this preview always reflects the full
+   `getTierAffordableQuantity`/`buyTierQuantity`); at ×1 it buys a single unit at a time. The Buy button
+   itself renders its cost-block progress as an on-button gradient fill (green = units already bought in
+   the current 10-unit cost block, `purchased % 10`; amber = units affordable right now but not yet
+   bought, `getTierAffordableQuantity(tier, purchased, spendable, 10)`) via `Button`'s `$progress`/
+   `$secondaryProgress` props, instead of a separate bar below it — this preview always reflects the full
    10-unit block regardless of the Bulk toggle, since it's showing runway to the next 10x cost jump, not
-   how much a single click will buy. The "⚙ Lv.N (×M/buy)" badge next to an unlocked tier's name shows
-   both its autobuyer level and the resulting `getAutobuyerYieldMultiplier(level)` — this multiplies how
-   many units the *autobuyer's own automatic purchases* yield for the money they spend; it does not
-   change the displayed production rate (that stays plain `owned × prestigeBonus`) and never applies to
-   manual Buy clicks.
+   how much a single click will buy. The Upgrade/Unlock button and the Prestige button carry the same
+   fill treatment (single-tone: spendable-resource-or-XP ÷ cost for Upgrade/Unlock, `prestigeProgressPercent`
+   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Because each of these
+   buttons nests a `VisuallyHiddenProgress` span carrying the real `role="progressbar"` (`aria-valuenow`/
+   `aria-valuemax`) for assistive tech, each button also sets an explicit `aria-label` matching its visible
+   text — without it, the accessible-name computation would recurse into the nested node and pick up its
+   label too. Buy/Upgrade/Unlock/Prestige/Bulk/Reset and the autobuyer badge all carry a `title` tooltip
+   explaining their effect in plain language. Each `TierLine` also gets a thin `border-left` accent color
+   cycled from a fixed palette by `tierIndex % length` — cosmetic scanability only, kept off text/button
+   colors so it never collides with the white/green/gold/darkgrey affordability semantics.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
-   `40rem` breakpoint, a stacked set below it) rather than flexbox content-based sizing, so a field's
+   `40rem` breakpoint, a denser 3-row set below it — name full-width, then owned/purchased/production
+   sharing one row, then buy/upgrade side by side — rather than flexbox content-based sizing, so a field's
    on-screen position depends only on viewport width, never on how many digits its value has; grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
    as a safety net against content forcing a column wider than its track. `RootDiv` sets
@@ -318,8 +328,10 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
-  row's cost-block progress bar carries `role="progressbar"` with `aria-label="<tier name> cost-block
-  progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax`.
+  row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHiddenProgress`) with
+  `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
+  the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` matching their visible text,
+  so `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
 - `yarn test` is green (158 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
