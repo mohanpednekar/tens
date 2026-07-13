@@ -77,6 +77,18 @@ safeguard) — with the default token, `ci.yml` would silently stop re-running o
 fixes, and `deploy.yml` would silently stop firing when the bot's PRs get merged to `main`. Using a PAT
 for these specific operations avoids that gap without any workaround.
 
+**Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
+unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
+constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token
+API billing): bounded per-run by `--max-turns` (25 for `autonomous-maintenance.yml`, 20 for
+`autonomous-pr-followup.yml`) as a best-effort proxy since there's no hard programmatic budget cutoff,
+and naturally self-limited further by the duplicate-PR guard, which skips a scheduled run entirely
+whenever a `claude/auto-*` PR is already open. Watch actual usage against your plan's weekly quota and
+tighten `--max-turns` (or pin a cheaper model via `claude_args`) further if runs consistently use too
+much. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dependency caching before
+invoking Claude (matching `ci.yml`), so `yarn install`/`yarn test` inside the agentic run don't waste
+turn budget on toolchain setup.
+
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via

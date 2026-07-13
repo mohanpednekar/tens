@@ -72,6 +72,17 @@ jobs:
           ref: ${{ steps.pr.outputs.branch }}
           fetch-depth: 0
 
+      - name: Enable Corepack
+        if: steps.pr.outputs.skip != 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
       - name: Address feedback / fix CI on the PR
         if: steps.pr.outputs.skip != 'true'
         uses: anthropics/claude-code-action@v1
