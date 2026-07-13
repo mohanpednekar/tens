@@ -95,10 +95,44 @@ much. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dep
 invoking Claude (matching `ci.yml`), so `yarn install`/`yarn test` inside the agentic run don't waste
 turn budget on toolchain setup.
 
+### Orchestration model
+
+The maintainer orchestrates; the scheduled workflow develops. Interactive Claude Code sessions are
+primarily for strategy discussion and for turning that strategy into a backlog of well-defined,
+run-sized tasks — GitHub issues labeled `claude-task`, created via the issue-form template at
+`.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance criteria / Files likely
+touched / Out of scope / Verification / Explicit authorizations / Dependencies). The scheduled
+maintenance workflow then implements those tasks unattended, one per run, and the follow-up +
+auto-merge workflows carry each PR to merge.
+
+In an interactive session, when the user is discussing features, strategy, or a body of work, the
+default deliverable is well-specified `claude-task` issues (created through the GitHub tooling), not
+direct implementation — implement live only when the user explicitly asks for that. Write each issue
+so an unattended 25-turn run can complete it without asking questions: one issue = one PR = one run.
+Split anything bigger into a sequence of issues ordered with "Blocked by #N" lines in the Dependencies
+section. An issue's optional "Explicit authorizations" section is the maintainer's written sign-off
+for changes the workflow otherwise hard-bans (e.g. adding a tier to `TIER_DEFINITIONS`); security
+constraints (no `--no-verify`, no editing other workflow files, never push to main, never self-merge)
+can never be authorized away. Issues labeled `priority:high` jump the queue; otherwise tasks are
+taken lowest-number-first.
+
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
-`anthropics/claude-code-action@v1`. Each run picks the single most valuable applicable task from:
+`anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in two phases:
+
+**Phase A — task backlog first.** The guard step passes the list of open `claude-task` issues
+(number + title) into the prompt. If any exist, Claude picks the top eligible one — `priority:high`
+label first, then lowest issue number; skipping tasks already covered by an open autonomous PR
+(issue number in a `claude/auto-task-<number>-*` branch name or PR title) and tasks whose "Blocked
+by #N" dependency is still open — reads its full spec with `gh issue view`, and implements it on a
+branch named `claude/auto-task-<number>-<short-slug>`. The PR body includes `Closes #<number>` so
+merging auto-closes the task. If the chosen task proves infeasible in one run, Claude comments on
+the issue explaining what's blocking and ends without a PR instead of half-landing it or falling
+through to another task.
+
+**Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
+single most valuable applicable task from:
 
 1. Test coverage gaps
 2. Dependency & security maintenance (`yarn audit` + safe patch/minor bumps)
@@ -106,9 +140,12 @@ Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
 4. CLAUDE.md documentation sync
 5. Workflow self-improvement — refine this task menu or the workflow file itself; scoped to editing
    `autonomous-maintenance.yml` only, and may not weaken the duplicate-PR guard, the turn/budget cap,
-   the never-self-merge rule, or the requirement to always open a PR
+   the never-self-merge rule, the requirement to always open a PR, or Phase A's priority over this
+   menu
 
-Adding new tiers to `TIER_DEFINITIONS` stays excluded from the menu — a human decision. `--max-turns`
+Adding new tiers to `TIER_DEFINITIONS` (and game-design/economy changes generally) is banned during
+Phase B menu runs, and allowed in Phase A only when the task issue's "Explicit authorizations"
+section explicitly permits that specific change — see the Orchestration model above. `--max-turns`
 is capped (currently 25) as a best-effort approximation of "no more than roughly 5% of weekly Claude
 usage quota per run" — Claude Code has no hard programmatic budget cutoff, so this is a turn-count
 proxy, not a guarantee; watch actual usage against your plan's weekly quota and tighten the cap
@@ -119,8 +156,8 @@ of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Clau
 skip opening a PR that duplicates an already-open one's purpose, while still opening a separate PR for
 a genuinely independent task (e.g. a dependency bump alongside an open docs-sync PR). A hard ceiling
 of 5 concurrently-open autonomous PRs (one per task slot) is a safety net against runaway PR count,
-skipping the run entirely once hit. If no applicable task remains (all either done or already covered
-by an open PR), the run makes no changes and opens no PR. `ci.yml`, `deploy.yml`,
+skipping the run entirely once hit. If nothing remains in either phase (all either done or already
+covered by an open PR), the run makes no changes and opens no PR. `ci.yml`, `deploy.yml`,
 `dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly
 denied to Claude's Edit/Write tools, even during the self-improvement task — only
 `autonomous-maintenance.yml` may edit itself.

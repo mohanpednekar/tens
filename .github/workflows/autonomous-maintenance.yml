@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check open autonomous PRs
+      - name: Check open autonomous PRs and task backlog
         id: guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,6 +51,17 @@ jobs:
             echo "PR_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Fetch the human-curated task backlog: open issues labeled claude-task. These
+          # take priority over the built-in maintenance menu — the prompt gets the list
+          # (number + title) and reads the chosen issue's full spec with `gh issue view`.
+          open_tasks=$(gh issue list --label claude-task --state open \
+            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+          {
+            echo "open_tasks<<TASK_EOF"
+            echo "$open_tasks"
+            echo "TASK_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Enable Corepack
         if: steps.guard.outputs.skip != 'true'
         run: corepack enable
@@ -74,7 +85,7 @@ jobs:
           branch_prefix: claude/auto-
           claude_args: |
             --max-turns 25
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*)"
           settings: |
             {
               "permissions": {
@@ -105,15 +116,40 @@ jobs:
             Currently-open autonomous PRs (branch: title):
             ${{ steps.guard.outputs.open_prs || '(none)' }}
 
-            Pick exactly ONE of the following tasks this run — whichever is most valuable given the
-            current state of the repo. Minimise PRs for similar work: if one of the open PRs above
-            already covers the same task/purpose you were about to pursue (e.g. another test-coverage
-            PR while a test-coverage PR is already open), don't open a duplicate — either pick a
-            different, genuinely independent task from the menu instead, or if every applicable task
-            already has a matching open PR, make no changes this run. Conversely, do open a separate
-            PR for a task that's genuinely independent of what's already open (e.g. a dependency bump
-            alongside an already-open docs-sync PR) — the goal is avoiding redundant PRs, not
-            minimising the total PR count.
+            Open task backlog (issues labeled claude-task, curated by the maintainer in planning
+            sessions):
+            ${{ steps.guard.outputs.open_tasks || '(none)' }}
+
+            You do exactly ONE unit of work per run, chosen in two phases:
+
+            PHASE A — task backlog first. If the backlog above is non-empty, pick the top
+            eligible task issue and implement it:
+            - Eligible means: no open autonomous PR above already covers it (its issue number
+              appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
+              is not blocked — if the issue body says "Blocked by #N", check #N with
+              `gh issue view N` and skip this task while #N is still open.
+            - Order: issues labeled priority:high first, then lowest issue number (FIFO).
+            - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
+              its acceptance criteria are the definition of done, its "Out of scope" section is
+              binding, and its "Verification" steps must be run in addition to `yarn test`.
+            - Name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
+              branch name is how future runs know this task is already in flight).
+            - The PR body MUST include the line `Closes #<number>` so merging auto-closes the task.
+            - If the chosen task turns out infeasible in this run (ambiguous spec, can't get tests
+              green, genuinely bigger than one run), do NOT half-land it or fall through to another
+              task: leave a comment on the issue with `gh issue comment` explaining exactly what's
+              blocking, make no changes, and end the run without a PR.
+
+            PHASE B — maintenance menu fallback. Only if there is NO eligible task issue in
+            Phase A, pick exactly one of the following menu tasks — whichever is most valuable
+            given the current state of the repo. Minimise PRs for similar work: if one of the open
+            PRs above already covers the same task/purpose you were about to pursue (e.g. another
+            test-coverage PR while a test-coverage PR is already open), don't open a duplicate —
+            either pick a different, genuinely independent task from the menu instead, or if every
+            applicable task already has a matching open PR, make no changes this run. Conversely,
+            do open a separate PR for a task that's genuinely independent of what's already open
+            (e.g. a dependency bump alongside an already-open docs-sync PR) — the goal is avoiding
+            redundant PRs, not minimising the total PR count.
 
             1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
                src/game/layers.js, or src/game/storage.js and add tests for them.
@@ -133,12 +169,16 @@ jobs:
                file under .github/workflows/. You must NOT weaken or remove, even in the name of
                "improving" it: the duplicate-PR guard step, the --max-turns budget cap, the
                settings.permissions.deny list protecting the other workflow files, the requirement
-               that you never merge your own PR, or the requirement to always open a PR for human
-               review instead of pushing straight to main.
+               that you never merge your own PR, the requirement to always open a PR for human
+               review instead of pushing straight to main, or the rule that the Phase A task
+               backlog always takes priority over this menu.
 
             Hard constraints, no exceptions:
-            - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js) —
-              adding new tiers is a game-design decision reserved for the human maintainer.
+            - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js), and
+              never make game-design/economy-rule changes, UNLESS you are implementing a Phase A
+              task issue whose "Explicit authorizations" section explicitly permits that specific
+              change — a claude-task issue is the maintainer's written sign-off. During Phase B
+              menu runs this ban is absolute.
             - Never modify .github/workflows/ci.yml, deploy.yml, dependabot-lockfile.yml,
               autonomous-pr-followup.yml, or pr-auto-merge.yml.
             - Never change the dev/test server host binding away from 127.0.0.1.
@@ -150,11 +190,13 @@ jobs:
             - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
               before doing anything else.
 
-            If, after surveying the repo, none of the five tasks has anything safe and meaningful to
-            do this run, make no changes and end without creating a branch or PR — do not force a
-            change just to have something to show.
+            If, after both phases, there is nothing safe and meaningful to do this run (no eligible
+            task issue, and no menu task worth doing), make no changes and end without creating a
+            branch or PR — do not force a change just to have something to show.
 
-            If you do make a change: create a branch named `claude/auto-<short-task-slug>`, commit,
+            If you do make a change: create a branch named `claude/auto-task-<number>-<short-slug>`
+            for a Phase A task, or `claude/auto-<short-task-slug>` for a Phase B menu task, commit,
             push it, and open a pull request against main using `gh pr create`. Structure the PR body
             to match .github/pull_request_template.md (Summary / Test plan / Documentation sections),
-            filling in the checkboxes truthfully based on what you actually ran.
+            filling in the checkboxes truthfully based on what you actually ran — and for a Phase A
+            task, include the `Closes #<number>` line.
