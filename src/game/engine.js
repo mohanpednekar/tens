@@ -140,8 +140,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   // Apply autobuyers: for each tier, attempt up to `level` purchases per tick. buyTierQuantity
   // re-validates internally and returns the state unchanged when a purchase fails, so a tier is
-  // safely skipped if a shared cost resource was exhausted.
-  const stateAfterAutobuyers = TIER_DEFINITIONS.reduce((s, tier) => {
+  // safely skipped if a shared cost resource was exhausted. Every tier is costed in the same
+  // resource (Money), so autobuyers compete for the same pool — processed highest tier first so
+  // a higher tier always gets first claim on limited funds.
+  const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? 0
     if (!level || !isTierUnlocked(s)(tier)) return s
     let result = s
