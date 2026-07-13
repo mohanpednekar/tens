@@ -5,7 +5,7 @@ import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCos
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 
 const RootDiv = styled.main`
   width: min(960px, calc(100vw - 2rem));
@@ -14,6 +14,16 @@ const RootDiv = styled.main`
   flex-direction: column;
   gap: 1.5rem;
   padding: 2rem 0;
+  font-variant-numeric: tabular-nums;
+`
+
+// Grid cells must never grow to fit their content — that's what lets a Buy button's or a stat's
+// on-screen position stay fixed as the underlying number's digit count changes.
+const gridCell = css`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 const Header = styled.header`
@@ -35,13 +45,26 @@ const TierList = styled.div`
   gap: 0.5rem;
 `
 
+// Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
+// the row's shape depends only on the viewport width, never on how many digits a value has.
 const TierLine = styled(StatCard)`
+  display: grid;
+  grid-template-areas: 'name owned purchased production buy upgrade';
+  grid-template-columns: 1.3fr 0.9fr 0.9fr 1.1fr 1.3fr 1.4fr;
   align-items: center;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: space-between;
+  column-gap: 1rem;
   padding: 0.5rem 1rem;
+
+  @media (max-width: 40rem) {
+    grid-template-areas:
+      'name name'
+      'owned purchased'
+      'production production'
+      'buy buy'
+      'upgrade upgrade';
+    grid-template-columns: 1fr 1fr;
+    row-gap: 0.5rem;
+  }
 `
 
 const QuantityToggle = styled.div`
@@ -72,6 +95,35 @@ const GreenText = styled.span`
 const TierName = styled.h3`
   font-size: 1em;
   margin: 0;
+  grid-area: name;
+  ${gridCell}
+`
+
+const OwnedText = styled(MutedText)`
+  grid-area: owned;
+  ${gridCell}
+`
+
+const PurchasedText = styled(MutedText)`
+  grid-area: purchased;
+  ${gridCell}
+`
+
+const ProductionText = styled(MutedText)`
+  grid-area: production;
+  ${gridCell}
+`
+
+const BuyButton = styled(Button)`
+  grid-area: buy;
+  width: 100%;
+  ${gridCell}
+`
+
+const UpgradeButton = styled(Button)`
+  grid-area: upgrade;
+  width: 100%;
+  ${gridCell}
 `
 
 const RESOURCE_NAME_BY_ID = Object.fromEntries(
@@ -161,17 +213,17 @@ const MainPage = () => {
           return (
             <TierLine key={tier.id} aria-label={`${tier.name} layer`}>
               <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</TierName>
-              <MutedText>Owned: {formatAmount(owned)}</MutedText>
-              <MutedText>Purchased: {formatAmount(purchased)}</MutedText>
-              <MutedText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</MutedText>
-              <Button
+              <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
+              <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
+              <ProductionText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</ProductionText>
+              <BuyButton
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id, quantity)}
               >
                 Buy{affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for {formatCurrency(displayCost)}
-              </Button>
-              <Button
+              </BuyButton>
+              <UpgradeButton
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeAutobuyer}
                 onClick={() => actions.buyAutobuyer(tier.id)}
@@ -179,7 +231,7 @@ const MainPage = () => {
                 {isAutobuyerLocked
                   ? `Unlock for ${autobuyerUnlockXPCost} XP`
                   : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`}
-              </Button>
+              </UpgradeButton>
             </TierLine>
           )
         })}
