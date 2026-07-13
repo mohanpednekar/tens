@@ -230,8 +230,10 @@ Strict three-layer separation:
    colors so it never collides with the white/green/gold/darkgrey affordability semantics.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
    `40rem` breakpoint, a denser 3-row set below it — name full-width, then owned/purchased/production
-   sharing one row, then buy/upgrade side by side — rather than flexbox content-based sizing, so a field's
-   on-screen position depends only on viewport width, never on how many digits its value has; grid cells use
+   sharing one row, then upgrade/buy side by side — rather than flexbox content-based sizing, so a field's
+   on-screen position depends only on viewport width, never on how many digits its value has. Buy sits to
+   the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
+   occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
    as a safety net against content forcing a column wider than its track. `RootDiv` sets
    `font-variant-numeric: tabular-nums` so digits render at a uniform width.

@@ -57,9 +57,12 @@ const TIER_ACCENT_COLORS = ['#60a5fa', '#f472b6', '#a78bfa', '#fb923c', '#22d3ee
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
+// Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
+// occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
+// that's about to click again.
 const TierLine = styled(StatCard)`
   display: grid;
-  grid-template-areas: 'name owned purchased production buy upgrade';
+  grid-template-areas: 'name owned purchased production upgrade buy';
   grid-template-columns: 1fr 0.75fr 0.8fr 0.9fr 1.5fr 1.6fr;
   align-items: center;
   column-gap: 0.6rem;
@@ -76,7 +79,7 @@ const TierLine = styled(StatCard)`
     grid-template-areas:
       'name name name name name name'
       'owned owned purchased purchased production production'
-      'buy buy buy upgrade upgrade upgrade';
+      'upgrade upgrade upgrade buy buy buy';
     grid-template-columns: repeat(6, 1fr);
     row-gap: 0.35rem;
     column-gap: 0.4rem;
