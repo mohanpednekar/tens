@@ -94,7 +94,7 @@ test('money balance is shown once at the top in full currency format', () => {
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
-test('the ×10 toggle bulk-buys up to 10 units at the same flat cost', async () => {
+test('the ×10 toggle does not change the manual Buy button — it always buys 1 unit', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -104,30 +104,14 @@ test('the ×10 toggle bulk-buys up to 10 units at the same flat cost', async () 
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: '×10' }))
-  await user.click(screen.getByRole('button', { name: /buy ×10 for \$100\b/i }))
 
-  expect(screen.getByText(/owned: 10/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
-})
-
-test('the ×10 toggle partially fills a bulk buy when funds only cover some of the block', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 35 }, // affords 3 at $10/unit, not the full 10 requested
-  }))
-
-  render(<App />)
-
-  await user.click(screen.getByRole('button', { name: '×10' }))
-
-  const buyButton = screen.getByRole('button', { name: /buy ×3 for \$30\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy for \$10\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
-  expect(screen.getByText(/owned: 3/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
+  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$90')
 })
 
 test('the quantity toggle marks the active option with aria-pressed', async () => {

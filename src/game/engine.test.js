@@ -560,6 +560,39 @@ describe('tickGame', () => {
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBe(0)
   })
+
+  it('with a batch size above 1, autobuyer holds until it can afford the entire block', () => {
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), 65), // affords 6 at $10/unit, not the full block of 10
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(65)
+  })
+
+  it('with a batch size above 1, autobuyer buys the whole block at once once affordable', () => {
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), 100),
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.owned[tensTier.id]).toBe(10)
+    // Cost drains money to 0, but the same tick's production from the 10 newly-owned
+    // generators (Tens produces its own cost resource) adds 10 back.
+    expect(after.resources[MONEY_ID]).toBe(10)
+  })
+
+  it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
+    const state = withAutobuyer(
+      withMoney(withPurchased(createInitialGameState(), tensTier.id, 7), 30), // only 3 units left in this block
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(10)
+    expect(after.owned[tensTier.id]).toBe(3)
+    expect(after.resources[MONEY_ID]).toBe(3)
+  })
 })
 
 // ─── buyAutobuyer ────────────────────────────────────────────────────────────
