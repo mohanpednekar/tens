@@ -132,7 +132,11 @@ access (`author_association` in `OWNER`/`COLLABORATOR`/`MEMBER`) before checkout
 public repo, anyone can comment on or review a PR without write access, which is the standard "pwn
 request" surface for privileged workflows on these trigger types; a runtime bash check alone isn't
 visible to CodeQL's static analysis, so this authorization check needs to live in the workflow YAML's
-`if:` to actually register as a mitigation.
+`if:` to actually register as a mitigation. Checkout is pinned to the exact commit SHA
+(`headRefOid`) resolved at the same time as the authorization check, not the branch name — the branch
+is mutable, so re-resolving "the current tip" at checkout time would reopen a TOCTOU window between
+authorization and execution; a SHA is immutable. Since that leaves a detached HEAD, the prompt has
+Claude run `git checkout -B <branch>` before committing so it can push back normally.
 
 ### Auto-merge on approval (`pr-auto-merge.yml`)
 
