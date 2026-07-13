@@ -94,6 +94,18 @@ test('money balance is shown once at the top in full currency format', () => {
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
+test('a money-producing tier shows its production rate with a $ prefix, consistent with money elsewhere', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { Tens: 5 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
+  expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('$/sec')
+})
+
 test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {
   const user = userEvent.setup()
 

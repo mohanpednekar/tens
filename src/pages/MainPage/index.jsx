@@ -214,7 +214,11 @@ const MainPage = () => {
               <TierName>{tier.name}{autobuyerLevel > 0 && <GreenText> ⚙ Auto (Lv.{autobuyerLevel})</GreenText>}</TierName>
               <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
               <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
-              <ProductionText>+{formatAmount(production)} {RESOURCE_SYMBOL(tier.producesResourceId)}/sec</ProductionText>
+              <ProductionText>
+                +{tier.producesResourceId === MONEY_ID
+                  ? formatCurrency(production)
+                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}/sec
+              </ProductionText>
               <BuyButton
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
