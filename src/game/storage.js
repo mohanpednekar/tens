@@ -1,6 +1,7 @@
 import { createInitialGameState } from './engine'
 
 const STORAGE_KEY = 'tens_game_state'
+const QUANTITY_STORAGE_KEY = 'tens_bulk_quantity'
 
 // Merge a saved state with a fresh one so new fields are always present
 // and old save files remain playable after schema changes.
@@ -51,5 +52,24 @@ export const clearGameState = () => {
     localStorage.removeItem(STORAGE_KEY)
   } catch {
     // Silently ignore
+  }
+}
+
+// The Bulk (×1/×10) toggle is a UI preference, not game progress — stored under its own key so
+// it's untouched by save-schema migration and by resetGame/clearGameState.
+export const saveQuantityPreference = quantity => {
+  try {
+    localStorage.setItem(QUANTITY_STORAGE_KEY, String(quantity))
+  } catch {
+    // Silently ignore
+  }
+}
+
+export const loadQuantityPreference = () => {
+  try {
+    const raw = localStorage.getItem(QUANTITY_STORAGE_KEY)
+    return raw === '1' ? 1 : 10
+  } catch {
+    return 10
   }
 }

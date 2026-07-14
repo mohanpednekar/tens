@@ -59,6 +59,35 @@ test('reset clears localStorage', async () => {
   expect(saved.owned.Tens).toBe(0)
 })
 
+test('Bulk toggle defaults to ×10 and persists a switch to ×1 across reload', async () => {
+  const user = userEvent.setup()
+
+  const { unmount } = render(<App />)
+
+  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'true')
+
+  await user.click(screen.getByRole('button', { name: '×1' }))
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
+  expect(localStorage.getItem('tens_bulk_quantity')).toBe('1')
+
+  // Simulate a page reload: unmount and render a fresh instance against the same localStorage
+  unmount()
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('reset game does not reset the Bulk toggle preference', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: '×1' }))
+  await user.click(screen.getByRole('button', { name: /reset game/i }))
+
+  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1000 },

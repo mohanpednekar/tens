@@ -276,7 +276,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema migration
+    storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
+                               keyed Bulk-toggle preference save/load
   components/
     Button/index.js        ← styled button; every caller passes `color` explicitly (no defaultProps —
                                React 19 dropped defaultProps support for function components, so it's a
@@ -310,7 +311,10 @@ Strict three-layer separation:
    localStorage persistence effect, the `quantity` (×1/×10 "Bulk") toggle state, and exposes
    `{ state, actions, resetGame, quantity, setQuantity }`. `quantity` defaults to `10` (bulk-by-default) and is
    passed into `tickGame` on every tick as `autobuyerBatchSize`; it also caps how many units the manual Buy
-   button requests (see below). It is UI-only preference state, not persisted to `localStorage`.
+   button requests (see below). It is UI preference state, persisted to `localStorage` under its own
+   `tens_bulk_quantity` key (separate from the game-state save blob, via `saveQuantityPreference`/
+   `loadQuantityPreference` in `storage.js`) so it survives reloads without participating in save-schema
+   migration or being cleared by `resetGame`.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
    renders each unlocked tier as a single compact row rather than separate cards, showing `Owned` (current
    amount, drives production) and `Purchased` (lifetime buy count, drives cost) as two separate figures.
@@ -445,7 +449,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` matching their visible text,
   so `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (158 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (165 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
