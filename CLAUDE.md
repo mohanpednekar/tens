@@ -69,9 +69,10 @@ below).
 ## Automation workflows
 
 Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working
-together to open, fix up, and merge PRs with no human in the loop until an approval is needed. All
-three authenticate git/GitHub operations with a `GH_AUTOMATION_PAT` repo secret (a personal access
-token) instead of the default `GITHUB_TOKEN`. This isn't optional: GitHub does not let commits, pushes,
+together to open, fix up, and merge PRs with no human in the loop until an approval is needed — except
+for a narrow, conservative class of low-risk bot-authored PRs that merge on green checks alone; see
+"Auto-merge" below. All three authenticate git/GitHub operations with a `GH_AUTOMATION_PAT` repo secret
+(a personal access token) instead of the default `GITHUB_TOKEN`. This isn't optional: GitHub does not let commits, pushes,
 or merges authored by the default `GITHUB_TOKEN` trigger other workflows (an anti-recursion
 safeguard) — with the default token, `ci.yml` would silently stop re-running on the bot's own pushed
 fixes, and `deploy.yml` would silently stop firing when the bot's PRs get merged to `main`. Using a PAT
@@ -87,13 +88,20 @@ step fails immediately with "Could not fetch an OIDC token" before ever reaching
 unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
 constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based, not pay-per-token
 API billing): bounded per-run by `--max-turns` (50 for `autonomous-maintenance.yml`, 30 for
-`autonomous-pr-followup.yml` — every tool call counts as a turn, and a real implementation run
-needs 30–50 of them; the original caps of 25/20 made runs fail with `error_max_turns` before
-finishing) as a best-effort proxy since there's no hard programmatic budget cutoff,
+`autonomous-pr-followup.yml` — every tool call counts as a turn, and a real implement-test-PR run
+needs 30–50 of them) as a best-effort proxy since there's no hard programmatic budget cutoff,
 and naturally self-limited further by the PR-dedup guard (see below), which caps the number of
-concurrently-open autonomous PRs. Watch actual usage against your plan's weekly quota and
-tighten `--max-turns` (or pin a cheaper model via `claude_args`) further if runs consistently use too
-much. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dependency caching before
+concurrently-open autonomous PRs. `autonomous-maintenance.yml`'s cap started at 25 and was raised in
+two steps after two separate live failures: the first run under the new Phase A/B prompt hit
+`error_max_turns` at only 26 turns / ~$0.79 of cost (25→40 — not enough headroom for the fuller
+read-CLAUDE.md → choose → implement → test → commit → push → open-PR round trip), and a subsequent
+Phase A smoke-test run (task issue #33) failed the same way even at 40 (40→50) — confirming every tool
+call, not just each higher-level step, counts against the cap. `autonomous-pr-followup.yml` was raised
+20→30 for the same reason. Watch actual usage against your plan's weekly quota and tighten
+`--max-turns` (or pin a cheaper model via `claude_args`) further if runs consistently use too much, but
+not below what a real task run needs (~30–50 turns), or every run will fail with `error_max_turns`
+before finishing. Both Claude-invoking workflows set up Node 22 + Yarn via Corepack with dependency
+caching before
 invoking Claude (matching `ci.yml`), so `yarn install`/`yarn test` inside the agentic run don't waste
 turn budget on toolchain setup.
 
@@ -123,15 +131,29 @@ taken lowest-number-first.
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
 `anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in two phases:
 
+**Budget discipline.** This is a side project — wall-clock time is not a constraint (one task every 5
+hours is fine), but the per-run turn/token budget is. Before starting whatever task it picks, Claude
+roughly sizes the work against its remaining turns, reserving a buffer of roughly the last 15-20% for
+test + commit + push + PR-open overhead. If a task looks too large even after buffering, it scopes down
+rather than attempting everything and risking `error_max_turns`: a Phase A task lands its largest
+coherent, test-covered *slice* first (PR body says `Part of #<number>` instead of `Closes #<number>`,
+and a `gh issue comment` on the task issue records what's done/what remains so the issue stays open and
+eligible for a future run to continue); a Phase B menu task scopes down to one coherent sub-area (e.g.
+one file) and leaves the rest for a future run under the same menu item. Either way, Claude opens the PR
+as soon as there's a meaningful, test-passing first commit (not only at the end) and pushes each
+subsequent commit as it lands, so a run that does get cut short by the turn budget still leaves real,
+discoverable progress on a real PR instead of losing everything with the ephemeral runner.
+
 **Phase A — task backlog first.** The guard step passes the list of open `claude-task` issues
 (number + title) into the prompt. If any exist, Claude picks the top eligible one — `priority:high`
 label first, then lowest issue number; skipping tasks already covered by an open autonomous PR
 (issue number in a `claude/auto-task-<number>-*` branch name or PR title) and tasks whose "Blocked
 by #N" dependency is still open — reads its full spec with `gh issue view`, and implements it on a
 branch named `claude/auto-task-<number>-<short-slug>`. The PR body includes `Closes #<number>` so
-merging auto-closes the task. If the chosen task proves infeasible in one run, Claude comments on
-the issue explaining what's blocking and ends without a PR instead of half-landing it or falling
-through to another task.
+merging auto-closes the task, unless it's a partial slice per the Budget discipline note above. If the
+chosen task proves infeasible for reasons other than size (ambiguous spec, can't get tests green),
+Claude comments on the issue explaining what's blocking and ends without a PR instead of half-landing
+it or falling through to another task.
 
 **Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
 single most valuable applicable task from:
@@ -144,15 +166,24 @@ single most valuable applicable task from:
    `autonomous-maintenance.yml` only, and may not weaken the duplicate-PR guard, the turn/budget cap,
    the never-self-merge rule, the requirement to always open a PR, or Phase A's priority over this
    menu
+6. Gap analysis — survey the repo for a gap not already covered by an open issue/PR (missing tests,
+   stale docs, an unwatched CI/CD failure mode, an unaddressed dependency/security finding, a thin
+   Phase A backlog) and file exactly one well-specified `claude-task` issue proposing a solution,
+   matching `.github/ISSUE_TEMPLATE/claude-task.yml`'s structure and sized the same way a
+   human-authored task would be. This task only proposes — it never opens a PR. The guard step
+   separately surfaces currently-open issues labeled `gap-analysis` so a run can skip re-proposing an
+   already-covered gap; new proposals get both the `claude-task` and `gap-analysis` labels (the latter
+   created idempotently via `gh label create ... --force` if missing).
 
 Adding new tiers to `TIER_DEFINITIONS` (and game-design/economy changes generally) is banned during
 Phase B menu runs, and allowed in Phase A only when the task issue's "Explicit authorizations"
 section explicitly permits that specific change — see the Orchestration model above. `--max-turns`
-is capped (currently 50) as a best-effort budget proxy — sized so a full implement-test-PR run fits,
-since every tool call counts as a turn; Claude Code has no hard programmatic budget cutoff, so watch
-actual usage against your plan's weekly quota and tighten the cap if runs consistently use too much,
-but not below what a real task run needs (~30–50 turns), or every Phase A run will fail with
-`error_max_turns` before opening its PR.
+is capped (currently 50, raised in two steps from an initial 25 — see the Cost implications note
+above) as a best-effort budget proxy, sized so a full implement-test-PR run fits since every tool call
+counts as a turn; Claude Code has no hard programmatic budget cutoff, so watch actual usage against
+your plan's weekly quota and tighten the cap if runs consistently use too much, but not below what a
+real task run needs (~30–50 turns), or every Phase A run will fail with `error_max_turns` before
+opening its PR.
 
 PRs are minimised for *similar* work but not capped to one at a time: the guard step passes the list
 of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Claude is instructed to
@@ -191,12 +222,28 @@ is mutable, so re-resolving "the current tip" at checkout time would reopen a TO
 authorization and execution; a SHA is immutable. Since that leaves a detached HEAD, the prompt has
 Claude run `git checkout -B <branch>` before committing so it can push back normally.
 
-### Auto-merge on approval (`pr-auto-merge.yml`)
+### Auto-merge (`pr-auto-merge.yml`)
 
-Fires on `pull_request_review: submitted`. If the review is an approval from the repo owner or a
-collaborator/member, it runs `gh pr merge --auto --squash`, which enables GitHub's native auto-merge —
-the PR merges by itself as soon as its required status checks pass, with no human needing to come back
-and click merge. This applies repo-wide, not just to autonomous PRs.
+Two independent paths, either of which calls `gh pr merge --auto --squash` to enable GitHub's native
+auto-merge (the PR merges by itself once its required status checks pass, with no human needing to come
+back and click merge):
+
+1. **On human approval** (`pull_request_review: submitted`) — if the review is an approval from the repo
+   owner or a collaborator/member, auto-merge is enabled unconditionally, any PR, any size. This applies
+   repo-wide, not just to autonomous PRs, and is unchanged from the original design.
+2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`) —
+   for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
+   `claude/heal-main-*`, `dependabot/*`; never a fork, checked via `isCrossRepository`), auto-merge is
+   enabled immediately once the diff meets a conservative "low risk" bar: the whole diff touches only
+   `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR the total changed lines is ≤50, OR it's a
+   Dependabot PR whose title shows a patch/minor semver bump (major-version bumps still wait for
+   approval). A PR that touches anything under `.github/workflows/` is **always** excluded from this
+   path regardless of size or content — workflow-file changes are the CI/CD trust boundary itself and
+   always get a human's eyes, matching how every Claude-invoking workflow already treats those files as
+   specially protected. This path is a plain shell script (no Claude invocation) for speed and
+   determinism, and is safe even if its heuristics ever mis-fire early: `gh pr merge --auto` doesn't
+   merge immediately, it only enables auto-merge, which still waits on the real required `test` check
+   from branch protection either way.
 
 **Two one-time manual prerequisites**, since neither is settable through the tools available to a
 Claude Code session:

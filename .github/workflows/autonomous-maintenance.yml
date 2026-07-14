@@ -62,6 +62,16 @@ jobs:
             echo "TASK_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Separately surface already-open gap-analysis proposals, so the Phase B gap
+          # analysis task can skip re-proposing something already in the backlog above.
+          open_gap_issues=$(gh issue list --label gap-analysis --state open \
+            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+          {
+            echo "open_gap_issues<<GAP_EOF"
+            echo "$open_gap_issues"
+            echo "GAP_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Enable Corepack
         if: steps.guard.outputs.skip != 'true'
         run: corepack enable
@@ -85,7 +95,7 @@ jobs:
           branch_prefix: claude/auto-
           claude_args: |
             --max-turns 50
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh label create:*)"
           settings: |
             {
               "permissions": {
@@ -121,6 +131,30 @@ jobs:
             sessions):
             ${{ steps.guard.outputs.open_tasks || '(none)' }}
 
+            Currently-open gap-analysis proposals (number: title), filed by a previous run's gap
+            analysis task (see Phase B item 6):
+            ${{ steps.guard.outputs.open_gap_issues || '(none)' }}
+
+            This is a side project — time is not a constraint (one task every 5 hours is fine), but
+            your turn/token budget per run is. Before you start implementing whatever task you pick
+            below, roughly size it against your remaining turns, reserving a buffer of roughly the
+            last 15-20% of your budget for test + commit + push + PR-open overhead, so you don't run
+            out mid-work. If a task looks too large to land safely within that budget even after
+            buffering:
+            - For a Phase A task issue, implement the largest coherent, independently-valuable,
+              test-covered SLICE of the spec first — see the `Part of #<number>` guidance in Phase A
+              below, instead of abandoning the task or attempting the whole thing at once.
+            - For a Phase B menu task, scope this run to one coherent sub-area (e.g. one file, one
+              specific gap) rather than trying to cover everything the item could mean at once, and
+              leave the rest for a future run to pick up under the same menu item.
+
+            Either way, don't wait until everything is finished to create visible progress: open the
+            PR as soon as there's a meaningful, buildable, test-passing first commit rather than only
+            at the very end, and push each subsequent meaningful commit as you make it rather than
+            batching every commit into one push at the end. If the run is ever cut short by the turn
+            budget, whatever has already landed then stays as real, discoverable progress on a real
+            PR instead of being lost with the ephemeral runner.
+
             You do exactly ONE unit of work per run, chosen in two phases:
 
             PHASE A — task backlog first. If the backlog above is non-empty, pick the top
@@ -135,11 +169,16 @@ jobs:
               binding, and its "Verification" steps must be run in addition to `yarn test`.
             - Name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
               branch name is how future runs know this task is already in flight).
-            - The PR body MUST include the line `Closes #<number>` so merging auto-closes the task.
-            - If the chosen task turns out infeasible in this run (ambiguous spec, can't get tests
-              green, genuinely bigger than one run), do NOT half-land it or fall through to another
-              task: leave a comment on the issue with `gh issue comment` explaining exactly what's
-              blocking, make no changes, and end the run without a PR.
+            - The PR body MUST include the line `Closes #<number>` so merging auto-closes the task —
+              UNLESS this PR is a partial slice per the budget guidance above, in which case use
+              `Part of #<number>` instead (no auto-close) and leave a `gh issue comment` on the task
+              issue summarizing exactly what this slice covers and what remains, so a future run can
+              pick up the rest (the issue stays open and eligible; only the PR that completes the
+              full spec includes `Closes #<number>`).
+            - If the chosen task turns out infeasible for reasons other than size (ambiguous spec,
+              can't get tests green after a reasonable attempt), do NOT half-land it or fall through
+              to another task: leave a comment on the issue with `gh issue comment` explaining
+              exactly what's blocking, make no changes, and end the run without a PR.
 
             PHASE B — maintenance menu fallback. Only if there is NO eligible task issue in
             Phase A, pick exactly one of the following menu tasks — whichever is most valuable
@@ -173,6 +212,21 @@ jobs:
                that you never merge your own PR, the requirement to always open a PR for human
                review instead of pushing straight to main, or the rule that the Phase A task
                backlog always takes priority over this menu.
+            6. Gap analysis — survey the repo for a gap not already covered by an open issue or PR:
+               a missing test, stale or missing documentation, a CI/CD failure mode nothing
+               currently watches, an unaddressed dependency/security finding, or a thin Phase A
+               backlog. Skip any gap already covered by one of the currently-open gap-analysis
+               proposals listed above. File exactly 1 well-specified claude-task issue (via
+               `gh issue create`) proposing a concrete solution — match the structure of
+               `.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance
+               criteria / Files likely touched / Out of scope / Verification / Explicit
+               authorizations / Dependencies) and size it the same way a human-authored task issue
+               would be sized (small enough for one run's budget, or explicitly split with
+               "Blocked by #N" if it's bigger). Do NOT implement the fix yourself in this run —
+               this task only proposes, it never opens a PR. Label the new issue with both
+               `claude-task` and `gap-analysis`; ensure the `gap-analysis` label exists first
+               (idempotent: `gh label create gap-analysis --color 0e8a16 --description
+               "Proposal filed by a gap-analysis run" --force`).
 
             Hard constraints, no exceptions:
             - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js), and
@@ -195,9 +249,11 @@ jobs:
             task issue, and no menu task worth doing), make no changes and end without creating a
             branch or PR — do not force a change just to have something to show.
 
-            If you do make a change: create a branch named `claude/auto-task-<number>-<short-slug>`
+            If you do make a code change: create a branch named `claude/auto-task-<number>-<short-slug>`
             for a Phase A task, or `claude/auto-<short-task-slug>` for a Phase B menu task, commit,
             push it, and open a pull request against main using `gh pr create`. Structure the PR body
             to match .github/pull_request_template.md (Summary / Test plan / Documentation sections),
             filling in the checkboxes truthfully based on what you actually ran — and for a Phase A
-            task, include the `Closes #<number>` line.
+            task, include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per
+            the budget guidance above). The one exception is Phase B item 6 (gap analysis), whose
+            output is a filed issue, not a branch or PR.
