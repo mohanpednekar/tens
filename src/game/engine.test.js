@@ -743,26 +743,52 @@ describe('buyAutobuyer', () => {
     expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
   })
 
-  it('upgrades from level 0 to 1 and deducts 10 of the tier\'s own resource', () => {
+  it('upgrades from level 0 to 1 and deducts 10 of the tier\'s own resource, keeping 1 generator', () => {
+    const state = withResource(
+      withAutobuyer(createInitialGameState(), tensTier.id, 0),
+      tensTier.id,
+      11
+    )
+    const after = buyAutobuyer(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.resources[tensTier.id]).toBe(1)
+  })
+
+  it('upgrades from level 1 to 2 and deducts 100 of the tier\'s own resource, keeping 1 generator', () => {
+    const state = withResource(
+      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+      tensTier.id,
+      101
+    )
+    const after = buyAutobuyer(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(2)
+    expect(after.resources[tensTier.id]).toBe(1)
+  })
+
+  it('refuses to upgrade when paying the cost would leave zero generators', () => {
+    // Exactly enough to cover the cost, but that would drain resources/owned to 0 — since
+    // those two move together, the tier would be left with no generators at all.
     const state = withResource(
       withAutobuyer(createInitialGameState(), tensTier.id, 0),
       tensTier.id,
       10
     )
-    const after = buyAutobuyer(tensTier.id)(state)
-    expect(after.autobuyers[tensTier.id]).toBe(1)
-    expect(after.resources[tensTier.id]).toBe(0)
+    expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
   })
 
-  it('upgrades from level 1 to 2 and deducts 100 of the tier\'s own resource', () => {
-    const state = withResource(
-      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+  it('leaves owned in sync with resources after an upgrade that keeps 1 generator', () => {
+    const state = withOwned(
+      withResource(
+        withAutobuyer(createInitialGameState(), tensTier.id, 0),
+        tensTier.id,
+        11
+      ),
       tensTier.id,
-      100
+      11
     )
     const after = buyAutobuyer(tensTier.id)(state)
-    expect(after.autobuyers[tensTier.id]).toBe(2)
-    expect(after.resources[tensTier.id]).toBe(0)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.resources[tensTier.id]).toBe(1)
   })
 
   it('returns the same state for an unknown tier ID', () => {
@@ -785,7 +811,7 @@ describe('buyAutobuyer', () => {
     expect(after.prestige.xp).toBe(0)
   })
 
-  it('upgrades higher-layer autobuyer from 0 to 1 using the tier\'s own resource', () => {
+  it('upgrades higher-layer autobuyer from 0 to 1 using the tier\'s own resource, keeping 1 generator', () => {
     const state = withResource(
       withAutobuyer(
         withOwned(createInitialGameState(), tensTier.id, 10),
@@ -793,11 +819,11 @@ describe('buyAutobuyer', () => {
         0
       ),
       thousandsTier.id,
-      10
+      11
     )
     const after = buyAutobuyer(thousandsTier.id)(state)
     expect(after.autobuyers[thousandsTier.id]).toBe(1)
-    expect(after.resources[thousandsTier.id]).toBe(0)
+    expect(after.resources[thousandsTier.id]).toBe(1)
   })
 })
 

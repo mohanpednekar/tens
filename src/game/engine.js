@@ -324,10 +324,13 @@ export const buyAutobuyer = tierId => state => {
     }
   }
 
-  // Upgrade: spend cost resource (10^(currentLevel+1))
+  // Upgrade: spend cost resource (10^(currentLevel+1)). resources[tier.id] and owned[tier.id]
+  // move together, so requiring only `available >= cost` could drain a tier to exactly 0
+  // generators — production for that tier (and everything cascading from it) would stop even
+  // though the upgrade "succeeded". Require at least 1 generator left over instead.
   const cost = getAutobuyerCost(currentLevel)
   const available = state.resources[tier.id] ?? 0
-  if (available < cost) return state
+  if (available < cost + 1) return state
 
   return {
     ...state,

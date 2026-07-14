@@ -330,16 +330,22 @@ Strict three-layer separation:
    10-unit block regardless of the Bulk toggle, since it's showing runway to the next 10x cost jump, not
    how much a single click will buy. The Upgrade/Unlock button and the Prestige button carry the same
    fill treatment (single-tone: spendable-resource-or-XP ÷ cost for Upgrade/Unlock, `prestigeProgressPercent`
-   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Because each of these
-   buttons nests a `VisuallyHidden` span carrying the real `role="progressbar"` (`aria-valuenow`/
-   `aria-valuemax`) for assistive tech, each button also sets an explicit `aria-label` matching its visible
-   text — without it, the accessible-name computation would recurse into the nested node and pick up its
-   label too. Buy/Upgrade/Unlock/Prestige/Bulk/Reset and the autobuyer badge all carry a `title` tooltip
-   explaining their effect in plain language; the Prestige and Reset buttons additionally wire
-   `aria-describedby` to a visible (Prestige) or `VisuallyHidden` (Reset) description, since those two are
-   the app's only irreversible actions and their most important fact (resources get wiped) previously lived
-   only in a mouse-hover `title` — the other four `title` usages genuinely just restate what's already
-   visible/in the `aria-label`, so they were left as-is. Each `TierLine` also gets a thin `border-left`
+   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Buy/Upgrade/Unlock/Prestige/
+   Reset render compact *visible* text — an icon in place of the action word (🛒 Buy, 🔓 Unlock, ⚙ Upgrade,
+   ✦ Prestige, ↺ Reset) plus the cost only, and (via `formatCost`) the paying tier's short `RESOURCE_SYMBOL`
+   (e.g. `Ks`) instead of its full name (e.g. `Thousands`) — while each button's `aria-label` still carries
+   the full descriptive sentence (`"Buy ×10 for $100"`, `"Unlock for 4 XP"`, `"Prestige (requires 1 Googol
+   Money)"`, `"Reset game"`, …) used by assistive tech and by tests that query `getByRole('button', { name })`.
+   Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
+   (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
+   required regardless of the visible/accessible-name split above — without it, the accessible-name
+   computation would recurse into the nested node and pick up its label too. Buy/Upgrade/Unlock/Prestige/
+   Bulk/Reset and the autobuyer badge all carry a `title` tooltip explaining their effect in plain language;
+   the Prestige and Reset buttons additionally wire `aria-describedby` to a visible (Prestige) or
+   `VisuallyHidden` (Reset) description, since those two are the app's only irreversible actions and their
+   most important fact (resources get wiped) previously lived only in a mouse-hover `title` — the other four
+   `title` usages genuinely just restate what's already visible/in the `aria-label`, so they were left as-is.
+   Each `TierLine` also gets a thin `border-left`
    accent color cycled from a fixed palette by `tierIndex % length` — cosmetic scanability only, kept off
    text/button colors so it never collides with the white/green/gold/darkgrey affordability semantics — and
    plays a one-shot CSS "reveal" animation (`$animateReveal`) when a tier unlocks *during the current
@@ -411,7 +417,7 @@ paid for — never discounts cost.
 | `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; the manual "Buy" button calls this with the Bulk toggle's `quantity` (1 or 10) to grab as many units as it can currently afford up to that cap. Never applies any autobuyer yield bonus. |
 | `buyTierQuantityWithYield` | `(tierId, quantity, yieldMultiplier) → state → state` | Used only by `tickGame`'s autobuyer loop: pays for up to `quantity` units at the normal flat price (same cost-block rules as `buyTierQuantity`), but credits `owned`/`resources` with `paidQuantity × yieldMultiplier` instead of `paidQuantity` — same money spent, more units gained. `purchased` only increases by the paid quantity, so the bonus units never discount future cost the way a real purchase would. |
-| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0, inactive); subsequent calls upgrade the level (spends the tier's own resource) — each level purchased doubles the autobuyer's own purchase yield via `getAutobuyerYieldMultiplier`, without changing the tier's passive production rate or affecting manual Buy |
+| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0, inactive); subsequent calls upgrade the level (spends the tier's own resource) — each level purchased doubles the autobuyer's own purchase yield via `getAutobuyerYieldMultiplier`, without changing the tier's passive production rate or affecting manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, an upgrade requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op (returns the same state) until at least 1 would remain afterward; the MainPage Upgrade button's `disabled` state mirrors this same `+ 1` threshold so it never looks clickable when the engine would refuse it |
 | `getAutobuyerYieldMultiplier` | `autobuyerLevel → number` | `2 ** level` (`null`/locked treated as level 0 → multiplier 1); passed into `buyTierQuantityWithYield` so each automatic purchase yields more units for the same money — level 0 (just unlocked, idle) doesn't purchase at all yet, so its multiplier is moot |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *unlock* status (levels reset to 0), leaves XP untouched, increments prestige level |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
@@ -446,10 +452,11 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
   row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
   `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
-  the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` matching their visible text,
-  so `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
+  the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` with the full descriptive
+  sentence (independent of their compact icon-based visible text — see Architecture above), so
+  `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (165 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (167 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
