@@ -82,7 +82,11 @@ The two Claude-invoking workflows (`autonomous-maintenance.yml`, `autonomous-pr-
 need `id-token: write` in their `permissions:` block — `claude-code-action`'s `claude_code_oauth_token`
 auth path requests a GitHub Actions OIDC token as part of its setup, and without that permission the
 step fails immediately with "Could not fetch an OIDC token" before ever reaching the actual task.
-`pr-auto-merge.yml` doesn't invoke Claude, so it doesn't need this.
+`pr-auto-merge.yml` doesn't invoke Claude, so it doesn't need this. `autonomous-maintenance.yml`
+additionally needs `issues: write` — an explicit `permissions:` block zeroes out everything unlisted,
+and without the issues permission the guard step's `gh issue list --label claude-task` (which runs
+with the default `GITHUB_TOKEN`) silently returns an empty backlog, so every run skips Phase A and
+falls through to the Phase B menu.
 
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited — revisit this if the repo ever goes private, since minutes would then be metered. The real
@@ -248,7 +252,9 @@ back and click merge):
 **Two one-time manual prerequisites**, since neither is settable through the tools available to a
 Claude Code session:
 - Add the `GH_AUTOMATION_PAT` repo secret described above (fine-grained PAT scoped to this repo,
-  Contents: read/write, Pull requests: read/write), alongside the existing `CLAUDE_CODE_OAUTH_TOKEN`.
+  Contents: read/write, Pull requests: read/write, Issues: read/write — the Issues permission is
+  what lets the maintenance run's `gh issue view`/`gh issue comment` read a `claude-task` spec and
+  report an infeasible task), alongside the existing `CLAUDE_CODE_OAUTH_TOKEN`.
 - Enable "Allow auto-merge" in repo Settings → General, and add branch protection on `main` that
   requires the `test` check from `ci.yml` to pass before merging. Without a required check,
   `gh pr merge --auto` has nothing to wait on and may merge immediately rather than "once green" —
