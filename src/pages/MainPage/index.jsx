@@ -12,8 +12,8 @@ const RootDiv = styled.main`
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem 0;
+  gap: 0.85rem;
+  padding: 1.25rem 0;
   font-variant-numeric: tabular-nums;
 `
 
@@ -48,7 +48,7 @@ const TopRow = styled.div`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.3rem;
 `
 
 // One accent hue per tier (cycled by index), applied as a thin left-edge stripe on the row —
@@ -72,10 +72,10 @@ const reveal = keyframes`
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas: 'name owned purchased production upgrade buy';
-  grid-template-columns: 1fr 0.75fr 0.8fr 0.9fr 1.5fr 1.6fr;
+  grid-template-columns: 1fr 0.75fr 0.8fr 0.9fr 1.05fr 1.05fr;
   align-items: center;
-  column-gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
+  column-gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
   transition: border-color 0.15s ease;
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
@@ -95,9 +95,9 @@ const TierLine = styled(StatCard)`
       'owned owned purchased purchased production production'
       'upgrade upgrade upgrade buy buy buy';
     grid-template-columns: repeat(6, 1fr);
-    row-gap: 0.35rem;
-    column-gap: 0.4rem;
-    padding: 0.5rem 0.65rem;
+    row-gap: 0.3rem;
+    column-gap: 0.35rem;
+    padding: 0.4rem 0.55rem;
   }
 `
 
@@ -172,37 +172,33 @@ const ProductionText = styled(MutedText)`
 const BuyButton = styled(Button)`
   grid-area: buy;
   width: 100%;
-  font-size: 0.85em;
-  padding: 0.5em 0.6em;
+  font-size: 0.82em;
+  padding: 0.4em 0.45em;
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.8em;
-    padding: 0.45em 0.5em;
+    font-size: 0.78em;
+    padding: 0.38em 0.4em;
   }
 `
 
 const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
-  font-size: 0.85em;
-  padding: 0.5em 0.6em;
+  font-size: 0.82em;
+  padding: 0.4em 0.45em;
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.8em;
-    padding: 0.45em 0.5em;
+    font-size: 0.78em;
+    padding: 0.38em 0.4em;
   }
 `
-
-const RESOURCE_NAME_BY_ID = Object.fromEntries(
-  TIER_DEFINITIONS.map(tier => [tier.id, tier.name])
-)
 
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
-    : `${formatAmount(amount)} ${RESOURCE_NAME_BY_ID[resourceId]}`
+    : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
 const MainPage = () => {
   const { actions, quantity, resetGame, setQuantity, state } = useIncrementalGame()
@@ -292,16 +288,26 @@ const MainPage = () => {
           const production = owned * prestigeBonus
           const autobuyerUnlockXPCost = getAutobuyerUnlockXPCost(tierIndex)
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
+          // Upgrading spends the tier's own resource (resources[tier.id] === owned[tier.id]),
+          // so the button must stay disabled until at least 1 generator would remain afterward
+          // — matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
           const canUpgradeAutobuyer = isAutobuyerLocked
             ? prestige.xp >= autobuyerUnlockXPCost
-            : resources >= autobuyerUpgradeCost
+            : resources >= autobuyerUpgradeCost + 1
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${autobuyerUnlockXPCost} XP`
             : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`
+          // Compact visible text: an icon in place of the "Buy"/"Upgrade"/"Unlock" word, and
+          // the tier's short symbol (via formatCost) in place of its full name. The full
+          // sentence stays in aria-label/title for assistive tech.
+          const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
+          const upgradeVisibleLabel = isAutobuyerLocked
+            ? `🔓 ${autobuyerUnlockXPCost} XP`
+            : `⚙ ${formatCost(autobuyerUpgradeCost, tier.id)}`
           // Live "how close am I" meter for the Upgrade/Unlock button, even while disabled.
           const autobuyerProgressPercent = Math.min(100, Math.round(
-            (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / autobuyerUpgradeCost) * 100
+            (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / (autobuyerUpgradeCost + 1)) * 100
           ))
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
 
@@ -337,7 +343,7 @@ const MainPage = () => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                {buyLabel}
+                {buyVisibleLabel}
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
@@ -355,7 +361,7 @@ const MainPage = () => {
                 $progress={autobuyerProgressPercent}
                 $pulse={canUpgradeAutobuyer}
               >
-                {upgradeLabel}
+                {upgradeVisibleLabel}
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} autobuyer progress`}
@@ -398,7 +404,7 @@ const MainPage = () => {
           $progressColor="#fbbf24"
           $pulse={canPrestige}
         >
-          {prestigeLabel}
+          ✦ Prestige
           <VisuallyHidden
             role="progressbar"
             aria-label="Prestige progress"
@@ -417,7 +423,7 @@ const MainPage = () => {
         onClick={resetGame}
         title="Erases all progress and starts over"
       >
-        Reset game
+        ↺ Reset
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
       </Button>
     </RootDiv>
