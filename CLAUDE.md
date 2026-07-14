@@ -128,7 +128,11 @@ section. An issue's optional "Explicit authorizations" section is the maintainer
 for changes the workflow otherwise hard-bans (e.g. adding a tier to `TIER_DEFINITIONS`); security
 constraints (no `--no-verify`, no editing other workflow files, never push to main, never self-merge)
 can never be authorized away. Issues labeled `priority:high` jump the queue; otherwise tasks are
-taken lowest-number-first.
+taken lowest-number-first. Whoever files a `claude-task` issue — a human, an interactive session, or
+an automation run filing one itself (gap analysis, or bug-filing per #55) — should also assign a
+`size:S`/`size:M`/`size:L` label using judgment about how much of the issue's Files/Spec surface it
+touches; Phase A weighs this against its own remaining budget when picking (see Budget discipline
+below).
 
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
@@ -146,7 +150,13 @@ eligible for a future run to continue); a Phase B menu task scopes down to one c
 one file) and leaves the rest for a future run under the same menu item. Either way, Claude opens the PR
 as soon as there's a meaningful, test-passing first commit (not only at the end) and pushes each
 subsequent commit as it lands, so a run that does get cut short by the turn budget still leaves real,
-discoverable progress on a real PR instead of losing everything with the ephemeral runner.
+discoverable progress on a real PR instead of losing everything with the ephemeral runner. A task
+issue's `size:S`/`size:M`/`size:L` label (see Orchestration model above) is a prior signal for this
+sizing step — a run may prefer a `size:S`/`size:M` task it can actually finish over a `size:L` one
+that's otherwise next in line, if its own estimate suggests a meaningful share of the budget is
+already used. The label is advisory context, not a gate: a run isn't blocked from attempting a
+`size:L` task anyway. Either way, skipping a task this way should be noted in reasoning/PR
+description, not silent — the same transparency expected of impact-based reordering per #55.
 
 **Phase A — task backlog first.** The guard step passes the list of open `claude-task` issues
 (number + title) into the prompt. If any exist, Claude picks the top eligible one — `priority:high`
