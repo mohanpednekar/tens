@@ -94,6 +94,9 @@ jobs:
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           base_branch: main
           branch_prefix: claude/auto-
+          # This repo is public, so the run's logs are public either way; the transcript is
+          # the only way to see WHY an unattended run ended without producing anything.
+          show_full_output: true
           claude_args: |
             --max-turns 50
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh label create:*)"
