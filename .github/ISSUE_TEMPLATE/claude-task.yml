@@ -5,6 +5,16 @@ description: >-
   multiple issues ordered with "Blocked by #N".
 labels: ["claude-task"]
 body:
+  - type: markdown
+    attributes:
+      value: >-
+        Before filing, apply a `size:S` / `size:M` / `size:L` label (S = a single small
+        focused change, roughly one concern/a couple files; M = the normal run-sized task
+        implied by this template — implement, test, commit, push, PR; L = large, likely
+        needs the "land the largest coherent slice, comment `Part of #N`" partial-completion
+        fallback rather than finishing in one run), alongside `priority:high`/`priority:low`
+        if applicable.
+
   - type: input
     id: goal
     attributes:
