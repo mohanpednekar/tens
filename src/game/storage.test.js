@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createInitialGameState } from './engine'
 import { MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, loadGameState, saveGameState } from './storage'
+import { clearGameState, loadGameState, loadQuantityPreference, saveGameState, saveQuantityPreference } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -169,5 +169,33 @@ describe('clearGameState', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadGameState()).toBeNull()
+  })
+})
+
+describe('saveQuantityPreference / loadQuantityPreference', () => {
+  it('defaults to 10 when nothing is saved', () => {
+    expect(loadQuantityPreference()).toBe(10)
+  })
+
+  it('round-trips a saved value of 1', () => {
+    saveQuantityPreference(1)
+    expect(loadQuantityPreference()).toBe(1)
+  })
+
+  it('round-trips a saved value of 10', () => {
+    saveQuantityPreference(10)
+    expect(loadQuantityPreference()).toBe(10)
+  })
+
+  it('falls back to 10 for an invalid stored value', () => {
+    localStorage.setItem('tens_bulk_quantity', 'not-a-number')
+    expect(loadQuantityPreference()).toBe(10)
+  })
+
+  it('is unaffected by clearGameState (separate key from the game-state blob)', () => {
+    saveQuantityPreference(1)
+    saveGameState(createInitialGameState())
+    clearGameState()
+    expect(loadQuantityPreference()).toBe(1)
   })
 })
