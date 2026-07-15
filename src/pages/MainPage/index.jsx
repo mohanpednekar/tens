@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
@@ -201,7 +201,7 @@ const formatCost = (amount, resourceId) =>
     : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
 const MainPage = () => {
-  const { actions, quantity, resetGame, setQuantity, state } = useIncrementalGame()
+  const { actions, dismissOfflineProgress, offlineProgress, quantity, resetGame, setQuantity, state } = useIncrementalGame()
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   const prestigeBonus = productionMultiplier(prestige.level)
@@ -224,6 +224,26 @@ const MainPage = () => {
         <h1>Tens</h1>
         <MutedText>Build by powers of ten. Prestige to multiply your progress.</MutedText>
       </Header>
+
+      {offlineProgress && (
+        <StatCard aria-label="offline progress notice">
+          <TopRow>
+            <MutedText>
+              Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
+              {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 10% speed.
+            </MutedText>
+            <Button
+              aria-label="Dismiss offline progress notice"
+              color="darkgrey"
+              onClick={dismissOfflineProgress}
+              title="Dismiss this notice"
+              type="button"
+            >
+              Dismiss
+            </Button>
+          </TopRow>
+        </StatCard>
+      )}
 
       <StatCard aria-label="money display">
         <TopRow>

@@ -1,4 +1,4 @@
-import { AUTOBUYER_XP_COST_BASE, GOOGOL, MONEY_ID, MONEY_STARTING_AMOUNT, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_XP_COST_BASE, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -201,6 +201,39 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     owned: newOwned,
     prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
   }
+}
+
+// Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
+// OFFLINE_PROGRESS_SPEED_MULTIPLIER and floored — the number of 1-second ticks
+// applyOfflineProgress will simulate.
+export const getOfflineEffectiveSeconds = elapsedRealSeconds =>
+  Math.floor(Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS) * OFFLINE_PROGRESS_SPEED_MULTIPLIER)
+
+// Catches a save up on the time it was closed/backgrounded by replaying tickGame one simulated
+// second at a time (rather than a single call with a large elapsedSeconds) so autobuyers get the
+// same one-purchase-attempt-per-second cadence they'd have had if the game had stayed open —
+// only at 10% speed, and capped to MAX_OFFLINE_SECONDS of real time.
+export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
+  const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds)
+  let result = state
+  for (let i = 0; i < effectiveSeconds; i++) {
+    result = tickGame(1, autobuyerBatchSize)(result)
+  }
+  return result
+}
+
+// "1h 15m" / "15m 30s" / "45s" — used only to summarize the elapsed/simulated duration in the
+// offline-progress notice; only ever needs to read up to MAX_OFFLINE_SECONDS (24h), so it has no
+// need to express days.
+export const formatOfflineDuration = totalSeconds => {
+  const seconds = Math.max(0, Math.floor(clampNonNegative(totalSeconds)))
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${secs}s`
+  return `${secs}s`
 }
 
 export const getTierSpendableAmount = (state, tier) =>

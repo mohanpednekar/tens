@@ -277,7 +277,8 @@ src/
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
-                               keyed Bulk-toggle preference save/load
+                               keyed Bulk-toggle preference save/load and the separately keyed last-save
+                               timestamp used to compute offline progress
   components/
     Button/index.js        ← styled button; every caller passes `color` explicitly (no defaultProps —
                                React 19 dropped defaultProps support for function components, so it's a
@@ -309,12 +310,19 @@ Strict three-layer separation:
    autobuyer loop, which breaks as soon as `buyTier` returns the same object back).
 2. **`useIncrementalGame.js`** — the only place holding React state. Owns the `setInterval` tick timer, the
    localStorage persistence effect, the `quantity` (×1/×10 "Bulk") toggle state, and exposes
-   `{ state, actions, resetGame, quantity, setQuantity }`. `quantity` defaults to `10` (bulk-by-default) and is
-   passed into `tickGame` on every tick as `autobuyerBatchSize`; it also caps how many units the manual Buy
-   button requests (see below). It is UI preference state, persisted to `localStorage` under its own
-   `tens_bulk_quantity` key (separate from the game-state save blob, via `saveQuantityPreference`/
-   `loadQuantityPreference` in `storage.js`) so it survives reloads without participating in save-schema
-   migration or being cleared by `resetGame`.
+   `{ state, actions, resetGame, quantity, setQuantity, offlineProgress, dismissOfflineProgress }`. `quantity`
+   defaults to `10` (bulk-by-default) and is passed into `tickGame` on every tick as `autobuyerBatchSize`; it
+   also caps how many units the manual Buy button requests (see below). It is UI preference state, persisted
+   to `localStorage` under its own `tens_bulk_quantity` key (separate from the game-state save blob, via
+   `saveQuantityPreference`/`loadQuantityPreference` in `storage.js`) so it survives reloads without
+   participating in save-schema migration or being cleared by `resetGame`. On mount, a one-time
+   `computeInitialGame` helper (module-scoped, not itself a hook) loads any saved state, reads
+   `loadLastSaveTimestamp()` (see `storage.js`), and — if the elapsed real time since that timestamp is long
+   enough to register at least one simulated second — folds in offline progress via `applyOfflineProgress`
+   (see "Offline progress" below) before the first render, and records a one-shot
+   `{ elapsedRealSeconds, effectiveSeconds }` summary as `offlineProgress` for the UI to report;
+   `dismissOfflineProgress` (and `resetGame`) clear that summary back to `null`. This all happens once, before
+   the regular tick timer starts — it is not re-evaluated on every render.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
    renders each unlocked tier as a single compact row rather than separate cards, showing `Owned` (current
    amount, drives production) and `Purchased` (lifetime buy count, drives cost) as two separate figures.
@@ -362,7 +370,11 @@ Strict three-layer separation:
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
    as a safety net against content forcing a column wider than its track. `RootDiv` sets
-   `font-variant-numeric: tabular-nums` so digits render at a uniform width.
+   `font-variant-numeric: tabular-nums` so digits render at a uniform width. When the hook reports a non-null
+   `offlineProgress` (see "Offline progress" below), a dismissible `StatCard` ("Welcome back! …", formatted via
+   `formatOfflineDuration`) renders above the money display, with a Dismiss button wired to
+   `dismissOfflineProgress`; it never reappears once dismissed (or once the state is reset) since it's a
+   one-shot summary of what happened between this load and the last, not a recurring status.
 
 ### Economy model
 
@@ -380,6 +392,25 @@ unlocked even if the rule changes later, so old saves stay playable.
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs `id`, `name`, `symbol`, `baseCost`,
 `costResourceId: MONEY_ID`, and `producesResourceId` set to the previous tier's `id`. No other file should
 need changing — the page and engine are meant to be fully data-driven from that array.
+
+### Offline progress
+
+Time away from the game is simulated at **10% speed** (`OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1` in
+`layers.js`) when the page is reopened, capped at `MAX_OFFLINE_SECONDS` (24 hours) of real elapsed time before
+the multiplier is applied — a courtesy for short absences, not a way to let the autobuyer loop or production
+outrun active play, and a hard bound on how long the catch-up simulation can take on load. The mechanism
+(`getOfflineEffectiveSeconds`/`applyOfflineProgress` in `engine.js`) replays `tickGame(1, autobuyerBatchSize)`
+once per *simulated* second — not a single call with one large `elapsedSeconds` — so autobuyers get the same
+one-purchase-attempt-per-tick cadence they'd have had if the game had stayed open the whole time, just at 10%
+speed; a single lump-sum call would let a long-idle autobuyer buy far more per "tick" than it ever could
+while the app was actually running. `storage.js`'s `saveGameState` stamps a separate `tens_last_save_timestamp`
+localStorage key with `Date.now()` on every save (every tick, not just on unmount, so it always reflects the
+last confirmed moment the app was open); `loadLastSaveTimestamp` reads it back, returning `null` if it's
+missing (no prior save, or an older save that predates this feature) — a `null` timestamp means "unknown
+elapsed time" and skips offline progress entirely rather than guessing. `clearGameState` (called by
+`resetGame`) removes this key too, since it's save-state bookkeeping, not a durable UI preference like the
+Bulk toggle. See "Architecture" above for how `useIncrementalGame` wires this into `state`/`offlineProgress`
+on mount, and how `MainPage` surfaces it.
 
 ### Game state shape
 
@@ -428,6 +459,9 @@ paid for — never discounts cost.
 | `getAutobuyerCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier production rates, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
+| `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, scales by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (10%), floors — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
+| `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` — see "Offline progress" above |
+| `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'$'` fallback for `MONEY_ID`/unknown ids |
 
 ### Constants (`src/game/layers.js`)
@@ -437,6 +471,8 @@ paid for — never discounts cost.
 - `GOOGOL = 1e100` — money balance required to prestige
 - `TICK_RATE_MS = 1000`
 - `AUTOBUYER_XP_COST_BASE = 1` (doubles per tier index)
+- `OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1` — offline progress runs at 10% of normal speed
+- `MAX_OFFLINE_SECONDS = 86400` (24 hours) — cap on real elapsed time counted toward offline progress
 
 ### Path aliases (`vite.config.js`)
 
@@ -456,7 +492,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (167 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (185 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
   (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
   mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
@@ -466,6 +502,6 @@ aliases in imports (as the existing code does), not relative paths like `../../g
 - Dev and test-watch servers bind to `127.0.0.1` explicitly (`--host 127.0.0.1`) — do not change to `0.0.0.0`.
 - All purchases, autobuyer upgrades, and prestige are validated inside `engine.js`, not just via disabled UI
   buttons — the engine re-checks affordability/unlock state on every call.
-- `saveGameState`/`loadGameState`/`clearGameState` wrap `localStorage` access in try/catch and fail silently
-  (quota errors, private-browsing restrictions).
+- `saveGameState`/`loadGameState`/`clearGameState`/`loadLastSaveTimestamp` wrap `localStorage` access in
+  try/catch and fail silently (quota errors, private-browsing restrictions).
 - Timer effects (`useIncrementalGame`'s `setInterval`) are cleaned up on unmount.
