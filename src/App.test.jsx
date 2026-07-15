@@ -361,3 +361,39 @@ test('no Automate control appears before a tier\'s autobuyer is activated', () =
 
   expect(screen.queryByRole('button', { name: /automate tens autobuyer/i })).not.toBeInTheDocument()
 })
+
+test('once every tier is automated, a single notice replaces every per-tier automation indicator', () => {
+  const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
+  // Owning 10 of each tier except the last unlocks the entire chain up to tier10.
+  const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
+  const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
+  const autobuyerAutomation = Object.fromEntries(tierIds.map(id => [id, true]))
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned,
+    autobuyers,
+    autobuyerAutomation,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^full automation notice$/i)).toBeInTheDocument()
+  expect(screen.queryByText(/🤖 auto/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /automate/i })).not.toBeInTheDocument()
+})
+
+test('the full automation notice does not appear while any tier is still unautomated', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    autobuyerAutomation: { tier01: true },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^full automation notice$/i)).not.toBeInTheDocument()
+  expect(screen.getByText(/🤖 auto/i)).toBeInTheDocument()
+})

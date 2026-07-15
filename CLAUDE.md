@@ -399,12 +399,14 @@ Strict three-layer separation:
    The Upgrade state (autobuyer already unlocked) additionally prefixes its visible text with `+10%` (e.g.
    `⚙ +10% 100 Ks`) and its `aria-label` with `"(+10% purchase speed)"`, so the speed-up is visible on the
    button itself rather than only in its `title` tooltip.
-   Once a tier's autobuyer is active (level ≠ `null`), an `UpgradeCell` wrapper (a flex column sharing the
-   same `upgrade` grid area as the Upgrade/Unlock button, rather than a 7th grid column) additionally shows
-   either an `AutomateButton` (spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from
-   `getAutobuyerAutomationCost`, disabled without enough unspent PP — see "Prestige Points" below) or, once
-   bought, a green `AutoBadge` ("🤖 Auto") in its place; the control never appears before the autobuyer
-   itself is activated, since there's nothing to automate yet.
+   Once a tier's autobuyer is active (level ≠ `null`), a dedicated narrow `automate` grid column (its own
+   track, not stacked under Upgrade — see the grid layout paragraph below) shows either an `AutomateButton`
+   (spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from `getAutobuyerAutomationCost`,
+   disabled without enough unspent PP — see "Prestige Points" below) or, once bought, a green `AutoBadge`
+   ("🤖 Auto") in its place; neither renders before the autobuyer itself is activated (nothing to automate
+   yet), and once every tier is automated (`allTiersAutomated`, `TIER_DEFINITIONS.every(...)`), neither
+   renders on *any* row anymore — a single `StatCard` ("full automation notice") above `TierList` explains
+   why, rather than leaving a permanent "Auto" badge cluttering all 10 rows forever.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
@@ -425,8 +427,10 @@ Strict three-layer separation:
    relying on mount timing alone.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
    `40rem` breakpoint, a denser 3-row set below it — name full-width, then owned/purchased/production
-   sharing one row, then upgrade/buy side by side — rather than flexbox content-based sizing, so a field's
-   on-screen position depends only on viewport width, never on how many digits its value has. Buy sits to
+   sharing one row, then upgrade/automate/buy side by side — rather than flexbox content-based sizing, so a
+   field's on-screen position depends only on viewport width, never on how many digits its value has (or on
+   whether the narrow `automate` column currently has anything in it — it stays reserved even when empty,
+   same principle). Buy sits to
    the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
@@ -646,7 +650,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (217 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (219 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current
