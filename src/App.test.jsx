@@ -430,7 +430,7 @@ test('the Smart button stays disabled without enough Prestige Points', () => {
   expect(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
 })
 
-test('the Smart and Automate controls are independent — buying one leaves the other untouched', async () => {
+test('buying Smart for a tier replaces its Auto-upgrade indicator instead of showing both', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -441,13 +441,17 @@ test('the Smart and Automate controls are independent — buying one leaves the 
 
   render(<App />)
 
+  // Before buying Smart, both controls are present.
+  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
+
   await user.click(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i }))
 
   expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/🤖 auto-upgrade/i)).not.toBeInTheDocument()
 })
 
-test('once every tier is smart, a single notice replaces every per-tier Smart indicator', () => {
+test('once every tier is smart, a single notice replaces every per-tier Smart indicator, and hands the Auto-upgrade indicator back', () => {
   const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
   const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
   const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
@@ -466,4 +470,7 @@ test('once every tier is smart, a single notice replaces every per-tier Smart in
   expect(screen.getByLabelText(/^full smart autobuyer notice$/i)).toBeInTheDocument()
   expect(screen.queryByText(/🧠 smart/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
+  // Every tier is smart but none is auto-upgrade-automated yet — the Auto-upgrade indicator,
+  // which Smart was covering, is shown again now that Smart no longer occupies the slot.
+  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
 })

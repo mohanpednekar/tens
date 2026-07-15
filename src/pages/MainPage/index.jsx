@@ -490,6 +490,12 @@ const MainPage = () => {
           const isSmart = state.smartAutobuyer?.[tier.id] ?? false
           const smartCost = getSmartAutobuyerCost(tier.id)
           const canBuySmart = !isFrozen && !isSmart && !isAutobuyerLocked && prestige.points >= smartCost
+          // Smart visually replaces the Auto-upgrade indicator for a tier once bought — showing
+          // both at once was cluttered, and Smart is the more advanced of the two. Once every
+          // tier is smart, the Smart indicator itself disappears (see allTiersSmart below), which
+          // hands the slot back to Auto-upgrade if that tier still needs it.
+          const showAutoUpgradeControl = !allTiersAutomated && !(isSmart && !allTiersSmart)
+          const showSmartControl = !allTiersSmart
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
@@ -578,9 +584,9 @@ const MainPage = () => {
                   aria-valuemax={100}
                 />
               </UpgradeButton>
-              {!isAutobuyerLocked && (!allTiersAutomated || !allTiersSmart) && (
+              {!isAutobuyerLocked && (showAutoUpgradeControl || showSmartControl) && (
                 <AutomationCell>
-                  {!allTiersAutomated && (
+                  {showAutoUpgradeControl && (
                     isAutomated ? (
                       <AutomationBadge $color="#4ade80" title="This tier's autobuyer Upgrades are bought automatically, forever">
                         🤖 Auto-upgrade
@@ -598,7 +604,7 @@ const MainPage = () => {
                       </AutomationButton>
                     )
                   )}
-                  {!allTiersSmart && (
+                  {showSmartControl && (
                     isSmart ? (
                       <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
                         🧠 Smart

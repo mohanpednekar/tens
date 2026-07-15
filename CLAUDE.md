@@ -400,9 +400,8 @@ Strict three-layer separation:
    `⚙ +10% 100 Ks`) and its `aria-label` with `"(+10% purchase speed)"`, so the speed-up is visible on the
    button itself rather than only in its `title` tooltip.
    Once a tier's autobuyer is active (level ≠ `null`), a dedicated narrow `automate` grid column (its own
-   track, not stacked under Upgrade — see the grid layout paragraph below) holds an `AutomationCell`: a
-   small flex column of up to two independent controls, each a compact button before it's bought or a
-   colored badge after —
+   track, not stacked under Upgrade — see the grid layout paragraph below) holds an `AutomationCell`: up to
+   two independent controls, each a compact button before it's bought or a colored badge after —
    - **Auto-upgrade** (green, 🤖): spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from
      `getAutobuyerAutomationCost`, disabled without enough unspent PP — see "Prestige Points and autobuyer
      automation" below. Labeled "🤖 Auto-upgrade" once bought (not bare "Auto") to be explicit about *what*
@@ -414,14 +413,21 @@ Strict three-layer separation:
      stall a batch-size-10 autobuyer would otherwise hit forever on a tier it's never bought anything for
      (see "Prestige Points and autobuyer automation" below). Labeled "🧠 Smart" once bought.
 
-   Neither control renders before the tier's autobuyer is activated (nothing to automate/smart-batch yet),
-   and each disappears independently, on *every* row, once every tier has that same capability
-   (`allTiersAutomated`/`allTiersSmart`, both `TIER_DEFINITIONS.every(...)`) — a single `StatCard` ("full
-   automation notice" / "full smart autobuyer notice") above `TierList` explains why, rather than leaving a
-   permanent badge cluttering all 10 rows forever; `AutomationCell` itself only renders while at least one
-   of the two still has something to show. The autobuyer-level speed badge in `TierName` (`⚙ Lv.N (×rate
-   speed)`, gated only on `autobuyerLevel > 0`) is independent of all this — it's shown whenever an
-   autobuyer is active at all, regardless of the state of either automation capability.
+   Neither control renders before the tier's autobuyer is activated (nothing to automate/smart-batch yet).
+   `MainPage` computes `showAutoUpgradeControl`/`showSmartControl` per tier row rather than showing both
+   unconditionally: **once Smart is bought for a tier, it visually replaces that tier's Auto-upgrade
+   indicator** (`showAutoUpgradeControl` folds in `!(isSmart && !allTiersSmart)`) rather than the two
+   stacking — showing both was cluttered, and Smart is treated as the more advanced status to surface.
+   Separately, once *every* tier has a given capability (`allTiersAutomated`/`allTiersSmart`, both
+   `TIER_DEFINITIONS.every(...)`), that capability's control disappears entirely, on every row, and a
+   single `StatCard` ("full automation notice" / "full smart autobuyer notice") above `TierList` explains
+   why, rather than leaving a permanent badge cluttering all 10 rows forever. Once `allTiersSmart` flips
+   true, Smart's per-row slot frees back up — `showAutoUpgradeControl`'s `!(isSmart && !allTiersSmart)` term
+   becomes `true` again — so any tier still missing Auto-upgrade shows that indicator again instead of a
+   now-empty slot. `AutomationCell` itself only renders while at least one of the two controls has
+   something to show. The autobuyer-level speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on
+   `autobuyerLevel > 0`) is independent of all this — it's shown whenever an autobuyer is active at all,
+   regardless of the state of either automation capability.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
