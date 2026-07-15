@@ -1,0 +1,5 @@
+# Workflow files are the CI/CD trust boundary — require the repo owner's review
+# on any change under this directory, structurally enforced via branch protection
+# ("Require review from Code Owners", a manual repo-settings prerequisite tracked
+# in issue #62), independent of pr-auto-merge.yml's own script-level exclusion.
+.github/workflows/** @mohanpednekar
