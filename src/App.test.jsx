@@ -56,7 +56,7 @@ test('reset clears localStorage', async () => {
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved).not.toBeNull()
   expect(saved.resources.Ones).toBe(10)
-  expect(saved.owned.Tens).toBe(0)
+  expect(saved.owned.tier01).toBe(0)
 })
 
 test('Bulk toggle defaults to ×10 and persists a switch to ×1 across reload', async () => {
@@ -91,7 +91,7 @@ test('reset game does not reset the Bulk toggle preference', async () => {
 test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1000 },
-    owned: { Tens: 10 },
+    owned: { tier01: 10 },
   }))
 
   render(<App />)
@@ -105,7 +105,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1000 },
-    owned: { Tens: 10 },
+    owned: { tier01: 10 },
   }))
 
   render(<App />)
@@ -126,7 +126,7 @@ test('money balance is shown once at the top in full currency format', () => {
 test('a money-producing tier shows its production rate with a $ prefix, consistent with money elsewhere', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: { Tens: 5 },
+    owned: { tier01: 5 },
   }))
 
   render(<App />)
@@ -138,8 +138,8 @@ test('a money-producing tier shows its production rate with a $ prefix, consiste
 test('an Upgrade level shows its autobuyer purchase-yield bonus without changing the displayed production rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: { Tens: 5 },
-    autobuyers: { Tens: 1 },
+    owned: { tier01: 5 },
+    autobuyers: { tier01: 1 },
   }))
 
   render(<App />)
@@ -154,7 +154,7 @@ test('an Upgrade level shows its autobuyer purchase-yield bonus without changing
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    purchased: { Tens: 4 },
+    purchased: { tier01: 4 },
   }))
 
   render(<App />)
@@ -242,7 +242,7 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
 test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 0 },
-    owned: { Tens: 5 },
+    owned: { tier01: 5 },
   }))
   // 100 real seconds ago → 10 simulated seconds at 10% speed → 5 Tens × 10s = +50 money
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
@@ -258,7 +258,7 @@ test('dismissing the offline progress notice hides it', async () => {
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 0 },
-    owned: { Tens: 5 },
+    owned: { tier01: 5 },
   }))
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
