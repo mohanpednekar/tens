@@ -130,6 +130,17 @@ constraints (no `--no-verify`, no editing other workflow files, never push to ma
 can never be authorized away. Issues labeled `priority:high` jump the queue; otherwise tasks are
 taken lowest-number-first.
 
+**Milestones vs. the Project's `Track` field.** These are complementary grouping axes, not
+duplicates. A GitHub Milestone targets a specific planned release and gets GitHub's native due-date
+and automatic X/Y-closed progress tracking for free; a `Track` (the Project's grouping field — see
+#53) groups issues by theme or dependency chain (e.g. "Byte-scale rename"), and can span multiple
+releases. A `Track` can outlive any single Milestone; a Milestone pulls together whichever issues —
+possibly from several Tracks — are actually planned for one release. Assign a player-facing
+feature/economy issue to the milestone representing its next planned release when one exists; pure
+process/infrastructure/automation issues typically don't need a milestone. Milestone creation and
+issue assignment are GitHub metadata operations (`gh api repos/<owner>/<repo>/milestones`, `gh issue
+edit --milestone`), not file changes.
+
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via

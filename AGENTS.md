@@ -130,6 +130,15 @@ the same number by design.
 - Setup file: `src/setupTests.js` (imports `@testing-library/jest-dom`).
 - Globals are enabled (`describe`, `it`, `expect`, etc. without imports).
 
+## Issue tracking conventions
+
+- `claude-task`-labeled issues are the work backlog for the scheduled automation (see `CLAUDE.md`'s
+  Orchestration model). Milestones and the Project's `Track` field are complementary: a Milestone
+  targets one planned release (native GitHub due-date + closed/open progress tracking); `Track`
+  groups issues by theme/dependency chain and can span multiple releases. Assign a milestone to
+  player-facing feature/economy issues when a next release is planned; process/infrastructure issues
+  typically don't need one.
+
 ## Security notes
 
 - Dev and test servers bind to `127.0.0.1` — do not change to `0.0.0.0`.
