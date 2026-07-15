@@ -149,3 +149,6 @@ the same number by design.
   UI buttons.
 - Timer effects are cleaned up on unmount.
 - Save/load wraps localStorage in try/catch to handle quota errors silently.
+- `.github/workflows/**` changes require the repo owner's review, enforced two ways:
+  `pr-auto-merge.yml`'s script-level exclusion, and (once branch protection enables
+  "Require review from Code Owners") `.github/CODEOWNERS`.

@@ -258,9 +258,13 @@ back and click merge):
    specially protected. This path is a plain shell script (no Claude invocation) for speed and
    determinism, and is safe even if its heuristics ever mis-fire early: `gh pr merge --auto` doesn't
    merge immediately, it only enables auto-merge, which still waits on the real required `test` check
-   from branch protection either way.
+   from branch protection either way. That exclusion is enforced entirely by this script's own `if`
+   logic, so it's backed by a second, structural layer independent of the script staying correct: a
+   `.github/CODEOWNERS` entry maps `.github/workflows/**` to the repo owner, and once branch protection
+   requires Code Owner review (see the manual prerequisite below), GitHub itself blocks any workflow-file
+   PR from merging without that review — defense in depth, not a replacement for the script-level check.
 
-**Two one-time manual prerequisites**, since neither is settable through the tools available to a
+**Three one-time manual prerequisites**, since none is settable through the tools available to a
 Claude Code session:
 - Add the `GH_AUTOMATION_PAT` repo secret described above (fine-grained PAT scoped to this repo,
   Contents: read/write, Pull requests: read/write, Issues: read/write — the Issues permission is
@@ -270,6 +274,9 @@ Claude Code session:
   requires the `test` check from `ci.yml` to pass before merging. Without a required check,
   `gh pr merge --auto` has nothing to wait on and may merge immediately rather than "once green" —
   the whole point of this workflow depends on `ci.yml` actually being wired up as a required check.
+- Enable "Require review from Code Owners" in that same branch-protection rule on `main`, so the
+  `.github/CODEOWNERS` entry above actually takes effect (tracked in issue #62's checklist until
+  confirmed done).
 
 ## Documentation
 
