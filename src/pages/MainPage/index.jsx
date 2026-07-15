@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerCost, getAutobuyerProductionMultiplier, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
@@ -200,6 +200,10 @@ const formatCost = (amount, resourceId) =>
     ? formatCurrency(amount)
     : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
+// "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero,
+// used only for the autobuyer's purchase-speed multiplier (getAutobuyerAttemptRate).
+const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
+
 const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, quantity, resetGame, setQuantity, state } = useIncrementalGame()
   const { prestige } = state
@@ -304,8 +308,11 @@ const MainPage = () => {
           const availablePercent = (availableInBlock / 10) * 100
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
-          const autobuyerProductionMultiplier = getAutobuyerProductionMultiplier(autobuyerLevel)
-          const production = owned * prestigeBonus * autobuyerProductionMultiplier
+          const autobuyerAttemptRate = getAutobuyerAttemptRate(autobuyerLevel)
+          // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
+          // of a tier (manual or automatic) doubles its own production, the same boundary where
+          // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
+          const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
           const autobuyerUnlockXPCost = getAutobuyerUnlockXPCost(tierIndex)
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           // Upgrading spends the tier's own resource (resources[tier.id] === owned[tier.id]),
@@ -317,15 +324,15 @@ const MainPage = () => {
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${autobuyerUnlockXPCost} XP`
-            : `Upgrade (doubles production) for ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            : `Upgrade (+10% purchase speed) for ${formatCost(autobuyerUpgradeCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/"Upgrade"/"Unlock" word, and
           // the tier's short symbol (via formatCost) in place of its full name. The full
           // sentence stays in aria-label/title for assistive tech. The Upgrade state also gets
-          // a "×2" prefix so the doubling effect is visible without needing to hover for the title.
+          // a "+10%" prefix so the speed-up is visible without needing to hover for the title.
           const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
           const upgradeVisibleLabel = isAutobuyerLocked
             ? `🔓 ${autobuyerUnlockXPCost} XP`
-            : `⚙ ×2 ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            : `⚙ +10% ${formatCost(autobuyerUpgradeCost, tier.id)}`
           // Live "how close am I" meter for the Upgrade/Unlock button, even while disabled.
           const autobuyerProgressPercent = Math.min(100, Math.round(
             (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / (autobuyerUpgradeCost + 1)) * 100
@@ -342,8 +349,8 @@ const MainPage = () => {
               <TierName>
                 {tier.name}
                 {autobuyerLevel > 0 && (
-                  <GreenText title={`Autobuyer level ${autobuyerLevel} — this tier's production is multiplied ×${autobuyerProductionMultiplier}`}>
-                    {' '}⚙ Lv.{autobuyerLevel} (×{autobuyerProductionMultiplier} production)
+                  <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
+                    {' '}⚙ Lv.{autobuyerLevel} (×{formatRate(autobuyerAttemptRate)} speed)
                   </GreenText>
                 )}
               </TierName>
@@ -359,7 +366,7 @@ const MainPage = () => {
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id, quantity)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production`}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — every 10 purchases also doubles it`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
@@ -378,7 +385,7 @@ const MainPage = () => {
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeAutobuyer}
                 onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : "Doubles this tier's production"}
+                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
                 $progress={autobuyerProgressPercent}
                 $pulse={canUpgradeAutobuyer}
               >

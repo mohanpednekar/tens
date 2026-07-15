@@ -8,12 +8,13 @@ import {
   formatAmount,
   formatCurrency,
   formatOfflineDuration,
+  getAutobuyerAttemptRate,
   getAutobuyerCost,
-  getAutobuyerProductionMultiplier,
   getAutobuyerUnlockXPCost,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getPrestigeProgressPercent,
+  getPurchaseMilestoneMultiplier,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -96,6 +97,13 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.autobuyers[tier.id]).toBeNull()
+    })
+  })
+
+  it('initialises all autobuyer attempt budgets to 0', () => {
+    const state = createInitialGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(state.autobuyerAttemptBudgets[tier.id]).toBe(0)
     })
   })
 
@@ -313,23 +321,41 @@ describe('productionMultiplier', () => {
 
 // ─── getAutobuyerProductionMultiplier ────────────────────────────────────────
 
-describe('getAutobuyerProductionMultiplier', () => {
-  it('returns 1 (no-op) for an unlocked-but-idle autobuyer (level 0)', () => {
-    expect(getAutobuyerProductionMultiplier(0)).toBe(1)
+describe('getPurchaseMilestoneMultiplier', () => {
+  it('returns 1 within the first block of 10 purchases', () => {
+    expect(getPurchaseMilestoneMultiplier(0)).toBe(1)
+    expect(getPurchaseMilestoneMultiplier(9)).toBe(1)
+  })
+
+  it('doubles at each block-of-10 boundary, same as the cost epoch', () => {
+    expect(getPurchaseMilestoneMultiplier(10)).toBe(2)
+    expect(getPurchaseMilestoneMultiplier(19)).toBe(2)
+    expect(getPurchaseMilestoneMultiplier(20)).toBe(4)
+    expect(getPurchaseMilestoneMultiplier(30)).toBe(8)
+  })
+
+  it('treats negative purchased counts as 0', () => {
+    expect(getPurchaseMilestoneMultiplier(-1)).toBe(1)
+  })
+})
+
+describe('getAutobuyerAttemptRate', () => {
+  it('returns 1 (baseline) for an unlocked-but-not-upgraded autobuyer (level 0)', () => {
+    expect(getAutobuyerAttemptRate(0)).toBe(1)
   })
 
   it('returns 1 for a locked autobuyer (null)', () => {
-    expect(getAutobuyerProductionMultiplier(null)).toBe(1)
+    expect(getAutobuyerAttemptRate(null)).toBe(1)
   })
 
-  it('doubles per level', () => {
-    expect(getAutobuyerProductionMultiplier(1)).toBe(2)
-    expect(getAutobuyerProductionMultiplier(2)).toBe(4)
-    expect(getAutobuyerProductionMultiplier(3)).toBe(8)
+  it('compounds by 10% per level', () => {
+    expect(getAutobuyerAttemptRate(1)).toBeCloseTo(1.1)
+    expect(getAutobuyerAttemptRate(2)).toBeCloseTo(1.21)
+    expect(getAutobuyerAttemptRate(3)).toBeCloseTo(1.331)
   })
 
   it('treats negative levels as 0', () => {
-    expect(getAutobuyerProductionMultiplier(-1)).toBe(1)
+    expect(getAutobuyerAttemptRate(-1)).toBe(1)
   })
 })
 
@@ -618,32 +644,47 @@ describe('tickGame', () => {
     expect(after.prestige.xp).toBeGreaterThan(0)
   })
 
-  it('active autobuyer (level 1) buys 2 generators per tick (unlocking already grants 1 attempt, Upgrade grants 1 more), and level 1 doubles that tier\'s production', () => {
-    const state = withAutobuyer(
-      withMoney(createInitialGameState(), 100),
-      tensTier.id
-    )
-    const after = tickGame(1)(state)
-    // Buys 2 units ($20 total) at the normal rate — no purchase-yield bonus.
-    expect(after.owned[tensTier.id]).toBe(2)
-    expect(after.purchased[tensTier.id]).toBe(2)
-    // Passive production from those 2 owned generators is doubled by the level-1 autobuyer
-    // production multiplier (2^1): 100 - 20 (cost) + 2 × 1sec × 2 (production) = 84.
-    expect(after.resources[MONEY_ID]).toBe(84)
-  })
-
-  it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 generator per tick, with no production bonus yet', () => {
+  it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 generator per tick', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 100),
       tensTier.id,
       0
     )
     const after = tickGame(1)(state)
-    // Level 0 = 1 purchase attempt per tick — unlocking alone already enables purchasing.
+    // Level 0 = 1 purchase attempt per tick (rate 1.0) — unlocking alone already enables
+    // purchasing, with no Upgrade needed.
     expect(after.owned[tensTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(1)
-    // No production bonus at level 0 (multiplier 2^0 = 1): 100 - 10 (cost) + 1 × 1sec × 1 = 91.
+    // Production depends only on purchased milestones now (see getPurchaseMilestoneMultiplier),
+    // not on autobuyer level: 100 - 10 (cost) + 1 × 1sec × 1 (still under 10 purchases) = 91.
     expect(after.resources[MONEY_ID]).toBe(91)
+  })
+
+  it('a level-1 autobuyer\'s single-tick purchase count matches level 0 exactly — the 10% speed-up only shows up over many ticks', () => {
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), 100),
+      tensTier.id,
+      1
+    )
+    const after = tickGame(1)(state)
+    // Level 1's 1.1x attempt rate only fires 1 purchase in a single tick, same as level 0 — the
+    // fractional 0.1 remainder carries into future ticks rather than buying twice immediately.
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.purchased[tensTier.id]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(91)
+  })
+
+  it('a level-1 autobuyer buys 10% more often than level 0 over many ticks', () => {
+    const runTicks = (level, ticks) => {
+      let result = withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id, level)
+      for (let i = 0; i < ticks; i++) result = tickGame(1)(result)
+      return result
+    }
+    // Level 0 fires exactly 1 attempt/tick (rate 1.0) → 10 purchases over 10 ticks.
+    expect(runTicks(0, 10).purchased[tensTier.id]).toBe(10)
+    // Level 1 fires at rate 1.1/tick — the fractional remainder accumulates across ticks and
+    // fires an 11th purchase within the same 10 ticks.
+    expect(runTicks(1, 10).purchased[tensTier.id]).toBe(11)
   })
 
   it('autobuyer does not purchase when funds are insufficient', () => {
@@ -675,8 +716,9 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
     // Cost drains money to 0, but the same tick's production from the 10 owned generators
-    // (Tens produces its own cost resource), doubled by the level-1 autobuyer production
-    // multiplier (2^1), adds 10 × 2 = 20 back.
+    // (Tens produces its own cost resource) is doubled by the purchase-milestone multiplier —
+    // purchased just crossed from 0-9 into the 10-19 block (see getPurchaseMilestoneMultiplier)
+    // — adding 10 × 2 = 20 back.
     expect(after.resources[MONEY_ID]).toBe(20)
   })
 
@@ -689,8 +731,8 @@ describe('tickGame', () => {
     expect(after.purchased[tensTier.id]).toBe(10)
     // Pays for the 3 remaining units in the block at the normal rate — no purchase-yield bonus.
     expect(after.owned[tensTier.id]).toBe(3)
-    // 3 owned generators produce 3 money each, doubled by the level-1 autobuyer production
-    // multiplier (2^1): 3 × 1sec × 2 = 6 money.
+    // 3 owned generators produce 3 money each, doubled by the purchase-milestone multiplier —
+    // purchased just crossed into the 10-19 block: 3 × 1sec × 2 = 6 money.
     expect(after.resources[MONEY_ID]).toBe(6)
   })
 
@@ -750,10 +792,11 @@ describe('applyOfflineProgress', () => {
   it('runs an active autobuyer across each simulated second, not just once', () => {
     const state = withAutobuyer(withMoney(createInitialGameState(), 1000), tensTier.id)
     const after = applyOfflineProgress(100)(state) // 10 simulated seconds/ticks
-    // A level-1 autobuyer gets 2 purchase attempts per simulated tick (level + 1), each capped
-    // at 1 unit by the default batch size of 1, so 10 ticks caps purchased at 20 even though
-    // funds could otherwise cover far more in one lump call.
-    expect(after.purchased[tensTier.id]).toBe(20)
+    // A level-1 autobuyer's 1.1x attempt rate accumulates a fractional budget across ticks
+    // (see tickGame) — over 10 simulated ticks that's 9 ticks firing 1 purchase each plus a
+    // 10th tick whose carried-over remainder fires 2, for 11 total — capped by real funds/time
+    // rather than bought in one lump sum.
+    expect(after.purchased[tensTier.id]).toBe(11)
   })
 })
 

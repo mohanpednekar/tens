@@ -97,6 +97,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
     expect(loadGameState().autobuyers[tensTier.id]).toBe(0)
   })
+
+  it('preserves a fractional autobuyer attempt budget', () => {
+    const state = {
+      ...createInitialGameState(),
+      autobuyerAttemptBudgets: { ...createInitialGameState().autobuyerAttemptBudgets, [tensTier.id]: 0.7 },
+    }
+    saveGameState(state)
+    expect(loadGameState().autobuyerAttemptBudgets[tensTier.id]).toBeCloseTo(0.7)
+  })
 })
 
 describe('schema migration', () => {
@@ -107,6 +116,15 @@ describe('schema migration', () => {
     expect(loaded.autobuyers).toBeDefined()
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.autobuyers).toHaveProperty(tier.id)
+    })
+  })
+
+  it('defaults autobuyerAttemptBudgets to 0 for every tier on a save that predates it', () => {
+    const { autobuyerAttemptBudgets: _dropped, ...oldSave } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.autobuyerAttemptBudgets[tier.id]).toBe(0)
     })
   })
 
