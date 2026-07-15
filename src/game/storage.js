@@ -36,11 +36,12 @@ const migrateTierKeys = map =>
 const migrateState = saved => {
   const fresh = createInitialGameState()
   // Convert legacy boolean autobuyers to level numbers (true → 1, false → null for locked).
-  // Numeric values (including 0, which means "unlocked but idle" in the current schema) pass
-  // through unchanged — they must NOT be remapped to null here, or every autobuyer sitting at
-  // level 0 (freshly unlocked, or reset to 0 by a prestige) would silently relock on the very
-  // next load, since a legitimate level-0 value would otherwise be indistinguishable from the
-  // legacy boolean `false`.
+  // Numeric values pass through unchanged — they must NOT be remapped to null here, or an
+  // in-progress autobuyer would silently relock on the very next load, since a legitimate
+  // numeric level would otherwise be indistinguishable from the legacy boolean `false`. A
+  // pre-existing save's old level 0 ("unlocked but idle" under a since-removed schema) is left
+  // as-is rather than migrated to 1 — tickGame/getAutobuyerAttemptRate already treat it as an
+  // active autobuyer at the baseline rate, so it degrades gracefully without special-casing.
   const rawAutobuyers = migrateTierKeys(saved.autobuyers)
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])

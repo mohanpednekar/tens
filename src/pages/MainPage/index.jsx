@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
@@ -313,29 +313,28 @@ const MainPage = () => {
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
           const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
-          const autobuyerUnlockXPCost = getAutobuyerUnlockXPCost(tierIndex)
-          const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
-          // Upgrading spends the tier's own resource (resources[tier.id] === owned[tier.id]),
-          // so the button must stay disabled until at least 1 generator would remain afterward
-          // — matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
-          const canUpgradeAutobuyer = isAutobuyerLocked
-            ? prestige.xp >= autobuyerUnlockXPCost
-            : resources >= autobuyerUpgradeCost + 1
+          // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
+          // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
+          const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
+          // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
+          // button must stay disabled until at least 1 generator would remain afterward —
+          // matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
+          const canUpgradeAutobuyer = resources >= autobuyerCost + 1
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
-            ? `Unlock for ${autobuyerUnlockXPCost} XP`
-            : `Upgrade (+10% purchase speed) for ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            ? `Unlock for ${formatCost(autobuyerCost, tier.id)}`
+            : `Upgrade (+10% purchase speed) for ${formatCost(autobuyerCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/"Upgrade"/"Unlock" word, and
           // the tier's short symbol (via formatCost) in place of its full name. The full
           // sentence stays in aria-label/title for assistive tech. The Upgrade state also gets
           // a "+10%" prefix so the speed-up is visible without needing to hover for the title.
           const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
           const upgradeVisibleLabel = isAutobuyerLocked
-            ? `🔓 ${autobuyerUnlockXPCost} XP`
-            : `⚙ +10% ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            ? `🔓 ${formatCost(autobuyerCost, tier.id)}`
+            : `⚙ +10% ${formatCost(autobuyerCost, tier.id)}`
           // Live "how close am I" meter for the Upgrade/Unlock button, even while disabled.
           const autobuyerProgressPercent = Math.min(100, Math.round(
-            (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / (autobuyerUpgradeCost + 1)) * 100
+            (resources / (autobuyerCost + 1)) * 100
           ))
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
 

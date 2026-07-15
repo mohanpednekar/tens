@@ -1,4 +1,4 @@
-import { AUTOBUYER_XP_COST_BASE, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -100,15 +100,11 @@ export const getTierAffordableQuantity = (tier, purchased, spendable, requestedQ
   return Math.min(blockCapped, Math.floor(clampNonNegative(spendable) / unitCost))
 }
 
-// XP cost to unlock an autobuyer (null → 0; already active at level 0, see tickGame). Doubles
-// per tier layer. Layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
-export const getAutobuyerUnlockXPCost = tierIndex =>
-  AUTOBUYER_XP_COST_BASE * (2 ** clampNonNegative(tierIndex))
-
-// Resource cost to upgrade an autobuyer from currentLevel to currentLevel+1.
-// Level 0→1 costs 10, level 1→2 costs 100, level 2→3 costs 1000, …  (10^(level+1))
+// Resource cost to activate/upgrade an autobuyer from currentLevel to currentLevel+1 (null/no
+// autobuyer yet treated as currentLevel 0). Level 0→1 (activation) costs 1000, level 1→2 costs
+// 1,000,000, level 2→3 costs 1,000,000,000, …  (1000^(level+1))
 export const getAutobuyerCost = currentLevel =>
-  10 ** (clampNonNegative(currentLevel) + 1)
+  1000 ** (clampNonNegative(currentLevel) + 1)
 
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
@@ -120,12 +116,14 @@ export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prest
 export const getPurchaseMilestoneMultiplier = purchased =>
   2 ** Math.floor(clampNonNegative(purchased) / 10)
 
-// Each autobuyer Upgrade level makes that tier's autobuyer 10% faster on average: the rate of
-// purchase attempts per tick compounds by 1.1 per level (level 0 = 1x, the baseline rate already
-// active once unlocked — see tickGame). This is a purchase-cadence multiplier only; it has no
-// effect on the tier's production (see getPurchaseMilestoneMultiplier) or on manual Buy.
+// Level 1 is the baseline rate (1x, already active as soon as the autobuyer is activated — see
+// tickGame/buyAutobuyer); each level after that makes that tier's autobuyer 10% faster on
+// average, compounding: level 2 = 1.1x, level 3 = 1.21x, … This is a purchase-cadence multiplier
+// only; it has no effect on the tier's production (see getPurchaseMilestoneMultiplier) or on
+// manual Buy. `null` (not yet activated) is never actually fed into this in tickGame — treated
+// as level 1 here defensively.
 export const getAutobuyerAttemptRate = autobuyerLevel =>
-  1.1 ** clampNonNegative(autobuyerLevel ?? 0)
+  1.1 ** clampNonNegative((autobuyerLevel ?? 1) - 1)
 
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
 // Already-owned tiers stay unlocked so older saves remain playable after rule changes.
@@ -175,10 +173,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) this tick, then fire one
   // purchase attempt per whole unit of budget, carrying any fractional remainder into the next
-  // tick. Level 0 (just unlocked) already accumulates at the baseline rate (1/tick), so unlocking
-  // alone makes an autobuyer active; each Upgrade level compounds that rate by another 10%. If a
-  // batch can't be afforded, the loop stops WITHOUT spending the budget already accumulated for
-  // this attempt — it stays banked so a stretch of being broke doesn't cost any attempts, only
+  // tick. Level 1 (just activated) already accumulates at the baseline rate (1/tick), so
+  // activating alone makes an autobuyer active; each further Upgrade level compounds that rate by
+  // another 10%. If a batch can't be afforded, the loop stops WITHOUT spending the budget already
+  // accumulated for this attempt — it stays banked so a stretch of being broke doesn't cost any attempts, only
   // delays them until funds catch up. buyTierQuantity re-validates internally and returns the
   // state unchanged when a purchase fails. Every tier is costed in the same resource (Money), so
   // autobuyers compete for the same pool — processed highest tier first so a higher tier always
@@ -317,38 +315,18 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   return result
 }
 
-// Unlock the autobuyer for a tier by spending XP (null → 0; already active at level 0, see
-// tickGame). Then upgrade it by spending the tier's own cost-resource in powers of 10
-// (level N → N+1: costs 10^(N+1), so 0→1=10, 1→2=100, …).
+// Activate (currentLevel null → 1) or upgrade (level N → N+1) an autobuyer, always by spending
+// the tier's own resource — there's no separate XP-gated unlock step; activation is just the
+// N=0 case of the same cost formula (getAutobuyerCost(0) = 1000). resources[tier.id] and
+// owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
+// exactly 0 generators — production for that tier (and everything cascading from it) would stop
+// even though the purchase "succeeded". Require at least 1 generator left over instead.
 export const buyAutobuyer = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
-  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tierId)
   const currentLevel = state.autobuyers[tierId] ?? null
-
-  if (currentLevel === null) {
-    // Unlock: spend XP → level becomes 0 (already active — see tickGame)
-    const xpCost = getAutobuyerUnlockXPCost(tierIndex)
-    if ((state.prestige.xp ?? 0) < xpCost) return state
-    return {
-      ...state,
-      prestige: {
-        ...state.prestige,
-        xp: (state.prestige.xp ?? 0) - xpCost,
-      },
-      autobuyers: {
-        ...state.autobuyers,
-        [tierId]: 0,
-      },
-    }
-  }
-
-  // Upgrade: spend cost resource (10^(currentLevel+1)). resources[tier.id] and owned[tier.id]
-  // move together, so requiring only `available >= cost` could drain a tier to exactly 0
-  // generators — production for that tier (and everything cascading from it) would stop even
-  // though the upgrade "succeeded". Require at least 1 generator left over instead.
-  const cost = getAutobuyerCost(currentLevel)
+  const cost = getAutobuyerCost(currentLevel ?? 0)
   const available = state.resources[tier.id] ?? 0
   if (available < cost + 1) return state
 
@@ -364,15 +342,16 @@ export const buyAutobuyer = tierId => state => {
     },
     autobuyers: {
       ...state.autobuyers,
-      [tierId]: currentLevel + 1,
+      [tierId]: (currentLevel ?? 0) + 1,
     },
   }
 }
 
 // Reaching GOOGOL money gains 1 Prestige Level and resets all progress.
-// XP is untouched by prestige (it only ever gated autobuyer unlocks, not prestige).
-// Autobuyer unlocks are permanent across prestige (non-null stays unlocked at level 0),
-// while run-funded autobuyer levels reset to 0.
+// XP is untouched by prestige — it's earned independently via money milestones and doesn't fund
+// anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
+// Autobuyer activation is permanent across prestige (non-null stays active at level 1, the
+// baseline rate), while run-funded Upgrade levels above that reset.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -380,7 +359,7 @@ export const prestigeGame = state => {
   const resetAutobuyers = Object.fromEntries(
     Object.entries(initial.autobuyers).map(([tierId]) => {
       const level = state.autobuyers[tierId] ?? null
-      return [tierId, level === null ? null : 0]
+      return [tierId, level === null ? null : 1]
     })
   )
   return {
