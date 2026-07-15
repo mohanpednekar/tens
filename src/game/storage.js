@@ -4,12 +4,39 @@ const STORAGE_KEY = 'tens_game_state'
 const QUANTITY_STORAGE_KEY = 'tens_bulk_quantity'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 
+// Legacy name-based tier ids (pre-tier0N rename) mapped to their new naming-agnostic id.
+// Nonillions/Decillions have no new id — they were dropped when the tier count went 12 → 10,
+// so their old data is discarded rather than remapped (see LEGACY_REMOVED_TIER_IDS below).
+const LEGACY_TIER_ID_MAP = {
+  Tens: 'tier01',
+  Thousands: 'tier02',
+  Millions: 'tier03',
+  Billions: 'tier04',
+  Trillions: 'tier05',
+  Quadrillions: 'tier06',
+  Pentillions: 'tier07',
+  Hexillions: 'tier08',
+  Septillions: 'tier09',
+  Octillions: 'tier10',
+}
+const LEGACY_REMOVED_TIER_IDS = new Set(['Nonillions', 'Decillions'])
+
+// Remaps an old-schema per-tier map (resources/owned/purchased/autobuyers) from legacy
+// name-based keys to the new tier0N keys, dropping data under removed legacy tier ids;
+// keys already in the new scheme (or unrelated, like MONEY_ID) pass through unchanged.
+const migrateTierKeys = map =>
+  Object.fromEntries(
+    Object.entries(map ?? {})
+      .filter(([k]) => !LEGACY_REMOVED_TIER_IDS.has(k))
+      .map(([k, v]) => [LEGACY_TIER_ID_MAP[k] ?? k, v])
+  )
+
 // Merge a saved state with a fresh one so new fields are always present
 // and old save files remain playable after schema changes.
 const migrateState = saved => {
   const fresh = createInitialGameState()
   // Convert legacy boolean autobuyers to level numbers (true → 1, false/0 → null for locked)
-  const rawAutobuyers = saved.autobuyers ?? {}
+  const rawAutobuyers = migrateTierKeys(saved.autobuyers)
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : (v === false || v === 0) ? null : v])
   )
@@ -22,9 +49,9 @@ const migrateState = saved => {
   return {
     ...fresh,
     ...saved,
-    resources: { ...fresh.resources, ...saved.resources },
-    owned:     { ...fresh.owned,     ...saved.owned },
-    purchased: { ...fresh.purchased, ...(saved.purchased ?? saved.owned ?? {}) },
+    resources: { ...fresh.resources, ...migrateTierKeys(saved.resources) },
+    owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
+    purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }

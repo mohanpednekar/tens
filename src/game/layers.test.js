@@ -9,8 +9,8 @@ import {
 } from './layers'
 
 describe('TIER_DEFINITIONS', () => {
-  it('has exactly 12 tiers', () => {
-    expect(TIER_DEFINITIONS).toHaveLength(12)
+  it('has exactly 10 tiers', () => {
+    expect(TIER_DEFINITIONS).toHaveLength(10)
   })
 
   it('each tier has all required fields', () => {
@@ -42,7 +42,7 @@ describe('TIER_DEFINITIONS', () => {
   })
 
   it('first tier is Tens and both costs and produces Ones (money)', () => {
-    expect(TIER_DEFINITIONS[0].id).toBe('Tens')
+    expect(TIER_DEFINITIONS[0].id).toBe('tier01')
     expect(TIER_DEFINITIONS[0].costResourceId).toBe(MONEY_ID)
     expect(TIER_DEFINITIONS[0].producesResourceId).toBe(MONEY_ID)
   })

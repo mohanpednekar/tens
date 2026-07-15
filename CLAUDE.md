@@ -389,20 +389,23 @@ Strict three-layer separation:
 
 ### Economy model
 
-There are 12 tiers, `Tens` through `Decillions` (`TIER_DEFINITIONS` in `src/game/layers.js`). **Every tier
-is bought directly with `Ones` (money)** — `costResourceId` is `MONEY_ID` for all of them. Once owned, a
-tier produces the tier immediately below it (`producesResourceId`), cascading production down to `Ones`.
-`Tens` is the special case where `costResourceId === producesResourceId === MONEY_ID`: it's the entry-level
-generator, bought with money to produce more money.
+There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
+display names `Tens` through `Octillions`. `id` is a naming-agnostic key, fully decoupled from `name`/
+`symbol` — a future re-theme only needs to touch `name`/`symbol`, never state keys, tests, or save data.
+**Every tier is bought directly with `Ones` (money)** — `costResourceId` is `MONEY_ID` for all of them.
+Once owned, a tier produces the tier immediately below it (`producesResourceId`), cascading production
+down to `Ones`. `tier01` (`Tens`) is the special case where `costResourceId === producesResourceId ===
+MONEY_ID`: it's the entry-level generator, bought with money to produce more money.
 
 A tier unlocks once you own **≥ 10** of the tier below it (`isTierUnlocked`); already-owned tiers stay
 unlocked even if the rule changes later, so old saves stay playable.
 
 ### Adding a new tier
 
-Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs `id`, `name`, `symbol`, `baseCost`,
-`costResourceId: MONEY_ID`, and `producesResourceId` set to the previous tier's `id`. No other file should
-need changing — the page and engine are meant to be fully data-driven from that array.
+Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs a naming-agnostic `id` (next in the
+`tier0N`/`tierNN` sequence), `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`, and
+`producesResourceId` set to the previous tier's `id`. No other file should need changing — the page and
+engine are meant to be fully data-driven from that array.
 
 ### Offline progress
 
@@ -427,10 +430,10 @@ on mount, and how `MainPage` surfaces it.
 
 ```js
 {
-  resources:  { Ones: 10, Tens: 0, … },       // amount owned per resource id (keyed by costResourceId/MONEY_ID)
-  owned:      { Tens: 0, Thousands: 0, … },    // generator count per tier id (drives production)
-  purchased:  { Tens: 0, Thousands: 0, … },    // lifetime purchase count per tier id (drives cost scaling)
-  autobuyers: { Tens: null, Thousands: null, … }, // null = locked; number = active level (0 = unlocked but idle)
+  resources:  { Ones: 10, tier01: 0, … },       // amount owned per resource id (keyed by costResourceId/MONEY_ID)
+  owned:      { tier01: 0, tier02: 0, … },       // generator count per tier id (drives production)
+  purchased:  { tier01: 0, tier02: 0, … },       // lifetime purchase count per tier id (drives cost scaling)
+  autobuyers: { tier01: null, tier02: null, … }, // null = locked; number = active level (0 = unlocked but idle)
   prestige:   { xp: 0, level: 0, highestMilestone: 1 }, // xp only funds autobuyer unlocks — prestige itself
                                                           // is gated on Money ≥ GOOGOL, not xp
 }
@@ -503,10 +506,11 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (185 tests). All four test files assert against the current tier/resource id scheme
-  (`MONEY_ID = 'Ones'`, tiers `Tens`/`Thousands`/…) — don't reintroduce the older lowercase scheme
-  (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in the tests; that
-  mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
+- `yarn test` is green (187 tests). All four test files assert against the current tier/resource id scheme
+  (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
+  reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
+  rename left behind in the tests; that mismatch has been reconciled in favor of the current
+  `layers.js`/`engine.js` source.
 
 ## Security notes
 

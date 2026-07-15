@@ -162,6 +162,44 @@ describe('schema migration', () => {
     const loaded = loadGameState()
     expect(loaded.prestige.xp).toBe(9)
   })
+
+  it('remaps legacy name-based tier ids to the new tier0N ids', () => {
+    const oldSave = {
+      resources: { Ones: 10, Tens: 3, Thousands: 1 },
+      owned: { Tens: 3, Thousands: 1 },
+      purchased: { Tens: 6, Thousands: 1 },
+      autobuyers: { Tens: 2, Thousands: null },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources.tier01).toBe(3)
+    expect(loaded.resources.tier02).toBe(1)
+    expect(loaded.owned.tier01).toBe(3)
+    expect(loaded.owned.tier02).toBe(1)
+    expect(loaded.purchased.tier01).toBe(6)
+    expect(loaded.purchased.tier02).toBe(1)
+    expect(loaded.autobuyers.tier01).toBe(2)
+    expect(loaded.autobuyers.tier02).toBeNull()
+  })
+
+  it('drops data under removed legacy tier ids (Nonillions/Decillions) without error', () => {
+    const oldSave = {
+      resources: { Ones: 10, Nonillions: 5, Decillions: 2 },
+      owned: { Nonillions: 5, Decillions: 2 },
+      purchased: { Nonillions: 5, Decillions: 2 },
+      autobuyers: { Nonillions: 1, Decillions: null },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources.Nonillions).toBeUndefined()
+    expect(loaded.resources.Decillions).toBeUndefined()
+    expect(loaded.owned.Nonillions).toBeUndefined()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.owned).toHaveProperty(tier.id)
+    })
+  })
 })
 
 describe('clearGameState', () => {

@@ -1,20 +1,20 @@
 // Every tier is bought directly with Ones (Money); production cascades down
 // through `producesResourceId` into the tier below's owned/resource count.
-// 'Tens' intentionally has costResourceId === producesResourceId: it is the
+// `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
+// so a future re-theme never has to touch state keys, tests, or save data.
+// 'tier01' intentionally has costResourceId === producesResourceId: it is the
 // entry-level money generator, bought with Ones to produce more Ones.
 export const TIER_DEFINITIONS = [
-  { id: 'Tens',          name: 'Tens',          symbol: 'Tens', baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones' },
-  { id: 'Thousands',     name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'Tens' },
-  { id: 'Millions',      name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'Thousands' },
-  { id: 'Billions',      name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'Millions' },
-  { id: 'Trillions',     name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'Billions' },
-  { id: 'Quadrillions',  name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'Trillions' },
-  { id: 'Pentillions',   name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'Quadrillions' },
-  { id: 'Hexillions',    name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'Pentillions' },
-  { id: 'Septillions',   name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'Hexillions' },
-  { id: 'Octillions',    name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'Septillions' },
-  { id: 'Nonillions',    name: 'Nonillions',    symbol: 'Ns',   baseCost: 1E30, costResourceId: 'Ones', producesResourceId: 'Octillions' },
-  { id: 'Decillions',    name: 'Decillions',    symbol: 'Ds',   baseCost: 1E33, costResourceId: 'Ones', producesResourceId: 'Nonillions' },
+  { id: 'tier01', name: 'Tens',          symbol: 'Tens', baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones' },
+  { id: 'tier02', name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01' },
+  { id: 'tier03', name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02' },
+  { id: 'tier04', name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03' },
+  { id: 'tier05', name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04' },
+  { id: 'tier06', name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05' },
+  { id: 'tier07', name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06' },
+  { id: 'tier08', name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07' },
+  { id: 'tier09', name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08' },
+  { id: 'tier10', name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09' },
 ]
 
 
