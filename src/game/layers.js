@@ -42,6 +42,14 @@ export const AUTOBUYER_AUTOMATION_BASE_COST = 1
 // The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
 // times more PP than automating that same tier's autobuyer Upgrades.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
-// Flat PP cost to permanently automate Prestige itself (see engine.js's buyAutoPrestige) — a
-// single global purchase, not per-tier, so unlike the costs above it isn't a per-tier formula.
+// Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
+// buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
+// it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it
+// each level.
 export const AUTO_PRESTIGE_COST = 100
+// Auto-Prestige's cost doubles with each level purchased (see engine.js's getAutoPrestigeCost).
+export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
+// Auto-Prestige's base check cadence at level 1: once unlocked, it attempts to prestige roughly
+// this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
+// reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
+export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000

@@ -312,7 +312,7 @@ test('after the first prestige, the Prestige panel is shown regardless of last-t
   expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears in the Prestige panel, and spends 100 PP to enable it', async () => {
+test('an Auto-Prestige button appears in the Prestige panel, and spends 100 PP to activate level 1', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -327,8 +327,8 @@ test('an Auto-Prestige button appears in the Prestige panel, and spends 100 PP t
 
   await user.click(autoPrestigeButton)
 
-  expect(screen.getByText(/auto-prestige enabled/i)).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable auto-prestige/i })).not.toBeInTheDocument()
+  expect(screen.getByText(/auto-prestige lv\.1/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 200 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -341,6 +341,19 @@ test('the Auto-Prestige button stays disabled without enough Prestige Points', (
   render(<App />)
 
   expect(screen.getByRole('button', { name: /enable auto-prestige for 100 prestige points/i })).toBeDisabled()
+})
+
+test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autoPrestige: 1,
+    prestige: { xp: 0, points: 199, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByText(/auto-prestige lv\.1/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 200 prestige points/i })).toBeDisabled()
 })
 
 test('prestige points and the production speed bonus are shown', () => {

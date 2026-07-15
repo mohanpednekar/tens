@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
   AUTO_PRESTIGE_COST,
+  AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTOBUYER_AUTOMATION_BASE_COST,
   GOOGOL,
   MONEY_ID,
@@ -112,5 +114,13 @@ describe('constants', () => {
 
   it('AUTO_PRESTIGE_COST is 100', () => {
     expect(AUTO_PRESTIGE_COST).toBe(100)
+  })
+
+  it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
+    expect(AUTO_PRESTIGE_COST_MULTIPLIER).toBe(2)
+  })
+
+  it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
+    expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
   })
 })

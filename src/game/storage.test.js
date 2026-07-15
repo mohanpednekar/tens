@@ -195,7 +195,7 @@ describe('schema migration', () => {
     expect(loaded.prestige.count).toBe(9)
   })
 
-  it('defaults prestige.points to 0, autobuyerAutomation/smartAutobuyer to false, and autoPrestige to false for saves that predate them', () => {
+  it('defaults prestige.points to 0, autobuyerAutomation/smartAutobuyer to false, and autoPrestige to null for saves that predate them', () => {
     const oldSave = {
       resources: { Ones: 10 },
       prestige: { xp: 0, level: 0, highestMilestone: 1 },
@@ -203,7 +203,7 @@ describe('schema migration', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.prestige.points).toBe(0)
-    expect(loaded.autoPrestige).toBe(false)
+    expect(loaded.autoPrestige).toBeNull()
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.autobuyerAutomation[tier.id]).toBe(false)
       expect(loaded.smartAutobuyer[tier.id]).toBe(false)
@@ -219,10 +219,22 @@ describe('schema migration', () => {
     expect(loadGameState().smartAutobuyer[tensTier.id]).toBe(true)
   })
 
-  it('preserves a saved autoPrestige flag', () => {
-    const state = { ...createInitialGameState(), autoPrestige: true }
+  it('preserves a saved Auto-Prestige level', () => {
+    const state = { ...createInitialGameState(), autoPrestige: 3 }
     saveGameState(state)
-    expect(loadGameState().autoPrestige).toBe(true)
+    expect(loadGameState().autoPrestige).toBe(3)
+  })
+
+  it('migrates a legacy boolean autoPrestige true to level 1', () => {
+    const rawState = { ...createInitialGameState(), autoPrestige: true }
+    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
+    expect(loadGameState().autoPrestige).toBe(1)
+  })
+
+  it('migrates a legacy boolean autoPrestige false to null (not yet bought)', () => {
+    const rawState = { ...createInitialGameState(), autoPrestige: false }
+    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
+    expect(loadGameState().autoPrestige).toBeNull()
   })
 
   it('remaps legacy name-based tier ids to the new tier0N ids', () => {

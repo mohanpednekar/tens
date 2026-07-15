@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_COST, AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -50,10 +50,15 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: false,
   }), {}),
-  // Permanent global flag (not per-tier — there's only one to buy): whether Prestige Points have
-  // been spent to make Prestige itself automatic (see buyAutoPrestige/tickGame) — never reset by
-  // prestige.
-  autoPrestige: false,
+  // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
+  // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
+  // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
+  autoPrestige: null,
+  // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
+  // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
+  // autobuyerAttemptBudgets, this is a single global counter; resets to 0 on every prestige
+  // (manual or automatic) same as they do.
+  autoPrestigeAttemptBudget: 0,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -167,6 +172,22 @@ export const getPurchaseMilestoneMultiplier = purchased =>
 export const getAutobuyerAttemptRate = autobuyerLevel =>
   1.1 ** clampNonNegative((autobuyerLevel ?? 1) - 1)
 
+// PP cost to activate/upgrade Auto-Prestige from currentLevel to currentLevel+1 (null/not yet
+// bought treated as currentLevel 0) — doubles each level: 100 PP to activate (level 0→1), 200 for
+// the next, 400 after that, … (AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel).
+export const getAutoPrestigeCost = currentLevel =>
+  AUTO_PRESTIGE_COST * (AUTO_PRESTIGE_COST_MULTIPLIER ** clampNonNegative(currentLevel))
+
+// Level 1 is the baseline cadence — once activated, Auto-Prestige attempts to fire roughly every
+// AUTO_PRESTIGE_BASE_INTERVAL_SECONDS (1000s); each level after that speeds this up by another
+// 10%, compounding, exactly like getAutobuyerAttemptRate. Expressed as a per-tick budget
+// increment (see tickGame's autoPrestigeAttemptBudget) rather than a raw interval, so the same
+// "accumulate until it crosses 1" mechanism used for tier autobuyers applies here too. `null`
+// (not yet bought) is never actually fed into this in tickGame — treated as level 1 here
+// defensively, same convention as getAutobuyerAttemptRate.
+export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
+  (1.1 ** clampNonNegative((autoPrestigeLevel ?? 1) - 1)) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS
+
 // Once Money reaches GOOGOL, all production and purchasing (manual and automatic) freezes —
 // the only action left is to Prestige. Exported so the UI can drive the same gate (disabling
 // every other control) that the engine itself enforces on tickGame/buyTier/buyAutobuyer below.
@@ -230,13 +251,23 @@ const checkMilestones = (resources, prestige) => {
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // block onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
+  const autoPrestigeLevel = state.autoPrestige ?? null
+
   // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
   // until the player prestiges. Returning the same reference (rather than an equivalent copy)
-  // lets React's setState bail out of re-rendering while frozen, same as any other no-op action.
-  // Once Auto-Prestige is bought (see buyAutoPrestige), prestiging itself skips the manual click
-  // too — the instant production freezes, immediately prestige and carry on, so the frozen
-  // full-screen prompt/top banner are never even rendered.
-  if (isProductionFrozen(state)) return state.autoPrestige ? prestigeGame(state) : state
+  // lets React's setState bail out of re-rendering while frozen, same as any other no-op action;
+  // that optimization only applies when Auto-Prestige isn't bought at all, since its attempt
+  // budget (see below) needs to keep accumulating even while otherwise frozen.
+  if (isProductionFrozen(state)) {
+    if (autoPrestigeLevel === null) return state
+    const nextBudget = (state.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel)
+    // A completed attempt (budget >= 1) only actually prestiges once Money has reached GOOGOL —
+    // which it already has, here, by definition of this branch — so it always fires as soon as
+    // the budget crosses 1. prestigeGame's own reset zeroes the budget back out; no need to pass
+    // the incremented value in, it would just be discarded.
+    if (nextBudget >= 1) return prestigeGame(state)
+    return { ...state, autoPrestigeAttemptBudget: nextBudget }
+  }
 
   const multiplier = getPrestigeProductionMultiplier(state.prestige.points)
 
@@ -293,6 +324,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     resources: newResources,
     owned: newOwned,
     prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
+    // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
+    // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
+    // start counting once Money first reaches GOOGOL — but it can only ever actually fire from
+    // the frozen branch above, once Money has actually gotten there.
+    ...(autoPrestigeLevel === null ? {} : {
+      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel),
+    }),
   }
 
   // Tiers with automated autobuyer-upgrade purchasing (bought with Prestige Points, see
@@ -479,21 +517,26 @@ export const buySmartAutobuyer = tierId => state => {
   }
 }
 
-// Permanently automates Prestige itself: once bought, tickGame calls prestigeGame automatically
-// the instant production freezes (Money >= GOOGOL), instead of waiting for a manual click — the
-// player never needs to see the full-screen prompt or top banner again. A flat, one-time global
-// cost (AUTO_PRESTIGE_COST, not per-tier — there's only one to buy). A no-op if already bought,
-// if there aren't enough unspent points, or while already frozen (buy it ahead of the next
-// Googol, not to retroactively affect the one already in progress).
+// Activate (currentLevel null → 1) or upgrade (level N → N+1) Auto-Prestige, always by spending
+// Prestige Points — activation is just the N=0 case of the same cost formula
+// (getAutoPrestigeCost(0) = AUTO_PRESTIGE_COST). Once bought, tickGame accumulates an attempt
+// budget every tick at getAutoPrestigeAttemptRate(level) and calls prestigeGame automatically the
+// first time that budget crosses 1 *while* Money is at/above GOOGOL — the player never needs to
+// see the full-screen prompt or top banner again. A single global upgrade track, not per-tier —
+// there's only one to buy/upgrade. A no-op if there aren't enough unspent points, or while
+// already frozen (buy/upgrade it ahead of the next Googol, not to retroactively affect the one
+// already in progress).
 export const buyAutoPrestige = state => {
   if (isProductionFrozen(state)) return state
-  if (state.autoPrestige) return state
-  if (clampNonNegative(state.prestige.points) < AUTO_PRESTIGE_COST) return state
+
+  const currentLevel = state.autoPrestige ?? null
+  const cost = getAutoPrestigeCost(currentLevel ?? 0)
+  if (clampNonNegative(state.prestige.points) < cost) return state
 
   return {
     ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - AUTO_PRESTIGE_COST },
-    autoPrestige: true,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    autoPrestige: (currentLevel ?? 0) + 1,
   }
 }
 

@@ -45,6 +45,11 @@ const migrateState = saved => {
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
   )
+  // autoPrestige was originally a plain boolean (bought/not bought) before becoming a levelled
+  // upgrade like autobuyers above — migrate the same way: true → level 1, false → null (not yet
+  // bought). A numeric value (current schema) passes through unchanged.
+  const rawAutoPrestige = saved.autoPrestige
+  const migratedAutoPrestige = rawAutoPrestige === true ? 1 : rawAutoPrestige === false ? null : rawAutoPrestige
   // Carry forward legacy prestige.pp (renamed to prestige.xp) so old saves don't lose points
   const rawPrestige = saved.prestige ?? {}
   const { pp: legacyPP, level: legacyLevel, ...migratedPrestige } = rawPrestige
@@ -68,6 +73,7 @@ const migrateState = saved => {
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     autobuyerAutomation: { ...fresh.autobuyerAutomation, ...migrateTierKeys(saved.autobuyerAutomation) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
+    autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
 }
