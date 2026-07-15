@@ -140,7 +140,7 @@ test('an Upgrade level speeds up the autobuyer without changing the displayed pr
     resources: { Ones: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 5 },
-    autobuyers: { tier01: 1 },
+    autobuyers: { tier01: 2 },
   }))
 
   render(<App />)
@@ -148,7 +148,7 @@ test('an Upgrade level speeds up the autobuyer without changing the displayed pr
   // Production depends only on purchased milestones (still under 10), never on autobuyer
   // level: owned(5) × $1/sec × 1 = $5/sec, unaffected by the Upgrade.
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.1')
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.2')
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('×1.1 speed')
 })
 

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AUTOBUYER_XP_COST_BASE,
   GOOGOL,
   MONEY_ID,
   RESOURCE_SYMBOL,
@@ -93,9 +92,5 @@ describe('constants', () => {
 
   it('TICK_RATE_MS is a positive number', () => {
     expect(TICK_RATE_MS).toBeGreaterThan(0)
-  })
-
-  it('AUTOBUYER_XP_COST_BASE is a positive number', () => {
-    expect(AUTOBUYER_XP_COST_BASE).toBeGreaterThan(0)
   })
 })
