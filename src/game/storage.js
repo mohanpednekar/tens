@@ -58,6 +58,7 @@ const migrateState = saved => {
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
+    autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
 }

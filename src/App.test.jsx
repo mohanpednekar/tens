@@ -135,19 +135,34 @@ test('a money-producing tier shows its production rate with a $ prefix, consiste
   expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('$/sec')
 })
 
-test('an Upgrade level doubles the displayed production rate', () => {
+test('an Upgrade level speeds up the autobuyer without changing the displayed production rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
+    purchased: { tier01: 5 },
     autobuyers: { tier01: 1 },
   }))
 
   render(<App />)
 
-  // A level-1 autobuyer doubles this tier's production: owned(5) × $1/sec × 2 = $10/sec.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
+  // Production depends only on purchased milestones (still under 10), never on autobuyer
+  // level: owned(5) × $1/sec × 1 = $5/sec, unaffected by the Upgrade.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.1')
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('×2 production')
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('×1.1 speed')
+})
+
+test('reaching 10 lifetime purchases of a tier doubles its displayed production rate', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 5 },
+    purchased: { tier01: 10 },
+  }))
+
+  render(<App />)
+
+  // Crossing the 10-purchase milestone doubles production: owned(5) × $1/sec × 2 = $10/sec.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
