@@ -59,35 +59,6 @@ test('reset clears localStorage', async () => {
   expect(saved.owned.tier01).toBe(0)
 })
 
-test('Bulk toggle defaults to ×10 and persists a switch to ×1 across reload', async () => {
-  const user = userEvent.setup()
-
-  const { unmount } = render(<App />)
-
-  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'true')
-
-  await user.click(screen.getByRole('button', { name: '×1' }))
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
-  expect(localStorage.getItem('tens_bulk_quantity')).toBe('1')
-
-  // Simulate a page reload: unmount and render a fresh instance against the same localStorage
-  unmount()
-  render(<App />)
-
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
-})
-
-test('reset game does not reset the Bulk toggle preference', async () => {
-  const user = userEvent.setup()
-
-  render(<App />)
-
-  await user.click(screen.getByRole('button', { name: '×1' }))
-  await user.click(screen.getByRole('button', { name: /reset game/i }))
-
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
-})
-
 test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1000 },
@@ -214,39 +185,6 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
 })
 
-test('the ×1/×10 bulk toggle affects the manual Buy button', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 100 },
-  }))
-
-  render(<App />)
-
-  // Default bulk mode is ×10 — Buy grabs the full affordable block.
-  expect(screen.getByRole('button', { name: /buy ×10 for \$100\b/i })).toBeEnabled()
-
-  // Switching to ×1 limits manual Buy to a single unit.
-  await user.click(screen.getByRole('button', { name: '×1' }))
-
-  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
-})
-
-test('the quantity toggle marks the active option with aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  render(<App />)
-
-  // Default bulk mode is ×10.
-  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(screen.getByRole('button', { name: '×1' }))
-
-  expect(screen.getByRole('button', { name: '×10' })).toHaveAttribute('aria-pressed', 'false')
-  expect(screen.getByRole('button', { name: '×1' })).toHaveAttribute('aria-pressed', 'true')
-})
-
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
   render(<App />)
 
@@ -294,7 +232,7 @@ test('shows no offline progress notice when there is no recorded last-save times
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
-test('prestige becomes available once money reaches a googol and resets progress', async () => {
+test('the first time money reaches a googol, a mandatory full-screen prompt offers Prestige', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -303,11 +241,261 @@ test('prestige becomes available once money reaches a googol and resets progress
 
   render(<App />)
 
-  const prestigeButton = screen.getByRole('button', { name: /prestige \(requires/i })
+  expect(screen.getByRole('dialog', { name: /prestige required/i })).toBeInTheDocument()
+  const prestigeButton = screen.getByRole('button', { name: /prestige now/i })
   expect(prestigeButton).toBeEnabled()
 
   await user.click(prestigeButton)
 
-  expect(screen.getByText(/level 1/i)).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
+  expect(screen.getByText(/prestiged 1 time/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
+})
+
+test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige available banner$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /prestige \(requires/i })).toBeEnabled()
+})
+
+test('production and every other control freeze once money reaches a googol', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    owned: { tier01: 5 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
+})
+
+test('during the first run, the Prestige panel stays hidden until 10 of the last tier are bought', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 9 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^prestige panel$/i)).not.toBeInTheDocument()
+})
+
+test('during the first run, the Prestige panel appears once 10 of the last tier are bought', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
+})
+
+test('after the first prestige, the Prestige panel is shown regardless of last-tier purchases', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 0 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
+})
+
+const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
+// Every tier smart (which itself requires every tier automated — see buySmartAutobuyer's
+// prerequisite) is what unlocks the Auto-Prestige option in the UI at all — see MainPage's
+// allTiersSmart gate.
+const allTiersSmartSeed = () => ({
+  owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
+  autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
+  autobuyerAutomation: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
+  smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
+})
+
+test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /auto-prestige/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
+})
+
+test('an Auto-Prestige button appears in the Prestige panel once every tier is Smart, and spends 100 PP to activate level 1', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 100 prestige points/i })
+  expect(autoPrestigeButton).toBeEnabled()
+
+  await user.click(autoPrestigeButton)
+
+  expect(screen.getByText(/auto-prestige lv\.1/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 200 prestige points/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Auto-Prestige button stays disabled without enough Prestige Points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /enable auto-prestige for 100 prestige points/i })).toBeDisabled()
+})
+
+test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    autoPrestige: 1,
+    prestige: { xp: 0, points: 199, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByText(/auto-prestige lv\.1/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 200 prestige points/i })).toBeDisabled()
+})
+
+test('prestige points and the production speed bonus are shown', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('50 PP')
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('+50% production speed')
+})
+
+test('an Automate button appears once a tier\'s autobuyer is active, and buying it reveals the Smart button in its place', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 1, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  const automateButton = screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })
+  expect(automateButton).toBeEnabled()
+  // Smart isn't purchasable yet — it requires Auto-upgrade automation first.
+  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
+
+  await user.click(automateButton)
+
+  // Auto-upgrade is bought silently in the background; the slot immediately shows Smart instead
+  // of a lingering "Auto-upgrade" badge — the two controls are never shown for the same tier.
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/🤖 auto-upgrade/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Automate button stays disabled without enough Prestige Points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeDisabled()
+})
+
+test('no Automate control appears before a tier\'s autobuyer is activated', () => {
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer/i })).not.toBeInTheDocument()
+})
+
+test('a Smart button appears once a tier is automated (not before), and spends 10x the automation cost', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    autobuyerAutomation: { tier01: true },
+    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  const smartButton = screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })
+  expect(smartButton).toBeEnabled()
+  // The Automate control is already gone — Auto-upgrade is bought, Smart has taken its place.
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
+
+  await user.click(smartButton)
+
+  expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Smart button stays disabled without enough Prestige Points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    autobuyerAutomation: { tier01: true },
+    prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
+})
+
+test('once every tier is smart, a single notice replaces every per-tier Smart indicator, with no Automate control left either', () => {
+  const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
+  const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
+  const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
+  // Smart requires automation, so every tier being smart implies every tier is also automated.
+  const autobuyerAutomation = Object.fromEntries(tierIds.map(id => [id, true]))
+  const smartAutobuyer = Object.fromEntries(tierIds.map(id => [id, true]))
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned,
+    autobuyers,
+    autobuyerAutomation,
+    smartAutobuyer,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^full smart autobuyer notice$/i)).toBeInTheDocument()
+  expect(screen.queryByText(/🧠 smart/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /automate/i })).not.toBeInTheDocument()
 })

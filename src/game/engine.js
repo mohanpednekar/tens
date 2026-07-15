@@ -1,4 +1,4 @@
-import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -36,9 +36,39 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
+  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
+  // autobuyer self-upgrade every tick (see buyAutobuyerAutomation) — never reset by prestige.
+  autobuyerAutomation: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
+  }), {}),
+  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
+  // autobuyer "smart" — buys one unit at a time until 10 lifetime purchases, then switches to
+  // the normal full-block batching from then on (see tickGame/buySmartAutobuyer) — never reset
+  // by prestige.
+  smartAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
+  }), {}),
+  // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
+  // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
+  // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
+  autoPrestige: null,
+  // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
+  // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
+  // autobuyerAttemptBudgets, this is a single global counter; resets to 0 on every prestige
+  // (manual or automatic) same as they do.
+  autoPrestigeAttemptBudget: 0,
   prestige: {
     xp: 0,
-    level: 0,
+    // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
+    // spent via buyAutobuyerAutomation. Unspent points also drive production speed (see
+    // getPrestigeProductionMultiplier).
+    points: 0,
+    // Number of times ever prestiged — drives only the first-run-vs-repeat UI presentation
+    // (MainPage), not production or cost. Renamed from the old `level` field now that prestige
+    // grants points instead of directly doubling production.
+    count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
   },
 })
@@ -106,8 +136,25 @@ export const getTierAffordableQuantity = (tier, purchased, spendable, requestedQ
 export const getAutobuyerCost = currentLevel =>
   1000 ** (clampNonNegative(currentLevel) + 1)
 
-// Each Prestige Level doubles production at every tier
-export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
+// Each unspent Prestige Point adds a flat 1% production-speed bonus, applied uniformly to every
+// tier — replaces the old "prestige level doubles production" mechanic. Spending points (see
+// buyAutobuyerAutomation) reduces this bonus in exchange for permanent autobuyer automation.
+export const getPrestigeProductionMultiplier = points =>
+  1 + PRESTIGE_POINT_SPEED_BONUS * clampNonNegative(points)
+
+// PP cost to permanently automate a tier's autobuyer Upgrades (see buyAutobuyerAutomation): 1 PP
+// for the first tier, doubling for each subsequent one (2, 4, 8, … 512 for the 10th/last tier).
+// An unrecognized tier id is treated as index 0 (the cheapest tier) rather than throwing.
+export const getAutobuyerAutomationCost = tierId => {
+  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  return AUTOBUYER_AUTOMATION_BASE_COST * (2 ** tierIndex)
+}
+
+// PP cost to permanently make a tier's autobuyer "smart" (see buySmartAutobuyer) —
+// SMART_AUTOBUYER_COST_MULTIPLIER times the cost of automating that same tier's autobuyer
+// Upgrades (getAutobuyerAutomationCost), since it's a separate, more powerful capability.
+export const getSmartAutobuyerCost = tierId =>
+  SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)
 
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
 // the same boundary where getTierCost's cost jumps 10x, so buying into a fresh cost epoch always
@@ -124,6 +171,27 @@ export const getPurchaseMilestoneMultiplier = purchased =>
 // as level 1 here defensively.
 export const getAutobuyerAttemptRate = autobuyerLevel =>
   1.1 ** clampNonNegative((autobuyerLevel ?? 1) - 1)
+
+// PP cost to activate/upgrade Auto-Prestige from currentLevel to currentLevel+1 (null/not yet
+// bought treated as currentLevel 0) — doubles each level: 100 PP to activate (level 0→1), 200 for
+// the next, 400 after that, … (AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel).
+export const getAutoPrestigeCost = currentLevel =>
+  AUTO_PRESTIGE_COST * (AUTO_PRESTIGE_COST_MULTIPLIER ** clampNonNegative(currentLevel))
+
+// Level 1 is the baseline cadence — once activated, Auto-Prestige attempts to fire roughly every
+// AUTO_PRESTIGE_BASE_INTERVAL_SECONDS (1000s); each level after that speeds this up by another
+// 10%, compounding, exactly like getAutobuyerAttemptRate. Expressed as a per-tick budget
+// increment (see tickGame's autoPrestigeAttemptBudget) rather than a raw interval, so the same
+// "accumulate until it crosses 1" mechanism used for tier autobuyers applies here too. `null`
+// (not yet bought) is never actually fed into this in tickGame — treated as level 1 here
+// defensively, same convention as getAutobuyerAttemptRate.
+export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
+  (1.1 ** clampNonNegative((autoPrestigeLevel ?? 1) - 1)) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS
+
+// Once Money reaches GOOGOL, all production and purchasing (manual and automatic) freezes —
+// the only action left is to Prestige. Exported so the UI can drive the same gate (disabling
+// every other control) that the engine itself enforces on tickGame/buyTier/buyAutobuyer below.
+export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= GOOGOL
 
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
 // Already-owned tiers stay unlocked so older saves remain playable after rule changes.
@@ -148,6 +216,16 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
+// How many Prestige Points a prestige action awards: always at least 1 (prestiging requires
+// money >= GOOGOL, i.e. exponent >= googolExponent, in the first place), plus 1 more for every
+// extra order of magnitude the money exponent reached before production froze — the tick that
+// crosses GOOGOL can overshoot substantially in one step (see isProductionFrozen), so a higher
+// production rate before prestiging pays off in extra points.
+export const getPrestigePointsAwarded = money => {
+  const googolExponent = Math.floor(Math.log10(GOOGOL))
+  return getMoneyExponent(money) - googolExponent + 1
+}
+
 const checkMilestones = (resources, prestige) => {
   const money = clampNonNegative(resources[MONEY_ID])
   if (money < 10) return prestige
@@ -166,9 +244,32 @@ const checkMilestones = (resources, prestige) => {
 // (the manual Buy button always buys 1 — see buyTier). At 1 (default), each attempt buys a
 // single unit as soon as it's affordable, same as always. Above 1, each attempt only buys once
 // the tier can afford the *entire* current cost block up to that size — it holds and waits
-// rather than trickling in a partial purchase.
+// rather than trickling in a partial purchase. A "smart" tier (see buySmartAutobuyer) overrides
+// this with an effective batch size of 1 for its very first cost block (purchased < 10) —
+// otherwise a tier that's never been manually bought can never afford autobuyerBatchSize's full
+// first block (0 owned generators produce $0 income, and the starting balance only ever covers
+// 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
+// block onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
-  const multiplier = productionMultiplier(state.prestige.level)
+  const autoPrestigeLevel = state.autoPrestige ?? null
+
+  // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
+  // until the player prestiges. Returning the same reference (rather than an equivalent copy)
+  // lets React's setState bail out of re-rendering while frozen, same as any other no-op action;
+  // that optimization only applies when Auto-Prestige isn't bought at all, since its attempt
+  // budget (see below) needs to keep accumulating even while otherwise frozen.
+  if (isProductionFrozen(state)) {
+    if (autoPrestigeLevel === null) return state
+    const nextBudget = (state.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel)
+    // A completed attempt (budget >= 1) only actually prestiges once Money has reached GOOGOL —
+    // which it already has, here, by definition of this branch — so it always fires as soon as
+    // the budget crosses 1. prestigeGame's own reset zeroes the budget back out; no need to pass
+    // the incremented value in, it would just be discarded.
+    if (nextBudget >= 1) return prestigeGame(state)
+    return { ...state, autoPrestigeAttemptBudget: nextBudget }
+  }
+
+  const multiplier = getPrestigeProductionMultiplier(state.prestige.points)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) this tick, then fire one
@@ -188,8 +289,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level)
     while (budget >= 1) {
       const purchased = getTierPurchasedCount(result, tier.id)
-      const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
-      const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
+      const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && purchased < 10 ? 1 : autobuyerBatchSize
+      const blockMax = getTierBulkQuantity(tier, purchased, effectiveBatchSize)
+      const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), effectiveBatchSize)
       if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold, bank the attempt
       const next = buyTierQuantity(tier.id, blockMax)(result)
       if (next === result) break
@@ -217,12 +319,27 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     }
   })
 
-  return {
+  const producedState = {
     ...stateAfterAutobuyers,
     resources: newResources,
     owned: newOwned,
     prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
+    // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
+    // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
+    // start counting once Money first reaches GOOGOL — but it can only ever actually fire from
+    // the frozen branch above, once Money has actually gotten there.
+    ...(autoPrestigeLevel === null ? {} : {
+      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel),
+    }),
   }
+
+  // Tiers with automated autobuyer-upgrade purchasing (bought with Prestige Points, see
+  // buyAutobuyerAutomation) self-upgrade one level per tick whenever affordable — no manual
+  // Upgrade click needed. buyAutobuyer re-validates internally (affordability, frozen state)
+  // and returns the same state unchanged when a level isn't affordable yet.
+  return TIER_DEFINITIONS.reduce((s, tier) => (
+    s.autobuyerAutomation?.[tier.id] ? buyAutobuyer(tier.id)(s) : s
+  ), producedState)
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
@@ -265,6 +382,7 @@ export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
 export const buyTier = tierId => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
@@ -322,6 +440,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
 // even though the purchase "succeeded". Require at least 1 generator left over instead.
 export const buyAutobuyer = tierId => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
@@ -347,14 +466,92 @@ export const buyAutobuyer = tierId => state => {
   }
 }
 
-// Reaching GOOGOL money gains 1 Prestige Level and resets all progress.
-// XP is untouched by prestige — it's earned independently via money milestones and doesn't fund
-// anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
-// Autobuyer activation is permanent across prestige (non-null stays active at level 1, the
-// baseline rate), while run-funded Upgrade levels above that reset.
+// Permanently automates a tier's autobuyer Upgrades — once bought, tickGame calls buyAutobuyer
+// for this tier automatically once per tick whenever affordable, with no manual click needed.
+// Costs Prestige Points (see getAutobuyerAutomationCost), spent from the shared prestige.points
+// balance — this trades away some of the flat 1%-per-point production speed bonus in exchange
+// for permanent automation (see prestigeGame: automation, unlike autobuyer levels, is never
+// reset). Requires the tier's autobuyer to already be active (nothing to automate otherwise);
+// a no-op if already automated or if there aren't enough unspent points.
+export const buyAutobuyerAutomation = tierId => state => {
+  if (isProductionFrozen(state)) return state
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier) return state
+  if (state.autobuyers[tierId] == null) return state
+  if (state.autobuyerAutomation?.[tierId]) return state
+
+  const cost = getAutobuyerAutomationCost(tierId)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    autobuyerAutomation: { ...state.autobuyerAutomation, [tierId]: true },
+  }
+}
+
+// Permanently makes a tier's autobuyer "smart": in tickGame, that tier buys one unit at a time
+// (rather than waiting for a full 10-unit block) until it reaches 10 lifetime purchases, then
+// switches to the normal full-block batching from then on — fixes an otherwise-permanent stall
+// where a tier with 0 owned generators (0 income) can never afford a full first block on its
+// own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than automating that tier's autobuyer
+// Upgrades (see getSmartAutobuyerCost) — and requires that Auto-upgrade automation
+// (autobuyerAutomation[tierId]) already be bought first: Smart is presented as the next purchase
+// after Auto-upgrade, not a parallel/independent one, so the MainPage automate slot only ever
+// shows one control per tier at a time (Automate → Smart → bought), never both together. A no-op
+// if automation isn't bought yet, already smart, or there aren't enough unspent points.
+export const buySmartAutobuyer = tierId => state => {
+  if (isProductionFrozen(state)) return state
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier) return state
+  if (!state.autobuyerAutomation?.[tierId]) return state
+  if (state.smartAutobuyer?.[tierId]) return state
+
+  const cost = getSmartAutobuyerCost(tierId)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    smartAutobuyer: { ...state.smartAutobuyer, [tierId]: true },
+  }
+}
+
+// Activate (currentLevel null → 1) or upgrade (level N → N+1) Auto-Prestige, always by spending
+// Prestige Points — activation is just the N=0 case of the same cost formula
+// (getAutoPrestigeCost(0) = AUTO_PRESTIGE_COST). Once bought, tickGame accumulates an attempt
+// budget every tick at getAutoPrestigeAttemptRate(level) and calls prestigeGame automatically the
+// first time that budget crosses 1 *while* Money is at/above GOOGOL — the player never needs to
+// see the full-screen prompt or top banner again. A single global upgrade track, not per-tier —
+// there's only one to buy/upgrade. A no-op if there aren't enough unspent points, or while
+// already frozen (buy/upgrade it ahead of the next Googol, not to retroactively affect the one
+// already in progress).
+export const buyAutoPrestige = state => {
+  if (isProductionFrozen(state)) return state
+
+  const currentLevel = state.autoPrestige ?? null
+  const cost = getAutoPrestigeCost(currentLevel ?? 0)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    autoPrestige: (currentLevel ?? 0) + 1,
+  }
+}
+
+// Reaching GOOGOL money awards Prestige Points (see getPrestigePointsAwarded) and resets all
+// progress. XP is untouched by prestige — it's earned independently via money milestones and
+// doesn't fund anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
+// Newly-awarded points add on top of any already-unspent balance (PP is a permanent, cumulative
+// currency, unlike resources/owned/purchased). Autobuyer activation is permanent across prestige
+// (non-null stays active at level 1, the baseline rate), while run-funded Upgrade levels above
+// that reset — autobuyer automation (see buyAutobuyerAutomation), by contrast, is permanent and
+// carries over unchanged.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
+  const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const initial = createInitialGameState()
   const resetAutobuyers = Object.fromEntries(
     Object.entries(initial.autobuyers).map(([tierId]) => {
@@ -365,10 +562,14 @@ export const prestigeGame = state => {
   return {
     ...initial,
     autobuyers: resetAutobuyers,
+    autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
+    smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
+    autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
-      level: state.prestige.level + 1,
+      points: clampNonNegative(state.prestige.points) + pointsAwarded,
+      count: state.prestige.count + 1,
     },
   }
 }

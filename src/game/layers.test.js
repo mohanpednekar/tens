@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
+  AUTO_PRESTIGE_COST,
+  AUTO_PRESTIGE_COST_MULTIPLIER,
+  AUTOBUYER_AUTOMATION_BASE_COST,
   GOOGOL,
   MONEY_ID,
+  PRESTIGE_POINT_SPEED_BONUS,
   RESOURCE_SYMBOL,
+  SMART_AUTOBUYER_COST_MULTIPLIER,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
 } from './layers'
@@ -92,5 +98,29 @@ describe('constants', () => {
 
   it('TICK_RATE_MS is a positive number', () => {
     expect(TICK_RATE_MS).toBeGreaterThan(0)
+  })
+
+  it('PRESTIGE_POINT_SPEED_BONUS is 0.01 (1% per unspent Prestige Point)', () => {
+    expect(PRESTIGE_POINT_SPEED_BONUS).toBe(0.01)
+  })
+
+  it('AUTOBUYER_AUTOMATION_BASE_COST is 1 (first tier costs 1 PP)', () => {
+    expect(AUTOBUYER_AUTOMATION_BASE_COST).toBe(1)
+  })
+
+  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x automation)', () => {
+    expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
+  })
+
+  it('AUTO_PRESTIGE_COST is 100', () => {
+    expect(AUTO_PRESTIGE_COST).toBe(100)
+  })
+
+  it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
+    expect(AUTO_PRESTIGE_COST_MULTIPLIER).toBe(2)
+  })
+
+  it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
+    expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
   })
 })

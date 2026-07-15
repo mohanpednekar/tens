@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutobuyer, buyTierQuantity, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, tickGame } from './engine'
+import { applyOfflineProgress, buyAutobuyer, buyAutobuyerAutomation, buyAutoPrestige, buySmartAutobuyer, buyTierQuantity, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
-import { clearGameState, loadGameState, loadLastSaveTimestamp, loadQuantityPreference, saveGameState, saveQuantityPreference } from './storage'
+import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
+
+// Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
+// 10-unit cost-block boundary. This used to be a player-facing ×1/×10 "Bulk" toggle; it's now a
+// fixed engine behavior (the toggle's former default), so there's nothing left to persist.
+const BUY_QUANTITY = 10
 
 // Runs once, at mount, before the regular tick timer starts. Computes the resting game state
 // (with offline progress already folded in, if applicable) and a summary of that offline
@@ -19,7 +24,7 @@ const computeInitialGame = () => {
   if (effectiveSeconds <= 0) return { state: loaded, offlineProgress: null }
 
   return {
-    state: applyOfflineProgress(elapsedRealSeconds, loadQuantityPreference())(loaded),
+    state: applyOfflineProgress(elapsedRealSeconds, BUY_QUANTITY)(loaded),
     offlineProgress: { elapsedRealSeconds, effectiveSeconds },
   }
 }
@@ -31,24 +36,14 @@ export const useIncrementalGame = () => {
   const [initial] = useState(computeInitialGame)
   const [state, setState] = useState(initial.state)
   const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
-  // The ×1/×10 "Bulk" toggle. Governs the batch size for both the manual Buy button and how
-  // autobuyers batch their purchases during a tick. Defaults to ×10 (buy until the current
-  // cost-block boundary) rather than one unit at a time. Persisted separately from game state
-  // (its own localStorage key) since it's a UI preference, not progress — resetGame must not
-  // touch it.
-  const [quantity, setQuantity] = useState(() => loadQuantityPreference())
-
-  useEffect(() => {
-    saveQuantityPreference(quantity)
-  }, [quantity])
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      setState(tickGame(TICK_RATE_MS / 1000, quantity))
+      setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
     }, TICK_RATE_MS)
 
     return () => window.clearInterval(intervalId)
-  }, [quantity])
+  }, [])
 
   // Persist to localStorage whenever state changes
   useEffect(() => {
@@ -56,8 +51,11 @@ export const useIncrementalGame = () => {
   }, [state])
 
   const actions = useMemo(() => ({
-    buyTierQuantity: (tierId, quantity) => setState(buyTierQuantity(tierId, quantity)),
+    buyTierQuantity: tierId => setState(buyTierQuantity(tierId, BUY_QUANTITY)),
     buyAutobuyer: tierId => setState(buyAutobuyer(tierId)),
+    buyAutobuyerAutomation: tierId => setState(buyAutobuyerAutomation(tierId)),
+    buySmartAutobuyer: tierId => setState(buySmartAutobuyer(tierId)),
+    buyAutoPrestige: () => setState(buyAutoPrestige),
     prestige: () => setState(prestigeGame),
   }), [])
 
@@ -69,5 +67,5 @@ export const useIncrementalGame = () => {
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
-  return { actions, dismissOfflineProgress, offlineProgress, resetGame, state, quantity, setQuantity }
+  return { actions, dismissOfflineProgress, offlineProgress, resetGame, state }
 }
