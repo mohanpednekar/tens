@@ -543,6 +543,15 @@ Unspent PP has one passive effect and two active uses:
   short, and `state.smartAutobuyer[tierId]` is likewise permanent across prestige (unlike `purchased`,
   which resets to 0 each run and is what re-triggers the one-at-a-time bootstrap on every subsequent run
   too).
+- **Active — Auto-Prestige:** `buyAutoPrestige(state)` permanently spends a flat `AUTO_PRESTIGE_COST`
+  (100 PP, `layers.js`) — a single global purchase, not per-tier, since there's only one to buy. Once
+  bought, `tickGame` calls `prestigeGame` automatically the instant `isProductionFrozen` becomes true,
+  instead of returning the frozen state unchanged and waiting for a manual click (see "Prestige and the
+  Googol freeze" below) — the player never needs to see the full-screen prompt or top banner again, ever.
+  A no-op if already bought, PP is short, or called while already frozen (buy it ahead of the *next*
+  Googol, not to retroactively affect the one already in progress). `state.autoPrestige` is a plain
+  top-level boolean (not per-tier) and, like the other two capabilities above, is carried forward
+  unchanged by `prestigeGame` rather than reset.
 
 XP (`prestige.xp`, earned via money milestones — see `checkMilestones`) has been removed from the UI as
 part of this change; the underlying mechanic (accumulation, `highestMilestone` tracking) is untouched in
@@ -552,13 +561,19 @@ part of this change; the underlying mechanic (accumulation, `highestMilestone` t
 
 Reaching Money ≥ `GOOGOL` doesn't just make Prestige *available* — it freezes the entire economy.
 `isProductionFrozen(state)` (`engine.js`) is the single source of truth for this: once true, `tickGame`
-returns the same state unchanged (no passive production, no autobuyer purchases), and `buyTier`/
-`buyAutobuyer`/`buyAutobuyerAutomation`/`buySmartAutobuyer` do the same for manual purchases —
-`prestigeGame` is the only action still able to change state. `MainPage` reads this same function (rather
-than re-deriving its own copy) to disable every other control while frozen: each tier's
-Buy/Upgrade/Automate/Smart button (`canAfford`/`canUpgradeAutobuyer`/`canAutomate`/`canBuySmart` all fold
-in `!isFrozen`) and the Reset button — all fall back to the same `darkgrey` disabled-color convention as
-anywhere else in the app, with a `title` explaining why on Reset.
+returns the same state unchanged (no passive production, no autobuyer purchases) *unless*
+`state.autoPrestige` is true, in which case it calls `prestigeGame` immediately instead (see "Prestige
+Points and autobuyer automation" above) — either way `buyTier`/`buyAutobuyer`/`buyAutobuyerAutomation`/
+`buySmartAutobuyer`/`buyAutoPrestige` all still no-op while frozen for manual purchases; `prestigeGame` is
+the only action able to change state (whether triggered by the player's click or by Auto-Prestige).
+`MainPage` reads `isProductionFrozen` (rather than re-deriving its own copy) to disable every other
+control while frozen: each tier's Buy/Upgrade/Automate/Smart button
+(`canAfford`/`canUpgradeAutobuyer`/`canAutomate`/`canBuySmart` all fold in `!isFrozen`), the global
+Auto-Prestige button (`canBuyAutoPrestige`, same fold), and the Reset button — all fall back to the same
+`darkgrey` disabled-color convention as anywhere else in the app, with a `title` explaining why on Reset.
+In practice, once Auto-Prestige is bought, `MainPage` never actually renders any of the frozen-state UI
+below — `tickGame` prestiges within the same state update that would have frozen it, so React never
+renders the intermediate frozen frame.
 
 How the Prestige control itself is presented depends on prestige history, not just the frozen state —
 tracked by `prestige.count` (the number of times ever prestiged; renamed from the old `level` field now
@@ -581,7 +596,11 @@ multiplier) only renders when *not* frozen, and — during the first run only (`
 stays hidden until `purchased.tier10 >= 10` (10 lifetime purchases of the last tier), a
 progressive-disclosure gate so a brand-new player isn't shown the Prestige panel before it's relevant;
 once the player has prestiged at least once, the card is always shown (whenever not frozen) regardless of
-tier10 purchases.
+tier10 purchases. The same card also holds the Auto-Prestige control, right below the Prestige button
+itself — a plain `Button` (not a per-tier `AutomationButton`, since this is a single global purchase, not
+one per tier) reading "🔁 Auto-Prestige for 100 PP" before it's bought, spending `AUTO_PRESTIGE_COST` via
+`actions.buyAutoPrestige`, or a static "🔁 Auto-Prestige enabled" `MutedText` once it is — see "Prestige
+Points and autobuyer automation" above and "Prestige and the Googol freeze" below for what it does.
 
 ### Game state shape
 
@@ -602,6 +621,9 @@ tier10 purchases.
   smartAutobuyer: { tier01: false, tier02: false, … },   // permanent per-tier flag: PP spent to make this
                                                           // tier buy singly until 10 purchases then in blocks
                                                           // of 10 (see buySmartAutobuyer) — never reset by prestige
+  autoPrestige: false,                                   // permanent GLOBAL flag (not per-tier — only one to
+                                                          // buy): PP spent to make Prestige itself automatic
+                                                          // (see buyAutoPrestige/tickGame) — never reset by prestige
   prestige:   { xp: 0, points: 0, count: 0, highestMilestone: 1 }, // xp is earned via money milestones (see
                                                           // checkMilestones) but doesn't currently fund anything —
                                                           // removed from the UI, kept for a future repurposing;
@@ -635,20 +657,21 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `getTierAffordableQuantity` | `(tier, purchased, spendable, requestedQuantity) → number` | Further caps `getTierBulkQuantity` by what `spendable` can actually pay for — what `buyTierQuantity` will actually purchase |
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `Ones`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
-| `isProductionFrozen` | `state → bool` | `Money >= GOOGOL` — once true, `tickGame`/`buyTier`/`buyAutobuyer`/`buyAutobuyerAutomation`/`buySmartAutobuyer` all become no-ops (return the same state unchanged); only `prestigeGame` can still act. The UI reads this same function to disable every other control (see Architecture) |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | Short-circuits (returns the same state) if `isProductionFrozen`. Otherwise runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier (`owned × elapsedSeconds × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`), then checks milestones, then — for every tier with automation bought (`autobuyerAutomation[tier.id]`, see `buyAutobuyerAutomation`) — calls `buyAutobuyer(tier.id)` once more automatically, no-op if unaffordable. For each non-`null` (activated) autobuyer, accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + getAutobuyerAttemptRate(level)`) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget, carrying any fractional remainder into the next tick — level 1 (just activated) already accumulates at the baseline pace, so activating immediately makes an autobuyer active rather than leaving it idle until the first Upgrade. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked so a stretch of being broke only delays attempts, never loses them. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`, see `buySmartAutobuyer`) still in its first cost block (`purchased < 10`), which uses 1 instead — at batch size 1 each attempt buys as soon as affordable; above 1 (always 10 in the running app, via `useIncrementalGame`'s `BUY_QUANTITY` — see Architecture) each attempt only buys once the tier can afford the *entire* current cost block up to that size, holding and waiting rather than buying a partial batch — which is why a non-smart tier with 0 owned generators (0 income) can never afford its very first block on its own and stalls forever |
+| `isProductionFrozen` | `state → bool` | `Money >= GOOGOL` — once true, `buyTier`/`buyAutobuyer`/`buyAutobuyerAutomation`/`buySmartAutobuyer`/`buyAutoPrestige` all become no-ops (return the same state unchanged); `tickGame` either stays frozen too or calls `prestigeGame` automatically if `autoPrestige` is bought (see its own row below). The UI reads this same function to disable every other control (see Architecture) |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | If `isProductionFrozen`, calls `prestigeGame` immediately when `state.autoPrestige` is bought, otherwise short-circuits (returns the same state) — see `buyAutoPrestige`. Otherwise runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier (`owned × elapsedSeconds × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`), then checks milestones, then — for every tier with automation bought (`autobuyerAutomation[tier.id]`, see `buyAutobuyerAutomation`) — calls `buyAutobuyer(tier.id)` once more automatically, no-op if unaffordable. For each non-`null` (activated) autobuyer, accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + getAutobuyerAttemptRate(level)`) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget, carrying any fractional remainder into the next tick — level 1 (just activated) already accumulates at the baseline pace, so activating immediately makes an autobuyer active rather than leaving it idle until the first Upgrade. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked so a stretch of being broke only delays attempts, never loses them. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`, see `buySmartAutobuyer`) still in its first cost block (`purchased < 10`), which uses 1 instead — at batch size 1 each attempt buys as soon as affordable; above 1 (always 10 in the running app, via `useIncrementalGame`'s `BUY_QUANTITY` — see Architecture) each attempt only buys once the tier can afford the *entire* current cost block up to that size, holding and waiting rather than buying a partial batch — which is why a non-smart tier with 0 owned generators (0 income) can never afford its very first block on its own and stalls forever |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` 10, see `useIncrementalGame`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, an autobuyer's Upgrade level has no effect on how much a purchase costs or how many units it grants |
 | `buyAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise activates (`null` → 1) or upgrades (level N → N+1) an autobuyer — always by spending the tier's own resource via `getAutobuyerCost`, with no separate XP-gated step (activation is just the N=0 case of the same formula). Each level purchased compounds that autobuyer's purchase-attempt rate by another 10% via `getAutobuyerAttemptRate`, without changing production (see `getPurchaseMilestoneMultiplier`), how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op (returns the same state) until at least 1 would remain afterward; the MainPage Upgrade button's `disabled` state mirrors this same `+ 1` threshold so it never looks clickable when the engine would refuse it. Also called automatically by `tickGame` for tiers with automation bought (see `buyAutobuyerAutomation`) |
 | `buyAutobuyerAutomation` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if the tier's autobuyer isn't yet active, if it's already automated, or if there aren't enough unspent Prestige Points; otherwise spends `getAutobuyerAutomationCost(tierId)` PP from `prestige.points` and permanently sets `autobuyerAutomation[tierId] = true` — see "Prestige Points and autobuyer automation" |
 | `buySmartAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if `autobuyerAutomation[tierId]` isn't bought yet (prerequisite — implies the autobuyer is active too), if already smart, or if there aren't enough unspent Prestige Points; otherwise spends `getSmartAutobuyerCost(tierId)` PP and permanently sets `smartAutobuyer[tierId] = true` — see "Prestige Points and autobuyer automation" |
+| `buyAutoPrestige` | `state → state` | Returns the same state if `isProductionFrozen`, if already bought, or if there aren't enough unspent Prestige Points; otherwise spends the flat `AUTO_PRESTIGE_COST` (100 PP) and permanently sets `autoPrestige = true` — a single global purchase, not per-tier — see "Prestige Points and autobuyer automation" |
 | `getPurchaseMilestoneMultiplier` | `purchased → number` | `2 ** floor(purchased/10)` — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost` scales cost 10x. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getAutobuyerAttemptRate` | `autobuyerLevel → number` | `1.1 ** (level - 1)` (`null`/not-yet-activated and level ≤ 1 all treated as the baseline rate 1); the average purchase-attempt rate an autobuyer accumulates per tick in `tickGame` — level 1 (just activated, not yet upgraded) is the 1x baseline rate |
 | `getAutobuyerAutomationCost` | `tierId → number` | `AUTOBUYER_AUTOMATION_BASE_COST * 2^tierIndex` — 1 PP for the first tier, doubling for each subsequent one (512 PP for the 10th/last tier); an unrecognized tier id is treated as index 0 |
 | `getSmartAutobuyerCost` | `tierId → number` | `SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)` — 10x that tier's Auto-upgrade cost (10, 20, … 5,120 PP for the 10th/last tier) |
 | `getPrestigePointsAwarded` | `money → number` | `getMoneyExponent(money) - googolExponent + 1` — always ≥ 1 (prestiging requires the exponent ≥ 100 already); +1 more per extra order of magnitude the money exponent reached before production froze |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point, replacing the old level-based doubling |
-| `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *activation* status (levels reset to 1, the baseline) and `autobuyerAutomation`/`smartAutobuyer` unchanged (both permanent), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 |
+| `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *activation* status (levels reset to 1, the baseline) and `autobuyerAutomation`/`smartAutobuyer`/`autoPrestige` unchanged (all permanent), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when `autoPrestige` is bought |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
@@ -671,6 +694,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 - `PRESTIGE_POINT_SPEED_BONUS = 0.01` — +1% production speed per unspent Prestige Point
 - `AUTOBUYER_AUTOMATION_BASE_COST = 1` — PP cost to automate the first tier's autobuyer Upgrades, doubling per subsequent tier
 - `SMART_AUTOBUYER_COST_MULTIPLIER = 10` — the "smart" autobuyer costs this many times more PP than automating that same tier's Upgrades
+- `AUTO_PRESTIGE_COST = 100` — flat PP cost to permanently automate Prestige itself (a single global purchase, not per-tier)
 
 ### Path aliases (`vite.config.js`)
 
@@ -690,7 +714,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (237 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (248 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

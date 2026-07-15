@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutobuyer, buyAutobuyerAutomation, buySmartAutobuyer, buyTierQuantity, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, tickGame } from './engine'
+import { applyOfflineProgress, buyAutobuyer, buyAutobuyerAutomation, buyAutoPrestige, buySmartAutobuyer, buyTierQuantity, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -55,6 +55,7 @@ export const useIncrementalGame = () => {
     buyAutobuyer: tierId => setState(buyAutobuyer(tierId)),
     buyAutobuyerAutomation: tierId => setState(buyAutobuyerAutomation(tierId)),
     buySmartAutobuyer: tierId => setState(buySmartAutobuyer(tierId)),
+    buyAutoPrestige: () => setState(buyAutoPrestige),
     prestige: () => setState(prestigeGame),
   }), [])
 

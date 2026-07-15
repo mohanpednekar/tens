@@ -1,4 +1,4 @@
-import { AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_COST, AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -50,6 +50,10 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: false,
   }), {}),
+  // Permanent global flag (not per-tier — there's only one to buy): whether Prestige Points have
+  // been spent to make Prestige itself automatic (see buyAutoPrestige/tickGame) — never reset by
+  // prestige.
+  autoPrestige: false,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -229,7 +233,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
   // until the player prestiges. Returning the same reference (rather than an equivalent copy)
   // lets React's setState bail out of re-rendering while frozen, same as any other no-op action.
-  if (isProductionFrozen(state)) return state
+  // Once Auto-Prestige is bought (see buyAutoPrestige), prestiging itself skips the manual click
+  // too — the instant production freezes, immediately prestige and carry on, so the frozen
+  // full-screen prompt/top banner are never even rendered.
+  if (isProductionFrozen(state)) return state.autoPrestige ? prestigeGame(state) : state
 
   const multiplier = getPrestigeProductionMultiplier(state.prestige.points)
 
@@ -472,6 +479,24 @@ export const buySmartAutobuyer = tierId => state => {
   }
 }
 
+// Permanently automates Prestige itself: once bought, tickGame calls prestigeGame automatically
+// the instant production freezes (Money >= GOOGOL), instead of waiting for a manual click — the
+// player never needs to see the full-screen prompt or top banner again. A flat, one-time global
+// cost (AUTO_PRESTIGE_COST, not per-tier — there's only one to buy). A no-op if already bought,
+// if there aren't enough unspent points, or while already frozen (buy it ahead of the next
+// Googol, not to retroactively affect the one already in progress).
+export const buyAutoPrestige = state => {
+  if (isProductionFrozen(state)) return state
+  if (state.autoPrestige) return state
+  if (clampNonNegative(state.prestige.points) < AUTO_PRESTIGE_COST) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - AUTO_PRESTIGE_COST },
+    autoPrestige: true,
+  }
+}
+
 // Reaching GOOGOL money awards Prestige Points (see getPrestigePointsAwarded) and resets all
 // progress. XP is untouched by prestige — it's earned independently via money milestones and
 // doesn't fund anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
@@ -496,6 +521,7 @@ export const prestigeGame = state => {
     autobuyers: resetAutobuyers,
     autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
+    autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,

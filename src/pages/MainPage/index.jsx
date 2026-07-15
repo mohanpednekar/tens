@@ -2,7 +2,7 @@ import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { AUTO_PRESTIGE_COST, GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -341,6 +341,12 @@ const MainPage = () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
 
+  // Auto-Prestige is a single global (not per-tier) purchase — once bought, tickGame prestiges
+  // automatically the instant production freezes, so the player never sees the full-screen
+  // prompt/top banner again.
+  const isAutoPrestige = state.autoPrestige ?? false
+  const canBuyAutoPrestige = !isFrozen && !isAutoPrestige && prestige.points >= AUTO_PRESTIGE_COST
+
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
   // interactive element on screen while it's showing (no close/dismiss control by design).
   const fullScreenPrestigeButtonRef = useRef(null)
@@ -645,6 +651,22 @@ const MainPage = () => {
               aria-valuemax={100}
             />
           </Button>
+          {isAutoPrestige ? (
+            <MutedText title="Prestige happens automatically the instant Money reaches 1 Googol">
+              🔁 Auto-Prestige enabled
+            </MutedText>
+          ) : (
+            <Button
+              aria-label={`Enable Auto-Prestige for ${AUTO_PRESTIGE_COST} Prestige Points`}
+              color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+              disabled={!canBuyAutoPrestige}
+              onClick={actions.buyAutoPrestige}
+              title="Spend Prestige Points so Prestige happens automatically, forever, the instant Money reaches 1 Googol"
+              type="button"
+            >
+              🔁 Auto-Prestige for {AUTO_PRESTIGE_COST} PP
+            </Button>
+          )}
         </PrestigeCard>
       )}
 

@@ -42,3 +42,6 @@ export const AUTOBUYER_AUTOMATION_BASE_COST = 1
 // The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
 // times more PP than automating that same tier's autobuyer Upgrades.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
+// Flat PP cost to permanently automate Prestige itself (see engine.js's buyAutoPrestige) — a
+// single global purchase, not per-tier, so unlike the costs above it isn't a per-tier formula.
+export const AUTO_PRESTIGE_COST = 100

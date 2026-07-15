@@ -3,6 +3,7 @@ import {
   applyOfflineProgress,
   buyAutobuyer,
   buyAutobuyerAutomation,
+  buyAutoPrestige,
   buySmartAutobuyer,
   buyTier,
   buyTierQuantity,
@@ -31,7 +32,7 @@ import {
   prestigeGame,
   tickGame,
 } from './engine'
-import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,11 @@ const withAutobuyerAutomation = (state, tierId, automated = true) => ({
 const withSmartAutobuyer = (state, tierId, smart = true) => ({
   ...state,
   smartAutobuyer: { ...state.smartAutobuyer, [tierId]: smart },
+})
+
+const withAutoPrestige = (state, autoPrestige = true) => ({
+  ...state,
+  autoPrestige,
 })
 
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
@@ -141,6 +147,10 @@ describe('createInitialGameState', () => {
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.smartAutobuyer[tier.id]).toBe(false)
     })
+  })
+
+  it('initialises autoPrestige to false', () => {
+    expect(createInitialGameState().autoPrestige).toBe(false)
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -699,6 +709,14 @@ describe('tickGame', () => {
     expect(tickGame(1)(state)).toBe(state)
   })
 
+  it('automatically prestiges instead of freezing once Money reaches GOOGOL, if Auto-Prestige is bought', () => {
+    const state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5))
+    const after = tickGame(1)(state)
+    expect(after.prestige.count).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(10)
+    expect(after.owned[tensTier.id]).toBe(0)
+  })
+
   it('scales production with elapsed time', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 1)
     const after = tickGame(3)(state)
@@ -1202,6 +1220,32 @@ describe('buySmartAutobuyer', () => {
   })
 })
 
+// ─── buyAutoPrestige ──────────────────────────────────────────────────────────
+
+describe('buyAutoPrestige', () => {
+  it('spends 100 PP to enable Auto-Prestige', () => {
+    const state = withPrestigePoints(createInitialGameState(), 100)
+    const after = buyAutoPrestige(state)
+    expect(after.autoPrestige).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('returns the same state when there are not enough points', () => {
+    const state = withPrestigePoints(createInitialGameState(), 99)
+    expect(buyAutoPrestige(state)).toBe(state)
+  })
+
+  it('returns the same state when already bought (one-time purchase)', () => {
+    const state = withAutoPrestige(withPrestigePoints(createInitialGameState(), 100))
+    expect(buyAutoPrestige(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 100), GOOGOL)
+    expect(buyAutoPrestige(state)).toBe(state)
+  })
+})
+
 // ─── prestigeGame ────────────────────────────────────────────────────────────
 
 describe('prestigeGame', () => {
@@ -1260,6 +1304,12 @@ describe('prestigeGame', () => {
     )
     const after = prestigeGame(state)
     expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('keeps autoPrestige permanently across prestige', () => {
+    const state = withAutoPrestige(withMoney(createInitialGameState(), GOOGOL))
+    const after = prestigeGame(state)
+    expect(after.autoPrestige).toBe(true)
   })
 
   it('leaves XP untouched', () => {

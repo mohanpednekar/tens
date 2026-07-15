@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTO_PRESTIGE_COST,
   AUTOBUYER_AUTOMATION_BASE_COST,
   GOOGOL,
   MONEY_ID,
@@ -107,5 +108,9 @@ describe('constants', () => {
 
   it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x automation)', () => {
     expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
+  })
+
+  it('AUTO_PRESTIGE_COST is 100', () => {
+    expect(AUTO_PRESTIGE_COST).toBe(100)
   })
 })
