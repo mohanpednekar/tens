@@ -69,10 +69,10 @@ const reveal = keyframes`
 // Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
 // occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again.
-// The 'automate' column only ever holds content once a tier's autobuyer is active (up to two
-// small controls — Auto-upgrade and Smart, see AutomationCell) — a narrower fraction than the
-// other columns since these are rare, glanceable controls rather than something clicked
-// constantly like Buy.
+// The 'automate' column only ever holds content once a tier's autobuyer is active — a single
+// small control at a time (Automate → Smart → the "Smart" badge, see AutomationCell), never both
+// Automate and Smart together — a narrower fraction than the other columns since it's a rare,
+// glanceable control rather than something clicked constantly like Buy.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas: 'name owned purchased production upgrade automate buy';
@@ -260,15 +260,13 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Its own narrow grid column (see TierLine), not stacked under the Upgrade button — holds up to
-// two small, equally-sized controls (Auto-upgrade and Smart, each a button before it's bought or
-// a badge after), rather than one large button sharing space with a tiny badge. Nothing renders
-// here at all before the tier's autobuyer is active, and each control individually disappears
-// once every tier has that same capability (see MainPage's allTiersAutomated/allTiersSmart).
+// Its own narrow grid column (see TierLine), not stacked under the Upgrade button — holds exactly
+// one small control at a time, progressing Automate → Smart → the "Smart" badge (Smart requires
+// Auto-upgrade automation to already be bought, so the two are never both shown for the same
+// tier). Nothing renders here at all before the tier's autobuyer is active, and the whole thing
+// disappears everywhere once every tier is smart (see MainPage's allTiersSmart).
 const AutomationCell = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
   grid-area: automate;
   min-width: 0;
 `
@@ -322,10 +320,10 @@ const MainPage = () => {
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
 
-  // Once every tier has a given automation capability, its per-tier button/badge has nothing
-  // left to say — rather than leave a permanent badge on all 10 rows forever, each capability's
-  // per-tier indicator disappears (independently of the other) and a one-line notice explains why.
-  const allTiersAutomated = TIER_DEFINITIONS.every(tier => state.autobuyerAutomation?.[tier.id])
+  // Smart requires Auto-upgrade automation to already be bought (see buySmartAutobuyer), so being
+  // smart implies being automated too — once every tier is smart, there's nothing left in this
+  // whole progression for any tier, so the per-tier indicator disappears everywhere and a
+  // one-line notice explains why, rather than leaving a permanent badge on all 10 rows forever.
   const allTiersSmart = TIER_DEFINITIONS.every(tier => state.smartAutobuyer?.[tier.id])
 
   // All production and purchasing freezes the instant Money reaches GOOGOL (see
@@ -442,20 +440,11 @@ const MainPage = () => {
         </MutedText>
       </StatCard>
 
-      {allTiersAutomated && (
-        <StatCard aria-label="full automation notice">
-          <MutedText>
-            🤖 Every tier's autobuyer is fully automated — since there's nothing left to automate,
-            this indicator won't be shown per tier anymore.
-          </MutedText>
-        </StatCard>
-      )}
-
       {allTiersSmart && (
         <StatCard aria-label="full smart autobuyer notice">
           <MutedText>
-            🧠 Every tier's autobuyer is already smart — since there's nothing left to upgrade,
-            this indicator won't be shown per tier anymore.
+            🧠 Every tier's autobuyer is fully automated and smart — since there's nothing left to
+            upgrade, this indicator won't be shown per tier anymore.
           </MutedText>
         </StatCard>
       )}
@@ -485,17 +474,15 @@ const MainPage = () => {
           const automationCost = getAutobuyerAutomationCost(tier.id)
           const canAutomate = !isFrozen && !isAutomated && !isAutobuyerLocked && prestige.points >= automationCost
           // "Smart" buys this tier one at a time until 10 lifetime purchases, then switches to
-          // the normal full-block batching — a separate capability from automating the
-          // autobuyer's own Upgrade purchases above, not a prerequisite for it.
+          // the normal full-block batching. It requires Auto-upgrade automation to already be
+          // bought (see buySmartAutobuyer) — it's the next purchase in the same progression, not
+          // a parallel one, so the tier's automate slot only ever shows a single control at a
+          // time: Automate → (once bought) Smart → (once bought) the "Smart" badge. Once every
+          // tier is smart (which implies every tier is also automated), the whole slot disappears
+          // (see allTiersSmart above).
           const isSmart = state.smartAutobuyer?.[tier.id] ?? false
           const smartCost = getSmartAutobuyerCost(tier.id)
-          const canBuySmart = !isFrozen && !isSmart && !isAutobuyerLocked && prestige.points >= smartCost
-          // Smart visually replaces the Auto-upgrade indicator for a tier once bought — showing
-          // both at once was cluttered, and Smart is the more advanced of the two. Once every
-          // tier is smart, the Smart indicator itself disappears (see allTiersSmart below), which
-          // hands the slot back to Auto-upgrade if that tier still needs it.
-          const showAutoUpgradeControl = !allTiersAutomated && !(isSmart && !allTiersSmart)
-          const showSmartControl = !allTiersSmart
+          const canBuySmart = !isFrozen && !isSmart && isAutomated && prestige.points >= smartCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
@@ -584,43 +571,34 @@ const MainPage = () => {
                   aria-valuemax={100}
                 />
               </UpgradeButton>
-              {!isAutobuyerLocked && (showAutoUpgradeControl || showSmartControl) && (
+              {!isAutobuyerLocked && !allTiersSmart && (
                 <AutomationCell>
-                  {showAutoUpgradeControl && (
-                    isAutomated ? (
-                      <AutomationBadge $color="#4ade80" title="This tier's autobuyer Upgrades are bought automatically, forever">
-                        🤖 Auto-upgrade
-                      </AutomationBadge>
-                    ) : (
-                      <AutomationButton
-                        aria-label={`Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`}
-                        color={canAutomate ? '#38bdf8' : 'darkgrey'}
-                        disabled={!canAutomate}
-                        onClick={() => actions.buyAutobuyerAutomation(tier.id)}
-                        title="Spend Prestige Points to make this tier's autobuyer Upgrades happen automatically, forever"
-                        type="button"
-                      >
-                        🤖 {automationCost}
-                      </AutomationButton>
-                    )
-                  )}
-                  {showSmartControl && (
-                    isSmart ? (
-                      <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
-                        🧠 Smart
-                      </AutomationBadge>
-                    ) : (
-                      <AutomationButton
-                        aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${smartCost} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                        color={canBuySmart ? '#a78bfa' : 'darkgrey'}
-                        disabled={!canBuySmart}
-                        onClick={() => actions.buySmartAutobuyer(tier.id)}
-                        title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
-                        type="button"
-                      >
-                        🧠 {smartCost}
-                      </AutomationButton>
-                    )
+                  {isSmart ? (
+                    <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
+                      🧠 Smart
+                    </AutomationBadge>
+                  ) : isAutomated ? (
+                    <AutomationButton
+                      aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${smartCost} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                      color={canBuySmart ? '#a78bfa' : 'darkgrey'}
+                      disabled={!canBuySmart}
+                      onClick={() => actions.buySmartAutobuyer(tier.id)}
+                      title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
+                      type="button"
+                    >
+                      🧠 {smartCost}
+                    </AutomationButton>
+                  ) : (
+                    <AutomationButton
+                      aria-label={`Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`}
+                      color={canAutomate ? '#38bdf8' : 'darkgrey'}
+                      disabled={!canAutomate}
+                      onClick={() => actions.buyAutobuyerAutomation(tier.id)}
+                      title="Spend Prestige Points to make this tier's autobuyer Upgrades happen automatically, forever"
+                      type="button"
+                    >
+                      🤖 {automationCost}
+                    </AutomationButton>
                   )}
                 </AutomationCell>
               )}

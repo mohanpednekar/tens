@@ -400,34 +400,30 @@ Strict three-layer separation:
    `⚙ +10% 100 Ks`) and its `aria-label` with `"(+10% purchase speed)"`, so the speed-up is visible on the
    button itself rather than only in its `title` tooltip.
    Once a tier's autobuyer is active (level ≠ `null`), a dedicated narrow `automate` grid column (its own
-   track, not stacked under Upgrade — see the grid layout paragraph below) holds an `AutomationCell`: up to
-   two independent controls, each a compact button before it's bought or a colored badge after —
-   - **Auto-upgrade** (green, 🤖): spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from
-     `getAutobuyerAutomationCost`, disabled without enough unspent PP — see "Prestige Points and autobuyer
-     automation" below. Labeled "🤖 Auto-upgrade" once bought (not bare "Auto") to be explicit about *what*
-     is automated, since the tier's own purchases are already automatic once its autobuyer is merely
-     active, independent of this.
-   - **Smart** (purple, 🧠): spends Prestige Points via `actions.buySmartAutobuyer`, cost from
-     `getSmartAutobuyerCost` (10x the Auto-upgrade cost for that same tier) — makes the tier buy one unit
-     at a time until 10 lifetime purchases, then switch to the normal full-block batching, fixing the
-     stall a batch-size-10 autobuyer would otherwise hit forever on a tier it's never bought anything for
-     (see "Prestige Points and autobuyer automation" below). Labeled "🧠 Smart" once bought.
+   track, not stacked under Upgrade — see the grid layout paragraph below) holds an `AutomationCell`
+   showing **exactly one control at a time** for that tier, progressing through a strict sequence — never
+   both Auto-upgrade and Smart shown together for the same tier:
+   1. **Automate** (blue button, 🤖): spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from
+      `getAutobuyerAutomationCost` — see "Prestige Points and autobuyer automation" below.
+   2. Once bought, the slot immediately shows **Smart** (purple button, 🧠) instead — spends Prestige Points
+      via `actions.buySmartAutobuyer`, cost from `getSmartAutobuyerCost` (10x the Auto-upgrade cost for that
+      same tier). Smart *requires* Auto-upgrade automation to already be bought (enforced in
+      `buySmartAutobuyer` itself, not just the UI) — it's presented as the next purchase in one
+      progression, not a parallel, independent one, so there is no distinct "bought Auto-upgrade" badge
+      state at all; buying Automate reveals the Smart button directly.
+   3. Once Smart is bought too, the slot shows a static "🧠 Smart" badge (purple) — makes the tier buy one
+      unit at a time until 10 lifetime purchases, then switch to the normal full-block batching, fixing the
+      stall a batch-size-10 autobuyer would otherwise hit forever on a tier it's never bought anything for
+      (see "Prestige Points and autobuyer automation" below).
 
-   Neither control renders before the tier's autobuyer is activated (nothing to automate/smart-batch yet).
-   `MainPage` computes `showAutoUpgradeControl`/`showSmartControl` per tier row rather than showing both
-   unconditionally: **once Smart is bought for a tier, it visually replaces that tier's Auto-upgrade
-   indicator** (`showAutoUpgradeControl` folds in `!(isSmart && !allTiersSmart)`) rather than the two
-   stacking — showing both was cluttered, and Smart is treated as the more advanced status to surface.
-   Separately, once *every* tier has a given capability (`allTiersAutomated`/`allTiersSmart`, both
-   `TIER_DEFINITIONS.every(...)`), that capability's control disappears entirely, on every row, and a
-   single `StatCard` ("full automation notice" / "full smart autobuyer notice") above `TierList` explains
-   why, rather than leaving a permanent badge cluttering all 10 rows forever. Once `allTiersSmart` flips
-   true, Smart's per-row slot frees back up — `showAutoUpgradeControl`'s `!(isSmart && !allTiersSmart)` term
-   becomes `true` again — so any tier still missing Auto-upgrade shows that indicator again instead of a
-   now-empty slot. `AutomationCell` itself only renders while at least one of the two controls has
-   something to show. The autobuyer-level speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on
-   `autobuyerLevel > 0`) is independent of all this — it's shown whenever an autobuyer is active at all,
-   regardless of the state of either automation capability.
+   `MainPage` picks which single control to render per row with `isSmart ? <badge> : isAutomated ? <Smart
+   button> : <Automate button>`. Nothing renders before the tier's autobuyer is activated (nothing to
+   automate yet), and once *every* tier is smart (`allTiersSmart`, `TIER_DEFINITIONS.every(...)` — which,
+   since Smart requires automation, also implies every tier is automated), the whole `AutomationCell`
+   disappears on every row and a single `StatCard` ("full smart autobuyer notice") above `TierList`
+   explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer-level
+   speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on `autobuyerLevel > 0`) is independent of
+   all this — it's shown whenever an autobuyer is active at all, regardless of automation/Smart status.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
@@ -530,20 +526,23 @@ Unspent PP has one passive effect and two active uses:
   above in exchange for permanent automation: unlike autobuyer *levels* (which reset to the level-1
   baseline on every prestige), automation itself (`state.autobuyerAutomation[tierId]`) is never reset —
   it's meta-progression, carried forward by `prestigeGame` unchanged.
-- **Active — Smart:** `buySmartAutobuyer(tierId)` permanently spends PP (independently of Auto-upgrade
-  above — neither is a prerequisite for the other) to make a tier's autobuyer "smart". Cost is
-  `getSmartAutobuyerCost(tierId) = SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)`
-  (`SMART_AUTOBUYER_COST_MULTIPLIER = 10` in `layers.js`) — 10 PP for the first tier, 20 for the second, up
-  to 5,120 for the 10th/last. It fixes a real stall: `tickGame`'s autobuyer purchase loop normally requires
-  affording an *entire* `autobuyerBatchSize`-unit block before buying anything (see `tickGame` below); a
-  freshly-unlocked tier with 0 owned generators earns $0/tick, so at the app's fixed batch size of 10 it
-  can never afford the first 10-unit block on its own and stalls at whatever balance it started with,
-  forever, every run. A "smart" tier instead buys **one unit at a time until it reaches 10 lifetime
-  purchases** (ignoring `autobuyerBatchSize` for that first block only), then **reverts to the normal
-  full-block batching** for every block after — same requirements/no-op conditions as
-  `buyAutobuyerAutomation` (autobuyer must already be active; no-op if already smart or PP is short), and
-  `state.smartAutobuyer[tierId]` is likewise permanent across prestige (unlike `purchased`, which resets to
-  0 each run and is what re-triggers the one-at-a-time bootstrap on every subsequent run too).
+- **Active — Smart:** `buySmartAutobuyer(tierId)` permanently spends PP to make a tier's autobuyer
+  "smart" — **but only once Auto-upgrade automation is already bought for that same tier**
+  (`autobuyerAutomation[tierId]` must be true; a no-op otherwise, enforced in the engine function itself,
+  not just the UI). Smart is the next purchase in the same progression as Auto-upgrade, not a parallel,
+  independent one — see Architecture above for how `MainPage` reflects this with a single control per tier
+  rather than two. Cost is `getSmartAutobuyerCost(tierId) = SMART_AUTOBUYER_COST_MULTIPLIER *
+  getAutobuyerAutomationCost(tierId)` (`SMART_AUTOBUYER_COST_MULTIPLIER = 10` in `layers.js`) — 10 PP for
+  the first tier, 20 for the second, up to 5,120 for the 10th/last. It fixes a real stall: `tickGame`'s
+  autobuyer purchase loop normally requires affording an *entire* `autobuyerBatchSize`-unit block before
+  buying anything (see `tickGame` below); a freshly-unlocked tier with 0 owned generators earns $0/tick, so
+  at the app's fixed batch size of 10 it can never afford the first 10-unit block on its own and stalls at
+  whatever balance it started with, forever, every run. A "smart" tier instead buys **one unit at a time
+  until it reaches 10 lifetime purchases** (ignoring `autobuyerBatchSize` for that first block only), then
+  **reverts to the normal full-block batching** for every block after — a no-op if already smart or PP is
+  short, and `state.smartAutobuyer[tierId]` is likewise permanent across prestige (unlike `purchased`,
+  which resets to 0 each run and is what re-triggers the one-at-a-time bootstrap on every subsequent run
+  too).
 
 XP (`prestige.xp`, earned via money milestones — see `checkMilestones`) has been removed from the UI as
 part of this change; the underlying mechanic (accumulation, `highestMilestone` tracking) is untouched in
@@ -642,7 +641,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` 10, see `useIncrementalGame`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, an autobuyer's Upgrade level has no effect on how much a purchase costs or how many units it grants |
 | `buyAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise activates (`null` → 1) or upgrades (level N → N+1) an autobuyer — always by spending the tier's own resource via `getAutobuyerCost`, with no separate XP-gated step (activation is just the N=0 case of the same formula). Each level purchased compounds that autobuyer's purchase-attempt rate by another 10% via `getAutobuyerAttemptRate`, without changing production (see `getPurchaseMilestoneMultiplier`), how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op (returns the same state) until at least 1 would remain afterward; the MainPage Upgrade button's `disabled` state mirrors this same `+ 1` threshold so it never looks clickable when the engine would refuse it. Also called automatically by `tickGame` for tiers with automation bought (see `buyAutobuyerAutomation`) |
 | `buyAutobuyerAutomation` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if the tier's autobuyer isn't yet active, if it's already automated, or if there aren't enough unspent Prestige Points; otherwise spends `getAutobuyerAutomationCost(tierId)` PP from `prestige.points` and permanently sets `autobuyerAutomation[tierId] = true` — see "Prestige Points and autobuyer automation" |
-| `buySmartAutobuyer` | `(tierId) → state → state` | Same no-op conditions as `buyAutobuyerAutomation` (frozen / autobuyer inactive / already smart / not enough points), just against `getSmartAutobuyerCost(tierId)` and `smartAutobuyer[tierId]` instead — independent capability, not a prerequisite for or of `buyAutobuyerAutomation` — see "Prestige Points and autobuyer automation" |
+| `buySmartAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if `autobuyerAutomation[tierId]` isn't bought yet (prerequisite — implies the autobuyer is active too), if already smart, or if there aren't enough unspent Prestige Points; otherwise spends `getSmartAutobuyerCost(tierId)` PP and permanently sets `smartAutobuyer[tierId] = true` — see "Prestige Points and autobuyer automation" |
 | `getPurchaseMilestoneMultiplier` | `purchased → number` | `2 ** floor(purchased/10)` — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost` scales cost 10x. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getAutobuyerAttemptRate` | `autobuyerLevel → number` | `1.1 ** (level - 1)` (`null`/not-yet-activated and level ≤ 1 all treated as the baseline rate 1); the average purchase-attempt rate an autobuyer accumulates per tick in `tickGame` — level 1 (just activated, not yet upgraded) is the 1x baseline rate |
 | `getAutobuyerAutomationCost` | `tierId → number` | `AUTOBUYER_AUTOMATION_BASE_COST * 2^tierIndex` — 1 PP for the first tier, doubling for each subsequent one (512 PP for the 10th/last tier); an unrecognized tier id is treated as index 0 |
@@ -691,7 +690,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (240 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (237 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

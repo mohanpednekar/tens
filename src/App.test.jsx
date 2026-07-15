@@ -324,7 +324,7 @@ test('prestige points and the production speed bonus are shown', () => {
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('+50% production speed')
 })
 
-test('an Automate button appears once a tier\'s autobuyer is active, and spends Prestige Points to enable auto-upgrading', async () => {
+test('an Automate button appears once a tier\'s autobuyer is active, and buying it reveals the Smart button in its place', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -337,10 +337,16 @@ test('an Automate button appears once a tier\'s autobuyer is active, and spends 
 
   const automateButton = screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })
   expect(automateButton).toBeEnabled()
+  // Smart isn't purchasable yet — it requires Auto-upgrade automation first.
+  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
 
   await user.click(automateButton)
 
-  expect(screen.getByText(/🤖 auto/i)).toBeInTheDocument()
+  // Auto-upgrade is bought silently in the background; the slot immediately shows Smart instead
+  // of a lingering "Auto-upgrade" badge — the two controls are never shown for the same tier.
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/🤖 auto-upgrade/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -362,48 +368,13 @@ test('no Automate control appears before a tier\'s autobuyer is activated', () =
   expect(screen.queryByRole('button', { name: /automate tens autobuyer/i })).not.toBeInTheDocument()
 })
 
-test('once every tier is automated, a single notice replaces every per-tier automation indicator', () => {
-  const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
-  // Owning 10 of each tier except the last unlocks the entire chain up to tier10.
-  const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
-  const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
-  const autobuyerAutomation = Object.fromEntries(tierIds.map(id => [id, true]))
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned,
-    autobuyers,
-    autobuyerAutomation,
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^full automation notice$/i)).toBeInTheDocument()
-  expect(screen.queryByText(/🤖 auto/i)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /automate/i })).not.toBeInTheDocument()
-})
-
-test('the full automation notice does not appear while any tier is still unautomated', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    autobuyers: { tier01: 1 },
-    autobuyerAutomation: { tier01: true },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  expect(screen.queryByLabelText(/^full automation notice$/i)).not.toBeInTheDocument()
-  expect(screen.getByText(/🤖 auto/i)).toBeInTheDocument()
-})
-
-test('a Smart button appears once a tier\'s autobuyer is active, and spends 10x the automation cost', async () => {
+test('a Smart button appears once a tier is automated (not before), and spends 10x the automation cost', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
+    autobuyerAutomation: { tier01: true },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   }))
 
@@ -411,10 +382,13 @@ test('a Smart button appears once a tier\'s autobuyer is active, and spends 10x 
 
   const smartButton = screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })
   expect(smartButton).toBeEnabled()
+  // The Automate control is already gone — Auto-upgrade is bought, Smart has taken its place.
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
 
   await user.click(smartButton)
 
   expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -422,6 +396,7 @@ test('the Smart button stays disabled without enough Prestige Points', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
+    autobuyerAutomation: { tier01: true },
     prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 },
   }))
 
@@ -430,37 +405,19 @@ test('the Smart button stays disabled without enough Prestige Points', () => {
   expect(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
 })
 
-test('buying Smart for a tier replaces its Auto-upgrade indicator instead of showing both', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    autobuyers: { tier01: 1 },
-    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  // Before buying Smart, both controls are present.
-  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
-
-  await user.click(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i }))
-
-  expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
-  expect(screen.queryByText(/🤖 auto-upgrade/i)).not.toBeInTheDocument()
-})
-
-test('once every tier is smart, a single notice replaces every per-tier Smart indicator, and hands the Auto-upgrade indicator back', () => {
+test('once every tier is smart, a single notice replaces every per-tier Smart indicator, with no Automate control left either', () => {
   const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
   const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
   const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
+  // Smart requires automation, so every tier being smart implies every tier is also automated.
+  const autobuyerAutomation = Object.fromEntries(tierIds.map(id => [id, true]))
   const smartAutobuyer = Object.fromEntries(tierIds.map(id => [id, true]))
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned,
     autobuyers,
+    autobuyerAutomation,
     smartAutobuyer,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
@@ -470,7 +427,5 @@ test('once every tier is smart, a single notice replaces every per-tier Smart in
   expect(screen.getByLabelText(/^full smart autobuyer notice$/i)).toBeInTheDocument()
   expect(screen.queryByText(/🧠 smart/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
-  // Every tier is smart but none is auto-upgrade-automated yet — the Auto-upgrade indicator,
-  // which Smart was covering, is shown again now that Smart no longer occupies the slot.
-  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /automate/i })).not.toBeInTheDocument()
 })

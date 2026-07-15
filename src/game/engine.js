@@ -450,14 +450,16 @@ export const buyAutobuyerAutomation = tierId => state => {
 // switches to the normal full-block batching from then on — fixes an otherwise-permanent stall
 // where a tier with 0 owned generators (0 income) can never afford a full first block on its
 // own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than automating that tier's autobuyer
-// Upgrades (see getSmartAutobuyerCost) — a separate capability from buyAutobuyerAutomation, not a
-// prerequisite for it. Requires the tier's autobuyer to already be active; a no-op if already
-// smart or if there aren't enough unspent points.
+// Upgrades (see getSmartAutobuyerCost) — and requires that Auto-upgrade automation
+// (autobuyerAutomation[tierId]) already be bought first: Smart is presented as the next purchase
+// after Auto-upgrade, not a parallel/independent one, so the MainPage automate slot only ever
+// shows one control per tier at a time (Automate → Smart → bought), never both together. A no-op
+// if automation isn't bought yet, already smart, or there aren't enough unspent points.
 export const buySmartAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier) return state
-  if (state.autobuyers[tierId] == null) return state
+  if (!state.autobuyerAutomation?.[tierId]) return state
   if (state.smartAutobuyer?.[tierId]) return state
 
   const cost = getSmartAutobuyerCost(tierId)
