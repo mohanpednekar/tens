@@ -1,10 +1,10 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
@@ -69,10 +69,14 @@ const reveal = keyframes`
 // Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
 // occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again.
+// The 'automate' column only ever holds content once a tier's autobuyer is active — a single
+// small control at a time (Automate → Smart → the "Smart" badge, see AutomationCell), never both
+// Automate and Smart together — a narrower fraction than the other columns since it's a rare,
+// glanceable control rather than something clicked constantly like Buy.
 const TierLine = styled(StatCard)`
   display: grid;
-  grid-template-areas: 'name owned purchased production upgrade buy';
-  grid-template-columns: 1fr 0.75fr 0.8fr 0.9fr 1.05fr 1.05fr;
+  grid-template-areas: 'name owned purchased production upgrade automate buy';
+  grid-template-columns: 1fr 0.7fr 0.75fr 0.85fr 0.95fr 0.55fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
   padding: 0.4rem 0.7rem;
@@ -93,7 +97,7 @@ const TierLine = styled(StatCard)`
     grid-template-areas:
       'name name name name name name'
       'owned owned purchased purchased production production'
-      'upgrade upgrade upgrade buy buy buy';
+      'upgrade upgrade automate buy buy buy';
     grid-template-columns: repeat(6, 1fr);
     row-gap: 0.3rem;
     column-gap: 0.35rem;
@@ -101,14 +105,75 @@ const TierLine = styled(StatCard)`
   }
 `
 
-const QuantityToggle = styled.div`
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
-`
-
 const PrestigeCard = styled(StatCard)`
   border-color: #854d0e;
+`
+
+// Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
+// player has ever prestiged) — covers the whole viewport so the frozen, disabled page underneath
+// is never visible/reachable; there's deliberately no close/dismiss control (see PrestigeButton
+// below, the only thing left clickable while frozen).
+const FullScreenOverlay = styled.div`
+  align-items: center;
+  background: rgba(0, 0, 0, 0.96);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 2rem 1rem;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 1000;
+`
+
+const FullScreenCard = styled.div`
+  color: white;
+  max-width: 28rem;
+  text-align: center;
+  width: 100%;
+
+  h2 {
+    color: #fbbf24;
+    font-size: 1.6rem;
+    margin: 0 0 0.75rem;
+  }
+
+  ul {
+    color: #d4d4d4;
+    margin: 1rem 0 1.5rem;
+    padding-left: 1.25rem;
+    text-align: left;
+  }
+
+  li {
+    margin: 0.3rem 0;
+  }
+`
+
+// From the 2nd prestige onward, reaching GOOGOL again shows a compact banner pinned to the top
+// of the viewport instead of the full-screen takeover — the player already knows what Prestige
+// does, so a persistent-but-unobtrusive reminder is enough.
+const TopPrestigeBar = styled.div`
+  align-items: center;
+  background: #1c1206;
+  border-bottom: 2px solid #854d0e;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  left: 0;
+  padding: 0.6rem 1rem;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 900;
+`
+
+// Reserves space at the top of the page so TopPrestigeBar (position: fixed) never overlaps the
+// Header underneath it.
+const TopPrestigeBarSpacer = styled.div`
+  height: 3.75rem;
 `
 
 const MutedText = styled.p`
@@ -195,6 +260,38 @@ const UpgradeButton = styled(Button)`
   }
 `
 
+// Its own narrow grid column (see TierLine), not stacked under the Upgrade button — holds exactly
+// one small control at a time, progressing Automate → Smart → the "Smart" badge (Smart requires
+// Auto-upgrade automation to already be bought, so the two are never both shown for the same
+// tier). Nothing renders here at all before the tier's autobuyer is active, and the whole thing
+// disappears everywhere once every tier is smart (see MainPage's allTiersSmart).
+const AutomationCell = styled.div`
+  display: flex;
+  grid-area: automate;
+  min-width: 0;
+`
+
+const AutomationButton = styled(Button)`
+  width: 100%;
+  font-size: 0.72em;
+  padding: 0.3em 0.3em;
+  ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: 0.68em;
+    padding: 0.28em 0.25em;
+  }
+`
+
+const AutomationBadge = styled.span`
+  align-items: center;
+  color: ${props => props.$color};
+  display: flex;
+  font-size: 0.72em;
+  justify-content: center;
+  ${gridCell}
+`
+
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
@@ -205,10 +302,11 @@ const formatCost = (amount, resourceId) =>
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
 const MainPage = () => {
-  const { actions, dismissOfflineProgress, offlineProgress, quantity, resetGame, setQuantity, state } = useIncrementalGame()
+  const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
-  const prestigeBonus = productionMultiplier(prestige.level)
+  const prestigeBonus = getPrestigeProductionMultiplier(prestige.points)
+  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
@@ -222,11 +320,105 @@ const MainPage = () => {
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
 
+  // Smart requires Auto-upgrade automation to already be bought (see buySmartAutobuyer), so being
+  // smart implies being automated too — once every tier is smart, there's nothing left in this
+  // whole progression for any tier, so the per-tier indicator disappears everywhere and a
+  // one-line notice explains why, rather than leaving a permanent badge on all 10 rows forever.
+  const allTiersSmart = TIER_DEFINITIONS.every(tier => state.smartAutobuyer?.[tier.id])
+
+  // All production and purchasing freezes the instant Money reaches GOOGOL (see
+  // isProductionFrozen in engine.js) — Prestige is the only remaining action. The first time
+  // this ever happens (before the player has prestiged even once) it's a mandatory full-screen
+  // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
+  // since the player already knows what Prestige does.
+  const isFrozen = isProductionFrozen(state)
+  const isFirstRun = prestige.count === 0
+  const showFullScreenPrompt = isFrozen && isFirstRun
+  const showTopPrestigeBar = isFrozen && !isFirstRun
+  // During the first run only, the normal Prestige card stays hidden until the player has
+  // bought 10 of the very last tier — once they've prestiged at least once, it's always shown
+  // (in its usual spot) whenever production isn't frozen.
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
+
+  // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
+  // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
+  // AUTO_PRESTIGE_BASE_INTERVAL_SECONDS once Money is at/above GOOGOL; each further level speeds
+  // that up by 10% at double the previous level's cost (see getAutoPrestigeAttemptRate/
+  // getAutoPrestigeCost).
+  const autoPrestigeLevel = state.autoPrestige ?? null
+  const isAutoPrestigeActive = autoPrestigeLevel !== null
+  const autoPrestigeCost = getAutoPrestigeCost(autoPrestigeLevel ?? 0)
+  const canBuyAutoPrestige = !isFrozen && prestige.points >= autoPrestigeCost
+  const autoPrestigeIntervalSeconds = isAutoPrestigeActive
+    ? Math.round(1 / getAutoPrestigeAttemptRate(autoPrestigeLevel))
+    : null
+
+  // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
+  // interactive element on screen while it's showing (no close/dismiss control by design).
+  const fullScreenPrestigeButtonRef = useRef(null)
+  useEffect(() => {
+    if (showFullScreenPrompt) fullScreenPrestigeButtonRef.current?.focus()
+  }, [showFullScreenPrompt])
+
+  if (showFullScreenPrompt) {
+    return (
+      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
+        <FullScreenCard>
+          <h2>✦ Prestige Available!</h2>
+          <MutedText>
+            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Money. All
+            production has stopped.
+          </MutedText>
+          <ul>
+            <li>Resets your resources, owned tiers, and purchases</li>
+            <li>
+              Awards {formatAmount(prestigePointsPreview)} Prestige Point
+              {prestigePointsPreview === 1 ? '' : 's'} — each unspent point adds +1% production
+              speed, or spend them to automate autobuyer Upgrades
+            </li>
+            <li>Keeps your autobuyers, automations, and Prestige Points</li>
+          </ul>
+          <Button
+            ref={fullScreenPrestigeButtonRef}
+            aria-label="Prestige now"
+            color="#fbbf24"
+            onClick={actions.prestige}
+            title="Awards Prestige Points and resets your resources"
+            type="button"
+            $pulse
+          >
+            ✦ Prestige Now
+          </Button>
+        </FullScreenCard>
+      </FullScreenOverlay>
+    )
+  }
+
   return (
     <RootDiv>
+      {showTopPrestigeBar && (
+        <>
+          <TopPrestigeBar aria-label="prestige available banner">
+            <MutedText>1 Googol Money reached — production has stopped.</MutedText>
+            <Button
+              aria-label={prestigeLabel}
+              color="#fbbf24"
+              onClick={actions.prestige}
+              title="Awards Prestige Points and resets your resources"
+              type="button"
+              $pulse
+            >
+              ✦ Prestige
+            </Button>
+          </TopPrestigeBar>
+          <TopPrestigeBarSpacer />
+        </>
+      )}
+
       <Header>
         <h1>Tens</h1>
-        <MutedText>Build by powers of ten. Prestige to multiply your progress.</MutedText>
+        <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
       </Header>
 
       {offlineProgress && (
@@ -250,41 +442,25 @@ const MainPage = () => {
       )}
 
       <StatCard aria-label="money display">
-        <TopRow>
-          <div>
-            <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-            <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
-          </div>
-          <QuantityToggle role="group" aria-label="Bulk batch size">
-            <MutedText>Bulk:</MutedText>
-            <Button
-              aria-pressed={quantity === 1}
-              color={quantity === 1 ? 'white' : 'darkgrey'}
-              onClick={() => setQuantity(1)}
-              title="Buy one unit per click"
-              type="button"
-            >
-              ×1
-            </Button>
-            <Button
-              aria-pressed={quantity === 10}
-              color={quantity === 10 ? 'white' : 'darkgrey'}
-              onClick={() => setQuantity(10)}
-              title="Buy up to a full 10-unit price block per click"
-              type="button"
-            >
-              ×10
-            </Button>
-          </QuantityToggle>
-        </TopRow>
+        <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
+        <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
       </StatCard>
 
-      <StatCard aria-label="exponent points display">
+      <StatCard aria-label="prestige points display">
         <MutedText>
-          <GoldText>{prestige.xp} XP</GoldText>
-          {' · '}Next XP at {formatCurrency(10 ** (prestige.highestMilestone + 1))}
+          <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+          {' · '}+{Math.round((prestigeBonus - 1) * 100)}% production speed
         </MutedText>
       </StatCard>
+
+      {allTiersSmart && (
+        <StatCard aria-label="full smart autobuyer notice">
+          <MutedText>
+            🧠 Every tier's autobuyer is fully automated and smart — since there's nothing left to
+            upgrade, this indicator won't be shown per tier anymore.
+          </MutedText>
+        </StatCard>
+      )}
 
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
@@ -294,21 +470,32 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
-          // Manual buy grabs as many units as are currently affordable, capped at the Bulk
-          // toggle's quantity (which itself never exceeds the 10-unit cost block boundary).
-          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, quantity)
+          // Manual Buy always grabs as many units as are currently affordable, up to the
+          // 10-unit cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
+          // behavior — see useIncrementalGame's BUY_QUANTITY).
+          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, 10)
           const unitCost = getTierQuantityCost(tier, purchased, 1)
           const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
-          const canAfford = affordableQuantity > 0
-          // The cost-block progress fill always previews the full 10-unit block, independent of
-          // the Bulk toggle — it shows how much runway is left before the next 10x cost jump.
+          const canAfford = affordableQuantity > 0 && !isFrozen
           const doneInBlock = purchased % 10
-          const availableInBlock = getTierAffordableQuantity(tier, purchased, costResource, 10)
           const donePercent = (doneInBlock / 10) * 100
-          const availablePercent = (availableInBlock / 10) * 100
+          const availablePercent = (affordableQuantity / 10) * 100
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
           const autobuyerAttemptRate = getAutobuyerAttemptRate(autobuyerLevel)
+          const isAutomated = state.autobuyerAutomation?.[tier.id] ?? false
+          const automationCost = getAutobuyerAutomationCost(tier.id)
+          const canAutomate = !isFrozen && !isAutomated && !isAutobuyerLocked && prestige.points >= automationCost
+          // "Smart" buys this tier one at a time until 10 lifetime purchases, then switches to
+          // the normal full-block batching. It requires Auto-upgrade automation to already be
+          // bought (see buySmartAutobuyer) — it's the next purchase in the same progression, not
+          // a parallel one, so the tier's automate slot only ever shows a single control at a
+          // time: Automate → (once bought) Smart → (once bought) the "Smart" badge. Once every
+          // tier is smart (which implies every tier is also automated), the whole slot disappears
+          // (see allTiersSmart above).
+          const isSmart = state.smartAutobuyer?.[tier.id] ?? false
+          const smartCost = getSmartAutobuyerCost(tier.id)
+          const canBuySmart = !isFrozen && !isSmart && isAutomated && prestige.points >= smartCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
@@ -319,7 +506,7 @@ const MainPage = () => {
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
-          const canUpgradeAutobuyer = resources >= autobuyerCost + 1
+          const canUpgradeAutobuyer = resources >= autobuyerCost + 1 && !isFrozen
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${formatCost(autobuyerCost, tier.id)}`
@@ -364,7 +551,7 @@ const MainPage = () => {
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
-                onClick={() => actions.buyTierQuantity(tier.id, quantity)}
+                onClick={() => actions.buyTierQuantity(tier.id)}
                 title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — every 10 purchases also doubles it`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
@@ -397,58 +584,114 @@ const MainPage = () => {
                   aria-valuemax={100}
                 />
               </UpgradeButton>
+              {!isAutobuyerLocked && !allTiersSmart && (
+                <AutomationCell>
+                  {isSmart ? (
+                    <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
+                      🧠 Smart
+                    </AutomationBadge>
+                  ) : isAutomated ? (
+                    <AutomationButton
+                      aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${smartCost} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                      color={canBuySmart ? '#a78bfa' : 'darkgrey'}
+                      disabled={!canBuySmart}
+                      onClick={() => actions.buySmartAutobuyer(tier.id)}
+                      title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
+                      type="button"
+                    >
+                      🧠 {smartCost}
+                    </AutomationButton>
+                  ) : (
+                    <AutomationButton
+                      aria-label={`Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`}
+                      color={canAutomate ? '#38bdf8' : 'darkgrey'}
+                      disabled={!canAutomate}
+                      onClick={() => actions.buyAutobuyerAutomation(tier.id)}
+                      title="Spend Prestige Points to make this tier's autobuyer Upgrades happen automatically, forever"
+                      type="button"
+                    >
+                      🤖 {automationCost}
+                    </AutomationButton>
+                  )}
+                </AutomationCell>
+              )}
             </TierLine>
           )
         })}
       </TierList>
 
-      <PrestigeCard aria-label="prestige panel">
-        <div>
-          <h2>Prestige</h2>
-          <MutedText id="prestige-description">
-            Reach 1 Googol Money to gain 1 Prestige Level, doubling all production. Resets your
-            resources when reached.
-          </MutedText>
-        </div>
-        <div>
-          <GoldText>Level {prestige.level}</GoldText>
-          {prestige.level > 0 && (
-            <MutedText>×{prestigeBonus} production bonus</MutedText>
+      {showBottomPrestigeCard && (
+        <PrestigeCard aria-label="prestige panel">
+          <div>
+            <h2>Prestige</h2>
+            <MutedText id="prestige-description">
+              Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
+              Each unspent point adds +1% production speed, or spend points to automate autobuyer
+              Upgrades. Resets your resources when reached.
+            </MutedText>
+          </div>
+          <div>
+            <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
+            <MutedText>{formatAmount(prestige.points)} PP unspent{' · '}×{formatRate(prestigeBonus)} production speed</MutedText>
+            <MutedText>
+              {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
+            </MutedText>
+          </div>
+          <Button
+            aria-describedby="prestige-description"
+            aria-label={prestigeLabel}
+            color={canPrestige ? '#fbbf24' : 'darkgrey'}
+            disabled={!canPrestige}
+            onClick={actions.prestige}
+            title="Awards Prestige Points and resets your resources"
+            type="button"
+            $progress={prestigeProgressPercent}
+            $progressColor="#fbbf24"
+            $pulse={canPrestige}
+          >
+            ✦ Prestige
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Prestige progress"
+              aria-valuenow={prestigeProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+          {allTiersSmart && (
+            <>
+              {isAutoPrestigeActive && (
+                <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
+                  🔁 Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                </MutedText>
+              )}
+              <Button
+                aria-label={
+                  isAutoPrestigeActive
+                    ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                    : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                }
+                color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+                disabled={!canBuyAutoPrestige}
+                onClick={actions.buyAutoPrestige}
+                title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                type="button"
+              >
+                🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+              </Button>
+            </>
           )}
-          <MutedText>
-            {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
-          </MutedText>
-        </div>
-        <Button
-          aria-describedby="prestige-description"
-          aria-label={prestigeLabel}
-          color={canPrestige ? '#fbbf24' : 'darkgrey'}
-          disabled={!canPrestige}
-          onClick={actions.prestige}
-          title="Resets resources and doubles all future production permanently"
-          type="button"
-          $progress={prestigeProgressPercent}
-          $progressColor="#fbbf24"
-          $pulse={canPrestige}
-        >
-          ✦ Prestige
-          <VisuallyHidden
-            role="progressbar"
-            aria-label="Prestige progress"
-            aria-valuenow={prestigeProgressPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </Button>
-      </PrestigeCard>
+        </PrestigeCard>
+      )}
 
       <Button
         aria-describedby="reset-description"
         aria-label="Reset game"
-        color="#a3a3a3"
+        color={isFrozen ? 'darkgrey' : '#a3a3a3'}
+        disabled={isFrozen}
         type="button"
         onClick={resetGame}
-        title="Erases all progress and starts over"
+        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over'}
       >
         ↺ Reset
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
