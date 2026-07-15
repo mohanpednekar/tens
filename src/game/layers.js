@@ -39,3 +39,6 @@ export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // PP cost to permanently automate the first tier's autobuyer Upgrades (see engine.js's
 // getAutobuyerAutomationCost) — doubles for each subsequent tier.
 export const AUTOBUYER_AUTOMATION_BASE_COST = 1
+// The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
+// times more PP than automating that same tier's autobuyer Upgrades.
+export const SMART_AUTOBUYER_COST_MULTIPLIER = 10

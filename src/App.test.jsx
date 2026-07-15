@@ -397,3 +397,73 @@ test('the full automation notice does not appear while any tier is still unautom
   expect(screen.queryByLabelText(/^full automation notice$/i)).not.toBeInTheDocument()
   expect(screen.getByText(/🤖 auto/i)).toBeInTheDocument()
 })
+
+test('a Smart button appears once a tier\'s autobuyer is active, and spends 10x the automation cost', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  const smartButton = screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })
+  expect(smartButton).toBeEnabled()
+
+  await user.click(smartButton)
+
+  expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Smart button stays disabled without enough Prestige Points', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
+})
+
+test('the Smart and Automate controls are independent — buying one leaves the other untouched', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i }))
+
+  expect(screen.getByText(/🧠 smart/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /automate tens autobuyer upgrades for 1 prestige point/i })).toBeInTheDocument()
+})
+
+test('once every tier is smart, a single notice replaces every per-tier Smart indicator', () => {
+  const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
+  const owned = Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10]))
+  const autobuyers = Object.fromEntries(tierIds.map(id => [id, 1]))
+  const smartAutobuyer = Object.fromEntries(tierIds.map(id => [id, true]))
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned,
+    autobuyers,
+    smartAutobuyer,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^full smart autobuyer notice$/i)).toBeInTheDocument()
+  expect(screen.queryByText(/🧠 smart/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
+})

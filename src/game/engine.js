@@ -1,4 +1,4 @@
-import { AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -39,6 +39,14 @@ export const createInitialGameState = () => ({
   // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
   // autobuyer self-upgrade every tick (see buyAutobuyerAutomation) — never reset by prestige.
   autobuyerAutomation: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
+  }), {}),
+  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
+  // autobuyer "smart" — buys one unit at a time until 10 lifetime purchases, then switches to
+  // the normal full-block batching from then on (see tickGame/buySmartAutobuyer) — never reset
+  // by prestige.
+  smartAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: false,
   }), {}),
@@ -133,6 +141,12 @@ export const getAutobuyerAutomationCost = tierId => {
   return AUTOBUYER_AUTOMATION_BASE_COST * (2 ** tierIndex)
 }
 
+// PP cost to permanently make a tier's autobuyer "smart" (see buySmartAutobuyer) —
+// SMART_AUTOBUYER_COST_MULTIPLIER times the cost of automating that same tier's autobuyer
+// Upgrades (getAutobuyerAutomationCost), since it's a separate, more powerful capability.
+export const getSmartAutobuyerCost = tierId =>
+  SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)
+
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
 // the same boundary where getTierCost's cost jumps 10x, so buying into a fresh cost epoch always
 // pays off with cheaper-relative production. epoch = floor(purchased/10); multiplier = 2^epoch.
@@ -205,7 +219,12 @@ const checkMilestones = (resources, prestige) => {
 // (the manual Buy button always buys 1 — see buyTier). At 1 (default), each attempt buys a
 // single unit as soon as it's affordable, same as always. Above 1, each attempt only buys once
 // the tier can afford the *entire* current cost block up to that size — it holds and waits
-// rather than trickling in a partial purchase.
+// rather than trickling in a partial purchase. A "smart" tier (see buySmartAutobuyer) overrides
+// this with an effective batch size of 1 for its very first cost block (purchased < 10) —
+// otherwise a tier that's never been manually bought can never afford autobuyerBatchSize's full
+// first block (0 owned generators produce $0 income, and the starting balance only ever covers
+// 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
+// block onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
   // until the player prestiges. Returning the same reference (rather than an equivalent copy)
@@ -232,8 +251,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level)
     while (budget >= 1) {
       const purchased = getTierPurchasedCount(result, tier.id)
-      const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
-      const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
+      const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && purchased < 10 ? 1 : autobuyerBatchSize
+      const blockMax = getTierBulkQuantity(tier, purchased, effectiveBatchSize)
+      const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), effectiveBatchSize)
       if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold, bank the attempt
       const next = buyTierQuantity(tier.id, blockMax)(result)
       if (next === result) break
@@ -425,6 +445,31 @@ export const buyAutobuyerAutomation = tierId => state => {
   }
 }
 
+// Permanently makes a tier's autobuyer "smart": in tickGame, that tier buys one unit at a time
+// (rather than waiting for a full 10-unit block) until it reaches 10 lifetime purchases, then
+// switches to the normal full-block batching from then on — fixes an otherwise-permanent stall
+// where a tier with 0 owned generators (0 income) can never afford a full first block on its
+// own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than automating that tier's autobuyer
+// Upgrades (see getSmartAutobuyerCost) — a separate capability from buyAutobuyerAutomation, not a
+// prerequisite for it. Requires the tier's autobuyer to already be active; a no-op if already
+// smart or if there aren't enough unspent points.
+export const buySmartAutobuyer = tierId => state => {
+  if (isProductionFrozen(state)) return state
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier) return state
+  if (state.autobuyers[tierId] == null) return state
+  if (state.smartAutobuyer?.[tierId]) return state
+
+  const cost = getSmartAutobuyerCost(tierId)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    smartAutobuyer: { ...state.smartAutobuyer, [tierId]: true },
+  }
+}
+
 // Reaching GOOGOL money awards Prestige Points (see getPrestigePointsAwarded) and resets all
 // progress. XP is untouched by prestige — it's earned independently via money milestones and
 // doesn't fund anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
@@ -448,6 +493,7 @@ export const prestigeGame = state => {
     ...initial,
     autobuyers: resetAutobuyers,
     autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
+    smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,

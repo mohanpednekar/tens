@@ -3,6 +3,7 @@ import {
   applyOfflineProgress,
   buyAutobuyer,
   buyAutobuyerAutomation,
+  buySmartAutobuyer,
   buyTier,
   buyTierQuantity,
   createInitialGameState,
@@ -18,6 +19,7 @@ import {
   getPrestigeProductionMultiplier,
   getPrestigeProgressPercent,
   getPurchaseMilestoneMultiplier,
+  getSmartAutobuyerCost,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -73,6 +75,11 @@ const withAutobuyerAutomation = (state, tierId, automated = true) => ({
   autobuyerAutomation: { ...state.autobuyerAutomation, [tierId]: automated },
 })
 
+const withSmartAutobuyer = (state, tierId, smart = true) => ({
+  ...state,
+  smartAutobuyer: { ...state.smartAutobuyer, [tierId]: smart },
+})
+
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
 // entry-level generator. TIER_DEFINITIONS[1] ('Thousands') is the first
 // tier that needs unlocking (10 Tens owned) and produces Tens.
@@ -126,6 +133,13 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.autobuyerAutomation[tier.id]).toBe(false)
+    })
+  })
+
+  it('initialises all tiers with smartAutobuyer = false', () => {
+    const state = createInitialGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(state.smartAutobuyer[tier.id]).toBe(false)
     })
   })
 
@@ -346,6 +360,19 @@ describe('getAutobuyerAutomationCost', () => {
 
   it('treats an unknown tier id as index 0 (cheapest tier)', () => {
     expect(getAutobuyerAutomationCost('does_not_exist')).toBe(1)
+  })
+})
+
+// ─── getSmartAutobuyerCost ────────────────────────────────────────────────────
+
+describe('getSmartAutobuyerCost', () => {
+  it('costs 10x the automation cost for the first tier', () => {
+    expect(getSmartAutobuyerCost(tensTier.id)).toBe(10)
+  })
+
+  it('costs 10x the automation cost for later tiers', () => {
+    expect(getSmartAutobuyerCost(thousandsTier.id)).toBe(20)
+    expect(getSmartAutobuyerCost(TIER_DEFINITIONS[9].id)).toBe(5120)
   })
 })
 
@@ -768,6 +795,45 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(65)
   })
 
+  it('without smart, a tier with only its $10 starting balance never buys anything at batch size 10 (the bootstrap stall)', () => {
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), 10),
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(10)
+  })
+
+  it('a smart tier buys one at a time (ignoring the batch size) instead of stalling on the first block', () => {
+    const state = withSmartAutobuyer(
+      withAutobuyer(
+        withMoney(createInitialGameState(), 10), // same stall scenario as above
+        tensTier.id
+      ),
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(1)
+    // Money is spent on the single unit ($10 → $0) but that unit's own production adds $1 back
+    // this same tick (owned(1) × 1sec × 1 prestige multiplier × 1 milestone multiplier).
+    expect(after.resources[MONEY_ID]).toBe(1)
+  })
+
+  it('a smart tier reverts to the normal (full-block) batch size once past its first 10 purchases', () => {
+    const state = withSmartAutobuyer(
+      withAutobuyer(
+        withMoney(withPurchased(createInitialGameState(), tensTier.id, 10), 65), // 2nd block: unit cost is now $100 (10x epoch jump), $65 affords 0
+        tensTier.id
+      ),
+      tensTier.id
+    )
+    const after = tickGame(1, 10)(state)
+    expect(after.purchased[tensTier.id]).toBe(10) // unchanged — holds for the full block, same as non-smart
+    expect(after.resources[MONEY_ID]).toBe(65)
+  })
+
   it('with a batch size above 1, autobuyer buys the whole block at once once affordable', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 100),
@@ -1064,6 +1130,74 @@ describe('buyAutobuyerAutomation', () => {
   })
 })
 
+// ─── buySmartAutobuyer ────────────────────────────────────────────────────────
+
+describe('buySmartAutobuyer', () => {
+  it('spends 10 PP to make the first tier smart when its autobuyer is active', () => {
+    const state = withPrestigePoints(
+      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+      10
+    )
+    const after = buySmartAutobuyer(tensTier.id)(state)
+    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('costs 20 PP for the second tier', () => {
+    const state = withPrestigePoints(
+      withAutobuyer(createInitialGameState(), thousandsTier.id, 1),
+      20
+    )
+    const after = buySmartAutobuyer(thousandsTier.id)(state)
+    expect(after.smartAutobuyer[thousandsTier.id]).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('is independent of autobuyer-upgrade automation — buyable without it', () => {
+    const state = withPrestigePoints(
+      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+      10
+    )
+    const after = buySmartAutobuyer(tensTier.id)(state)
+    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+    expect(after.autobuyerAutomation[tensTier.id]).toBe(false)
+  })
+
+  it('returns the same state when there are not enough points', () => {
+    const state = withPrestigePoints(
+      withAutobuyer(createInitialGameState(), tensTier.id, 1),
+      9
+    )
+    expect(buySmartAutobuyer(tensTier.id)(state)).toBe(state)
+  })
+
+  it('returns the same state when the tier\'s autobuyer is not yet active', () => {
+    const state = withPrestigePoints(createInitialGameState(), 100)
+    expect(buySmartAutobuyer(tensTier.id)(state)).toBe(state)
+  })
+
+  it('returns the same state when already smart (one-time purchase)', () => {
+    const state = withSmartAutobuyer(
+      withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 100),
+      tensTier.id
+    )
+    expect(buySmartAutobuyer(tensTier.id)(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(
+      withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 100),
+      GOOGOL
+    )
+    expect(buySmartAutobuyer(tensTier.id)(state)).toBe(state)
+  })
+
+  it('returns the same state for an unknown tier id', () => {
+    const state = withPrestigePoints(createInitialGameState(), 100)
+    expect(buySmartAutobuyer('does_not_exist')(state)).toBe(state)
+  })
+})
+
 // ─── prestigeGame ────────────────────────────────────────────────────────────
 
 describe('prestigeGame', () => {
@@ -1113,6 +1247,15 @@ describe('prestigeGame', () => {
     )
     const after = prestigeGame(state)
     expect(after.autobuyerAutomation[tensTier.id]).toBe(true)
+  })
+
+  it('keeps the smart autobuyer flag permanently across prestige', () => {
+    const state = withSmartAutobuyer(
+      withMoney(createInitialGameState(), GOOGOL),
+      tensTier.id
+    )
+    const after = prestigeGame(state)
+    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
   })
 
   it('leaves XP untouched', () => {

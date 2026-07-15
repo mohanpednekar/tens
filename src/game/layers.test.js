@@ -5,6 +5,7 @@ import {
   MONEY_ID,
   PRESTIGE_POINT_SPEED_BONUS,
   RESOURCE_SYMBOL,
+  SMART_AUTOBUYER_COST_MULTIPLIER,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
 } from './layers'
@@ -102,5 +103,9 @@ describe('constants', () => {
 
   it('AUTOBUYER_AUTOMATION_BASE_COST is 1 (first tier costs 1 PP)', () => {
     expect(AUTOBUYER_AUTOMATION_BASE_COST).toBe(1)
+  })
+
+  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x automation)', () => {
+    expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
   })
 })

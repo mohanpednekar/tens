@@ -195,7 +195,7 @@ describe('schema migration', () => {
     expect(loaded.prestige.count).toBe(9)
   })
 
-  it('defaults prestige.points to 0 and autobuyerAutomation to false for saves that predate them', () => {
+  it('defaults prestige.points to 0 and autobuyerAutomation/smartAutobuyer to false for saves that predate them', () => {
     const oldSave = {
       resources: { Ones: 10 },
       prestige: { xp: 0, level: 0, highestMilestone: 1 },
@@ -205,7 +205,17 @@ describe('schema migration', () => {
     expect(loaded.prestige.points).toBe(0)
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.autobuyerAutomation[tier.id]).toBe(false)
+      expect(loaded.smartAutobuyer[tier.id]).toBe(false)
     })
+  })
+
+  it('preserves a saved smartAutobuyer flag', () => {
+    const state = {
+      ...createInitialGameState(),
+      smartAutobuyer: { ...createInitialGameState().smartAutobuyer, [tensTier.id]: true },
+    }
+    saveGameState(state)
+    expect(loadGameState().smartAutobuyer[tensTier.id]).toBe(true)
   })
 
   it('remaps legacy name-based tier ids to the new tier0N ids', () => {
