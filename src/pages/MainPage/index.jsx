@@ -317,14 +317,15 @@ const MainPage = () => {
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${autobuyerUnlockXPCost} XP`
-            : `Upgrade for ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            : `Upgrade (doubles production) for ${formatCost(autobuyerUpgradeCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/"Upgrade"/"Unlock" word, and
           // the tier's short symbol (via formatCost) in place of its full name. The full
-          // sentence stays in aria-label/title for assistive tech.
+          // sentence stays in aria-label/title for assistive tech. The Upgrade state also gets
+          // a "×2" prefix so the doubling effect is visible without needing to hover for the title.
           const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
           const upgradeVisibleLabel = isAutobuyerLocked
             ? `🔓 ${autobuyerUnlockXPCost} XP`
-            : `⚙ ${formatCost(autobuyerUpgradeCost, tier.id)}`
+            : `⚙ ×2 ${formatCost(autobuyerUpgradeCost, tier.id)}`
           // Live "how close am I" meter for the Upgrade/Unlock button, even while disabled.
           const autobuyerProgressPercent = Math.min(100, Math.round(
             (isAutobuyerLocked ? prestige.xp / autobuyerUnlockXPCost : resources / (autobuyerUpgradeCost + 1)) * 100
