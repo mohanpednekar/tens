@@ -29,6 +29,13 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: null,
   }), {}),
+  // Fractional purchase-attempt budget per tier, accumulated each tick by
+  // getAutobuyerAttemptRate(level) and drained by 1 per successful autobuyer purchase — see
+  // tickGame. Only meaningful for unlocked (non-null) autobuyers; stays 0 while locked.
+  autobuyerAttemptBudgets: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: 0,
+  }), {}),
   prestige: {
     xp: 0,
     level: 0,
@@ -106,13 +113,19 @@ export const getAutobuyerCost = currentLevel =>
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
-// Each Upgrade level doubles that tier's own passive production: level 0 (unlocked, not yet
-// upgraded — but already actively purchasing, see tickGame) is a no-op multiplier (2^0 = 1), so
-// the production bonus only starts once the first Upgrade is actually purchased. This only
-// affects the tier's own passive per-second production — it does not change how autobuyer
-// purchases are paid for or batched, and does not affect manual Buy.
-export const getAutobuyerProductionMultiplier = autobuyerLevel =>
-  2 ** clampNonNegative(autobuyerLevel ?? 0)
+// Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
+// the same boundary where getTierCost's cost jumps 10x, so buying into a fresh cost epoch always
+// pays off with cheaper-relative production. epoch = floor(purchased/10); multiplier = 2^epoch.
+// Applies to every tier uniformly, regardless of whether the purchases were manual or automatic.
+export const getPurchaseMilestoneMultiplier = purchased =>
+  2 ** Math.floor(clampNonNegative(purchased) / 10)
+
+// Each autobuyer Upgrade level makes that tier's autobuyer 10% faster on average: the rate of
+// purchase attempts per tick compounds by 1.1 per level (level 0 = 1x, the baseline rate already
+// active once unlocked — see tickGame). This is a purchase-cadence multiplier only; it has no
+// effect on the tier's production (see getPurchaseMilestoneMultiplier) or on manual Buy.
+export const getAutobuyerAttemptRate = autobuyerLevel =>
+  1.1 ** clampNonNegative(autobuyerLevel ?? 0)
 
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
 // Already-owned tiers stay unlocked so older saves remain playable after rule changes.
@@ -159,28 +172,36 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: for each unlocked (non-null) tier, attempt up to `level + 1` purchases per
-  // tick — unlocking alone (level 0) already grants 1 attempt, so paying the XP to unlock an
-  // autobuyer immediately makes it active rather than leaving it idle until the first Upgrade;
-  // each subsequent Upgrade level grants one additional attempt on top of that. buyTierQuantity
-  // re-validates internally and returns the state unchanged when a purchase fails, so a tier is
-  // safely skipped if a shared cost resource was exhausted. Every tier is costed in the same
-  // resource (Money), so autobuyers compete for the same pool — processed highest tier first so
-  // a higher tier always gets first claim on limited funds.
+  // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
+  // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) this tick, then fire one
+  // purchase attempt per whole unit of budget, carrying any fractional remainder into the next
+  // tick. Level 0 (just unlocked) already accumulates at the baseline rate (1/tick), so unlocking
+  // alone makes an autobuyer active; each Upgrade level compounds that rate by another 10%. If a
+  // batch can't be afforded, the loop stops WITHOUT spending the budget already accumulated for
+  // this attempt — it stays banked so a stretch of being broke doesn't cost any attempts, only
+  // delays them until funds catch up. buyTierQuantity re-validates internally and returns the
+  // state unchanged when a purchase fails. Every tier is costed in the same resource (Money), so
+  // autobuyers compete for the same pool — processed highest tier first so a higher tier always
+  // gets first claim on limited funds.
   const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? null
     if (level === null || !isTierUnlocked(s)(tier)) return s
     let result = s
-    for (let i = 0; i <= level; i++) {
+    let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level)
+    while (budget >= 1) {
       const purchased = getTierPurchasedCount(result, tier.id)
       const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
       const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
-      if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold
+      if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold, bank the attempt
       const next = buyTierQuantity(tier.id, blockMax)(result)
       if (next === result) break
       result = next
+      budget -= 1
     }
-    return result
+    return {
+      ...result,
+      autobuyerAttemptBudgets: { ...result.autobuyerAttemptBudgets, [tier.id]: budget },
+    }
   }, state)
 
   const newResources = { ...stateAfterAutobuyers.resources }
@@ -188,7 +209,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
-    const tierMultiplier = getAutobuyerProductionMultiplier(stateAfterAutobuyers.autobuyers[tier.id])
+    const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
     const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier * tierMultiplier
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
