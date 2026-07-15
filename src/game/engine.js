@@ -93,8 +93,8 @@ export const getTierAffordableQuantity = (tier, purchased, spendable, requestedQ
   return Math.min(blockCapped, Math.floor(clampNonNegative(spendable) / unitCost))
 }
 
-// XP cost to unlock an autobuyer (null → 0, locked to inactive). Doubles per tier layer.
-// Layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
+// XP cost to unlock an autobuyer (null → 0; already active at level 0, see tickGame). Doubles
+// per tier layer. Layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
 export const getAutobuyerUnlockXPCost = tierIndex =>
   AUTOBUYER_XP_COST_BASE * (2 ** clampNonNegative(tierIndex))
 
@@ -106,10 +106,11 @@ export const getAutobuyerCost = currentLevel =>
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
-// Each Upgrade level doubles that tier's own passive production: level 0 (unlocked but idle) is
-// a no-op multiplier (2^0 = 1), so the visible effect only starts once a level is actually
-// purchased. This only affects the tier's own passive per-second production — it does not change
-// how autobuyer purchases are paid for or batched (see tickGame), and does not affect manual Buy.
+// Each Upgrade level doubles that tier's own passive production: level 0 (unlocked, not yet
+// upgraded — but already actively purchasing, see tickGame) is a no-op multiplier (2^0 = 1), so
+// the production bonus only starts once the first Upgrade is actually purchased. This only
+// affects the tier's own passive per-second production — it does not change how autobuyer
+// purchases are paid for or batched, and does not affect manual Buy.
 export const getAutobuyerProductionMultiplier = autobuyerLevel =>
   2 ** clampNonNegative(autobuyerLevel ?? 0)
 
@@ -158,16 +159,19 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: for each tier, attempt up to `level` purchases per tick. buyTierQuantity
+  // Apply autobuyers: for each unlocked (non-null) tier, attempt up to `level + 1` purchases per
+  // tick — unlocking alone (level 0) already grants 1 attempt, so paying the XP to unlock an
+  // autobuyer immediately makes it active rather than leaving it idle until the first Upgrade;
+  // each subsequent Upgrade level grants one additional attempt on top of that. buyTierQuantity
   // re-validates internally and returns the state unchanged when a purchase fails, so a tier is
   // safely skipped if a shared cost resource was exhausted. Every tier is costed in the same
   // resource (Money), so autobuyers compete for the same pool — processed highest tier first so
   // a higher tier always gets first claim on limited funds.
   const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
-    const level = s.autobuyers[tier.id] ?? 0
-    if (!level || !isTierUnlocked(s)(tier)) return s
+    const level = s.autobuyers[tier.id] ?? null
+    if (level === null || !isTierUnlocked(s)(tier)) return s
     let result = s
-    for (let i = 0; i < level; i++) {
+    for (let i = 0; i <= level; i++) {
       const purchased = getTierPurchasedCount(result, tier.id)
       const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
       const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
@@ -292,8 +296,8 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   return result
 }
 
-// Unlock the autobuyer for a tier by spending XP (null → 0, inactive).
-// Then upgrade it by spending the tier's own cost-resource in powers of 10
+// Unlock the autobuyer for a tier by spending XP (null → 0; already active at level 0, see
+// tickGame). Then upgrade it by spending the tier's own cost-resource in powers of 10
 // (level N → N+1: costs 10^(N+1), so 0→1=10, 1→2=100, …).
 export const buyAutobuyer = tierId => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
@@ -303,7 +307,7 @@ export const buyAutobuyer = tierId => state => {
   const currentLevel = state.autobuyers[tierId] ?? null
 
   if (currentLevel === null) {
-    // Unlock: spend XP → level becomes 0 (inactive)
+    // Unlock: spend XP → level becomes 0 (already active — see tickGame)
     const xpCost = getAutobuyerUnlockXPCost(tierIndex)
     if ((state.prestige.xp ?? 0) < xpCost) return state
     return {

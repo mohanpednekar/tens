@@ -618,18 +618,32 @@ describe('tickGame', () => {
     expect(after.prestige.xp).toBeGreaterThan(0)
   })
 
-  it('active autobuyer (level 1) buys 1 generator at the normal rate, and level 1 doubles that tier\'s production', () => {
+  it('active autobuyer (level 1) buys 2 generators per tick (unlocking already grants 1 attempt, Upgrade grants 1 more), and level 1 doubles that tier\'s production', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 100),
       tensTier.id
     )
     const after = tickGame(1)(state)
-    // Buys 1 unit ($10) at the normal rate — no purchase-yield bonus.
+    // Buys 2 units ($20 total) at the normal rate — no purchase-yield bonus.
+    expect(after.owned[tensTier.id]).toBe(2)
+    expect(after.purchased[tensTier.id]).toBe(2)
+    // Passive production from those 2 owned generators is doubled by the level-1 autobuyer
+    // production multiplier (2^1): 100 - 20 (cost) + 2 × 1sec × 2 (production) = 84.
+    expect(after.resources[MONEY_ID]).toBe(84)
+  })
+
+  it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 generator per tick, with no production bonus yet', () => {
+    const state = withAutobuyer(
+      withMoney(createInitialGameState(), 100),
+      tensTier.id,
+      0
+    )
+    const after = tickGame(1)(state)
+    // Level 0 = 1 purchase attempt per tick — unlocking alone already enables purchasing.
     expect(after.owned[tensTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(1)
-    // Passive production from that 1 owned generator is doubled by the level-1 autobuyer
-    // production multiplier (2^1): 100 - 10 (cost) + 1 × 1sec × 2 (production) = 92.
-    expect(after.resources[MONEY_ID]).toBe(92)
+    // No production bonus at level 0 (multiplier 2^0 = 1): 100 - 10 (cost) + 1 × 1sec × 1 = 91.
+    expect(after.resources[MONEY_ID]).toBe(91)
   })
 
   it('autobuyer does not purchase when funds are insufficient', () => {
@@ -736,9 +750,10 @@ describe('applyOfflineProgress', () => {
   it('runs an active autobuyer across each simulated second, not just once', () => {
     const state = withAutobuyer(withMoney(createInitialGameState(), 1000), tensTier.id)
     const after = applyOfflineProgress(100)(state) // 10 simulated seconds/ticks
-    // A level-1 autobuyer can buy at most 1 unit per simulated tick, so 10 ticks caps
-    // purchased at 10 even though funds could otherwise cover far more in one lump call.
-    expect(after.purchased[tensTier.id]).toBe(10)
+    // A level-1 autobuyer gets 2 purchase attempts per simulated tick (level + 1), each capped
+    // at 1 unit by the default batch size of 1, so 10 ticks caps purchased at 20 even though
+    // funds could otherwise cover far more in one lump call.
+    expect(after.purchased[tensTier.id]).toBe(20)
   })
 })
 
