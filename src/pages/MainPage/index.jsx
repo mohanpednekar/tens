@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerCost, getAutobuyerUnlockXPCost, getAutobuyerYieldMultiplier, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerCost, getAutobuyerProductionMultiplier, getAutobuyerUnlockXPCost, getPrestigeProgressPercent, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useState } from 'react'
@@ -304,8 +304,8 @@ const MainPage = () => {
           const availablePercent = (availableInBlock / 10) * 100
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
-          const autobuyerYieldMultiplier = getAutobuyerYieldMultiplier(autobuyerLevel)
-          const production = owned * prestigeBonus
+          const autobuyerProductionMultiplier = getAutobuyerProductionMultiplier(autobuyerLevel)
+          const production = owned * prestigeBonus * autobuyerProductionMultiplier
           const autobuyerUnlockXPCost = getAutobuyerUnlockXPCost(tierIndex)
           const autobuyerUpgradeCost = getAutobuyerCost(autobuyerLevel)
           // Upgrading spends the tier's own resource (resources[tier.id] === owned[tier.id]),
@@ -341,8 +341,8 @@ const MainPage = () => {
               <TierName>
                 {tier.name}
                 {autobuyerLevel > 0 && (
-                  <GreenText title={`Autobuyer level ${autobuyerLevel} — automatic purchases yield ×${autobuyerYieldMultiplier} units per buy`}>
-                    {' '}⚙ Lv.{autobuyerLevel} (×{autobuyerYieldMultiplier}/buy)
+                  <GreenText title={`Autobuyer level ${autobuyerLevel} — this tier's production is multiplied ×${autobuyerProductionMultiplier}`}>
+                    {' '}⚙ Lv.{autobuyerLevel} (×{autobuyerProductionMultiplier} production)
                   </GreenText>
                 )}
               </TierName>
@@ -377,7 +377,7 @@ const MainPage = () => {
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeAutobuyer}
                 onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : "Doubles this autobuyer's purchase yield"}
+                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : "Doubles this tier's production"}
                 $progress={autobuyerProgressPercent}
                 $pulse={canUpgradeAutobuyer}
               >
