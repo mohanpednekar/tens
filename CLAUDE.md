@@ -440,12 +440,12 @@ on mount, and how `MainPage` surfaces it.
 ```
 
 `owned[tierId]` and `resources[tierId]` for the same tier id always move together — buying a tier, producing
-it via the tier above's tick, an autobuyer's automatic purchase (including its yield bonus), and spending it
-on that tier's own autobuyer upgrade all update both by the same amount. They represent "how many generators
-you have" and "how much of that tier's resource you can spend" respectively, which happen to be the same
-number by design. `purchased` is separate: it only ever increases and is what `getTierCost` scales against,
-so passively-produced `owned` growth — including the autobuyer's yield bonus above the quantity it actually
-paid for — never discounts cost.
+it via the tier above's tick, an autobuyer's automatic purchase, and spending it on that tier's own autobuyer
+upgrade all update both by the same amount. They represent "how many generators you have" and "how much of
+that tier's resource you can spend" respectively, which happen to be the same number by design. `purchased`
+is separate: it only ever increases and is what `getTierCost` scales against, so passively-produced `owned`
+growth — via the tier above's production, itself doubled per level by that tier's own autobuyer upgrades
+(see `getAutobuyerProductionMultiplier`) — never discounts cost.
 
 ### Key engine functions (`src/game/engine.js`)
 
@@ -458,12 +458,11 @@ paid for — never discounts cost.
 | `getTierAffordableQuantity` | `(tier, purchased, spendable, requestedQuantity) → number` | Further caps `getTierBulkQuantity` by what `spendable` can actually pay for — what `buyTierQuantity` will actually purchase |
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `Ones`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | Runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier (`owned × elapsedSeconds × productionMultiplier` — plain, no autobuyer-level scaling), then checks milestones. Each active autobuyer attempts up to `level` purchases via `buyTierQuantityWithYield`, using that tier's `getAutobuyerYieldMultiplier(level)`; at `autobuyerBatchSize` 1 each attempt buys as soon as affordable (unchanged legacy behavior); above 1 (the ×10 "Bulk" toggle, the UI default) each attempt only buys once the tier can afford the *entire* current cost block up to that size — it holds and waits rather than buying a partial batch |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | Runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier (`owned × elapsedSeconds × productionMultiplier × getAutobuyerProductionMultiplier(autobuyers[tier.id])`), then checks milestones. Each active autobuyer attempts up to `level` purchases via `buyTierQuantity` — plain purchases at the normal rate, same as a manual Buy click; at `autobuyerBatchSize` 1 each attempt buys as soon as affordable (unchanged legacy behavior); above 1 (the ×10 "Bulk" toggle, the UI default) each attempt only buys once the tier can afford the *entire* current cost block up to that size — it holds and waits rather than buying a partial batch |
 | `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
-| `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; the manual "Buy" button calls this with the Bulk toggle's `quantity` (1 or 10) to grab as many units as it can currently afford up to that cap. Never applies any autobuyer yield bonus. |
-| `buyTierQuantityWithYield` | `(tierId, quantity, yieldMultiplier) → state → state` | Used only by `tickGame`'s autobuyer loop: pays for up to `quantity` units at the normal flat price (same cost-block rules as `buyTierQuantity`), but credits `owned`/`resources` with `paidQuantity × yieldMultiplier` instead of `paidQuantity` — same money spent, more units gained. `purchased` only increases by the paid quantity, so the bonus units never discount future cost the way a real purchase would. |
-| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0, inactive); subsequent calls upgrade the level (spends the tier's own resource) — each level purchased doubles the autobuyer's own purchase yield via `getAutobuyerYieldMultiplier`, without changing the tier's passive production rate or affecting manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, an upgrade requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op (returns the same state) until at least 1 would remain afterward; the MainPage Upgrade button's `disabled` state mirrors this same `+ 1` threshold so it never looks clickable when the engine would refuse it |
-| `getAutobuyerYieldMultiplier` | `autobuyerLevel → number` | `2 ** level` (`null`/locked treated as level 0 → multiplier 1); passed into `buyTierQuantityWithYield` so each automatic purchase yields more units for the same money — level 0 (just unlocked, idle) doesn't purchase at all yet, so its multiplier is moot |
+| `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (with the Bulk toggle's `quantity`, 1 or 10) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, an autobuyer's Upgrade level has no effect on how much a purchase costs or how many units it grants |
+| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends XP, level → 0, inactive); subsequent calls upgrade the level (spends the tier's own resource) — each level purchased doubles that tier's own passive production via `getAutobuyerProductionMultiplier`, without changing how autobuyer purchases are paid for/batched or affecting manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, an upgrade requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op (returns the same state) until at least 1 would remain afterward; the MainPage Upgrade button's `disabled` state mirrors this same `+ 1` threshold so it never looks clickable when the engine would refuse it |
+| `getAutobuyerProductionMultiplier` | `autobuyerLevel → number` | `2 ** level` (`null`/locked treated as level 0 → multiplier 1); multiplies that tier's own passive production in `tickGame` — level 0 (just unlocked, idle) is a no-op (×1) |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *unlock* status (levels reset to 0), leaves XP untouched, increments prestige level |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
@@ -506,7 +505,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (187 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (182 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

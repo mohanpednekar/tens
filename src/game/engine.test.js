@@ -4,14 +4,13 @@ import {
   buyAutobuyer,
   buyTier,
   buyTierQuantity,
-  buyTierQuantityWithYield,
   createInitialGameState,
   formatAmount,
   formatCurrency,
   formatOfflineDuration,
   getAutobuyerCost,
+  getAutobuyerProductionMultiplier,
   getAutobuyerUnlockXPCost,
-  getAutobuyerYieldMultiplier,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getPrestigeProgressPercent,
@@ -312,25 +311,25 @@ describe('productionMultiplier', () => {
   })
 })
 
-// ─── getAutobuyerYieldMultiplier ────────────────────────────────────────
+// ─── getAutobuyerProductionMultiplier ────────────────────────────────────────
 
-describe('getAutobuyerYieldMultiplier', () => {
+describe('getAutobuyerProductionMultiplier', () => {
   it('returns 1 (no-op) for an unlocked-but-idle autobuyer (level 0)', () => {
-    expect(getAutobuyerYieldMultiplier(0)).toBe(1)
+    expect(getAutobuyerProductionMultiplier(0)).toBe(1)
   })
 
   it('returns 1 for a locked autobuyer (null)', () => {
-    expect(getAutobuyerYieldMultiplier(null)).toBe(1)
+    expect(getAutobuyerProductionMultiplier(null)).toBe(1)
   })
 
   it('doubles per level', () => {
-    expect(getAutobuyerYieldMultiplier(1)).toBe(2)
-    expect(getAutobuyerYieldMultiplier(2)).toBe(4)
-    expect(getAutobuyerYieldMultiplier(3)).toBe(8)
+    expect(getAutobuyerProductionMultiplier(1)).toBe(2)
+    expect(getAutobuyerProductionMultiplier(2)).toBe(4)
+    expect(getAutobuyerProductionMultiplier(3)).toBe(8)
   })
 
   it('treats negative levels as 0', () => {
-    expect(getAutobuyerYieldMultiplier(-1)).toBe(1)
+    expect(getAutobuyerProductionMultiplier(-1)).toBe(1)
   })
 })
 
@@ -567,44 +566,6 @@ describe('buyTierQuantity', () => {
   })
 })
 
-// ─── buyTierQuantityWithYield ────────────────────────────────────────────────
-
-describe('buyTierQuantityWithYield', () => {
-  it('pays the normal cost but credits owned/resources with quantity × yieldMultiplier', () => {
-    const state = withMoney(createInitialGameState(), 100)
-    const after = buyTierQuantityWithYield(tensTier.id, 10, 2)(state)
-    expect(after.purchased[tensTier.id]).toBe(10) // paid quantity, drives cost scaling
-    expect(after.owned[tensTier.id]).toBe(20) // 10 × yieldMultiplier 2
-    expect(after.resources[tensTier.id]).toBe(20)
-    expect(after.resources[MONEY_ID]).toBe(0) // cost is unaffected by the yield bonus
-  })
-
-  it('a yieldMultiplier of 1 behaves like a plain purchase', () => {
-    const state = withMoney(createInitialGameState(), 100)
-    const after = buyTierQuantityWithYield(tensTier.id, 10, 1)(state)
-    expect(after.owned[tensTier.id]).toBe(10)
-    expect(after.purchased[tensTier.id]).toBe(10)
-  })
-
-  it('caps the paid quantity at what is affordable, then applies the yield bonus to that amount', () => {
-    const state = withMoney(createInitialGameState(), 35) // affords 3 at cost 10 each
-    const after = buyTierQuantityWithYield(tensTier.id, 10, 2)(state)
-    expect(after.purchased[tensTier.id]).toBe(3)
-    expect(after.owned[tensTier.id]).toBe(6) // 3 × yieldMultiplier 2
-    expect(after.resources[MONEY_ID]).toBe(5)
-  })
-
-  it('returns the same state object when nothing is affordable', () => {
-    const state = withMoney(createInitialGameState(), 0)
-    expect(buyTierQuantityWithYield(tensTier.id, 10, 2)(state)).toBe(state)
-  })
-
-  it('returns the same state object for a locked tier', () => {
-    const state = createInitialGameState()
-    expect(buyTierQuantityWithYield(thousandsTier.id, 10, 2)(state)).toBe(state)
-  })
-})
-
 // ─── tickGame ────────────────────────────────────────────────────────────────
 
 describe('tickGame', () => {
@@ -657,16 +618,18 @@ describe('tickGame', () => {
     expect(after.prestige.xp).toBeGreaterThan(0)
   })
 
-  it('active autobuyer (level 1) pays for 1 generator but yields 2 via its level-1 bonus', () => {
+  it('active autobuyer (level 1) buys 1 generator at the normal rate, and level 1 doubles that tier\'s production', () => {
     const state = withAutobuyer(
       withMoney(createInitialGameState(), 100),
       tensTier.id
     )
     const after = tickGame(1)(state)
-    // Pays for 1 unit ($10), but the level-1 autobuyer yield bonus (2^1) credits 2 owned.
-    expect(after.owned[tensTier.id]).toBe(2)
+    // Buys 1 unit ($10) at the normal rate — no purchase-yield bonus.
+    expect(after.owned[tensTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.resources[MONEY_ID]).toBeLessThan(100)
+    // Passive production from that 1 owned generator is doubled by the level-1 autobuyer
+    // production multiplier (2^1): 100 - 10 (cost) + 1 × 1sec × 2 (production) = 92.
+    expect(after.resources[MONEY_ID]).toBe(92)
   })
 
   it('autobuyer does not purchase when funds are insufficient', () => {
@@ -694,11 +657,12 @@ describe('tickGame', () => {
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
-    // Pays for 10 units ($100 total), but the level-1 autobuyer yield bonus (2^1) credits 20 owned.
-    expect(after.owned[tensTier.id]).toBe(20)
+    // Pays for 10 units ($100 total) at the normal rate — no purchase-yield bonus.
+    expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
-    // Cost drains money to 0, but the same tick's production from the 20 newly-owned
-    // generators (Tens produces its own cost resource) adds 20 back.
+    // Cost drains money to 0, but the same tick's production from the 10 owned generators
+    // (Tens produces its own cost resource), doubled by the level-1 autobuyer production
+    // multiplier (2^1), adds 10 × 2 = 20 back.
     expect(after.resources[MONEY_ID]).toBe(20)
   })
 
@@ -709,10 +673,10 @@ describe('tickGame', () => {
     )
     const after = tickGame(1, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(10)
-    // Pays for the 3 remaining units in the block, but the level-1 autobuyer yield bonus (2^1)
-    // credits 6 owned.
-    expect(after.owned[tensTier.id]).toBe(6)
-    // 6 owned generators produce 6 money.
+    // Pays for the 3 remaining units in the block at the normal rate — no purchase-yield bonus.
+    expect(after.owned[tensTier.id]).toBe(3)
+    // 3 owned generators produce 3 money each, doubled by the level-1 autobuyer production
+    // multiplier (2^1): 3 × 1sec × 2 = 6 money.
     expect(after.resources[MONEY_ID]).toBe(6)
   })
 

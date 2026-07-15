@@ -106,12 +106,11 @@ export const getAutobuyerCost = currentLevel =>
 // Each Prestige Level doubles production at every tier
 export const productionMultiplier = prestigeLevel => 2 ** clampNonNegative(prestigeLevel)
 
-// Each Upgrade level doubles the autobuyer's own purchasing yield: for the same money spent on
-// an automatic purchase, the autobuyer credits 2^level times the units bought (see
-// buyTierQuantityWithYield). Level 0 (unlocked but idle) is a no-op multiplier (2^0 = 1) and
-// doesn't purchase at all yet. This only affects automatic purchases — manual Buy clicks and
-// each generator's passive per-unit production rate are unaffected.
-export const getAutobuyerYieldMultiplier = autobuyerLevel =>
+// Each Upgrade level doubles that tier's own passive production: level 0 (unlocked but idle) is
+// a no-op multiplier (2^0 = 1), so the visible effect only starts once a level is actually
+// purchased. This only affects the tier's own passive per-second production — it does not change
+// how autobuyer purchases are paid for or batched (see tickGame), and does not affect manual Buy.
+export const getAutobuyerProductionMultiplier = autobuyerLevel =>
   2 ** clampNonNegative(autobuyerLevel ?? 0)
 
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
@@ -159,22 +158,21 @@ const checkMilestones = (resources, prestige) => {
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = productionMultiplier(state.prestige.level)
 
-  // Apply autobuyers: for each tier, attempt up to `level` purchases per tick.
-  // buyTierQuantityWithYield re-validates internally and returns the state unchanged when a
-  // purchase fails, so a tier is safely skipped if a shared cost resource was exhausted. Every
-  // tier is costed in the same resource (Money), so autobuyers compete for the same pool —
-  // processed highest tier first so a higher tier always gets first claim on limited funds.
+  // Apply autobuyers: for each tier, attempt up to `level` purchases per tick. buyTierQuantity
+  // re-validates internally and returns the state unchanged when a purchase fails, so a tier is
+  // safely skipped if a shared cost resource was exhausted. Every tier is costed in the same
+  // resource (Money), so autobuyers compete for the same pool — processed highest tier first so
+  // a higher tier always gets first claim on limited funds.
   const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? 0
     if (!level || !isTierUnlocked(s)(tier)) return s
-    const yieldMultiplier = getAutobuyerYieldMultiplier(level)
     let result = s
     for (let i = 0; i < level; i++) {
       const purchased = getTierPurchasedCount(result, tier.id)
       const blockMax = getTierBulkQuantity(tier, purchased, autobuyerBatchSize)
       const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), autobuyerBatchSize)
       if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold
-      const next = buyTierQuantityWithYield(tier.id, blockMax, yieldMultiplier)(result)
+      const next = buyTierQuantity(tier.id, blockMax)(result)
       if (next === result) break
       result = next
     }
@@ -186,7 +184,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
-    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier
+    const tierMultiplier = getAutobuyerProductionMultiplier(stateAfterAutobuyers.autobuyers[tier.id])
+    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier * tierMultiplier
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -291,43 +290,6 @@ export const buyTierQuantity = (tierId, quantity) => state => {
     result = next
   }
   return result
-}
-
-// Used only by tickGame's autobuyer loop: buys up to `quantity` units at the normal price
-// (capped at the cost-block boundary, same rules as buyTierQuantity), but credits
-// owned/resources with `paidQuantity * yieldMultiplier` instead of `paidQuantity` — the
-// autobuyer's per-purchase efficiency bonus from its Upgrade level (same money spent, more
-// units gained). `purchased` (which drives cost scaling) only increases by the paid quantity,
-// matching the existing invariant that passively-gained owned growth never discounts cost.
-// Manual Buy clicks (buyTierQuantity) never receive this bonus.
-export const buyTierQuantityWithYield = (tierId, quantity, yieldMultiplier) => state => {
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier || !isTierUnlocked(state)(tier)) return state
-
-  const purchased = getTierPurchasedCount(state, tierId)
-  const spendable = getTierSpendableAmount(state, tier)
-  const paidQuantity = getTierAffordableQuantity(tier, purchased, spendable, quantity)
-  if (paidQuantity <= 0) return state
-
-  const cost = getTierQuantityCost(tier, purchased, paidQuantity)
-  const yieldAmount = paidQuantity * yieldMultiplier
-
-  return {
-    ...state,
-    resources: {
-      ...state.resources,
-      [tier.costResourceId]: clampNonNegative((state.resources[tier.costResourceId] ?? 0) - cost),
-      [tierId]: (state.resources[tierId] ?? 0) + yieldAmount,
-    },
-    owned: {
-      ...state.owned,
-      [tierId]: (state.owned[tierId] ?? 0) + yieldAmount,
-    },
-    purchased: {
-      ...state.purchased,
-      [tierId]: purchased + paidQuantity,
-    },
-  }
 }
 
 // Unlock the autobuyer for a tier by spending XP (null → 0, inactive).
