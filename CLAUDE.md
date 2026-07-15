@@ -144,7 +144,8 @@ edit --milestone`), not file changes.
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
-`anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in two phases:
+`anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in three phases —
+Phase 0 always outranks Phase A, which always outranks Phase B:
 
 **Budget discipline.** This is a side project — wall-clock time is not a constraint (one task every 5
 hours is fine), but the per-run turn/token budget is. Before starting whatever task it picks, Claude
@@ -159,7 +160,26 @@ as soon as there's a meaningful, test-passing first commit (not only at the end)
 subsequent commit as it lands, so a run that does get cut short by the turn budget still leaves real,
 discoverable progress on a real PR instead of losing everything with the ephemeral runner.
 
-**Phase A — task backlog first.** The guard step passes the list of open `claude-task` issues
+**Phase 0 — CI/CD failures (top priority).** The guard step checks whether the latest completed
+`ci.yml` run on `main` failed, and separately lists any open PR (excluding `claude/auto-*`, already
+owned by the PR follow-up workflow below, and fork PRs) with a failing check. Either condition
+outranks Phase A and Phase B outright — a broken `main` blocks every other PR from merging via the
+required `test` check, so healing it is treated as more urgent than any feature or maintenance work,
+and is the one case allowed to bypass the 5-PR ceiling described below (fixing a red `main` is never
+redundant with an already-open PR). If `main` is broken, Claude reads the failing run's logs (`gh run
+view --log-failed`), fixes the regression on a branch named `claude/heal-main-<short-slug>`, confirms
+`yarn test`/`yarn build` are green again, and opens a PR — this branch prefix is already recognized by
+`pr-auto-merge.yml`'s low-risk auto-merge path (see below), so a small fix can merge without waiting on
+a human or the next run. Otherwise, if any non-`claude/auto-*` PR has a failing check, Claude picks one
+to unblock: for a stale Dependabot PR (failing because its branch predates a source change its own copy
+of the tests doesn't know about, not because of the dependency bump itself) that's confirmed behind
+`main`, it comments `@dependabot rebase` to request Dependabot rebase its own branch — checking existing
+comments first so it never re-requests a pending rebase, and never pushes its own commits to a
+`dependabot/*` branch, which Dependabot alone owns. If the failure isn't just staleness, or it's some
+other PR without an obviously safe fix, it's left for a human. If neither condition applies, the run
+falls through to Phase A.
+
+**Phase A — task backlog next.** The guard step passes the list of open `claude-task` issues
 (number + title) into the prompt. If any exist, Claude picks the top eligible one — `priority:high`
 label first, then lowest issue number; skipping tasks already covered by an open autonomous PR
 (issue number in a `claude/auto-task-<number>-*` branch name or PR title) and tasks whose "Blocked
@@ -182,8 +202,10 @@ single most valuable applicable task from:
    the never-self-merge rule, the requirement to always open a PR, or Phase A's priority over this
    menu
 6. Gap analysis — survey the repo for a gap not already covered by an open issue/PR (missing tests,
-   stale docs, an unwatched CI/CD failure mode, an unaddressed dependency/security finding, a thin
-   Phase A backlog) and file exactly one well-specified `claude-task` issue proposing a solution,
+   stale docs, an unwatched CI/CD failure mode — Phase 0 above already covers a red `main` and
+   stale/failing PRs, so this is for other gaps like `deploy.yml`/CodeQL failures going unwatched —
+   an unaddressed dependency/security finding, a thin Phase A backlog) and file exactly one
+   well-specified `claude-task` issue proposing a solution,
    matching `.github/ISSUE_TEMPLATE/claude-task.yml`'s structure and sized the same way a
    human-authored task would be. This task only proposes — it never opens a PR. The guard step
    separately surfaces currently-open issues labeled `gap-analysis` so a run can skip re-proposing an
@@ -205,8 +227,10 @@ of currently-open `claude/auto-*` PRs (branch + title) into the prompt, and Clau
 skip opening a PR that duplicates an already-open one's purpose, while still opening a separate PR for
 a genuinely independent task (e.g. a dependency bump alongside an open docs-sync PR). A hard ceiling
 of 5 concurrently-open autonomous PRs (one per task slot) is a safety net against runaway PR count,
-skipping the run entirely once hit. If nothing remains in either phase (all either done or already
-covered by an open PR), the run makes no changes and opens no PR. `ci.yml`, `deploy.yml`,
+skipping the run entirely once hit — except when Phase 0(a) applies (`main` is broken), which bypasses
+the ceiling since healing `main` is never redundant with an already-open PR. If nothing remains in any
+phase (all either done or already covered by an open PR), the run makes no changes and opens no PR.
+`ci.yml`, `deploy.yml`,
 `dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly
 denied to Claude's Edit/Write tools, even during the self-improvement task — only
 `autonomous-maintenance.yml` may edit itself.

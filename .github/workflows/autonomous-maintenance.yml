@@ -38,19 +38,50 @@ jobs:
             --jq '[.[] | select(.headRefName | startswith("claude/auto-"))]')
           count=$(jq 'length' <<<"$open_prs")
 
-          if [ "$count" -ge 5 ]; then
-            echo "5 autonomous PRs already open (one per task slot) — skipping this run."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
           summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")
           {
             echo "open_prs<<PR_EOF"
             echo "$summary"
             echo "PR_EOF"
           } >> "$GITHUB_OUTPUT"
+
+          # Phase 0 check: is the latest push to main currently red? This is the top-priority
+          # condition (see prompt below) and, unlike Phase A/B, is allowed to bypass the 5-PR
+          # ceiling — a broken main blocks every other PR's merge via the required `test`
+          # check, so healing it is never redundant with an already-open PR.
+          main_ci=$(gh run list --workflow=ci.yml --branch=main --status=completed --limit=1 \
+            --json conclusion,url,headSha)
+          main_ci_conclusion=$(jq -r '.[0].conclusion // "unknown"' <<<"$main_ci")
+          main_ci_url=$(jq -r '.[0].url // ""' <<<"$main_ci")
+          if [ "$main_ci_conclusion" = "failure" ]; then
+            echo "main_ci_broken=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main_ci_broken=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "main_ci_run_url=$main_ci_url" >> "$GITHUB_OUTPUT"
+
+          # Phase 0 check: open PRs with a failing check, excluding claude/auto-* (already
+          # owned by autonomous-pr-followup.yml's webhook-driven fixes) and fork PRs (never
+          # ours to touch). In practice this mostly surfaces Dependabot PRs that have gone
+          # stale against main and nothing currently re-syncs them.
+          failing_prs=$(gh pr list --state open \
+            --json number,headRefName,title,isCrossRepository,statusCheckRollup \
+            --jq '[.[] | select(.isCrossRepository == false)
+                        | select(.headRefName | startswith("claude/auto-") | not)
+                        | select([.statusCheckRollup[]?.conclusion] | any(. == "FAILURE"))]
+                  | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
+          {
+            echo "failing_prs<<FAIL_EOF"
+            echo "$failing_prs"
+            echo "FAIL_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
+            echo "5 autonomous PRs already open (one per task slot) — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
           # Fetch the human-curated task backlog: open issues labeled claude-task. These
           # take priority over the built-in maintenance menu — the prompt gets the list
@@ -99,7 +130,7 @@ jobs:
           show_full_output: true
           claude_args: |
             --max-turns 50
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*)"
           settings: |
             {
               "permissions": {
@@ -139,6 +170,13 @@ jobs:
             analysis task (see Phase B item 6):
             ${{ steps.guard.outputs.open_gap_issues || '(none)' }}
 
+            Main branch CI status: the latest completed run of ci.yml on main
+            ${{ steps.guard.outputs.main_ci_broken == 'true' && format('FAILED: {0}', steps.guard.outputs.main_ci_run_url) || 'is green.' }}
+
+            Open PRs with a failing check (excludes claude/auto-* branches, which
+            autonomous-pr-followup.yml already owns, and fork PRs):
+            ${{ steps.guard.outputs.failing_prs || '(none)' }}
+
             This is a side project — time is not a constraint (one task every 5 hours is fine), but
             your turn/token budget per run is. Before you start implementing whatever task you pick
             below, roughly size it against your remaining turns, reserving a buffer of roughly the
@@ -159,9 +197,46 @@ jobs:
             budget, whatever has already landed then stays as real, discoverable progress on a real
             PR instead of being lost with the ephemeral runner.
 
-            You do exactly ONE unit of work per run, chosen in two phases:
+            You do exactly ONE unit of work per run, chosen in three phases. A CI/CD failure
+            (Phase 0) always outranks the task backlog (Phase A), which always outranks the
+            maintenance menu (Phase B) — check them in that order and stop at the first one that
+            applies.
 
-            PHASE A — task backlog first. If the backlog above is non-empty, pick the top
+            PHASE 0 — CI/CD failures (highest priority; skip straight past Phase A/B if this
+            applies, even if the 5-PR ceiling below would otherwise skip the run entirely). A
+            failing CI check blocks every other PR from merging via the required `test` check and
+            erodes trust in the automation, so treat it as more urgent than any feature or
+            maintenance work:
+            - (a) If "Main branch CI status" above says FAILED, that is the single highest
+              priority thing to do this run, full stop — do not also attempt Phase A or B. Open
+              the failing run with `gh run view <run-id> --log-failed` (parse the run id from the
+              URL) to find the actual error, create a branch named
+              `claude/heal-main-<short-slug>` off the latest main, make the smallest correct fix
+              that gets `yarn test` (and `yarn build` if the failure is build-related) green again,
+              push it, and open a PR with `gh pr create` explaining what broke and why the fix
+              addresses it. Do not merge it yourself. This branch prefix is already recognized by
+              pr-auto-merge.yml's low-risk auto-merge path, so a small fix can merge without
+              waiting for a human or for your next run.
+            - (b) Otherwise, if "Open PRs with a failing check" above is non-empty, pick one (most
+              valuable first) and unblock it:
+              - For a Dependabot PR (branch starts with `dependabot/`): these usually fail because
+                the branch has gone stale against main (e.g. it predates a source change the PR's
+                own copy of the tests doesn't know about yet), not because of the dependency bump
+                itself. Confirm with `gh pr view <number> --json mergeStateStatus` — if it shows
+                the branch is behind, request a rebase by commenting exactly `@dependabot rebase`
+                via `gh pr comment <number> --body '@dependabot rebase'`. Check
+                `gh pr view <number> --json comments` first and skip this PR if that comment is
+                already there from a previous run (rebase runs asynchronously; don't re-request or
+                push your own commits to a `dependabot/*` branch). If the branch is NOT behind
+                main, the failure is a real issue with the bump itself — leave it for a human, do
+                not attempt a code fix.
+              - For any other non-`claude/auto-*` PR, only act if you can identify a genuine,
+                small, confidently-correct fix; otherwise leave it for a human rather than guessing.
+              - After handling one PR this way, end the run — do not also attempt Phase A or B.
+            - (c) If neither (a) nor (b) applies (main is green and the failing-PR list is empty),
+              fall through to Phase A.
+
+            PHASE A — task backlog next. If the backlog above is non-empty, pick the top
             eligible task issue and implement it:
             - Eligible means: no open autonomous PR above already covers it (its issue number
               appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
@@ -184,9 +259,10 @@ jobs:
               to another task: leave a comment on the issue with `gh issue comment` explaining
               exactly what's blocking, make no changes, and end the run without a PR.
 
-            PHASE B — maintenance menu fallback. Only if there is NO eligible task issue in
-            Phase A, pick exactly one of the following menu tasks — whichever is most valuable
-            given the current state of the repo. Minimise PRs for similar work: if one of the open
+            PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
+            eligible task issue in Phase A, pick exactly one of the following menu tasks —
+            whichever is most valuable given the current state of the repo. Minimise PRs for
+            similar work: if one of the open
             PRs above already covers the same task/purpose you were about to pursue (e.g. another
             test-coverage PR while a test-coverage PR is already open), don't open a duplicate —
             either pick a different, genuinely independent task from the menu instead, or if every
@@ -218,8 +294,10 @@ jobs:
                backlog always takes priority over this menu.
             6. Gap analysis — survey the repo for a gap not already covered by an open issue or PR:
                a missing test, stale or missing documentation, a CI/CD failure mode nothing
-               currently watches, an unaddressed dependency/security finding, or a thin Phase A
-               backlog. Skip any gap already covered by one of the currently-open gap-analysis
+               currently watches (Phase 0 above already covers a red main and stale/failing PRs —
+               this is for other gaps, e.g. deploy.yml or CodeQL failures going unwatched), an
+               unaddressed dependency/security finding, or a thin Phase A backlog. Skip any gap
+               already covered by one of the currently-open gap-analysis
                proposals listed above. File exactly 1 well-specified claude-task issue (via
                `gh issue create`) proposing a concrete solution — match the structure of
                `.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance
@@ -237,27 +315,32 @@ jobs:
               never make game-design/economy-rule changes, UNLESS you are implementing a Phase A
               task issue whose "Explicit authorizations" section explicitly permits that specific
               change — a claude-task issue is the maintainer's written sign-off. During Phase B
-              menu runs this ban is absolute.
+              menu runs (and Phase 0 heal-main fixes) this ban is absolute.
             - Never modify .github/workflows/ci.yml, deploy.yml, dependabot-lockfile.yml,
               autonomous-pr-followup.yml, or pr-auto-merge.yml.
             - Never change the dev/test server host binding away from 127.0.0.1.
             - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
               force-push, and never push directly to main.
+            - Never push your own commits to a `dependabot/*` branch — Dependabot owns that
+              branch's content; the only allowed interaction is the `@dependabot rebase` comment
+              described in Phase 0(b).
             - If a change touches anything CLAUDE.md documents (function signatures, constants,
               state shape, economy/game-rule behavior, file layout, or test counts), update
               CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
             - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
               before doing anything else.
 
-            If, after both phases, there is nothing safe and meaningful to do this run (no eligible
-            task issue, and no menu task worth doing), make no changes and end without creating a
-            branch or PR — do not force a change just to have something to show.
+            If, after all three phases, there is nothing safe and meaningful to do this run (no CI/CD
+            failure, no eligible task issue, and no menu task worth doing), make no changes and end
+            without creating a branch or PR — do not force a change just to have something to show.
 
-            If you do make a code change: create a branch named `claude/auto-task-<number>-<short-slug>`
-            for a Phase A task, or `claude/auto-<short-task-slug>` for a Phase B menu task, commit,
-            push it, and open a pull request against main using `gh pr create`. Structure the PR body
-            to match .github/pull_request_template.md (Summary / Test plan / Documentation sections),
-            filling in the checkboxes truthfully based on what you actually ran — and for a Phase A
-            task, include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per
-            the budget guidance above). The one exception is Phase B item 6 (gap analysis), whose
-            output is a filed issue, not a branch or PR.
+            If you do make a code change: create a branch named `claude/heal-main-<short-slug>` for a
+            Phase 0(a) fix, `claude/auto-task-<number>-<short-slug>` for a Phase A task, or
+            `claude/auto-<short-task-slug>` for a Phase B menu task, commit, push it, and open a pull
+            request against main using `gh pr create`. Structure the PR body to match
+            .github/pull_request_template.md (Summary / Test plan / Documentation sections), filling
+            in the checkboxes truthfully based on what you actually ran — and for a Phase A task,
+            include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per the
+            budget guidance above). The two exceptions are Phase 0(b)'s Dependabot rebase request
+            (a comment, not a branch or PR) and Phase B item 6 (gap analysis), whose output is a filed
+            issue, not a branch or PR.
