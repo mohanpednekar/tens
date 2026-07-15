@@ -20,6 +20,7 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
+  isProductionFrozen,
   isTierUnlocked,
   prestigeGame,
   productionMultiplier,
@@ -339,6 +340,27 @@ describe('getAutobuyerAttemptRate', () => {
   })
 })
 
+// ─── isProductionFrozen ──────────────────────────────────────────────────────
+
+describe('isProductionFrozen', () => {
+  it('is false below GOOGOL', () => {
+    // GOOGOL - 1 rounds back to GOOGOL at this magnitude (float precision), so use a value
+    // that's meaningfully smaller instead of relying on an off-by-one difference.
+    const state = withMoney(createInitialGameState(), GOOGOL / 10)
+    expect(isProductionFrozen(state)).toBe(false)
+  })
+
+  it('is true at exactly GOOGOL', () => {
+    const state = withMoney(createInitialGameState(), GOOGOL)
+    expect(isProductionFrozen(state)).toBe(true)
+  })
+
+  it('is true above GOOGOL', () => {
+    const state = withMoney(createInitialGameState(), GOOGOL * 2)
+    expect(isProductionFrozen(state)).toBe(true)
+  })
+})
+
 // ─── isTierUnlocked ──────────────────────────────────────────────────────────
 
 describe('isTierUnlocked', () => {
@@ -458,6 +480,11 @@ describe('buyTier', () => {
   it('returns the same state object for an unknown tier ID', () => {
     const state = createInitialGameState()
     expect(buyTier('does_not_exist')(state)).toBe(state)
+  })
+
+  it('refuses to buy once production is frozen at GOOGOL, even with plenty of funds', () => {
+    const state = withMoney(createInitialGameState(), GOOGOL)
+    expect(buyTier(tensTier.id)(state)).toBe(state)
   })
 
   it('cost stays flat within a block of 10, then jumps 10x at the boundary', () => {
@@ -588,6 +615,11 @@ describe('tickGame', () => {
     const state = createInitialGameState()
     const after = tickGame(1)(state)
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID])
+  })
+
+  it('freezes entirely (returns the same state object) once Money reaches GOOGOL', () => {
+    const state = withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5)
+    expect(tickGame(1)(state)).toBe(state)
   })
 
   it('scales production with elapsed time', () => {
@@ -812,6 +844,14 @@ describe('buyAutobuyer', () => {
 
   it('returns the same state when the tier\'s own resource is insufficient to activate', () => {
     const state = withResource(createInitialGameState(), tensTier.id, 500)
+    expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
+  })
+
+  it('refuses to activate/upgrade once production is frozen at GOOGOL, even with plenty of the tier\'s own resource', () => {
+    const state = withMoney(
+      withResource(createInitialGameState(), tensTier.id, 1001),
+      GOOGOL
+    )
     expect(buyAutobuyer(tensTier.id)(state)).toBe(state)
   })
 

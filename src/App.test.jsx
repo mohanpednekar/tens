@@ -294,7 +294,7 @@ test('shows no offline progress notice when there is no recorded last-save times
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
-test('prestige becomes available once money reaches a googol and resets progress', async () => {
+test('the first time money reaches a googol, a mandatory full-screen prompt offers Prestige', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -303,11 +303,75 @@ test('prestige becomes available once money reaches a googol and resets progress
 
   render(<App />)
 
-  const prestigeButton = screen.getByRole('button', { name: /prestige \(requires/i })
+  expect(screen.getByRole('dialog', { name: /prestige required/i })).toBeInTheDocument()
+  const prestigeButton = screen.getByRole('button', { name: /prestige now/i })
   expect(prestigeButton).toBeEnabled()
 
   await user.click(prestigeButton)
 
+  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
   expect(screen.getByText(/level 1/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
+})
+
+test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    prestige: { xp: 0, level: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige available banner$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /prestige \(requires/i })).toBeEnabled()
+})
+
+test('production and every other control freeze once money reaches a googol', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    owned: { tier01: 5 },
+    prestige: { xp: 0, level: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '×1' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '×10' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
+})
+
+test('during the first run, the Prestige panel stays hidden until 10 of the last tier are bought', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 9 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^prestige panel$/i)).not.toBeInTheDocument()
+})
+
+test('during the first run, the Prestige panel appears once 10 of the last tier are bought', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
+})
+
+test('after the first prestige, the Prestige panel is shown regardless of last-tier purchases', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 0 },
+    prestige: { xp: 0, level: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
 })

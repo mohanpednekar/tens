@@ -1,10 +1,10 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked, productionMultiplier } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
@@ -109,6 +109,73 @@ const QuantityToggle = styled.div`
 
 const PrestigeCard = styled(StatCard)`
   border-color: #854d0e;
+`
+
+// Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
+// player has ever prestiged) — covers the whole viewport so the frozen, disabled page underneath
+// is never visible/reachable; there's deliberately no close/dismiss control (see PrestigeButton
+// below, the only thing left clickable while frozen).
+const FullScreenOverlay = styled.div`
+  align-items: center;
+  background: rgba(0, 0, 0, 0.96);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 2rem 1rem;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 1000;
+`
+
+const FullScreenCard = styled.div`
+  color: white;
+  max-width: 28rem;
+  text-align: center;
+  width: 100%;
+
+  h2 {
+    color: #fbbf24;
+    font-size: 1.6rem;
+    margin: 0 0 0.75rem;
+  }
+
+  ul {
+    color: #d4d4d4;
+    margin: 1rem 0 1.5rem;
+    padding-left: 1.25rem;
+    text-align: left;
+  }
+
+  li {
+    margin: 0.3rem 0;
+  }
+`
+
+// From the 2nd prestige onward, reaching GOOGOL again shows a compact banner pinned to the top
+// of the viewport instead of the full-screen takeover — the player already knows what Prestige
+// does, so a persistent-but-unobtrusive reminder is enough.
+const TopPrestigeBar = styled.div`
+  align-items: center;
+  background: #1c1206;
+  border-bottom: 2px solid #854d0e;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  left: 0;
+  padding: 0.6rem 1rem;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 900;
+`
+
+// Reserves space at the top of the page so TopPrestigeBar (position: fixed) never overlaps the
+// Header underneath it.
+const TopPrestigeBarSpacer = styled.div`
+  height: 3.75rem;
 `
 
 const MutedText = styled.p`
@@ -222,8 +289,79 @@ const MainPage = () => {
     .filter(t => t.producesResourceId === MONEY_ID)
     .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
 
+  // All production and purchasing freezes the instant Money reaches GOOGOL (see
+  // isProductionFrozen in engine.js) — Prestige is the only remaining action. The first time
+  // this ever happens (before the player has prestiged even once) it's a mandatory full-screen
+  // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
+  // since the player already knows what Prestige does.
+  const isFrozen = isProductionFrozen(state)
+  const isFirstRun = prestige.level === 0
+  const showFullScreenPrompt = isFrozen && isFirstRun
+  const showTopPrestigeBar = isFrozen && !isFirstRun
+  // During the first run only, the normal Prestige card stays hidden until the player has
+  // bought 10 of the very last tier — once they've prestiged at least once, it's always shown
+  // (in its usual spot) whenever production isn't frozen.
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
+
+  // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
+  // interactive element on screen while it's showing (no close/dismiss control by design).
+  const fullScreenPrestigeButtonRef = useRef(null)
+  useEffect(() => {
+    if (showFullScreenPrompt) fullScreenPrestigeButtonRef.current?.focus()
+  }, [showFullScreenPrompt])
+
+  if (showFullScreenPrompt) {
+    return (
+      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
+        <FullScreenCard>
+          <h2>✦ Prestige Available!</h2>
+          <MutedText>
+            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Money. All
+            production has stopped.
+          </MutedText>
+          <ul>
+            <li>Resets your resources, owned tiers, and purchases</li>
+            <li>Doubles all future production, permanently</li>
+            <li>Keeps your unlocked autobuyers and XP</li>
+          </ul>
+          <Button
+            ref={fullScreenPrestigeButtonRef}
+            aria-label="Prestige now"
+            color="#fbbf24"
+            onClick={actions.prestige}
+            title="Resets resources and doubles all future production permanently"
+            type="button"
+            $pulse
+          >
+            ✦ Prestige Now
+          </Button>
+        </FullScreenCard>
+      </FullScreenOverlay>
+    )
+  }
+
   return (
     <RootDiv>
+      {showTopPrestigeBar && (
+        <>
+          <TopPrestigeBar aria-label="prestige available banner">
+            <MutedText>1 Googol Money reached — production has stopped.</MutedText>
+            <Button
+              aria-label={prestigeLabel}
+              color="#fbbf24"
+              onClick={actions.prestige}
+              title="Resets resources and doubles all future production permanently"
+              type="button"
+              $pulse
+            >
+              ✦ Prestige
+            </Button>
+          </TopPrestigeBar>
+          <TopPrestigeBarSpacer />
+        </>
+      )}
+
       <Header>
         <h1>Tens</h1>
         <MutedText>Build by powers of ten. Prestige to multiply your progress.</MutedText>
@@ -259,7 +397,8 @@ const MainPage = () => {
             <MutedText>Bulk:</MutedText>
             <Button
               aria-pressed={quantity === 1}
-              color={quantity === 1 ? 'white' : 'darkgrey'}
+              color={!isFrozen && quantity === 1 ? 'white' : 'darkgrey'}
+              disabled={isFrozen}
               onClick={() => setQuantity(1)}
               title="Buy one unit per click"
               type="button"
@@ -268,7 +407,8 @@ const MainPage = () => {
             </Button>
             <Button
               aria-pressed={quantity === 10}
-              color={quantity === 10 ? 'white' : 'darkgrey'}
+              color={!isFrozen && quantity === 10 ? 'white' : 'darkgrey'}
+              disabled={isFrozen}
               onClick={() => setQuantity(10)}
               title="Buy up to a full 10-unit price block per click"
               type="button"
@@ -299,7 +439,7 @@ const MainPage = () => {
           const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, quantity)
           const unitCost = getTierQuantityCost(tier, purchased, 1)
           const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
-          const canAfford = affordableQuantity > 0
+          const canAfford = affordableQuantity > 0 && !isFrozen
           // The cost-block progress fill always previews the full 10-unit block, independent of
           // the Bulk toggle — it shows how much runway is left before the next 10x cost jump.
           const doneInBlock = purchased % 10
@@ -319,7 +459,7 @@ const MainPage = () => {
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
-          const canUpgradeAutobuyer = resources >= autobuyerCost + 1
+          const canUpgradeAutobuyer = resources >= autobuyerCost + 1 && !isFrozen
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${formatCost(autobuyerCost, tier.id)}`
@@ -402,53 +542,56 @@ const MainPage = () => {
         })}
       </TierList>
 
-      <PrestigeCard aria-label="prestige panel">
-        <div>
-          <h2>Prestige</h2>
-          <MutedText id="prestige-description">
-            Reach 1 Googol Money to gain 1 Prestige Level, doubling all production. Resets your
-            resources when reached.
-          </MutedText>
-        </div>
-        <div>
-          <GoldText>Level {prestige.level}</GoldText>
-          {prestige.level > 0 && (
-            <MutedText>×{prestigeBonus} production bonus</MutedText>
-          )}
-          <MutedText>
-            {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
-          </MutedText>
-        </div>
-        <Button
-          aria-describedby="prestige-description"
-          aria-label={prestigeLabel}
-          color={canPrestige ? '#fbbf24' : 'darkgrey'}
-          disabled={!canPrestige}
-          onClick={actions.prestige}
-          title="Resets resources and doubles all future production permanently"
-          type="button"
-          $progress={prestigeProgressPercent}
-          $progressColor="#fbbf24"
-          $pulse={canPrestige}
-        >
-          ✦ Prestige
-          <VisuallyHidden
-            role="progressbar"
-            aria-label="Prestige progress"
-            aria-valuenow={prestigeProgressPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </Button>
-      </PrestigeCard>
+      {showBottomPrestigeCard && (
+        <PrestigeCard aria-label="prestige panel">
+          <div>
+            <h2>Prestige</h2>
+            <MutedText id="prestige-description">
+              Reach 1 Googol Money to gain 1 Prestige Level, doubling all production. Resets your
+              resources when reached.
+            </MutedText>
+          </div>
+          <div>
+            <GoldText>Level {prestige.level}</GoldText>
+            {prestige.level > 0 && (
+              <MutedText>×{prestigeBonus} production bonus</MutedText>
+            )}
+            <MutedText>
+              {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
+            </MutedText>
+          </div>
+          <Button
+            aria-describedby="prestige-description"
+            aria-label={prestigeLabel}
+            color={canPrestige ? '#fbbf24' : 'darkgrey'}
+            disabled={!canPrestige}
+            onClick={actions.prestige}
+            title="Resets resources and doubles all future production permanently"
+            type="button"
+            $progress={prestigeProgressPercent}
+            $progressColor="#fbbf24"
+            $pulse={canPrestige}
+          >
+            ✦ Prestige
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Prestige progress"
+              aria-valuenow={prestigeProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </PrestigeCard>
+      )}
 
       <Button
         aria-describedby="reset-description"
         aria-label="Reset game"
-        color="#a3a3a3"
+        color={isFrozen ? 'darkgrey' : '#a3a3a3'}
+        disabled={isFrozen}
         type="button"
         onClick={resetGame}
-        title="Erases all progress and starts over"
+        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over'}
       >
         ↺ Reset
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>

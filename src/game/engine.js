@@ -125,6 +125,11 @@ export const getPurchaseMilestoneMultiplier = purchased =>
 export const getAutobuyerAttemptRate = autobuyerLevel =>
   1.1 ** clampNonNegative((autobuyerLevel ?? 1) - 1)
 
+// Once Money reaches GOOGOL, all production and purchasing (manual and automatic) freezes —
+// the only action left is to Prestige. Exported so the UI can drive the same gate (disabling
+// every other control) that the engine itself enforces on tickGame/buyTier/buyAutobuyer below.
+export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= GOOGOL
+
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
 // Already-owned tiers stay unlocked so older saves remain playable after rule changes.
 export const isTierUnlocked = state => tier => {
@@ -168,6 +173,11 @@ const checkMilestones = (resources, prestige) => {
 // the tier can afford the *entire* current cost block up to that size — it holds and waits
 // rather than trickling in a partial purchase.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
+  // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
+  // until the player prestiges. Returning the same reference (rather than an equivalent copy)
+  // lets React's setState bail out of re-rendering while frozen, same as any other no-op action.
+  if (isProductionFrozen(state)) return state
+
   const multiplier = productionMultiplier(state.prestige.level)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
@@ -265,6 +275,7 @@ export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
 export const buyTier = tierId => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
@@ -322,6 +333,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
 // even though the purchase "succeeded". Require at least 1 generator left over instead.
 export const buyAutobuyer = tierId => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
