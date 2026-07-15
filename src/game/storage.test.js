@@ -86,13 +86,16 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().autobuyers[tensTier.id]).toBeNull()
   })
 
-  it('migrates legacy numeric autobuyer 0 to null (locked)', () => {
+  it('preserves a numeric autobuyer level of 0 (unlocked but idle) rather than relocking it', () => {
+    // Regression test: level 0 is a legitimate current-schema value (unlocked, not yet
+    // upgraded, or reset to 0 by a prestige) — it must survive a save/load round-trip
+    // unchanged, not be conflated with the legacy boolean `false` and remapped to null.
     const rawState = {
       ...createInitialGameState(),
       autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 0 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers[tensTier.id]).toBeNull()
+    expect(loadGameState().autobuyers[tensTier.id]).toBe(0)
   })
 })
 

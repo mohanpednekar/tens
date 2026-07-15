@@ -35,10 +35,15 @@ const migrateTierKeys = map =>
 // and old save files remain playable after schema changes.
 const migrateState = saved => {
   const fresh = createInitialGameState()
-  // Convert legacy boolean autobuyers to level numbers (true → 1, false/0 → null for locked)
+  // Convert legacy boolean autobuyers to level numbers (true → 1, false → null for locked).
+  // Numeric values (including 0, which means "unlocked but idle" in the current schema) pass
+  // through unchanged — they must NOT be remapped to null here, or every autobuyer sitting at
+  // level 0 (freshly unlocked, or reset to 0 by a prestige) would silently relock on the very
+  // next load, since a legitimate level-0 value would otherwise be indistinguishable from the
+  // legacy boolean `false`.
   const rawAutobuyers = migrateTierKeys(saved.autobuyers)
   const migratedAutobuyers = Object.fromEntries(
-    Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : (v === false || v === 0) ? null : v])
+    Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
   )
   // Carry forward legacy prestige.pp (renamed to prestige.xp) so old saves don't lose points
   const rawPrestige = saved.prestige ?? {}
