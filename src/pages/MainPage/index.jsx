@@ -556,8 +556,8 @@ const MainPage = () => {
               </UpgradeButton>
               {!isAutobuyerLocked && !allTiersAutomated && (
                 isAutomated ? (
-                  <AutoBadge title="This tier's autobuyer upgrades itself automatically, forever">
-                    🤖 Auto
+                  <AutoBadge title="This tier's autobuyer Upgrades are bought automatically, forever">
+                    🤖 Auto-upgrade
                   </AutoBadge>
                 ) : (
                   <AutomateButton

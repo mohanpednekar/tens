@@ -403,10 +403,15 @@ Strict three-layer separation:
    track, not stacked under Upgrade — see the grid layout paragraph below) shows either an `AutomateButton`
    (spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from `getAutobuyerAutomationCost`,
    disabled without enough unspent PP — see "Prestige Points" below) or, once bought, a green `AutoBadge`
-   ("🤖 Auto") in its place; neither renders before the autobuyer itself is activated (nothing to automate
+   ("🤖 Auto-upgrade" — explicit about *what* is automated, since the tier's own purchases are already
+   automatic once its autobuyer is merely active, independent of this) in its place; neither renders before
+   the autobuyer itself is activated (nothing to automate
    yet), and once every tier is automated (`allTiersAutomated`, `TIER_DEFINITIONS.every(...)`), neither
    renders on *any* row anymore — a single `StatCard` ("full automation notice") above `TierList` explains
-   why, rather than leaving a permanent "Auto" badge cluttering all 10 rows forever.
+   why, rather than leaving a permanent "Auto-upgrade" badge cluttering all 10 rows forever. The
+   autobuyer-level speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on `autobuyerLevel > 0`) is
+   independent of all this — it's shown whenever an autobuyer is active at all, regardless of whether that
+   tier's Upgrades are automated or every tier is.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
