@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyOfflineProgress,
   buyAutobuyer,
   buyTier,
   buyTierQuantity,
@@ -7,10 +8,12 @@ import {
   createInitialGameState,
   formatAmount,
   formatCurrency,
+  formatOfflineDuration,
   getAutobuyerCost,
   getAutobuyerUnlockXPCost,
   getAutobuyerYieldMultiplier,
   getMoneyExponent,
+  getOfflineEffectiveSeconds,
   getPrestigeProgressPercent,
   getTierAffordableQuantity,
   getTierBulkQuantity,
@@ -23,7 +26,7 @@ import {
   productionMultiplier,
   tickGame,
 } from './engine'
-import { GOOGOL, MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -725,6 +728,73 @@ describe('tickGame', () => {
     const after = tickGame(1)(state)
     expect(after.purchased[thousandsTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(0)
+  })
+})
+
+// ─── getOfflineEffectiveSeconds ──────────────────────────────────────────────
+
+describe('getOfflineEffectiveSeconds', () => {
+  it('scales elapsed real seconds down to 10%', () => {
+    expect(getOfflineEffectiveSeconds(100)).toBe(10)
+  })
+
+  it('floors a fractional result', () => {
+    expect(getOfflineEffectiveSeconds(15)).toBe(1) // 1.5 → 1
+  })
+
+  it('caps real elapsed time at MAX_OFFLINE_SECONDS before scaling', () => {
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS * 10)).toBe(
+      Math.floor(MAX_OFFLINE_SECONDS * 0.1)
+    )
+  })
+
+  it('treats negative input as 0', () => {
+    expect(getOfflineEffectiveSeconds(-50)).toBe(0)
+  })
+})
+
+// ─── applyOfflineProgress ─────────────────────────────────────────────────────
+
+describe('applyOfflineProgress', () => {
+  it('produces resources for 10% of the elapsed real time', () => {
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const after = applyOfflineProgress(100)(state) // 100s real → 10 simulated seconds
+    // 5 generators × 10 simulated seconds = +50 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 50)
+  })
+
+  it('is a no-op for a gap too short to register a single simulated second', () => {
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const after = applyOfflineProgress(5)(state) // 0.5 simulated seconds → floors to 0
+    expect(after).toBe(state)
+  })
+
+  it('runs an active autobuyer across each simulated second, not just once', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 1000), tensTier.id)
+    const after = applyOfflineProgress(100)(state) // 10 simulated seconds/ticks
+    // A level-1 autobuyer can buy at most 1 unit per simulated tick, so 10 ticks caps
+    // purchased at 10 even though funds could otherwise cover far more in one lump call.
+    expect(after.purchased[tensTier.id]).toBe(10)
+  })
+})
+
+// ─── formatOfflineDuration ────────────────────────────────────────────────────
+
+describe('formatOfflineDuration', () => {
+  it('formats seconds-only durations', () => {
+    expect(formatOfflineDuration(45)).toBe('45s')
+  })
+
+  it('formats minutes and seconds', () => {
+    expect(formatOfflineDuration(90)).toBe('1m 30s')
+  })
+
+  it('formats hours and minutes, omitting seconds', () => {
+    expect(formatOfflineDuration(3725)).toBe('1h 2m')
+  })
+
+  it('clamps negative input to 0s', () => {
+    expect(formatOfflineDuration(-10)).toBe('0s')
   })
 })
 

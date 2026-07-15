@@ -239,6 +239,47 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
   expect(screen.getByRole('heading', { level: 3, name: /^tens$/i })).toBeInTheDocument()
 })
 
+test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 0 },
+    owned: { Tens: 5 },
+  }))
+  // 100 real seconds ago → 10 simulated seconds at 10% speed → 5 Tens × 10s = +50 money
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$50')
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+})
+
+test('dismissing the offline progress notice hides it', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 0 },
+    owned: { Tens: 5 },
+  }))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  render(<App />)
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /dismiss offline progress notice/i }))
+
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+})
+
+test('shows no offline progress notice when there is no recorded last-save timestamp', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+})
+
 test('prestige becomes available once money reaches a googol and resets progress', async () => {
   const user = userEvent.setup()
 

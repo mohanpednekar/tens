@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createInitialGameState } from './engine'
 import { MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, loadGameState, loadQuantityPreference, saveGameState, saveQuantityPreference } from './storage'
+import { clearGameState, loadGameState, loadLastSaveTimestamp, loadQuantityPreference, saveGameState, saveQuantityPreference } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -169,6 +169,33 @@ describe('clearGameState', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadGameState()).toBeNull()
+  })
+})
+
+describe('saveGameState / loadLastSaveTimestamp', () => {
+  it('returns null when nothing has ever been saved', () => {
+    expect(loadLastSaveTimestamp()).toBeNull()
+  })
+
+  it('records a timestamp when the game is saved', () => {
+    const before = Date.now()
+    saveGameState(createInitialGameState())
+    const after = Date.now()
+    const timestamp = loadLastSaveTimestamp()
+    expect(timestamp).toBeGreaterThanOrEqual(before)
+    expect(timestamp).toBeLessThanOrEqual(after)
+  })
+
+  it('returns null for a corrupt stored timestamp', () => {
+    saveGameState(createInitialGameState())
+    localStorage.setItem('tens_last_save_timestamp', 'not-a-number')
+    expect(loadLastSaveTimestamp()).toBeNull()
+  })
+
+  it('is cleared by clearGameState', () => {
+    saveGameState(createInitialGameState())
+    clearGameState()
+    expect(loadLastSaveTimestamp()).toBeNull()
   })
 })
 

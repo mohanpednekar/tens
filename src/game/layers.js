@@ -26,3 +26,11 @@ export const TICK_RATE_MS = 1000
 
 // Autobuyer XP cost increases per layer: layer 0 → 1 XP, layer 1 → 2 XP, layer 2 → 4 XP, …
 export const AUTOBUYER_XP_COST_BASE = 1
+
+// Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
+// simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
+// autobuyer loop outrun active play.
+export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
+// Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
+// very long absence can't turn into an unbounded simulation loop on load.
+export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
