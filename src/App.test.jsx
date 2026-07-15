@@ -312,11 +312,35 @@ test('after the first prestige, the Prestige panel is shown regardless of last-t
   expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears in the Prestige panel, and spends 100 PP to activate level 1', async () => {
+const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
+// Every tier smart (which itself requires every tier automated — see buySmartAutobuyer's
+// prerequisite) is what unlocks the Auto-Prestige option in the UI at all — see MainPage's
+// allTiersSmart gate.
+const allTiersSmartSeed = () => ({
+  owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
+  autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
+  autobuyerAutomation: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
+  smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
+})
+
+test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /auto-prestige/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
+})
+
+test('an Auto-Prestige button appears in the Prestige panel once every tier is Smart, and spends 100 PP to activate level 1', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   }))
 
@@ -335,6 +359,7 @@ test('an Auto-Prestige button appears in the Prestige panel, and spends 100 PP t
 test('the Auto-Prestige button stays disabled without enough Prestige Points', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 },
   }))
 
@@ -346,6 +371,7 @@ test('the Auto-Prestige button stays disabled without enough Prestige Points', (
 test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
     autoPrestige: 1,
     prestige: { xp: 0, points: 199, count: 1, highestMilestone: 1 },
   }))

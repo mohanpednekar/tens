@@ -658,25 +658,29 @@ const MainPage = () => {
               aria-valuemax={100}
             />
           </Button>
-          {isAutoPrestigeActive && (
-            <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
-              🔁 Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-            </MutedText>
+          {allTiersSmart && (
+            <>
+              {isAutoPrestigeActive && (
+                <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
+                  🔁 Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                </MutedText>
+              )}
+              <Button
+                aria-label={
+                  isAutoPrestigeActive
+                    ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                    : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                }
+                color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+                disabled={!canBuyAutoPrestige}
+                onClick={actions.buyAutoPrestige}
+                title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                type="button"
+              >
+                🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+              </Button>
+            </>
           )}
-          <Button
-            aria-label={
-              isAutoPrestigeActive
-                ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-            }
-            color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
-            disabled={!canBuyAutoPrestige}
-            onClick={actions.buyAutoPrestige}
-            title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
-            type="button"
-          >
-            🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
-          </Button>
         </PrestigeCard>
       )}
 

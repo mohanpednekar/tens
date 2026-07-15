@@ -608,13 +608,19 @@ stays hidden until `purchased.tier10 >= 10` (10 lifetime purchases of the last t
 progressive-disclosure gate so a brand-new player isn't shown the Prestige panel before it's relevant;
 once the player has prestiged at least once, the card is always shown (whenever not frozen) regardless of
 tier10 purchases. The same card also holds the Auto-Prestige control, right below the Prestige button
-itself — a plain `Button` (not a per-tier `AutomationButton`, since this is a single global upgrade track,
-not one per tier), mirroring the tier autobuyer Lv./Upgrade pattern: reading "🔁 Auto-Prestige for 100 PP"
-before it's ever bought, or "🔁 Upgrade for {nextCost} PP" once active, always spending
-`getAutoPrestigeCost(currentLevel)` via `actions.buyAutoPrestige`. Once active, a `MutedText` above the
-button additionally reads "🔁 Auto-Prestige Lv.{level} (every ~{interval}s)", with `interval` computed as
-`Math.round(1 / getAutoPrestigeAttemptRate(level))` — see "Prestige Points and autobuyer automation" above
-and "Prestige and the Googol freeze" below for what it does.
+itself — but only once `allTiersSmart` is true (every tier upgraded to Smart, itself requiring every tier
+automated first — see the automate-column progression above); before that, the entire control (and any
+mention of Auto-Prestige) stays hidden, gating this endgame capability behind having maxed out the
+per-tier automation ladder first. Once shown, it's a plain `Button` (not a per-tier `AutomationButton`,
+since this is a single global upgrade track, not one per tier), mirroring the tier autobuyer Lv./Upgrade
+pattern: reading "🔁 Auto-Prestige for 100 PP" before it's ever bought, or "🔁 Upgrade for {nextCost} PP"
+once active, always spending `getAutoPrestigeCost(currentLevel)` via `actions.buyAutoPrestige`. Once
+active, a `MutedText` above the button additionally reads "🔁 Auto-Prestige Lv.{level} (every
+~{interval}s)", with `interval` computed as `Math.round(1 / getAutoPrestigeAttemptRate(level))` — see
+"Prestige Points and autobuyer automation" above and "Prestige and the Googol freeze" below for what it
+does. This `allTiersSmart` gate is UI-only — `buyAutoPrestige`/`tickGame` in `engine.js` don't check it, so
+a save with Auto-Prestige already active from before this restriction (or edited directly) keeps working
+exactly the same underneath, just without a visible control until every tier catches up to Smart.
 
 ### Game state shape
 
@@ -738,7 +744,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (264 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (265 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current
