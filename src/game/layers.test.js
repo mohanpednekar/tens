@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTOBUYER_AUTOMATION_BASE_COST,
   GOOGOL,
   MONEY_ID,
+  PRESTIGE_POINT_SPEED_BONUS,
   RESOURCE_SYMBOL,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
@@ -92,5 +94,13 @@ describe('constants', () => {
 
   it('TICK_RATE_MS is a positive number', () => {
     expect(TICK_RATE_MS).toBeGreaterThan(0)
+  })
+
+  it('PRESTIGE_POINT_SPEED_BONUS is 0.01 (1% per unspent Prestige Point)', () => {
+    expect(PRESTIGE_POINT_SPEED_BONUS).toBe(0.01)
+  })
+
+  it('AUTOBUYER_AUTOMATION_BASE_COST is 1 (first tier costs 1 PP)', () => {
+    expect(AUTOBUYER_AUTOMATION_BASE_COST).toBe(1)
   })
 })

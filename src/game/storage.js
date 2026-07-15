@@ -1,7 +1,6 @@
 import { createInitialGameState } from './engine'
 
 const STORAGE_KEY = 'tens_game_state'
-const QUANTITY_STORAGE_KEY = 'tens_bulk_quantity'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 
 // Legacy name-based tier ids (pre-tier0N rename) mapped to their new naming-agnostic id.
@@ -48,9 +47,16 @@ const migrateState = saved => {
   )
   // Carry forward legacy prestige.pp (renamed to prestige.xp) so old saves don't lose points
   const rawPrestige = saved.prestige ?? {}
-  const { pp: legacyPP, ...migratedPrestige } = rawPrestige
+  const { pp: legacyPP, level: legacyLevel, ...migratedPrestige } = rawPrestige
   if (migratedPrestige.xp === undefined && legacyPP !== undefined) {
     migratedPrestige.xp = legacyPP
+  }
+  // Legacy `level` (used to double production directly) is renamed `count` (times prestiged)
+  // now that prestige awards spendable Prestige Points instead — an old save's prestige count
+  // carries forward unchanged under the new field name. `points` (the new PP balance) has no
+  // legacy equivalent — a save that predates it merges in fresh's 0 default below.
+  if (migratedPrestige.count === undefined && legacyLevel !== undefined) {
+    migratedPrestige.count = legacyLevel
   }
   return {
     ...fresh,
@@ -60,6 +66,7 @@ const migrateState = saved => {
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
+    autobuyerAutomation: { ...fresh.autobuyerAutomation, ...migrateTierKeys(saved.autobuyerAutomation) },
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
 }
@@ -107,24 +114,5 @@ export const clearGameState = () => {
     localStorage.removeItem(LAST_SAVE_TIMESTAMP_KEY)
   } catch {
     // Silently ignore
-  }
-}
-
-// The Bulk (×1/×10) toggle is a UI preference, not game progress — stored under its own key so
-// it's untouched by save-schema migration and by resetGame/clearGameState.
-export const saveQuantityPreference = quantity => {
-  try {
-    localStorage.setItem(QUANTITY_STORAGE_KEY, String(quantity))
-  } catch {
-    // Silently ignore
-  }
-}
-
-export const loadQuantityPreference = () => {
-  try {
-    const raw = localStorage.getItem(QUANTITY_STORAGE_KEY)
-    return raw === '1' ? 1 : 10
-  } catch {
-    return 10
   }
 }

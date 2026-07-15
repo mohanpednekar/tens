@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerCost, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked, productionMultiplier } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
@@ -99,12 +99,6 @@ const TierLine = styled(StatCard)`
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
   }
-`
-
-const QuantityToggle = styled.div`
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
 `
 
 const PrestigeCard = styled(StatCard)`
@@ -249,8 +243,18 @@ const BuyButton = styled(Button)`
   }
 `
 
-const UpgradeButton = styled(Button)`
+// Wraps the Upgrade/Unlock button plus the (conditional) Automate control in the same 'upgrade'
+// grid area, stacked vertically — keeps the six-column grid-template-areas unchanged rather than
+// adding a 7th column for what's otherwise a rare, one-time control.
+const UpgradeCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   grid-area: upgrade;
+  min-width: 0;
+`
+
+const UpgradeButton = styled(Button)`
   width: 100%;
   font-size: 0.82em;
   padding: 0.4em 0.45em;
@@ -260,6 +264,19 @@ const UpgradeButton = styled(Button)`
     font-size: 0.78em;
     padding: 0.38em 0.4em;
   }
+`
+
+const AutomateButton = styled(Button)`
+  width: 100%;
+  font-size: 0.72em;
+  padding: 0.3em 0.4em;
+  ${gridCell}
+`
+
+const AutoBadge = styled(MutedText)`
+  color: #4ade80;
+  font-size: 0.72em;
+  ${gridCell}
 `
 
 const formatCost = (amount, resourceId) =>
@@ -272,10 +289,11 @@ const formatCost = (amount, resourceId) =>
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
 const MainPage = () => {
-  const { actions, dismissOfflineProgress, offlineProgress, quantity, resetGame, setQuantity, state } = useIncrementalGame()
+  const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
-  const prestigeBonus = productionMultiplier(prestige.level)
+  const prestigeBonus = getPrestigeProductionMultiplier(prestige.points)
+  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
@@ -295,7 +313,7 @@ const MainPage = () => {
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
-  const isFirstRun = prestige.level === 0
+  const isFirstRun = prestige.count === 0
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPrestigeBar = isFrozen && !isFirstRun
   // During the first run only, the normal Prestige card stays hidden until the player has
@@ -322,15 +340,19 @@ const MainPage = () => {
           </MutedText>
           <ul>
             <li>Resets your resources, owned tiers, and purchases</li>
-            <li>Doubles all future production, permanently</li>
-            <li>Keeps your unlocked autobuyers and XP</li>
+            <li>
+              Awards {formatAmount(prestigePointsPreview)} Prestige Point
+              {prestigePointsPreview === 1 ? '' : 's'} — each unspent point adds +1% production
+              speed, or spend them to automate autobuyer Upgrades
+            </li>
+            <li>Keeps your autobuyers, automations, and Prestige Points</li>
           </ul>
           <Button
             ref={fullScreenPrestigeButtonRef}
             aria-label="Prestige now"
             color="#fbbf24"
             onClick={actions.prestige}
-            title="Resets resources and doubles all future production permanently"
+            title="Awards Prestige Points and resets your resources"
             type="button"
             $pulse
           >
@@ -351,7 +373,7 @@ const MainPage = () => {
               aria-label={prestigeLabel}
               color="#fbbf24"
               onClick={actions.prestige}
-              title="Resets resources and doubles all future production permanently"
+              title="Awards Prestige Points and resets your resources"
               type="button"
               $pulse
             >
@@ -364,7 +386,7 @@ const MainPage = () => {
 
       <Header>
         <h1>Tens</h1>
-        <MutedText>Build by powers of ten. Prestige to multiply your progress.</MutedText>
+        <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
       </Header>
 
       {offlineProgress && (
@@ -388,41 +410,14 @@ const MainPage = () => {
       )}
 
       <StatCard aria-label="money display">
-        <TopRow>
-          <div>
-            <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-            <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
-          </div>
-          <QuantityToggle role="group" aria-label="Bulk batch size">
-            <MutedText>Bulk:</MutedText>
-            <Button
-              aria-pressed={quantity === 1}
-              color={!isFrozen && quantity === 1 ? 'white' : 'darkgrey'}
-              disabled={isFrozen}
-              onClick={() => setQuantity(1)}
-              title="Buy one unit per click"
-              type="button"
-            >
-              ×1
-            </Button>
-            <Button
-              aria-pressed={quantity === 10}
-              color={!isFrozen && quantity === 10 ? 'white' : 'darkgrey'}
-              disabled={isFrozen}
-              onClick={() => setQuantity(10)}
-              title="Buy up to a full 10-unit price block per click"
-              type="button"
-            >
-              ×10
-            </Button>
-          </QuantityToggle>
-        </TopRow>
+        <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
+        <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
       </StatCard>
 
-      <StatCard aria-label="exponent points display">
+      <StatCard aria-label="prestige points display">
         <MutedText>
-          <GoldText>{prestige.xp} XP</GoldText>
-          {' · '}Next XP at {formatCurrency(10 ** (prestige.highestMilestone + 1))}
+          <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+          {' · '}+{Math.round((prestigeBonus - 1) * 100)}% production speed
         </MutedText>
       </StatCard>
 
@@ -434,21 +429,22 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
-          // Manual buy grabs as many units as are currently affordable, capped at the Bulk
-          // toggle's quantity (which itself never exceeds the 10-unit cost block boundary).
-          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, quantity)
+          // Manual Buy always grabs as many units as are currently affordable, up to the
+          // 10-unit cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
+          // behavior — see useIncrementalGame's BUY_QUANTITY).
+          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, 10)
           const unitCost = getTierQuantityCost(tier, purchased, 1)
           const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
           const canAfford = affordableQuantity > 0 && !isFrozen
-          // The cost-block progress fill always previews the full 10-unit block, independent of
-          // the Bulk toggle — it shows how much runway is left before the next 10x cost jump.
           const doneInBlock = purchased % 10
-          const availableInBlock = getTierAffordableQuantity(tier, purchased, costResource, 10)
           const donePercent = (doneInBlock / 10) * 100
-          const availablePercent = (availableInBlock / 10) * 100
+          const availablePercent = (affordableQuantity / 10) * 100
           const autobuyerLevel = state.autobuyers[tier.id] ?? null
           const isAutobuyerLocked = autobuyerLevel === null
           const autobuyerAttemptRate = getAutobuyerAttemptRate(autobuyerLevel)
+          const isAutomated = state.autobuyerAutomation?.[tier.id] ?? false
+          const automationCost = getAutobuyerAutomationCost(tier.id)
+          const canAutomate = !isFrozen && !isAutomated && !isAutobuyerLocked && prestige.points >= automationCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
@@ -504,7 +500,7 @@ const MainPage = () => {
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
-                onClick={() => actions.buyTierQuantity(tier.id, quantity)}
+                onClick={() => actions.buyTierQuantity(tier.id)}
                 title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — every 10 purchases also doubles it`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
@@ -519,24 +515,44 @@ const MainPage = () => {
                   aria-valuemax={10}
                 />
               </BuyButton>
-              <UpgradeButton
-                aria-label={upgradeLabel}
-                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
-                disabled={!canUpgradeAutobuyer}
-                onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
-                $progress={autobuyerProgressPercent}
-                $pulse={canUpgradeAutobuyer}
-              >
-                {upgradeVisibleLabel}
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} autobuyer progress`}
-                  aria-valuenow={autobuyerProgressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </UpgradeButton>
+              <UpgradeCell>
+                <UpgradeButton
+                  aria-label={upgradeLabel}
+                  color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
+                  disabled={!canUpgradeAutobuyer}
+                  onClick={() => actions.buyAutobuyer(tier.id)}
+                  title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
+                  $progress={autobuyerProgressPercent}
+                  $pulse={canUpgradeAutobuyer}
+                >
+                  {upgradeVisibleLabel}
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label={`${tier.name} autobuyer progress`}
+                    aria-valuenow={autobuyerProgressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  />
+                </UpgradeButton>
+                {!isAutobuyerLocked && (
+                  isAutomated ? (
+                    <AutoBadge title="This tier's autobuyer upgrades itself automatically, forever">
+                      🤖 Auto
+                    </AutoBadge>
+                  ) : (
+                    <AutomateButton
+                      aria-label={`Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`}
+                      color={canAutomate ? '#38bdf8' : 'darkgrey'}
+                      disabled={!canAutomate}
+                      onClick={() => actions.buyAutobuyerAutomation(tier.id)}
+                      title="Spend Prestige Points to make this tier's autobuyer Upgrades happen automatically, forever"
+                      type="button"
+                    >
+                      🤖 {automationCost} PP
+                    </AutomateButton>
+                  )
+                )}
+              </UpgradeCell>
             </TierLine>
           )
         })}
@@ -547,15 +563,14 @@ const MainPage = () => {
           <div>
             <h2>Prestige</h2>
             <MutedText id="prestige-description">
-              Reach 1 Googol Money to gain 1 Prestige Level, doubling all production. Resets your
-              resources when reached.
+              Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
+              Each unspent point adds +1% production speed, or spend points to automate autobuyer
+              Upgrades. Resets your resources when reached.
             </MutedText>
           </div>
           <div>
-            <GoldText>Level {prestige.level}</GoldText>
-            {prestige.level > 0 && (
-              <MutedText>×{prestigeBonus} production bonus</MutedText>
-            )}
+            <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
+            <MutedText>{formatAmount(prestige.points)} PP unspent{' · '}×{formatRate(prestigeBonus)} production speed</MutedText>
             <MutedText>
               {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
             </MutedText>
@@ -566,7 +581,7 @@ const MainPage = () => {
             color={canPrestige ? '#fbbf24' : 'darkgrey'}
             disabled={!canPrestige}
             onClick={actions.prestige}
-            title="Resets resources and doubles all future production permanently"
+            title="Awards Prestige Points and resets your resources"
             type="button"
             $progress={prestigeProgressPercent}
             $progressColor="#fbbf24"

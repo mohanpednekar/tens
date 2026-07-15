@@ -31,3 +31,11 @@ export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
+
+// Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
+// tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
+// doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
+export const PRESTIGE_POINT_SPEED_BONUS = 0.01
+// PP cost to permanently automate the first tier's autobuyer Upgrades (see engine.js's
+// getAutobuyerAutomationCost) — doubles for each subsequent tier.
+export const AUTOBUYER_AUTOMATION_BASE_COST = 1

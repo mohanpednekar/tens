@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createInitialGameState } from './engine'
 import { MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, loadGameState, loadLastSaveTimestamp, loadQuantityPreference, saveGameState, saveQuantityPreference } from './storage'
+import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -48,14 +48,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().purchased[tensTier.id]).toBe(12)
   })
 
-  it('preserves prestige level and XP', () => {
+  it('preserves prestige count, points, and XP', () => {
     const state = {
       ...createInitialGameState(),
-      prestige: { xp: 7, level: 3, highestMilestone: 5 },
+      prestige: { xp: 7, points: 4, count: 3, highestMilestone: 5 },
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.prestige.level).toBe(3)
+    expect(loaded.prestige.count).toBe(3)
+    expect(loaded.prestige.points).toBe(4)
     expect(loaded.prestige.xp).toBe(7)
   })
 
@@ -163,7 +164,7 @@ describe('schema migration', () => {
     expect(loaded.purchased[tensTier.id]).toBe(7)
   })
 
-  it('migrates a legacy save\'s prestige.pp into prestige.xp', () => {
+  it('migrates a legacy save\'s prestige.pp into prestige.xp, and level into count', () => {
     const oldSave = {
       ...createInitialGameState(),
       prestige: { pp: 5, level: 2, highestMilestone: 3 },
@@ -171,7 +172,7 @@ describe('schema migration', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.prestige.xp).toBe(5)
-    expect(loaded.prestige.level).toBe(2)
+    expect(loaded.prestige.count).toBe(2)
   })
 
   it('prefers an explicit xp value over a legacy pp value when both are present', () => {
@@ -182,6 +183,29 @@ describe('schema migration', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.prestige.xp).toBe(9)
+  })
+
+  it('prefers an explicit count value over a legacy level value when both are present', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      prestige: { xp: 0, level: 5, count: 9, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.prestige.count).toBe(9)
+  })
+
+  it('defaults prestige.points to 0 and autobuyerAutomation to false for saves that predate them', () => {
+    const oldSave = {
+      resources: { Ones: 10 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.prestige.points).toBe(0)
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.autobuyerAutomation[tier.id]).toBe(false)
+    })
   })
 
   it('remaps legacy name-based tier ids to the new tier0N ids', () => {
@@ -255,33 +279,5 @@ describe('saveGameState / loadLastSaveTimestamp', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadLastSaveTimestamp()).toBeNull()
-  })
-})
-
-describe('saveQuantityPreference / loadQuantityPreference', () => {
-  it('defaults to 10 when nothing is saved', () => {
-    expect(loadQuantityPreference()).toBe(10)
-  })
-
-  it('round-trips a saved value of 1', () => {
-    saveQuantityPreference(1)
-    expect(loadQuantityPreference()).toBe(1)
-  })
-
-  it('round-trips a saved value of 10', () => {
-    saveQuantityPreference(10)
-    expect(loadQuantityPreference()).toBe(10)
-  })
-
-  it('falls back to 10 for an invalid stored value', () => {
-    localStorage.setItem('tens_bulk_quantity', 'not-a-number')
-    expect(loadQuantityPreference()).toBe(10)
-  })
-
-  it('is unaffected by clearGameState (separate key from the game-state blob)', () => {
-    saveQuantityPreference(1)
-    saveGameState(createInitialGameState())
-    clearGameState()
-    expect(loadQuantityPreference()).toBe(1)
   })
 })
