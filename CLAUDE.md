@@ -418,8 +418,11 @@ Strict three-layer separation:
 
    `MainPage` picks which single control to render per row with `isSmart ? <badge> : isAutomated ? <Smart
    button> : <Automate button>`. Nothing renders before the tier's autobuyer is activated (nothing to
-   automate yet), and once *every* tier is smart (`allTiersSmart`, `TIER_DEFINITIONS.every(...)` — which,
-   since Smart requires automation, also implies every tier is automated), the whole `AutomationCell`
+   automate yet) or before the player has ever prestiged (`!isFirstRun`, i.e. `prestige.count > 0`) — since
+   every control in this column spends Prestige Points, which don't exist as a concept for the player until
+   their first prestige (see "Prestige info is hidden until first prestige" below) — and once *every* tier
+   is smart (`allTiersSmart`, `TIER_DEFINITIONS.every(...)` — which, since Smart requires automation, also
+   implies every tier is automated), the whole `AutomationCell`
    disappears on every row and a single `StatCard` ("full smart autobuyer notice") above `TierList`
    explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer-level
    speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on `autobuyerLevel > 0`) is independent of
@@ -477,21 +480,25 @@ unlocked even if the rule changes later, so old saves stay playable.
 ### Adding a new tier
 
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs a naming-agnostic `id` (next in the
-`tier0N`/`tierNN` sequence), `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`, and
-`producesResourceId` set to the previous tier's `id`. No other file should need changing — the page and
-engine are meant to be fully data-driven from that array.
+`tier0N`/`tierNN` sequence), `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`,
+`producesResourceId` set to the previous tier's `id`, and `baseTickSpeedSeconds` set to one more than the
+previous tier's (see "Tier production tickspeed" below). No other file should need changing — the page
+and engine are meant to be fully data-driven from that array.
 
 ### Tier production tickspeed
 
-Each tier has its own **base tickspeed** (`getTierBaseTickSpeedSeconds` in `layers.js`) — how often, in
-seconds, that tier delivers its production as a single batch rather than continuously every global 1s
-tick. `tier01` is 1s (matching the global tick rate, so it's unaffected); each subsequent tier is 1s
-slower — `tier02` = 2s, `tier03` = 3s, … `tier10` = 10s — derived from the tier's index in
-`TIER_DEFINITIONS` (`tierIndex + 1`), so adding a new tier automatically gets the next tickspeed with no
-extra field needed. This is **balance-neutral**: a tier still produces the exact same total amount over
-time as continuous per-tick production would — it's just withheld and delivered in one lump every N
-seconds instead of smoothly every second, so the displayed `/sec` production rate on `MainPage` (an
-average) is unaffected.
+Each tier has its own **independent base tickspeed** — a plain `baseTickSpeedSeconds` field directly on
+its `TIER_DEFINITIONS` entry in `layers.js` (read via `getTierBaseTickSpeedSeconds`), not a value derived
+from tier order or any shared formula — so any single tier's cadence can be tuned directly by editing
+that one field, without touching any other tier or a shared formula. It's how often, in seconds, that
+tier delivers its production as a single batch rather than continuously every global 1s tick. `tier01` is
+1s (matching the global tick rate, so it's unaffected); each subsequent tier is currently seeded 1s slower
+than the last — `tier02` = 2s, `tier03` = 3s, … `tier10` = 10s — but because it's an explicit per-tier
+field rather than a computed one, nothing prevents a future tier (or a future upgrade) from setting any
+tier's tickspeed independently of that pattern. This is **balance-neutral**: a tier still produces the
+exact same total amount over time as continuous per-tick production would — it's just withheld and
+delivered in one lump every N seconds instead of smoothly every second, so the displayed `/sec` production
+rate on `MainPage` (an average) is unaffected.
 
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier (see "Game state shape" below), incremented by `elapsedSeconds` every tick.
@@ -631,7 +638,9 @@ multiplier) only renders when *not* frozen, and — during the first run only (`
 stays hidden until `purchased.tier10 >= 10` (10 lifetime purchases of the last tier), a
 progressive-disclosure gate so a brand-new player isn't shown the Prestige panel before it's relevant;
 once the player has prestiged at least once, the card is always shown (whenever not frozen) regardless of
-tier10 purchases. The same card also holds the Auto-Prestige control, right below the Prestige button
+tier10 purchases. Its unspent-PP/production-speed line and the PP-spending sentence in its description are
+themselves gated further, on `!isFirstRun` — see "Prestige info is hidden until first prestige" below. The
+same card also holds the Auto-Prestige control, right below the Prestige button
 itself — but only once `allTiersSmart` is true (every tier upgraded to Smart, itself requiring every tier
 automated first — see the automate-column progression above); before that, the entire control (and any
 mention of Auto-Prestige) stays hidden, gating this endgame capability behind having maxed out the
@@ -645,6 +654,45 @@ active, a `MutedText` above the button additionally reads "🔁 Auto-Prestige Lv
 does. This `allTiersSmart` gate is UI-only — `buyAutoPrestige`/`tickGame` in `engine.js` don't check it, so
 a save with Auto-Prestige already active from before this restriction (or edited directly) keeps working
 exactly the same underneath, just without a visible control until every tier catches up to Smart.
+
+### Prestige info is hidden until first prestige
+
+Prestige Points don't exist as a concept for the player until they've prestiged at least once
+(`isFirstRun` = `prestige.count === 0` — the same flag used above to choose the full-screen takeover vs.
+the top banner), so `MainPage` keeps every PP-related display and control out of the page entirely during
+the first run, rather than showing a premature "0 PP" or a button costing points the player has never
+earned:
+
+- The top-level "prestige points display" `StatCard` (unspent PP + production-speed bonus) doesn't render
+  at all until `!isFirstRun`.
+- Each tier's `AutomationCell` (Automate/Smart) stays hidden until `!isFirstRun`, on top of its existing
+  gates (autobuyer must be active; not all tiers already smart) — see the automate-column paragraph above.
+- The bottom `PrestigeCard`'s unspent-PP/production-speed line (`{points} PP unspent · ×{rate} production
+  speed`) only renders once `!isFirstRun`, and its description sentence about spending points on autobuyer
+  automation is likewise omitted pre-first-prestige, leaving just the Googol-requirement and reset-warning
+  sentences.
+- The Auto-Prestige control is unaffected by this flag directly, but is already unreachable pre-first-
+  prestige in practice: it requires `allTiersSmart`, and Smart/Automate purchases (the only way to spend
+  PP at all) are themselves hidden by the rule above.
+
+The one deliberate exception is the first-ever `FullScreenOverlay` (`prestige.count === 0`, shown the
+moment Money first reaches GOOGOL) — its body text does explain what Prestige Points are and what they'll
+be used for. That's the introduction of the mechanic, shown at exactly the moment it becomes relevant
+(right before the player's first Prestige click), not premature exposure of numbers they can't act on yet;
+every other PP surface in the app stays hidden until after that first click. This is a `MainPage`-only
+presentation choice — `engine.js` computes and stores `prestige.points`/PP-gated costs identically
+regardless of `prestige.count`; nothing here changes what a save file contains, only what's rendered.
+
+### Reset is a dev-only control
+
+The "↺ Reset" button (`actions` via `resetGame`, wipes the save and starts a fresh game) only renders when
+`import.meta.env.DEV` is true — i.e. in `yarn dev`/`yarn test`, never in a `yarn build` production bundle.
+It exists for development/testing convenience (quickly getting back to a fresh state without clearing
+`localStorage` by hand) and isn't intended as a player-facing feature of the released game; Vite statically
+replaces `import.meta.env.DEV` with `false` at build time, so the whole button (and its `resetGame` handler)
+is dead-code-eliminated from the production bundle rather than merely hidden by CSS. `resetGame` itself
+(`useIncrementalGame.js`) and `clearGameState` (`storage.js`) are unchanged — this only gates the UI entry
+point, not the underlying capability, in case a future dev/debug surface needs it.
 
 ### Game state shape
 
@@ -740,7 +788,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` — see "Offline progress" above |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'$'` fallback for `MONEY_ID`/unknown ids |
-| `getTierBaseTickSpeedSeconds` (`layers.js`) | `tierId → number` | `tierIndex + 1` — 1s for `tier01`, up to 10s for `tier10`; how often (in seconds) `tickGame` batches that tier's production instead of delivering it continuously every tick — see "Tier production tickspeed" above. An unrecognized tier id falls back to index 0 (1s) |
+| `getTierBaseTickSpeedSeconds` (`layers.js`) | `tierId → number` | Reads that tier's own independent `baseTickSpeedSeconds` field (currently 1s for `tier01`, up to 10s for `tier10`) — how often (in seconds) `tickGame` batches that tier's production instead of delivering it continuously every tick — see "Tier production tickspeed" above. An unrecognized tier id falls back to 1s |
 
 ### Constants (`src/game/layers.js`)
 
@@ -775,7 +823,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (274 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (279 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

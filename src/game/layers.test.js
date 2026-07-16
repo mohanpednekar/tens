@@ -27,6 +27,7 @@ describe('TIER_DEFINITIONS', () => {
       expect(tier).toHaveProperty('baseCost')
       expect(tier).toHaveProperty('costResourceId')
       expect(tier).toHaveProperty('producesResourceId')
+      expect(tier).toHaveProperty('baseTickSpeedSeconds')
     })
   })
 
@@ -44,6 +45,19 @@ describe('TIER_DEFINITIONS', () => {
   it('baseCost strictly increases from one tier to the next', () => {
     for (let i = 1; i < TIER_DEFINITIONS.length; i++) {
       expect(TIER_DEFINITIONS[i].baseCost).toBeGreaterThan(TIER_DEFINITIONS[i - 1].baseCost)
+    }
+  })
+
+  it('every tier baseTickSpeedSeconds is a positive number', () => {
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(tier.baseTickSpeedSeconds).toBeGreaterThan(0)
+    })
+  })
+
+  it('baseTickSpeedSeconds is 1 for the first tier and increases by exactly 1 per subsequent tier', () => {
+    expect(TIER_DEFINITIONS[0].baseTickSpeedSeconds).toBe(1)
+    for (let i = 1; i < TIER_DEFINITIONS.length; i++) {
+      expect(TIER_DEFINITIONS[i].baseTickSpeedSeconds).toBe(TIER_DEFINITIONS[i - 1].baseTickSpeedSeconds + 1)
     }
   })
 
