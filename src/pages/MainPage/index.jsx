@@ -246,12 +246,18 @@ const PurchasedText = styled(MutedText)`
   }
 `
 
+// justify-content: space-between pins the ring to the right edge of the (fixed-width) production
+// column on every row, rather than sitting immediately after the "+X" text at a position that
+// would otherwise vary with the text's own rendered width — the same "identical position on every
+// tier" goal as TierName's fixed-width label column above, just achieved by right-justifying
+// against the column's own fixed track width instead.
 const ProductionCell = styled.div`
   align-items: center;
   display: flex;
   flex-direction: row;
   gap: 0.35rem;
   grid-area: production;
+  justify-content: space-between;
   min-width: 0;
 `
 
