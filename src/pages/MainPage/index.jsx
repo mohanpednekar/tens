@@ -431,7 +431,13 @@ const MainPage = () => {
   const currentlyFullRef = useRef({})
   useEffect(() => {
     previousAccumulatorsRef.current = state.tierProductionAccumulators
-    wasFullRef.current = currentlyFullRef.current
+    // A shallow copy, not a reference assignment — aliasing the two refs to the same object let
+    // currentlyFullRef's in-render mutations bleed straight into wasFullRef within that same
+    // render, which under React StrictMode's deliberate double-invocation of render bodies (dev
+    // mode) caused each real tick's toggle to flip twice and net out to a stuck value instead of
+    // alternating, most visibly on tier01 (whose raw value is always 100, so the stuck-open case
+    // left its ring permanently forced to 0 instead of sweeping).
+    wasFullRef.current = { ...currentlyFullRef.current }
   }, [state.tierProductionAccumulators])
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
@@ -629,13 +635,16 @@ const MainPage = () => {
             state, tier.id, previousAccumulatorsRef.current[tier.id]
           )
           const isRingInstant = wasFullRef.current[tier.id] ?? false
-          currentlyFullRef.current[tier.id] = rawTickProgressPercent === 100
           // The tick right after a delivery already has some of its new cycle's own time banked
           // (e.g. a 2s tier is already back up to a raw 50% one real tick later), which would make
           // the ring's instant post-delivery snap land part-way full instead of empty. Forcing it
-          // to 0 here (only when the raw value isn't ALSO 100 — see tier01's always-100 case below)
-          // means the next tick's normal, non-instant transition animates a full, clean climb from
-          // empty back up to that tick's real value, rather than a shorter climb starting mid-way.
+          // to 0 here means the next tick's normal, non-instant transition animates a full, clean
+          // climb from empty back up to that tick's real value, rather than a shorter climb
+          // starting mid-way. Because tier01's tickspeed (1s) matches the global tick rate, its raw
+          // value is always 100 — every tick is a "just delivered" tick — so this same forcing
+          // gives it a clean full↔empty alternation once a second instead of sitting permanently
+          // full, the same animated language every other tier's ring already has, just condensed
+          // to a 1-tick cadence.
           // This visual-only value deliberately isn't what's reported via aria-valuenow below —
           // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
           // environment whenever the *accessible* value diverged from the plain
@@ -644,7 +653,10 @@ const MainPage = () => {
           // tied to the unmodified raw value sidesteps that entirely, and arguably reports the
           // more accurate number anyway — the forced-to-0 value is a display nicety, not the true
           // accumulator state.
-          const tickProgressPercent = (isRingInstant && rawTickProgressPercent !== 100) ? 0 : rawTickProgressPercent
+          const tickProgressPercent = isRingInstant ? 0 : rawTickProgressPercent
+          // Tracks the *displayed* value, not the raw one, so tier01 (whose raw value is always
+          // 100) still alternates instead of latching wasFullRef permanently true.
+          currentlyFullRef.current[tier.id] = tickProgressPercent === 100
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
