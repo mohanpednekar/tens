@@ -26,6 +26,7 @@ import {
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
+  getTierProductionProgressPercent,
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
@@ -589,6 +590,41 @@ describe('getPrestigeProgressPercent', () => {
   it('scales linearly with the exponent (Googol is exponent 100)', () => {
     expect(getPrestigeProgressPercent(1e50)).toBe(50)
     expect(getPrestigeProgressPercent(1e25)).toBe(25)
+  })
+})
+
+// ─── getTierProductionProgressPercent ───────────────────────────────────────
+
+describe('getTierProductionProgressPercent', () => {
+  it('is 0% on a fresh state', () => {
+    expect(getTierProductionProgressPercent(createInitialGameState(), thousandsTier.id)).toBe(0)
+  })
+
+  it('reflects a partial fraction of a multi-second tier\'s tickspeed', () => {
+    // Thousands' base tickspeed is 2s — one 1-second tick banks half of it.
+    const state = withOwned(
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      thousandsTier.id, 2
+    )
+    const afterOneTick = tickGame(1)(state)
+    expect(getTierProductionProgressPercent(afterOneTick, thousandsTier.id)).toBe(50)
+  })
+
+  it('drops back down to the banked remainder once a batch fires', () => {
+    const state = withOwned(
+      withOwned(createInitialGameState(), tensTier.id, 10),
+      thousandsTier.id, 2
+    )
+    const afterTwoTicks = tickGame(1)(tickGame(1)(state))
+    // The 2nd tick crosses the 2s threshold and delivers a batch, banking 0s of remainder.
+    expect(getTierProductionProgressPercent(afterTwoTicks, thousandsTier.id)).toBe(0)
+  })
+
+  it('is 100% for a 1s-tickspeed tier with a full second already banked', () => {
+    expect(getTierProductionProgressPercent(
+      { tierProductionAccumulators: { [tensTier.id]: 1 } },
+      tensTier.id
+    )).toBe(100)
   })
 })
 

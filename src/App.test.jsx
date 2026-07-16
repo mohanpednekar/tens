@@ -1,10 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
 
 beforeEach(() => {
   localStorage.clear()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 test('renders the game title and the Tens tier', () => {
@@ -27,8 +31,9 @@ test('buying Tens deducts cost and increases owned count', async () => {
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeDisabled()
 })
 
-test('reset game restores starting state', async () => {
+test('reset game restores starting state once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
 
   render(<App />)
 
@@ -39,12 +44,14 @@ test('reset game restores starting state', async () => {
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
+  expect(window.confirm).toHaveBeenCalled()
   expect(screen.getByText(/owned: 0/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
-test('reset clears localStorage', async () => {
+test('reset clears localStorage once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
 
   render(<App />)
 
@@ -57,6 +64,24 @@ test('reset clears localStorage', async () => {
   expect(saved).not.toBeNull()
   expect(saved.resources.Ones).toBe(10)
   expect(saved.owned.tier01).toBe(0)
+})
+
+test('cancelling the reset confirm dialog leaves the game state untouched', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+  render(<App />)
+
+  // Buy a Tens generator to dirty the state
+  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
+  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /reset game/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(1)
 })
 
 test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
@@ -87,14 +112,15 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 10/i)
 })
 
-test('money balance is shown once at the top in full currency format', () => {
+test('money balance is shown once at the top in full currency format, centered, with no per-second yield', () => {
   render(<App />)
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$10')
+  expect(screen.getByLabelText(/^money display$/i)).not.toHaveTextContent('/sec')
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
-test('a money-producing tier shows its production rate with a $ prefix, consistent with money elsewhere', () => {
+test('a money-producing tier shows its per-tick production amount with a $ prefix, not a per-second rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
@@ -102,11 +128,11 @@ test('a money-producing tier shows its production rate with a $ prefix, consiste
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
-  expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('$/sec')
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
+  expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('/sec')
 })
 
-test('an Upgrade level speeds up the autobuyer without changing the displayed production rate', () => {
+test('an Upgrade level speeds up the autobuyer without changing the displayed production amount', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
@@ -117,13 +143,13 @@ test('an Upgrade level speeds up the autobuyer without changing the displayed pr
   render(<App />)
 
   // Production depends only on purchased milestones (still under 10), never on autobuyer
-  // level: owned(5) × $1/sec × 1 = $5/sec, unaffected by the Upgrade.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5/sec')
+  // level: owned(5) × $1/tick × 1 = $5 per tick, unaffected by the Upgrade.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('Lv.2')
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('×1.1 speed')
 })
 
-test('reaching 10 lifetime purchases of a tier doubles its displayed production rate', () => {
+test('reaching 10 lifetime purchases of a tier doubles its displayed production amount', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
@@ -132,11 +158,11 @@ test('reaching 10 lifetime purchases of a tier doubles its displayed production 
 
   render(<App />)
 
-  // Crossing the 10-purchase milestone doubles production: owned(5) × $1/sec × 2 = $10/sec.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
+  // Crossing the 10-purchase milestone doubles production: owned(5) × $1/tick × 2 = $10 per tick.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10')
 })
 
-test('a tier with a slower base tickspeed shows a proportionally reduced displayed production rate', () => {
+test('a tier with a slower base tickspeed still shows its full per-tick production amount, not a reduced rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 },
@@ -144,9 +170,25 @@ test('a tier with a slower base tickspeed shows a proportionally reduced display
 
   render(<App />)
 
-  // Thousands' base tickspeed is 2s, so its real throughput (and displayed rate) is halved:
-  // owned(4) × 1 (no bonus/milestone) ÷ 2s = 2 Tens/sec, not 4.
-  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+2 Tens/sec')
+  // Thousands' base tickspeed is 2s, but the displayed amount is the raw per-tick credit
+  // (owned(4) × 1, no bonus/milestone) delivered once its tick-progress bar fills — not divided
+  // by tickspeed, since that's no longer shown as an averaged "/sec" rate.
+  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+4 Tens')
+})
+
+test('a tier row shows a production tick-progress bar reflecting its banked accumulator', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 5 },
+    // Tens' base tickspeed is 1s, so 0.5 banked seconds is a 50% fill.
+    tierProductionAccumulators: { tier01: 0.5 },
+  }))
+
+  render(<App />)
+
+  const progressBar = screen.getByRole('progressbar', { name: /tens production tick progress/i })
+  expect(progressBar).toHaveAttribute('aria-valuenow', '50')
+  expect(progressBar).toHaveAttribute('aria-valuemax', '100')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
