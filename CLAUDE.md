@@ -553,9 +553,10 @@ synced by a `useEffect` keyed on `state.tierProductionAccumulators`, so it alway
 behind) and passes it in; since `elapsedSeconds` is always 1 in this app (see above), "a delivery just
 happened" reduces to `previousAccumulator + 1 >= tickSpeed`, in which case the function reports 100
 regardless of the wrapped-down current value. Because `tier01`'s tickspeed (1s) matches the global tick
-rate exactly, it delivers a batch on *every* tick once it's producing at all — so its ring has no
-observable partial-progress state and simply reads as constantly full, which is an accurate (if visually
-static) representation of "producing every single tick," not a bug.
+rate exactly, its raw value is *always* 100 — every tick is a "just delivered" tick. Combined with the
+forced-to-0 reset behavior below, this gives `tier01` a clean full↔empty alternation once a second,
+rather than sitting permanently full — the same animated sweep every other tier's ring has, just
+condensed to `tier01`'s own 1-tick cadence, instead of reading as a frozen/static indicator.
 
 Although `state` (and so `$percent`) only updates once per real game tick, the ring visibly animates
 continuously rather than snapping in once-a-second steps: `--tick-percent` is registered as an
@@ -574,11 +575,20 @@ resetting, so `TickProgressRing`'s `$instant` prop sets the transition duration 
 one render. `MainPage` tracks this via two refs: `wasFullRef` (whether each tier's ring was at 100% as of
 the *previous* real tick — read during render, but only ever written from the `useEffect` after a tick
 commits, never mid-render) and `currentlyFullRef` (a render-phase scratch space recording whether *this*
-tick is at 100%, which the effect promotes into `wasFullRef` once the tick actually lands). Writing
+tick's *displayed* value — `tickProgressPercent`, after the forcing-to-0 below is applied, not the raw
+engine value — is at 100%, which the effect promotes into `wasFullRef` once the tick actually lands, via
+a shallow
+copy — `wasFullRef.current = { ...currentlyFullRef.current }`, not a bare reference assignment). Writing
 `currentlyFullRef` during render is safe — it's a plain function of this render's own already-stable
 inputs, so re-invoking the same render twice (as React's `StrictMode` intentionally does, to surface
 exactly this class of bug) assigns it the same value both times, unlike an earlier version that read and
-overwrote the same ref key in one pass and could observe its own write from a prior invocation.
+overwrote the same ref key in one pass and could observe its own write from a prior invocation. The
+shallow copy in the promotion effect matters for the same reason: an earlier version assigned the bare
+object reference (`wasFullRef.current = currentlyFullRef.current`), aliasing the two refs together —
+`currentlyFullRef`'s in-render mutations then bled straight into `wasFullRef` within that same render,
+so under `StrictMode`'s double-invocation each real tick's toggle flipped twice and netted out to a
+stuck value instead of alternating. This was most visible on `tier01`, whose raw value is always 100 —
+the stuck-open case left its ring permanently forced to 0 rather than sweeping.
 `prefers-reduced-motion: reduce` disables the transition entirely, matching the other continuous
 animations in this file.
 
@@ -587,8 +597,9 @@ first observable (e.g. a 2s tier is already back up to a raw 50% one real tick l
 quantized to whole real seconds) — displaying that raw value on the same render that also sets
 `$instant` would make the reset land part-way full instead of empty. `MainPage` instead forces the
 *visual* value (`tickProgressPercent`, what `TickProgressRing`'s `$percent` receives) to `0` on exactly
-that render (`(isRingInstant && rawTickProgressPercent !== 100) ? 0 : rawTickProgressPercent`), so the
-following tick's normal, non-instant transition animates a full, clean climb from empty back up to that
+that render (`isRingInstant ? 0 : rawTickProgressPercent` — unconditionally, including for `tier01`,
+which is what gives it the full↔empty alternation described above rather than sitting permanently full),
+so the following tick's normal, non-instant transition animates a full, clean climb from empty back up to that
 tick's real value, rather than a shorter climb starting mid-way. This forced-to-0 value is deliberately
 *not* what's reported via the nested `VisuallyHidden`'s `aria-valuenow` below, which always uses the
 unmodified `rawTickProgressPercent` instead — several `App.test.jsx` tests using `userEvent` were found
