@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -49,6 +49,15 @@ export const createInitialGameState = () => ({
   smartAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: false,
+  }), {}),
+  // Fractional seconds accumulated per tier toward its next production batch, since each tier
+  // only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds rather than
+  // continuously every global tick — see tickGame. tier01's tickspeed is 1s (matching the global
+  // tick), so this stays a no-op for it; later tiers batch every 2s, 3s, … 10s, banking any
+  // remainder below their own tickspeed.
+  tierProductionAccumulators: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: 0,
   }), {}),
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
@@ -307,11 +316,23 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   const newResources = { ...stateAfterAutobuyers.resources }
   const newOwned = { ...stateAfterAutobuyers.owned }
+  const newAccumulators = { ...stateAfterAutobuyers.tierProductionAccumulators }
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
+
+    // Each tier only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds,
+    // as a single batch, rather than continuously every tick — balance-neutral, since the batch
+    // covers exactly the seconds it was withheld for (see tierProductionAccumulators above). Any
+    // remainder below a full tickspeed's worth stays banked for the next tick.
+    const tickSpeed = getTierBaseTickSpeedSeconds(tier.id)
+    const accumulated = (newAccumulators[tier.id] ?? 0) + elapsedSeconds
+    const batchedSeconds = Math.floor(accumulated / tickSpeed) * tickSpeed
+    newAccumulators[tier.id] = accumulated - batchedSeconds
+    if (batchedSeconds <= 0) return
+
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * elapsedSeconds * multiplier * tierMultiplier
+    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * batchedSeconds * multiplier * tierMultiplier
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -324,6 +345,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ...stateAfterAutobuyers,
     resources: newResources,
     owned: newOwned,
+    tierProductionAccumulators: newAccumulators,
     prestige: checkMilestones(newResources, stateAfterAutobuyers.prestige),
     // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
     // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only

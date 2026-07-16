@@ -4,6 +4,7 @@ import {
   AUTO_PRESTIGE_COST,
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTOBUYER_AUTOMATION_BASE_COST,
+  getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
   PRESTIGE_POINT_SPEED_BONUS,
@@ -84,6 +85,22 @@ describe('RESOURCE_SYMBOL', () => {
     const before = JSON.stringify(TIER_DEFINITIONS)
     RESOURCE_SYMBOL('anything')
     expect(JSON.stringify(TIER_DEFINITIONS)).toBe(before)
+  })
+})
+
+describe('getTierBaseTickSpeedSeconds', () => {
+  it('is 1 second for the first tier', () => {
+    expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
+  })
+
+  it('increases by 1 second per subsequent tier, up to 10 seconds for the 10th', () => {
+    TIER_DEFINITIONS.forEach((tier, index) => {
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
+    })
+  })
+
+  it('falls back to 1 second for an unrecognized tier id', () => {
+    expect(getTierBaseTickSpeedSeconds('does_not_exist')).toBe(1)
   })
 })
 

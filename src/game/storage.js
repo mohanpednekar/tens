@@ -71,6 +71,7 @@ const migrateState = saved => {
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
+    tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
     autobuyerAutomation: { ...fresh.autobuyerAutomation, ...migrateTierKeys(saved.autobuyerAutomation) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,

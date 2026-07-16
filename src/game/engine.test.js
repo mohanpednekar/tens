@@ -135,6 +135,13 @@ describe('createInitialGameState', () => {
     })
   })
 
+  it('initialises all tier production accumulators to 0', () => {
+    const state = createInitialGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(state.tierProductionAccumulators[tier.id]).toBe(0)
+    })
+  })
+
   it('starts at prestige count 0 with 0 points and 0 XP', () => {
     const { prestige } = createInitialGameState()
     expect(prestige.count).toBe(0)
@@ -814,14 +821,37 @@ describe('tickGame', () => {
     )
   })
 
-  it('Thousands generators produce Tens resource and owned generators', () => {
+  it('Thousands generators produce Tens resource and owned generators, batched every 2 seconds (its base tickspeed)', () => {
     const state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
-    const after = tickGame(1)(state)
-    expect(after.resources[tensTier.id]).toBe(2)
-    expect(after.owned[tensTier.id]).toBe(12) // 10 initial + 2 produced
+    // Thousands' base tickspeed is 2s (tier index 1 → 2) — the first 1-second tick only accumulates
+    // toward that, it doesn't produce yet.
+    const afterOneTick = tickGame(1)(state)
+    expect(afterOneTick.resources[tensTier.id]).toBe(0)
+    expect(afterOneTick.owned[tensTier.id]).toBe(10)
+    // The second tick crosses the 2s threshold and delivers both seconds' worth at once —
+    // balance-neutral: the same total as 2 seconds of uninterrupted production.
+    const afterTwoTicks = tickGame(1)(afterOneTick)
+    expect(afterTwoTicks.resources[tensTier.id]).toBe(4)
+    expect(afterTwoTicks.owned[tensTier.id]).toBe(14) // 10 initial + 4 produced
+  })
+
+  it('a tier further down the line banks fractional seconds across ticks without losing any production', () => {
+    const millionsTier = TIER_DEFINITIONS[2] // base tickspeed 3s
+    let state = withOwned(
+      withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Millions
+      millionsTier.id, 5
+    )
+    // The first 2 one-second ticks only accumulate toward the 3s threshold — no production yet.
+    for (let i = 0; i < 2; i++) {
+      state = tickGame(1)(state)
+      expect(state.resources[thousandsTier.id]).toBe(0)
+    }
+    // The 3rd tick crosses the threshold and delivers all 3 seconds' worth at once.
+    state = tickGame(1)(state)
+    expect(state.resources[thousandsTier.id]).toBe(15) // 5 owned × 3s
   })
 
   it('awards XP when money crosses a power-of-10 milestone', () => {
