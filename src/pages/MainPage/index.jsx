@@ -446,12 +446,14 @@ const MainPage = () => {
         <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
       </StatCard>
 
-      <StatCard aria-label="prestige points display">
-        <MutedText>
-          <GoldText>{formatAmount(prestige.points)} PP</GoldText>
-          {' · '}+{Math.round((prestigeBonus - 1) * 100)}% production speed
-        </MutedText>
-      </StatCard>
+      {!isFirstRun && (
+        <StatCard aria-label="prestige points display">
+          <MutedText>
+            <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+            {' · '}+{Math.round((prestigeBonus - 1) * 100)}% production speed
+          </MutedText>
+        </StatCard>
+      )}
 
       {allTiersSmart && (
         <StatCard aria-label="full smart autobuyer notice">
@@ -584,7 +586,7 @@ const MainPage = () => {
                   aria-valuemax={100}
                 />
               </UpgradeButton>
-              {!isAutobuyerLocked && !allTiersSmart && (
+              {!isFirstRun && !isAutobuyerLocked && !allTiersSmart && (
                 <AutomationCell>
                   {isSmart ? (
                     <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
@@ -626,13 +628,15 @@ const MainPage = () => {
             <h2>Prestige</h2>
             <MutedText id="prestige-description">
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
-              Each unspent point adds +1% production speed, or spend points to automate autobuyer
-              Upgrades. Resets your resources when reached.
+              {!isFirstRun && ' Each unspent point adds +1% production speed, or spend points to automate autobuyer Upgrades.'}
+              {' '}Resets your resources when reached.
             </MutedText>
           </div>
           <div>
             <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
-            <MutedText>{formatAmount(prestige.points)} PP unspent{' · '}×{formatRate(prestigeBonus)} production speed</MutedText>
+            {!isFirstRun && (
+              <MutedText>{formatAmount(prestige.points)} PP unspent{' · '}×{formatRate(prestigeBonus)} production speed</MutedText>
+            )}
             <MutedText>
               {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
             </MutedText>
@@ -684,18 +688,20 @@ const MainPage = () => {
         </PrestigeCard>
       )}
 
-      <Button
-        aria-describedby="reset-description"
-        aria-label="Reset game"
-        color={isFrozen ? 'darkgrey' : '#a3a3a3'}
-        disabled={isFrozen}
-        type="button"
-        onClick={resetGame}
-        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over'}
-      >
-        ↺ Reset
-        <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
-      </Button>
+      {import.meta.env.DEV && (
+        <Button
+          aria-describedby="reset-description"
+          aria-label="Reset game"
+          color={isFrozen ? 'darkgrey' : '#a3a3a3'}
+          disabled={isFrozen}
+          type="button"
+          onClick={resetGame}
+          title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over'}
+        >
+          ↺ Reset
+          <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
+        </Button>
+      )}
     </RootDiv>
   )
 }

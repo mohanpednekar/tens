@@ -438,6 +438,43 @@ test('no Automate control appears before a tier\'s autobuyer is activated', () =
   expect(screen.queryByRole('button', { name: /automate tens autobuyer/i })).not.toBeInTheDocument()
 })
 
+test('no PP information or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 5, count: 0, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^prestige points display$/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /automate tens autobuyer upgrades/i })).not.toBeInTheDocument()
+})
+
+test('the Prestige panel omits unspent-PP info and the automation sentence before the first prestige', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    purchased: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/pp unspent/i)
+  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/automate autobuyer/i)
+})
+
+test('the Prestige panel shows unspent-PP info and the automation sentence after the first prestige', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 5, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/pp unspent/i)
+  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/automate autobuyer/i)
+})
+
 test('a Smart button appears once a tier is automated (not before), and spends 10x the automation cost', async () => {
   const user = userEvent.setup()
 
