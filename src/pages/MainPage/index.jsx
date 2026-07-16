@@ -228,9 +228,10 @@ const PurchasedText = styled(MutedText)`
 `
 
 const ProductionCell = styled.div`
+  align-items: center;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  flex-direction: row;
+  gap: 0.35rem;
   grid-area: production;
   min-width: 0;
 `
