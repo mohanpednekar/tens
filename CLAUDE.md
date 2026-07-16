@@ -555,9 +555,32 @@ happened" reduces to `previousAccumulator + 1 >= tickSpeed`, in which case the f
 regardless of the wrapped-down current value. Because `tier01`'s tickspeed (1s) matches the global tick
 rate exactly, it delivers a batch on *every* tick once it's producing at all — so its ring has no
 observable partial-progress state and simply reads as constantly full, which is an accurate (if visually
-static) representation of "producing every single tick," not a bug. The fill redraws once per game tick
-rather than animating continuously, since `state` only re-renders every `TICK_RATE_MS`. The number shown
-next to the ring is the raw
+static) representation of "producing every single tick," not a bug.
+
+Although `state` (and so `$percent`) only updates once per real game tick, the ring visibly animates
+continuously rather than snapping in once-a-second steps: `--tick-percent` is registered as an
+animatable custom property via `@property` (`TickPercentProperty`, a `createGlobalStyle` block rendered
+once at the top of the page — `@property` must be a top-level rule, not nested inside a selector), which
+lets the browser's own compositor smoothly transition it on `TickProgressRing` (`transition: --tick-percent
+1s linear`) between each once-a-second value — including inside a `conic-gradient()` background, which
+isn't natively transitionable without this. This needed no new JS timer or polling loop; an earlier
+attempt to force a visually-smoother 10Hz update rate via a `setInterval`/`requestAnimationFrame` loop was
+abandoned after it caused several `App.test.jsx` tests using `userEvent` to hang/timeout in this
+jsdom+Vitest environment — the CSS-transition approach avoids introducing any recurring timer at all, so
+it doesn't have that failure mode, and produces smoother, browser-native motion besides. The one update
+that must *not* animate is the tick right after a delivery, where the value drops from 100% back down to
+the new cycle's value — animating that drop would visibly look like the ring "rewinding" rather than
+resetting, so `TickProgressRing`'s `$instant` prop sets the transition duration to `0s` for exactly that
+one render. `MainPage` tracks this via two refs: `wasFullRef` (whether each tier's ring was at 100% as of
+the *previous* real tick — read during render, but only ever written from the `useEffect` after a tick
+commits, never mid-render) and `currentlyFullRef` (a render-phase scratch space recording whether *this*
+tick is at 100%, which the effect promotes into `wasFullRef` once the tick actually lands). Writing
+`currentlyFullRef` during render is safe — it's a plain function of this render's own already-stable
+inputs, so re-invoking the same render twice (as React's `StrictMode` intentionally does, to surface
+exactly this class of bug) assigns it the same value both times, unlike an earlier version that read and
+overwrote the same ref key in one pass and could observe its own write from a prior invocation.
+`prefers-reduced-motion: reduce` disables the transition entirely, matching the other continuous
+animations in this file. The number shown next to the ring is the raw
 per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
 **not** divided by tickspeed) — "how much lands once the ring completes," not a per-second average — so
 a slower tier's row reads as a bigger number on a slower ring rather than a smaller number on an
