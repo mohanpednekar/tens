@@ -503,10 +503,11 @@ elapsed time" and skips offline progress entirely rather than guessing. `clearGa
 
 Prestiging no longer doubles production directly — instead it awards **Prestige Points (PP)**, a
 permanent, cumulative currency (`prestige.points`) that never resets and stacks across every future
-prestige. `getPrestigePointsAwarded(money) = floor(getMoneyExponent(money) / 100)` computes the award: the
-money exponent reached before production froze, divided by 100 and rounded down — always at least 1
-(prestiging requires Money ≥ `GOOGOL`, i.e. an exponent ≥ 100, in the first place), but only increasing
-once a further full 100 orders of magnitude are reached (exponent 200 → 2 points, 300 → 3, …). The tick
+prestige. `getPrestigePointsAwarded(money) = floor(getMoneyExponent(money) / log10(GOOGOL))` computes the
+award: the money exponent reached before production froze, divided by GOOGOL's own exponent (100) and
+rounded down — always at least 1 (prestiging requires Money ≥ `GOOGOL`, i.e. an exponent ≥ 100, in the
+first place), but only increasing once a further full 100 orders of magnitude are reached (exponent 200 →
+2 points, 300 → 3, …). The tick
 that crosses `GOOGOL` can overshoot substantially in a single step (see `isProductionFrozen` below), so
 waiting for a much higher production rate before prestiging can still pay off in extra points, just at
 this much larger scale. `prestigeGame` adds the newly-awarded points on top of any already-unspent balance
@@ -699,7 +700,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `getSmartAutobuyerCost` | `tierId → number` | `SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)` — 10x that tier's Auto-upgrade cost (10, 20, … 5,120 PP for the 10th/last tier) |
 | `getAutoPrestigeCost` | `currentLevel → number` | `AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel` — 100 PP to activate (level 0→1), doubling each level after (200, 400, …) |
 | `getAutoPrestigeAttemptRate` | `autoPrestigeLevel → number` | `1.1 ** (level - 1) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS` (`null` treated as level 1 defensively, same convention as `getAutobuyerAttemptRate`) — the per-tick Auto-Prestige attempt-budget increment; level 1 fires roughly every 1000 seconds, each level after that 10% sooner, compounding |
-| `getPrestigePointsAwarded` | `money → number` | `floor(getMoneyExponent(money) / 100)` — always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
+| `getPrestigePointsAwarded` | `money → number` | `floor(getMoneyExponent(money) / log10(GOOGOL))` — always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point, replacing the old level-based doubling |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *activation* status (levels reset to 1, the baseline) and `autobuyerAutomation`/`smartAutobuyer`/`autoPrestige` unchanged (all permanent, including the Auto-Prestige *level*), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |

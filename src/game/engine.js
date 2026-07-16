@@ -217,13 +217,16 @@ export const getPrestigeProgressPercent = money => {
 }
 
 // How many Prestige Points a prestige action awards: the money exponent reached (before
-// production froze) divided by 100, rounded down — always at least 1, since prestiging requires
-// money >= GOOGOL (exponent >= 100) in the first place. The tick that crosses GOOGOL can
-// overshoot substantially in one step (see isProductionFrozen), so waiting for a much higher
-// production rate before prestiging can still pay off in extra points, just at a much larger
-// scale (every further 100 orders of magnitude) than a flat per-order-of-magnitude bonus would.
-export const getPrestigePointsAwarded = money =>
-  Math.floor(getMoneyExponent(money) / 100)
+// production froze) divided by GOOGOL's own exponent (100), rounded down — always at least 1,
+// since prestiging requires money >= GOOGOL (exponent >= 100) in the first place. The tick that
+// crosses GOOGOL can overshoot substantially in one step (see isProductionFrozen), so waiting for
+// a much higher production rate before prestiging can still pay off in extra points, just at a
+// much larger scale (every further GOOGOL-exponent's-worth of orders of magnitude) than a flat
+// per-order-of-magnitude bonus would.
+export const getPrestigePointsAwarded = money => {
+  const googolExponent = Math.floor(Math.log10(GOOGOL))
+  return Math.floor(getMoneyExponent(money) / googolExponent)
+}
 
 const checkMilestones = (resources, prestige) => {
   const money = clampNonNegative(resources[MONEY_ID])
