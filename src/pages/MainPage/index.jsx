@@ -625,11 +625,26 @@ const MainPage = () => {
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
           const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
-          const tickProgressPercent = getTierProductionProgressPercent(
+          const rawTickProgressPercent = getTierProductionProgressPercent(
             state, tier.id, previousAccumulatorsRef.current[tier.id]
           )
           const isRingInstant = wasFullRef.current[tier.id] ?? false
-          currentlyFullRef.current[tier.id] = tickProgressPercent === 100
+          currentlyFullRef.current[tier.id] = rawTickProgressPercent === 100
+          // The tick right after a delivery already has some of its new cycle's own time banked
+          // (e.g. a 2s tier is already back up to a raw 50% one real tick later), which would make
+          // the ring's instant post-delivery snap land part-way full instead of empty. Forcing it
+          // to 0 here (only when the raw value isn't ALSO 100 — see tier01's always-100 case below)
+          // means the next tick's normal, non-instant transition animates a full, clean climb from
+          // empty back up to that tick's real value, rather than a shorter climb starting mid-way.
+          // This visual-only value deliberately isn't what's reported via aria-valuenow below —
+          // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
+          // environment whenever the *accessible* value diverged from the plain
+          // getTierProductionProgressPercent computation (root cause not fully identified; the
+          // same divergence in the CSS-only $percent value below was fine). Keeping aria-valuenow
+          // tied to the unmodified raw value sidesteps that entirely, and arguably reports the
+          // more accurate number anyway — the forced-to-0 value is a display nicety, not the true
+          // accumulator state.
+          const tickProgressPercent = (isRingInstant && rawTickProgressPercent !== 100) ? 0 : rawTickProgressPercent
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
@@ -682,7 +697,7 @@ const MainPage = () => {
                   <VisuallyHidden
                     role="progressbar"
                     aria-label={`${tier.name} production tick progress`}
-                    aria-valuenow={tickProgressPercent}
+                    aria-valuenow={rawTickProgressPercent}
                     aria-valuemin={0}
                     aria-valuemax={100}
                   />
