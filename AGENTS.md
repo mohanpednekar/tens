@@ -141,6 +141,11 @@ the same number by design.
   groups issues by theme/dependency chain and can span multiple releases. Assign a milestone to
   player-facing feature/economy issues when a next release is planned; process/infrastructure issues
   typically don't need one.
+- Whoever files a `claude-task` issue should also apply a `size:S`/`size:M`/`size:L` label (S = a
+  single small focused change; M = a normal run-sized task; L = large, likely needs a partial
+  `Part of #N` slice) — a prior signal Phase A weighs against its own remaining budget when picking
+  a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
+  logic.
 
 ## Security notes
 
