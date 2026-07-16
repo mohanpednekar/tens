@@ -580,7 +580,25 @@ inputs, so re-invoking the same render twice (as React's `StrictMode` intentiona
 exactly this class of bug) assigns it the same value both times, unlike an earlier version that read and
 overwrote the same ref key in one pass and could observe its own write from a prior invocation.
 `prefers-reduced-motion: reduce` disables the transition entirely, matching the other continuous
-animations in this file. The number shown next to the ring is the raw
+animations in this file.
+
+The tick right after a delivery already has some of its new cycle's own time banked by the time it's
+first observable (e.g. a 2s tier is already back up to a raw 50% one real tick later, since ticks are
+quantized to whole real seconds) — displaying that raw value on the same render that also sets
+`$instant` would make the reset land part-way full instead of empty. `MainPage` instead forces the
+*visual* value (`tickProgressPercent`, what `TickProgressRing`'s `$percent` receives) to `0` on exactly
+that render (`(isRingInstant && rawTickProgressPercent !== 100) ? 0 : rawTickProgressPercent`), so the
+following tick's normal, non-instant transition animates a full, clean climb from empty back up to that
+tick's real value, rather than a shorter climb starting mid-way. This forced-to-0 value is deliberately
+*not* what's reported via the nested `VisuallyHidden`'s `aria-valuenow` below, which always uses the
+unmodified `rawTickProgressPercent` instead — several `App.test.jsx` tests using `userEvent` were found
+to hang/timeout in this jsdom+Vitest environment specifically when the *accessible* value diverged from
+the plain `getTierProductionProgressPercent` computation (root cause not conclusively identified across
+extensive bisection — the same divergence in the CSS-only `$percent` prop was proven fine on its own,
+only the `aria-valuenow` attribute value mattered). Keeping `aria-valuenow` tied to the raw value
+sidesteps that failure mode entirely, and arguably reports the more accurate number anyway — the
+forced-to-0 value is a display nicety for the animation, not the true underlying accumulator state.
+The number shown next to the ring is the raw
 per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
 **not** divided by tickspeed) — "how much lands once the ring completes," not a per-second average — so
 a slower tier's row reads as a bigger number on a slower ring rather than a smaller number on an
