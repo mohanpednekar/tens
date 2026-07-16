@@ -1,8 +1,8 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -107,6 +107,11 @@ const TierLine = styled(StatCard)`
 
 const PrestigeCard = styled(StatCard)`
   border-color: #854d0e;
+`
+
+const MoneyCard = styled(StatCard)`
+  align-items: center;
+  text-align: center;
 `
 
 // Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
@@ -222,14 +227,41 @@ const PurchasedText = styled(MutedText)`
   }
 `
 
-const ProductionText = styled(MutedText)`
+const ProductionCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   grid-area: production;
+  min-width: 0;
+`
+
+const ProductionText = styled(MutedText)`
   font-size: 0.85em;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: 0.78em;
   }
+`
+
+// Fills over the tier's own base tickspeed (see getTierProductionProgressPercent) and resets
+// once the batch fires — a direct visualization of tierProductionAccumulators, rather than the
+// averaged "/sec" rate this used to be paired with.
+const TickProgressTrack = styled.div`
+  background: #262626;
+  border-radius: 999px;
+  height: 0.3rem;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+`
+
+const TickProgressFill = styled.div`
+  background: #4ade80;
+  border-radius: 999px;
+  height: 100%;
+  transition: width 0.2s linear;
+  width: ${props => props.$percent}%;
 `
 
 // The fill (green = already bought this cost block, amber = affordable but not yet bought)
@@ -292,6 +324,13 @@ const AutomationBadge = styled.span`
   ${gridCell}
 `
 
+// Deliberately small — Reset is a dev-only convenience, not a prominent action, and its own
+// confirm() prompt (see handleResetClick) is the real guard against an accidental click.
+const ResetButton = styled(Button)`
+  font-size: 0.72em;
+  padding: 0.3em 0.55em;
+`
+
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
@@ -309,6 +348,14 @@ const MainPage = () => {
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
+  // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
+  // than firing immediately on click — there's no modal/confirm component elsewhere in this app
+  // to reuse, and this is a single dev-only button, so window.confirm is the simplest fit.
+  const handleResetClick = () => {
+    if (window.confirm('Erase all progress and start over? This cannot be undone.')) {
+      resetGame()
+    }
+  }
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -316,10 +363,6 @@ const MainPage = () => {
   const [initialUnlockedIds] = useState(() =>
     new Set(TIER_DEFINITIONS.filter(tier => isTierUnlocked(state)(tier)).map(tier => tier.id))
   )
-  const moneyPerSec = TIER_DEFINITIONS
-    .filter(t => t.producesResourceId === MONEY_ID)
-    .reduce((sum, t) => sum + (state.owned[t.id] ?? 0), 0) * prestigeBonus
-
   // Smart requires Auto-upgrade automation to already be bought (see buySmartAutobuyer), so being
   // smart implies being automated too — once every tier is smart, there's nothing left in this
   // whole progression for any tier, so the per-tier indicator disappears everywhere and a
@@ -441,10 +484,9 @@ const MainPage = () => {
         </StatCard>
       )}
 
-      <StatCard aria-label="money display">
+      <MoneyCard aria-label="money display">
         <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-        <MutedText>+{formatCurrency(moneyPerSec)}/sec</MutedText>
-      </StatCard>
+      </MoneyCard>
 
       {!isFirstRun && (
         <StatCard aria-label="prestige points display">
@@ -500,11 +542,12 @@ const MainPage = () => {
           const canBuySmart = !isFrozen && !isSmart && isAutomated && prestige.points >= smartCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
-          // its cost jumps 10x (see getPurchaseMilestoneMultiplier). Divided by the tier's own
-          // base tickspeed since tickGame now delivers one tick's worth (not one second's worth)
-          // per completed tick period — a slower tier's real per-second throughput is lower (see
-          // "Tier production tickspeed" in CLAUDE.md), and this display should match that.
-          const production = (owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)) / getTierBaseTickSpeedSeconds(tier.id)
+          // its cost jumps 10x (see getPurchaseMilestoneMultiplier). This is the raw amount
+          // delivered in one lump batch once the tick-progress bar below fills — not a per-second
+          // average — matching exactly what tickGame credits when tierProductionAccumulators
+          // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
+          const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
+          const tickProgressPercent = getTierProductionProgressPercent(state, tier.id)
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
@@ -547,11 +590,23 @@ const MainPage = () => {
               </TierName>
               <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
               <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
-              <ProductionText>
-                +{tier.producesResourceId === MONEY_ID
-                  ? formatCurrency(production)
-                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}/sec
-              </ProductionText>
+              <ProductionCell>
+                <ProductionText>
+                  +{tier.producesResourceId === MONEY_ID
+                    ? formatCurrency(production)
+                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+                </ProductionText>
+                <TickProgressTrack>
+                  <TickProgressFill $percent={tickProgressPercent} />
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label={`${tier.name} production tick progress`}
+                    aria-valuenow={tickProgressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  />
+                </TickProgressTrack>
+              </ProductionCell>
               <BuyButton
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
@@ -692,18 +747,18 @@ const MainPage = () => {
       )}
 
       {import.meta.env.DEV && (
-        <Button
+        <ResetButton
           aria-describedby="reset-description"
           aria-label="Reset game"
           color={isFrozen ? 'darkgrey' : '#a3a3a3'}
           disabled={isFrozen}
           type="button"
-          onClick={resetGame}
-          title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over'}
+          onClick={handleResetClick}
+          title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
         >
           ↺ Reset
           <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
-        </Button>
+        </ResetButton>
       )}
     </RootDiv>
   )

@@ -379,7 +379,12 @@ Strict three-layer separation:
    amount, drives production) and `Purchased` (lifetime buy count, drives both cost and — every 10 of
    them — a production doubling, see `getPurchaseMilestoneMultiplier`) as two separate figures.
    Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
-   exponential above). Manual Buy always grabs as many units as are currently affordable up to the 10-unit
+   exponential above), in a centered `MoneyCard` (`styled(StatCard)` with `align-items: center; text-align:
+   center`) — the only top-of-page block besides `Header` that's centered rather than left-aligned. It no
+   longer shows an aggregate `+X/sec` line beneath the balance (previously summed `owned` across every
+   money-producing tier); each tier row's own tick-progress bar (see "Per-tier tick-progress bar" under
+   "Tier production tickspeed" above) is the per-tier replacement for that figure, and there is no top-level
+   aggregate anymore. Manual Buy always grabs as many units as are currently affordable up to the 10-unit
    cost-block boundary (via `getTierAffordableQuantity`/`buyTierQuantity`) — there is no player-facing
    batch-size control; a ×1/×10 "Bulk" toggle previously exposed this as a choice, but has been removed
    from the UI (see `useIncrementalGame`'s `BUY_QUANTITY` above), leaving ×10 as the only, fixed behavior.
@@ -498,8 +503,8 @@ field rather than a computed one, nothing prevents a future tier (or a future up
 tier's tickspeed independently of that pattern. This is **not** balance-neutral: each completed tick
 period delivers exactly one tick's worth of production (`owned × multipliers`), not one second's worth
 per elapsed second within it, so a tier's real per-second throughput is divided by its own tickspeed —
-`tier02` produces at half the rate of a 1s-tickspeed tier, `tier10` at a tenth. The displayed `/sec`
-production rate on `MainPage` divides by `getTierBaseTickSpeedSeconds(tier.id)` to match.
+`tier02` produces at half the rate of a 1s-tickspeed tier, `tier10` at a tenth. `MainPage` no longer
+shows this as an averaged `/sec` rate — see "Per-tier tick-progress bar" below for what it shows instead.
 
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier (see "Game state shape" below), incremented by `elapsedSeconds` every tick.
@@ -511,6 +516,22 @@ the number of seconds they span — and keeps any leftover remainder banked for 
 replay (`applyOfflineProgress` also always calls `tickGame(1, …)`, one simulated second at a time), a tier
 with tickspeed *N* simply skips producing for *N-1* ticks, then delivers exactly one tick's worth (not *N*
 seconds' worth) on the *N*th — an *N*x reduction in throughput compared to producing every second.
+
+#### Per-tier tick-progress bar
+
+`tierProductionAccumulators` is surfaced directly to the player rather than only driving an internal
+calculation: `getTierProductionProgressPercent(state, tierId)` (`engine.js`) reads that tier's banked
+accumulator as a percent of its own `getTierBaseTickSpeedSeconds` (clamped/rounded to `[0, 100]`,
+following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it as a thin
+green fill bar (`TickProgressTrack`/`TickProgressFill`) directly under each tier row's production
+figure — visibly empty right after a batch delivers, filling over that tier's own tickspeed period, and
+snapping back down the instant the next batch fires. The number shown next to the bar is the raw
+per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
+**not** divided by tickspeed) — "how much lands once the bar completes," not a per-second average — so a
+slower tier's row reads as a bigger number on a slower bar rather than a smaller number on an implicit
+one-per-second cadence. Like the other per-row progress indicators (see Architecture below), the bar
+nests a `VisuallyHidden role="progressbar"` (`aria-label="<tier name> production tick progress"`,
+`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech.
 
 ### Offline progress
 
@@ -696,6 +717,13 @@ is dead-code-eliminated from the production bundle rather than merely hidden by 
 (`useIncrementalGame.js`) and `clearGameState` (`storage.js`) are unchanged — this only gates the UI entry
 point, not the underlying capability, in case a future dev/debug surface needs it.
 
+`ResetButton` (`styled(Button)`, smaller `font-size`/`padding` than the app's other buttons) renders it
+deliberately small, and its click handler (`handleResetClick` in `MainPage`) gates the actual `resetGame()`
+call behind a native `window.confirm(...)` prompt — since this is a single, irreversible, dev-only action
+with no existing modal/confirm component elsewhere in the app to reuse, a native confirm dialog is the
+whole guard rather than a custom two-step UI. Cancelling the dialog leaves state untouched; the button's
+`aria-label` ("Reset game") and disabled-while-frozen behavior are otherwise unchanged from before.
+
 ### Game state shape
 
 ```js
@@ -783,8 +811,9 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
+| `getTierProductionProgressPercent` | `(state, tierId) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress bar is (see "Per-tier tick-progress bar" under "Tier production tickspeed" above) |
 | `getAutobuyerCost` | `currentLevel → number` | `1000 ** (currentLevel + 1)` — activation (from `null`, treated as `currentLevel` 0) costs 1000; each subsequent Upgrade level costs another power of 1000 (1,000,000, then 1,000,000,000, …), always paid in the tier's own resource |
-| `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier production rates, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
+| `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
 | `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, scales by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (10%), floors — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` — see "Offline progress" above |
@@ -819,13 +848,16 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
-  row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
-  `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
-  the Buy/Upgrade/Unlock/Prestige buttons also carry an explicit `aria-label` with the full descriptive
+  row's Buy button and tick-progress bar nest a visually-hidden `role="progressbar"` (via `VisuallyHidden`)
+  with `aria-label="<tier name> cost-block progress"`/`"<tier name> production tick progress"` respectively,
+  plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` — the Buy/Upgrade/Unlock/Prestige buttons also carry
+  an explicit `aria-label` with the full descriptive
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
-- Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (280 tests). All four test files assert against the current tier/resource id scheme
+- Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
+  Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
+  `afterEach` (see `App.test.jsx`).
+- `yarn test` is green (286 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

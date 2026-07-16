@@ -225,6 +225,15 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
+// How far a tier's production accumulator has filled toward its next delivered batch, as a
+// whole percent — 0 right after a batch is delivered, 100 the instant it's about to fire (see
+// tickGame's tierProductionAccumulators handling and "Tier production tickspeed" in CLAUDE.md).
+export const getTierProductionProgressPercent = (state, tierId) => {
+  const tickSpeed = getTierBaseTickSpeedSeconds(tierId)
+  const accumulated = state.tierProductionAccumulators?.[tierId] ?? 0
+  return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))
+}
+
 // How many Prestige Points a prestige action awards: the log, base GOOGOL, of the money balance
 // reached before production froze, rounded down — always at least 1, since prestiging requires
 // money >= GOOGOL in the first place. The tick that crosses GOOGOL can overshoot substantially in
