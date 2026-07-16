@@ -225,14 +225,16 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
-// How far a tier's production accumulator has filled toward its next delivered batch, as a whole
-// percent. Normally reads state.tierProductionAccumulators directly (0 right after a batch is
-// delivered, 100 the instant it's about to fire). Pass the tier's *previous* banked accumulator
-// (e.g. from a UI-side ref tracking the prior render, since state itself only stores the
-// post-delivery wrapped remainder — see "Per-tier tick-progress ring" in CLAUDE.md) to instead
-// report 100 for the one render where a delivery just happened, rather than the wrapped-down
-// remainder — since elapsedSeconds is always 1 in this app, that's simply
-// previousAccumulator + 1 >= this tier's own tickspeed.
+// How far a tier's production accumulator has filled toward its next delivered batch, as a
+// whole percent — 0 right after a batch is delivered, 100 the instant it's about to fire (see
+// tickGame's tierProductionAccumulators handling and "Tier production tickspeed" in CLAUDE.md).
+// Pass the tier's *previous* banked accumulator (e.g. from a UI-side ref tracking the prior
+// render, since state itself only stores the post-delivery wrapped remainder) to instead report
+// 100 for the one render where a delivery just happened, rather than the wrapped-down remainder —
+// since elapsedSeconds is always 1 in this app, that's simply previousAccumulator + 1 >= this
+// tier's own tickspeed. The UI then animates the *visual transition* between these once-per-tick
+// values via a CSS custom-property transition (see TickProgressRing in MainPage), rather than
+// this function trying to interpolate sub-tick progress itself.
 export const getTierProductionProgressPercent = (state, tierId, previousAccumulator) => {
   const tickSpeed = getTierBaseTickSpeedSeconds(tierId)
   if (previousAccumulator != null && previousAccumulator + 1 >= tickSpeed) return 100

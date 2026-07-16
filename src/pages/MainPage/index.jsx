@@ -5,7 +5,7 @@ import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemp
 import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
-import styled, { css, keyframes } from 'styled-components'
+import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -272,22 +272,39 @@ const ProductionText = styled(MutedText)`
   }
 `
 
+// Registers --tick-percent as an animatable custom property (a plain <percentage>, not inherited)
+// so the browser can smoothly transition it on its own compositor — including inside a
+// conic-gradient() background, which isn't natively transitionable otherwise. Rendered once,
+// globally; @property must be a top-level rule, not nested inside a selector.
+const TickPercentProperty = createGlobalStyle`
+  @property --tick-percent {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+  }
+`
+
 // Compact circular "watch face" — a conic-gradient sweep (green fill against the same #262626
 // track color the old bar used) with a punched-out center matching TierLine's own background
 // (StatCard's #171717), so it reads as a thin filling ring rather than a solid pie wedge. Fixed
 // diameter (not width: 100%) since it doesn't need to track the fractional grid column width to
 // stay layout-safe at both breakpoints. Fills over the tier's own base tickspeed (see
 // getTierProductionProgressPercent) and resets once the batch fires — a direct visualization of
-// tierProductionAccumulators. The fill redraws once per game tick (state only re-renders every
-// TICK_RATE_MS) — deliberately no transition on the gradient itself, since a plain CSS transition
-// can't interpolate conic-gradient stop percentages without registering the custom property via
-// @property, which this file doesn't otherwise use.
+// tierProductionAccumulators. state (and thus $percent) only updates once per real game tick, but
+// the browser smoothly animates --tick-percent between each of those once-a-second values via
+// `transition`, rather than snapping instantly — continuous-looking motion with no JS polling
+// timer at all. $instant suppresses that transition for exactly one update: the tick right after a
+// delivery, where the value drops from 100% back down to the new cycle's small remainder and
+// should snap immediately rather than visibly "rewinding" (see the isRingInstant tracking in
+// MainPage, driven by wasFullRef/currentlyFullRef).
 const TickProgressRing = styled.div`
-  background: conic-gradient(#4ade80 ${props => props.$percent}%, #262626 0);
+  --tick-percent: ${props => props.$percent}%;
+  background: conic-gradient(#4ade80 var(--tick-percent), #262626 0);
   border-radius: 50%;
   flex-shrink: 0;
   height: 1.15rem;
   position: relative;
+  transition: --tick-percent ${props => (props.$instant ? '0s' : '1s')} linear;
   width: 1.15rem;
 
   &::after {
@@ -296,6 +313,10 @@ const TickProgressRing = styled.div`
     content: '';
     inset: 0.2rem;
     position: absolute;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `
 
@@ -397,8 +418,20 @@ const MainPage = () => {
   // "Per-tier tick-progress ring" in CLAUDE.md). Starts empty, so the very first render (including
   // right after loading a save with a mid-cycle accumulator) shows the raw resumed value truthfully.
   const previousAccumulatorsRef = useRef({})
+  // Whether each tier's ring showed a full 100% as of the last real tick — if so, this tick's drop
+  // back down to the new cycle's small remainder should apply instantly (no CSS transition), since
+  // animating that drop would visibly look like the ring "rewinding" instead of resetting.
+  // wasFullRef is only ever written from the effect below (after a real tick commits, never
+  // mid-render), so it can't go stale/inconsistent under StrictMode's double-render checks;
+  // currentlyFullRef is the render-phase scratch space the effect promotes into wasFullRef once a
+  // tick actually lands — writing it during render is safe since, unlike reading-then-overwriting
+  // the same ref in one pass, it's a plain function of this render's own (already-stable) inputs,
+  // so re-invoking the same render twice just assigns it the same value both times.
+  const wasFullRef = useRef({})
+  const currentlyFullRef = useRef({})
   useEffect(() => {
     previousAccumulatorsRef.current = state.tierProductionAccumulators
+    wasFullRef.current = currentlyFullRef.current
   }, [state.tierProductionAccumulators])
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
@@ -484,6 +517,7 @@ const MainPage = () => {
 
   return (
     <RootDiv>
+      <TickPercentProperty />
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar aria-label="prestige available banner">
@@ -594,6 +628,8 @@ const MainPage = () => {
           const tickProgressPercent = getTierProductionProgressPercent(
             state, tier.id, previousAccumulatorsRef.current[tier.id]
           )
+          const isRingInstant = wasFullRef.current[tier.id] ?? false
+          currentlyFullRef.current[tier.id] = tickProgressPercent === 100
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
@@ -642,7 +678,7 @@ const MainPage = () => {
                     ? formatCurrency(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
                 </ProductionText>
-                <TickProgressRing $percent={tickProgressPercent}>
+                <TickProgressRing $percent={tickProgressPercent} $instant={isRingInstant}>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label={`${tier.name} production tick progress`}
