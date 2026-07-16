@@ -363,6 +363,15 @@ const MainPage = () => {
       resetGame()
     }
   }
+  // Tracks each tier's tierProductionAccumulators value from the last render where it actually
+  // changed (a tick or a prestige — see the effect below), so getTierProductionProgressPercent can
+  // tell "just delivered" (about to wrap to a small remainder) apart from "genuinely empty" (see
+  // "Per-tier tick-progress ring" in CLAUDE.md). Starts empty, so the very first render (including
+  // right after loading a save with a mid-cycle accumulator) shows the raw resumed value truthfully.
+  const previousAccumulatorsRef = useRef({})
+  useEffect(() => {
+    previousAccumulatorsRef.current = state.tierProductionAccumulators
+  }, [state.tierProductionAccumulators])
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -554,7 +563,9 @@ const MainPage = () => {
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
           const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
-          const tickProgressPercent = getTierProductionProgressPercent(state, tier.id)
+          const tickProgressPercent = getTierProductionProgressPercent(
+            state, tier.id, previousAccumulatorsRef.current[tier.id]
+          )
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)

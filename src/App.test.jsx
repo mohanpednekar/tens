@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
@@ -189,6 +189,32 @@ test('a tier row shows a production tick-progress bar reflecting its banked accu
   const progressBar = screen.getByRole('progressbar', { name: /tens production tick progress/i })
   expect(progressBar).toHaveAttribute('aria-valuenow', '50')
   expect(progressBar).toHaveAttribute('aria-valuemax', '100')
+})
+
+test('a tick-progress ring holds at 100% on the tick a batch delivers, then resets on the next', () => {
+  vi.useFakeTimers()
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 100000 },
+    owned: { tier01: 10, tier02: 4 },
+  }))
+
+  render(<App />)
+  const getRing = () => screen.getByRole('progressbar', { name: /thousands production tick progress/i })
+
+  // Thousands' tickspeed is 2s — the 1st tick only banks half of it.
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(getRing()).toHaveAttribute('aria-valuenow', '50')
+
+  // The 2nd tick crosses the threshold and delivers — the ring should read 100%, not the
+  // freshly-wrapped 0% remainder that tickGame actually banks internally.
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(getRing()).toHaveAttribute('aria-valuenow', '100')
+
+  // The following tick starts the next cycle, dropping back down to a partial fill.
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(getRing()).toHaveAttribute('aria-valuenow', '50')
+
+  vi.useRealTimers()
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {

@@ -626,6 +626,29 @@ describe('getTierProductionProgressPercent', () => {
       tensTier.id
     )).toBe(100)
   })
+
+  it('reports 100% instead of the wrapped remainder when the previous accumulator just crossed the threshold', () => {
+    // Thousands' tickspeed is 2s: a previous accumulator of 1 plus this tick's 1 elapsed second
+    // crosses 2s, so a delivery just happened even though the freshly-wrapped remainder is 0.
+    const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
+    expect(getTierProductionProgressPercent(state, thousandsTier.id, 1)).toBe(100)
+  })
+
+  it('falls through to the normal calculation when the previous accumulator has not yet crossed the threshold', () => {
+    const state = { tierProductionAccumulators: { [thousandsTier.id]: 1 } }
+    expect(getTierProductionProgressPercent(state, thousandsTier.id, 0)).toBe(50)
+  })
+
+  it('reports a 1s-tickspeed tier as 100% for any non-negative previous accumulator', () => {
+    const state = { tierProductionAccumulators: { [tensTier.id]: 0 } }
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0)).toBe(100)
+  })
+
+  it('ignores a null/undefined previous accumulator, preserving the 2-arg behavior', () => {
+    const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
+    expect(getTierProductionProgressPercent(state, thousandsTier.id, null)).toBe(0)
+    expect(getTierProductionProgressPercent(state, thousandsTier.id, undefined)).toBe(0)
+  })
 })
 
 // ─── getTierSpendableAmount ──────────────────────────────────────────────────
