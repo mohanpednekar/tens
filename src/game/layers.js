@@ -35,7 +35,12 @@ export const getTierBaseTickSpeedSeconds = tierId =>
 export const MONEY_ID = 'Ones'
 export const MONEY_STARTING_AMOUNT = 10
 export const GOOGOL = 1e100
-export const TICK_RATE_MS = 1000
+// The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
+// second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
+// and every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets) is explicitly
+// scaled by elapsedSeconds so real-world cadence stays identical to a slower tick rate; only the
+// update granularity (and animation smoothness) increases.
+export const TICK_RATE_MS = 100
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 10% of normal speed — a courtesy for short absences, not a way to make the

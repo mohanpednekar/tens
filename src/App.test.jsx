@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TICK_RATE_MS } from 'game/layers'
 import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
 
@@ -198,22 +199,34 @@ test('a tick-progress ring holds at 100% on the tick a batch delivers, then rese
     owned: { tier01: 10, tier02: 4 },
   }))
 
-  render(<App />)
+  const { unmount } = render(<App />)
   const getRing = () => screen.getByRole('progressbar', { name: /thousands production tick progress/i })
+  // Advance exactly one live tick (TICK_RATE_MS) per act() call, rather than jumping by a whole
+  // second in one advanceTimersByTime call — jumping by more than one tick fires the interval
+  // several times synchronously within the same call stack, which React 18 batches into a single
+  // render; the ring's "just delivered" detection (see getTierProductionProgressPercent) compares
+  // against the previous *render's* banked accumulator, so it needs one render per tick to stay
+  // in sync with reality, exactly like the real interval firing 100ms apart in production does.
+  const advanceOneTick = () => act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  const ticksPerSecond = 1000 / TICK_RATE_MS
 
-  // Thousands' tickspeed is 2s — the 1st tick only banks half of it.
-  act(() => { vi.advanceTimersByTime(1000) })
+  // Thousands' tickspeed is 2s — the first second's worth of ticks only banks half of it.
+  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '50')
 
-  // The 2nd tick crosses the threshold and delivers — the ring should read 100%, not the
-  // freshly-wrapped 0% remainder that tickGame actually banks internally.
-  act(() => { vi.advanceTimersByTime(1000) })
+  // The second second's worth of ticks crosses the threshold and delivers — the ring should read
+  // 100%, not the freshly-wrapped 0% remainder that tickGame actually banks internally.
+  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '100')
 
-  // The following tick starts the next cycle, dropping back down to a partial fill.
-  act(() => { vi.advanceTimersByTime(1000) })
+  // The following ticks start the next cycle, dropping back down to a partial fill.
+  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '50')
 
+  // Unmount while fake timers are still active so the live tick interval is cancelled against the
+  // same (fake) timer implementation that scheduled it — unmounting after vi.useRealTimers() would
+  // leave a real clearInterval call holding a stale fake-timer id, silently failing to cancel it.
+  unmount()
   vi.useRealTimers()
 })
 
