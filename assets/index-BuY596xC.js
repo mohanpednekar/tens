@@ -231,9 +231,10 @@ Error generating stack: `+e.message+`
     font-size: 0.78em;
   }
 `,Ai=j.div`
+  align-items: center;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  flex-direction: row;
+  gap: 0.35rem;
   grid-area: production;
   min-width: 0;
 `,ji=j(wi)`
