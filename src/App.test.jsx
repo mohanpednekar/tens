@@ -136,6 +136,19 @@ test('reaching 10 lifetime purchases of a tier doubles its displayed production 
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10/sec')
 })
 
+test('a tier with a slower base tickspeed shows a proportionally reduced displayed production rate', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 10, tier02: 4 },
+  }))
+
+  render(<App />)
+
+  // Thousands' base tickspeed is 2s, so its real throughput (and displayed rate) is halved:
+  // owned(4) × 1 (no bonus/milestone) ÷ 2s = 2 Tens/sec, not 4.
+  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+2 Tens/sec')
+})
+
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },

@@ -322,17 +322,20 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
 
     // Each tier only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds,
-    // as a single batch, rather than continuously every tick — balance-neutral, since the batch
-    // covers exactly the seconds it was withheld for (see tierProductionAccumulators above). Any
-    // remainder below a full tickspeed's worth stays banked for the next tick.
+    // as a single batch — and each completed tick period delivers exactly one "tick's worth"
+    // (owned × multipliers), not one tick's worth per elapsed second within it. This means a
+    // slower tier's actual per-second throughput is reduced (divided by its own tickspeed)
+    // compared to a tier that ticks every second — a real slowdown, not just a delayed delivery
+    // of the same total (see tierProductionAccumulators above). Any partial tick below a full
+    // tickspeed's worth stays banked for the next tick.
     const tickSpeed = getTierBaseTickSpeedSeconds(tier.id)
     const accumulated = (newAccumulators[tier.id] ?? 0) + elapsedSeconds
-    const batchedSeconds = Math.floor(accumulated / tickSpeed) * tickSpeed
-    newAccumulators[tier.id] = accumulated - batchedSeconds
-    if (batchedSeconds <= 0) return
+    const ticksElapsed = Math.floor(accumulated / tickSpeed)
+    newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
+    if (ticksElapsed <= 0) return
 
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * batchedSeconds * multiplier * tierMultiplier
+    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * tierMultiplier
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count

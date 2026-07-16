@@ -2,7 +2,7 @@ import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -500,8 +500,11 @@ const MainPage = () => {
           const canBuySmart = !isFrozen && !isSmart && isAutomated && prestige.points >= smartCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
-          // its cost jumps 10x (see getPurchaseMilestoneMultiplier).
-          const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
+          // its cost jumps 10x (see getPurchaseMilestoneMultiplier). Divided by the tier's own
+          // base tickspeed since tickGame now delivers one tick's worth (not one second's worth)
+          // per completed tick period — a slower tier's real per-second throughput is lower (see
+          // "Tier production tickspeed" in CLAUDE.md), and this display should match that.
+          const production = (owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)) / getTierBaseTickSpeedSeconds(tier.id)
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
