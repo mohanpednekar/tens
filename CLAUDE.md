@@ -536,12 +536,13 @@ as a small circular "watch face" ring (`TickProgressRing`) — a conic-gradient 
 center hole matching the row's own background (`StatCard`'s `#171717`) so it reads as a thin filling
 ring rather than a solid pie wedge — inline beside each tier row's production figure (`ProductionCell`
 is a `flex-direction: row`, not stacked column, so the ring sits to the right of the "+X" text at the
-same baseline rather than below it). `ProductionCell` uses `justify-content: space-between` so the ring
-is right-justified against the fixed-width `production` column's own right edge rather than sitting
-immediately after the "+X" text — the same "identical position on every tier" goal as `TierName`'s
-fixed-width label column (see Architecture above), just achieved by pinning to the column's far edge
-instead of reserving fixed space at its near edge, since the production text (unlike the tier name) has
-no natural maximum length worth reserving a column for. It fills
+same baseline rather than below it). `ProductionCell` uses `justify-content: flex-end` so the "+X" text
+and ring are right-justified together as one unit against the fixed-width `production` column's own
+right edge, keeping the ring at an identical position on every tier row the same way `TierName`'s
+fixed-width label column does (see Architecture above) — achieved by pinning the whole pair to the
+column's far edge (rather than reserving fixed space at its near edge, since the production text, unlike
+the tier name, has no natural maximum length worth reserving a column for) while still keeping the text
+snug against its own ring rather than stranded at the column's opposite edge. It fills
 clockwise over that tier's own tickspeed period and holds at a full 100% ring for the exact tick a
 batch delivers, before dropping back to empty and refilling for the next cycle — a real
 0%→…→100%→reset sawtooth, rather than resetting one step short of full. This needs the optional third
