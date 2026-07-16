@@ -503,12 +503,14 @@ elapsed time" and skips offline progress entirely rather than guessing. `clearGa
 
 Prestiging no longer doubles production directly — instead it awards **Prestige Points (PP)**, a
 permanent, cumulative currency (`prestige.points`) that never resets and stacks across every future
-prestige. `getPrestigePointsAwarded(money)` computes the award: always at least 1 (prestiging requires
-Money ≥ `GOOGOL`, i.e. an exponent ≥ 100, in the first place), plus 1 more for every extra order of
-magnitude the money exponent reached before production froze — the tick that crosses `GOOGOL` can
-overshoot substantially in a single step (see `isProductionFrozen` below), so waiting for a higher
-production rate before prestiging pays off in extra points. `prestigeGame` adds the newly-awarded points
-on top of any already-unspent balance rather than resetting it.
+prestige. `getPrestigePointsAwarded(money) = floor(getMoneyExponent(money) / 100)` computes the award: the
+money exponent reached before production froze, divided by 100 and rounded down — always at least 1
+(prestiging requires Money ≥ `GOOGOL`, i.e. an exponent ≥ 100, in the first place), but only increasing
+once a further full 100 orders of magnitude are reached (exponent 200 → 2 points, 300 → 3, …). The tick
+that crosses `GOOGOL` can overshoot substantially in a single step (see `isProductionFrozen` below), so
+waiting for a much higher production rate before prestiging can still pay off in extra points, just at
+this much larger scale. `prestigeGame` adds the newly-awarded points on top of any already-unspent balance
+rather than resetting it.
 
 Unspent PP has one passive effect and two active uses:
 
@@ -697,7 +699,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `getSmartAutobuyerCost` | `tierId → number` | `SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)` — 10x that tier's Auto-upgrade cost (10, 20, … 5,120 PP for the 10th/last tier) |
 | `getAutoPrestigeCost` | `currentLevel → number` | `AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel` — 100 PP to activate (level 0→1), doubling each level after (200, 400, …) |
 | `getAutoPrestigeAttemptRate` | `autoPrestigeLevel → number` | `1.1 ** (level - 1) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS` (`null` treated as level 1 defensively, same convention as `getAutobuyerAttemptRate`) — the per-tick Auto-Prestige attempt-budget increment; level 1 fires roughly every 1000 seconds, each level after that 10% sooner, compounding |
-| `getPrestigePointsAwarded` | `money → number` | `getMoneyExponent(money) - googolExponent + 1` — always ≥ 1 (prestiging requires the exponent ≥ 100 already); +1 more per extra order of magnitude the money exponent reached before production froze |
+| `getPrestigePointsAwarded` | `money → number` | `floor(getMoneyExponent(money) / 100)` — always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point, replacing the old level-based doubling |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, keeps autobuyer *activation* status (levels reset to 1, the baseline) and `autobuyerAutomation`/`smartAutobuyer`/`autoPrestige` unchanged (all permanent, including the Auto-Prestige *level*), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
@@ -744,7 +746,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`).
-- `yarn test` is green (265 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (267 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

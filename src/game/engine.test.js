@@ -355,9 +355,18 @@ describe('getPrestigePointsAwarded', () => {
     expect(getPrestigePointsAwarded(GOOGOL)).toBe(1)
   })
 
-  it('awards 1 extra point per extra order of magnitude past GOOGOL', () => {
-    expect(getPrestigePointsAwarded(GOOGOL * 10)).toBe(2)
-    expect(getPrestigePointsAwarded(GOOGOL * 1e9)).toBe(10)
+  it('stays at 1 point until a full further 100 orders of magnitude are reached', () => {
+    expect(getPrestigePointsAwarded(GOOGOL * 10)).toBe(1)
+    expect(getPrestigePointsAwarded(GOOGOL * 1e9)).toBe(1)
+    expect(getPrestigePointsAwarded(GOOGOL * 1e99)).toBe(1)
+  })
+
+  it('awards 2 points once the exponent reaches 200 (double the Googol exponent)', () => {
+    expect(getPrestigePointsAwarded(GOOGOL * 1e100)).toBe(2)
+  })
+
+  it('awards 3 points at exponent 300', () => {
+    expect(getPrestigePointsAwarded(GOOGOL * 1e200)).toBe(3)
   })
 })
 
@@ -1362,10 +1371,10 @@ describe('prestigeGame', () => {
     expect(after.prestige.points).toBe(1)
   })
 
-  it('awards more Prestige Points the further past GOOGOL the money exponent reached', () => {
-    const state = withMoney(createInitialGameState(), GOOGOL * 1e5)
+  it('awards more Prestige Points once the exponent reaches a further full multiple of 100', () => {
+    const state = withMoney(createInitialGameState(), GOOGOL * 1e100)
     const after = prestigeGame(state)
-    expect(after.prestige.points).toBe(6)
+    expect(after.prestige.points).toBe(2)
   })
 
   it('adds newly-awarded points on top of any already-unspent points', () => {
