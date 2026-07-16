@@ -19,6 +19,18 @@ export const TIER_DEFINITIONS = [
 
 
 export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || '$'
+
+// Base tickspeed per tier, in seconds: how often that tier's production is delivered as a single
+// batch rather than continuously every global 1s tick (see engine.js's tickGame /
+// tierProductionAccumulators). tier01 = 1s (matching the global tick rate, so it's unaffected);
+// each subsequent tier is 1s slower — tier02 = 2s, tier03 = 3s, … tier10 = 10s. Balance-neutral: a
+// tier still produces the exact same total amount over time, it's just delivered every N seconds
+// instead of continuously. An unrecognized tier id is treated as index 0 (1s) rather than throwing.
+export const getTierBaseTickSpeedSeconds = tierId => {
+  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  return tierIndex + 1
+}
+
 export const MONEY_ID = 'Ones'
 export const MONEY_STARTING_AMOUNT = 10
 export const GOOGOL = 1e100

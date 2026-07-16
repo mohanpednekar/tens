@@ -107,6 +107,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     saveGameState(state)
     expect(loadGameState().autobuyerAttemptBudgets[tensTier.id]).toBeCloseTo(0.7)
   })
+
+  it('preserves a fractional tier production accumulator', () => {
+    const state = {
+      ...createInitialGameState(),
+      tierProductionAccumulators: { ...createInitialGameState().tierProductionAccumulators, [tensTier.id]: 0.4 },
+    }
+    saveGameState(state)
+    expect(loadGameState().tierProductionAccumulators[tensTier.id]).toBeCloseTo(0.4)
+  })
 })
 
 describe('schema migration', () => {
@@ -126,6 +135,15 @@ describe('schema migration', () => {
     const loaded = loadGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.autobuyerAttemptBudgets[tier.id]).toBe(0)
+    })
+  })
+
+  it('defaults tierProductionAccumulators to 0 for every tier on a save that predates it', () => {
+    const { tierProductionAccumulators: _dropped, ...oldSave } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.tierProductionAccumulators[tier.id]).toBe(0)
     })
   })
 
