@@ -382,7 +382,7 @@ Strict three-layer separation:
    exponential above), in a centered `MoneyCard` (`styled(StatCard)` with `align-items: center; text-align:
    center`) — the only top-of-page block besides `Header` that's centered rather than left-aligned. It no
    longer shows an aggregate `+X/sec` line beneath the balance (previously summed `owned` across every
-   money-producing tier); each tier row's own tick-progress bar (see "Per-tier tick-progress bar" under
+   money-producing tier); each tier row's own tick-progress ring (see "Per-tier tick-progress ring" under
    "Tier production tickspeed" above) is the per-tier replacement for that figure, and there is no top-level
    aggregate anymore. Manual Buy always grabs as many units as are currently affordable up to the 10-unit
    cost-block boundary (via `getTierAffordableQuantity`/`buyTierQuantity`) — there is no player-facing
@@ -504,7 +504,7 @@ tier's tickspeed independently of that pattern. This is **not** balance-neutral:
 period delivers exactly one tick's worth of production (`owned × multipliers`), not one second's worth
 per elapsed second within it, so a tier's real per-second throughput is divided by its own tickspeed —
 `tier02` produces at half the rate of a 1s-tickspeed tier, `tier10` at a tenth. `MainPage` no longer
-shows this as an averaged `/sec` rate — see "Per-tier tick-progress bar" below for what it shows instead.
+shows this as an averaged `/sec` rate — see "Per-tier tick-progress ring" below for what it shows instead.
 
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier (see "Game state shape" below), incremented by `elapsedSeconds` every tick.
@@ -517,21 +517,24 @@ replay (`applyOfflineProgress` also always calls `tickGame(1, …)`, one simulat
 with tickspeed *N* simply skips producing for *N-1* ticks, then delivers exactly one tick's worth (not *N*
 seconds' worth) on the *N*th — an *N*x reduction in throughput compared to producing every second.
 
-#### Per-tier tick-progress bar
+#### Per-tier tick-progress ring
 
 `tierProductionAccumulators` is surfaced directly to the player rather than only driving an internal
 calculation: `getTierProductionProgressPercent(state, tierId)` (`engine.js`) reads that tier's banked
 accumulator as a percent of its own `getTierBaseTickSpeedSeconds` (clamped/rounded to `[0, 100]`,
-following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it as a thin
-green fill bar (`TickProgressTrack`/`TickProgressFill`) directly under each tier row's production
-figure — visibly empty right after a batch delivers, filling over that tier's own tickspeed period, and
-snapping back down the instant the next batch fires. The number shown next to the bar is the raw
+following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it as a small
+circular "watch face" ring (`TickProgressRing`) — a conic-gradient sweep, punched with a center hole
+matching the row's own background (`StatCard`'s `#171717`) so it reads as a thin filling ring rather
+than a solid pie wedge — directly under each tier row's production figure. It's visibly empty right
+after a batch delivers, fills clockwise over that tier's own tickspeed period, and snaps back down the
+instant the next batch fires; the fill redraws once per game tick rather than animating continuously,
+since `state` only re-renders every `TICK_RATE_MS`. The number shown next to the ring is the raw
 per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
-**not** divided by tickspeed) — "how much lands once the bar completes," not a per-second average — so a
-slower tier's row reads as a bigger number on a slower bar rather than a smaller number on an implicit
-one-per-second cadence. Like the other per-row progress indicators (see Architecture below), the bar
-nests a `VisuallyHidden role="progressbar"` (`aria-label="<tier name> production tick progress"`,
-`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech.
+**not** divided by tickspeed) — "how much lands once the ring completes," not a per-second average — so
+a slower tier's row reads as a bigger number on a slower ring rather than a smaller number on an
+implicit one-per-second cadence. Like the other per-row progress indicators (see Architecture below),
+the ring nests a `VisuallyHidden role="progressbar"` (`aria-label="<tier name> production tick
+progress"`, `aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech.
 
 ### Offline progress
 
@@ -811,7 +814,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getTierProductionProgressPercent` | `(state, tierId) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress bar is (see "Per-tier tick-progress bar" under "Tier production tickspeed" above) |
+| `getTierProductionProgressPercent` | `(state, tierId) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress ring is (see "Per-tier tick-progress ring" under "Tier production tickspeed" above) |
 | `getAutobuyerCost` | `currentLevel → number` | `1000 ** (currentLevel + 1)` — activation (from `null`, treated as `currentLevel` 0) costs 1000; each subsequent Upgrade level costs another power of 1000 (1,000,000, then 1,000,000,000, …), always paid in the tier's own resource |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
@@ -848,7 +851,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
-  row's Buy button and tick-progress bar nest a visually-hidden `role="progressbar"` (via `VisuallyHidden`)
+  row's Buy button and tick-progress ring nest a visually-hidden `role="progressbar"` (via `VisuallyHidden`)
   with `aria-label="<tier name> cost-block progress"`/`"<tier name> production tick progress"` respectively,
   plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` — the Buy/Upgrade/Unlock/Prestige buttons also carry
   an explicit `aria-label` with the full descriptive

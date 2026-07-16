@@ -244,24 +244,31 @@ const ProductionText = styled(MutedText)`
   }
 `
 
-// Fills over the tier's own base tickspeed (see getTierProductionProgressPercent) and resets
-// once the batch fires — a direct visualization of tierProductionAccumulators, rather than the
-// averaged "/sec" rate this used to be paired with.
-const TickProgressTrack = styled.div`
-  background: #262626;
-  border-radius: 999px;
-  height: 0.3rem;
-  overflow: hidden;
+// Compact circular "watch face" — a conic-gradient sweep (green fill against the same #262626
+// track color the old bar used) with a punched-out center matching TierLine's own background
+// (StatCard's #171717), so it reads as a thin filling ring rather than a solid pie wedge. Fixed
+// diameter (not width: 100%) since it doesn't need to track the fractional grid column width to
+// stay layout-safe at both breakpoints. Fills over the tier's own base tickspeed (see
+// getTierProductionProgressPercent) and resets once the batch fires — a direct visualization of
+// tierProductionAccumulators. The fill redraws once per game tick (state only re-renders every
+// TICK_RATE_MS) — deliberately no transition on the gradient itself, since a plain CSS transition
+// can't interpolate conic-gradient stop percentages without registering the custom property via
+// @property, which this file doesn't otherwise use.
+const TickProgressRing = styled.div`
+  background: conic-gradient(#4ade80 ${props => props.$percent}%, #262626 0);
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 1.15rem;
   position: relative;
-  width: 100%;
-`
+  width: 1.15rem;
 
-const TickProgressFill = styled.div`
-  background: #4ade80;
-  border-radius: 999px;
-  height: 100%;
-  transition: width 0.2s linear;
-  width: ${props => props.$percent}%;
+  &::after {
+    background: #171717;
+    border-radius: 50%;
+    content: '';
+    inset: 0.2rem;
+    position: absolute;
+  }
 `
 
 // The fill (green = already bought this cost block, amber = affordable but not yet bought)
@@ -543,7 +550,7 @@ const MainPage = () => {
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
           // its cost jumps 10x (see getPurchaseMilestoneMultiplier). This is the raw amount
-          // delivered in one lump batch once the tick-progress bar below fills — not a per-second
+          // delivered in one lump batch once the tick-progress ring below fills — not a per-second
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
           const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
@@ -596,8 +603,7 @@ const MainPage = () => {
                     ? formatCurrency(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
                 </ProductionText>
-                <TickProgressTrack>
-                  <TickProgressFill $percent={tickProgressPercent} />
+                <TickProgressRing $percent={tickProgressPercent}>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label={`${tier.name} production tick progress`}
@@ -605,7 +611,7 @@ const MainPage = () => {
                     aria-valuemin={0}
                     aria-valuemax={100}
                   />
-                </TickProgressTrack>
+                </TickProgressRing>
               </ProductionCell>
               <BuyButton
                 aria-label={buyLabel}
