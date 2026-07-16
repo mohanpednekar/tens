@@ -147,6 +147,20 @@ the same number by design.
   a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
   logic.
 
+## Automation design principles
+
+Three conventions guide this repo's automation design (see `CLAUDE.md`'s Orchestration model for the
+full rationale and examples):
+
+1. **Determinism-first** — prefer a plain deterministic script over a Claude invocation whenever no
+   genuine judgment is needed (e.g. `pr-auto-merge.yml`'s auto-merge path is a plain script).
+2. **Judgment-call transparency** — when a genuine judgment call is made on something the spec didn't
+   pin down, state the reasoning explicitly (e.g. in a PR description or issue comment) rather than
+   deciding silently.
+3. **Conflict-avoidance sequencing** — when splitting large work into a sequence of issues, chain them
+   with `Blocked by #N` whenever two issues would edit the same lines/files, even without a strict
+   functional dependency, purely to avoid concurrent-edit conflicts.
+
 ## Security notes
 
 - Dev and test servers bind to `127.0.0.1` — do not change to `0.0.0.0`.

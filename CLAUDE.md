@@ -145,6 +145,29 @@ process/infrastructure/automation issues typically don't need a milestone. Miles
 issue assignment are GitHub metadata operations (`gh api repos/<owner>/<repo>/milestones`, `gh issue
 edit --milestone`), not file changes.
 
+### Automation design principles
+
+Three conventions have guided this repo's automation design so far, mostly discoverable only by
+reading old issues/PRs until now — writing them down here means a future session (interactive or
+autonomous) doesn't have to rediscover them from scratch:
+
+1. **Determinism-first.** Prefer a plain deterministic script over a Claude invocation whenever no
+   genuine judgment is needed — a script is cheaper, faster, and can't drift in interpretation
+   between runs. See `pr-auto-merge.yml`: its low-risk auto-merge path is a plain shell script with
+   no Claude invocation at all, precisely because "is this diff small/safe enough to auto-merge" is
+   a mechanical check, not a judgment call.
+2. **Judgment-call transparency.** When a genuine judgment call is made on something the spec or the
+   user didn't pin down, state the reasoning explicitly rather than deciding silently. See the
+   Budget discipline section above: a run that scopes down or skips a task because of its own
+   turn-budget estimate is required to note that reasoning in the PR description/issue comment, not
+   just silently do less than the full spec.
+3. **Conflict-avoidance sequencing.** When splitting a large body of work into a sequence of issues,
+   chain them with a `Blocked by #N` line whenever two issues would edit the same lines/files — even
+   without a strict *functional* dependency between them — purely to avoid two concurrently-open PRs
+   conflicting over the same region. See the Orchestration model's "Split anything bigger into a
+   sequence of issues ordered with 'Blocked by #N' lines" guidance above, and e.g. issue #69's
+   dependency on #49 (both edit the same Phase A selection-logic prose here).
+
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
