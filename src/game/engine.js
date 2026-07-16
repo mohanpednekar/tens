@@ -2,6 +2,12 @@ import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
+// Tolerance nudge for tierProductionAccumulators' tickspeed-crossing check (see tickGame) —
+// absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds (e.g. the
+// live 10Hz tick loop's 0.1-per-call). Far smaller than any real tick granularity, so it never
+// affects actual timing.
+const TICK_ACCUMULATION_EPSILON = 1e-9
+
 // Collect all unique resource IDs referenced by the tier definitions
 const allResourceIds = () => {
   const ids = new Set([MONEY_ID])
@@ -231,13 +237,15 @@ export const getPrestigeProgressPercent = money => {
 // Pass the tier's *previous* banked accumulator (e.g. from a UI-side ref tracking the prior
 // render, since state itself only stores the post-delivery wrapped remainder) to instead report
 // 100 for the one render where a delivery just happened, rather than the wrapped-down remainder —
-// since elapsedSeconds is always 1 in this app, that's simply previousAccumulator + 1 >= this
-// tier's own tickspeed. The UI then animates the *visual transition* between these once-per-tick
-// values via a CSS custom-property transition (see TickProgressRing in MainPage), rather than
-// this function trying to interpolate sub-tick progress itself.
-export const getTierProductionProgressPercent = (state, tierId, previousAccumulator) => {
+// that's previousAccumulator + elapsedSeconds >= this tier's own tickspeed, where elapsedSeconds
+// defaults to 1 (matching a full real second, e.g. one offline-progress replay step) but callers
+// driven by the live tick loop should pass the real per-tick value (TICK_RATE_MS / 1000). The UI
+// then animates the *visual transition* between these once-per-tick values via a CSS
+// custom-property transition (see TickProgressRing in MainPage), rather than this function
+// trying to interpolate sub-tick progress itself.
+export const getTierProductionProgressPercent = (state, tierId, previousAccumulator, elapsedSeconds = 1) => {
   const tickSpeed = getTierBaseTickSpeedSeconds(tierId)
-  if (previousAccumulator != null && previousAccumulator + 1 >= tickSpeed) return 100
+  if (previousAccumulator != null && previousAccumulator + elapsedSeconds >= tickSpeed) return 100
   const accumulated = state.tierProductionAccumulators?.[tierId] ?? 0
   return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))
 }
@@ -287,21 +295,25 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // budget (see below) needs to keep accumulating even while otherwise frozen.
   if (isProductionFrozen(state)) {
     if (autoPrestigeLevel === null) return state
-    const nextBudget = (state.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel)
-    // A completed attempt (budget >= 1) only actually prestiges once Money has reached GOOGOL —
-    // which it already has, here, by definition of this branch — so it always fires as soon as
-    // the budget crosses 1. prestigeGame's own reset zeroes the budget back out; no need to pass
-    // the incremented value in, it would just be discarded.
-    if (nextBudget >= 1) return prestigeGame(state)
+    const nextBudget = (state.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
+    // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
+    // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
+    // only actually prestiges once Money has reached GOOGOL — which it already has, here, by
+    // definition of this branch — so it always fires as soon as the budget crosses 1.
+    // prestigeGame's own reset zeroes the budget back out; no need to pass the incremented value
+    // in, it would just be discarded.
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return prestigeGame(state)
     return { ...state, autoPrestigeAttemptBudget: nextBudget }
   }
 
   const multiplier = getPrestigeProductionMultiplier(state.prestige.points)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
-  // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) this tick, then fire one
+  // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) * elapsedSeconds this
+  // tick — scaled by elapsedSeconds so the real-world attempt cadence stays identical regardless
+  // of how often tickGame itself is called (see TICK_RATE_MS in layers.js) — then fire one
   // purchase attempt per whole unit of budget, carrying any fractional remainder into the next
-  // tick. Level 1 (just activated) already accumulates at the baseline rate (1/tick), so
+  // tick. Level 1 (just activated) already accumulates at the baseline rate (1/real second), so
   // activating alone makes an autobuyer active; each further Upgrade level compounds that rate by
   // another 10%. If a batch can't be afforded, the loop stops WITHOUT spending the budget already
   // accumulated for this attempt — it stays banked so a stretch of being broke doesn't cost any attempts, only
@@ -313,8 +325,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const level = s.autobuyers[tier.id] ?? null
     if (level === null || !isTierUnlocked(s)(tier)) return s
     let result = s
-    let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level)
-    while (budget >= 1) {
+    let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level) * elapsedSeconds
+    // The epsilon tolerance absorbs the same repeated-fractional-elapsedSeconds floating-point
+    // drift as tierProductionAccumulators (see TICK_ACCUMULATION_EPSILON) — without it, ten
+    // 0.1-elapsedSeconds calls at the baseline rate sum to 0.9999999999999999, one shy of
+    // triggering a purchase that should fire exactly on schedule.
+    while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
       const purchased = getTierPurchasedCount(result, tier.id)
       const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && purchased < 10 ? 1 : autobuyerBatchSize
       const blockMax = getTierBulkQuantity(tier, purchased, effectiveBatchSize)
@@ -344,15 +360,22 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // slower tier's actual per-second throughput is reduced (divided by its own tickspeed)
     // compared to a tier that ticks every second — a real slowdown, not just a delayed delivery
     // of the same total (see tierProductionAccumulators above). Any partial tick below a full
-    // tickspeed's worth stays banked for the next tick.
+    // tickspeed's worth stays banked for the next tick. TICK_ACCUMULATION_EPSILON absorbs the
+    // floating-point drift of repeatedly summing a fractional elapsedSeconds (e.g. ten additions
+    // of 0.1 land on 0.9999999999999999, not 1) so a delivery isn't delayed by a stray tick.
     const tickSpeed = getTierBaseTickSpeedSeconds(tier.id)
     const accumulated = (newAccumulators[tier.id] ?? 0) + elapsedSeconds
-    const ticksElapsed = Math.floor(accumulated / tickSpeed)
+    const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
 
+    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, and tierMultiplier
+    // (always a power of 2) are already integers, so only a fractional Prestige Point production
+    // multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent points → ×1.5) can introduce a
+    // fraction here. multiplier is always >= 1, so flooring never zeroes out production for a
+    // tier with owned > 0.
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const production = (stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * tierMultiplier
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * tierMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -372,14 +395,18 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // start counting once Money first reaches GOOGOL — but it can only ever actually fire from
     // the frozen branch above, once Money has actually gotten there.
     ...(autoPrestigeLevel === null ? {} : {
-      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel),
+      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds,
     }),
   }
 
   // Tiers with automated autobuyer-upgrade purchasing (bought with Prestige Points, see
   // buyAutobuyerAutomation) self-upgrade one level per tick whenever affordable — no manual
   // Upgrade click needed. buyAutobuyer re-validates internally (affordability, frozen state)
-  // and returns the same state unchanged when a level isn't affordable yet.
+  // and returns the same state unchanged when a level isn't affordable yet. Unlike the
+  // rate-accumulating budgets above, this is edge-triggered on affordability rather than a
+  // banked rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see
+  // TICK_RATE_MS) only makes it react sooner after becoming affordable, not more often per
+  // real second.
   return TIER_DEFINITIONS.reduce((s, tier) => (
     s.autobuyerAutomation?.[tier.id] ? buyAutobuyer(tier.id)(s) : s
   ), producedState)

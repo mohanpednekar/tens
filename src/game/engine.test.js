@@ -649,6 +649,24 @@ describe('getTierProductionProgressPercent', () => {
     expect(getTierProductionProgressPercent(state, thousandsTier.id, null)).toBe(0)
     expect(getTierProductionProgressPercent(state, thousandsTier.id, undefined)).toBe(0)
   })
+
+  it('defaults elapsedSeconds to 1, matching a full real second (e.g. offline-progress replay)', () => {
+    const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
+    expect(getTierProductionProgressPercent(state, thousandsTier.id, 1)).toBe(
+      getTierProductionProgressPercent(state, thousandsTier.id, 1, 1)
+    )
+  })
+
+  it('accepts a fractional elapsedSeconds (e.g. a 10Hz live tick) for the just-delivered check', () => {
+    // Tens' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
+    const state = { tierProductionAccumulators: { [tensTier.id]: 0.05 } }
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.95, 0.1)).toBe(100)
+  })
+
+  it('does not report 100% early when a fractional elapsedSeconds has not yet crossed the threshold', () => {
+    const state = { tierProductionAccumulators: { [tensTier.id]: 0.85 } }
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.75, 0.1)).toBe(85)
+  })
 })
 
 // ─── getTierSpendableAmount ──────────────────────────────────────────────────
@@ -872,12 +890,30 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 3)
   })
 
+  it('still delivers a 1s-tickspeed tier\'s production on the 10th tick despite fractional elapsedSeconds floating-point drift', () => {
+    // Summing 0.1 ten times lands on 0.9999999999999999 in IEEE-754, not exactly 1 — matching a
+    // 10Hz live tick loop (elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call). Without the
+    // epsilon tolerance in tickGame's ticksElapsed calculation, this would delay delivery to an
+    // 11th tick instead of firing on the 10th, as it does at a coarser (e.g. 1-tick-per-second)
+    // granularity.
+    let state = withOwned(createInitialGameState(), tensTier.id, 1)
+    for (let i = 0; i < 10; i++) state = tickGame(0.1)(state)
+    expect(state.resources[MONEY_ID]).toBe(11) // 10 starting + 1 tick's worth of production
+  })
+
   it('applies the Prestige Points production-speed bonus', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
     const boosted = withPrestigePoints(base, 100) // +100% → ×2
     expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(
       base.resources[MONEY_ID] + 2
     )
+  })
+
+  it('floors a fractional Prestige Points production multiplier instead of crediting a fraction', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 1)
+    const boosted = withPrestigePoints(base, 50) // +50% → ×1.5, raw production 1 × 1.5 = 1.5
+    const after = tickGame(1)(boosted)
+    expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1) // floor(1.5) = 1
   })
 
   it('Thousands generators produce Tens resource and owned generators, once every 2 seconds (its base tickspeed) at a reduced rate', () => {
@@ -965,6 +1001,16 @@ describe('tickGame', () => {
     // Level 2 fires at rate 1.1/tick — the fractional remainder accumulates across ticks and
     // fires an 11th purchase within the same 10 ticks.
     expect(runTicks(2, 10).purchased[tensTier.id]).toBe(11)
+  })
+
+  it('scales the autobuyer attempt budget by elapsedSeconds, so real-world purchase cadence is unaffected by tick granularity', () => {
+    const oneSecondTick = withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id, 1)
+    const tenTenthSecondTicks = withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id, 1)
+    // A single elapsedSeconds=1 call vs. ten elapsedSeconds=0.1 calls (10x more often, as at a
+    // 10Hz tick rate) must reach the same real-world purchase count after 1 real second.
+    let tenTicksResult = tenTenthSecondTicks
+    for (let i = 0; i < 10; i++) tenTicksResult = tickGame(0.1)(tenTicksResult)
+    expect(tenTicksResult.purchased[tensTier.id]).toBe(tickGame(1)(oneSecondTick).purchased[tensTier.id])
   })
 
   it('autobuyer does not purchase when funds are insufficient', () => {

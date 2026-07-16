@@ -2,7 +2,7 @@ import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
@@ -290,10 +290,11 @@ const TickPercentProperty = createGlobalStyle`
 // diameter (not width: 100%) since it doesn't need to track the fractional grid column width to
 // stay layout-safe at both breakpoints. Fills over the tier's own base tickspeed (see
 // getTierProductionProgressPercent) and resets once the batch fires — a direct visualization of
-// tierProductionAccumulators. state (and thus $percent) only updates once per real game tick, but
-// the browser smoothly animates --tick-percent between each of those once-a-second values via
-// `transition`, rather than snapping instantly — continuous-looking motion with no JS polling
-// timer at all. $instant suppresses that transition for exactly one update: the tick right after a
+// tierProductionAccumulators. state (and thus $percent) only updates once per real game tick
+// (every TICK_RATE_MS), but the browser smoothly animates --tick-percent between each of those
+// once-per-tick values over that same TICK_RATE_MS duration via `transition`, rather than
+// snapping instantly — continuous-looking motion with no JS polling timer at all. $instant
+// suppresses that transition for exactly one update: the tick right after a
 // delivery, where the value drops from 100% back down to the new cycle's small remainder and
 // should snap immediately rather than visibly "rewinding" (see the isRingInstant tracking in
 // MainPage, driven by wasFullRef/currentlyFullRef).
@@ -304,7 +305,7 @@ const TickProgressRing = styled.div`
   flex-shrink: 0;
   height: 1.15rem;
   position: relative;
-  transition: --tick-percent ${props => (props.$instant ? '0s' : '1s')} linear;
+  transition: --tick-percent ${props => (props.$instant ? '0s' : `${TICK_RATE_MS}ms`)} linear;
   width: 1.15rem;
 
   &::after {
@@ -630,21 +631,21 @@ const MainPage = () => {
           // delivered in one lump batch once the tick-progress ring below fills — not a per-second
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
-          const production = owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased)
+          // Floored to match tickGame's own floored production credit — prestigeBonus is the only
+          // fractional factor here (getPurchaseMilestoneMultiplier is always a power of 2), so
+          // without flooring this preview could show a fraction that never actually lands.
+          const production = Math.floor(owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased))
           const rawTickProgressPercent = getTierProductionProgressPercent(
-            state, tier.id, previousAccumulatorsRef.current[tier.id]
+            state, tier.id, previousAccumulatorsRef.current[tier.id], TICK_RATE_MS / 1000
           )
           const isRingInstant = wasFullRef.current[tier.id] ?? false
           // The tick right after a delivery already has some of its new cycle's own time banked
-          // (e.g. a 2s tier is already back up to a raw 50% one real tick later), which would make
-          // the ring's instant post-delivery snap land part-way full instead of empty. Forcing it
-          // to 0 here means the next tick's normal, non-instant transition animates a full, clean
-          // climb from empty back up to that tick's real value, rather than a shorter climb
-          // starting mid-way. Because tier01's tickspeed (1s) matches the global tick rate, its raw
-          // value is always 100 — every tick is a "just delivered" tick — so this same forcing
-          // gives it a clean full↔empty alternation once a second instead of sitting permanently
-          // full, the same animated language every other tier's ring already has, just condensed
-          // to a 1-tick cadence.
+          // (e.g. a 2s tier is already back up to a raw 5% one real (100ms) tick later, since
+          // every tier now takes multiple ticks to fill — tier01's 1s tickspeed is 10 ticks at the
+          // 10Hz tick rate, no longer a single-tick special case), which would make the ring's
+          // instant post-delivery snap land part-way full instead of empty. Forcing it to 0 here
+          // means the next tick's normal, non-instant transition animates a full, clean climb from
+          // empty back up to that tick's real value, rather than a shorter climb starting mid-way.
           // This visual-only value deliberately isn't what's reported via aria-valuenow below —
           // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
           // environment whenever the *accessible* value diverged from the plain
