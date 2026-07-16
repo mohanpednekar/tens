@@ -100,7 +100,7 @@ jobs:
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.pr.outputs.skip != 'true'
         with:
           # Pin to the exact commit resolved above, not the branch name: the branch is
