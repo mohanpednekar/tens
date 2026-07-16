@@ -520,15 +520,27 @@ seconds' worth) on the *N*th — an *N*x reduction in throughput compared to pro
 #### Per-tier tick-progress ring
 
 `tierProductionAccumulators` is surfaced directly to the player rather than only driving an internal
-calculation: `getTierProductionProgressPercent(state, tierId)` (`engine.js`) reads that tier's banked
-accumulator as a percent of its own `getTierBaseTickSpeedSeconds` (clamped/rounded to `[0, 100]`,
-following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it as a small
-circular "watch face" ring (`TickProgressRing`) — a conic-gradient sweep, punched with a center hole
-matching the row's own background (`StatCard`'s `#171717`) so it reads as a thin filling ring rather
-than a solid pie wedge — directly under each tier row's production figure. It's visibly empty right
-after a batch delivers, fills clockwise over that tier's own tickspeed period, and snaps back down the
-instant the next batch fires; the fill redraws once per game tick rather than animating continuously,
-since `state` only re-renders every `TICK_RATE_MS`. The number shown next to the ring is the raw
+calculation: `getTierProductionProgressPercent(state, tierId, previousAccumulator)` (`engine.js`) reads
+that tier's banked accumulator as a percent of its own `getTierBaseTickSpeedSeconds` (clamped/rounded
+to `[0, 100]`, following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it
+as a small circular "watch face" ring (`TickProgressRing`) — a conic-gradient sweep, punched with a
+center hole matching the row's own background (`StatCard`'s `#171717`) so it reads as a thin filling
+ring rather than a solid pie wedge — directly under each tier row's production figure. It fills
+clockwise over that tier's own tickspeed period and holds at a full 100% ring for the exact tick a
+batch delivers, before dropping back to empty and refilling for the next cycle — a real
+0%→…→100%→reset sawtooth, rather than resetting one step short of full. This needs the optional third
+`previousAccumulator` argument because `state.tierProductionAccumulators` alone only ever holds the
+*post-delivery* wrapped remainder (indistinguishable from "genuinely empty, nothing banked yet") —
+`MainPage` tracks each tier's prior-render accumulator in a `previousAccumulatorsRef` (a `useRef`
+synced by a `useEffect` keyed on `state.tierProductionAccumulators`, so it always lags one render
+behind) and passes it in; since `elapsedSeconds` is always 1 in this app (see above), "a delivery just
+happened" reduces to `previousAccumulator + 1 >= tickSpeed`, in which case the function reports 100
+regardless of the wrapped-down current value. Because `tier01`'s tickspeed (1s) matches the global tick
+rate exactly, it delivers a batch on *every* tick once it's producing at all — so its ring has no
+observable partial-progress state and simply reads as constantly full, which is an accurate (if visually
+static) representation of "producing every single tick," not a bug. The fill redraws once per game tick
+rather than animating continuously, since `state` only re-renders every `TICK_RATE_MS`. The number shown
+next to the ring is the raw
 per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
 **not** divided by tickspeed) — "how much lands once the ring completes," not a per-second average — so
 a slower tier's row reads as a bigger number on a slower ring rather than a smaller number on an
@@ -814,7 +826,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getTierProductionProgressPercent` | `(state, tierId) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress ring is (see "Per-tier tick-progress ring" under "Tier production tickspeed" above) |
+| `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress ring is (see "Per-tier tick-progress ring" under "Tier production tickspeed" above). If the optional `previousAccumulator` crosses the tier's tickspeed once this tick's elapsed second is added, returns 100 instead — surfaces the instant a batch delivers, which the post-delivery wrapped remainder alone can't represent |
 | `getAutobuyerCost` | `currentLevel → number` | `1000 ** (currentLevel + 1)` — activation (from `null`, treated as `currentLevel` 0) costs 1000; each subsequent Upgrade level costs another power of 1000 (1,000,000, then 1,000,000,000, …), always paid in the tier's own resource |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
@@ -859,8 +871,12 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
   Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
-  `afterEach` (see `App.test.jsx`).
-- `yarn test` is green (286 tests). All four test files assert against the current tier/resource id scheme
+  `afterEach` (see `App.test.jsx`). A test that needs to observe behavior across real tick boundaries
+  (e.g. the tick-progress ring reaching 100%) uses `vi.useFakeTimers()` + `act(() =>
+  vi.advanceTimersByTime(TICK_RATE_MS))` per tick, restoring real timers with `vi.useRealTimers()`
+  afterward (see `App.test.jsx`) — `useIncrementalGame`'s tick effect uses a plain `window.setInterval`,
+  so this is compatible without any other test setup.
+- `yarn test` is green (291 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current
