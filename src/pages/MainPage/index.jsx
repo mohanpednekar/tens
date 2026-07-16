@@ -69,16 +69,23 @@ const reveal = keyframes`
 // Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
 // occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again.
+// Name spans the full row width as its own top line at both breakpoints, rather than sharing a
+// narrow column with everything else — the autobuyer badge nested inside TierName (see below)
+// needs real horizontal room to render in full at a fixed position, which a slim shared column
+// can't provide regardless of how it's split internally.
 // The 'automate' column only ever holds content once a tier's autobuyer is active — a single
 // small control at a time (Automate → Smart → the "Smart" badge, see AutomationCell), never both
 // Automate and Smart together — a narrower fraction than the other columns since it's a rare,
 // glanceable control rather than something clicked constantly like Buy.
 const TierLine = styled(StatCard)`
   display: grid;
-  grid-template-areas: 'name owned purchased production upgrade automate buy';
-  grid-template-columns: 1fr 0.7fr 0.75fr 0.85fr 0.95fr 0.55fr 1fr;
+  grid-template-areas:
+    'name name name name name name'
+    'owned purchased production upgrade automate buy';
+  grid-template-columns: 0.7fr 0.75fr 0.85fr 0.95fr 0.55fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
+  row-gap: 0.3rem;
   padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
   transition: border-color 0.15s ease;
@@ -194,17 +201,29 @@ const GoldText = styled.b`
 const GreenText = styled.span`
   color: #4ade80;
   font-size: 0.85em;
+  ${gridCell}
 `
 
+// A two-column grid rather than plain inline text flow, so the autobuyer badge always starts at
+// the same horizontal position regardless of how wide tier.name happens to render — the same
+// fixed-track technique TierLine itself uses for the rest of the row (see its own comment above).
 const TierName = styled.h3`
+  align-items: baseline;
+  column-gap: 0.4rem;
+  display: grid;
   font-size: 1em;
-  margin: 0;
   grid-area: name;
-  ${gridCell}
+  grid-template-columns: 7rem 1fr;
+  margin: 0;
 
   @media (max-width: 40rem) {
     font-size: 0.95em;
+    grid-template-columns: 6.25rem 1fr;
   }
+`
+
+const TierNameLabel = styled.span`
+  ${gridCell}
 `
 
 const OwnedText = styled(MutedText)`
@@ -600,10 +619,10 @@ const MainPage = () => {
               $animateReveal={!initialUnlockedIds.has(tier.id)}
             >
               <TierName>
-                {tier.name}
+                <TierNameLabel>{tier.name}</TierNameLabel>
                 {autobuyerLevel > 0 && (
                   <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
-                    {' '}⚙ Lv.{autobuyerLevel} (×{formatRate(autobuyerAttemptRate)} speed)
+                    ⚙ Lv.{autobuyerLevel} (×{formatRate(autobuyerAttemptRate)} speed)
                   </GreenText>
                 )}
               </TierName>

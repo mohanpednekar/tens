@@ -455,7 +455,16 @@ Strict three-layer separation:
    sharing one row, then upgrade/automate/buy side by side — rather than flexbox content-based sizing, so a
    field's on-screen position depends only on viewport width, never on how many digits its value has (or on
    whether the narrow `automate` column currently has anything in it — it stays reserved even when empty,
-   same principle). Buy sits to
+   same principle). Name spans the full row width as its own top line at *both* breakpoints (a 2-row grid
+   on desktop, the top row of the 3-row grid on mobile) rather than sharing a narrow column with the rest
+   of the row — the autobuyer-level speed badge nested inside `TierName` (`⚙ Lv.N (×rate speed)`, see
+   below) needs real horizontal room to render in full, which a slim shared column can't provide regardless
+   of how it's split internally. `TierName` itself is a nested two-column grid (`grid-template-columns:
+   7rem 1fr` desktop, `6.25rem 1fr` below `40rem`) — a fixed-width label column holding the tier name (long
+   enough to fit every tier name, e.g. `Quadrillions`/`Pentillions`, without truncating) plus a flexible
+   second column for the badge — so the badge always starts at an identical horizontal position on every
+   tier row, regardless of how wide that row's own name happens to render, the same fixed-track principle
+   `TierLine` itself uses one level up. Buy sits to
    the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
