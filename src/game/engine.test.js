@@ -280,33 +280,35 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 9)).toBe(10)
   })
 
-  it('jumps to baseCost^2 at owned = 10 (epoch 1), then stays flat within it', () => {
-    // epoch=1 → exponent 2 → 10^2 = 100, flat for owned 10-19
+  it('jumps to baseCost * 10^1 at owned = 10 (epoch 1), then stays flat within it', () => {
+    // epoch=1 → fib 2 → baseCost * 10^(2-1) = 10 * 10 = 100, flat for owned 10-19
     expect(getTierCost(tier, 10)).toBe(100)
     expect(getTierCost(tier, 19)).toBe(100)
   })
 
-  it('jumps to baseCost^3 at owned = 20 (epoch 2)', () => {
-    // epoch=2 → exponent 3 → 10^3 = 1000
+  it('jumps to baseCost * 10^2 at owned = 20 (epoch 2)', () => {
+    // epoch=2 → fib 3 → 10 * 10^(3-1) = 1000
     expect(getTierCost(tier, 20)).toBe(1000)
   })
 
-  it('skips to baseCost^5 at owned = 30 (epoch 3, first Fibonacci divergence)', () => {
-    // epoch=3 → exponent 5 (not 4) → 10^5, flat for owned 30-39
+  it('skips to baseCost * 10^4 at owned = 30 (epoch 3, first Fibonacci divergence)', () => {
+    // epoch=3 → fib 5 (not 4) → 10 * 10^(5-1) = 1e5, flat for owned 30-39
     expect(getTierCost(tier, 30)).toBe(1e5)
     expect(getTierCost(tier, 39)).toBe(1e5)
   })
 
-  it('reaches baseCost^8 at owned = 40 (epoch 4)', () => {
+  it('reaches baseCost * 10^7 at owned = 40 (epoch 4)', () => {
+    // epoch=4 → fib 8 → 10 * 10^(8-1) = 1e8
     expect(getTierCost(tier, 40)).toBe(1e8)
   })
 
-  it('raises a larger baseCost to the same Fibonacci exponents', () => {
+  it('scales a larger baseCost by the same Fibonacci-driven multiplier, not a compounded power', () => {
     const thousands = { baseCost: 1e3 }
     expect(getTierCost(thousands, 0)).toBe(1e3)
-    expect(getTierCost(thousands, 10)).toBe(1e6)
-    expect(getTierCost(thousands, 20)).toBe(1e9)
-    expect(getTierCost(thousands, 30)).toBe(1e15)
+    expect(getTierCost(thousands, 10)).toBe(1e4)
+    expect(getTierCost(thousands, 20)).toBe(1e5)
+    expect(getTierCost(thousands, 30)).toBe(1e7)
+    expect(getTierCost(thousands, 40)).toBe(1e10)
   })
 
   it('treats negative owned as 0', () => {
