@@ -151,8 +151,6 @@ jobs:
                   "Write(.github/workflows/ci.yml)",
                   "Edit(.github/workflows/deploy.yml)",
                   "Write(.github/workflows/deploy.yml)",
-                  "Edit(.github/workflows/dependabot-lockfile.yml)",
-                  "Write(.github/workflows/dependabot-lockfile.yml)",
                   "Edit(.github/workflows/autonomous-pr-followup.yml)",
                   "Write(.github/workflows/autonomous-pr-followup.yml)",
                   "Edit(.github/workflows/pr-auto-merge.yml)",
@@ -338,8 +336,8 @@ jobs:
               task issue whose "Explicit authorizations" section explicitly permits that specific
               change — a claude-task issue is the maintainer's written sign-off. During Phase B
               menu runs (and Phase 0 heal-main fixes) this ban is absolute.
-            - Never modify .github/workflows/ci.yml, deploy.yml, dependabot-lockfile.yml,
-              autonomous-pr-followup.yml, or pr-auto-merge.yml.
+            - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-pr-followup.yml,
+              or pr-auto-merge.yml.
             - Never change the dev/test server host binding away from 127.0.0.1.
             - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
               force-push, and never push directly to main.

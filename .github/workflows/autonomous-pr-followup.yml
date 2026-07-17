@@ -141,8 +141,6 @@ jobs:
                   "Write(.github/workflows/ci.yml)",
                   "Edit(.github/workflows/deploy.yml)",
                   "Write(.github/workflows/deploy.yml)",
-                  "Edit(.github/workflows/dependabot-lockfile.yml)",
-                  "Write(.github/workflows/dependabot-lockfile.yml)",
                   "Edit(.github/workflows/autonomous-maintenance.yml)",
                   "Write(.github/workflows/autonomous-maintenance.yml)",
                   "Edit(.github/workflows/pr-auto-merge.yml)",
