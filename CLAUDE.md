@@ -66,6 +66,14 @@ needs updating, fix the workflow/check definition instead of routing around it. 
 increasingly as more of the merge process comes to rely on status checks being trustworthy (see
 below).
 
+Before merging any PR that touches `TIER_DEFINITIONS` or other economy constants/formulas in
+`src/game/layers.js` (autonomous or interactive), run the `economy-change-review` skill
+(`.claude/skills/economy-change-review/SKILL.md`): a narrow, mechanical cross-check of the diff
+against the originating issue's approved spec table and Explicit Authorizations section — catching
+drift (a wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migration missing an old
+tier id, an unauthorized economy change) that general code review doesn't specifically look for.
+It supplements, not replaces, the ordinary review flow above.
+
 ## Automation workflows
 
 Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working
