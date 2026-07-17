@@ -297,8 +297,7 @@ of 5 concurrently-open autonomous PRs (one per task slot) is a safety net agains
 skipping the run entirely once hit — except when Phase 0(a) applies (`main` is broken), which bypasses
 the ceiling since healing `main` is never redundant with an already-open PR. If nothing remains in any
 phase (all either done or already covered by an open PR), the run makes no changes and opens no PR.
-`ci.yml`, `deploy.yml`,
-`dependabot-lockfile.yml`, `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly
+`ci.yml`, `deploy.yml`, `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly
 denied to Claude's Edit/Write tools, even during the self-improvement task — only
 `autonomous-maintenance.yml` may edit itself.
 

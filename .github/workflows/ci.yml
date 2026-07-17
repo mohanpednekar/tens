@@ -1,7 +1,12 @@
 name: CI
 
+# push is limited to main so a PR branch doesn't run the same test job twice per push
+# (once for the branch push, once for the pull_request event) — PRs get their required
+# `test` check from the pull_request run alone.
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
