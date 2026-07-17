@@ -174,15 +174,31 @@ Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
 `anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B:
 
-**Tolerated failure mode: usage-quota 429s.** Because `CLAUDE_CODE_OAUTH_TOKEN` is
-subscription-quota-based (see Cost implications above), a scheduled run can die on turn 1 with HTTP
-429 ("You've hit your session limit") whenever the quota happens to be exhausted at fire time —
-purely transient, no work attempted, and the next 5-hourly run retries by itself. The Claude step
-therefore runs with `continue-on-error: true`, and a follow-up "Classify Claude step failure" step
-inspects the action's execution-output JSON: a final result with `is_error: true` and
-`api_error_status: 429` downgrades the run to a `::warning::` (job stays green), while any other
-failure — including `error_max_turns`, which is a real budget signal worth keeping red — re-fails
-the job as before.
+**Job conclusion vs. what the run actually did.** The action step's exit code alone misreports both
+directions, so two follow-up steps re-align the job's red/green with reality by inspecting the
+action's execution-output JSON (`$RUNNER_TEMP/claude-execution-output.json`):
+
+- *Green that should be red:* the action exits 0 whenever the agent runs to completion — including
+  a run that completed by giving up. This happened for real: three consecutive green runs each
+  picked task #78, had every `Write` into `.claude/skills/`/`.claude/agents/` refused by the
+  harness's unattended-session guardrail (creating new skill/agent files needs an interactive
+  approval no one is present to grant), and ended having only left an issue comment — each burning
+  a full run's quota, every 5 hours, indefinitely. The "Fail on denied file modifications" step
+  now fails the job whenever the final result's `permission_denials` include a `Write`/`Edit`/
+  `NotebookEdit` denial (a file the run wanted to change and couldn't); Bash denials stay
+  non-fatal since allowlist misses are routine and worked around. To stop the every-5-hours retry
+  loop itself, a run that hits an environment/permission blocker on a task issue also labels it
+  `blocked` (created idempotently), and the guard step excludes `blocked`-labeled issues from the
+  Phase A backlog — a human removes the label after unblocking (e.g. by creating the `.claude/`
+  file interactively, where the approval prompt can actually be granted).
+- *Red that should be green:* because `CLAUDE_CODE_OAUTH_TOKEN` is subscription-quota-based (see
+  Cost implications above), a scheduled run can die on turn 1 with HTTP 429 ("You've hit your
+  session limit") whenever the quota happens to be exhausted at fire time — purely transient, no
+  work attempted, and the next 5-hourly run retries by itself. The Claude step therefore runs with
+  `continue-on-error: true`, and the "Classify Claude step failure" step downgrades a final result
+  with `is_error: true` and `api_error_status: 429` to a `::warning::` (job stays green), while
+  any other failure — including `error_max_turns`, a real budget signal worth keeping red —
+  re-fails the job as before.
 
 **Budget discipline.** This is a side project — wall-clock time is not a constraint (one task every 5
 hours is fine), but the per-run turn/token budget is. Before starting whatever task it picks, Claude
