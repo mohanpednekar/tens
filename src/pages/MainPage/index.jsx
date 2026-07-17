@@ -717,7 +717,7 @@ const MainPage = () => {
                 )}
               </TierName>
               <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
-              <PurchasedText>Purchased: {formatAmount(purchased)}</PurchasedText>
+              <PurchasedText>Level: {formatAmount(purchased)}</PurchasedText>
               <ProductionCell>
                 <ProductionText>
                   +{tier.producesResourceId === MONEY_ID

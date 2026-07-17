@@ -400,7 +400,10 @@ Strict three-layer separation:
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
    renders each unlocked tier as a single compact row rather than separate cards, showing `Owned` (current
    amount, drives production) and `Purchased` (lifetime buy count, drives both cost and — every 10 of
-   them — a production doubling, see `getPurchaseMilestoneMultiplier`) as two separate figures.
+   them — a production doubling, see `getPurchaseMilestoneMultiplier`) as two separate figures — the UI
+   label for `purchased` reads "Level" (it already behaves like one: it only ever increases and gates both
+   cost and production milestones), while the underlying state field/variable/function names
+   (`state.purchased`, `getTierPurchasedCount`, `getPurchaseMilestoneMultiplier`) are unchanged.
    Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
    exponential above), in a centered `MoneyCard` (`styled(StatCard)` with `align-items: center; text-align:
    center`) — the only top-of-page block besides `Header` that's centered rather than left-aligned. It no
