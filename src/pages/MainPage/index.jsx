@@ -2,7 +2,7 @@ import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { GOOGOL, MONEY_ID, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
+import { GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
@@ -401,7 +401,11 @@ const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
-  const prestigeBonus = getPrestigeProductionMultiplier(prestige.points)
+  // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
+  // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
+  const prestigeBonus = state.prestigeSpeedBonusUnlocked
+    ? getPrestigeProductionMultiplier(prestige.points)
+    : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
@@ -467,6 +471,10 @@ const MainPage = () => {
   // (in its usual spot) whenever production isn't frozen.
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
+
+  // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
+  // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
+  const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
   // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
@@ -577,7 +585,10 @@ const MainPage = () => {
         <StatCard aria-label="prestige points display">
           <MutedText>
             <GoldText>{formatAmount(prestige.points)} PP</GoldText>
-            {' · '}+{Math.round((prestigeBonus - 1) * 100)}% production speed
+            {' · '}
+            {state.prestigeSpeedBonusUnlocked
+              ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
+              : 'production speed bonus locked'}
           </MutedText>
         </StatCard>
       )}
@@ -614,7 +625,14 @@ const MainPage = () => {
           const autobuyerAttemptRate = getAutobuyerAttemptRate(autobuyerLevel)
           const isAutomated = state.autobuyerAutomation?.[tier.id] ?? false
           const automationCost = getAutobuyerAutomationCost(tier.id)
-          const canAutomate = !isFrozen && !isAutomated && !isAutobuyerLocked && prestige.points >= automationCost
+          // The first tier's Automate purchase is an exception: it activates its autobuyer (at
+          // the baseline level) as part of the same 1 PP purchase if it isn't already active,
+          // instead of requiring it be bought separately with Money first (see
+          // buyAutobuyerAutomation in engine.js) — every other tier still needs its autobuyer
+          // already active before Automate becomes available.
+          const isFirstTier = tierIndex === 0
+          const bootstrapsAutobuyer = isFirstTier && isAutobuyerLocked
+          const canAutomate = !isFrozen && !isAutomated && (!isAutobuyerLocked || isFirstTier) && prestige.points >= automationCost
           // "Smart" buys this tier one at a time until 10 lifetime purchases, then switches to
           // the normal full-block batching. It requires Auto-upgrade automation to already be
           // bought (see buySmartAutobuyer) — it's the next purchase in the same progression, not
@@ -753,7 +771,7 @@ const MainPage = () => {
                   aria-valuemax={100}
                 />
               </UpgradeButton>
-              {!isFirstRun && !isAutobuyerLocked && !allTiersSmart && (
+              {!isFirstRun && (!isAutobuyerLocked || isFirstTier) && !allTiersSmart && (
                 <AutomationCell>
                   {isSmart ? (
                     <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
@@ -772,11 +790,19 @@ const MainPage = () => {
                     </AutomationButton>
                   ) : (
                     <AutomationButton
-                      aria-label={`Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`}
+                      aria-label={
+                        bootstrapsAutobuyer
+                          ? `Unlock and automate ${tier.name}'s autobuyer for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
+                          : `Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
+                      }
                       color={canAutomate ? '#38bdf8' : 'darkgrey'}
                       disabled={!canAutomate}
                       onClick={() => actions.buyAutobuyerAutomation(tier.id)}
-                      title="Spend Prestige Points to make this tier's autobuyer Upgrades happen automatically, forever"
+                      title={
+                        bootstrapsAutobuyer
+                          ? 'Spend Prestige Points to unlock and automate this tier\'s autobuyer forever, with no Money cost needed to activate it first'
+                          : 'Spend Prestige Points to make this tier\'s autobuyer Upgrades happen automatically, forever'
+                      }
                       type="button"
                     >
                       🤖 {automationCost}
@@ -795,19 +821,36 @@ const MainPage = () => {
             <h2>Prestige</h2>
             <MutedText id="prestige-description">
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
-              {!isFirstRun && ' Each unspent point adds +1% production speed, or spend points to automate autobuyer Upgrades.'}
+              {!isFirstRun && ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`}
               {' '}Resets your resources when reached.
             </MutedText>
           </div>
           <div>
             <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
             {!isFirstRun && (
-              <MutedText>{formatAmount(prestige.points)} PP unspent{' · '}×{formatRate(prestigeBonus)} production speed</MutedText>
+              <MutedText>
+                {formatAmount(prestige.points)} PP unspent{' · '}
+                {state.prestigeSpeedBonusUnlocked
+                  ? `×${formatRate(prestigeBonus)} production speed`
+                  : 'production speed bonus locked'}
+              </MutedText>
             )}
             <MutedText>
               {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
             </MutedText>
           </div>
+          {!isFirstRun && !state.prestigeSpeedBonusUnlocked && (
+            <Button
+              aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
+              color={canBuySpeedBonus ? '#38bdf8' : 'darkgrey'}
+              disabled={!canBuySpeedBonus}
+              onClick={actions.buyPrestigeSpeedBonus}
+              title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
+              type="button"
+            >
+              🚀 Unlock Speed Bonus for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+            </Button>
+          )}
           <Button
             aria-describedby="prestige-description"
             aria-label={prestigeLabel}

@@ -53,7 +53,14 @@ export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 // Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
 // tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
 // doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
+// This bonus is inert until unlocked (see PRESTIGE_SPEED_BONUS_UNLOCK_COST below) — it no longer
+// applies automatically just from holding points.
 export const PRESTIGE_POINT_SPEED_BONUS = 0.01
+// One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
+// buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
+// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
+// Auto-Prestige.
+export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 1000
 // PP cost to permanently automate the first tier's autobuyer Upgrades (see engine.js's
 // getAutobuyerAutomationCost) — doubles for each subsequent tier.
 export const AUTOBUYER_AUTOMATION_BASE_COST = 1
