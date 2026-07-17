@@ -1010,14 +1010,16 @@ upgrade all update both by the same amount. They represent "how many generators 
 that tier's resource you can spend" respectively, which happen to be the same number by design. `purchased`
 is separate: it only ever increases and is what `getTierCost` scales against; it also drives production
 directly, doubling every time it crosses another block of 10 (see `getPurchaseMilestoneMultiplier`) — the
-same boundary where cost jumps 10x, regardless of whether those purchases were manual or automatic.
+same boundary where cost jumps to the next Fibonacci power of `baseCost` (see `getTierCost`),
+regardless of whether those purchases were manual or automatic.
 
 ### Key engine functions (`src/game/engine.js`)
 
 | Function | Signature | Purpose |
 |----------|-----------|---------|
 | `createInitialGameState` | `() → state` | Fresh state derived from `TIER_DEFINITIONS`; `resources` is pre-populated with every `costResourceId`/`producesResourceId`, not just money |
-| `getTierCost` | `(tier, purchasedCount) → number` | `baseCost * 10^epoch`, epoch = `floor(purchased/10)` — flat across each block of 10 purchases, jumps 10x at each block boundary |
+| `getTierCost` | `(tier, purchasedCount) → number` | `baseCost ^ getCostEpochExponent(epoch)`, epoch = `floor(purchased/10)` — flat across each block of 10 purchases; each block raises `baseCost` to the next Fibonacci exponent (1, 2, 3, 5, 8, …), e.g. a baseCost-10 tier's 4th block (purchases 30–39) costs 10^5 per unit. Deep epochs overflow to `Infinity`, which is safe — an infinite cost is simply never affordable |
+| `getCostEpochExponent` | `epoch → number` | The Fibonacci exponent a cost epoch raises `baseCost` to in `getTierCost`: 1, 2, 3, 5, 8, 13, … for epochs 0, 1, 2, 3, 4, 5, …; a negative epoch is clamped to 0 |
 | `getTierBulkQuantity` | `(tier, purchased, requestedQuantity) → number` | Caps a bulk purchase at the current cost-block boundary, so every unit bought is the same price |
 | `getTierQuantityCost` | `(tier, purchased, requestedQuantity) → number` | `getTierCost(...) * getTierBulkQuantity(...)` |
 | `getTierAffordableQuantity` | `(tier, purchased, spendable, requestedQuantity) → number` | Further caps `getTierBulkQuantity` by what `spendable` can actually pay for — what `buyTierQuantity` will actually purchase |
@@ -1032,7 +1034,7 @@ same boundary where cost jumps 10x, regardless of whether those purchases were m
 | `buyPrestigeSpeedBonus` | `state → state` | Returns the same state if `isProductionFrozen`, if `prestigeSpeedBonusUnlocked` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` PP and permanently sets `prestigeSpeedBonusUnlocked = true`, activating `getPrestigeProductionMultiplier`'s passive bonus in `tickGame` — see "Prestige Points and autobuyer automation" |
 | `buySmartAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if `autobuyerAutomation[tierId]` isn't bought yet (prerequisite — implies the autobuyer is active too), if already smart, or if there aren't enough unspent Prestige Points; otherwise spends `getSmartAutobuyerCost(tierId)` PP and permanently sets `smartAutobuyer[tierId] = true` — see "Prestige Points and autobuyer automation" |
 | `buyAutoPrestige` | `state → state` | Returns the same state if `isProductionFrozen` or if there aren't enough unspent Prestige Points for the next level; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getAutoPrestigeCost(currentLevel)` — a single global upgrade track, not per-tier — see "Prestige Points and autobuyer automation" |
-| `getPurchaseMilestoneMultiplier` | `purchased → number` | `2 ** floor(purchased/10)` — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost` scales cost 10x. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
+| `getPurchaseMilestoneMultiplier` | `purchased → number` | `2 ** floor(purchased/10)` — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost` jumps to the next Fibonacci power of `baseCost`. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getAutobuyerAttemptRate` | `autobuyerLevel → number` | `1.1 ** (level - 1)` (`null`/not-yet-activated and level ≤ 1 all treated as the baseline rate 1); the average purchase-attempt rate an autobuyer accumulates per tick in `tickGame` — level 1 (just activated, not yet upgraded) is the 1x baseline rate |
 | `getAutobuyerAutomationCost` | `tierId → number` | `AUTOBUYER_AUTOMATION_BASE_COST * 2^tierIndex` — 1 PP for the first tier, doubling for each subsequent one (512 PP for the 10th/last tier); an unrecognized tier id is treated as index 0 |
 | `getSmartAutobuyerCost` | `tierId → number` | `SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)` — 10x that tier's Auto-upgrade cost (10, 20, … 5,120 PP for the 10th/last tier) |
@@ -1112,7 +1114,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   the rest of the test file. At the old 1Hz tick rate this leak was infrequent enough not to matter; at
   10Hz it fires 10x more often and reliably starved subsequent `userEvent`-based tests into timing out
   until fixed (a real regression caught while raising `TICK_RATE_MS`, not merely a style preference).
-- `yarn test` is green (312 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (317 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

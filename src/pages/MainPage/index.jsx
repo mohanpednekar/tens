@@ -645,7 +645,8 @@ const MainPage = () => {
           const canBuySmart = !isFrozen && !isSmart && isAutomated && prestige.points >= smartCost
           // Production no longer depends on the autobuyer at all — every 10 lifetime purchases
           // of a tier (manual or automatic) doubles its own production, the same boundary where
-          // its cost jumps 10x (see getPurchaseMilestoneMultiplier). This is the raw amount
+          // its cost jumps to the next Fibonacci power of baseCost (see
+          // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount
           // delivered in one lump batch once the tick-progress ring below fills — not a per-second
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
