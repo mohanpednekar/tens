@@ -74,6 +74,17 @@ drift (a wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migrat
 tier id, an unauthorized economy change) that general code review doesn't specifically look for.
 It supplements, not replaces, the ordinary review flow above.
 
+For general review depth beyond that narrow economy check, a dedicated reviewer subagent is
+defined at `.claude/agents/code-reviewer.md`: a comprehensive, adversarial, evidence-based review
+of a PR or working diff — every finding verified against the checked-out code and cited by
+`file:line` with a CONFIRMED/PLAUSIBLE confidence label, an explicit merge verdict
+(APPROVE / NEEDS CHANGES / BLOCK), a checked-and-clean list of the invariants it verified, and an
+honest statement of anything it didn't cover. It is read-only — it reports findings but never
+edits code. Use it (spawn via the Agent tool) before merging any non-trivial change, or whenever
+asked to review a branch/PR; when a diff touches economy surfaces it folds the
+`economy-change-review` skill's cross-check in as one of its required steps rather than replacing
+it.
+
 ## Automation workflows
 
 Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working

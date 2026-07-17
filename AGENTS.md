@@ -147,6 +147,15 @@ the same number by design.
   a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
   logic.
 
+## Code review tooling
+
+- `.claude/agents/code-reviewer.md` — a comprehensive, adversarial reviewer subagent for any PR or
+  working diff: verified `file:line`-cited findings with confidence labels, a merge verdict, and an
+  explicit coverage report. Read-only (never edits code). Use before merging any non-trivial change.
+- `.claude/skills/economy-change-review/SKILL.md` — a narrow, mechanical spec-vs-implementation
+  cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
+  code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
+
 ## Automation design principles
 
 Three conventions guide this repo's automation design (see `CLAUDE.md`'s Orchestration model for the
