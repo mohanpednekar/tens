@@ -17,6 +17,7 @@ import {
   getAutobuyerCost,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getCostEpochExponent,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getPrestigePointsAwarded,
@@ -248,6 +249,23 @@ describe('formatCurrency', () => {
   })
 })
 
+// ─── getCostEpochExponent ────────────────────────────────────────────────────
+
+describe('getCostEpochExponent', () => {
+  it('follows the Fibonacci sequence 1, 2, 3, 5, 8, 13 across epochs 0-5', () => {
+    expect(getCostEpochExponent(0)).toBe(1)
+    expect(getCostEpochExponent(1)).toBe(2)
+    expect(getCostEpochExponent(2)).toBe(3)
+    expect(getCostEpochExponent(3)).toBe(5)
+    expect(getCostEpochExponent(4)).toBe(8)
+    expect(getCostEpochExponent(5)).toBe(13)
+  })
+
+  it('clamps a negative epoch to 0', () => {
+    expect(getCostEpochExponent(-1)).toBe(1)
+  })
+})
+
 // ─── getTierCost ─────────────────────────────────────────────────────────────
 
 describe('getTierCost', () => {
@@ -262,15 +280,33 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 9)).toBe(10)
   })
 
-  it('scales 10x starting at owned = 10 (epoch 1), then stays flat within it', () => {
-    // epoch=1 → 10 * 10 = 100, flat for owned 10-19
+  it('jumps to baseCost^2 at owned = 10 (epoch 1), then stays flat within it', () => {
+    // epoch=1 → exponent 2 → 10^2 = 100, flat for owned 10-19
     expect(getTierCost(tier, 10)).toBe(100)
     expect(getTierCost(tier, 19)).toBe(100)
   })
 
-  it('scales 10x again at owned = 20 (epoch 2)', () => {
-    // epoch=2 → 10 * 100 = 1000
+  it('jumps to baseCost^3 at owned = 20 (epoch 2)', () => {
+    // epoch=2 → exponent 3 → 10^3 = 1000
     expect(getTierCost(tier, 20)).toBe(1000)
+  })
+
+  it('skips to baseCost^5 at owned = 30 (epoch 3, first Fibonacci divergence)', () => {
+    // epoch=3 → exponent 5 (not 4) → 10^5, flat for owned 30-39
+    expect(getTierCost(tier, 30)).toBe(1e5)
+    expect(getTierCost(tier, 39)).toBe(1e5)
+  })
+
+  it('reaches baseCost^8 at owned = 40 (epoch 4)', () => {
+    expect(getTierCost(tier, 40)).toBe(1e8)
+  })
+
+  it('raises a larger baseCost to the same Fibonacci exponents', () => {
+    const thousands = { baseCost: 1e3 }
+    expect(getTierCost(thousands, 0)).toBe(1e3)
+    expect(getTierCost(thousands, 10)).toBe(1e6)
+    expect(getTierCost(thousands, 20)).toBe(1e9)
+    expect(getTierCost(thousands, 30)).toBe(1e15)
   })
 
   it('treats negative owned as 0', () => {

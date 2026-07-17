@@ -123,11 +123,24 @@ export const formatCurrency = value => {
     : `$${scientificNumberFormatter.format(safeValue)}`
 }
 
-// Cost is flat across each block of 10 purchases, jumping 10x at every block boundary.
-// epoch = floor(purchased / 10); cost = baseCost * 10^epoch
+// The Fibonacci exponent a cost epoch raises baseCost to (see getTierCost): 1, 2, 3, 5, 8,
+// 13, … for epochs 0, 1, 2, 3, 4, 5, … A negative epoch is clamped to 0 rather than throwing.
+export const getCostEpochExponent = epoch => {
+  let current = 1
+  let next = 2
+  for (let i = 0; i < clampNonNegative(epoch); i += 1) {
+    [current, next] = [next, current + next]
+  }
+  return current
+}
+
+// Cost is flat across each block of 10 purchases; each block raises baseCost to the next
+// Fibonacci power. epoch = floor(purchased / 10); cost = baseCost ^ (1, 2, 3, 5, 8, …)[epoch] —
+// e.g. a baseCost-10 tier's 4th block (purchases 30–39) costs 10^5 per unit. Deep epochs
+// overflow to Infinity, which is safe: an infinite cost is simply never affordable.
 export const getTierCost = (tier, purchased) => {
   const epoch = Math.floor(clampNonNegative(purchased) / 10)
-  return tier.baseCost * (10 ** epoch)
+  return tier.baseCost ** getCostEpochExponent(epoch)
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the
@@ -198,8 +211,9 @@ export const getSmartAutobuyerCost = tierId =>
   SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)
 
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
-// the same boundary where getTierCost's cost jumps 10x, so buying into a fresh cost epoch always
-// pays off with cheaper-relative production. epoch = floor(purchased/10); multiplier = 2^epoch.
+// the same boundary where getTierCost jumps to the next Fibonacci power of baseCost, so buying
+// into a fresh cost epoch always pays off with production alongside the steeper price.
+// epoch = floor(purchased/10); multiplier = 2^epoch.
 // Applies to every tier uniformly, regardless of whether the purchases were manual or automatic.
 export const getPurchaseMilestoneMultiplier = purchased =>
   2 ** Math.floor(clampNonNegative(purchased) / 10)
