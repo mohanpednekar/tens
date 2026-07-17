@@ -174,6 +174,16 @@ Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
 `anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B:
 
+**Tolerated failure mode: usage-quota 429s.** Because `CLAUDE_CODE_OAUTH_TOKEN` is
+subscription-quota-based (see Cost implications above), a scheduled run can die on turn 1 with HTTP
+429 ("You've hit your session limit") whenever the quota happens to be exhausted at fire time —
+purely transient, no work attempted, and the next 5-hourly run retries by itself. The Claude step
+therefore runs with `continue-on-error: true`, and a follow-up "Classify Claude step failure" step
+inspects the action's execution-output JSON: a final result with `is_error: true` and
+`api_error_status: 429` downgrades the run to a `::warning::` (job stays green), while any other
+failure — including `error_max_turns`, which is a real budget signal worth keeping red — re-fails
+the job as before.
+
 **Budget discipline.** This is a side project — wall-clock time is not a constraint (one task every 5
 hours is fine), but the per-run turn/token budget is. Before starting whatever task it picks, Claude
 roughly sizes the work against its remaining turns, reserving a buffer of roughly the last 15-20% for

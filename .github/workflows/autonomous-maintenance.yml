@@ -116,7 +116,13 @@ jobs:
           cache: yarn
 
       - name: Run autonomous maintenance task
+        id: claude
         if: steps.guard.outputs.skip != 'true'
+        # Tolerated-failure handling: the step below re-fails the job for any real error,
+        # but downgrades a pure Claude usage-quota exhaustion (HTTP 429 on turn 1) to a
+        # warning — the run did no work and the next scheduled run simply retries, so a
+        # red X adds alert noise without any actionable signal.
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
@@ -344,3 +350,24 @@ jobs:
             budget guidance above). The two exceptions are Phase 0(b)'s Dependabot rebase request
             (a comment, not a branch or PR) and Phase B item 6 (gap analysis), whose output is a filed
             issue, not a branch or PR.
+
+      - name: Classify Claude step failure
+        # Companion to the continue-on-error above: keep every real failure red, but treat
+        # a run that died on turn 1 because the Claude subscription's usage quota was
+        # exhausted (429 "session limit") as a skipped run — it made no changes, cost no
+        # quota, and the next scheduled run (every 5 hours) retries automatically.
+        if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'failure'
+        run: |
+          out="${{ steps.claude.outputs.execution_file }}"
+          [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
+          if [ -f "$out" ] && jq -e '
+                (if type == "array" then . else [.] end)
+                | map(select(.type == "result"))
+                | last
+                | .is_error == true and .api_error_status == 429
+              ' "$out" >/dev/null 2>&1; then
+            echo "::warning::Run skipped: Claude usage limit hit (HTTP 429) before any work was done. The next scheduled run will retry."
+            exit 0
+          fi
+          echo "::error::Claude run failed for a reason other than usage-quota exhaustion — see the 'Run autonomous maintenance task' step logs."
+          exit 1
