@@ -659,12 +659,12 @@ const MainPage = () => {
           )
           const isRingInstant = wasFullRef.current[tier.id] ?? false
           // The tick right after a delivery already has some of its new cycle's own time banked
-          // (e.g. a 2s tier is already back up to a raw 5% one real (100ms) tick later, since
-          // every tier now takes multiple ticks to fill — tier01's 1s tickspeed is 10 ticks at the
-          // 10Hz tick rate, no longer a single-tick special case), which would make the ring's
-          // instant post-delivery snap land part-way full instead of empty. Forcing it to 0 here
-          // means the next tick's normal, non-instant transition animates a full, clean climb from
-          // empty back up to that tick's real value, rather than a shorter climb starting mid-way.
+          // (every tier's 1s tickspeed is 10 ticks at the 10Hz tick rate, so it's already back up
+          // to a raw 10% one real (100ms) tick later, not a single-tick special case), which would
+          // make the ring's instant post-delivery snap land part-way full instead of empty. Forcing
+          // it to 0 here means the next tick's normal, non-instant transition animates a full,
+          // clean climb from empty back up to that tick's real value, rather than a shorter climb
+          // starting mid-way.
           // This visual-only value deliberately isn't what's reported via aria-valuenow below —
           // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
           // environment whenever the *accessible* value diverged from the plain

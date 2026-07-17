@@ -7,28 +7,35 @@
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier.
+// shared formula or any other tier. Every tier is currently set to the same 1s cadence (matching
+// the global 100ms/10Hz tick rate — see TICK_RATE_MS below) rather than a per-tier value that
+// slows down for later tiers, since a slower cadence divides that tier's real throughput (see
+// getTierBaseTickSpeedSeconds below) — a division that used to grow to 10x for the last tier, on
+// top of the already-steep Fibonacci-driven cost curve (see getTierCost in engine.js), and made a
+// full run unable to reach GOOGOL within any practical amount of time.
 export const TIER_DEFINITIONS = [
   { id: 'tier01', name: 'Tens',          symbol: 'Tens', baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
-  { id: 'tier03', name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
-  { id: 'tier04', name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
-  { id: 'tier05', name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
-  { id: 'tier06', name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
-  { id: 'tier07', name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
-  { id: 'tier08', name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
-  { id: 'tier09', name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
-  { id: 'tier10', name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
+  { id: 'tier02', name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 1 },
+  { id: 'tier03', name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 1 },
+  { id: 'tier04', name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 1 },
+  { id: 'tier05', name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 1 },
+  { id: 'tier06', name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 1 },
+  { id: 'tier07', name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 1 },
+  { id: 'tier08', name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 1 },
+  { id: 'tier09', name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 1 },
+  { id: 'tier10', name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 1 },
 ]
 
 
 export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || '$'
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
-// continuously every global 1s tick (see engine.js's tickGame / tierProductionAccumulators) —
-// simply reads that tier's own independent baseTickSpeedSeconds field above. Balance-neutral: a
-// tier still produces the exact same total amount over time, it's just delivered every N seconds
-// instead of continuously. An unrecognized tier id falls back to 1s rather than throwing.
+// continuously every global tick (see engine.js's tickGame / tierProductionAccumulators) —
+// simply reads that tier's own independent baseTickSpeedSeconds field above. Not balance-neutral:
+// a tier's real per-second throughput is divided by its own tickspeed (see tickGame in
+// engine.js), which is exactly why every tier now shares the same 1s value rather than the
+// slower, per-tier-increasing cadence used before. An unrecognized tier id falls back to 1s
+// rather than throwing.
 export const getTierBaseTickSpeedSeconds = tierId =>
   TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
 
