@@ -4,6 +4,7 @@ import {
   buyAutobuyer,
   buyAutobuyerAutomation,
   buyAutoPrestige,
+  buyPrestigeSpeedBonus,
   buySmartAutobuyer,
   buyTier,
   buyTierQuantity,
@@ -35,7 +36,7 @@ import {
   prestigeGame,
   tickGame,
 } from './engine'
-import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,11 @@ const withAutoPrestige = (state, level = 1) => ({
 const withAutoPrestigeBudget = (state, budget) => ({
   ...state,
   autoPrestigeAttemptBudget: budget,
+})
+
+const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
+  ...state,
+  prestigeSpeedBonusUnlocked: unlocked,
 })
 
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
@@ -162,6 +168,11 @@ describe('createInitialGameState', () => {
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.smartAutobuyer[tier.id]).toBe(false)
     })
+  })
+
+  it('initialises prestigeSpeedBonusUnlocked as false', () => {
+    const state = createInitialGameState()
+    expect(state.prestigeSpeedBonusUnlocked).toBe(false)
   })
 
   it('initialises autoPrestige to null (not yet bought) and its attempt budget to 0', () => {
@@ -901,9 +912,15 @@ describe('tickGame', () => {
     expect(state.resources[MONEY_ID]).toBe(11) // 10 starting + 1 tick's worth of production
   })
 
-  it('applies the Prestige Points production-speed bonus', () => {
+  it('does not apply the Prestige Points production-speed bonus until it has been unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    const boosted = withPrestigePoints(base, 100) // +100% → ×2
+    const boosted = withPrestigePoints(base, 100) // +100% → ×2, but not yet unlocked
+    expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1)
+  })
+
+  it('applies the Prestige Points production-speed bonus once unlocked', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 1)
+    const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)) // +100% → ×2
     expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(
       base.resources[MONEY_ID] + 2
     )
@@ -911,7 +928,8 @@ describe('tickGame', () => {
 
   it('floors a fractional Prestige Points production multiplier instead of crediting a fraction', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    const boosted = withPrestigePoints(base, 50) // +50% → ×1.5, raw production 1 × 1.5 = 1.5
+    // +50% → ×1.5, raw production 1 × 1.5 = 1.5
+    const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 50))
     const after = tickGame(1)(boosted)
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1) // floor(1.5) = 1
   })
@@ -1340,8 +1358,31 @@ describe('buyAutobuyerAutomation', () => {
     expect(buyAutobuyerAutomation(tensTier.id)(state)).toBe(state)
   })
 
-  it('returns the same state when the tier\'s autobuyer is not yet active', () => {
+  it('returns the same state when the tier\'s autobuyer is not yet active (non-first tiers only — see the first-tier bypass tests below)', () => {
     const state = withPrestigePoints(createInitialGameState(), 100)
+    expect(buyAutobuyerAutomation(thousandsTier.id)(state)).toBe(state)
+  })
+
+  it('the first tier bypasses the "must already be active" requirement, activating its autobuyer at the baseline level as part of the same purchase', () => {
+    const state = withPrestigePoints(createInitialGameState(), 1) // tier01's autobuyer is locked
+    const after = buyAutobuyerAutomation(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.autobuyerAutomation[tensTier.id]).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('leaves an already-active first tier\'s autobuyer level untouched when automating', () => {
+    const state = withPrestigePoints(
+      withAutobuyer(createInitialGameState(), tensTier.id, 3),
+      1
+    )
+    const after = buyAutobuyerAutomation(tensTier.id)(state)
+    expect(after.autobuyers[tensTier.id]).toBe(3)
+    expect(after.autobuyerAutomation[tensTier.id]).toBe(true)
+  })
+
+  it('still refuses to bypass-activate the first tier without enough points', () => {
+    const state = withPrestigePoints(createInitialGameState(), 0)
     expect(buyAutobuyerAutomation(tensTier.id)(state)).toBe(state)
   })
 
@@ -1477,6 +1518,43 @@ describe('buyAutoPrestige', () => {
   })
 })
 
+// ─── buyPrestigeSpeedBonus ─────────────────────────────────────────────────────
+
+describe('buyPrestigeSpeedBonus', () => {
+  it(`spends ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP to permanently unlock the passive production-speed bonus`, () => {
+    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST)
+    const after = buyPrestigeSpeedBonus(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('leaves any points beyond the cost unspent', () => {
+    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST + 50)
+    const after = buyPrestigeSpeedBonus(state)
+    expect(after.prestige.points).toBe(50)
+  })
+
+  it('returns the same state when there are not enough points', () => {
+    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST - 1)
+    expect(buyPrestigeSpeedBonus(state)).toBe(state)
+  })
+
+  it('returns the same state when already unlocked (one-time purchase)', () => {
+    const state = withPrestigeSpeedBonusUnlocked(
+      withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST)
+    )
+    expect(buyPrestigeSpeedBonus(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(
+      withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST),
+      GOOGOL
+    )
+    expect(buyPrestigeSpeedBonus(state)).toBe(state)
+  })
+})
+
 // ─── prestigeGame ────────────────────────────────────────────────────────────
 
 describe('prestigeGame', () => {
@@ -1541,6 +1619,14 @@ describe('prestigeGame', () => {
     const state = withAutoPrestige(withMoney(createInitialGameState(), GOOGOL), 3)
     const after = prestigeGame(state)
     expect(after.autoPrestige).toBe(3)
+  })
+
+  it('keeps the prestige speed bonus unlock permanently across prestige', () => {
+    const state = withPrestigeSpeedBonusUnlocked(
+      withMoney(createInitialGameState(), GOOGOL)
+    )
+    const after = prestigeGame(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
