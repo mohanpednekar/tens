@@ -1,6 +1,5 @@
-import { act, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { TICK_RATE_MS } from 'game/layers'
 import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
 
@@ -178,64 +177,9 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   render(<App />)
 
   // The displayed amount is the raw per-tick credit (owned(4) × 1, no bonus/milestone) delivered
-  // once its tick-progress bar fills — not divided by tickspeed, since that's no longer shown as
-  // an averaged "/sec" rate.
+  // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
+  // not shown as an averaged "/sec" rate.
   expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+4 Tens')
-})
-
-test('a tier row shows a production tick-progress bar reflecting its banked accumulator', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier01: 5 },
-    // Tens' base tickspeed is 1s, so 0.5 banked seconds is a 50% fill.
-    tierProductionAccumulators: { tier01: 0.5 },
-  }))
-
-  render(<App />)
-
-  const progressBar = screen.getByRole('progressbar', { name: /tens production tick progress/i })
-  expect(progressBar).toHaveAttribute('aria-valuenow', '50')
-  expect(progressBar).toHaveAttribute('aria-valuemax', '100')
-})
-
-test('a tick-progress ring holds at 100% on the tick a batch delivers, then resets on the next', () => {
-  vi.useFakeTimers()
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 100000 },
-    owned: { tier01: 10, tier02: 4 },
-  }))
-
-  const { unmount } = render(<App />)
-  const getRing = () => screen.getByRole('progressbar', { name: /thousands production tick progress/i })
-  // Advance exactly one live tick (TICK_RATE_MS) per act() call, rather than jumping by a whole
-  // second in one advanceTimersByTime call — jumping by more than one tick fires the interval
-  // several times synchronously within the same call stack, which React 18 batches into a single
-  // render; the ring's "just delivered" detection (see getTierProductionProgressPercent) compares
-  // against the previous *render's* banked accumulator, so it needs one render per tick to stay
-  // in sync with reality, exactly like the real interval firing 100ms apart in production does.
-  const advanceOneTick = () => act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
-  const ticksPerSecond = 1000 / TICK_RATE_MS
-  const halfSecond = ticksPerSecond / 2
-
-  // Thousands' tickspeed is 1s (same as every tier) — half a second's worth of ticks banks half
-  // of it.
-  for (let i = 0; i < halfSecond; i++) advanceOneTick()
-  expect(getRing()).toHaveAttribute('aria-valuenow', '50')
-
-  // The rest of that second's ticks cross the threshold and deliver — the ring should read 100%,
-  // not the freshly-wrapped 0% remainder that tickGame actually banks internally.
-  for (let i = 0; i < halfSecond; i++) advanceOneTick()
-  expect(getRing()).toHaveAttribute('aria-valuenow', '100')
-
-  // The following ticks start the next cycle, dropping back down to a partial fill.
-  for (let i = 0; i < halfSecond; i++) advanceOneTick()
-  expect(getRing()).toHaveAttribute('aria-valuenow', '50')
-
-  // Unmount while fake timers are still active so the live tick interval is cancelled against the
-  // same (fake) timer implementation that scheduled it — unmounting after vi.useRealTimers() would
-  // leave a real clearInterval call holding a stale fake-timer id, silently failing to cancel it.
-  unmount()
-  vi.useRealTimers()
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
@@ -249,6 +193,9 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   const progressBar = screen.getByRole('progressbar', { name: /tens cost-block progress/i })
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
   expect(progressBar).toHaveAttribute('aria-valuemax', '10')
+  // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
+  expect(screen.getByRole('button', { name: /buy for \$10 \(level 4\)/i })).toBeInTheDocument()
+  expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
 })
 
 test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {

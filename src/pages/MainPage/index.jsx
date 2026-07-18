@@ -1,11 +1,11 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
-import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -69,20 +69,15 @@ const reveal = keyframes`
 // Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
 // occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again.
-// Name spans the full row width as its own top line at both breakpoints, rather than sharing a
-// narrow column with everything else — the autobuyer badge nested inside TierName (see below)
-// needs real horizontal room to render in full at a fixed position, which a slim shared column
-// can't provide regardless of how it's split internally.
-// The 'automate' column only ever holds content once a tier's autobuyer is active — a single
-// small control at a time (Automate → Smart → the "Smart" badge, see AutomationCell), never both
-// Automate and Smart together — a narrower fraction than the other columns since it's a rare,
-// glanceable control rather than something clicked constantly like Buy.
+// The name row's leftover width holds the 'automate' area (the PP-based Automate/Smart control —
+// a single small control at a time, see AutomationCell) at the row's right edge — the badge
+// nested inside TierName still gets its fixed-position horizontal room in the remaining span.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name name name name name'
-    'owned purchased production upgrade automate buy';
-  grid-template-columns: 0.7fr 0.75fr 0.85fr 0.95fr 0.55fr 1fr;
+    'name name name automate'
+    'owned production upgrade buy';
+  grid-template-columns: 0.9fr 0.9fr 0.95fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
   row-gap: 0.3rem;
@@ -102,10 +97,10 @@ const TierLine = styled(StatCard)`
 
   @media (max-width: 40rem) {
     grid-template-areas:
-      'name name name name name name'
-      'owned owned purchased purchased production production'
-      'upgrade upgrade automate buy buy buy';
-    grid-template-columns: repeat(6, 1fr);
+      'name name automate'
+      'owned owned production'
+      'upgrade buy buy';
+    grid-template-columns: repeat(3, 1fr);
     row-gap: 0.3rem;
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
@@ -319,88 +314,14 @@ const OwnedText = styled(MutedText)`
   }
 `
 
-const PurchasedText = styled(MutedText)`
-  grid-area: purchased;
-  font-size: 0.85em;
-  ${gridCell}
-
-  @media (max-width: 40rem) {
-    font-size: 0.78em;
-  }
-`
-
-// justify-content: flex-end right-justifies the text+ring pair as a unit against the (fixed-width)
-// production column's right edge, rather than sitting immediately after the "+X" text at a
-// position that would otherwise vary with the text's own rendered width — the same "identical
-// position on every tier" goal as TierName's fixed-width label column above, just achieved by
-// right-justifying against the column's own fixed track width instead. Keeping the text right next
-// to the ring (rather than space-between, which would push it all the way to the column's left
-// edge) reads as one cohesive "amount + how-soon" unit instead of two disconnected pieces.
-const ProductionCell = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  gap: 0.35rem;
-  grid-area: production;
-  justify-content: flex-end;
-  min-width: 0;
-`
-
 const ProductionText = styled(MutedText)`
+  grid-area: production;
   font-size: 0.85em;
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: 0.78em;
-  }
-`
-
-// Registers --tick-percent as an animatable custom property (a plain <percentage>, not inherited)
-// so the browser can smoothly transition it on its own compositor — including inside a
-// conic-gradient() background, which isn't natively transitionable otherwise. Rendered once,
-// globally; @property must be a top-level rule, not nested inside a selector.
-const TickPercentProperty = createGlobalStyle`
-  @property --tick-percent {
-    syntax: '<percentage>';
-    inherits: false;
-    initial-value: 0%;
-  }
-`
-
-// Compact circular "watch face" — a conic-gradient sweep (green fill against the same #262626
-// track color the old bar used) with a punched-out center matching TierLine's own background
-// (StatCard's #171717), so it reads as a thin filling ring rather than a solid pie wedge. Fixed
-// diameter (not width: 100%) since it doesn't need to track the fractional grid column width to
-// stay layout-safe at both breakpoints. Fills over the tier's own base tickspeed (see
-// getTierProductionProgressPercent) and resets once the batch fires — a direct visualization of
-// tierProductionAccumulators. state (and thus $percent) only updates once per real game tick
-// (every TICK_RATE_MS), but the browser smoothly animates --tick-percent between each of those
-// once-per-tick values over that same TICK_RATE_MS duration via `transition`, rather than
-// snapping instantly — continuous-looking motion with no JS polling timer at all. $instant
-// suppresses that transition for exactly one update: the tick right after a
-// delivery, where the value drops from 100% back down to the new cycle's small remainder and
-// should snap immediately rather than visibly "rewinding" (see the isRingInstant tracking in
-// MainPage, driven by wasFullRef/currentlyFullRef).
-const TickProgressRing = styled.div`
-  --tick-percent: ${props => props.$percent}%;
-  background: conic-gradient(#4ade80 var(--tick-percent), #262626 0);
-  border-radius: 50%;
-  flex-shrink: 0;
-  height: 1.15rem;
-  position: relative;
-  transition: --tick-percent ${props => (props.$instant ? '0s' : `${TICK_RATE_MS}ms`)} linear;
-  width: 1.15rem;
-
-  &::after {
-    background: #171717;
-    border-radius: 50%;
-    content: '';
-    inset: 0.2rem;
-    position: absolute;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
   }
 `
 
@@ -432,7 +353,7 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Its own narrow grid column (see TierLine), not stacked under the Upgrade button — holds exactly
+// Sits at the right edge of the tier's name row (TierLine's 'automate' area) — holds exactly
 // one small control at a time, progressing Automate → Smart → the "Smart" badge (Smart requires
 // Auto-upgrade automation to already be bought, so the two are never both shown for the same
 // tier). Nothing renders here at all before the tier's autobuyer is active, and the whole thing
@@ -504,33 +425,6 @@ const MainPage = () => {
       resetGame()
     }
   }
-  // Tracks each tier's tierProductionAccumulators value from the last render where it actually
-  // changed (a tick or a prestige — see the effect below), so getTierProductionProgressPercent can
-  // tell "just delivered" (about to wrap to a small remainder) apart from "genuinely empty" (see
-  // "Per-tier tick-progress ring" in CLAUDE.md). Starts empty, so the very first render (including
-  // right after loading a save with a mid-cycle accumulator) shows the raw resumed value truthfully.
-  const previousAccumulatorsRef = useRef({})
-  // Whether each tier's ring showed a full 100% as of the last real tick — if so, this tick's drop
-  // back down to the new cycle's small remainder should apply instantly (no CSS transition), since
-  // animating that drop would visibly look like the ring "rewinding" instead of resetting.
-  // wasFullRef is only ever written from the effect below (after a real tick commits, never
-  // mid-render), so it can't go stale/inconsistent under StrictMode's double-render checks;
-  // currentlyFullRef is the render-phase scratch space the effect promotes into wasFullRef once a
-  // tick actually lands — writing it during render is safe since, unlike reading-then-overwriting
-  // the same ref in one pass, it's a plain function of this render's own (already-stable) inputs,
-  // so re-invoking the same render twice just assigns it the same value both times.
-  const wasFullRef = useRef({})
-  const currentlyFullRef = useRef({})
-  useEffect(() => {
-    previousAccumulatorsRef.current = state.tierProductionAccumulators
-    // A shallow copy, not a reference assignment — aliasing the two refs to the same object let
-    // currentlyFullRef's in-render mutations bleed straight into wasFullRef within that same
-    // render, which under React StrictMode's deliberate double-invocation of render bodies (dev
-    // mode) caused each real tick's toggle to flip twice and net out to a stuck value instead of
-    // alternating, most visibly on tier01 (whose raw value is always 100, so the stuck-open case
-    // left its ring permanently forced to 0 instead of sweeping).
-    wasFullRef.current = { ...currentlyFullRef.current }
-  }, [state.tierProductionAccumulators])
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -664,7 +558,6 @@ const MainPage = () => {
 
   return (
     <RootDiv>
-      <TickPercentProperty />
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar aria-label="prestige available banner">
@@ -791,29 +684,6 @@ const MainPage = () => {
           // always powers of 2), so without flooring this preview could show a fraction that
           // never actually lands.
           const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
-          const rawTickProgressPercent = getTierProductionProgressPercent(
-            state, tier.id, previousAccumulatorsRef.current[tier.id], TICK_RATE_MS / 1000
-          )
-          const isRingInstant = wasFullRef.current[tier.id] ?? false
-          // The tick right after a delivery already has some of its new cycle's own time banked
-          // (every tier's 1s tickspeed is 10 ticks at the 10Hz tick rate, so it's already back up
-          // to a raw 10% one real (100ms) tick later, not a single-tick special case), which would
-          // make the ring's instant post-delivery snap land part-way full instead of empty. Forcing
-          // it to 0 here means the next tick's normal, non-instant transition animates a full,
-          // clean climb from empty back up to that tick's real value, rather than a shorter climb
-          // starting mid-way.
-          // This visual-only value deliberately isn't what's reported via aria-valuenow below —
-          // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
-          // environment whenever the *accessible* value diverged from the plain
-          // getTierProductionProgressPercent computation (root cause not fully identified; the
-          // same divergence in the CSS-only $percent value below was fine). Keeping aria-valuenow
-          // tied to the unmodified raw value sidesteps that entirely, and arguably reports the
-          // more accurate number anyway — the forced-to-0 value is a display nicety, not the true
-          // accumulator state.
-          const tickProgressPercent = isRingInstant ? 0 : rawTickProgressPercent
-          // Tracks the *displayed* value, not the raw one, so tier01 (whose raw value is always
-          // 100) still alternates instead of latching wasFullRef permanently true.
-          currentlyFullRef.current[tier.id] = tickProgressPercent === 100
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
@@ -821,7 +691,7 @@ const MainPage = () => {
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
           const canUpgradeAutobuyer = resources >= autobuyerCost + 1 && !isFrozen
-          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
+          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(purchased)})`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${formatCost(autobuyerCost, tier.id)}`
             : `Upgrade (+10% purchase speed) for ${formatCost(autobuyerCost, tier.id)}`
@@ -829,7 +699,9 @@ const MainPage = () => {
           // the tier's short symbol (via formatCost) in place of its full name. The full
           // sentence stays in aria-label/title for assistive tech. The Upgrade state also gets
           // a "+10%" prefix so the speed-up is visible without needing to hover for the title.
-          const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
+          // Buy also carries the tier's level (lifetime purchase count — the figure the removed
+          // "Level:" cell used to show), since Buy is the action that raises it.
+          const buyVisibleLabel = `🛒 Lv.${formatAmount(purchased)}${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
           const upgradeVisibleLabel = isAutobuyerLocked
             ? `🔓 ${formatCost(autobuyerCost, tier.id)}`
             : `⚙ +10% ${formatCost(autobuyerCost, tier.id)}`
@@ -854,61 +726,6 @@ const MainPage = () => {
                   </GreenText>
                 )}
               </TierName>
-              <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
-              <PurchasedText>Level: {formatAmount(purchased)}</PurchasedText>
-              <ProductionCell>
-                <ProductionText>
-                  +{tier.producesResourceId === MONEY_ID
-                    ? formatCurrency(production)
-                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-                </ProductionText>
-                <TickProgressRing $percent={tickProgressPercent} $instant={isRingInstant}>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label={`${tier.name} production tick progress`}
-                    aria-valuenow={rawTickProgressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </TickProgressRing>
-              </ProductionCell>
-              <BuyButton
-                aria-label={buyLabel}
-                color={canAfford ? 'white' : 'darkgrey'}
-                disabled={!canAfford}
-                onClick={() => actions.buyTierQuantity(tier.id)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — every 10 purchases also doubles it`}
-                $progress={donePercent}
-                $secondaryProgress={availablePercent}
-                $pulse={canAfford}
-              >
-                {buyVisibleLabel}
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} cost-block progress`}
-                  aria-valuenow={doneInBlock}
-                  aria-valuemin={0}
-                  aria-valuemax={10}
-                />
-              </BuyButton>
-              <UpgradeButton
-                aria-label={upgradeLabel}
-                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
-                disabled={!canUpgradeAutobuyer}
-                onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
-                $progress={autobuyerProgressPercent}
-                $pulse={canUpgradeAutobuyer}
-              >
-                {upgradeVisibleLabel}
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} autobuyer progress`}
-                  aria-valuenow={autobuyerProgressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </UpgradeButton>
               {!isFirstRun && (!isAutobuyerLocked || isFirstTier) && !allTiersSmart && (
                 <AutomationCell>
                   {isSmart ? (
@@ -966,6 +783,49 @@ const MainPage = () => {
                   )}
                 </AutomationCell>
               )}
+              <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
+              <ProductionText>
+                +{tier.producesResourceId === MONEY_ID
+                  ? formatCurrency(production)
+                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+              </ProductionText>
+              <BuyButton
+                aria-label={buyLabel}
+                color={canAfford ? 'white' : 'darkgrey'}
+                disabled={!canAfford}
+                onClick={() => actions.buyTierQuantity(tier.id)}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — every 10 purchases also doubles it`}
+                $progress={donePercent}
+                $secondaryProgress={availablePercent}
+                $pulse={canAfford}
+              >
+                {buyVisibleLabel}
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label={`${tier.name} cost-block progress`}
+                  aria-valuenow={doneInBlock}
+                  aria-valuemin={0}
+                  aria-valuemax={10}
+                />
+              </BuyButton>
+              <UpgradeButton
+                aria-label={upgradeLabel}
+                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
+                disabled={!canUpgradeAutobuyer}
+                onClick={() => actions.buyAutobuyer(tier.id)}
+                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
+                $progress={autobuyerProgressPercent}
+                $pulse={canUpgradeAutobuyer}
+              >
+                {upgradeVisibleLabel}
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label={`${tier.name} autobuyer progress`}
+                  aria-valuenow={autobuyerProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </UpgradeButton>
             </TierLine>
           )
         })}
