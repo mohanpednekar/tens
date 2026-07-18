@@ -619,56 +619,57 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
 })
 
-test('an Enable Global Tickspeed Multiplier button appears on the PP Upgrades page after the first prestige, and spends 10 PP to activate level 1', async () => {
+test('no Global Tickspeed Multiplier panel appears before the second tier has ever been owned', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^global tickspeed panel$/i)).not.toBeInTheDocument()
+})
+
+test('an Enable Global Tickspeed Multiplier button appears once the second tier is owned (even during the first run), and spends 10 Money to activate level 1', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    owned: { tier02: 1 },
   }))
 
   render(<App />)
-  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 prestige points/i })
+  const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })
   expect(globalTickspeedButton).toBeEnabled()
 
   await user.click(globalTickspeedButton)
 
-  expect(screen.getByLabelText(/^global tickspeed multiplier upgrade$/i)).toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 100 prestige points/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.1, \+10%/i)
+  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$100/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
-test('the Enable Global Tickspeed Multiplier button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
+test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 },
+    resources: { Ones: 9 },
+    owned: { tier02: 1 },
   }))
 
   render(<App />)
-  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeDisabled()
 })
 
-test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the cumulative bonus', async () => {
+test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the cumulative bonus', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
+    resources: { Ones: 999 },
     globalTickspeedMultiplier: 2,
-    prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
-  await userEvent.setup().click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByLabelText(/^global tickspeed multiplier upgrade$/i)).toHaveTextContent(/lv\.2/i)
-  expect(screen.getByLabelText(/^global tickspeed multiplier upgrade$/i)).toHaveTextContent(/\+21%/i)
-  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 1,000 prestige points/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2, \+21%/i)
+  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$1,000/i })).toBeDisabled()
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']

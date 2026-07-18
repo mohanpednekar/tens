@@ -69,9 +69,11 @@ export const createInitialGameState = () => ({
   // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
   autoPrestige: null,
   // Permanent global level (not per-tier — there's only one to buy, mirroring autoPrestige above),
-  // null = not yet bought: how many times Prestige Points have been spent on the global tickspeed
-  // multiplier, which compounds *every* tier's production by another 10% per level (see
-  // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) — never reset by prestige.
+  // null = not yet bought: how many times Money has been spent on the global tickspeed multiplier
+  // (unlocked once at least 1 of the second tier is owned — see
+  // isGlobalTickspeedMultiplierUnlocked), which compounds *every* tier's production by another 10%
+  // per level (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) — never
+  // reset by prestige.
   globalTickspeedMultiplier: null,
   // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
   // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
@@ -224,13 +226,23 @@ export const getAutobuyerUnlockCost = tierId => {
 export const getTickspeedProductionMultiplier = level =>
   (1 + TICKSPEED_PRODUCTION_STEP) ** clampNonNegative((level ?? 1) - 1)
 
-// PP cost to activate (null → 1) or upgrade (level N → N+1) the global tickspeed multiplier — a
-// single global upgrade track, not per-tier (mirroring Auto-Prestige's null/level pattern): level 1
-// costs 10^1 = 10 PP, level 2 costs 10^2 = 100 PP, level 3 costs 10^3 = 1000 PP, and so on — the
-// same "powers of ten" theme as everything else in this economy. `currentLevel` is the level
-// *before* this purchase (null/not-yet-bought treated as 0).
+// Money (Ones) cost to activate (null → 1) or upgrade (level N → N+1) the global tickspeed
+// multiplier — a single global upgrade track, not per-tier (mirroring Auto-Prestige's null/level
+// pattern): level 1 costs 10^1 = 10 Money, level 2 costs 10^2 = 100 Money, level 3 costs 10^3 =
+// 1000 Money, and so on — the same "powers of ten" theme as everything else in this economy.
+// `currentLevel` is the level *before* this purchase (null/not-yet-bought treated as 0).
 export const getGlobalTickspeedMultiplierCost = currentLevel =>
   10 ** (clampNonNegative(currentLevel) + 1)
+
+// Whether the global tickspeed multiplier can be bought/upgraded at all yet — gated on owning at
+// least 1 of the second tier (TIER_DEFINITIONS[1]) rather than being available from the very start,
+// so a player can't accidentally spend their only Money on this before they have a second income
+// source; tier01's own cost/production resource is Money itself, so buying this too early could
+// zero out the balance needed to keep buying tier01. Once the multiplier is already active (level
+// non-null), it stays purchasable/upgradable even if tier02 is later reset to 0 by a Prestige/Speed
+// Up — this only gates the *initial* activation; an already-active level is never revoked.
+export const isGlobalTickspeedMultiplierUnlocked = state =>
+  (state.owned[TIER_DEFINITIONS[1].id] ?? 0) >= 1 || (state.globalTickspeedMultiplier ?? null) !== null
 
 // The production-speed multiplier every tier gets from the global tickspeed multiplier: unlike the
 // per-tier tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP
@@ -751,21 +763,24 @@ export const buyAutoPrestige = state => {
 }
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) the global tickspeed multiplier,
-// always by spending Prestige Points — activation is just the N=0 case of the same cost formula
+// always by spending Money (Ones) — activation is just the N=0 case of the same cost formula
 // (getGlobalTickspeedMultiplierCost(0) = 10). A single global upgrade track, not per-tier — unlike
-// the per-tier tickspeed multiplier (Money-funded, requires that tier's autobuyer already
-// unlocked), this one is PP-funded and has no prerequisite beyond having enough points. A no-op if
-// there aren't enough unspent points, or while production is frozen.
+// the per-tier tickspeed multiplier (also Money-funded, but requires that tier's autobuyer already
+// unlocked via PP), this one requires no PP or autobuyer at all, just owning at least 1 of the
+// second tier (see isGlobalTickspeedMultiplierUnlocked). A no-op if not yet unlocked, if Money is
+// short, or while production is frozen.
 export const buyGlobalTickspeedMultiplier = state => {
   if (isProductionFrozen(state)) return state
+  if (!isGlobalTickspeedMultiplierUnlocked(state)) return state
 
   const currentLevel = state.globalTickspeedMultiplier ?? null
   const cost = getGlobalTickspeedMultiplierCost(currentLevel ?? 0)
-  if (clampNonNegative(state.prestige.points) < cost) return state
+  const available = state.resources[MONEY_ID] ?? 0
+  if (available < cost) return state
 
   return {
     ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    resources: { ...state.resources, [MONEY_ID]: available - cost },
     globalTickspeedMultiplier: (currentLevel ?? 0) + 1,
   }
 }
