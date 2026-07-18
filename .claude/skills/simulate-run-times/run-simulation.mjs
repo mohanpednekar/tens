@@ -11,11 +11,13 @@
 //   - Autobuyer levels are never manually Upgraded past 1, and no PP is ever spent on Auto-upgrade
 //     automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
 //     bonus (getPrestigeProductionMultiplier) on run length, holding every other lever fixed.
-//   - Every tick, the instant the last tier reaches 10 lifetime purchases, "click Speed Up"
-//     (speedUpGame) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an
-//     optional PP-gated lever being deliberately held fixed — it's a core, always-on mechanic with
-//     no PP cost, so always accepting it the moment it's available is the natural "attentive
-//     player" behavior this bot otherwise already models for autobuyer unlocks.
+//   - Every tick, the instant the last tier reaches that cycle's requirement
+//     (getSpeedUpRequirement(speedUpCount): 10 lifetime purchases for the first activation, 20 for
+//     the second, 30 for the third, …), "click Speed Up" (speedUpGame) immediately. Unlike
+//     Auto-upgrade automation/Smart above, this isn't an optional PP-gated lever being
+//     deliberately held fixed — it's a core, always-on mechanic with no PP cost, so always
+//     accepting it the moment it's available is the natural "attentive player" behavior this bot
+//     otherwise already models for autobuyer unlocks.
 //
 // Usage:
 //   node run-simulation.mjs                      # default PP balances
@@ -26,6 +28,7 @@ import {
   buyTierQuantity,
   createInitialGameState,
   formatCurrency,
+  getSpeedUpRequirement,
   getTierPurchasedCount,
   isProductionFrozen,
   speedUpGame,
@@ -56,7 +59,7 @@ function simulateRun(startingPP) {
         state = buyAutobuyer(tier.id)(state)
       }
     }
-    if (getTierPurchasedCount(state, lastTier.id) >= 10) {
+    if (getTierPurchasedCount(state, lastTier.id) >= getSpeedUpRequirement(state.speedUpCount ?? 0)) {
       const next = speedUpGame(state)
       if (next !== state) speedUps += 1
       state = next

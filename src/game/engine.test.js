@@ -4,6 +4,7 @@ import {
   buyAutobuyer,
   buyAutobuyerAutomation,
   buyAutoPrestige,
+  buyAutoSpeedUp,
   buyPrestigeSpeedBonus,
   buySmartAutobuyer,
   buyTier,
@@ -26,6 +27,7 @@ import {
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
   getSpeedUpMultiplier,
+  getSpeedUpRequirement,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -39,7 +41,7 @@ import {
   speedUpGame,
   tickGame,
 } from './engine'
-import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_SPEED_UP_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -106,6 +108,11 @@ const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
 const withSpeedUpCount = (state, count) => ({
   ...state,
   speedUpCount: count,
+})
+
+const withAutoSpeedUp = (state, active = true) => ({
+  ...state,
+  autoSpeedUp: active,
 })
 
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
@@ -192,6 +199,11 @@ describe('createInitialGameState', () => {
   it('initialises speedUpCount to 0', () => {
     const state = createInitialGameState()
     expect(state.speedUpCount).toBe(0)
+  })
+
+  it('initialises autoSpeedUp to false', () => {
+    const state = createInitialGameState()
+    expect(state.autoSpeedUp).toBe(false)
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -476,18 +488,18 @@ describe('getSmartAutobuyerCost', () => {
 // ─── getAutoPrestigeCost ──────────────────────────────────────────────────────
 
 describe('getAutoPrestigeCost', () => {
-  it('costs the base 100 PP to activate (level 0 → 1)', () => {
-    expect(getAutoPrestigeCost(0)).toBe(100)
+  it('costs the base 1000 PP to activate (level 0 → 1)', () => {
+    expect(getAutoPrestigeCost(0)).toBe(1000)
   })
 
   it('doubles each level after that', () => {
-    expect(getAutoPrestigeCost(1)).toBe(200)
-    expect(getAutoPrestigeCost(2)).toBe(400)
-    expect(getAutoPrestigeCost(3)).toBe(800)
+    expect(getAutoPrestigeCost(1)).toBe(2000)
+    expect(getAutoPrestigeCost(2)).toBe(4000)
+    expect(getAutoPrestigeCost(3)).toBe(8000)
   })
 
   it('treats negative levels as 0', () => {
-    expect(getAutoPrestigeCost(-1)).toBe(100)
+    expect(getAutoPrestigeCost(-1)).toBe(1000)
   })
 })
 
@@ -543,6 +555,22 @@ describe('getSpeedUpMultiplier', () => {
 
   it('treats a negative count as 0', () => {
     expect(getSpeedUpMultiplier(-1)).toBe(1)
+  })
+})
+
+describe('getSpeedUpRequirement', () => {
+  it('is 10 for the first activation (speedUpCount 0)', () => {
+    expect(getSpeedUpRequirement(0)).toBe(10)
+  })
+
+  it('increases by another full block of 10 per prior activation', () => {
+    expect(getSpeedUpRequirement(1)).toBe(20)
+    expect(getSpeedUpRequirement(2)).toBe(30)
+    expect(getSpeedUpRequirement(3)).toBe(40)
+  })
+
+  it('treats a negative count as 0', () => {
+    expect(getSpeedUpRequirement(-1)).toBe(10)
   })
 })
 
@@ -1261,6 +1289,32 @@ describe('tickGame', () => {
     const after = tickGame(1)(state)
     expect(after.autobuyers[tensTier.id]).toBe(1)
   })
+
+  it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withAutoSpeedUp(
+      withPurchased(createInitialGameState(), lastTier.id, 10)
+    )
+    const after = tickGame(1)(state)
+    expect(after.speedUpCount).toBe(1)
+    expect(after.purchased[lastTier.id]).toBe(0)
+  })
+
+  it('does not trigger Speed Up automatically when the last tier is not yet eligible', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withAutoSpeedUp(
+      withPurchased(createInitialGameState(), lastTier.id, 9)
+    )
+    const after = tickGame(1)(state)
+    expect(after.speedUpCount).toBe(0)
+  })
+
+  it('does not trigger Speed Up automatically without Auto Speed Up bought', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withPurchased(createInitialGameState(), lastTier.id, 10)
+    const after = tickGame(1)(state)
+    expect(after.speedUpCount).toBe(0)
+  })
 })
 
 // ─── getOfflineEffectiveSeconds ──────────────────────────────────────────────
@@ -1573,37 +1627,37 @@ describe('buySmartAutobuyer', () => {
 // ─── buyAutoPrestige ──────────────────────────────────────────────────────────
 
 describe('buyAutoPrestige', () => {
-  it('spends 100 PP to activate Auto-Prestige at level 1', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
+  it('spends 1000 PP to activate Auto-Prestige at level 1', () => {
+    const state = withPrestigePoints(createInitialGameState(), 1000)
     const after = buyAutoPrestige(state)
     expect(after.autoPrestige).toBe(1)
     expect(after.prestige.points).toBe(0)
   })
 
-  it('costs 200 PP for level 1 → 2, doubling each level after that', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 200)
+  it('costs 2000 PP for level 1 → 2, doubling each level after that', () => {
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 2000)
     const after = buyAutoPrestige(state)
     expect(after.autoPrestige).toBe(2)
     expect(after.prestige.points).toBe(0)
 
-    const state2 = withPrestigePoints(withAutoPrestige(createInitialGameState(), 2), 400)
+    const state2 = withPrestigePoints(withAutoPrestige(createInitialGameState(), 2), 4000)
     const after2 = buyAutoPrestige(state2)
     expect(after2.autoPrestige).toBe(3)
     expect(after2.prestige.points).toBe(0)
   })
 
   it('returns the same state when there are not enough points to activate', () => {
-    const state = withPrestigePoints(createInitialGameState(), 99)
+    const state = withPrestigePoints(createInitialGameState(), 999)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('returns the same state when there are not enough points to upgrade', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 199)
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 1999)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('refuses to spend once production is frozen at GOOGOL', () => {
-    const state = withMoney(withPrestigePoints(createInitialGameState(), 100), GOOGOL)
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 1000), GOOGOL)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 })
@@ -1727,6 +1781,14 @@ describe('prestigeGame', () => {
     expect(after.speedUpCount).toBe(3)
   })
 
+  it('keeps the Auto Speed Up flag permanently across prestige', () => {
+    const state = withAutoSpeedUp(
+      withMoney(createInitialGameState(), GOOGOL)
+    )
+    const after = prestigeGame(state)
+    expect(after.autoSpeedUp).toBe(true)
+  })
+
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
     const state = withAutoPrestigeBudget(
       withAutoPrestige(withMoney(createInitialGameState(), GOOGOL)),
@@ -1805,8 +1867,25 @@ describe('speedUpGame', () => {
     expect(after.speedUpCount).toBe(1)
   })
 
+  it('requires a full block of 10 more on each subsequent activation', () => {
+    // After 1 prior activation, the requirement is 20, not the flat 10 the first cycle needed.
+    const stillTen = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 10), 1
+    )
+    expect(speedUpGame(stillTen)).toBe(stillTen)
+
+    const twenty = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 20), 1
+    )
+    const after = speedUpGame(twenty)
+    expect(after.speedUpCount).toBe(2)
+  })
+
   it('stacks across repeated activations', () => {
-    const state = withSpeedUpCount(eligibleState(), 2)
+    // getSpeedUpRequirement(2) = 30
+    const state = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 30), 2
+    )
     const after = speedUpGame(state)
     expect(after.speedUpCount).toBe(3)
   })
@@ -1861,11 +1940,48 @@ describe('speedUpGame', () => {
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
+  it('keeps the Auto Speed Up flag permanently', () => {
+    const state = withAutoSpeedUp(eligibleState())
+    const after = speedUpGame(state)
+    expect(after.autoSpeedUp).toBe(true)
+  })
+
   it('leaves Prestige Points, count, and XP completely untouched', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = speedUpGame(state)
     expect(after.prestige.points).toBe(42)
     expect(after.prestige.count).toBe(0)
     expect(after.prestige.xp).toBe(7)
+  })
+})
+
+// ─── buyAutoSpeedUp ──────────────────────────────────────────────────────────
+
+describe('buyAutoSpeedUp', () => {
+  it(`spends ${AUTO_SPEED_UP_COST} PP to permanently enable Auto Speed Up`, () => {
+    const state = withPrestigePoints(createInitialGameState(), AUTO_SPEED_UP_COST)
+    const after = buyAutoSpeedUp(state)
+    expect(after.autoSpeedUp).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('returns the same state when there are not enough points', () => {
+    const state = withPrestigePoints(createInitialGameState(), AUTO_SPEED_UP_COST - 1)
+    expect(buyAutoSpeedUp(state)).toBe(state)
+  })
+
+  it('returns the same state when already enabled (one-time purchase)', () => {
+    const state = withAutoSpeedUp(
+      withPrestigePoints(createInitialGameState(), AUTO_SPEED_UP_COST)
+    )
+    expect(buyAutoSpeedUp(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(
+      withPrestigePoints(createInitialGameState(), AUTO_SPEED_UP_COST),
+      GOOGOL
+    )
+    expect(buyAutoSpeedUp(state)).toBe(state)
   })
 })

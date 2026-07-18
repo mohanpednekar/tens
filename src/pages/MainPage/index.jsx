@@ -1,8 +1,8 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
@@ -385,8 +385,8 @@ const AutomationBadge = styled.span`
   ${gridCell}
 `
 
-// Deliberately small — Reset is a dev-only convenience, not a prominent action, and its own
-// confirm() prompt (see handleResetClick) is the real guard against an accidental click.
+// Deliberately small — Reset is not a prominent action, and its own confirm() prompt (see
+// handleResetClick) is the real guard against an accidental click.
 const ResetButton = styled(Button)`
   font-size: 0.72em;
   padding: 0.3em 0.55em;
@@ -415,7 +415,7 @@ const MainPage = () => {
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
   // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
   // than firing immediately on click — there's no modal/confirm component elsewhere in this app
-  // to reuse, and this is a single dev-only button, so window.confirm is the simplest fit.
+  // to reuse, so window.confirm is the simplest fit.
   const handleResetClick = () => {
     if (window.confirm('Erase all progress and start over? This cannot be undone.')) {
       resetGame()
@@ -477,18 +477,26 @@ const MainPage = () => {
   const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
 
   // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
-  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches 10 lifetime purchases, it
-  // resets tiers/resources but permanently doubles production speed, stacking with every prior
-  // activation. Gated on the last tier being unlocked at all, same progressive-disclosure
-  // principle as the first-run Prestige card gate above, so it doesn't clutter the page before
-  // tier10 even exists.
+  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
+  // (getSpeedUpRequirement(speedUpCount): 10 lifetime purchases for the first activation, 20 for
+  // the second, 30 for the third, …), it resets tiers/resources but permanently doubles
+  // production speed, stacking with every prior activation. Gated on the last tier being unlocked
+  // at all, same progressive-disclosure principle as the first-run Prestige card gate above, so it
+  // doesn't clutter the page before tier10 even exists.
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
   const speedUpCount = state.speedUpCount ?? 0
   const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
   const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
+  const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
   const lastTierPurchased = getTierPurchasedCount(state, lastTier.id)
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / 10) * 100))
-  const canSpeedUp = !isFrozen && lastTierPurchased >= 10
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / speedUpRequirement) * 100))
+  const canSpeedUp = !isFrozen && lastTierPurchased >= speedUpRequirement
+  // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
+  // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
+  // allTiersSmart the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
+  // that endgame milestone.
+  const isAutoSpeedUpActive = state.autoSpeedUp ?? false
+  const canBuyAutoSpeedUp = !isFrozen && !isAutoSpeedUpActive && !isFirstRun && prestige.points >= AUTO_SPEED_UP_COST
 
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
@@ -840,9 +848,9 @@ const MainPage = () => {
           <div>
             <h2>Speed Up</h2>
             <MutedText id="speed-up-description">
-              Buy 10 {lastTier.name} to trigger a Speed Up: resets your tiers and resources (keeps
-              autobuyers, automations, and Prestige Points) and permanently doubles production
-              speed.
+              Buy {speedUpRequirement} {lastTier.name} to trigger a Speed Up: resets your tiers and
+              resources (keeps autobuyers, automations, and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs a full block of 10 more than the last.
             </MutedText>
           </div>
           <MutedText>
@@ -851,7 +859,7 @@ const MainPage = () => {
           </MutedText>
           <Button
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires 10 ${lastTier.name})`}
+            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name})`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -870,6 +878,24 @@ const MainPage = () => {
               aria-valuemax={100}
             />
           </Button>
+          {!isFirstRun && (
+            isAutoSpeedUpActive ? (
+              <MutedText title="Speed Up now triggers automatically the instant it's eligible">
+                🔁 Auto Speed Up active
+              </MutedText>
+            ) : (
+              <Button
+                aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
+                color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
+                disabled={!canBuyAutoSpeedUp}
+                onClick={actions.buyAutoSpeedUp}
+                title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
+                type="button"
+              >
+                🔁 Auto Speed Up for {AUTO_SPEED_UP_COST} PP
+              </Button>
+            )
+          )}
         </SpeedUpCard>
       )}
 
@@ -956,20 +982,18 @@ const MainPage = () => {
         </PrestigeCard>
       )}
 
-      {import.meta.env.DEV && (
-        <ResetButton
-          aria-describedby="reset-description"
-          aria-label="Reset game"
-          color={isFrozen ? 'darkgrey' : '#a3a3a3'}
-          disabled={isFrozen}
-          type="button"
-          onClick={handleResetClick}
-          title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
-        >
-          ↺ Reset
-          <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
-        </ResetButton>
-      )}
+      <ResetButton
+        aria-describedby="reset-description"
+        aria-label="Reset game"
+        color={isFrozen ? 'darkgrey' : '#a3a3a3'}
+        disabled={isFrozen}
+        type="button"
+        onClick={handleResetClick}
+        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
+      >
+        ↺ Reset
+        <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
+      </ResetButton>
     </RootDiv>
   )
 }
