@@ -155,6 +155,25 @@ Directory imports resolve to that dir's `index.jsx`/`index.js` (e.g. `from 'them
   a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
   logic.
 
+## Reliability: cron dormancy
+
+GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository
+activity. `autonomous-maintenance.yml`'s primary mitigation is its own regular activity (merged PRs
+reset the dormancy clock) plus Phase B gap analysis keeping the backlog non-empty; the actual backstop
+is an external, out-of-band periodic check (outside this repo/issue system) that notices prolonged
+silence and re-triggers the workflow via `workflow_dispatch`, which works regardless of whether the
+`schedule` trigger is currently disabled. See `CLAUDE.md`'s Scheduled maintenance section for the full
+writeup.
+
+## Code review tooling
+
+- `.claude/agents/code-reviewer.md` — a comprehensive, adversarial reviewer subagent for any PR or
+  working diff: verified `file:line`-cited findings with confidence labels, a merge verdict, and an
+  explicit coverage report. Read-only (never edits code). Use before merging any non-trivial change.
+- `.claude/skills/economy-change-review/SKILL.md` — a narrow, mechanical spec-vs-implementation
+  cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
+  code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
+
 ## Automation design principles
 
 Three conventions guide this repo's automation design (see `CLAUDE.md`'s Orchestration model for the

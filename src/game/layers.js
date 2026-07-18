@@ -7,28 +7,35 @@
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier.
+// shared formula or any other tier. Every tier is currently set to the same 1s cadence (matching
+// the global 100ms/10Hz tick rate — see TICK_RATE_MS below) rather than a per-tier value that
+// slows down for later tiers, since a slower cadence divides that tier's real throughput (see
+// getTierBaseTickSpeedSeconds below) — a division that used to grow to 10x for the last tier, on
+// top of the already-steep Fibonacci-driven cost curve (see getTierCost in engine.js), and made a
+// full run unable to reach GOOGOL within any practical amount of time.
 export const TIER_DEFINITIONS = [
   { id: 'tier01', name: 'Tens',          symbol: 'Tens', baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
-  { id: 'tier03', name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
-  { id: 'tier04', name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
-  { id: 'tier05', name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
-  { id: 'tier06', name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
-  { id: 'tier07', name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
-  { id: 'tier08', name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
-  { id: 'tier09', name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
-  { id: 'tier10', name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
+  { id: 'tier02', name: 'Thousands',     symbol: 'Ks',   baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 1 },
+  { id: 'tier03', name: 'Millions',      symbol: 'Ms',   baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 1 },
+  { id: 'tier04', name: 'Billions',      symbol: 'Bs',   baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 1 },
+  { id: 'tier05', name: 'Trillions',     symbol: 'Ts',   baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 1 },
+  { id: 'tier06', name: 'Quadrillions',  symbol: 'Qs',   baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 1 },
+  { id: 'tier07', name: 'Pentillions',   symbol: 'Ps',   baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 1 },
+  { id: 'tier08', name: 'Hexillions',    symbol: 'Hs',   baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 1 },
+  { id: 'tier09', name: 'Septillions',   symbol: 'Ss',   baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 1 },
+  { id: 'tier10', name: 'Octillions',    symbol: 'Os',   baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 1 },
 ]
 
 
 export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || '$'
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
-// continuously every global 1s tick (see engine.js's tickGame / tierProductionAccumulators) —
-// simply reads that tier's own independent baseTickSpeedSeconds field above. Balance-neutral: a
-// tier still produces the exact same total amount over time, it's just delivered every N seconds
-// instead of continuously. An unrecognized tier id falls back to 1s rather than throwing.
+// continuously every global tick (see engine.js's tickGame / tierProductionAccumulators) —
+// simply reads that tier's own independent baseTickSpeedSeconds field above. Not balance-neutral:
+// a tier's real per-second throughput is divided by its own tickspeed (see tickGame in
+// engine.js), which is exactly why every tier now shares the same 1s value rather than the
+// slower, per-tier-increasing cadence used before. An unrecognized tier id falls back to 1s
+// rather than throwing.
 export const getTierBaseTickSpeedSeconds = tierId =>
   TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
 
@@ -53,7 +60,15 @@ export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 // Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
 // tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
 // doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
+// This bonus is inert until unlocked (see PRESTIGE_SPEED_BONUS_UNLOCK_COST below) — it no longer
+// applies automatically just from holding points.
 export const PRESTIGE_POINT_SPEED_BONUS = 0.01
+// One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
+// buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
+// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
+// Auto-Prestige. The priciest of the three global PP automation unlocks (see AUTO_SPEED_UP_COST/
+// AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather than a one-shot action.
+export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // PP cost to permanently automate the first tier's autobuyer Upgrades (see engine.js's
 // getAutobuyerAutomationCost) — doubles for each subsequent tier.
 export const AUTOBUYER_AUTOMATION_BASE_COST = 1
@@ -63,11 +78,24 @@ export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
 // it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it
-// each level.
-export const AUTO_PRESTIGE_COST = 100
+// each level. Priced above AUTO_SPEED_UP_COST (see below) since Auto-Prestige only ever fires
+// once per run at most, versus Speed Up's much higher activation frequency.
+export const AUTO_PRESTIGE_COST = 1000
 // Auto-Prestige's cost doubles with each level purchased (see engine.js's getAutoPrestigeCost).
 export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // Auto-Prestige's base check cadence at level 1: once unlocked, it attempts to prestige roughly
 // this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
+// Per-activation production-speed multiplier base for Speed Up (see engine.js's
+// getSpeedUpMultiplier/speedUpGame) — production is multiplied by SPEED_UP_MULTIPLIER_BASE raised
+// to state.speedUpCount, so each activation doubles it (1x, 2x, 4x, 8x, …). Unlike the Prestige
+// Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
+// speedUpCount > 0.
+export const SPEED_UP_MULTIPLIER_BASE = 2
+// One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
+// bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
+// click needed. The cheapest of the three global PP automation unlocks (see
+// PRESTIGE_SPEED_BONUS_UNLOCK_COST above and AUTO_PRESTIGE_COST below), since Speed Up itself
+// fires far more often than either of the other two over a run.
+export const AUTO_SPEED_UP_COST = 100

@@ -3,13 +3,16 @@ import {
   AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
   AUTO_PRESTIGE_COST,
   AUTO_PRESTIGE_COST_MULTIPLIER,
+  AUTO_SPEED_UP_COST,
   AUTOBUYER_AUTOMATION_BASE_COST,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
   PRESTIGE_POINT_SPEED_BONUS,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
+  SPEED_UP_MULTIPLIER_BASE,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
 } from './layers'
@@ -54,11 +57,10 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('baseTickSpeedSeconds is 1 for the first tier and increases by exactly 1 per subsequent tier', () => {
-    expect(TIER_DEFINITIONS[0].baseTickSpeedSeconds).toBe(1)
-    for (let i = 1; i < TIER_DEFINITIONS.length; i++) {
-      expect(TIER_DEFINITIONS[i].baseTickSpeedSeconds).toBe(TIER_DEFINITIONS[i - 1].baseTickSpeedSeconds + 1)
-    }
+  it('baseTickSpeedSeconds is 1 for every tier', () => {
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(tier.baseTickSpeedSeconds).toBe(1)
+    })
   })
 
   it('first tier is Tens and both costs and produces Ones (money)', () => {
@@ -107,9 +109,9 @@ describe('getTierBaseTickSpeedSeconds', () => {
     expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
-  it('increases by 1 second per subsequent tier, up to 10 seconds for the 10th', () => {
-    TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
+  it('is 1 second for every tier', () => {
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(1)
     })
   })
 
@@ -143,8 +145,16 @@ describe('constants', () => {
     expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
   })
 
-  it('AUTO_PRESTIGE_COST is 100', () => {
-    expect(AUTO_PRESTIGE_COST).toBe(100)
+  it('AUTO_PRESTIGE_COST is 1000', () => {
+    expect(AUTO_PRESTIGE_COST).toBe(1000)
+  })
+
+  it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
+    expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
+  })
+
+  it('AUTO_SPEED_UP_COST is 100', () => {
+    expect(AUTO_SPEED_UP_COST).toBe(100)
   })
 
   it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
@@ -153,5 +163,9 @@ describe('constants', () => {
 
   it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
     expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
+  })
+
+  it('SPEED_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
+    expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 })

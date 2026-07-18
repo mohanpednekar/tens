@@ -86,8 +86,14 @@ jobs:
           # Fetch the human-curated task backlog: open issues labeled claude-task. These
           # take priority over the built-in maintenance menu — the prompt gets the list
           # (number + title) and reads the chosen issue's full spec with `gh issue view`.
+          # Issues also labeled `blocked` are excluded: a previous run already established
+          # they can't be done unattended (environment/permission blocker, documented in an
+          # issue comment), so re-attempting them every 5 hours just burns quota — a human
+          # unblocks and removes the label to make them eligible again.
           open_tasks=$(gh issue list --label claude-task --state open \
-            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+            --json number,title,labels \
+            --jq '.[] | select([.labels[].name] | index("blocked") | not)
+                      | "- #\(.number): \(.title)"')
           {
             echo "open_tasks<<TASK_EOF"
             echo "$open_tasks"
@@ -116,7 +122,13 @@ jobs:
           cache: yarn
 
       - name: Run autonomous maintenance task
+        id: claude
         if: steps.guard.outputs.skip != 'true'
+        # Tolerated-failure handling: the step below re-fails the job for any real error,
+        # but downgrades a pure Claude usage-quota exhaustion (HTTP 429 on turn 1) to a
+        # warning — the run did no work and the next scheduled run simply retries, so a
+        # red X adds alert noise without any actionable signal.
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
@@ -139,8 +151,6 @@ jobs:
                   "Write(.github/workflows/ci.yml)",
                   "Edit(.github/workflows/deploy.yml)",
                   "Write(.github/workflows/deploy.yml)",
-                  "Edit(.github/workflows/dependabot-lockfile.yml)",
-                  "Write(.github/workflows/dependabot-lockfile.yml)",
                   "Edit(.github/workflows/autonomous-pr-followup.yml)",
                   "Write(.github/workflows/autonomous-pr-followup.yml)",
                   "Edit(.github/workflows/pr-auto-merge.yml)",
@@ -241,7 +251,9 @@ jobs:
             - Eligible means: no open autonomous PR above already covers it (its issue number
               appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
               is not blocked — if the issue body says "Blocked by #N", check #N with
-              `gh issue view N` and skip this task while #N is still open.
+              `gh issue view N` and skip this task while #N is still open. (Issues labeled
+              `blocked` — environment/permission blockers a previous run already documented —
+              are excluded from the backlog list above before you ever see it.)
             - Order: issues labeled priority:high first, then lowest issue number (FIFO).
             - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
               its acceptance criteria are the definition of done, its "Out of scope" section is
@@ -257,7 +269,15 @@ jobs:
             - If the chosen task turns out infeasible for reasons other than size (ambiguous spec,
               can't get tests green after a reasonable attempt), do NOT half-land it or fall through
               to another task: leave a comment on the issue with `gh issue comment` explaining
-              exactly what's blocking, make no changes, and end the run without a PR.
+              exactly what's blocking, make no changes, and end the run without a PR. If the
+              blocker is an environment/permission restriction of this unattended session itself
+              (e.g. a Write the harness refuses to grant, like new files under .claude/), ALSO
+              label the issue so future runs stop re-attempting it and burning their budget on the
+              same wall: `gh label create blocked --color d93f0b --description "Infeasible for
+              unattended runs until a human unblocks it" --force`, then
+              `gh issue edit <number> --add-label blocked`. A human removes the label once
+              unblocked. Do not use the label for ordinary spec/test problems — those stay
+              comment-only, since a future run (or a spec fix) may resolve them.
 
             PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
             eligible task issue in Phase A, pick exactly one of the following menu tasks —
@@ -316,8 +336,8 @@ jobs:
               task issue whose "Explicit authorizations" section explicitly permits that specific
               change — a claude-task issue is the maintainer's written sign-off. During Phase B
               menu runs (and Phase 0 heal-main fixes) this ban is absolute.
-            - Never modify .github/workflows/ci.yml, deploy.yml, dependabot-lockfile.yml,
-              autonomous-pr-followup.yml, or pr-auto-merge.yml.
+            - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-pr-followup.yml,
+              or pr-auto-merge.yml.
             - Never change the dev/test server host binding away from 127.0.0.1.
             - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
               force-push, and never push directly to main.
@@ -344,3 +364,53 @@ jobs:
             budget guidance above). The two exceptions are Phase 0(b)'s Dependabot rebase request
             (a comment, not a branch or PR) and Phase B item 6 (gap analysis), whose output is a filed
             issue, not a branch or PR.
+
+      - name: Classify Claude step failure
+        # Companion to the continue-on-error above: keep every real failure red, but treat
+        # a run that died on turn 1 because the Claude subscription's usage quota was
+        # exhausted (429 "session limit") as a skipped run — it made no changes, cost no
+        # quota, and the next scheduled run (every 5 hours) retries automatically.
+        if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'failure'
+        run: |
+          out="${{ steps.claude.outputs.execution_file }}"
+          [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
+          if [ -f "$out" ] && jq -e '
+                (if type == "array" then . else [.] end)
+                | map(select(.type == "result"))
+                | last
+                | .is_error == true and .api_error_status == 429
+              ' "$out" >/dev/null 2>&1; then
+            echo "::warning::Run skipped: Claude usage limit hit (HTTP 429) before any work was done. The next scheduled run will retry."
+            exit 0
+          fi
+          echo "::error::Claude run failed for a reason other than usage-quota exhaustion — see the 'Run autonomous maintenance task' step logs."
+          exit 1
+
+      - name: Fail on denied file modifications
+        # The inverse blind spot of the step above: the action step can exit 0 while the
+        # run inside it failed to do its job. Concretely: three consecutive green runs each
+        # picked task #78, had every Write into .claude/skills//.claude/agents/ refused by
+        # the harness's unattended-session guardrail, and ended "successfully" having only
+        # left an issue comment. A denied Write/Edit means the run wanted to change a file
+        # and couldn't — that's a failed run and should be red, not silently green. Bash
+        # denials are NOT treated as failures: allowlist misses (python3, mkdir, multi-line
+        # gh commands) are routine and the agent works around them.
+        if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'success'
+        run: |
+          out="${{ steps.claude.outputs.execution_file }}"
+          [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
+          [ -f "$out" ] || { echo "No execution output found; nothing to check."; exit 0; }
+          denied=$(jq -r '
+                (if type == "array" then . else [.] end)
+                | map(select(.type == "result")) | last
+                | .permission_denials // []
+                | map(select(.tool_name == "Write" or .tool_name == "Edit" or .tool_name == "NotebookEdit"))
+                | .[] | "\(.tool_name): \(.tool_input.file_path // "(unknown path)")"
+              ' "$out")
+          if [ -n "$denied" ]; then
+            echo "::error::The Claude run was denied one or more file modifications and could not fully do its work:"
+            echo "$denied"
+            echo "::error::If this was a task issue that needs a path an unattended run can't write (e.g. .claude/skills/), label the issue 'blocked' so future runs skip it, and handle it interactively."
+            exit 1
+          fi
+          echo "No denied file modifications."
