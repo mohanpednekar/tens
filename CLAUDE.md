@@ -467,6 +467,14 @@ Strict three-layer separation:
    exponential above), in a centered `CenteredCard` (`styled(StatCard)` with `align-items: center;
    text-align: center`) — the Prestige Point balance display shares the same `CenteredCard`, making
    them the only top-of-page blocks besides `Header` that are centered rather than left-aligned.
+   Both balance cards are wrapped in a `StickyBalances` (`position: sticky`) container so they stay
+   visible at all times: once the page scrolls past their normal position they pin to the viewport
+   top and compress into a compact side-by-side bar (smaller font/padding, row layout), detected via
+   an IntersectionObserver on a zero-height `BalancesSentinel` rendered just above the pair — CSS
+   alone can't detect "currently stuck", and the sentinel's negative margin cancels the extra
+   `RootDiv` flex-gap slot it would otherwise add. The observer effect guards for environments
+   without IntersectionObserver (jsdom in tests), where the balances simply stay expanded; when the
+   fixed `TopPrestigeBar` is showing, the stick position drops below it instead of underlapping it.
    Description prose is kept out of the always-visible page: the Speed Up and Prestige cards' full
    explanations, and the full-smart-autobuyer notice's, live inside an `InfoDetails` (`styled.details`)
    click-to-expand disclosure — the clickable `<summary>` is the card's own `<h2>` heading (or the

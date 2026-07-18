@@ -127,6 +127,57 @@ const CenteredCard = styled(StatCard)`
   text-align: center;
 `
 
+// Keeps both balances visible at all times: the Money + PP pair sticks to the top of the viewport
+// once the page scrolls past their normal position, and compresses into a compact side-by-side
+// bar while stuck ($compressed — tracked via an IntersectionObserver on the sentinel rendered
+// just above, since CSS alone can't detect "currently stuck"). The solid page-background fill
+// stops scrolled tier rows showing through the gap between the two cards, and when the fixed
+// TopPrestigeBar is showing ($belowBar), the stick position drops below it instead of
+// underlapping it.
+const StickyBalances = styled.div`
+  background: #050505;
+  display: flex;
+  flex-direction: ${props => (props.$compressed ? 'row' : 'column')};
+  gap: ${props => (props.$compressed ? '0.5rem' : '0.85rem')};
+  position: sticky;
+  top: ${props => (props.$belowBar ? '3.75rem' : '0')};
+  z-index: 100;
+
+  ${props => props.$compressed && css`
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.6);
+    padding: 0.25rem 0;
+
+    ${CenteredCard} {
+      flex: 1;
+      gap: 0.2rem;
+      justify-content: center;
+      min-width: 0;
+      padding: 0.3rem 0.6rem;
+    }
+
+    ${Money} {
+      font-size: 1em;
+      padding: 0;
+    }
+
+    p {
+      font-size: 0.85em;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  `}
+`
+
+// Zero-impact scroll marker for StickyBalances' "am I stuck?" detection — the negative margin
+// cancels the extra RootDiv flex-gap slot this element would otherwise add, so the page's
+// spacing is unchanged by its presence.
+const BalancesSentinel = styled.div`
+  height: 1px;
+  margin-top: calc(-0.85rem - 1px);
+`
+
 // A native click-to-expand disclosure replacing always-visible description prose — the summary
 // line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
 // full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
@@ -550,6 +601,23 @@ const MainPage = () => {
     if (showFullScreenPrompt) fullScreenPrestigeButtonRef.current?.focus()
   }, [showFullScreenPrompt])
 
+  // Compress the sticky balance bar once its normal position scrolls out of view: the sentinel
+  // sits just above StickyBalances, so it leaving the viewport means the pair is now pinned.
+  // Guarded for environments without IntersectionObserver (jsdom in tests), where the balances
+  // simply stay in their expanded form; keyed on showFullScreenPrompt since the sentinel doesn't
+  // exist while the first-prestige takeover replaces the whole page.
+  const balancesSentinelRef = useRef(null)
+  const [balancesCompressed, setBalancesCompressed] = useState(false)
+  useEffect(() => {
+    const sentinel = balancesSentinelRef.current
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      setBalancesCompressed(!entry.isIntersecting)
+    })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [showFullScreenPrompt])
+
   if (showFullScreenPrompt) {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
@@ -631,21 +699,24 @@ const MainPage = () => {
         </StatCard>
       )}
 
-      <CenteredCard aria-label="money display">
-        <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-      </CenteredCard>
-
-      {!isFirstRun && (
-        <CenteredCard aria-label="prestige points display">
-          <MutedText>
-            <GoldText>{formatAmount(prestige.points)} PP</GoldText>
-            {' · '}
-            {state.prestigeSpeedBonusUnlocked
-              ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
-              : 'production speed bonus locked'}
-          </MutedText>
+      <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
+      <StickyBalances $compressed={balancesCompressed} $belowBar={showTopPrestigeBar}>
+        <CenteredCard aria-label="money display">
+          <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
         </CenteredCard>
-      )}
+
+        {!isFirstRun && (
+          <CenteredCard aria-label="prestige points display">
+            <MutedText>
+              <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+              {' · '}
+              {state.prestigeSpeedBonusUnlocked
+                ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
+                : 'production speed bonus locked'}
+            </MutedText>
+          </CenteredCard>
+        )}
+      </StickyBalances>
 
       {allTiersSmart && (
         <StatCard aria-label="full smart autobuyer notice">
