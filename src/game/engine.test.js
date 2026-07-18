@@ -27,6 +27,7 @@ import {
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
   getSpeedUpMultiplier,
+  getSpeedUpRequirement,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -554,6 +555,22 @@ describe('getSpeedUpMultiplier', () => {
 
   it('treats a negative count as 0', () => {
     expect(getSpeedUpMultiplier(-1)).toBe(1)
+  })
+})
+
+describe('getSpeedUpRequirement', () => {
+  it('is 10 for the first activation (speedUpCount 0)', () => {
+    expect(getSpeedUpRequirement(0)).toBe(10)
+  })
+
+  it('increases by another full block of 10 per prior activation', () => {
+    expect(getSpeedUpRequirement(1)).toBe(20)
+    expect(getSpeedUpRequirement(2)).toBe(30)
+    expect(getSpeedUpRequirement(3)).toBe(40)
+  })
+
+  it('treats a negative count as 0', () => {
+    expect(getSpeedUpRequirement(-1)).toBe(10)
   })
 })
 
@@ -1850,8 +1867,25 @@ describe('speedUpGame', () => {
     expect(after.speedUpCount).toBe(1)
   })
 
+  it('requires a full block of 10 more on each subsequent activation', () => {
+    // After 1 prior activation, the requirement is 20, not the flat 10 the first cycle needed.
+    const stillTen = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 10), 1
+    )
+    expect(speedUpGame(stillTen)).toBe(stillTen)
+
+    const twenty = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 20), 1
+    )
+    const after = speedUpGame(twenty)
+    expect(after.speedUpCount).toBe(2)
+  })
+
   it('stacks across repeated activations', () => {
-    const state = withSpeedUpCount(eligibleState(), 2)
+    // getSpeedUpRequirement(2) = 30
+    const state = withSpeedUpCount(
+      withPurchased(createInitialGameState(), lastTier.id, 30), 2
+    )
     const after = speedUpGame(state)
     expect(after.speedUpCount).toBe(3)
   })

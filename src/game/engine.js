@@ -240,6 +240,15 @@ export const getPurchaseMilestoneMultiplier = purchased =>
 export const getSpeedUpMultiplier = speedUpCount =>
   SPEED_UP_MULTIPLIER_BASE ** clampNonNegative(speedUpCount)
 
+// How many lifetime purchases of the last tier the *next* Speed Up requires: one more full block
+// of 10 than the last time — 10 for the first activation (speedUpCount 0), 20 for the second,
+// 30 for the third, and so on (10 * (speedUpCount + 1)). Unlike the flat 10-per-cycle requirement
+// this replaced, this keeps climbing indefinitely, so later cycles' last-tier purchases do cross
+// into deeper Fibonacci-driven cost epochs (see getTierCost) — no longer dodging that escalation
+// by resetting exactly at the epoch-0/epoch-1 boundary every time.
+export const getSpeedUpRequirement = speedUpCount =>
+  10 * (clampNonNegative(speedUpCount) + 1)
+
 // Level 1 is the baseline rate (1x, already active as soon as the autobuyer is activated — see
 // tickGame/buyAutobuyer); each level after that makes that tier's autobuyer 10% faster on
 // average, compounding: level 2 = 1.1x, level 3 = 1.21x, … This is a purchase-cadence multiplier
@@ -738,19 +747,21 @@ export const prestigeGame = state => {
 }
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches GOOGOL:
-// once the last tier reaches 10 lifetime purchases, resets resources/owned/purchased (and every
-// other per-run field) back to a fresh game exactly like createInitialGameState, but permanently
-// doubles production speed (see getSpeedUpMultiplier) and — like prestigeGame — collapses any
-// already-active autobuyer to its level-1 baseline rather than deactivating it, while
-// autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoSpeedUp carry
-// over unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed
-// through completely untouched — Speed Up is unrelated to real Prestige or Prestige Points, and
-// doesn't award or spend any. A no-op (returns the same state) while frozen (a frozen state is
-// waiting on a real Prestige, not a Speed Up) or before the last tier has reached 10 purchases.
+// once the last tier reaches getSpeedUpRequirement(speedUpCount) lifetime purchases — 10 for the
+// first activation, 20 for the second, 30 for the third, … — resets resources/owned/purchased
+// (and every other per-run field) back to a fresh game exactly like createInitialGameState, but
+// permanently doubles production speed (see getSpeedUpMultiplier) and — like prestigeGame —
+// collapses any already-active autobuyer to its level-1 baseline rather than deactivating it,
+// while autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoSpeedUp
+// carry over unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is
+// passed through completely untouched — Speed Up is unrelated to real Prestige or Prestige
+// Points, and doesn't award or spend any. A no-op (returns the same state) while frozen (a frozen
+// state is waiting on a real Prestige, not a Speed Up) or before the last tier has reached that
+// cycle's requirement.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  if (getTierPurchasedCount(state, lastTier.id) < 10) return state
+  if (getTierPurchasedCount(state, lastTier.id) < getSpeedUpRequirement(state.speedUpCount ?? 0)) return state
 
   const initial = createInitialGameState()
   const resetAutobuyers = Object.fromEntries(

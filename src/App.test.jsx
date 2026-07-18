@@ -449,6 +449,21 @@ test('the Speed Up button is enabled once the last tier reaches 10 purchases', (
   expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeEnabled()
 })
 
+test('the second Speed Up requires a full block of 10 more than the first, not the same flat 10', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchased: { tier10: 10 },
+    speedUpCount: 1,
+  }))
+
+  render(<App />)
+
+  const button = screen.getByRole('button', { name: /speed up \(requires 20/i })
+  expect(button).toBeDisabled()
+  expect(screen.queryByRole('button', { name: /speed up \(requires 10/i })).not.toBeInTheDocument()
+})
+
 test('the Speed Up panel shows the current multiplier and activation count', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },

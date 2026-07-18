@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
@@ -477,18 +477,20 @@ const MainPage = () => {
   const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
 
   // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
-  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches 10 lifetime purchases, it
-  // resets tiers/resources but permanently doubles production speed, stacking with every prior
-  // activation. Gated on the last tier being unlocked at all, same progressive-disclosure
-  // principle as the first-run Prestige card gate above, so it doesn't clutter the page before
-  // tier10 even exists.
+  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
+  // (getSpeedUpRequirement(speedUpCount): 10 lifetime purchases for the first activation, 20 for
+  // the second, 30 for the third, …), it resets tiers/resources but permanently doubles
+  // production speed, stacking with every prior activation. Gated on the last tier being unlocked
+  // at all, same progressive-disclosure principle as the first-run Prestige card gate above, so it
+  // doesn't clutter the page before tier10 even exists.
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
   const speedUpCount = state.speedUpCount ?? 0
   const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
   const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
+  const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
   const lastTierPurchased = getTierPurchasedCount(state, lastTier.id)
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / 10) * 100))
-  const canSpeedUp = !isFrozen && lastTierPurchased >= 10
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / speedUpRequirement) * 100))
+  const canSpeedUp = !isFrozen && lastTierPurchased >= speedUpRequirement
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
   // allTiersSmart the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
@@ -846,9 +848,9 @@ const MainPage = () => {
           <div>
             <h2>Speed Up</h2>
             <MutedText id="speed-up-description">
-              Buy 10 {lastTier.name} to trigger a Speed Up: resets your tiers and resources (keeps
-              autobuyers, automations, and Prestige Points) and permanently doubles production
-              speed.
+              Buy {speedUpRequirement} {lastTier.name} to trigger a Speed Up: resets your tiers and
+              resources (keeps autobuyers, automations, and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs a full block of 10 more than the last.
             </MutedText>
           </div>
           <MutedText>
@@ -857,7 +859,7 @@ const MainPage = () => {
           </MutedText>
           <Button
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires 10 ${lastTier.name})`}
+            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name})`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
