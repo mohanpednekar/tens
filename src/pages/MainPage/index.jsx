@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
@@ -582,10 +582,21 @@ const MainPage = () => {
     ? Math.round(1 / getAutoPrestigeAttemptRate(autoPrestigeLevel))
     : null
 
+  // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
+  // Auto-Prestige's null/level pattern — each level compounds *every* tier's production by another
+  // 10% at once (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
+  // Auto-Prestige, it has no allTiersSmart prerequisite — it's available as soon as the player has
+  // prestiged once, same as Auto Speed Up and the production speed bonus.
+  const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
+  const isGlobalTickspeedActive = globalTickspeedLevel !== null
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel)
+  const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
+  const canBuyGlobalTickspeed = !isFrozen && !isFirstRun && prestige.points >= globalTickspeedCost
+
   // Lights the PP Upgrades tab's dot whenever unspent PP can afford at least one purchase over
-  // there — any tier's Unlock/Smart, the speed bonus unlock (once revealed), Auto Speed Up, or
-  // Auto-Prestige (once revealed via allTiersSmart) — so the player knows to check in without
-  // opening the page on spec every time.
+  // there — any tier's Unlock/Smart, the speed bonus unlock (once revealed), Auto Speed Up, the
+  // global tickspeed multiplier, or Auto-Prestige (once revealed via allTiersSmart) — so the
+  // player knows to check in without opening the page on spec every time.
   const hasAffordablePpUpgrade = !isFrozen && !isFirstRun && (
     TIER_DEFINITIONS.some(tier => {
       if (!isTierUnlocked(state)(tier)) return false
@@ -596,6 +607,7 @@ const MainPage = () => {
     }) ||
     (speedBonusRevealed && canBuySpeedBonus) ||
     canBuyAutoSpeedUp ||
+    canBuyGlobalTickspeed ||
     (allTiersSmart && canBuyAutoPrestige)
   )
 
@@ -846,7 +858,7 @@ const MainPage = () => {
           // and tickspeedMultiplier are the only fractional factors here (getPurchaseMilestoneMultiplier
           // and getSpeedUpMultiplier are always powers of 2), so without flooring this preview
           // could show a fraction that never actually lands.
-          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased) * tickspeedMultiplier)
+          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased) * tickspeedMultiplier * globalTickspeedMultiplier)
           // Only meaningful once unlocked (see buyAutobuyerUnlock on the PP Upgrades page) — this
           // tier row has nothing tickspeed-related to show or buy before then.
           const tickspeedCost = isAutobuyerLocked ? null : getTickspeedMultiplierCost(tier.id, autobuyerLevel + 1)
@@ -984,16 +996,6 @@ const MainPage = () => {
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
               {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
               {' '}Resets your resources when reached.
-            </MutedText>
-            <MutedText>
-              <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
-              {!isFirstRun && (
-                <>
-                  {' · '}{formatAmount(prestige.points)} PP unspent
-                  {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
-                  {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
-                </>
-              )}
             </MutedText>
           </InfoDetails>
           <div>
@@ -1162,6 +1164,40 @@ const MainPage = () => {
                 />
               </PpUpgradeButton>
             )}
+          </UpgradeRow>
+
+          <UpgradeRow aria-label="global tickspeed multiplier upgrade">
+            <TierNameLabel>
+              Global Tickspeed Multiplier
+              {isGlobalTickspeedActive && (
+                <MutedText title={`+${formatBonusPercent(globalTickspeedMultiplier)}% production on every tier`}>
+                  Lv.{globalTickspeedLevel} (+{formatBonusPercent(globalTickspeedMultiplier)}%)
+                </MutedText>
+              )}
+            </TierNameLabel>
+            <PpUpgradeButton
+              aria-label={
+                isGlobalTickspeedActive
+                  ? `Upgrade global tickspeed multiplier for ${formatAmount(globalTickspeedCost)} Prestige Points`
+                  : `Enable global tickspeed multiplier for ${formatAmount(globalTickspeedCost)} Prestige Points`
+              }
+              color={canBuyGlobalTickspeed ? '#38bdf8' : 'darkgrey'}
+              disabled={!canBuyGlobalTickspeed}
+              onClick={actions.buyGlobalTickspeedMultiplier}
+              title="Spend Prestige Points to permanently speed up every tier's production by another 10% at once — each level costs another power of ten"
+              type="button"
+              $progress={ppProgressPercent(globalTickspeedCost)}
+              $progressColor="#38bdf8"
+            >
+              🌐 {isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatAmount(globalTickspeedCost)} PP
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="Global tickspeed multiplier Prestige Point progress"
+                aria-valuenow={Math.min(prestige.points, globalTickspeedCost)}
+                aria-valuemin={0}
+                aria-valuemax={globalTickspeedCost}
+              />
+            </PpUpgradeButton>
           </UpgradeRow>
 
           {allTiersSmart && (

@@ -72,17 +72,28 @@ export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
 // decreasing by a power of ten per subsequent tier (10^9, 10^8, … 10^1 for the 10th/last tier).
-// Reaching level L on a tier costs this base raised to L; level 1 (the PP-funded unlock cost, see
-// getAutobuyerUnlockCost) is exactly this base cost itself.
+// Reaching level L on a tier costs this base raised to L. This ladder is Money-funded only (see
+// buyTickspeedMultiplier) — the separate PP-funded autobuyer unlock (see
+// AUTOBUYER_UNLOCK_BASE_COST below) no longer reuses it.
 export const TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10
-// Each tickspeed multiplier level (beyond the first, unlock-granted level) compounds a tier's
+// Each tickspeed multiplier level compounds a tier's
 // production by another 10% (see engine.js's getTickspeedProductionMultiplier) — the same 1.1x
 // compounding rate that used to drive autobuyer purchase-attempt frequency before that effect was
 // moved to production instead (see "Tickspeed multiplier" in CLAUDE.md).
 export const TICKSPEED_PRODUCTION_STEP = 0.1
+// PP cost to permanently unlock the first tier's autobuyer (see engine.js's
+// getAutobuyerUnlockCost) — a flat, small per-tier increment (not a power-of-ten ladder like the
+// tickspeed multiplier above): 1 PP for the first tier, up through 10 PP for the 10th/last tier.
+export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
-// times more PP than unlocking that same tier's autobuyer (getAutobuyerUnlockCost).
+// times more PP than unlocking that same tier's autobuyer (getAutobuyerUnlockCost) — 10 PP through
+// 100 PP across the ten tiers.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
+// Each global tickspeed multiplier level (see engine.js's getGlobalTickspeedProductionMultiplier/
+// buyGlobalTickspeedMultiplier) compounds *every* tier's production by another 10% at once —
+// unlike the per-tier tickspeed multiplier above, this is a single global upgrade track (mirroring
+// Auto-Prestige's null/level pattern), not something bought separately per tier.
+export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.1
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
 // it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it
