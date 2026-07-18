@@ -566,12 +566,15 @@ Strict three-layer separation:
    snapshot of which tier ids were already unlocked at mount time (captured once, from whatever
    `loadGameState()` returned) is compared against on each row to decide whether to animate, rather than
    relying on mount timing alone.
-   Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (a 2-row set above
-   the `40rem` breakpoint — name+automate on top, then owned/production/upgrade/buy — and a denser 3-row
-   set below it — name+automate, then owned/production, then upgrade/buy) rather than flexbox
-   content-based sizing, so a field's on-screen position depends only on viewport width, never on how many
-   digits its value has (or on whether the `automate` area currently has anything in it — it stays
-   reserved even when empty, same principle). Name shares the top line only with the small `automate` area
+   Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` — the same 2-row
+   areas at every viewport width (name+automate on top, then owned/production/upgrade/buy; below the
+   `40rem` breakpoint only fonts/spacing shrink and the column weights shift to give the two buttons most
+   of the width, with the owned cell dropping its "Owned: " prefix there via a `display: none` span
+   (`OwnedLabel`) so its narrow track still fits the bare count — the text stays in the DOM, so tests
+   assert it via `toHaveTextContent` on the layer card rather than `getByText`, which only matches single
+   text nodes) rather than flexbox content-based sizing, so a field's on-screen position depends only on
+   viewport width, never on how many digits its value has (or on whether the `automate` area currently
+   has anything in it — it stays reserved even when empty, same principle). Name shares the top line only with the small `automate` area
    at its right edge, at *both* breakpoints — the autobuyer-level speed badge nested inside `TierName`
    (`⚙ Lv.N (×rate speed)`, see below) needs real horizontal room to render in full, which a slim shared
    column can't provide. `TierName` itself is a nested two-column grid (`grid-template-columns:

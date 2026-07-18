@@ -26,7 +26,7 @@ test('buying Tens deducts cost and increases owned count', async () => {
 
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
 
-  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
   // After spending $10 on the first Tens, money=$0. Cost stays $10 (flat within the block of 10) — button disabled.
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeDisabled()
 })
@@ -45,13 +45,13 @@ test('reset game restores starting state once the confirm dialog is accepted', a
 
   // Buy a Tens generator to dirty the state
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
-  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByText(/owned: 0/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 0\b/i)
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
@@ -80,12 +80,12 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
 
   // Buy a Tens generator to dirty the state
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
-  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByText(/owned: 1/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
 })
@@ -212,7 +212,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   await user.click(buyButton)
 
-  expect(screen.getByText(/owned: 10/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 10\b/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
@@ -230,7 +230,7 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
 
   await user.click(buyButton)
 
-  expect(screen.getByText(/owned: 3/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 3\b/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
 })
 

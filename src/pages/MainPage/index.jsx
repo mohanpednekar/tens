@@ -96,11 +96,10 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    grid-template-areas:
-      'name name automate'
-      'owned owned production'
-      'upgrade buy buy';
-    grid-template-columns: repeat(3, 1fr);
+    /* Same 2-row areas as desktop; only the column weights shift, giving the two buttons the
+       lion's share so their cost text doesn't truncate at phone widths (the owned cell drops
+       its "Owned: " prefix there — see OwnedLabel — so its narrow track still fits the count). */
+    grid-template-columns: 0.45fr 0.7fr 1.28fr 1.27fr;
     row-gap: 0.3rem;
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
@@ -311,6 +310,15 @@ const OwnedText = styled(MutedText)`
 
   @media (max-width: 40rem) {
     font-size: 0.78em;
+  }
+`
+
+// The "Owned: " prefix is hidden at phone widths (the bare count remains) — the narrow owned
+// column can't fit label + value there, and the value is the part that matters. display: none
+// only affects rendering; the text stays in the DOM for tests and assistive tech.
+const OwnedLabel = styled.span`
+  @media (max-width: 40rem) {
+    display: none;
   }
 `
 
@@ -783,7 +791,10 @@ const MainPage = () => {
                   )}
                 </AutomationCell>
               )}
-              <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
+              <OwnedText title="Owned">
+                <OwnedLabel>Owned: </OwnedLabel>
+                {formatAmount(owned)}
+              </OwnedText>
               <ProductionText>
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
