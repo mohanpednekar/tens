@@ -946,10 +946,13 @@ automation" above for `buyAutoSpeedUp`.
 `TierList` and before `PrestigeCard` — tiers first, then the frequent Speed Up loop, then the
 end-of-run Prestige card. It's gated on the last tier being unlocked at all (`isTierUnlocked`), the
 same progressive-disclosure principle as the first-run Prestige card gate, so it doesn't clutter
-the page before `tier10` even exists. It shows the current multiplier and activation count, and a
-"⚡ Speed Up" button (progress-filled toward the next activation via the same `$progress`
-convention as Buy/Upgrade/Prestige, now measured against that cycle's own
-`getSpeedUpRequirement(speedUpCount)` rather than a flat 10) that's enabled once
+the page before `tier10` even exists. Like the Prestige button, the Speed Up button carries its
+effect and progress on itself — visible text `⚡ ×{next} · {percent}%` (the multiplier the next
+activation would set, and requirement progress), with no separate multiplier/activation-count
+status line; the full sentence lives in its `aria-label` ("Speed Up (requires N {lastTier}) —
+doubles production speed to ×{next}"). It's progress-filled via the same `$progress`
+convention as Buy/Upgrade/Prestige, measured against that cycle's own
+`getSpeedUpRequirement(speedUpCount)` rather than a flat 10, and enabled once
 `getTierPurchasedCount(lastTier) >= getSpeedUpRequirement(speedUpCount)` and disabled while frozen
 — like Prestige, there's no `window.confirm` guard, since this is a clearly beneficial action, not
 a destructive one like the Reset button. Below that, once `!isFirstRun` (the

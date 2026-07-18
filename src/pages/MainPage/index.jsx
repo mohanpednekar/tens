@@ -837,13 +837,9 @@ const MainPage = () => {
               doubles production speed. Each Speed Up needs a full block of 10 more than the last.
             </MutedText>
           </InfoDetails>
-          <MutedText>
-            ×{formatRate(speedUpMultiplier)} production speed{' · '}
-            {speedUpCount} activation{speedUpCount === 1 ? '' : 's'}
-          </MutedText>
           <Button
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name})`}
+            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -853,7 +849,7 @@ const MainPage = () => {
             $progressColor="#22d3ee"
             $pulse={canSpeedUp}
           >
-            ⚡ Speed Up
+            ⚡ ×{formatRate(nextSpeedUpMultiplier)}{' · '}{speedUpProgressPercent}%
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"

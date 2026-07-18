@@ -411,17 +411,22 @@ test('the second Speed Up requires a full block of 10 more than the first, not t
   expect(screen.queryByRole('button', { name: /speed up \(requires 10/i })).not.toBeInTheDocument()
 })
 
-test('the Speed Up panel shows the current multiplier and activation count', () => {
+test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
+    purchased: { tier10: 15 },
     speedUpCount: 2,
   }))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent(/×4 production speed/i)
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent(/2 activations/i)
+  // Third activation requires 30 tier10 purchases (15/30 = 50%) and would raise the permanent
+  // multiplier to ×8 — both shown on the button itself, with no separate status text line.
+  expect(screen.getByRole('button', {
+    name: /speed up \(requires 30 octillions\) — doubles production speed to ×8/i,
+  })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⚡ ×8 · 50%')
 })
 
 test('clicking Speed Up once eligible resets resources and re-hides the panel until the last tier unlocks again', async () => {
