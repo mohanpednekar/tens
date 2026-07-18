@@ -120,9 +120,37 @@ const SpeedUpCard = styled(StatCard)`
   border-color: #0e7490;
 `
 
-const MoneyCard = styled(StatCard)`
+// Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
+// Header that are centered rather than left-aligned.
+const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
+`
+
+// A native click-to-expand disclosure replacing always-visible description prose — the summary
+// line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
+// full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
+// no JS state; the collapsed content stays in the DOM, so aria-describedby references into it
+// (and textContent-based tests) still resolve either way.
+const InfoDetails = styled.details`
+  summary {
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+  }
+
+  summary:hover {
+    color: #d4d4d4;
+  }
+
+  summary h2 {
+    display: inline;
+    margin: 0;
+  }
+
+  p {
+    margin-top: 0.4rem;
+  }
 `
 
 // Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
@@ -603,12 +631,12 @@ const MainPage = () => {
         </StatCard>
       )}
 
-      <MoneyCard aria-label="money display">
+      <CenteredCard aria-label="money display">
         <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-      </MoneyCard>
+      </CenteredCard>
 
       {!isFirstRun && (
-        <StatCard aria-label="prestige points display">
+        <CenteredCard aria-label="prestige points display">
           <MutedText>
             <GoldText>{formatAmount(prestige.points)} PP</GoldText>
             {' · '}
@@ -616,15 +644,18 @@ const MainPage = () => {
               ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
               : 'production speed bonus locked'}
           </MutedText>
-        </StatCard>
+        </CenteredCard>
       )}
 
       {allTiersSmart && (
         <StatCard aria-label="full smart autobuyer notice">
-          <MutedText>
-            🧠 Every tier's autobuyer is fully automated and smart — since there's nothing left to
-            upgrade, this indicator won't be shown per tier anymore.
-          </MutedText>
+          <InfoDetails>
+            <summary>🧠 Every tier is fully smart</summary>
+            <MutedText>
+              Every tier's autobuyer is fully automated and smart — since there's nothing left to
+              upgrade, this indicator won't be shown per tier anymore.
+            </MutedText>
+          </InfoDetails>
         </StatCard>
       )}
 
@@ -845,14 +876,14 @@ const MainPage = () => {
 
       {lastTierUnlocked && (
         <SpeedUpCard aria-label="speed up panel">
-          <div>
-            <h2>Speed Up</h2>
+          <InfoDetails>
+            <summary><h2>Speed Up</h2></summary>
             <MutedText id="speed-up-description">
               Buy {speedUpRequirement} {lastTier.name} to trigger a Speed Up: resets your tiers and
               resources (keeps autobuyers, automations, and Prestige Points) and permanently
               doubles production speed. Each Speed Up needs a full block of 10 more than the last.
             </MutedText>
-          </div>
+          </InfoDetails>
           <MutedText>
             ×{formatRate(speedUpMultiplier)} production speed{' · '}
             {speedUpCount} activation{speedUpCount === 1 ? '' : 's'}
@@ -901,14 +932,14 @@ const MainPage = () => {
 
       {showBottomPrestigeCard && (
         <PrestigeCard aria-label="prestige panel">
-          <div>
-            <h2>Prestige</h2>
+          <InfoDetails>
+            <summary><h2>Prestige</h2></summary>
             <MutedText id="prestige-description">
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
               {!isFirstRun && ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`}
               {' '}Resets your resources when reached.
             </MutedText>
-          </div>
+          </InfoDetails>
           <div>
             <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
             {!isFirstRun && (

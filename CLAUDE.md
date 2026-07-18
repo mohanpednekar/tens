@@ -464,8 +464,16 @@ Strict three-layer separation:
    cost and production milestones), while the underlying state field/variable/function names
    (`state.purchased`, `getTierPurchasedCount`, `getPurchaseMilestoneMultiplier`) are unchanged.
    Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
-   exponential above), in a centered `MoneyCard` (`styled(StatCard)` with `align-items: center; text-align:
-   center`) — the only top-of-page block besides `Header` that's centered rather than left-aligned. It no
+   exponential above), in a centered `CenteredCard` (`styled(StatCard)` with `align-items: center;
+   text-align: center`) — the Prestige Point balance display shares the same `CenteredCard`, making
+   them the only top-of-page blocks besides `Header` that are centered rather than left-aligned.
+   Description prose is kept out of the always-visible page: the Speed Up and Prestige cards' full
+   explanations, and the full-smart-autobuyer notice's, live inside an `InfoDetails` (`styled.details`)
+   click-to-expand disclosure — the clickable `<summary>` is the card's own `<h2>` heading (or the
+   notice's one-line label), so the section reads minimal until clicked. Native `<details>`/`<summary>`
+   needs no JS state, and the collapsed content stays in the DOM, so the Speed Up/Prestige buttons'
+   `aria-describedby` references into it (and `toHaveTextContent`-based tests) resolve whether or not
+   the section is expanded. It no
    longer shows an aggregate `+X/sec` line beneath the balance (previously summed `owned` across every
    money-producing tier); each tier row's own tick-progress ring (see "Per-tier tick-progress ring" under
    "Tier production tickspeed" above) is the per-tier replacement for that figure, and there is no top-level
