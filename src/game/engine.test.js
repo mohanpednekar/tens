@@ -25,6 +25,7 @@ import {
   getPrestigeProgressPercent,
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
+  getSpeedUpMultiplier,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
@@ -35,6 +36,7 @@ import {
   isProductionFrozen,
   isTierUnlocked,
   prestigeGame,
+  speedUpGame,
   tickGame,
 } from './engine'
 import { GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TIER_DEFINITIONS } from './layers'
@@ -99,6 +101,11 @@ const withAutoPrestigeBudget = (state, budget) => ({
 const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
   ...state,
   prestigeSpeedBonusUnlocked: unlocked,
+})
+
+const withSpeedUpCount = (state, count) => ({
+  ...state,
+  speedUpCount: count,
 })
 
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
@@ -180,6 +187,11 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     expect(state.autoPrestige).toBeNull()
     expect(state.autoPrestigeAttemptBudget).toBe(0)
+  })
+
+  it('initialises speedUpCount to 0', () => {
+    const state = createInitialGameState()
+    expect(state.speedUpCount).toBe(0)
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -513,6 +525,24 @@ describe('getPurchaseMilestoneMultiplier', () => {
 
   it('treats negative purchased counts as 0', () => {
     expect(getPurchaseMilestoneMultiplier(-1)).toBe(1)
+  })
+})
+
+// ─── getSpeedUpMultiplier ─────────────────────────────────────────────────────
+
+describe('getSpeedUpMultiplier', () => {
+  it('is 1x (no bonus) with no Speed Up activations', () => {
+    expect(getSpeedUpMultiplier(0)).toBe(1)
+  })
+
+  it('doubles per activation', () => {
+    expect(getSpeedUpMultiplier(1)).toBe(2)
+    expect(getSpeedUpMultiplier(2)).toBe(4)
+    expect(getSpeedUpMultiplier(3)).toBe(8)
+  })
+
+  it('treats a negative count as 0', () => {
+    expect(getSpeedUpMultiplier(-1)).toBe(1)
   })
 })
 
@@ -975,6 +1005,23 @@ describe('tickGame', () => {
     const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 50))
     const after = tickGame(1)(boosted)
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1) // floor(1.5) = 1
+  })
+
+  it('multiplies production by the Speed Up multiplier', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 5)
+    const sped = withSpeedUpCount(base, 2) // ×4
+    const after = tickGame(1)(sped)
+    expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 20) // 5 × 4
+  })
+
+  it('stacks the Speed Up multiplier with the Prestige Point speed bonus', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 10)
+    // ×2 (Speed Up) × ×2 (+100% PP bonus) = ×4
+    const state = withSpeedUpCount(
+      withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)), 1
+    )
+    const after = tickGame(1)(state)
+    expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 40) // 10 × 4
   })
 
   it('Thousands generators produce Tens resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
@@ -1672,6 +1719,14 @@ describe('prestigeGame', () => {
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
+  it('keeps the Speed Up count permanently across prestige', () => {
+    const state = withSpeedUpCount(
+      withMoney(createInitialGameState(), GOOGOL), 3
+    )
+    const after = prestigeGame(state)
+    expect(after.speedUpCount).toBe(3)
+  })
+
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
     const state = withAutoPrestigeBudget(
       withAutoPrestige(withMoney(createInitialGameState(), GOOGOL)),
@@ -1726,5 +1781,91 @@ describe('prestigeGame', () => {
     const state = withMoney(createInitialGameState(), GOOGOL)
     const after = prestigeGame(state)
     expect(after.autobuyers[tensTier.id]).toBeNull()
+  })
+})
+
+// ─── speedUpGame ─────────────────────────────────────────────────────────────
+
+describe('speedUpGame', () => {
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const eligibleState = () => withPurchased(createInitialGameState(), lastTier.id, 10)
+
+  it('does nothing when the last tier has fewer than 10 lifetime purchases', () => {
+    const state = withPurchased(createInitialGameState(), lastTier.id, 9)
+    expect(speedUpGame(state)).toBe(state)
+  })
+
+  it('does nothing while production is frozen at GOOGOL', () => {
+    const state = withMoney(eligibleState(), GOOGOL)
+    expect(speedUpGame(state)).toBe(state)
+  })
+
+  it('increments speedUpCount by 1', () => {
+    const after = speedUpGame(eligibleState())
+    expect(after.speedUpCount).toBe(1)
+  })
+
+  it('stacks across repeated activations', () => {
+    const state = withSpeedUpCount(eligibleState(), 2)
+    const after = speedUpGame(state)
+    expect(after.speedUpCount).toBe(3)
+  })
+
+  it('resets money to the starting amount', () => {
+    const state = withMoney(eligibleState(), 99999)
+    const after = speedUpGame(state)
+    expect(after.resources[MONEY_ID]).toBe(10)
+  })
+
+  it('resets all owned and purchased counts to 0', () => {
+    const state = withOwned(eligibleState(), tensTier.id, 50)
+    const after = speedUpGame(state)
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(after.owned[tier.id]).toBe(0)
+      expect(after.purchased[tier.id]).toBe(0)
+    })
+  })
+
+  it('keeps an active autobuyer active at the baseline level (1)', () => {
+    const state = withAutobuyer(eligibleState(), tensTier.id, 3)
+    const after = speedUpGame(state)
+    expect(after.autobuyers[tensTier.id]).toBe(1)
+  })
+
+  it('leaves a not-yet-active autobuyer locked (null)', () => {
+    const after = speedUpGame(eligibleState())
+    expect(after.autobuyers[tensTier.id]).toBeNull()
+  })
+
+  it('keeps autobuyer automation permanently', () => {
+    const state = withAutobuyerAutomation(eligibleState(), tensTier.id)
+    const after = speedUpGame(state)
+    expect(after.autobuyerAutomation[tensTier.id]).toBe(true)
+  })
+
+  it('keeps the smart autobuyer flag permanently', () => {
+    const state = withSmartAutobuyer(eligibleState(), tensTier.id)
+    const after = speedUpGame(state)
+    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('keeps the Auto-Prestige level permanently', () => {
+    const state = withAutoPrestige(eligibleState(), 3)
+    const after = speedUpGame(state)
+    expect(after.autoPrestige).toBe(3)
+  })
+
+  it('keeps the prestige speed bonus unlock permanently', () => {
+    const state = withPrestigeSpeedBonusUnlocked(eligibleState())
+    const after = speedUpGame(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+  })
+
+  it('leaves Prestige Points, count, and XP completely untouched', () => {
+    const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
+    const after = speedUpGame(state)
+    expect(after.prestige.points).toBe(42)
+    expect(after.prestige.count).toBe(0)
+    expect(after.prestige.xp).toBe(7)
   })
 })

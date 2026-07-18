@@ -11,6 +11,11 @@
 //   - Autobuyer levels are never manually Upgraded past 1, and no PP is ever spent on Auto-upgrade
 //     automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
 //     bonus (getPrestigeProductionMultiplier) on run length, holding every other lever fixed.
+//   - Every tick, the instant the last tier reaches 10 lifetime purchases, "click Speed Up"
+//     (speedUpGame) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an
+//     optional PP-gated lever being deliberately held fixed — it's a core, always-on mechanic with
+//     no PP cost, so always accepting it the moment it's available is the natural "attentive
+//     player" behavior this bot otherwise already models for autobuyer unlocks.
 //
 // Usage:
 //   node run-simulation.mjs                      # default PP balances
@@ -21,22 +26,26 @@ import {
   buyTierQuantity,
   createInitialGameState,
   formatCurrency,
+  getTierPurchasedCount,
   isProductionFrozen,
+  speedUpGame,
   tickGame,
 } from '../../../src/game/engine.js'
 import { MONEY_ID, TIER_DEFINITIONS } from '../../../src/game/layers.js'
 
 const BUY_QUANTITY = 10 // matches useIncrementalGame's fixed autobuyer/manual-buy batch size
 const MAX_TICKS = 5_000_000 // safety cap (~58 simulated days) so a pathological input can't hang
+const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
 function simulateRun(startingPP) {
   let state = createInitialGameState()
   state = { ...state, prestige: { ...state.prestige, points: startingPP } }
 
   let ticks = 0
+  let speedUps = 0
   while (!isProductionFrozen(state)) {
     if (ticks >= MAX_TICKS) {
-      return { ticks, reached: false, finalMoney: state.resources[MONEY_ID] }
+      return { ticks, reached: false, finalMoney: state.resources[MONEY_ID], speedUps }
     }
 
     for (const tier of TIER_DEFINITIONS) {
@@ -47,11 +56,16 @@ function simulateRun(startingPP) {
         state = buyAutobuyer(tier.id)(state)
       }
     }
+    if (getTierPurchasedCount(state, lastTier.id) >= 10) {
+      const next = speedUpGame(state)
+      if (next !== state) speedUps += 1
+      state = next
+    }
     state = tickGame(1, BUY_QUANTITY)(state)
     ticks += 1
   }
 
-  return { ticks, reached: true, finalMoney: state.resources[MONEY_ID] }
+  return { ticks, reached: true, finalMoney: state.resources[MONEY_ID], speedUps }
 }
 
 // Not formatOfflineDuration (engine.js) — that formatter is explicitly scoped to durations up to
@@ -73,11 +87,11 @@ const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000]
 const cliValues = process.argv.slice(2).map(Number).filter(n => Number.isFinite(n) && n >= 0)
 const ppValues = cliValues.length > 0 ? cliValues : defaultPPValues
 
-console.log('| PP balance | Speed bonus | Ticks (sim. seconds) | Run duration | Money at Googol |')
-console.log('|---|---|---|---|---|')
+console.log('| PP balance | Speed bonus | Ticks (sim. seconds) | Run duration | Money at Googol | Speed Ups |')
+console.log('|---|---|---|---|---|---|')
 for (const pp of ppValues) {
-  const { ticks, reached, finalMoney } = simulateRun(pp)
+  const { ticks, reached, finalMoney, speedUps } = simulateRun(pp)
   const durationCell = reached ? formatDuration(ticks) : `${formatDuration(ticks)} (capped)`
   const moneyCell = reached ? formatCurrency(finalMoney) : 'not reached'
-  console.log(`| ${pp} | +${pp}% | ${ticks.toLocaleString()} | ${durationCell} | ${moneyCell} |`)
+  console.log(`| ${pp} | +${pp}% | ${ticks.toLocaleString()} | ${durationCell} | ${moneyCell} | ${speedUps} |`)
 }

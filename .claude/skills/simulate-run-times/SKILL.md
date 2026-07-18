@@ -26,6 +26,11 @@ reimplementation — so results automatically reflect any balance changes made t
   bonus (`getPrestigeProductionMultiplier`) on run length, holding every other lever fixed. If the
   user wants those other levers varied too (e.g. "what if automation is already bought"), that
   needs a different, explicitly-scoped simulation — say so rather than silently changing strategy.
+- Every tick, the instant the last tier reaches 10 lifetime purchases, "clicks Speed Up"
+  (`speedUpGame`) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an optional
+  PP-gated lever being deliberately held fixed for isolation — it's a core, always-on, no-cost
+  mechanic, so always accepting it the moment it's available is the natural "attentive player"
+  behavior, matching how the bot already treats autobuyer unlocks.
 
 ## Usage
 
@@ -35,11 +40,12 @@ node .claude/skills/simulate-run-times/simulate.mjs 0 100 1000 10000 # custom PP
 ```
 
 Prints a markdown table straight to stdout: PP balance, the production-speed bonus it grants,
-ticks elapsed (= simulated seconds), a human-readable duration, and the money balance at the
-moment Googol was crossed (which can overshoot substantially in the final tick — see
-`getPrestigePointsAwarded` in `CLAUDE.md`). A run capped by the script's `MAX_TICKS` safety net
-(5,000,000 simulated seconds) is marked "(capped)" in the duration column rather than a real
-result — call this out to the user if it happens rather than presenting it as a finished run.
+ticks elapsed (= simulated seconds), a human-readable duration, the money balance at the moment
+Googol was crossed (which can overshoot substantially in the final tick — see
+`getPrestigePointsAwarded` in `CLAUDE.md`), and how many times Speed Up fired during the run. A
+run capped by the script's `MAX_TICKS` safety net (5,000,000 simulated seconds) is marked
+"(capped)" in the duration column rather than a real result — call this out to the user if it
+happens rather than presenting it as a finished run.
 
 ## When editing the simulation
 
