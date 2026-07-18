@@ -66,18 +66,18 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
-// occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
-// that's about to click again.
-// The name row's leftover width holds the 'automate' area (the PP-based Automate/Smart control —
-// a single small control at a time, see AutomationCell) at the row's right edge — the badge
-// nested inside TierName still gets its fixed-position horizontal room in the remaining span.
+// Top line: name (+ compact autobuyer badge), the owned count, the production figure, and the
+// PP-based Automate/Smart control ('automate' area) at the right edge. Bottom line: just the two
+// buttons, each spanning two of the four tracks — the track pairs sum equally (col1+col2 =
+// col3+col4) so Upgrade and Buy each take exactly half the row's width. Buy sits rightmost, not
+// Upgrade — Buy is clicked constantly while Upgrade/Unlock is an occasional action, and the
+// rightmost slot is the natural resting spot for a thumb/mouse that's about to click again.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name name automate'
-    'owned production upgrade buy';
-  grid-template-columns: 0.9fr 0.9fr 0.95fr 1fr;
+    'name owned production automate'
+    'upgrade upgrade buy buy';
+  grid-template-columns: 1.3fr 0.7fr 1.2fr 0.8fr;
   align-items: center;
   column-gap: 0.5rem;
   row-gap: 0.3rem;
@@ -96,10 +96,10 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same 2-row areas as desktop; only the column weights shift, giving the two buttons the
-       lion's share so their cost text doesn't truncate at phone widths (the owned cell drops
-       its "Owned: " prefix there — see OwnedLabel — so its narrow track still fits the count). */
-    grid-template-columns: 0.45fr 0.7fr 1.28fr 1.27fr;
+    /* Same 2-row areas as desktop; only the column weights shift (still summing to equal
+       halves for the buttons), and the owned cell drops its "Owned: " prefix there — see
+       OwnedLabel — so its narrow track still fits the bare count. */
+    grid-template-columns: 1.25fr 0.75fr 1.3fr 0.7fr;
     row-gap: 0.3rem;
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
@@ -281,26 +281,25 @@ const GreenText = styled.span`
   ${gridCell}
 `
 
-// A two-column grid rather than plain inline text flow, so the autobuyer badge always starts at
-// the same horizontal position regardless of how wide tier.name happens to render — the same
-// fixed-track technique TierLine itself uses for the rest of the row (see its own comment above).
+// Name + compact autobuyer badge, sharing the top line's first track. The name itself never
+// shrinks (flex-shrink: 0 on the label); the badge takes what's left and ellipsizes first if the
+// track runs out — the name is the anchor the whole row is scanned by.
 const TierName = styled.h3`
   align-items: baseline;
   column-gap: 0.4rem;
-  display: grid;
+  display: flex;
   font-size: 1em;
   grid-area: name;
-  grid-template-columns: 7rem 1fr;
   margin: 0;
+  min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: 0.95em;
-    grid-template-columns: 6.25rem 1fr;
   }
 `
 
 const TierNameLabel = styled.span`
-  ${gridCell}
+  flex-shrink: 0;
 `
 
 const OwnedText = styled(MutedText)`
@@ -730,10 +729,19 @@ const MainPage = () => {
                 <TierNameLabel>{tier.name}</TierNameLabel>
                 {autobuyerLevel > 0 && (
                   <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
-                    ⚙ Lv.{autobuyerLevel} (×{formatRate(autobuyerAttemptRate)} speed)
+                    ⚙ ×{formatRate(autobuyerAttemptRate)}
                   </GreenText>
                 )}
               </TierName>
+              <OwnedText title="Owned">
+                <OwnedLabel>Owned: </OwnedLabel>
+                {formatAmount(owned)}
+              </OwnedText>
+              <ProductionText>
+                +{tier.producesResourceId === MONEY_ID
+                  ? formatCurrency(production)
+                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+              </ProductionText>
               {!isFirstRun && (!isAutobuyerLocked || isFirstTier) && !allTiersSmart && (
                 <AutomationCell>
                   {isSmart ? (
@@ -791,15 +799,24 @@ const MainPage = () => {
                   )}
                 </AutomationCell>
               )}
-              <OwnedText title="Owned">
-                <OwnedLabel>Owned: </OwnedLabel>
-                {formatAmount(owned)}
-              </OwnedText>
-              <ProductionText>
-                +{tier.producesResourceId === MONEY_ID
-                  ? formatCurrency(production)
-                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-              </ProductionText>
+              <UpgradeButton
+                aria-label={upgradeLabel}
+                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
+                disabled={!canUpgradeAutobuyer}
+                onClick={() => actions.buyAutobuyer(tier.id)}
+                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
+                $progress={autobuyerProgressPercent}
+                $pulse={canUpgradeAutobuyer}
+              >
+                {upgradeVisibleLabel}
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label={`${tier.name} autobuyer progress`}
+                  aria-valuenow={autobuyerProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </UpgradeButton>
               <BuyButton
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
@@ -819,24 +836,6 @@ const MainPage = () => {
                   aria-valuemax={10}
                 />
               </BuyButton>
-              <UpgradeButton
-                aria-label={upgradeLabel}
-                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
-                disabled={!canUpgradeAutobuyer}
-                onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
-                $progress={autobuyerProgressPercent}
-                $pulse={canUpgradeAutobuyer}
-              >
-                {upgradeVisibleLabel}
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} autobuyer progress`}
-                  aria-valuenow={autobuyerProgressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </UpgradeButton>
             </TierLine>
           )
         })}

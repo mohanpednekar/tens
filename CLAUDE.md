@@ -546,7 +546,9 @@ Strict three-layer separation:
    implies every tier is automated), the whole `AutomationCell`
    disappears on every row and a single `StatCard` ("full smart autobuyer notice") above `TierList`
    explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer-level
-   speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on `autobuyerLevel > 0`) is independent of
+   speed badge in `TierName` (compact `⚙ ×rate` — the level itself lives in its `title` tooltip, so it
+   doesn't repeat the "Lv." wording the Buy button uses for purchase level — gated only on
+   `autobuyerLevel > 0`) is independent of
    all this — it's shown whenever an autobuyer is active at all, regardless of automation/Smart status.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
@@ -567,22 +569,19 @@ Strict three-layer separation:
    `loadGameState()` returned) is compared against on each row to decide whether to animate, rather than
    relying on mount timing alone.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` — the same 2-row
-   areas at every viewport width (name+automate on top, then owned/production/upgrade/buy; below the
-   `40rem` breakpoint only fonts/spacing shrink and the column weights shift to give the two buttons most
-   of the width, with the owned cell dropping its "Owned: " prefix there via a `display: none` span
-   (`OwnedLabel`) so its narrow track still fits the bare count — the text stays in the DOM, so tests
-   assert it via `toHaveTextContent` on the layer card rather than `getByText`, which only matches single
-   text nodes) rather than flexbox content-based sizing, so a field's on-screen position depends only on
-   viewport width, never on how many digits its value has (or on whether the `automate` area currently
-   has anything in it — it stays reserved even when empty, same principle). Name shares the top line only with the small `automate` area
-   at its right edge, at *both* breakpoints — the autobuyer-level speed badge nested inside `TierName`
-   (`⚙ Lv.N (×rate speed)`, see below) needs real horizontal room to render in full, which a slim shared
-   column can't provide. `TierName` itself is a nested two-column grid (`grid-template-columns:
-   7rem 1fr` desktop, `6.25rem 1fr` below `40rem`) — a fixed-width label column holding the tier name (long
-   enough to fit every tier name, e.g. `Quadrillions`/`Pentillions`, without truncating) plus a flexible
-   second column for the badge — so the badge always starts at an identical horizontal position on every
-   tier row, regardless of how wide that row's own name happens to render, the same fixed-track principle
-   `TierLine` itself uses one level up. Buy sits to
+   areas at every viewport width: name (+ compact autobuyer badge), owned, production, and the `automate`
+   area on the top line, then just the two buttons on the bottom line, Upgrade and Buy each spanning two
+   of the four tracks whose widths sum to equal halves (col1+col2 = col3+col4), so each button takes
+   exactly half the row's width. Below the `40rem` breakpoint only fonts/spacing shrink and the column
+   weights shift (still summing to equal halves), with the owned cell dropping its "Owned: " prefix there
+   via a `display: none` span (`OwnedLabel`) so its narrow track still fits the bare count — the text
+   stays in the DOM, so tests assert it via `toHaveTextContent` on the layer card rather than
+   `getByText`, which only matches single text nodes. Fixed areas rather than flexbox content-based
+   sizing means a field's on-screen position depends only on viewport width, never on how many digits its
+   value has (or on whether the `automate` area currently has anything in it — it stays reserved even
+   when empty, same principle). `TierName` is a flex pair — the name label never shrinks
+   (`flex-shrink: 0`; it's the anchor the row is scanned by) and the compact badge beside it ellipsizes
+   first if the track runs out. Buy sits to
    the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
