@@ -238,6 +238,21 @@ already used. The label is advisory context, not a gate: a run isn't blocked fro
 `size:L` task anyway. Either way, skipping a task this way should be noted in reasoning/PR
 description, not silent — the same transparency expected of impact-based reordering per #55.
 
+**Reliability: cron dormancy.** GitHub Actions automatically disables a workflow's `schedule` (cron)
+trigger after 60 days with no repository activity — if the `claude-task` backlog ever fully drained
+and nothing filed new work for an extended stretch, `autonomous-maintenance.yml`'s cron trigger could
+go dormant with no error or notification anywhere; GitHub just silently stops firing it. In practice
+this is unlikely while the backlog stays active, since the automation's own merged PRs already count
+as repository activity (resetting the dormancy clock), and Phase B menu item 6 (gap analysis) exists
+specifically to keep proposing new work when the backlog thins. The actual backstop is external to
+GitHub Actions entirely: a periodic check running on separate infrastructure — not subject to GitHub's
+cron-dormancy rule, since manual/API `workflow_dispatch` always works regardless of whether the
+`schedule` trigger is currently disabled — that notices if `autonomous-maintenance.yml` has gone quiet
+longer than expected and manually re-kicks it via `workflow_dispatch`. This note documents the risk and
+the mitigation that's actually in place; it doesn't overstate protection beyond that (the watchdog
+mechanism itself lives outside this repo/issue system and isn't something a `claude-task` PR
+implements).
+
 **Phase 0 — CI/CD failures (top priority).** The guard step checks whether the latest completed
 `ci.yml` run on `main` failed, and separately lists any open PR (excluding `claude/auto-*`, already
 owned by the PR follow-up workflow below, and fork PRs) with a failing check. Either condition
