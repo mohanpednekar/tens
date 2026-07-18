@@ -483,6 +483,10 @@ const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/
 const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
+  // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
+  // on-button progress treatment: how much of a given PP cost the current unspent balance
+  // already covers.
+  const ppProgressPercent = cost => Math.min(100, Math.round((prestige.points / cost) * 100))
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
@@ -919,8 +923,17 @@ const MainPage = () => {
                       onClick={() => actions.buySmartAutobuyer(tier.id)}
                       title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
                       type="button"
+                      $progress={ppProgressPercent(smartCost)}
+                      $progressColor="#a78bfa"
                     >
                       🧠 {smartCost}
+                      <VisuallyHidden
+                        role="progressbar"
+                        aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
+                        aria-valuenow={Math.min(prestige.points, smartCost)}
+                        aria-valuemin={0}
+                        aria-valuemax={smartCost}
+                      />
                     </AutomationButton>
                   ) : (
                     <AutomationButton
@@ -938,8 +951,17 @@ const MainPage = () => {
                           : 'Spend Prestige Points to make this tier\'s autobuyer Upgrades happen automatically, forever'
                       }
                       type="button"
+                      $progress={ppProgressPercent(automationCost)}
+                      $progressColor="#38bdf8"
                     >
                       🤖 {automationCost}
+                      <VisuallyHidden
+                        role="progressbar"
+                        aria-label={`${tier.name} automation Prestige Point progress`}
+                        aria-valuenow={Math.min(prestige.points, automationCost)}
+                        aria-valuemin={0}
+                        aria-valuemax={automationCost}
+                      />
                     </AutomationButton>
                   )}
                 </AutomationCell>
@@ -997,8 +1019,17 @@ const MainPage = () => {
                 onClick={actions.buyAutoSpeedUp}
                 title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
                 type="button"
+                $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
+                $progressColor="#38bdf8"
               >
                 🔁 Auto Speed Up for {AUTO_SPEED_UP_COST} PP
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="Auto Speed Up Prestige Point progress"
+                  aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
+                  aria-valuemin={0}
+                  aria-valuemax={AUTO_SPEED_UP_COST}
+                />
               </Button>
             )
           )}
@@ -1038,8 +1069,17 @@ const MainPage = () => {
               onClick={actions.buyPrestigeSpeedBonus}
               title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
               type="button"
+              $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+              $progressColor="#38bdf8"
             >
               🚀 Unlock Speed Bonus for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="Speed bonus unlock Prestige Point progress"
+                aria-valuenow={Math.min(prestige.points, PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+                aria-valuemin={0}
+                aria-valuemax={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
+              />
             </Button>
           )}
           <Button
@@ -1081,8 +1121,17 @@ const MainPage = () => {
                 onClick={actions.buyAutoPrestige}
                 title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
                 type="button"
+                $progress={ppProgressPercent(autoPrestigeCost)}
+                $progressColor="#38bdf8"
               >
                 🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="Auto-Prestige Prestige Point progress"
+                  aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
+                  aria-valuemin={0}
+                  aria-valuemax={autoPrestigeCost}
+                />
               </Button>
             </>
           )}

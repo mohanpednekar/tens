@@ -691,6 +691,28 @@ test('the Unlock Speed Bonus button stays disabled without enough Prestige Point
   expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeDisabled()
 })
 
+test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', () => {
+  // owned.tier09 unlocks tier10, so the Speed Up card (holding Auto Speed Up) is shown.
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  // Automate tier01 costs 1 PP — 50 PP fully covers it (valuenow caps at the cost).
+  const automationProgress = screen.getByRole('progressbar', { name: /tens automation prestige point progress/i })
+  expect(automationProgress).toHaveAttribute('aria-valuenow', '1')
+  expect(automationProgress).toHaveAttribute('aria-valuemax', '1')
+
+  // Auto Speed Up costs 100 PP — 50 PP covers half.
+  const autoSpeedUpProgress = screen.getByRole('progressbar', { name: /auto speed up prestige point progress/i })
+  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuenow', '50')
+  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '100')
+})
+
 test('the Speed Bonus unlock stays hidden (button and locked teaser alike) until Auto Speed Up is bought', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },

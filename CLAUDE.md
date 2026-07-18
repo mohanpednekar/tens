@@ -495,7 +495,12 @@ Strict three-layer separation:
    `$progress`/`$secondaryProgress` props, instead of a separate bar below it. The Upgrade/Unlock button and
    the Prestige button carry the same
    fill treatment (single-tone: spendable-resource ÷ cost for Upgrade/Unlock, `prestigeProgressPercent`
-   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Buy/Upgrade/Unlock/Prestige/
+   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Every PP-spending
+   button (the per-tier Automate/Smart buttons, Auto Speed Up, Unlock Speed Bonus, and Auto-Prestige)
+   carries the same single-tone fill too — unspent PP ÷ that button's cost (`ppProgressPercent` in
+   `MainPage`), in the button's own accent color — each nesting the usual `VisuallyHidden`
+   `role="progressbar"` (`aria-valuenow` = the PP balance capped at the cost, `aria-valuemax` = the
+   cost). Buy/Upgrade/Unlock/Prestige/
    Reset render compact *visible* text — an icon in place of the action word (🛒 Buy, 🔓 Unlock, ⚙ Upgrade,
    ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short `RESOURCE_SYMBOL`
    (e.g. `Ks`) instead of its full name (e.g. `Thousands`) — while each button's `aria-label` still carries
@@ -1271,7 +1276,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   the rest of the test file. At the old 1Hz tick rate this leak was infrequent enough not to matter; at
   10Hz it fires 10x more often and reliably starved subsequent `userEvent`-based tests into timing out
   until fixed (a real regression caught while raising `TICK_RATE_MS`, not merely a style preference).
-- `yarn test` is green (367 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (368 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current
