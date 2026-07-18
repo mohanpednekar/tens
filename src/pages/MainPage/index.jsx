@@ -275,31 +275,17 @@ const GoldText = styled.b`
   font-size: 1.1em;
 `
 
-const GreenText = styled.span`
-  color: #4ade80;
-  font-size: 0.85em;
-  ${gridCell}
-`
-
-// Name + compact autobuyer badge, sharing the top line's first track. The name itself never
-// shrinks (flex-shrink: 0 on the label); the badge takes what's left and ellipsizes first if the
-// track runs out — the name is the anchor the whole row is scanned by.
+// The tier name is the anchor the whole row is scanned by — no badge beside it; the autobuyer's
+// current state lives on the Upgrade button (and its title) instead of being repeated up here.
 const TierName = styled.h3`
-  align-items: baseline;
-  column-gap: 0.4rem;
-  display: flex;
   font-size: 1em;
   grid-area: name;
   margin: 0;
-  min-width: 0;
+  ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: 0.95em;
   }
-`
-
-const TierNameLabel = styled.span`
-  flex-shrink: 0;
 `
 
 const OwnedText = styled(MutedText)`
@@ -423,7 +409,12 @@ const MainPage = () => {
     : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
+  // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
+  // but the award on reaching it is always at least 1, so that's the effect worth advertising.
+  const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
+  const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
   // than firing immediately on click — there's no modal/confirm component elsewhere in this app
   // to reuse, so window.confirm is the simplest fit.
@@ -570,14 +561,14 @@ const MainPage = () => {
           <TopPrestigeBar aria-label="prestige available banner">
             <MutedText>1 Googol Money reached — production has stopped.</MutedText>
             <Button
-              aria-label={prestigeLabel}
+              aria-label={prestigeAriaLabel}
               color="#fbbf24"
               onClick={actions.prestige}
               title="Awards Prestige Points and resets your resources"
               type="button"
               $pulse
             >
-              ✦ Prestige
+              ✦ Prestige +{formatAmount(prestigeAwardPreview)} PP
             </Button>
           </TopPrestigeBar>
           <TopPrestigeBarSpacer />
@@ -725,14 +716,7 @@ const MainPage = () => {
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
             >
-              <TierName>
-                <TierNameLabel>{tier.name}</TierNameLabel>
-                {autobuyerLevel > 0 && (
-                  <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
-                    ⚙ ×{formatRate(autobuyerAttemptRate)}
-                  </GreenText>
-                )}
-              </TierName>
+              <TierName>{tier.name}</TierName>
               <OwnedText title="Owned">
                 <OwnedLabel>Owned: </OwnedLabel>
                 {formatAmount(owned)}
@@ -804,7 +788,9 @@ const MainPage = () => {
                 color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeAutobuyer}
                 onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
+                title={isAutobuyerLocked
+                  ? 'Unlocks automatic buying for this tier'
+                  : `Autobuyer level ${autobuyerLevel} (×${formatRate(autobuyerAttemptRate)} purchase speed) — the next level makes it 10% faster`}
                 $progress={autobuyerProgressPercent}
                 $pulse={canUpgradeAutobuyer}
               >
@@ -927,9 +913,6 @@ const MainPage = () => {
                 {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
               </MutedText>
             )}
-            <MutedText>
-              {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
-            </MutedText>
           </div>
           {!isFirstRun && !state.prestigeSpeedBonusUnlocked && speedBonusRevealed && (
             <Button
@@ -954,7 +937,7 @@ const MainPage = () => {
           )}
           <Button
             aria-describedby="prestige-description"
-            aria-label={prestigeLabel}
+            aria-label={prestigeAriaLabel}
             color={canPrestige ? '#fbbf24' : 'darkgrey'}
             disabled={!canPrestige}
             onClick={actions.prestige}
@@ -964,7 +947,7 @@ const MainPage = () => {
             $progressColor="#fbbf24"
             $pulse={canPrestige}
           >
-            ✦ Prestige
+            ✦ +{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%
             <VisuallyHidden
               role="progressbar"
               aria-label="Prestige progress"

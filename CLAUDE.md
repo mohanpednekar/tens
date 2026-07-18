@@ -545,16 +545,16 @@ Strict three-layer separation:
    is smart (`allTiersSmart`, `TIER_DEFINITIONS.every(...)` — which, since Smart requires automation, also
    implies every tier is automated), the whole `AutomationCell`
    disappears on every row and a single `StatCard` ("full smart autobuyer notice") above `TierList`
-   explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer-level
-   speed badge in `TierName` (compact `⚙ ×rate` — the level itself lives in its `title` tooltip, so it
-   doesn't repeat the "Lv." wording the Buy button uses for purchase level — gated only on
-   `autobuyerLevel > 0`) is independent of
-   all this — it's shown whenever an autobuyer is active at all, regardless of automation/Smart status.
+   explains why, rather than leaving a permanent badge cluttering all 10 rows forever. There is no
+   autobuyer badge in the name row anymore (an earlier design showed one) — an active autobuyer's
+   level and speed multiplier live in the Upgrade button's `title` tooltip instead ("Autobuyer level N
+   (×rate purchase speed) — the next level makes it 10% faster"), so the row doesn't repeat information
+   the Upgrade control already owns.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
    computation would recurse into the nested node and pick up its label too. Buy/Upgrade/Unlock/Prestige/
-   Reset and the autobuyer badge all carry a `title` tooltip explaining their effect in plain language;
+   Reset all carry a `title` tooltip explaining their effect in plain language;
    the Prestige and Reset buttons additionally wire `aria-describedby` to a visible (Prestige) or
    `VisuallyHidden` (Reset) description, since those two are the app's only irreversible actions and their
    most important fact (resources get wiped) previously lived only in a mouse-hover `title` — the other four
@@ -569,7 +569,7 @@ Strict three-layer separation:
    `loadGameState()` returned) is compared against on each row to decide whether to animate, rather than
    relying on mount timing alone.
    Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` — the same 2-row
-   areas at every viewport width: name (+ compact autobuyer badge), owned, production, and the `automate`
+   areas at every viewport width: name, owned, production, and the `automate`
    area on the top line, then just the two buttons on the bottom line, Upgrade and Buy each spanning two
    of the four tracks whose widths sum to equal halves (col1+col2 = col3+col4), so each button takes
    exactly half the row's width. Below the `40rem` breakpoint only fonts/spacing shrink and the column
@@ -579,9 +579,7 @@ Strict three-layer separation:
    `getByText`, which only matches single text nodes. Fixed areas rather than flexbox content-based
    sizing means a field's on-screen position depends only on viewport width, never on how many digits its
    value has (or on whether the `automate` area currently has anything in it — it stays reserved even
-   when empty, same principle). `TierName` is a flex pair — the name label never shrinks
-   (`flex-shrink: 0`; it's the anchor the row is scanned by) and the compact badge beside it ellipsizes
-   first if the track runs out. Buy sits to
+   when empty, same principle). Buy sits to
    the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
@@ -861,8 +859,14 @@ fluctuates as PP is earned and spent):
   so it never overlaps `Header`) shows a compact reminder + Prestige button, while the rest of the
   (disabled) page still renders normally underneath it.
 
-The normal bottom `PrestigeCard` (progress-toward-Googol, prestige count, unspent PP, production-speed
-multiplier) only renders when *not* frozen, and — during the first run only (`prestige.count === 0`) —
+The normal bottom `PrestigeCard` (prestige count, unspent PP, production-speed multiplier) only renders
+when *not* frozen. Its Prestige button carries the effect and progress on itself, Buy-button style —
+visible text `✦ +{award} PP · {percent}%` (award = `max(1, getPrestigePointsAwarded(money))`, since
+below Googol the formula reads 0 but the award on reaching it is always at least 1) over the existing
+`$progress` fill, with the full sentence in `aria-label` ("Prestige (requires 1 Googol Money) — awards
++N Prestige Points"); there is no separate progress-toward-Googol text line anymore. The frozen-state
+`TopPrestigeBar` button shows the award the same way ("✦ Prestige +N PP"). During the first run only
+(`prestige.count === 0`), the card
 stays hidden until `purchased.tier10 >= 10` (10 lifetime purchases of the last tier), a
 progressive-disclosure gate so a brand-new player isn't shown the Prestige panel before it's relevant;
 once the player has prestiged at least once, the card is always shown (whenever not frozen) regardless of
