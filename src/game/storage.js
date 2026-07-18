@@ -39,8 +39,14 @@ const migrateState = saved => {
   // in-progress autobuyer would silently relock on the very next load, since a legitimate
   // numeric level would otherwise be indistinguishable from the legacy boolean `false`. A
   // pre-existing save's old level 0 ("unlocked but idle" under a since-removed schema) is left
-  // as-is rather than migrated to 1 — tickGame/getAutobuyerAttemptRate already treat it as an
-  // active autobuyer at the baseline rate, so it degrades gracefully without special-casing.
+  // as-is rather than migrated to 1 — tickGame already treats any non-null level as an active
+  // autobuyer at the flat baseline purchase rate, so it degrades gracefully without
+  // special-casing. A save from before autobuyer unlock became PP-funded (see engine.js's
+  // buyAutobuyerUnlock) already has whatever level its autobuyer reached under the old
+  // Money-funded activation/Upgrade or PP-funded automation — that level (and the free
+  // automatic tickspeed self-upgrading every unlocked tier now gets, previously gated behind a
+  // separate "automation" purchase that no longer exists) carries forward unchanged; an
+  // already-unlocked tier is never punished or relocked by this schema change.
   const rawAutobuyers = migrateTierKeys(saved.autobuyers)
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
@@ -72,7 +78,6 @@ const migrateState = saved => {
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
-    autobuyerAutomation: { ...fresh.autobuyerAutomation, ...migrateTierKeys(saved.autobuyerAutomation) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },

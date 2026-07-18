@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -31,22 +31,22 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
+  // null = not yet unlocked (see buyAutobuyerUnlock — a permanent, PP-funded purchase); once
+  // unlocked, a number is the tier's tickspeed multiplier level (1 = just unlocked, no production
+  // bonus yet — see getTickspeedProductionMultiplier). An unlocked tier's autobuyer always buys
+  // tier units automatically AND self-upgrades its own tickspeed level automatically every tick —
+  // there's no separate "automation" purchase anymore (see tickGame).
   autobuyers: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: null,
   }), {}),
-  // Fractional purchase-attempt budget per tier, accumulated each tick by
-  // getAutobuyerAttemptRate(level) and drained by 1 per successful autobuyer purchase — see
-  // tickGame. Only meaningful for unlocked (non-null) autobuyers; stays 0 while locked.
+  // Fractional purchase-attempt budget per tier, accumulated each tick at a flat rate of 1 (the
+  // tickspeed multiplier level no longer affects this — see "Tickspeed multiplier" in CLAUDE.md)
+  // and drained by 1 per successful autobuyer purchase — see tickGame. Only meaningful for
+  // unlocked (non-null) autobuyers; stays 0 while locked.
   autobuyerAttemptBudgets: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: 0,
-  }), {}),
-  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
-  // autobuyer self-upgrade every tick (see buyAutobuyerAutomation) — never reset by prestige.
-  autobuyerAutomation: TIER_DEFINITIONS.reduce((acc, tier) => ({
-    ...acc,
-    [tier.id]: false,
   }), {}),
   // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
   // autobuyer "smart" — buys one unit at a time until 10 lifetime purchases, then switches to
@@ -75,24 +75,24 @@ export const createInitialGameState = () => ({
   autoPrestigeAttemptBudget: 0,
   // Permanent global flag, false = not yet bought: whether the passive +1%-per-unspent-point
   // production speed bonus (getPrestigeProductionMultiplier) is active at all — see
-  // buyPrestigeSpeedBonus. Never reset by prestige, like autobuyerAutomation/smartAutobuyer/
+  // buyPrestigeSpeedBonus. Never reset by prestige, like smartAutobuyer/
   // autoPrestige above.
   prestigeSpeedBonusUnlocked: false,
   // Permanent count of how many times Speed Up has been triggered (see speedUpGame) — drives
   // getSpeedUpMultiplier's unconditional production-speed multiplier. Never reset by Speed Up
   // itself (it's the thing being incremented) or by a real Prestige (see prestigeGame) — it's
-  // meta-progression, like autobuyerAutomation/smartAutobuyer/autoPrestige/
+  // meta-progression, like smartAutobuyer/autoPrestige/
   // prestigeSpeedBonusUnlocked above.
   speedUpCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make Speed Up trigger automatically (see buyAutoSpeedUp/tickGame) the instant it's eligible —
   // no manual click needed. Never reset by prestige or by Speed Up itself, like
-  // autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
+  // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoSpeedUp: false,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
-    // spent via buyAutobuyerAutomation/buyPrestigeSpeedBonus. Unspent points also drive
+    // spent via buyAutobuyerUnlock/buyPrestigeSpeedBonus. Unspent points also drive
     // production speed (see getPrestigeProductionMultiplier), but only once
     // prestigeSpeedBonusUnlocked is true.
     points: 0,
@@ -179,25 +179,56 @@ export const getTierAffordableQuantity = (tier, purchased, spendable, requestedQ
   return Math.min(blockCapped, Math.floor(clampNonNegative(spendable) / unitCost))
 }
 
-// Resource cost to activate/upgrade an autobuyer from currentLevel to currentLevel+1 (null/no
-// autobuyer yet treated as currentLevel 0). Level 0→1 (activation) costs 1000, level 1→2 costs
-// 1,000,000, level 2→3 costs 1,000,000,000, …  (1000^(level+1))
-export const getAutobuyerCost = currentLevel =>
-  1000 ** (clampNonNegative(currentLevel) + 1)
+// Per-tier base cost for the tickspeed multiplier ladder (see getTickspeedMultiplierCost below):
+// 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier — 10^9,
+// 10^8, … 10^1 for the 10th/last tier (index 9). An out-of-range index is clamped to the valid
+// range rather than throwing.
+export const getTickspeedMultiplierBaseCost = tierIndex => {
+  const clampedIndex = Math.min(TIER_DEFINITIONS.length - 1, Math.max(0, tierIndex))
+  return 10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - clampedIndex)
+}
+
+// Resource cost to reach tickspeed multiplier level `targetLevel` on a tier, paid in that tier's
+// own resource: the tier's base cost (see getTickspeedMultiplierBaseCost) raised to targetLevel —
+// e.g. the 2nd tier's (index 1, base 10^9) level-4 cost is (10^9)^4 = 10^36. targetLevel 1 is the
+// PP-funded unlock cost itself (see getAutobuyerUnlockCost) — this function is shared by both the
+// PP unlock (level 1) and every subsequent Money-funded level-up (targetLevel > 1).
+export const getTickspeedMultiplierCost = (tierId, targetLevel) => {
+  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  return getTickspeedMultiplierBaseCost(tierIndex) ** Math.max(1, clampNonNegative(targetLevel))
+}
+
+// PP cost to permanently unlock a tier's autobuyer (see buyAutobuyerUnlock) — reuses the
+// tickspeed multiplier's own cost ladder at level 1 (getTickspeedMultiplierCost(tierId, 1)), just
+// paid in Prestige Points instead of the tier's own resource. There is no other way to get an
+// autobuyer running on a tier — see "Autobuyer unlock" in CLAUDE.md.
+export const getAutobuyerUnlockCost = tierId => getTickspeedMultiplierCost(tierId, 1)
+
+// The production-speed multiplier from a tier's tickspeed multiplier level: level 1 (just
+// unlocked, no Money-funded levels bought yet) is the baseline ×1 — no bonus — and each level
+// after that compounds production by another TICKSPEED_PRODUCTION_STEP (10%): level 2 = ×1.1,
+// level 3 = ×1.21, … This is the exact formula that used to drive autobuyer purchase-attempt
+// frequency before that effect moved to production instead (see "Tickspeed multiplier" in
+// CLAUDE.md) — the tickspeed multiplier button no longer has any effect on how often the
+// autobuyer attempts a purchase (see the flat rate used in tickGame below). `null` (tier has no
+// autobuyer at all — never unlocked) is treated as level 1 (no bonus), same defensive convention
+// used elsewhere in this file.
+export const getTickspeedProductionMultiplier = level =>
+  (1 + TICKSPEED_PRODUCTION_STEP) ** clampNonNegative((level ?? 1) - 1)
 
 // The production-speed multiplier at a given unspent-point balance: a flat 1% per point, applied
 // uniformly to every tier — replaces the old "prestige level doubles production" mechanic. This
 // is a pure formula, not a gate — callers must check state.prestigeSpeedBonusUnlocked themselves
 // (see buyPrestigeSpeedBonus/tickGame) before applying it, since the bonus is inert until that
 // one-time PP cost is paid; before then, every caller uses a flat ×1 instead of calling this at
-// all. Spending points (see buyAutobuyerAutomation) reduces the points available to this formula
+// all. Spending points (see buyAutobuyerUnlock) reduces the points available to this formula
 // in exchange for permanent autobuyer automation.
 export const getPrestigeProductionMultiplier = points =>
   1 + PRESTIGE_POINT_SPEED_BONUS * clampNonNegative(points)
 
 // One-time PP cost to unlock getPrestigeProductionMultiplier's passive bonus (see
 // PRESTIGE_SPEED_BONUS_UNLOCK_COST) — a no-op if already unlocked, if there aren't enough unspent
-// points, or while production is frozen. Permanent once bought, like autobuyerAutomation/
+// points, or while production is frozen. Permanent once bought, like smartAutobuyer/
 // smartAutobuyer/autoPrestige.
 export const buyPrestigeSpeedBonus = state => {
   if (isProductionFrozen(state)) return state
@@ -211,19 +242,11 @@ export const buyPrestigeSpeedBonus = state => {
   }
 }
 
-// PP cost to permanently automate a tier's autobuyer Upgrades (see buyAutobuyerAutomation): 1 PP
-// for the first tier, doubling for each subsequent one (2, 4, 8, … 512 for the 10th/last tier).
-// An unrecognized tier id is treated as index 0 (the cheapest tier) rather than throwing.
-export const getAutobuyerAutomationCost = tierId => {
-  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
-  return AUTOBUYER_AUTOMATION_BASE_COST * (2 ** tierIndex)
-}
-
 // PP cost to permanently make a tier's autobuyer "smart" (see buySmartAutobuyer) —
-// SMART_AUTOBUYER_COST_MULTIPLIER times the cost of automating that same tier's autobuyer
-// Upgrades (getAutobuyerAutomationCost), since it's a separate, more powerful capability.
+// SMART_AUTOBUYER_COST_MULTIPLIER times the cost of unlocking that same tier's autobuyer
+// (getAutobuyerUnlockCost), since it's a separate, more powerful capability bought after unlock.
 export const getSmartAutobuyerCost = tierId =>
-  SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)
+  SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerUnlockCost(tierId)
 
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
 // the same boundary where getTierCost's Fibonacci-driven multiplier steps up, so buying into a
@@ -249,15 +272,6 @@ export const getSpeedUpMultiplier = speedUpCount =>
 export const getSpeedUpRequirement = speedUpCount =>
   10 * (clampNonNegative(speedUpCount) + 1)
 
-// Level 1 is the baseline rate (1x, already active as soon as the autobuyer is activated — see
-// tickGame/buyAutobuyer); each level after that makes that tier's autobuyer 10% faster on
-// average, compounding: level 2 = 1.1x, level 3 = 1.21x, … This is a purchase-cadence multiplier
-// only; it has no effect on the tier's production (see getPurchaseMilestoneMultiplier) or on
-// manual Buy. `null` (not yet activated) is never actually fed into this in tickGame — treated
-// as level 1 here defensively.
-export const getAutobuyerAttemptRate = autobuyerLevel =>
-  1.1 ** clampNonNegative((autobuyerLevel ?? 1) - 1)
-
 // PP cost to activate/upgrade Auto-Prestige from currentLevel to currentLevel+1 (null/not yet
 // bought treated as currentLevel 0) — doubles each level: 100 PP to activate (level 0→1), 200 for
 // the next, 400 after that, … (AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel).
@@ -266,11 +280,11 @@ export const getAutoPrestigeCost = currentLevel =>
 
 // Level 1 is the baseline cadence — once activated, Auto-Prestige attempts to fire roughly every
 // AUTO_PRESTIGE_BASE_INTERVAL_SECONDS (1000s); each level after that speeds this up by another
-// 10%, compounding, exactly like getAutobuyerAttemptRate. Expressed as a per-tick budget
+// 10%, compounding. Expressed as a per-tick budget
 // increment (see tickGame's autoPrestigeAttemptBudget) rather than a raw interval, so the same
 // "accumulate until it crosses 1" mechanism used for tier autobuyers applies here too. `null`
 // (not yet bought) is never actually fed into this in tickGame — treated as level 1 here
-// defensively, same convention as getAutobuyerAttemptRate.
+// defensively, same defensive convention used elsewhere in this file.
 export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
   (1.1 ** clampNonNegative((autoPrestigeLevel ?? 1) - 1)) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS
 
@@ -391,23 +405,22 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const speedUpMultiplier = getSpeedUpMultiplier(state.speedUpCount ?? 0)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
-  // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) * elapsedSeconds this
-  // tick — scaled by elapsedSeconds so the real-world attempt cadence stays identical regardless
-  // of how often tickGame itself is called (see TICK_RATE_MS in layers.js) — then fire one
-  // purchase attempt per whole unit of budget, carrying any fractional remainder into the next
-  // tick. Level 1 (just activated) already accumulates at the baseline rate (1/real second), so
-  // activating alone makes an autobuyer active; each further Upgrade level compounds that rate by
-  // another 10%. If a batch can't be afforded, the loop stops WITHOUT spending the budget already
-  // accumulated for this attempt — it stays banked so a stretch of being broke doesn't cost any attempts, only
-  // delays them until funds catch up. buyTierQuantity re-validates internally and returns the
-  // state unchanged when a purchase fails. Every tier is costed in the same resource (Money), so
-  // autobuyers compete for the same pool — processed highest tier first so a higher tier always
-  // gets first claim on limited funds.
+  // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
+  // multiplier level no longer affects this cadence (it drives production instead, see
+  // getTickspeedProductionMultiplier below) — scaled by elapsedSeconds so the real-world attempt
+  // cadence stays identical regardless of how often tickGame itself is called (see TICK_RATE_MS in
+  // layers.js), then fire one purchase attempt per whole unit of budget, carrying any fractional
+  // remainder into the next tick. If a batch can't be afforded, the loop stops WITHOUT spending the
+  // budget already accumulated for this attempt — it stays banked so a stretch of being broke
+  // doesn't cost any attempts, only delays them until funds catch up. buyTierQuantity re-validates
+  // internally and returns the state unchanged when a purchase fails. Every tier is costed in the
+  // same resource (Money), so autobuyers compete for the same pool — processed highest tier first
+  // so a higher tier always gets first claim on limited funds.
   const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? null
     if (level === null || !isTierUnlocked(s)(tier)) return s
     let result = s
-    let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + getAutobuyerAttemptRate(level) * elapsedSeconds
+    let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + elapsedSeconds
     // The epsilon tolerance absorbs the same repeated-fractional-elapsedSeconds floating-point
     // drift as tierProductionAccumulators (see TICK_ACCUMULATION_EPSILON) — without it, ten
     // 0.1-elapsedSeconds calls at the baseline rate sum to 0.9999999999999999, one shy of
@@ -451,13 +464,15 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
 
-    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, tierMultiplier, and
-    // speedUpMultiplier (both always powers of 2) are already integers, so only a fractional
+    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, and tierMultiplier/
+    // speedUpMultiplier (both always powers of 2) are already integers, so only the fractional
     // Prestige Point production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent
-    // points → ×1.5) can introduce a fraction here. multiplier is always >= 1, so flooring never
-    // zeroes out production for a tier with owned > 0.
+    // points → ×1.5) and the tickspeed multiplier (getTickspeedProductionMultiplier, e.g. level 3
+    // → ×1.21) can introduce a fraction here. Both are always >= 1, so flooring never zeroes out
+    // production for a tier with owned > 0.
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier)
+    const tickspeedMultiplier = getTickspeedProductionMultiplier(stateAfterAutobuyers.autobuyers[tier.id] ?? null)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * tickspeedMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -481,16 +496,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     }),
   }
 
-  // Tiers with automated autobuyer-upgrade purchasing (bought with Prestige Points, see
-  // buyAutobuyerAutomation) self-upgrade one level per tick whenever affordable — no manual
-  // Upgrade click needed. buyAutobuyer re-validates internally (affordability, frozen state)
-  // and returns the same state unchanged when a level isn't affordable yet. Unlike the
-  // rate-accumulating budgets above, this is edge-triggered on affordability rather than a
-  // banked rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see
-  // TICK_RATE_MS) only makes it react sooner after becoming affordable, not more often per
-  // real second.
+  // Every unlocked tier (autobuyers[tier.id] non-null — see buyAutobuyerUnlock) self-upgrades its
+  // tickspeed multiplier level one step per tick whenever affordable — no manual click needed;
+  // there's no separate "automation" purchase gating this anymore, unlocking is all it takes.
+  // buyTickspeedMultiplier re-validates internally (affordability, frozen state) and returns the
+  // same state unchanged when a level isn't affordable yet. Unlike the rate-accumulating budgets
+  // above, this is edge-triggered on affordability rather than a banked rate, so it needs no
+  // elapsedSeconds scaling — calling tickGame more often (see TICK_RATE_MS) only makes it react
+  // sooner after becoming affordable, not more often per real second.
   const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => (
-    s.autobuyerAutomation?.[tier.id] ? buyAutobuyer(tier.id)(s) : s
+    s.autobuyers?.[tier.id] != null ? buyTickspeedMultiplier(tier.id)(s) : s
   ), producedState)
 
   // If Auto Speed Up is bought (see buyAutoSpeedUp), trigger a Speed Up automatically the instant
@@ -592,19 +607,49 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   return result
 }
 
-// Activate (currentLevel null → 1) or upgrade (level N → N+1) an autobuyer, always by spending
-// the tier's own resource — there's no separate XP-gated unlock step; activation is just the
-// N=0 case of the same cost formula (getAutobuyerCost(0) = 1000). resources[tier.id] and
-// owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
-// exactly 0 generators — production for that tier (and everything cascading from it) would stop
-// even though the purchase "succeeded". Require at least 1 generator left over instead.
-export const buyAutobuyer = tierId => state => {
+// Permanently unlocks a tier's autobuyer — the only way to get one running at all; there is no
+// Money-funded activation path anymore (see "Autobuyer unlock" in CLAUDE.md). Spends Prestige
+// Points (getAutobuyerUnlockCost) from the shared prestige.points balance — this trades away some
+// of the flat 1%-per-point production speed bonus in exchange for a permanent autobuyer (never
+// reset by prestige/Speed Up, only the tickspeed levels bought on top of it are). Sets
+// autobuyers[tierId] to 1 (the baseline tickspeed level — no production bonus yet, see
+// getTickspeedProductionMultiplier), which immediately makes the tier buy units automatically AND
+// self-upgrade its own tickspeed level automatically every tick (see tickGame) — there's no
+// separate "automation" purchase needed on top of this. A no-op if already unlocked, if the tier
+// itself isn't unlocked yet, or if there aren't enough unspent points.
+export const buyAutobuyerUnlock = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
+  if (state.autobuyers[tierId] != null) return state
 
+  const cost = getAutobuyerUnlockCost(tierId)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    autobuyers: { ...state.autobuyers, [tierId]: 1 },
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+  }
+}
+
+// Upgrades a tier's tickspeed multiplier from level N to N+1, spending the tier's own resource —
+// requires the tier's autobuyer to already be unlocked via Prestige Points first (see
+// buyAutobuyerUnlock); there's no way to buy tickspeed levels on a tier with no autobuyer at all.
+// Cost is getTickspeedMultiplierCost(tierId, currentLevel + 1); each level compounds that tier's
+// production by another 10% (see getTickspeedProductionMultiplier) — it has no effect on how
+// often the autobuyer attempts a purchase (see the flat rate in tickGame). resources[tier.id] and
+// owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
+// exactly 0 generators — production for that tier (and everything cascading from it) would stop
+// even though the purchase "succeeded". Require at least 1 generator left over instead.
+export const buyTickspeedMultiplier = tierId => state => {
+  if (isProductionFrozen(state)) return state
+  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  if (!tier || !isTierUnlocked(state)(tier)) return state
   const currentLevel = state.autobuyers[tierId] ?? null
-  const cost = getAutobuyerCost(currentLevel ?? 0)
+  if (currentLevel === null) return state
+
+  const cost = getTickspeedMultiplierCost(tierId, currentLevel + 1)
   const available = state.resources[tier.id] ?? 0
   if (available < cost + 1) return state
 
@@ -620,42 +665,8 @@ export const buyAutobuyer = tierId => state => {
     },
     autobuyers: {
       ...state.autobuyers,
-      [tierId]: (currentLevel ?? 0) + 1,
+      [tierId]: currentLevel + 1,
     },
-  }
-}
-
-// Permanently automates a tier's autobuyer Upgrades — once bought, tickGame calls buyAutobuyer
-// for this tier automatically once per tick whenever affordable, with no manual click needed.
-// Costs Prestige Points (see getAutobuyerAutomationCost), spent from the shared prestige.points
-// balance — this trades away some of the flat 1%-per-point production speed bonus in exchange
-// for permanent automation (see prestigeGame: automation, unlike autobuyer levels, is never
-// reset). Requires the tier's autobuyer to already be active (nothing to automate otherwise) —
-// EXCEPT for the first tier (tier01), whose 1 PP cost (the cheapest of all ten) instead
-// activates its autobuyer (at the level-1 baseline) as part of this same purchase if it isn't
-// already active, rather than requiring it be bought separately with Money first. An already-
-// active tier01 (at any level) is left untouched — this only ever sets the baseline level when
-// bootstrapping from locked. A no-op if already automated or if there aren't enough unspent
-// points.
-export const buyAutobuyerAutomation = tierId => state => {
-  if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier) return state
-  const isFirstTier = TIER_DEFINITIONS[0].id === tierId
-  const autobuyerActive = state.autobuyers[tierId] != null
-  if (!isFirstTier && !autobuyerActive) return state
-  if (state.autobuyerAutomation?.[tierId]) return state
-
-  const cost = getAutobuyerAutomationCost(tierId)
-  if (clampNonNegative(state.prestige.points) < cost) return state
-
-  return {
-    ...state,
-    autobuyers: isFirstTier && !autobuyerActive
-      ? { ...state.autobuyers, [tierId]: 1 }
-      : state.autobuyers,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
-    autobuyerAutomation: { ...state.autobuyerAutomation, [tierId]: true },
   }
 }
 
@@ -663,17 +674,17 @@ export const buyAutobuyerAutomation = tierId => state => {
 // (rather than waiting for a full 10-unit block) until it reaches 10 lifetime purchases, then
 // switches to the normal full-block batching from then on — fixes an otherwise-permanent stall
 // where a tier with 0 owned generators (0 income) can never afford a full first block on its
-// own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than automating that tier's autobuyer
-// Upgrades (see getSmartAutobuyerCost) — and requires that Auto-upgrade automation
-// (autobuyerAutomation[tierId]) already be bought first: Smart is presented as the next purchase
-// after Auto-upgrade, not a parallel/independent one, so the MainPage automate slot only ever
-// shows one control per tier at a time (Automate → Smart → bought), never both together. A no-op
-// if automation isn't bought yet, already smart, or there aren't enough unspent points.
+// own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than unlocking that tier's autobuyer
+// (see getSmartAutobuyerCost) — and requires the autobuyer already be unlocked first: Smart is
+// presented as the next purchase after Unlock, not a parallel/independent one, so the MainPage PP
+// Upgrades page only ever shows one control per tier at a time (Unlock → Smart → bought), never
+// both together. A no-op if not yet unlocked, already smart, or there aren't enough unspent
+// points.
 export const buySmartAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier) return state
-  if (!state.autobuyerAutomation?.[tierId]) return state
+  if (state.autobuyers[tierId] == null) return state
   if (state.smartAutobuyer?.[tierId]) return state
 
   const cost = getSmartAutobuyerCost(tierId)
@@ -713,10 +724,10 @@ export const buyAutoPrestige = state => {
 // progress. XP is untouched by prestige — it's earned independently via money milestones and
 // doesn't fund anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
 // Newly-awarded points add on top of any already-unspent balance (PP is a permanent, cumulative
-// currency, unlike resources/owned/purchased). Autobuyer activation is permanent across prestige
-// (non-null stays active at level 1, the baseline rate), while run-funded Upgrade levels above
-// that reset — autobuyer automation (see buyAutobuyerAutomation), by contrast, is permanent and
-// carries over unchanged.
+// currency, unlike resources/owned/purchased). Autobuyer unlock is permanent across prestige
+// (non-null stays active, collapsed back to tickspeed level 1 — the baseline, no production
+// bonus), while the run-funded tickspeed levels bought on top of that reset along with everything
+// else — smartAutobuyer, by contrast, is permanent and carries over unchanged.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -731,7 +742,6 @@ export const prestigeGame = state => {
   return {
     ...initial,
     autobuyers: resetAutobuyers,
-    autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
@@ -751,13 +761,13 @@ export const prestigeGame = state => {
 // first activation, 20 for the second, 30 for the third, … — resets resources/owned/purchased
 // (and every other per-run field) back to a fresh game exactly like createInitialGameState, but
 // permanently doubles production speed (see getSpeedUpMultiplier) and — like prestigeGame —
-// collapses any already-active autobuyer to its level-1 baseline rather than deactivating it,
-// while autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoSpeedUp
-// carry over unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is
-// passed through completely untouched — Speed Up is unrelated to real Prestige or Prestige
-// Points, and doesn't award or spend any. A no-op (returns the same state) while frozen (a frozen
-// state is waiting on a real Prestige, not a Speed Up) or before the last tier has reached that
-// cycle's requirement.
+// collapses any already-unlocked autobuyer to its tickspeed level-1 baseline rather than
+// relocking it, while smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoSpeedUp carry
+// over unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed
+// through completely untouched — Speed Up is unrelated to real Prestige or Prestige Points, and
+// doesn't award or spend any. A no-op (returns the same state) while frozen (a frozen state is
+// waiting on a real Prestige, not a Speed Up) or before the last tier has reached that cycle's
+// requirement.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
@@ -773,7 +783,6 @@ export const speedUpGame = state => {
   return {
     ...initial,
     autobuyers: resetAutobuyers,
-    autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
@@ -788,7 +797,7 @@ export const speedUpGame = state => {
 // (no-op unless the last tier has reached 10 purchases and production isn't frozen), so this just
 // removes the need for a manual click once eligible. A no-op if already bought, if there aren't
 // enough unspent points, or while production is frozen — same convention as
-// buyPrestigeSpeedBonus/buyAutobuyerAutomation.
+// buyPrestigeSpeedBonus/buyAutobuyerUnlock.
 export const buyAutoSpeedUp = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoSpeedUp) return state

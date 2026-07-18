@@ -4,7 +4,6 @@ import {
   AUTO_PRESTIGE_COST,
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
-  AUTOBUYER_AUTOMATION_BASE_COST,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
@@ -13,6 +12,8 @@ import {
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
   SPEED_UP_MULTIPLIER_BASE,
+  TICKSPEED_MULTIPLIER_BASE_EXPONENT,
+  TICKSPEED_PRODUCTION_STEP,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
 } from './layers'
@@ -137,11 +138,15 @@ describe('constants', () => {
     expect(PRESTIGE_POINT_SPEED_BONUS).toBe(0.01)
   })
 
-  it('AUTOBUYER_AUTOMATION_BASE_COST is 1 (first tier costs 1 PP)', () => {
-    expect(AUTOBUYER_AUTOMATION_BASE_COST).toBe(1)
+  it('TICKSPEED_MULTIPLIER_BASE_EXPONENT is 10 (first tier\'s base cost is 10^10)', () => {
+    expect(TICKSPEED_MULTIPLIER_BASE_EXPONENT).toBe(10)
   })
 
-  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x automation)', () => {
+  it('TICKSPEED_PRODUCTION_STEP is 0.1 (10% production per tickspeed level)', () => {
+    expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
+  })
+
+  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x the unlock cost)', () => {
     expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
   })
 
