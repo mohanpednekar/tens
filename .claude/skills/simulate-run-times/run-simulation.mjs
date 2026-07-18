@@ -11,6 +11,11 @@
 //   - Autobuyer levels are never manually Upgraded past 1, and no PP is ever spent on Auto-upgrade
 //     automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
 //     bonus (getPrestigeProductionMultiplier) on run length, holding every other lever fixed.
+//   - Every tick, the instant enough unspent PP is banked (>= PRESTIGE_SPEED_BONUS_UNLOCK_COST),
+//     "click Unlock" on the passive speed bonus (buyPrestigeSpeedBonus) — the one PP lever this
+//     bot doesn't hold back, since without it a run's starting PP balance is otherwise inert
+//     (the bot never actually prestiges mid-run, so points never grow beyond the starting value —
+//     see startingPP below). Only starting balances at/above the unlock cost ever afford this.
 //   - Every tick, the instant the last tier reaches that cycle's requirement
 //     (getSpeedUpRequirement(speedUpCount): 10 lifetime purchases for the first activation, 20 for
 //     the second, 30 for the third, …), "click Speed Up" (speedUpGame) immediately. Unlike
@@ -25,6 +30,7 @@
 
 import {
   buyAutobuyer,
+  buyPrestigeSpeedBonus,
   buyTierQuantity,
   createInitialGameState,
   formatCurrency,
@@ -48,7 +54,7 @@ function simulateRun(startingPP) {
   let speedUps = 0
   while (!isProductionFrozen(state)) {
     if (ticks >= MAX_TICKS) {
-      return { ticks, reached: false, finalMoney: state.resources[MONEY_ID], speedUps }
+      return { ticks, reached: false, finalMoney: state.resources[MONEY_ID], speedUps, speedBonusUnlocked: state.prestigeSpeedBonusUnlocked }
     }
 
     for (const tier of TIER_DEFINITIONS) {
@@ -59,6 +65,9 @@ function simulateRun(startingPP) {
         state = buyAutobuyer(tier.id)(state)
       }
     }
+    if (!state.prestigeSpeedBonusUnlocked) {
+      state = buyPrestigeSpeedBonus(state)
+    }
     if (getTierPurchasedCount(state, lastTier.id) >= getSpeedUpRequirement(state.speedUpCount ?? 0)) {
       const next = speedUpGame(state)
       if (next !== state) speedUps += 1
@@ -68,7 +77,7 @@ function simulateRun(startingPP) {
     ticks += 1
   }
 
-  return { ticks, reached: true, finalMoney: state.resources[MONEY_ID], speedUps }
+  return { ticks, reached: true, finalMoney: state.resources[MONEY_ID], speedUps, speedBonusUnlocked: state.prestigeSpeedBonusUnlocked }
 }
 
 // Not formatOfflineDuration (engine.js) — that formatter is explicitly scoped to durations up to
@@ -86,15 +95,19 @@ function formatDuration(totalSeconds) {
   return parts.join(' ')
 }
 
-const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000]
+// Extends past PRESTIGE_SPEED_BONUS_UNLOCK_COST (10000) so the highest rows actually afford and
+// exercise the passive-bonus unlock above — the bot never prestiges mid-run, so points never grow
+// beyond the starting value, and every value below the unlock cost leaves it permanently locked.
+const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 25000, 50000]
 const cliValues = process.argv.slice(2).map(Number).filter(n => Number.isFinite(n) && n >= 0)
 const ppValues = cliValues.length > 0 ? cliValues : defaultPPValues
 
 console.log('| PP balance | Speed bonus | Ticks (sim. seconds) | Run duration | Money at Googol | Speed Ups |')
 console.log('|---|---|---|---|---|---|')
 for (const pp of ppValues) {
-  const { ticks, reached, finalMoney, speedUps } = simulateRun(pp)
+  const { ticks, reached, finalMoney, speedUps, speedBonusUnlocked } = simulateRun(pp)
   const durationCell = reached ? formatDuration(ticks) : `${formatDuration(ticks)} (capped)`
   const moneyCell = reached ? formatCurrency(finalMoney) : 'not reached'
-  console.log(`| ${pp} | +${pp}% | ${ticks.toLocaleString()} | ${durationCell} | ${moneyCell} | ${speedUps} |`)
+  const bonusCell = speedBonusUnlocked ? `+${pp}%` : 'locked'
+  console.log(`| ${pp} | ${bonusCell} | ${ticks.toLocaleString()} | ${durationCell} | ${moneyCell} | ${speedUps} |`)
 }

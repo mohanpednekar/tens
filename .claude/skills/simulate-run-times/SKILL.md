@@ -26,6 +26,14 @@ reimplementation — so results automatically reflect any balance changes made t
   bonus (`getPrestigeProductionMultiplier`) on run length, holding every other lever fixed. If the
   user wants those other levers varied too (e.g. "what if automation is already bought"), that
   needs a different, explicitly-scoped simulation — say so rather than silently changing strategy.
+- Every tick, the instant enough unspent PP is banked, "clicks Unlock" on the passive speed bonus
+  (`buyPrestigeSpeedBonus`) — the one PP lever this bot doesn't hold back, since without it a run's
+  starting PP balance is otherwise inert: the bot never actually prestiges mid-run (the loop exits
+  the instant `isProductionFrozen` becomes true, before ever calling `prestigeGame`), so
+  `prestige.points` never grows beyond the starting value passed in. Only starting balances at or
+  above `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) ever afford this — lower balances leave it
+  permanently locked for the whole run, and the output table's "Speed bonus" column reports
+  `locked` rather than a fictional `+N%` in that case.
 - Every tick, the instant the last tier reaches that cycle's requirement
   (`getSpeedUpRequirement(speedUpCount)`: 10 lifetime purchases for the first activation, 20 for
   the second, 30 for the third, …), "clicks Speed Up" (`speedUpGame`) immediately. Unlike
@@ -41,13 +49,15 @@ node .claude/skills/simulate-run-times/simulate.mjs                  # default P
 node .claude/skills/simulate-run-times/simulate.mjs 0 100 1000 10000 # custom PP balances
 ```
 
-Prints a markdown table straight to stdout: PP balance, the production-speed bonus it grants,
-ticks elapsed (= simulated seconds), a human-readable duration, the money balance at the moment
-Googol was crossed (which can overshoot substantially in the final tick — see
-`getPrestigePointsAwarded` in `CLAUDE.md`), and how many times Speed Up fired during the run. A
-run capped by the script's `MAX_TICKS` safety net (5,000,000 simulated seconds) is marked
-"(capped)" in the duration column rather than a real result — call this out to the user if it
-happens rather than presenting it as a finished run.
+Prints a markdown table straight to stdout: PP balance, the production-speed bonus it actually
+granted (`locked` if the run's starting balance never reached the unlock cost — see the bot
+strategy above), ticks elapsed (= simulated seconds), a human-readable duration, the money balance
+at the moment Googol was crossed (which can overshoot substantially in the final tick — see
+`getPrestigePointsAwarded` in `CLAUDE.md`), and how many times Speed Up fired during the run. The
+default PP range (`0` through `50000`) deliberately spans `PRESTIGE_SPEED_BONUS_UNLOCK_COST`
+(10000) so both the locked and unlocked cases show up. A run capped by the script's `MAX_TICKS`
+safety net (5,000,000 simulated seconds) is marked "(capped)" in the duration column rather than a
+real result — call this out to the user if it happens rather than presenting it as a finished run.
 
 ## When editing the simulation
 
