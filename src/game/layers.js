@@ -69,11 +69,19 @@ export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // Auto-Prestige. The priciest of the three global PP automation unlocks (see AUTO_SPEED_UP_COST/
 // AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
-// PP cost to permanently automate the first tier's autobuyer Upgrades (see engine.js's
-// getAutobuyerAutomationCost) — doubles for each subsequent tier.
-export const AUTOBUYER_AUTOMATION_BASE_COST = 1
+// Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
+// getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
+// decreasing by a power of ten per subsequent tier (10^9, 10^8, … 10^1 for the 10th/last tier).
+// Reaching level L on a tier costs this base raised to L; level 1 (the PP-funded unlock cost, see
+// getAutobuyerUnlockCost) is exactly this base cost itself.
+export const TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10
+// Each tickspeed multiplier level (beyond the first, unlock-granted level) compounds a tier's
+// production by another 10% (see engine.js's getTickspeedProductionMultiplier) — the same 1.1x
+// compounding rate that used to drive autobuyer purchase-attempt frequency before that effect was
+// moved to production instead (see "Tickspeed multiplier" in CLAUDE.md).
+export const TICKSPEED_PRODUCTION_STEP = 0.1
 // The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
-// times more PP than automating that same tier's autobuyer Upgrades.
+// times more PP than unlocking that same tier's autobuyer (getAutobuyerUnlockCost).
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
