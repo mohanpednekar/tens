@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
@@ -271,6 +271,90 @@ test('dismissing the offline progress notice hides it', async () => {
   await user.click(screen.getByRole('button', { name: /dismiss offline progress notice/i }))
 
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+})
+
+test('the offline progress notice shows a countdown on its Dismiss button and fades/auto-dismisses after 10 seconds', () => {
+  vi.useFakeTimers()
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  }))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  const { unmount } = render(<App />)
+
+  const progressBar = screen.getByRole('progressbar', { name: /time until this notice auto-dismisses/i })
+  expect(progressBar).toHaveAttribute('aria-valuenow', '100')
+
+  act(() => { vi.advanceTimersByTime(5_000) })
+  const midway = Number(progressBar.getAttribute('aria-valuenow'))
+  expect(midway).toBeLessThan(100)
+  expect(midway).toBeGreaterThan(0)
+  // Still present mid-countdown.
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+
+  // Reaching the 10s deadline starts the fade; the notice is only actually removed once the
+  // separate fade transition (400ms) also completes.
+  act(() => { vi.advanceTimersByTime(5_000) })
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(400) })
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('clicking the offline progress notice extends its auto-dismiss to a minute from the click', () => {
+  vi.useFakeTimers()
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  }))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  const { unmount } = render(<App />)
+  const notice = screen.getByLabelText(/^offline progress notice$/i)
+
+  // Click well before the original 10s deadline would have fired.
+  act(() => { vi.advanceTimersByTime(9_000) })
+  fireEvent.click(notice)
+
+  // 1.5s later (10.5s since mount) — past the original 10s deadline plus its 400ms fade, proving
+  // the click reset the countdown rather than merely letting the original one finish.
+  act(() => { vi.advanceTimersByTime(1_500) })
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+
+  // Advance to (not past) the extended 60s-from-click deadline in its own act() call, then the
+  // 400ms fade in a separate one — the fade's setTimeout is only registered once React flushes
+  // the fading-state update *after* an act() call returns, so folding both into a single larger
+  // advance would register that timeout too late for the same call to also fire it (the same
+  // chained-timer pitfall CLAUDE.md documents for the old tick-progress ring tests).
+  act(() => { vi.advanceTimersByTime(58_500) })
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(400) })
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('clicking Dismiss removes the offline progress notice immediately, without waiting for the fade', () => {
+  vi.useFakeTimers()
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  }))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  const { unmount } = render(<App />)
+
+  act(() => { vi.advanceTimersByTime(2_000) })
+  fireEvent.click(screen.getByRole('button', { name: /dismiss offline progress notice/i }))
+
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('shows no offline progress notice when there is no recorded last-save timestamp', () => {

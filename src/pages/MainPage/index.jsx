@@ -7,6 +7,14 @@ import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
+// Offline-progress notice auto-dismiss timing (UI chrome only — not a game/economy constant, so
+// it lives here rather than in layers.js). Clicking the notice itself (not the Dismiss button)
+// extends the deadline to the longer duration — see handleOfflineNoticeClick in MainPage.
+const OFFLINE_NOTICE_AUTO_DISMISS_MS = 10_000
+const OFFLINE_NOTICE_EXTENDED_DISMISS_MS = 60_000
+const OFFLINE_NOTICE_FADE_MS = 400
+const OFFLINE_NOTICE_PROGRESS_INTERVAL_MS = 100
+
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
   margin: 0 auto;
@@ -43,6 +51,20 @@ const TopRow = styled.div`
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: space-between;
+`
+
+// Fades out (rather than disappearing abruptly) once the auto-dismiss countdown reaches zero —
+// see the offline-notice timing state in MainPage. Clickable to extend the countdown, hence the
+// pointer cursor; $fading drives the opacity transition, not a remount, so the fade is visible
+// before the notice is actually removed from the DOM by dismissOfflineProgress.
+const OfflineNoticeCard = styled(StatCard)`
+  cursor: pointer;
+  opacity: ${props => (props.$fading ? 0 : 1)};
+  transition: opacity ${OFFLINE_NOTICE_FADE_MS}ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `
 
 const TierList = styled.div`
@@ -177,12 +199,19 @@ const BalancesSentinel = styled.div`
 // line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
 // full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
 // no JS state; the collapsed content stays in the DOM, so aria-describedby references into it
-// (and textContent-based tests) still resolve either way.
+// (and textContent-based tests) still resolve either way. The disclosure marker (▸) is hidden
+// deliberately: no inherent visual clue that the heading expands — players discover it by
+// clicking (screen readers still announce the summary as collapsed/expanded regardless).
 const InfoDetails = styled.details`
   summary {
     cursor: pointer;
+    list-style: none;
     user-select: none;
     width: fit-content;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
   }
 
   summary:hover {
@@ -594,6 +623,58 @@ const MainPage = () => {
     return () => observer.disconnect()
   }, [showFullScreenPrompt])
 
+  // Offline-progress notice: auto-dismisses after OFFLINE_NOTICE_AUTO_DISMISS_MS unless the
+  // player clicks the notice itself, which extends the deadline to
+  // OFFLINE_NOTICE_EXTENDED_DISMISS_MS from that click (not merely +60s on top of whatever
+  // remained). offlineProgress is a one-shot value fixed at mount (see useIncrementalGame — it
+  // only ever transitions non-null → null via dismissOfflineProgress, never null → non-null after
+  // mount), so a lazy initializer capturing its start/end timestamps at mount time is enough;
+  // no effect is needed to (re)initialize it later.
+  const [offlineNoticeTiming, setOfflineNoticeTiming] = useState(() => {
+    if (!offlineProgress) return null
+    const now = Date.now()
+    return { start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS }
+  })
+  const [offlineNoticeFading, setOfflineNoticeFading] = useState(false)
+  const [offlineNoticeRemainingPercent, setOfflineNoticeRemainingPercent] = useState(100)
+  useEffect(() => {
+    // Guarded on offlineProgress (not just offlineNoticeTiming) so this effect re-runs — and its
+    // interval cleanup fires — the instant the notice is dismissed (manually or via the fade
+    // below), rather than leaving a 100ms interval running forever in the background.
+    if (!offlineProgress || !offlineNoticeTiming || offlineNoticeFading) return undefined
+    const { start, end } = offlineNoticeTiming
+    const total = end - start
+    const tick = () => {
+      const remaining = end - Date.now()
+      if (remaining <= 0) {
+        setOfflineNoticeRemainingPercent(0)
+        setOfflineNoticeFading(true)
+        return
+      }
+      setOfflineNoticeRemainingPercent(Math.round((remaining / total) * 100))
+    }
+    tick()
+    const interval = setInterval(tick, OFFLINE_NOTICE_PROGRESS_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [offlineProgress, offlineNoticeTiming, offlineNoticeFading])
+  useEffect(() => {
+    if (!offlineNoticeFading) return undefined
+    const timeout = setTimeout(dismissOfflineProgress, OFFLINE_NOTICE_FADE_MS)
+    return () => clearTimeout(timeout)
+  }, [offlineNoticeFading, dismissOfflineProgress])
+  const handleOfflineNoticeClick = () => {
+    if (offlineNoticeFading) return
+    const now = Date.now()
+    setOfflineNoticeTiming({ start: now, end: now + OFFLINE_NOTICE_EXTENDED_DISMISS_MS })
+  }
+  // Dismiss is an explicit, immediate action — it skips the fade and stops the click from also
+  // bubbling up to handleOfflineNoticeClick (which would otherwise re-extend a notice that's
+  // about to be dismissed anyway).
+  const handleOfflineNoticeDismissClick = event => {
+    event.stopPropagation()
+    dismissOfflineProgress()
+  }
+
   if (showFullScreenPrompt) {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
@@ -655,7 +736,12 @@ const MainPage = () => {
       </Header>
 
       {offlineProgress && (
-        <StatCard aria-label="offline progress notice">
+        <OfflineNoticeCard
+          aria-label="offline progress notice"
+          onClick={handleOfflineNoticeClick}
+          title="Click to keep this notice a little longer"
+          $fading={offlineNoticeFading}
+        >
           <TopRow>
             <MutedText>
               Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
@@ -664,14 +750,23 @@ const MainPage = () => {
             <Button
               aria-label="Dismiss offline progress notice"
               color="darkgrey"
-              onClick={dismissOfflineProgress}
+              onClick={handleOfflineNoticeDismissClick}
               title="Dismiss this notice"
               type="button"
+              $progress={offlineNoticeRemainingPercent}
+              $progressColor="#525252"
             >
               Dismiss
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="Time until this notice auto-dismisses"
+                aria-valuenow={offlineNoticeRemainingPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
             </Button>
           </TopRow>
-        </StatCard>
+        </OfflineNoticeCard>
       )}
 
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
@@ -889,6 +984,16 @@ const MainPage = () => {
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
               {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
               {' '}Resets your resources when reached.
+            </MutedText>
+            <MutedText>
+              <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
+              {!isFirstRun && (
+                <>
+                  {' · '}{formatAmount(prestige.points)} PP unspent
+                  {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                  {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
+                </>
+              )}
             </MutedText>
           </InfoDetails>
           <div>

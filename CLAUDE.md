@@ -428,7 +428,15 @@ src/
     StatCard/index.js       ← styled card container used for every panel
   pages/
     MainPage/index.jsx      ← single page; compact one-line-per-tier layout, data-driven from TIER_DEFINITIONS
-  App.jsx                   ← root component, renders MainPage
+  theme/
+    tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
+                               tier-accent sets + mode-independent space/radius/motion/font/type scales;
+                               exports buildTheme(mode) + themes.{dark,light} (see "Theming" below)
+    GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
+                               and the token-driven page background/text (absorbs the removed index.css/App.css)
+    index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
+                               `mode` defaults to dark and is the seam #140 will drive from system pref + toggle
+  App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
   index.jsx                 ← ReactDOM.createRoot entry point
 vite.config.js               ← path aliases + dev/test server config
 ```
@@ -480,7 +488,12 @@ Strict three-layer separation:
    Description prose is kept out of the always-visible page: the Speed Up and Prestige cards' full
    explanations, and the full-smart-autobuyer notice's, live inside an `InfoDetails` (`styled.details`)
    click-to-expand disclosure — the clickable `<summary>` is the card's own `<h2>` heading (or the
-   notice's one-line label), so the section reads minimal until clicked. Native `<details>`/`<summary>`
+   notice's one-line label), so the section reads minimal until clicked. The Prestige card's status
+   lines (prestiged count · unspent PP · speed bonus) live inside the disclosure too, not just the
+   description — collapsed, the card is nothing but its heading and buttons. The disclosure marker (▸)
+   is hidden (`list-style: none` + `::-webkit-details-marker`), deliberately leaving no inherent visual
+   clue that the heading expands — players discover it by clicking; screen readers still announce the
+   summary's collapsed/expanded state. Native `<details>`/`<summary>`
    needs no JS state, and the collapsed content stays in the DOM, so the Speed Up/Prestige buttons'
    `aria-describedby` references into it (and `toHaveTextContent`-based tests) resolve whether or not
    the section is expanded. It no
@@ -632,10 +645,25 @@ Strict three-layer separation:
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
    as a safety net against content forcing a column wider than its track. `RootDiv` sets
    `font-variant-numeric: tabular-nums` so digits render at a uniform width. When the hook reports a non-null
-   `offlineProgress` (see "Offline progress" below), a dismissible `StatCard` ("Welcome back! …", formatted via
-   `formatOfflineDuration`) renders above the money display, with a Dismiss button wired to
-   `dismissOfflineProgress`; it never reappears once dismissed (or once the state is reset) since it's a
-   one-shot summary of what happened between this load and the last, not a recurring status.
+   `offlineProgress` (see "Offline progress" below), a dismissible `OfflineNoticeCard` (`styled(StatCard)`,
+   "Welcome back! …", formatted via `formatOfflineDuration`) renders above the money display; it never
+   reappears once dismissed (or once the state is reset) since it's a one-shot summary of what happened
+   between this load and the last, not a recurring status. It also self-dismisses: a countdown starting at
+   `OFFLINE_NOTICE_AUTO_DISMISS_MS` (10s, a UI-only timing constant local to `MainPage`, not a game/economy
+   value) drives both the Dismiss button's own `$progress` fill (grey, ticking down every
+   `OFFLINE_NOTICE_PROGRESS_INTERVAL_MS` via a plain `setInterval` computing `remaining/total` from two
+   `Date.now()`-based timestamps in `offlineNoticeTiming` state — not a CSS transition, matching the
+   codebase's established on-button-fill convention rather than reintroducing the removed tick-progress
+   ring's animation machinery) and, once it reaches zero, an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms)
+   before `dismissOfflineProgress` actually removes it. Clicking the notice card itself (not the Dismiss
+   button) extends the deadline to `OFFLINE_NOTICE_EXTENDED_DISMISS_MS` (60s) *from that click*, not merely
+   +60s on top of whatever remained — `handleOfflineNoticeClick` simply re-seeds `offlineNoticeTiming` with
+   a fresh start/end pair, which the countdown interval effect (keyed on that state) picks up immediately.
+   The Dismiss button's own click handler calls `event.stopPropagation()` so dismissing doesn't also bubble
+   into the card's extend handler on its way out. The countdown interval effect is guarded on
+   `offlineProgress` itself (not just the timing state) so it — and its `setInterval` — actually stops the
+   instant the notice is dismissed by any path (manual click or the auto-fade), rather than leaking a timer
+   that runs forever in the background once the card is gone.
    Once `isProductionFrozen(state)` is true, every control except Prestige disables and the Prestige UI
    itself switches to one of two presentations depending on prestige history — see "Prestige and the
    Googol freeze" below for the full mechanism.
@@ -1269,8 +1297,35 @@ regardless of whether those purchases were manual or automatic.
 
 ### Path aliases (`vite.config.js`)
 
-`components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`. Use these bare
-aliases in imports (as the existing code does), not relative paths like `../../game/engine`.
+`components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`, `theme/X` →
+`src/theme/X`. Use these bare aliases in imports (as the existing code does), not relative paths like
+`../../game/engine`. Directory imports resolve to that directory's `index.jsx`/`index.js` (e.g.
+`import { ThemeProvider } from 'theme'` → `src/theme/index.jsx`, same as `pages/MainPage` → its `index.jsx`).
+
+## Theming
+
+All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
+the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
+values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
+components migrate onto these tokens one at a time in later sub-issues.
+
+- **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
+  `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
+  `color` (per-mode: `page`, `surface`, `surfaceRaised`, `surfaceSunken`, `border`, `borderStrong`,
+  `text`, `textMuted`, `textFaint`, `accent` (indigo brand), `good`/`warn`/`info`/`violet`/`danger`
+  semantics kept distinct from the accent, `disabled`), `shadow` (`sm`/`md`, per-mode), `tierAccents`
+  (per-mode 8-hue cycle for the tier left-edge stripe), plus mode-independent `space`, `radius`,
+  `motion` (`duration`/`easing`), `font` (`display`/`body`/`mono`), and `type` (`scale` + `numeric`).
+  Font families are system stacks for now — a deliberate seam the typography sub-issue (#136) swaps for
+  locally-bundled faces.
+- **`GlobalStyle.js`** (`createGlobalStyle`) replaces the removed `src/index.css` + `src/App.css`: the
+  `box-sizing` reset, base font/smoothing, the form-control `font: inherit` rule, and the token-driven
+  page background + text color (so the whole page repaints on a mode change).
+- **`theme/index.jsx`** exports `<ThemeProvider mode>` (wrapping styled-components' `ThemeProvider`) and
+  re-exports `GlobalStyle`/`themes`/`buildTheme`/`MODES`/`DEFAULT_MODE`. `App.jsx` renders
+  `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
+  `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
+  light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
 
 ## Testing
 
