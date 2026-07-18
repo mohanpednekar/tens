@@ -151,8 +151,11 @@ test('an Upgrade level speeds up the autobuyer without changing the displayed pr
   // Production depends only on purchased milestones (still under 10), never on autobuyer
   // level: owned(5) × $1/tick × 1 = $5 per tick, unaffected by the Upgrade.
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
-  // No badge in the name row — the autobuyer's level/speed lives on the Upgrade button's title.
-  expect(screen.getByTitle(/autobuyer level 2 \(×1\.1 purchase speed\)/i)).toBeInTheDocument()
+  // The badge shows only the speed multiplier — no "Lv." (that wording belongs to the Buy
+  // button's purchase level); the autobuyer's own level lives in the title tooltips.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('⚙ ×1.1')
+  expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('×1.1 speed')
+  expect(screen.getByTitle(/autobuyer level 2 — purchases ×1\.1 as often/i)).toBeInTheDocument()
 })
 
 test('reaching 10 lifetime purchases of a tier doubles its displayed production amount', () => {

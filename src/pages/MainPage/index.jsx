@@ -96,9 +96,8 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same 2-row areas as desktop; only the column weights shift (still summing to equal
-       halves for the buttons), and the owned cell drops its "Owned: " prefix there — see
-       OwnedLabel — so its narrow track still fits the bare count. */
+    /* Same 2-row areas as desktop; only the column weights shift, still summing to equal
+       halves for the buttons. */
     grid-template-columns: 1.25fr 0.75fr 1.3fr 0.7fr;
     row-gap: 0.3rem;
     column-gap: 0.35rem;
@@ -275,17 +274,33 @@ const GoldText = styled.b`
   font-size: 1.1em;
 `
 
-// The tier name is the anchor the whole row is scanned by — no badge beside it; the autobuyer's
-// current state lives on the Upgrade button (and its title) instead of being repeated up here.
+// Name + compact autobuyer speed badge sharing the top line's first track. The badge shows only
+// the multiplier (⚙ ×1.1) — the autobuyer's level is deliberately not shown here, since a "Lv."
+// on this row would read as a duplicate of the Buy button's purchase level; the level lives in
+// the badge's (and Upgrade button's) title tooltip instead. The name never shrinks
+// (flex-shrink: 0); the badge ellipsizes first if the track runs out.
 const TierName = styled.h3`
+  align-items: baseline;
+  column-gap: 0.4rem;
+  display: flex;
   font-size: 1em;
   grid-area: name;
   margin: 0;
-  ${gridCell}
+  min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: 0.95em;
   }
+`
+
+const TierNameLabel = styled.span`
+  flex-shrink: 0;
+`
+
+const GreenText = styled.span`
+  color: #4ade80;
+  font-size: 0.85em;
+  ${gridCell}
 `
 
 const OwnedText = styled(MutedText)`
@@ -298,14 +313,6 @@ const OwnedText = styled(MutedText)`
   }
 `
 
-// The "Owned: " prefix is hidden at phone widths (the bare count remains) — the narrow owned
-// column can't fit label + value there, and the value is the part that matters. display: none
-// only affects rendering; the text stays in the DOM for tests and assistive tech.
-const OwnedLabel = styled.span`
-  @media (max-width: 40rem) {
-    display: none;
-  }
-`
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
@@ -716,9 +723,16 @@ const MainPage = () => {
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
             >
-              <TierName>{tier.name}</TierName>
+              <TierName>
+                <TierNameLabel>{tier.name}</TierNameLabel>
+                {autobuyerLevel > 0 && (
+                  <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
+                    ⚙ ×{formatRate(autobuyerAttemptRate)}
+                  </GreenText>
+                )}
+              </TierName>
               <OwnedText title="Owned">
-                <OwnedLabel>Owned: </OwnedLabel>
+                <VisuallyHidden>Owned: </VisuallyHidden>
                 {formatAmount(owned)}
               </OwnedText>
               <ProductionText>
