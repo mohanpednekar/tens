@@ -46,10 +46,17 @@ src/
     StatCard/           ← styled card container
   pages/
     MainPage/index.jsx  ← single page; renders all tiers data-driven from TIER_DEFINITIONS
-  App.jsx               ← root component
+  theme/                ← design tokens (dark+light) + ThemeProvider + GlobalStyle (see below)
+  App.jsx               ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/>
   index.jsx             ← ReactDOM.createRoot entry
-vite.config.js          ← aliases: components/, game/, pages/ → src/* equivalents
+vite.config.js          ← aliases: components/, game/, pages/, theme/ → src/* equivalents
 ```
+
+**Theming:** all styling resolves to semantic tokens in `src/theme/tokens.js`, exposing two themes
+(dark default + light) via `themes.{dark,light}` / `buildTheme(mode)`. `theme/index.jsx` provides
+`<ThemeProvider mode>` (mode defaults to dark; system-pref + persisted toggle deferred to a later
+sub-issue) and `GlobalStyle` (replaces the removed `index.css`/`App.css`). Components migrate onto
+these tokens incrementally (UI-revamp epic #132).
 
 ## Architecture
 
@@ -123,7 +130,8 @@ the same number by design.
 ### Path aliases (vite.config.js)
 
 `components/X` → `src/components/X`, `game/X` → `src/game/X`,
-`pages/X` → `src/pages/X`. Use these aliases in imports, not relative paths.
+`pages/X` → `src/pages/X`, `theme/X` → `src/theme/X`. Use these aliases in imports, not relative paths.
+Directory imports resolve to that dir's `index.jsx`/`index.js` (e.g. `from 'theme'` → `src/theme/index.jsx`).
 
 ## Testing
 
