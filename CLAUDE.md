@@ -458,18 +458,36 @@ Strict three-layer separation:
    the regular tick timer starts — it is not re-evaluated on every render.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's `state`;
    renders each unlocked tier as a single compact row rather than separate cards, showing `Owned` (current
-   amount, drives production) and `Purchased` (lifetime buy count, drives both cost and — every 10 of
-   them — a production doubling, see `getPurchaseMilestoneMultiplier`) as two separate figures — the UI
-   label for `purchased` reads "Level" (it already behaves like one: it only ever increases and gates both
-   cost and production milestones), while the underlying state field/variable/function names
-   (`state.purchased`, `getTierPurchasedCount`, `getPurchaseMilestoneMultiplier`) are unchanged.
+   amount, drives production) as its own figure, while `Purchased` (lifetime buy count, drives both cost
+   and — every 10 of them — a production doubling, see `getPurchaseMilestoneMultiplier`) has no separate
+   cell: it's shown as a `Lv.N` prefix on the Buy button's own visible text (and a `(level N)` suffix in
+   its `aria-label`), since Buy is the action that raises it — the player-facing term is "level" (it only
+   ever increases and gates both cost and production milestones), while the underlying state
+   field/variable/function names (`state.purchased`, `getTierPurchasedCount`,
+   `getPurchaseMilestoneMultiplier`) are unchanged.
    Money is displayed once, at the top, via `formatCurrency` (comma-grouped `$` format below 1,000,000,
-   exponential above), in a centered `MoneyCard` (`styled(StatCard)` with `align-items: center; text-align:
-   center`) — the only top-of-page block besides `Header` that's centered rather than left-aligned. It no
+   exponential above), in a centered `CenteredCard` (`styled(StatCard)` with `align-items: center;
+   text-align: center`) — the Prestige Point balance display shares the same `CenteredCard`, making
+   them the only top-of-page blocks besides `Header` that are centered rather than left-aligned.
+   Both balance cards are wrapped in a `StickyBalances` (`position: sticky`) container so they stay
+   visible at all times: once the page scrolls past their normal position they pin to the viewport
+   top and compress into a compact side-by-side bar (smaller font/padding, row layout), detected via
+   an IntersectionObserver on a zero-height `BalancesSentinel` rendered just above the pair — CSS
+   alone can't detect "currently stuck", and the sentinel's negative margin cancels the extra
+   `RootDiv` flex-gap slot it would otherwise add. The observer effect guards for environments
+   without IntersectionObserver (jsdom in tests), where the balances simply stay expanded; when the
+   fixed `TopPrestigeBar` is showing, the stick position drops below it instead of underlapping it.
+   Description prose is kept out of the always-visible page: the Speed Up and Prestige cards' full
+   explanations, and the full-smart-autobuyer notice's, live inside an `InfoDetails` (`styled.details`)
+   click-to-expand disclosure — the clickable `<summary>` is the card's own `<h2>` heading (or the
+   notice's one-line label), so the section reads minimal until clicked. Native `<details>`/`<summary>`
+   needs no JS state, and the collapsed content stays in the DOM, so the Speed Up/Prestige buttons'
+   `aria-describedby` references into it (and `toHaveTextContent`-based tests) resolve whether or not
+   the section is expanded. It no
    longer shows an aggregate `+X/sec` line beneath the balance (previously summed `owned` across every
-   money-producing tier); each tier row's own tick-progress ring (see "Per-tier tick-progress ring" under
-   "Tier production tickspeed" above) is the per-tier replacement for that figure, and there is no top-level
-   aggregate anymore. Manual Buy always grabs as many units as are currently affordable up to the 10-unit
+   money-producing tier); each tier row's own `+X` production figure (the raw per-delivery batch amount —
+   see "Tier production tickspeed" above) is the per-tier replacement for that figure, and there is no
+   top-level aggregate anymore. Manual Buy always grabs as many units as are currently affordable up to the 10-unit
    cost-block boundary (via `getTierAffordableQuantity`/`buyTierQuantity`) — there is no player-facing
    batch-size control; a ×1/×10 "Bulk" toggle previously exposed this as a choice, but has been removed
    from the UI (see `useIncrementalGame`'s `BUY_QUANTITY` above), leaving ×10 as the only, fixed behavior.
@@ -479,7 +497,12 @@ Strict three-layer separation:
    `$progress`/`$secondaryProgress` props, instead of a separate bar below it. The Upgrade/Unlock button and
    the Prestige button carry the same
    fill treatment (single-tone: spendable-resource ÷ cost for Upgrade/Unlock, `prestigeProgressPercent`
-   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Buy/Upgrade/Unlock/Prestige/
+   for Prestige), and all three also pulse (`$pulse`) when currently actionable. Every PP-spending
+   button (the per-tier Automate/Smart buttons, Auto Speed Up, Unlock Speed Bonus, and Auto-Prestige)
+   carries the same single-tone fill too — unspent PP ÷ that button's cost (`ppProgressPercent` in
+   `MainPage`), in the button's own accent color — each nesting the usual `VisuallyHidden`
+   `role="progressbar"` (`aria-valuenow` = the PP balance capped at the cost, `aria-valuemax` = the
+   cost). Buy/Upgrade/Unlock/Prestige/
    Reset render compact *visible* text — an icon in place of the action word (🛒 Buy, 🔓 Unlock, ⚙ Upgrade,
    ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short `RESOURCE_SYMBOL`
    (e.g. `Ks`) instead of its full name (e.g. `Thousands`) — while each button's `aria-label` still carries
@@ -491,8 +514,9 @@ Strict three-layer separation:
    button itself rather than only in its `title` tooltip.
    Once a tier's autobuyer is active (level ≠ `null`) — or, for the first tier only, unconditionally, since
    its Automate purchase can bootstrap-activate the autobuyer itself (see below and "Prestige Points and
-   autobuyer automation") — a dedicated narrow `automate` grid column (its own
-   track, not stacked under Upgrade — see the grid layout paragraph below) holds an `AutomationCell`
+   autobuyer automation") — a dedicated `automate` grid area at the right edge of the tier's *name row*
+   (sharing the top line with `TierName`, not the button row — see the grid layout paragraph below) holds
+   an `AutomationCell`
    showing **exactly one control at a time** for that tier, progressing through a strict sequence — never
    both Auto-upgrade and Smart shown together for the same tier:
    1. **Automate** (blue button, 🤖): spends Prestige Points via `actions.buyAutobuyerAutomation`, cost from
@@ -521,14 +545,16 @@ Strict three-layer separation:
    is smart (`allTiersSmart`, `TIER_DEFINITIONS.every(...)` — which, since Smart requires automation, also
    implies every tier is automated), the whole `AutomationCell`
    disappears on every row and a single `StatCard` ("full smart autobuyer notice") above `TierList`
-   explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer-level
-   speed badge in `TierName` (`⚙ Lv.N (×rate speed)`, gated only on `autobuyerLevel > 0`) is independent of
-   all this — it's shown whenever an autobuyer is active at all, regardless of automation/Smart status.
+   explains why, rather than leaving a permanent badge cluttering all 10 rows forever. The autobuyer
+   speed badge beside the tier name (`GreenText`, gated on `autobuyerLevel > 0`) shows only the
+   multiplier (`⚙ ×1.1`) — deliberately no "Lv." wording, which would read as a duplicate of the Buy
+   button's purchase level; the autobuyer's own level lives in the badge's and the Upgrade button's
+   `title` tooltips instead.
    Because each of these buttons also nests a `VisuallyHidden` span carrying the real `role="progressbar"`
    (`aria-valuenow`/`aria-valuemax`) for assistive tech, the explicit `aria-label` on the button itself is
    required regardless of the visible/accessible-name split above — without it, the accessible-name
    computation would recurse into the nested node and pick up its label too. Buy/Upgrade/Unlock/Prestige/
-   Reset and the autobuyer badge all carry a `title` tooltip explaining their effect in plain language;
+   Reset all carry a `title` tooltip explaining their effect in plain language;
    the Prestige and Reset buttons additionally wire `aria-describedby` to a visible (Prestige) or
    `VisuallyHidden` (Reset) description, since those two are the app's only irreversible actions and their
    most important fact (resources get wiped) previously lived only in a mouse-hover `title` — the other four
@@ -542,21 +568,22 @@ Strict three-layer separation:
    snapshot of which tier ids were already unlocked at mount time (captured once, from whatever
    `loadGameState()` returned) is compared against on each row to decide whether to animate, rather than
    relying on mount timing alone.
-   Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` (one set above the
-   `40rem` breakpoint, a denser 3-row set below it — name full-width, then owned/purchased/production
-   sharing one row, then upgrade/automate/buy side by side — rather than flexbox content-based sizing, so a
-   field's on-screen position depends only on viewport width, never on how many digits its value has (or on
-   whether the narrow `automate` column currently has anything in it — it stays reserved even when empty,
-   same principle). Name spans the full row width as its own top line at *both* breakpoints (a 2-row grid
-   on desktop, the top row of the 3-row grid on mobile) rather than sharing a narrow column with the rest
-   of the row — the autobuyer-level speed badge nested inside `TierName` (`⚙ Lv.N (×rate speed)`, see
-   below) needs real horizontal room to render in full, which a slim shared column can't provide regardless
-   of how it's split internally. `TierName` itself is a nested two-column grid (`grid-template-columns:
-   7rem 1fr` desktop, `6.25rem 1fr` below `40rem`) — a fixed-width label column holding the tier name (long
-   enough to fit every tier name, e.g. `Quadrillions`/`Pentillions`, without truncating) plus a flexible
-   second column for the badge — so the badge always starts at an identical horizontal position on every
-   tier row, regardless of how wide that row's own name happens to render, the same fixed-track principle
-   `TierLine` itself uses one level up. Buy sits to
+   Each tier row is a CSS Grid with fixed `grid-template-areas`/`grid-template-columns` — the same 2-row
+   areas at every viewport width: name (+ compact `⚙ ×rate` autobuyer badge), the owned count, the
+   production figure, and the `automate`
+   area on the top line, then just the two buttons on the bottom line, Upgrade and Buy each spanning two
+   of the four tracks whose widths sum to equal halves (col1+col2 = col3+col4), so each button takes
+   exactly half the row's width. Below the `40rem` breakpoint only fonts/spacing shrink and the column
+   weights shift (still summing to equal halves). The owned cell shows the bare count with no visible
+   label at any width — its "Owned: " prefix is a `VisuallyHidden` span (plus a `title="Owned"`
+   tooltip), staying in the DOM for assistive tech, so tests assert it via `toHaveTextContent` on the
+   layer card rather than `getByText`, which only matches single text nodes. Fixed areas rather than
+   flexbox content-based
+   sizing means a field's on-screen position depends only on viewport width, never on how many digits its
+   value has (or on whether the `automate` area currently has anything in it — it stays reserved even
+   when empty, same principle). `TierName` is a flex pair — the name label never shrinks
+   (`flex-shrink: 0`; it's the anchor the row is scanned by) and the badge beside it ellipsizes first
+   if the track runs out. Buy sits to
    the right of Upgrade/Unlock in both layouts — Buy is the button clicked constantly, Upgrade/Unlock only
    occasionally, so the more-clicked control gets the rightmost (thumb/cursor-resting) position. Grid cells use
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
@@ -613,7 +640,7 @@ simulator's safety cap without reaching Googol. Since `baseTickSpeedSeconds` is 
 per-tier field rather than a computed one, nothing prevents a future tier (or a future upgrade) from
 setting any tier's tickspeed independently of every other tier's — the uniform-1s state is a balance
 choice, not a structural constraint the field itself enforces. `MainPage` doesn't show this as an
-averaged `/sec` rate — see "Per-tier tick-progress ring" below for what it shows instead.
+averaged `/sec` rate — see "Production figure" below for what it shows instead.
 
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier (see "Game state shape" below), incremented by `elapsedSeconds` every tick.
@@ -649,9 +676,9 @@ below), `owned` and `ticksElapsed` are already integers, and `getPurchaseMilesto
 a multiple of 100). `tickGame` wraps the whole product in `Math.floor(...)` before crediting it, so a fractional
 Prestige Point bonus (e.g. 50 unspent points → ×1.5) rounds *down* to a whole unit rather than crediting
 a fraction — since the multiplier is always ≥ 1, this never zeroes out production for a tier with
-`owned > 0`. `MainPage`'s displayed production preview (the number shown next to each tier's
-tick-progress ring) mirrors this same `Math.floor(...)`, so the figure shown always matches what will
-actually land once the ring completes, rather than showing a fraction that never materializes. This
+`owned > 0`. `MainPage`'s displayed production preview (each tier row's `+X` figure) mirrors this same
+`Math.floor(...)`, so the figure shown always matches what will actually land once the tier's tickspeed
+period completes, rather than showing a fraction that never materializes. This
 "floor the outcome of any multiplier" policy is why the rate-accumulator constants elsewhere
 (`getAutobuyerAttemptRate`, `getAutoPrestigeAttemptRate`, and the cost-scaling multipliers like
 `getAutobuyerAutomationCost`/`getSmartAutobuyerCost`/`getAutoPrestigeCost`) are unaffected: the cost
@@ -661,109 +688,20 @@ production tickspeed" above and "Prestige Points and autobuyer automation" below
 total shown to the player, so flooring them would break the banking mechanism itself rather than serve
 this invariant.
 
-#### Per-tier tick-progress ring
+#### Production figure (tick-progress ring removed)
 
-`tierProductionAccumulators` is surfaced directly to the player rather than only driving an internal
-calculation: `getTierProductionProgressPercent(state, tierId, previousAccumulator)` (`engine.js`) reads
-that tier's banked accumulator as a percent of its own `getTierBaseTickSpeedSeconds` (clamped/rounded
-to `[0, 100]`, following the same convention as `getPrestigeProgressPercent`), and `MainPage` renders it
-as a small circular "watch face" ring (`TickProgressRing`) — a conic-gradient sweep, punched with a
-center hole matching the row's own background (`StatCard`'s `#171717`) so it reads as a thin filling
-ring rather than a solid pie wedge — inline beside each tier row's production figure (`ProductionCell`
-is a `flex-direction: row`, not stacked column, so the ring sits to the right of the "+X" text at the
-same baseline rather than below it). `ProductionCell` uses `justify-content: flex-end` so the "+X" text
-and ring are right-justified together as one unit against the fixed-width `production` column's own
-right edge, keeping the ring at an identical position on every tier row the same way `TierName`'s
-fixed-width label column does (see Architecture above) — achieved by pinning the whole pair to the
-column's far edge (rather than reserving fixed space at its near edge, since the production text, unlike
-the tier name, has no natural maximum length worth reserving a column for) while still keeping the text
-snug against its own ring rather than stranded at the column's opposite edge. It fills
-clockwise over that tier's own tickspeed period and holds at a full 100% ring for the exact tick a
-batch delivers, before dropping back to empty and refilling for the next cycle — a real
-0%→…→100%→reset sawtooth, rather than resetting one step short of full. This needs the optional third
-`previousAccumulator` argument because `state.tierProductionAccumulators` alone only ever holds the
-*post-delivery* wrapped remainder (indistinguishable from "genuinely empty, nothing banked yet") —
-`MainPage` tracks each tier's prior-render accumulator in a `previousAccumulatorsRef` (a `useRef`
-synced by a `useEffect` keyed on `state.tierProductionAccumulators`, so it always lags one render
-behind) and passes it in, along with a 4th `elapsedSeconds` argument set to `TICK_RATE_MS / 1000` (the
-real per-tick elapsed time, defaulting to `1` for callers like `engine.test.js` that don't pass one): "a
-delivery just happened" is `previousAccumulator + elapsedSeconds >= tickSpeed - TICK_ACCUMULATION_EPSILON`
-(see "Tier production tickspeed" above for the epsilon), in which case the function reports 100
-regardless of the wrapped-down current value. Since every tier's 1s tickspeed spans 10 ticks at the 10Hz
-tick rate, this "just delivered" flash-to-100 render is the exact same single-tick event for every tier —
-there's no longer a degenerate always-100 special case (unlike when the tick rate was 1Hz and `tier01`'s
-1s tickspeed matched it exactly). Combined with the forced-to-0 reset behavior below, every tier's ring
-gets the same clean 0%→…→100%→reset sawtooth over its own tickspeed period. The epsilon tolerance on this
-comparison matters in practice, not just in theory: with every tier sharing a 1s tickspeed, ten additions
-of the live tick's `0.1` elapsed-seconds land on `0.9999999999999999` rather than exactly `1` (the same
-IEEE-754 drift `tickGame` itself absorbs — see above), and without the same tolerance here the comparison
-would evaluate false right on the delivery tick, silently skipping the 100% flash. This was previously
-masked by luck: before every tier shared the same 1s value, the one tier whose "just delivered" transition
-was actually exercised by a live-tick-advancing test drifted in the other (still-passing) direction at its
-old, different tickspeed — unifying every tier onto 1s exposed the missing tolerance for real.
-
-Although `state` (and so `$percent`) only updates once per real game tick, the ring visibly animates
-continuously rather than snapping in discrete per-tick steps: `--tick-percent` is registered as an
-animatable custom property via `@property` (`TickPercentProperty`, a `createGlobalStyle` block rendered
-once at the top of the page — `@property` must be a top-level rule, not nested inside a selector), which
-lets the browser's own compositor smoothly transition it on `TickProgressRing` (`transition: --tick-percent
-${TICK_RATE_MS}ms linear`, tracking the live tick cadence rather than a hardcoded duration) between each
-once-per-tick value — including inside a `conic-gradient()` background, which isn't natively
-transitionable without this. This needed no new JS timer or polling loop; an earlier attempt to force a
-visually-smoother 10Hz update rate via a `setInterval`/`requestAnimationFrame` loop (back when the game
-tick itself still ran at 1Hz) was abandoned after it caused several `App.test.jsx` tests using
-`userEvent` to hang/timeout in this jsdom+Vitest environment — the CSS-transition approach avoids
-introducing any *additional* recurring timer beyond the game's own tick interval, so it doesn't have
-that failure mode, and produces smoother, browser-native motion besides. The one update
-that must *not* animate is the tick right after a delivery, where the value drops from 100% back down to
-the new cycle's value — animating that drop would visibly look like the ring "rewinding" rather than
-resetting, so `TickProgressRing`'s `$instant` prop sets the transition duration to `0s` for exactly that
-one render. `MainPage` tracks this via two refs: `wasFullRef` (whether each tier's ring was at 100% as of
-the *previous* real tick — read during render, but only ever written from the `useEffect` after a tick
-commits, never mid-render) and `currentlyFullRef` (a render-phase scratch space recording whether *this*
-tick's *displayed* value — `tickProgressPercent`, after the forcing-to-0 below is applied, not the raw
-engine value — is at 100%, which the effect promotes into `wasFullRef` once the tick actually lands, via
-a shallow
-copy — `wasFullRef.current = { ...currentlyFullRef.current }`, not a bare reference assignment). Writing
-`currentlyFullRef` during render is safe — it's a plain function of this render's own already-stable
-inputs, so re-invoking the same render twice (as React's `StrictMode` intentionally does, to surface
-exactly this class of bug) assigns it the same value both times, unlike an earlier version that read and
-overwrote the same ref key in one pass and could observe its own write from a prior invocation. The
-shallow copy in the promotion effect matters for the same reason: an earlier version assigned the bare
-object reference (`wasFullRef.current = currentlyFullRef.current`), aliasing the two refs together —
-`currentlyFullRef`'s in-render mutations then bled straight into `wasFullRef` within that same render,
-so under `StrictMode`'s double-invocation each real tick's toggle flipped twice and netted out to a
-stuck value instead of alternating. This was most visible on `tier01`, whose raw value was always 100
-back when the tick rate was still 1Hz and its 1s tickspeed matched it exactly (see above — no longer the
-case now that every tier, `tier01` included, spans multiple ticks per delivery) — the stuck-open case
-left its ring permanently forced to 0 rather than sweeping.
-`prefers-reduced-motion: reduce` disables the transition entirely, matching the other continuous
-animations in this file.
-
-The tick right after a delivery already has some of its new cycle's own time banked by the time it's
-first observable (every tier's 1s tickspeed is already back up to a raw 10% one real (`TICK_RATE_MS`,
-100ms) tick later, since ticks are quantized to `TICK_RATE_MS` increments, not whole real seconds) — displaying that
-raw value on the same render that also sets `$instant` would make the reset land part-way full instead
-of empty. `MainPage` instead forces the *visual* value (`tickProgressPercent`, what `TickProgressRing`'s
-`$percent` receives) to `0` on exactly that render (`isRingInstant ? 0 : rawTickProgressPercent`,
-uniformly for every tier — see above), so the following tick's normal, non-instant transition animates a
-full, clean climb from empty back up to that tick's real value, rather than a shorter climb starting
-mid-way. This forced-to-0 value is deliberately
-*not* what's reported via the nested `VisuallyHidden`'s `aria-valuenow` below, which always uses the
-unmodified `rawTickProgressPercent` instead — several `App.test.jsx` tests using `userEvent` were found
-to hang/timeout in this jsdom+Vitest environment specifically when the *accessible* value diverged from
-the plain `getTierProductionProgressPercent` computation (root cause not conclusively identified across
-extensive bisection — the same divergence in the CSS-only `$percent` prop was proven fine on its own,
-only the `aria-valuenow` attribute value mattered). Keeping `aria-valuenow` tied to the raw value
-sidesteps that failure mode entirely, and arguably reports the more accurate number anyway — the
-forced-to-0 value is a display nicety for the animation, not the true underlying accumulator state.
-The number shown next to the ring is the raw
-per-tick credit (`owned × getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`,
-**not** divided by tickspeed) — "how much lands once the ring completes," not a per-second average — so
-a slower tier's row reads as a bigger number on a slower ring rather than a smaller number on an
-implicit one-per-second cadence. Like the other per-row progress indicators (see Architecture below),
-the ring nests a `VisuallyHidden role="progressbar"` (`aria-label="<tier name> production tick
-progress"`, `aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech.
+Each tier row's `+X` production figure is the raw per-delivery credit (`owned ×
+getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purchased)`, **not** divided by
+tickspeed) — "how much lands each time the tier's tickspeed period completes," not a per-second average.
+A circular per-tier tick-progress ring (`TickProgressRing`, a conic-gradient "watch face" fed by
+`getTierProductionProgressPercent` and animated via an `@property`-registered custom property) used to
+render beside this figure, visualizing `tierProductionAccumulators` filling toward each delivery — it
+was removed from the UI once every tier's tickspeed was unified at 1s: with all ten rings sweeping the
+same constant 1-second cycle in unison, the ring carried no per-tier information and was pure motion
+noise. `getTierProductionProgressPercent` (and its `previousAccumulator`/`elapsedSeconds` "just
+delivered" detection) remains in `engine.js` with its unit tests — it reads state without touching it,
+and would be the starting point if any future design re-surfaces the accumulator (it's currently unused
+by `MainPage`).
 
 ### Offline progress
 
@@ -925,8 +863,14 @@ fluctuates as PP is earned and spent):
   so it never overlaps `Header`) shows a compact reminder + Prestige button, while the rest of the
   (disabled) page still renders normally underneath it.
 
-The normal bottom `PrestigeCard` (progress-toward-Googol, prestige count, unspent PP, production-speed
-multiplier) only renders when *not* frozen, and — during the first run only (`prestige.count === 0`) —
+The normal bottom `PrestigeCard` (prestige count, unspent PP, production-speed multiplier) only renders
+when *not* frozen. Its Prestige button carries the effect and progress on itself, Buy-button style —
+visible text `✦ +{award} PP · {percent}%` (award = `max(1, getPrestigePointsAwarded(money))`, since
+below Googol the formula reads 0 but the award on reaching it is always at least 1) over the existing
+`$progress` fill, with the full sentence in `aria-label` ("Prestige (requires 1 Googol Money) — awards
++N Prestige Points"); there is no separate progress-toward-Googol text line anymore. The frozen-state
+`TopPrestigeBar` button shows the award the same way ("✦ Prestige +N PP"). During the first run only
+(`prestige.count === 0`), the card
 stays hidden until `purchased.tier10 >= 10` (10 lifetime purchases of the last tier), a
 progressive-disclosure gate so a brand-new player isn't shown the Prestige panel before it's relevant;
 once the player has prestiged at least once, the card is always shown (whenever not frozen) regardless of
@@ -1006,10 +950,13 @@ automation" above for `buyAutoSpeedUp`.
 `TierList` and before `PrestigeCard` — tiers first, then the frequent Speed Up loop, then the
 end-of-run Prestige card. It's gated on the last tier being unlocked at all (`isTierUnlocked`), the
 same progressive-disclosure principle as the first-run Prestige card gate, so it doesn't clutter
-the page before `tier10` even exists. It shows the current multiplier and activation count, and a
-"⚡ Speed Up" button (progress-filled toward the next activation via the same `$progress`
-convention as Buy/Upgrade/Prestige, now measured against that cycle's own
-`getSpeedUpRequirement(speedUpCount)` rather than a flat 10) that's enabled once
+the page before `tier10` even exists. Like the Prestige button, the Speed Up button carries its
+effect and progress on itself — visible text `⚡ ×{next} · {percent}%` (the multiplier the next
+activation would set, and requirement progress), with no separate multiplier/activation-count
+status line; the full sentence lives in its `aria-label` ("Speed Up (requires N {lastTier}) —
+doubles production speed to ×{next}"). It's progress-filled via the same `$progress`
+convention as Buy/Upgrade/Prestige, measured against that cycle's own
+`getSpeedUpRequirement(speedUpCount)` rather than a flat 10, and enabled once
 `getTierPurchasedCount(lastTier) >= getSpeedUpRequirement(speedUpCount)` and disabled while frozen
 — like Prestige, there's no `window.confirm` guard, since this is a clearly beneficial action, not
 a destructive one like the Reset button. Below that, once `!isFirstRun` (the
@@ -1031,14 +978,24 @@ earned:
 
 - The top-level "prestige points display" `StatCard` (unspent PP + production-speed bonus, or a "locked"
   message pre-unlock) doesn't render at all until `!isFirstRun`.
+- PP upgrades additionally reveal one by one, cheapest first (`speedBonusRevealed` in `MainPage`): the
+  10000 PP Speed Bonus unlock — its button, the "production speed bonus locked" teaser in both the PP
+  display and the `PrestigeCard`, and the description sentence quoting its cost — stays hidden until the
+  far cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page isn't fronting a
+  cost that's still thousands of points away (a save that already unlocked the bonus stays revealed
+  regardless). Auto-Prestige (1000 PP) was already gated this way behind `allTiersSmart`, and the
+  per-tier Automate/Smart buttons (1–512 / 10–5120 PP) already reveal one at a time per tier. Like the
+  first-run gate, this is UI-only — `buyPrestigeSpeedBonus` in `engine.js` doesn't check it.
 - Each tier's `AutomationCell` (Automate/Smart) stays hidden until `!isFirstRun`, on top of its existing
   gates (autobuyer must be active, except for the first tier, which shows Automate even while its own
   autobuyer is still locked — see "Prestige Points and autobuyer automation" above; not all tiers already
   smart) — see the automate-column paragraph above.
 - The bottom `PrestigeCard`'s unspent-PP/production-speed line (`{points} PP unspent · ×{rate} production
-  speed`, or the locked variant) and its Unlock Speed Bonus button both only render once `!isFirstRun`,
-  and the description sentence about spending points on the speed-bonus unlock or autobuyer automation is
-  likewise omitted pre-first-prestige, leaving just the Googol-requirement and reset-warning sentences.
+  speed`, or the locked variant) and its Unlock Speed Bonus button both only render once `!isFirstRun`
+  (the locked variant and the button further need `speedBonusRevealed` — see above), and the description
+  sentence about spending points on the speed-bonus unlock or autobuyer automation is likewise omitted
+  pre-first-prestige, leaving just the Googol-requirement and reset-warning sentences (the unlock's cost
+  is only quoted in it once `speedBonusRevealed`, too).
 - The Auto-Prestige control is unaffected by this flag directly, but is already unreachable pre-first-
   prestige in practice: it requires `allTiersSmart`, and Smart/Automate purchases (the only way to spend
   PP at all) are themselves hidden by the rule above.
@@ -1175,7 +1132,7 @@ regardless of whether those purchases were manual or automatic.
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how full that tier's per-tier tick-progress ring is (see "Per-tier tick-progress ring" under "Tier production tickspeed" above). If the optional `previousAccumulator` crosses the tier's tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead — surfaces the instant a batch delivers, which the post-delivery wrapped remainder alone can't represent. `elapsedSeconds` defaults to `1` (a full real second); `MainPage` passes the live tick's real value (`TICK_RATE_MS / 1000`) explicitly |
+| `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getTierBaseTickSpeedSeconds(tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead — surfaces the instant a batch delivers, which the post-delivery wrapped remainder alone can't represent. `elapsedSeconds` defaults to `1` (a full real second). Currently unused by `MainPage` — it drove the removed per-tier tick-progress ring (see "Production figure" above) and is kept, with its unit tests, as the read-only accessor a future design would build on |
 | `getAutobuyerCost` | `currentLevel → number` | `1000 ** (currentLevel + 1)` — activation (from `null`, treated as `currentLevel` 0) costs 1000; each subsequent Upgrade level costs another power of 1000 (1,000,000, then 1,000,000,000, …), always paid in the tier's own resource |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
@@ -1221,30 +1178,25 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
   than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and each tier
-  row's Buy button and tick-progress ring nest a visually-hidden `role="progressbar"` (via `VisuallyHidden`)
-  with `aria-label="<tier name> cost-block progress"`/`"<tier name> production tick progress"` respectively,
+  row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
+  `aria-label="<tier name> cost-block progress"`
   plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` — the Buy/Upgrade/Unlock/Prestige buttons also carry
   an explicit `aria-label` with the full descriptive
   sentence (independent of their compact icon-based visible text — see Architecture above), so
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
   Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
-  `afterEach` (see `App.test.jsx`). A test that needs to observe behavior across real tick boundaries
-  (e.g. the tick-progress ring reaching 100%) uses `vi.useFakeTimers()` + `act(() =>
-  vi.advanceTimersByTime(TICK_RATE_MS))` **once per tick** (not one large jump per assertion — e.g. ten
-  100ms advances rather than a single 1000ms one), restoring real timers with `vi.useRealTimers()`
-  afterward (see `App.test.jsx`). Advancing tick-by-tick matters, not just for realism: jumping by more
-  than one tick fires the live `setInterval` several times synchronously within the same call stack,
-  which React 18 batches into a single render — breaking the tick-progress ring's "just delivered"
-  detection, which compares against the *previous render's* banked accumulator and needs one render per
-  tick to stay in sync (see "Per-tier tick-progress ring" above). Also **unmount the rendered component
-  before calling `vi.useRealTimers()`**, not after — unmounting while fake timers are still active lets
-  the effect cleanup's `clearInterval` cancel the pending periodic callback against the same (fake) timer
-  implementation that scheduled it; unmounting afterward calls the *real* `clearInterval` with a stale
-  fake-timer id, which silently fails to cancel it, leaving a live interval running in the background for
-  the rest of the test file. At the old 1Hz tick rate this leak was infrequent enough not to matter; at
-  10Hz it fires 10x more often and reliably starved subsequent `userEvent`-based tests into timing out
-  until fixed (a real regression caught while raising `TICK_RATE_MS`, not merely a style preference).
+  `afterEach` (see `App.test.jsx`). If a test ever needs to observe behavior across real tick boundaries
+  again (none currently does — the tick-progress ring tests that did were removed with the ring), use
+  `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))` **once per tick** (not one
+  large jump per assertion — jumping by more than one tick fires the live `setInterval` several times
+  synchronously within the same call stack, which React 18 batches into a single render), and **unmount
+  the rendered component before calling `vi.useRealTimers()`**, not after — unmounting while fake timers
+  are still active lets the effect cleanup's `clearInterval` cancel the pending periodic callback against
+  the same (fake) timer implementation that scheduled it; unmounting afterward calls the *real*
+  `clearInterval` with a stale fake-timer id, which silently fails to cancel it, leaving a live interval
+  running that starves subsequent `userEvent`-based tests into timing out (a real regression caught while
+  raising `TICK_RATE_MS` to 10Hz, not merely a style preference).
 - `yarn test` is green (366 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished

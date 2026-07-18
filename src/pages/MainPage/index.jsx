@@ -1,11 +1,11 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
-import styled, { createGlobalStyle, css, keyframes } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -66,23 +66,18 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Buy sits rightmost, not Upgrade — Buy is clicked constantly while Upgrade/Unlock is an
-// occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
-// that's about to click again.
-// Name spans the full row width as its own top line at both breakpoints, rather than sharing a
-// narrow column with everything else — the autobuyer badge nested inside TierName (see below)
-// needs real horizontal room to render in full at a fixed position, which a slim shared column
-// can't provide regardless of how it's split internally.
-// The 'automate' column only ever holds content once a tier's autobuyer is active — a single
-// small control at a time (Automate → Smart → the "Smart" badge, see AutomationCell), never both
-// Automate and Smart together — a narrower fraction than the other columns since it's a rare,
-// glanceable control rather than something clicked constantly like Buy.
+// Top line: name (+ compact autobuyer badge), the owned count, the production figure, and the
+// PP-based Automate/Smart control ('automate' area) at the right edge. Bottom line: just the two
+// buttons, each spanning two of the four tracks — the track pairs sum equally (col1+col2 =
+// col3+col4) so Upgrade and Buy each take exactly half the row's width. Buy sits rightmost, not
+// Upgrade — Buy is clicked constantly while Upgrade/Unlock is an occasional action, and the
+// rightmost slot is the natural resting spot for a thumb/mouse that's about to click again.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name name name name name'
-    'owned purchased production upgrade automate buy';
-  grid-template-columns: 0.7fr 0.75fr 0.85fr 0.95fr 0.55fr 1fr;
+    'name owned production automate'
+    'upgrade upgrade buy buy';
+  grid-template-columns: 1.3fr 0.7fr 1.2fr 0.8fr;
   align-items: center;
   column-gap: 0.5rem;
   row-gap: 0.3rem;
@@ -101,11 +96,9 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    grid-template-areas:
-      'name name name name name name'
-      'owned owned purchased purchased production production'
-      'upgrade upgrade automate buy buy buy';
-    grid-template-columns: repeat(6, 1fr);
+    /* Same 2-row areas as desktop; only the column weights shift, still summing to equal
+       halves for the buttons. */
+    grid-template-columns: 1.25fr 0.75fr 1.3fr 0.7fr;
     row-gap: 0.3rem;
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
@@ -120,9 +113,88 @@ const SpeedUpCard = styled(StatCard)`
   border-color: #0e7490;
 `
 
-const MoneyCard = styled(StatCard)`
+// Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
+// Header that are centered rather than left-aligned.
+const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
+`
+
+// Keeps both balances visible at all times: the Money + PP pair sticks to the top of the viewport
+// once the page scrolls past their normal position, and compresses into a compact side-by-side
+// bar while stuck ($compressed — tracked via an IntersectionObserver on the sentinel rendered
+// just above, since CSS alone can't detect "currently stuck"). The solid page-background fill
+// stops scrolled tier rows showing through the gap between the two cards, and when the fixed
+// TopPrestigeBar is showing ($belowBar), the stick position drops below it instead of
+// underlapping it.
+const StickyBalances = styled.div`
+  background: #050505;
+  display: flex;
+  flex-direction: ${props => (props.$compressed ? 'row' : 'column')};
+  gap: ${props => (props.$compressed ? '0.5rem' : '0.85rem')};
+  position: sticky;
+  top: ${props => (props.$belowBar ? '3.75rem' : '0')};
+  z-index: 100;
+
+  ${props => props.$compressed && css`
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.6);
+    padding: 0.25rem 0;
+
+    ${CenteredCard} {
+      flex: 1;
+      gap: 0.2rem;
+      justify-content: center;
+      min-width: 0;
+      padding: 0.3rem 0.6rem;
+    }
+
+    ${Money} {
+      font-size: 1em;
+      padding: 0;
+    }
+
+    p {
+      font-size: 0.85em;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  `}
+`
+
+// Zero-impact scroll marker for StickyBalances' "am I stuck?" detection — the negative margin
+// cancels the extra RootDiv flex-gap slot this element would otherwise add, so the page's
+// spacing is unchanged by its presence.
+const BalancesSentinel = styled.div`
+  height: 1px;
+  margin-top: calc(-0.85rem - 1px);
+`
+
+// A native click-to-expand disclosure replacing always-visible description prose — the summary
+// line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
+// full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
+// no JS state; the collapsed content stays in the DOM, so aria-describedby references into it
+// (and textContent-based tests) still resolve either way.
+const InfoDetails = styled.details`
+  summary {
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+  }
+
+  summary:hover {
+    color: #d4d4d4;
+  }
+
+  summary h2 {
+    display: inline;
+    margin: 0;
+  }
+
+  p {
+    margin-top: 0.4rem;
+  }
 `
 
 // Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
@@ -202,31 +274,32 @@ const GoldText = styled.b`
   font-size: 1.1em;
 `
 
-const GreenText = styled.span`
-  color: #4ade80;
-  font-size: 0.85em;
-  ${gridCell}
-`
-
-// A two-column grid rather than plain inline text flow, so the autobuyer badge always starts at
-// the same horizontal position regardless of how wide tier.name happens to render — the same
-// fixed-track technique TierLine itself uses for the rest of the row (see its own comment above).
+// Name + compact autobuyer speed badge sharing the top line's first track. The badge shows only
+// the multiplier (⚙ ×1.1) — the autobuyer's level is deliberately not shown here, since a "Lv."
+// on this row would read as a duplicate of the Buy button's purchase level; the level lives in
+// the badge's (and Upgrade button's) title tooltip instead. The name never shrinks
+// (flex-shrink: 0); the badge ellipsizes first if the track runs out.
 const TierName = styled.h3`
   align-items: baseline;
   column-gap: 0.4rem;
-  display: grid;
+  display: flex;
   font-size: 1em;
   grid-area: name;
-  grid-template-columns: 7rem 1fr;
   margin: 0;
+  min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: 0.95em;
-    grid-template-columns: 6.25rem 1fr;
   }
 `
 
 const TierNameLabel = styled.span`
+  flex-shrink: 0;
+`
+
+const GreenText = styled.span`
+  color: #4ade80;
+  font-size: 0.85em;
   ${gridCell}
 `
 
@@ -240,88 +313,15 @@ const OwnedText = styled(MutedText)`
   }
 `
 
-const PurchasedText = styled(MutedText)`
-  grid-area: purchased;
-  font-size: 0.85em;
-  ${gridCell}
-
-  @media (max-width: 40rem) {
-    font-size: 0.78em;
-  }
-`
-
-// justify-content: flex-end right-justifies the text+ring pair as a unit against the (fixed-width)
-// production column's right edge, rather than sitting immediately after the "+X" text at a
-// position that would otherwise vary with the text's own rendered width — the same "identical
-// position on every tier" goal as TierName's fixed-width label column above, just achieved by
-// right-justifying against the column's own fixed track width instead. Keeping the text right next
-// to the ring (rather than space-between, which would push it all the way to the column's left
-// edge) reads as one cohesive "amount + how-soon" unit instead of two disconnected pieces.
-const ProductionCell = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  gap: 0.35rem;
-  grid-area: production;
-  justify-content: flex-end;
-  min-width: 0;
-`
 
 const ProductionText = styled(MutedText)`
+  grid-area: production;
   font-size: 0.85em;
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: 0.78em;
-  }
-`
-
-// Registers --tick-percent as an animatable custom property (a plain <percentage>, not inherited)
-// so the browser can smoothly transition it on its own compositor — including inside a
-// conic-gradient() background, which isn't natively transitionable otherwise. Rendered once,
-// globally; @property must be a top-level rule, not nested inside a selector.
-const TickPercentProperty = createGlobalStyle`
-  @property --tick-percent {
-    syntax: '<percentage>';
-    inherits: false;
-    initial-value: 0%;
-  }
-`
-
-// Compact circular "watch face" — a conic-gradient sweep (green fill against the same #262626
-// track color the old bar used) with a punched-out center matching TierLine's own background
-// (StatCard's #171717), so it reads as a thin filling ring rather than a solid pie wedge. Fixed
-// diameter (not width: 100%) since it doesn't need to track the fractional grid column width to
-// stay layout-safe at both breakpoints. Fills over the tier's own base tickspeed (see
-// getTierProductionProgressPercent) and resets once the batch fires — a direct visualization of
-// tierProductionAccumulators. state (and thus $percent) only updates once per real game tick
-// (every TICK_RATE_MS), but the browser smoothly animates --tick-percent between each of those
-// once-per-tick values over that same TICK_RATE_MS duration via `transition`, rather than
-// snapping instantly — continuous-looking motion with no JS polling timer at all. $instant
-// suppresses that transition for exactly one update: the tick right after a
-// delivery, where the value drops from 100% back down to the new cycle's small remainder and
-// should snap immediately rather than visibly "rewinding" (see the isRingInstant tracking in
-// MainPage, driven by wasFullRef/currentlyFullRef).
-const TickProgressRing = styled.div`
-  --tick-percent: ${props => props.$percent}%;
-  background: conic-gradient(#4ade80 var(--tick-percent), #262626 0);
-  border-radius: 50%;
-  flex-shrink: 0;
-  height: 1.15rem;
-  position: relative;
-  transition: --tick-percent ${props => (props.$instant ? '0s' : `${TICK_RATE_MS}ms`)} linear;
-  width: 1.15rem;
-
-  &::after {
-    background: #171717;
-    border-radius: 50%;
-    content: '';
-    inset: 0.2rem;
-    position: absolute;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
   }
 `
 
@@ -353,7 +353,7 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Its own narrow grid column (see TierLine), not stacked under the Upgrade button — holds exactly
+// Sits at the right edge of the tier's name row (TierLine's 'automate' area) — holds exactly
 // one small control at a time, progressing Automate → Smart → the "Smart" badge (Smart requires
 // Auto-upgrade automation to already be bought, so the two are never both shown for the same
 // tier). Nothing renders here at all before the tier's autobuyer is active, and the whole thing
@@ -404,6 +404,10 @@ const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/
 const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
+  // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
+  // on-button progress treatment: how much of a given PP cost the current unspent balance
+  // already covers.
+  const ppProgressPercent = cost => Math.min(100, Math.round((prestige.points / cost) * 100))
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
@@ -412,7 +416,12 @@ const MainPage = () => {
     : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
+  // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
+  // but the award on reaching it is always at least 1, so that's the effect worth advertising.
+  const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
   const prestigeLabel = 'Prestige (requires 1 Googol Money)'
+  const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
   // than firing immediately on click — there's no modal/confirm component elsewhere in this app
   // to reuse, so window.confirm is the simplest fit.
@@ -421,33 +430,6 @@ const MainPage = () => {
       resetGame()
     }
   }
-  // Tracks each tier's tierProductionAccumulators value from the last render where it actually
-  // changed (a tick or a prestige — see the effect below), so getTierProductionProgressPercent can
-  // tell "just delivered" (about to wrap to a small remainder) apart from "genuinely empty" (see
-  // "Per-tier tick-progress ring" in CLAUDE.md). Starts empty, so the very first render (including
-  // right after loading a save with a mid-cycle accumulator) shows the raw resumed value truthfully.
-  const previousAccumulatorsRef = useRef({})
-  // Whether each tier's ring showed a full 100% as of the last real tick — if so, this tick's drop
-  // back down to the new cycle's small remainder should apply instantly (no CSS transition), since
-  // animating that drop would visibly look like the ring "rewinding" instead of resetting.
-  // wasFullRef is only ever written from the effect below (after a real tick commits, never
-  // mid-render), so it can't go stale/inconsistent under StrictMode's double-render checks;
-  // currentlyFullRef is the render-phase scratch space the effect promotes into wasFullRef once a
-  // tick actually lands — writing it during render is safe since, unlike reading-then-overwriting
-  // the same ref in one pass, it's a plain function of this render's own (already-stable) inputs,
-  // so re-invoking the same render twice just assigns it the same value both times.
-  const wasFullRef = useRef({})
-  const currentlyFullRef = useRef({})
-  useEffect(() => {
-    previousAccumulatorsRef.current = state.tierProductionAccumulators
-    // A shallow copy, not a reference assignment — aliasing the two refs to the same object let
-    // currentlyFullRef's in-render mutations bleed straight into wasFullRef within that same
-    // render, which under React StrictMode's deliberate double-invocation of render bodies (dev
-    // mode) caused each real tick's toggle to flip twice and net out to a stuck value instead of
-    // alternating, most visibly on tier01 (whose raw value is always 100, so the stuck-open case
-    // left its ring permanently forced to 0 instead of sweeping).
-    wasFullRef.current = { ...currentlyFullRef.current }
-  }, [state.tierProductionAccumulators])
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -501,6 +483,12 @@ const MainPage = () => {
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
+  // PP upgrades reveal one by one, cheapest first: the 10000 PP Speed Bonus unlock (its button,
+  // its "locked" teaser text, and its description sentence alike) stays hidden until the far
+  // cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page isn't fronting
+  // a cost that's still thousands of points away. A save that already unlocked the bonus stays
+  // revealed regardless. This is UI-only — buyPrestigeSpeedBonus in engine.js doesn't check it.
+  const speedBonusRevealed = isAutoSpeedUpActive || state.prestigeSpeedBonusUnlocked
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
   // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
@@ -520,6 +508,23 @@ const MainPage = () => {
   const fullScreenPrestigeButtonRef = useRef(null)
   useEffect(() => {
     if (showFullScreenPrompt) fullScreenPrestigeButtonRef.current?.focus()
+  }, [showFullScreenPrompt])
+
+  // Compress the sticky balance bar once its normal position scrolls out of view: the sentinel
+  // sits just above StickyBalances, so it leaving the viewport means the pair is now pinned.
+  // Guarded for environments without IntersectionObserver (jsdom in tests), where the balances
+  // simply stay in their expanded form; keyed on showFullScreenPrompt since the sentinel doesn't
+  // exist while the first-prestige takeover replaces the whole page.
+  const balancesSentinelRef = useRef(null)
+  const [balancesCompressed, setBalancesCompressed] = useState(false)
+  useEffect(() => {
+    const sentinel = balancesSentinelRef.current
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      setBalancesCompressed(!entry.isIntersecting)
+    })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
   }, [showFullScreenPrompt])
 
   if (showFullScreenPrompt) {
@@ -558,20 +563,19 @@ const MainPage = () => {
 
   return (
     <RootDiv>
-      <TickPercentProperty />
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar aria-label="prestige available banner">
             <MutedText>1 Googol Money reached — production has stopped.</MutedText>
             <Button
-              aria-label={prestigeLabel}
+              aria-label={prestigeAriaLabel}
               color="#fbbf24"
               onClick={actions.prestige}
               title="Awards Prestige Points and resets your resources"
               type="button"
               $pulse
             >
-              ✦ Prestige
+              ✦ Prestige +{formatAmount(prestigeAwardPreview)} PP
             </Button>
           </TopPrestigeBar>
           <TopPrestigeBarSpacer />
@@ -603,28 +607,32 @@ const MainPage = () => {
         </StatCard>
       )}
 
-      <MoneyCard aria-label="money display">
-        <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
-      </MoneyCard>
+      <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
+      <StickyBalances $compressed={balancesCompressed} $belowBar={showTopPrestigeBar}>
+        <CenteredCard aria-label="money display">
+          <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
+        </CenteredCard>
 
-      {!isFirstRun && (
-        <StatCard aria-label="prestige points display">
-          <MutedText>
-            <GoldText>{formatAmount(prestige.points)} PP</GoldText>
-            {' · '}
-            {state.prestigeSpeedBonusUnlocked
-              ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
-              : 'production speed bonus locked'}
-          </MutedText>
-        </StatCard>
-      )}
+        {!isFirstRun && (
+          <CenteredCard aria-label="prestige points display">
+            <MutedText>
+              <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+              {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
+              {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
+            </MutedText>
+          </CenteredCard>
+        )}
+      </StickyBalances>
 
       {allTiersSmart && (
         <StatCard aria-label="full smart autobuyer notice">
-          <MutedText>
-            🧠 Every tier's autobuyer is fully automated and smart — since there's nothing left to
-            upgrade, this indicator won't be shown per tier anymore.
-          </MutedText>
+          <InfoDetails>
+            <summary>🧠 Every tier is fully smart</summary>
+            <MutedText>
+              Every tier's autobuyer is fully automated and smart — since there's nothing left to
+              upgrade, this indicator won't be shown per tier anymore.
+            </MutedText>
+          </InfoDetails>
         </StatCard>
       )}
 
@@ -681,29 +689,6 @@ const MainPage = () => {
           // always powers of 2), so without flooring this preview could show a fraction that
           // never actually lands.
           const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
-          const rawTickProgressPercent = getTierProductionProgressPercent(
-            state, tier.id, previousAccumulatorsRef.current[tier.id], TICK_RATE_MS / 1000
-          )
-          const isRingInstant = wasFullRef.current[tier.id] ?? false
-          // The tick right after a delivery already has some of its new cycle's own time banked
-          // (every tier's 1s tickspeed is 10 ticks at the 10Hz tick rate, so it's already back up
-          // to a raw 10% one real (100ms) tick later, not a single-tick special case), which would
-          // make the ring's instant post-delivery snap land part-way full instead of empty. Forcing
-          // it to 0 here means the next tick's normal, non-instant transition animates a full,
-          // clean climb from empty back up to that tick's real value, rather than a shorter climb
-          // starting mid-way.
-          // This visual-only value deliberately isn't what's reported via aria-valuenow below —
-          // several App.test.jsx tests using userEvent hung/timed out in this jsdom+Vitest
-          // environment whenever the *accessible* value diverged from the plain
-          // getTierProductionProgressPercent computation (root cause not fully identified; the
-          // same divergence in the CSS-only $percent value below was fine). Keeping aria-valuenow
-          // tied to the unmodified raw value sidesteps that entirely, and arguably reports the
-          // more accurate number anyway — the forced-to-0 value is a display nicety, not the true
-          // accumulator state.
-          const tickProgressPercent = isRingInstant ? 0 : rawTickProgressPercent
-          // Tracks the *displayed* value, not the raw one, so tier01 (whose raw value is always
-          // 100) still alternates instead of latching wasFullRef permanently true.
-          currentlyFullRef.current[tier.id] = tickProgressPercent === 100
           // Activating (null → 1) and upgrading (N → N+1) are the same paid action, always in
           // the tier's own resource — there's no separate XP-gated unlock step (see buyAutobuyer).
           const autobuyerCost = getAutobuyerCost(autobuyerLevel ?? 0)
@@ -711,7 +696,7 @@ const MainPage = () => {
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyAutobuyer's own `available >= cost + 1` guard in engine.js.
           const canUpgradeAutobuyer = resources >= autobuyerCost + 1 && !isFrozen
-          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)}`
+          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(purchased)})`
           const upgradeLabel = isAutobuyerLocked
             ? `Unlock for ${formatCost(autobuyerCost, tier.id)}`
             : `Upgrade (+10% purchase speed) for ${formatCost(autobuyerCost, tier.id)}`
@@ -719,7 +704,9 @@ const MainPage = () => {
           // the tier's short symbol (via formatCost) in place of its full name. The full
           // sentence stays in aria-label/title for assistive tech. The Upgrade state also gets
           // a "+10%" prefix so the speed-up is visible without needing to hover for the title.
-          const buyVisibleLabel = `🛒${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
+          // Buy also carries the tier's level (lifetime purchase count — the figure the removed
+          // "Level:" cell used to show), since Buy is the action that raises it.
+          const buyVisibleLabel = `🛒 Lv.${formatAmount(purchased)}${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
           const upgradeVisibleLabel = isAutobuyerLocked
             ? `🔓 ${formatCost(autobuyerCost, tier.id)}`
             : `⚙ +10% ${formatCost(autobuyerCost, tier.id)}`
@@ -740,28 +727,96 @@ const MainPage = () => {
                 <TierNameLabel>{tier.name}</TierNameLabel>
                 {autobuyerLevel > 0 && (
                   <GreenText title={`Autobuyer level ${autobuyerLevel} — purchases ×${formatRate(autobuyerAttemptRate)} as often`}>
-                    ⚙ Lv.{autobuyerLevel} (×{formatRate(autobuyerAttemptRate)} speed)
+                    ⚙ ×{formatRate(autobuyerAttemptRate)}
                   </GreenText>
                 )}
               </TierName>
-              <OwnedText>Owned: {formatAmount(owned)}</OwnedText>
-              <PurchasedText>Level: {formatAmount(purchased)}</PurchasedText>
-              <ProductionCell>
-                <ProductionText>
-                  +{tier.producesResourceId === MONEY_ID
-                    ? formatCurrency(production)
-                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-                </ProductionText>
-                <TickProgressRing $percent={tickProgressPercent} $instant={isRingInstant}>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label={`${tier.name} production tick progress`}
-                    aria-valuenow={rawTickProgressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </TickProgressRing>
-              </ProductionCell>
+              <OwnedText title="Owned">
+                <VisuallyHidden>Owned: </VisuallyHidden>
+                {formatAmount(owned)}
+              </OwnedText>
+              <ProductionText>
+                +{tier.producesResourceId === MONEY_ID
+                  ? formatCurrency(production)
+                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+              </ProductionText>
+              {!isFirstRun && (!isAutobuyerLocked || isFirstTier) && !allTiersSmart && (
+                <AutomationCell>
+                  {isSmart ? (
+                    <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
+                      🧠 Smart
+                    </AutomationBadge>
+                  ) : isAutomated ? (
+                    <AutomationButton
+                      aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${smartCost} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                      color={canBuySmart ? '#a78bfa' : 'darkgrey'}
+                      disabled={!canBuySmart}
+                      onClick={() => actions.buySmartAutobuyer(tier.id)}
+                      title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
+                      type="button"
+                      $progress={ppProgressPercent(smartCost)}
+                      $progressColor="#a78bfa"
+                    >
+                      🧠 {smartCost}
+                      <VisuallyHidden
+                        role="progressbar"
+                        aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
+                        aria-valuenow={Math.min(prestige.points, smartCost)}
+                        aria-valuemin={0}
+                        aria-valuemax={smartCost}
+                      />
+                    </AutomationButton>
+                  ) : (
+                    <AutomationButton
+                      aria-label={
+                        bootstrapsAutobuyer
+                          ? `Unlock and automate ${tier.name}'s autobuyer for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
+                          : `Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
+                      }
+                      color={canAutomate ? '#38bdf8' : 'darkgrey'}
+                      disabled={!canAutomate}
+                      onClick={() => actions.buyAutobuyerAutomation(tier.id)}
+                      title={
+                        bootstrapsAutobuyer
+                          ? 'Spend Prestige Points to unlock and automate this tier\'s autobuyer forever, with no Money cost needed to activate it first'
+                          : 'Spend Prestige Points to make this tier\'s autobuyer Upgrades happen automatically, forever'
+                      }
+                      type="button"
+                      $progress={ppProgressPercent(automationCost)}
+                      $progressColor="#38bdf8"
+                    >
+                      🤖 {automationCost}
+                      <VisuallyHidden
+                        role="progressbar"
+                        aria-label={`${tier.name} automation Prestige Point progress`}
+                        aria-valuenow={Math.min(prestige.points, automationCost)}
+                        aria-valuemin={0}
+                        aria-valuemax={automationCost}
+                      />
+                    </AutomationButton>
+                  )}
+                </AutomationCell>
+              )}
+              <UpgradeButton
+                aria-label={upgradeLabel}
+                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
+                disabled={!canUpgradeAutobuyer}
+                onClick={() => actions.buyAutobuyer(tier.id)}
+                title={isAutobuyerLocked
+                  ? 'Unlocks automatic buying for this tier'
+                  : `Autobuyer level ${autobuyerLevel} (×${formatRate(autobuyerAttemptRate)} purchase speed) — the next level makes it 10% faster`}
+                $progress={autobuyerProgressPercent}
+                $pulse={canUpgradeAutobuyer}
+              >
+                {upgradeVisibleLabel}
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label={`${tier.name} autobuyer progress`}
+                  aria-valuenow={autobuyerProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </UpgradeButton>
               <BuyButton
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
@@ -781,63 +836,6 @@ const MainPage = () => {
                   aria-valuemax={10}
                 />
               </BuyButton>
-              <UpgradeButton
-                aria-label={upgradeLabel}
-                color={canUpgradeAutobuyer ? '#4ade80' : 'darkgrey'}
-                disabled={!canUpgradeAutobuyer}
-                onClick={() => actions.buyAutobuyer(tier.id)}
-                title={isAutobuyerLocked ? 'Unlocks automatic buying for this tier' : 'Makes this autobuyer 10% faster'}
-                $progress={autobuyerProgressPercent}
-                $pulse={canUpgradeAutobuyer}
-              >
-                {upgradeVisibleLabel}
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} autobuyer progress`}
-                  aria-valuenow={autobuyerProgressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </UpgradeButton>
-              {!isFirstRun && (!isAutobuyerLocked || isFirstTier) && !allTiersSmart && (
-                <AutomationCell>
-                  {isSmart ? (
-                    <AutomationBadge $color="#a78bfa" title="This tier buys one at a time until 10 purchases, then in blocks of 10, automatically">
-                      🧠 Smart
-                    </AutomationBadge>
-                  ) : isAutomated ? (
-                    <AutomationButton
-                      aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${smartCost} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                      color={canBuySmart ? '#a78bfa' : 'darkgrey'}
-                      disabled={!canBuySmart}
-                      onClick={() => actions.buySmartAutobuyer(tier.id)}
-                      title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
-                      type="button"
-                    >
-                      🧠 {smartCost}
-                    </AutomationButton>
-                  ) : (
-                    <AutomationButton
-                      aria-label={
-                        bootstrapsAutobuyer
-                          ? `Unlock and automate ${tier.name}'s autobuyer for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
-                          : `Automate ${tier.name} autobuyer upgrades for ${automationCost} Prestige Point${automationCost === 1 ? '' : 's'}`
-                      }
-                      color={canAutomate ? '#38bdf8' : 'darkgrey'}
-                      disabled={!canAutomate}
-                      onClick={() => actions.buyAutobuyerAutomation(tier.id)}
-                      title={
-                        bootstrapsAutobuyer
-                          ? 'Spend Prestige Points to unlock and automate this tier\'s autobuyer forever, with no Money cost needed to activate it first'
-                          : 'Spend Prestige Points to make this tier\'s autobuyer Upgrades happen automatically, forever'
-                      }
-                      type="button"
-                    >
-                      🤖 {automationCost}
-                    </AutomationButton>
-                  )}
-                </AutomationCell>
-              )}
             </TierLine>
           )
         })}
@@ -845,21 +843,17 @@ const MainPage = () => {
 
       {lastTierUnlocked && (
         <SpeedUpCard aria-label="speed up panel">
-          <div>
-            <h2>Speed Up</h2>
+          <InfoDetails>
+            <summary><h2>Speed Up</h2></summary>
             <MutedText id="speed-up-description">
               Buy {speedUpRequirement} {lastTier.name} to trigger a Speed Up: resets your tiers and
               resources (keeps autobuyers, automations, and Prestige Points) and permanently
               doubles production speed. Each Speed Up needs a full block of 10 more than the last.
             </MutedText>
-          </div>
-          <MutedText>
-            ×{formatRate(speedUpMultiplier)} production speed{' · '}
-            {speedUpCount} activation{speedUpCount === 1 ? '' : 's'}
-          </MutedText>
+          </InfoDetails>
           <Button
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name})`}
+            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -869,7 +863,7 @@ const MainPage = () => {
             $progressColor="#22d3ee"
             $pulse={canSpeedUp}
           >
-            ⚡ Speed Up
+            ⚡ ×{formatRate(nextSpeedUpMultiplier)}{' · '}{speedUpProgressPercent}%
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -891,8 +885,17 @@ const MainPage = () => {
                 onClick={actions.buyAutoSpeedUp}
                 title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
                 type="button"
+                $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
+                $progressColor="#38bdf8"
               >
                 🔁 Auto Speed Up for {AUTO_SPEED_UP_COST} PP
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="Auto Speed Up Prestige Point progress"
+                  aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
+                  aria-valuemin={0}
+                  aria-valuemax={AUTO_SPEED_UP_COST}
+                />
               </Button>
             )
           )}
@@ -901,29 +904,27 @@ const MainPage = () => {
 
       {showBottomPrestigeCard && (
         <PrestigeCard aria-label="prestige panel">
-          <div>
-            <h2>Prestige</h2>
+          <InfoDetails>
+            <summary><h2>Prestige</h2></summary>
             <MutedText id="prestige-description">
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
-              {!isFirstRun && ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`}
+              {!isFirstRun && (speedBonusRevealed
+                ? ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`
+                : ' Spend points to automate autobuyer Upgrades.')}
               {' '}Resets your resources when reached.
             </MutedText>
-          </div>
+          </InfoDetails>
           <div>
             <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
             {!isFirstRun && (
               <MutedText>
-                {formatAmount(prestige.points)} PP unspent{' · '}
-                {state.prestigeSpeedBonusUnlocked
-                  ? `×${formatRate(prestigeBonus)} production speed`
-                  : 'production speed bonus locked'}
+                {formatAmount(prestige.points)} PP unspent
+                {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
               </MutedText>
             )}
-            <MutedText>
-              {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
-            </MutedText>
           </div>
-          {!isFirstRun && !state.prestigeSpeedBonusUnlocked && (
+          {!isFirstRun && !state.prestigeSpeedBonusUnlocked && speedBonusRevealed && (
             <Button
               aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
               color={canBuySpeedBonus ? '#38bdf8' : 'darkgrey'}
@@ -931,13 +932,22 @@ const MainPage = () => {
               onClick={actions.buyPrestigeSpeedBonus}
               title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
               type="button"
+              $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+              $progressColor="#38bdf8"
             >
               🚀 Unlock Speed Bonus for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="Speed bonus unlock Prestige Point progress"
+                aria-valuenow={Math.min(prestige.points, PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+                aria-valuemin={0}
+                aria-valuemax={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
+              />
             </Button>
           )}
           <Button
             aria-describedby="prestige-description"
-            aria-label={prestigeLabel}
+            aria-label={prestigeAriaLabel}
             color={canPrestige ? '#fbbf24' : 'darkgrey'}
             disabled={!canPrestige}
             onClick={actions.prestige}
@@ -947,7 +957,7 @@ const MainPage = () => {
             $progressColor="#fbbf24"
             $pulse={canPrestige}
           >
-            ✦ Prestige
+            ✦ +{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%
             <VisuallyHidden
               role="progressbar"
               aria-label="Prestige progress"
@@ -974,8 +984,17 @@ const MainPage = () => {
                 onClick={actions.buyAutoPrestige}
                 title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
                 type="button"
+                $progress={ppProgressPercent(autoPrestigeCost)}
+                $progressColor="#38bdf8"
               >
                 🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="Auto-Prestige Prestige Point progress"
+                  aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
+                  aria-valuemin={0}
+                  aria-valuemax={autoPrestigeCost}
+                />
               </Button>
             </>
           )}
