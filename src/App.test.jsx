@@ -657,8 +657,10 @@ test('prestige points and the production speed bonus are shown once the bonus is
 test('the production speed bonus reads as locked, and an unlock button is offered, before it has been bought', async () => {
   const user = userEvent.setup()
 
+  // autoSpeedUp bought: the Speed Bonus unlock only reveals after the cheaper Auto Speed Up.
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    autoSpeedUp: true,
     prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
   }))
 
@@ -680,12 +682,28 @@ test('the production speed bonus reads as locked, and an unlock button is offere
 test('the Unlock Speed Bonus button stays disabled without enough Prestige Points', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    autoSpeedUp: true,
     prestige: { xp: 0, points: 9999, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
 
   expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeDisabled()
+})
+
+test('the Speed Bonus unlock stays hidden (button and locked teaser alike) until Auto Speed Up is bought', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
+  expect(screen.getByLabelText(/^prestige points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
+  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/production speed bonus locked/i)
+  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/10000 points/i)
 })
 
 test('an Automate button appears once a tier\'s autobuyer is active, and buying it reveals the Smart button in its place', async () => {

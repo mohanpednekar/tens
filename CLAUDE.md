@@ -1047,14 +1047,24 @@ earned:
 
 - The top-level "prestige points display" `StatCard` (unspent PP + production-speed bonus, or a "locked"
   message pre-unlock) doesn't render at all until `!isFirstRun`.
+- PP upgrades additionally reveal one by one, cheapest first (`speedBonusRevealed` in `MainPage`): the
+  10000 PP Speed Bonus unlock — its button, the "production speed bonus locked" teaser in both the PP
+  display and the `PrestigeCard`, and the description sentence quoting its cost — stays hidden until the
+  far cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page isn't fronting a
+  cost that's still thousands of points away (a save that already unlocked the bonus stays revealed
+  regardless). Auto-Prestige (1000 PP) was already gated this way behind `allTiersSmart`, and the
+  per-tier Automate/Smart buttons (1–512 / 10–5120 PP) already reveal one at a time per tier. Like the
+  first-run gate, this is UI-only — `buyPrestigeSpeedBonus` in `engine.js` doesn't check it.
 - Each tier's `AutomationCell` (Automate/Smart) stays hidden until `!isFirstRun`, on top of its existing
   gates (autobuyer must be active, except for the first tier, which shows Automate even while its own
   autobuyer is still locked — see "Prestige Points and autobuyer automation" above; not all tiers already
   smart) — see the automate-column paragraph above.
 - The bottom `PrestigeCard`'s unspent-PP/production-speed line (`{points} PP unspent · ×{rate} production
-  speed`, or the locked variant) and its Unlock Speed Bonus button both only render once `!isFirstRun`,
-  and the description sentence about spending points on the speed-bonus unlock or autobuyer automation is
-  likewise omitted pre-first-prestige, leaving just the Googol-requirement and reset-warning sentences.
+  speed`, or the locked variant) and its Unlock Speed Bonus button both only render once `!isFirstRun`
+  (the locked variant and the button further need `speedBonusRevealed` — see above), and the description
+  sentence about spending points on the speed-bonus unlock or autobuyer automation is likewise omitted
+  pre-first-prestige, leaving just the Googol-requirement and reset-warning sentences (the unlock's cost
+  is only quoted in it once `speedBonusRevealed`, too).
 - The Auto-Prestige control is unaffected by this flag directly, but is already unreachable pre-first-
   prestige in practice: it requires `allTiersSmart`, and Smart/Automate purchases (the only way to spend
   PP at all) are themselves hidden by the rule above.
@@ -1261,7 +1271,7 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   the rest of the test file. At the old 1Hz tick rate this leak was infrequent enough not to matter; at
   10Hz it fires 10x more often and reliably starved subsequent `userEvent`-based tests into timing out
   until fixed (a real regression caught while raising `TICK_RATE_MS`, not merely a style preference).
-- `yarn test` is green (366 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (367 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current

@@ -580,6 +580,12 @@ const MainPage = () => {
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
+  // PP upgrades reveal one by one, cheapest first: the 10000 PP Speed Bonus unlock (its button,
+  // its "locked" teaser text, and its description sentence alike) stays hidden until the far
+  // cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page isn't fronting
+  // a cost that's still thousands of points away. A save that already unlocked the bonus stays
+  // revealed regardless. This is UI-only — buyPrestigeSpeedBonus in engine.js doesn't check it.
+  const speedBonusRevealed = isAutoSpeedUpActive || state.prestigeSpeedBonusUnlocked
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
   // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
@@ -709,10 +715,8 @@ const MainPage = () => {
           <CenteredCard aria-label="prestige points display">
             <MutedText>
               <GoldText>{formatAmount(prestige.points)} PP</GoldText>
-              {' · '}
-              {state.prestigeSpeedBonusUnlocked
-                ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed`
-                : 'production speed bonus locked'}
+              {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
+              {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
             </MutedText>
           </CenteredCard>
         )}
@@ -1007,7 +1011,9 @@ const MainPage = () => {
             <summary><h2>Prestige</h2></summary>
             <MutedText id="prestige-description">
               Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
-              {!isFirstRun && ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`}
+              {!isFirstRun && (speedBonusRevealed
+                ? ` Spend ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} points once to unlock +1% production speed per unspent point, or spend points to automate autobuyer Upgrades.`
+                : ' Spend points to automate autobuyer Upgrades.')}
               {' '}Resets your resources when reached.
             </MutedText>
           </InfoDetails>
@@ -1015,17 +1021,16 @@ const MainPage = () => {
             <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
             {!isFirstRun && (
               <MutedText>
-                {formatAmount(prestige.points)} PP unspent{' · '}
-                {state.prestigeSpeedBonusUnlocked
-                  ? `×${formatRate(prestigeBonus)} production speed`
-                  : 'production speed bonus locked'}
+                {formatAmount(prestige.points)} PP unspent
+                {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
               </MutedText>
             )}
             <MutedText>
               {formatCurrency(state.resources[MONEY_ID])} / 1 Googol Money{' · '}{prestigeProgressPercent}%
             </MutedText>
           </div>
-          {!isFirstRun && !state.prestigeSpeedBonusUnlocked && (
+          {!isFirstRun && !state.prestigeSpeedBonusUnlocked && speedBonusRevealed && (
             <Button
               aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
               color={canBuySpeedBonus ? '#38bdf8' : 'darkgrey'}
