@@ -147,6 +147,16 @@ the same number by design.
   a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
   logic.
 
+## Reliability: cron dormancy
+
+GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository
+activity. `autonomous-maintenance.yml`'s primary mitigation is its own regular activity (merged PRs
+reset the dormancy clock) plus Phase B gap analysis keeping the backlog non-empty; the actual backstop
+is an external, out-of-band periodic check (outside this repo/issue system) that notices prolonged
+silence and re-triggers the workflow via `workflow_dispatch`, which works regardless of whether the
+`schedule` trigger is currently disabled. See `CLAUDE.md`'s Scheduled maintenance section for the full
+writeup.
+
 ## Code review tooling
 
 - `.claude/agents/code-reviewer.md` — a comprehensive, adversarial reviewer subagent for any PR or
