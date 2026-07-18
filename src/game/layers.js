@@ -85,3 +85,9 @@ export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
+// Per-activation production-speed multiplier base for Speed Up (see engine.js's
+// getSpeedUpMultiplier/speedUpGame) — production is multiplied by SPEED_UP_MULTIPLIER_BASE raised
+// to state.speedUpCount, so each activation doubles it (1x, 2x, 4x, 8x, …). Unlike the Prestige
+// Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
+// speedUpCount > 0.
+export const SPEED_UP_MULTIPLIER_BASE = 2

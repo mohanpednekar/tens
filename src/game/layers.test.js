@@ -10,6 +10,7 @@ import {
   PRESTIGE_POINT_SPEED_BONUS,
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
+  SPEED_UP_MULTIPLIER_BASE,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
 } from './layers'
@@ -152,5 +153,9 @@ describe('constants', () => {
 
   it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
     expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
+  })
+
+  it('SPEED_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
+    expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 })

@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -78,6 +78,12 @@ export const createInitialGameState = () => ({
   // buyPrestigeSpeedBonus. Never reset by prestige, like autobuyerAutomation/smartAutobuyer/
   // autoPrestige above.
   prestigeSpeedBonusUnlocked: false,
+  // Permanent count of how many times Speed Up has been triggered (see speedUpGame) — drives
+  // getSpeedUpMultiplier's unconditional production-speed multiplier. Never reset by Speed Up
+  // itself (it's the thing being incremented) or by a real Prestige (see prestigeGame) — it's
+  // meta-progression, like autobuyerAutomation/smartAutobuyer/autoPrestige/
+  // prestigeSpeedBonusUnlocked above.
+  speedUpCount: 0,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -222,6 +228,13 @@ export const getSmartAutobuyerCost = tierId =>
 export const getPurchaseMilestoneMultiplier = purchased =>
   2 ** Math.floor(clampNonNegative(purchased) / 10)
 
+// The unconditional production-speed multiplier from Speed Up activations (see speedUpGame):
+// SPEED_UP_MULTIPLIER_BASE raised to speedUpCount, so each activation doubles it (1x, 2x, 4x,
+// 8x, …). Unlike getPrestigeProductionMultiplier, this needs no unlock purchase — it applies
+// automatically as soon as speedUpCount > 0.
+export const getSpeedUpMultiplier = speedUpCount =>
+  SPEED_UP_MULTIPLIER_BASE ** clampNonNegative(speedUpCount)
+
 // Level 1 is the baseline rate (1x, already active as soon as the autobuyer is activated — see
 // tickGame/buyAutobuyer); each level after that makes that tier's autobuyer 10% faster on
 // average, compounding: level 2 = 1.1x, level 3 = 1.21x, … This is a purchase-cadence multiplier
@@ -359,6 +372,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = state.prestigeSpeedBonusUnlocked
     ? getPrestigeProductionMultiplier(state.prestige.points)
     : 1
+  // Speed Up's multiplier, unlike the PP bonus above, needs no unlock step — it applies as soon
+  // as speedUpCount > 0 (see getSpeedUpMultiplier/speedUpGame).
+  const speedUpMultiplier = getSpeedUpMultiplier(state.speedUpCount ?? 0)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) by getAutobuyerAttemptRate(level) * elapsedSeconds this
@@ -421,13 +437,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
 
-    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, and tierMultiplier
-    // (always a power of 2) are already integers, so only a fractional Prestige Point production
-    // multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent points → ×1.5) can introduce a
-    // fraction here. multiplier is always >= 1, so flooring never zeroes out production for a
-    // tier with owned > 0.
+    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, tierMultiplier, and
+    // speedUpMultiplier (both always powers of 2) are already integers, so only a fractional
+    // Prestige Point production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent
+    // points → ×1.5) can introduce a fraction here. multiplier is always >= 1, so flooring never
+    // zeroes out production for a tier with owned > 0.
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * tierMultiplier)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -698,11 +714,46 @@ export const prestigeGame = state => {
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
       count: state.prestige.count + 1,
     },
+  }
+}
+
+// A more frequent soft-reset than real Prestige, available well before Money reaches GOOGOL:
+// once the last tier reaches 10 lifetime purchases, resets resources/owned/purchased (and every
+// other per-run field) back to a fresh game exactly like createInitialGameState, but permanently
+// doubles production speed (see getSpeedUpMultiplier) and — like prestigeGame — collapses any
+// already-active autobuyer to its level-1 baseline rather than deactivating it, while
+// autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked carry over
+// unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through
+// completely untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't
+// award or spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on
+// a real Prestige, not a Speed Up) or before the last tier has reached 10 purchases.
+export const speedUpGame = state => {
+  if (isProductionFrozen(state)) return state
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  if (getTierPurchasedCount(state, lastTier.id) < 10) return state
+
+  const initial = createInitialGameState()
+  const resetAutobuyers = Object.fromEntries(
+    Object.entries(initial.autobuyers).map(([tierId]) => {
+      const level = state.autobuyers[tierId] ?? null
+      return [tierId, level === null ? null : 1]
+    })
+  )
+  return {
+    ...initial,
+    autobuyers: resetAutobuyers,
+    autobuyerAutomation: state.autobuyerAutomation ?? initial.autobuyerAutomation,
+    smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
+    autoPrestige: state.autoPrestige ?? initial.autoPrestige,
+    prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    prestige: state.prestige,
+    speedUpCount: (state.speedUpCount ?? 0) + 1,
   }
 }

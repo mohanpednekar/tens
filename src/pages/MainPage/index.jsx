@@ -1,7 +1,7 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerAttemptRate, getAutobuyerAutomationCost, getAutobuyerCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getTierAffordableQuantity, getTierProductionProgressPercent, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICK_RATE_MS, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
@@ -114,6 +114,10 @@ const TierLine = styled(StatCard)`
 
 const PrestigeCard = styled(StatCard)`
   border-color: #854d0e;
+`
+
+const SpeedUpCard = styled(StatCard)`
+  border-color: #0e7490;
 `
 
 const MoneyCard = styled(StatCard)`
@@ -472,6 +476,20 @@ const MainPage = () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const showBottomPrestigeCard = !isFrozen && (!isFirstRun || getTierPurchasedCount(state, lastTier.id) >= 10)
 
+  // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
+  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches 10 lifetime purchases, it
+  // resets tiers/resources but permanently doubles production speed, stacking with every prior
+  // activation. Gated on the last tier being unlocked at all, same progressive-disclosure
+  // principle as the first-run Prestige card gate above, so it doesn't clutter the page before
+  // tier10 even exists.
+  const lastTierUnlocked = isTierUnlocked(state)(lastTier)
+  const speedUpCount = state.speedUpCount ?? 0
+  const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
+  const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
+  const lastTierPurchased = getTierPurchasedCount(state, lastTier.id)
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / 10) * 100))
+  const canSpeedUp = !isFrozen && lastTierPurchased >= 10
+
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
@@ -651,9 +669,10 @@ const MainPage = () => {
           // average — matching exactly what tickGame credits when tierProductionAccumulators
           // crosses this tier's own base tickspeed (see "Tier production tickspeed" in CLAUDE.md).
           // Floored to match tickGame's own floored production credit — prestigeBonus is the only
-          // fractional factor here (getPurchaseMilestoneMultiplier is always a power of 2), so
-          // without flooring this preview could show a fraction that never actually lands.
-          const production = Math.floor(owned * prestigeBonus * getPurchaseMilestoneMultiplier(purchased))
+          // fractional factor here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are
+          // always powers of 2), so without flooring this preview could show a fraction that
+          // never actually lands.
+          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
           const rawTickProgressPercent = getTierProductionProgressPercent(
             state, tier.id, previousAccumulatorsRef.current[tier.id], TICK_RATE_MS / 1000
           )
@@ -815,6 +834,44 @@ const MainPage = () => {
           )
         })}
       </TierList>
+
+      {lastTierUnlocked && (
+        <SpeedUpCard aria-label="speed up panel">
+          <div>
+            <h2>Speed Up</h2>
+            <MutedText id="speed-up-description">
+              Buy 10 {lastTier.name} to trigger a Speed Up: resets your tiers and resources (keeps
+              autobuyers, automations, and Prestige Points) and permanently doubles production
+              speed.
+            </MutedText>
+          </div>
+          <MutedText>
+            ×{formatRate(speedUpMultiplier)} production speed{' · '}
+            {speedUpCount} activation{speedUpCount === 1 ? '' : 's'}
+          </MutedText>
+          <Button
+            aria-describedby="speed-up-description"
+            aria-label={`Speed Up (requires 10 ${lastTier.name})`}
+            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canSpeedUp}
+            onClick={actions.speedUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+            type="button"
+            $progress={speedUpProgressPercent}
+            $progressColor="#22d3ee"
+            $pulse={canSpeedUp}
+          >
+            ⚡ Speed Up
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Speed Up progress"
+              aria-valuenow={speedUpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </SpeedUpCard>
+      )}
 
       {showBottomPrestigeCard && (
         <PrestigeCard aria-label="prestige panel">

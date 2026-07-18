@@ -408,6 +408,89 @@ test('after the first prestige, the Prestige panel is shown regardless of last-t
   expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
 })
 
+test('the Speed Up panel stays hidden before the last tier unlocks', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^speed up panel$/i)).not.toBeInTheDocument()
+})
+
+test('the Speed Up panel appears once the last tier unlocks, with the button disabled below 10 purchases', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchased: { tier10: 9 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeDisabled()
+})
+
+test('the Speed Up button is enabled once the last tier reaches 10 purchases', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchased: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeEnabled()
+})
+
+test('the Speed Up panel shows the current multiplier and activation count', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    speedUpCount: 2,
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent(/×4 production speed/i)
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent(/2 activations/i)
+})
+
+test('clicking Speed Up once eligible resets resources and re-hides the panel until the last tier unlocks again', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 12345 },
+    owned: { tier09: 10, tier10: 25 },
+    purchased: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires 10/i })
+  expect(speedUpButton).toBeEnabled()
+
+  await user.click(speedUpButton)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$10')
+  // Speed Up resets owned counts too, so the last tier (and its own unlock prerequisite) is no
+  // longer unlocked — the panel disappears again until the player climbs back up to it.
+  expect(screen.queryByLabelText(/^speed up panel$/i)).not.toBeInTheDocument()
+})
+
+test('the Speed Up button is disabled once production freezes at a googol', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    owned: { tier09: 10 },
+    purchased: { tier10: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeDisabled()
+})
+
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
 // Every tier smart (which itself requires every tier automated — see buySmartAutobuyer's
 // prerequisite) is what unlocks the Auto-Prestige option in the UI at all — see MainPage's
