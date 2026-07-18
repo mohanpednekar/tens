@@ -1,10 +1,13 @@
 import MainPage from 'pages/MainPage'
-import './App.css';
+import { GlobalStyle, ThemeProvider } from 'theme'
 
 function App() {
   return (
-    <MainPage/>
-  );
+    <ThemeProvider>
+      <GlobalStyle />
+      <MainPage />
+    </ThemeProvider>
+  )
 }
 
-export default App;
+export default App

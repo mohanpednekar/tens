@@ -428,7 +428,15 @@ src/
     StatCard/index.js       ← styled card container used for every panel
   pages/
     MainPage/index.jsx      ← single page; compact one-line-per-tier layout, data-driven from TIER_DEFINITIONS
-  App.jsx                   ← root component, renders MainPage
+  theme/
+    tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
+                               tier-accent sets + mode-independent space/radius/motion/font/type scales;
+                               exports buildTheme(mode) + themes.{dark,light} (see "Theming" below)
+    GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
+                               and the token-driven page background/text (absorbs the removed index.css/App.css)
+    index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
+                               `mode` defaults to dark and is the seam #140 will drive from system pref + toggle
+  App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
   index.jsx                 ← ReactDOM.createRoot entry point
 vite.config.js               ← path aliases + dev/test server config
 ```
@@ -1189,8 +1197,35 @@ regardless of whether those purchases were manual or automatic.
 
 ### Path aliases (`vite.config.js`)
 
-`components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`. Use these bare
-aliases in imports (as the existing code does), not relative paths like `../../game/engine`.
+`components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`, `theme/X` →
+`src/theme/X`. Use these bare aliases in imports (as the existing code does), not relative paths like
+`../../game/engine`. Directory imports resolve to that directory's `index.jsx`/`index.js` (e.g.
+`import { ThemeProvider } from 'theme'` → `src/theme/index.jsx`, same as `pages/MainPage` → its `index.jsx`).
+
+## Theming
+
+All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
+the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
+values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
+components migrate onto these tokens one at a time in later sub-issues.
+
+- **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
+  `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
+  `color` (per-mode: `page`, `surface`, `surfaceRaised`, `surfaceSunken`, `border`, `borderStrong`,
+  `text`, `textMuted`, `textFaint`, `accent` (indigo brand), `good`/`warn`/`info`/`violet`/`danger`
+  semantics kept distinct from the accent, `disabled`), `shadow` (`sm`/`md`, per-mode), `tierAccents`
+  (per-mode 8-hue cycle for the tier left-edge stripe), plus mode-independent `space`, `radius`,
+  `motion` (`duration`/`easing`), `font` (`display`/`body`/`mono`), and `type` (`scale` + `numeric`).
+  Font families are system stacks for now — a deliberate seam the typography sub-issue (#136) swaps for
+  locally-bundled faces.
+- **`GlobalStyle.js`** (`createGlobalStyle`) replaces the removed `src/index.css` + `src/App.css`: the
+  `box-sizing` reset, base font/smoothing, the form-control `font: inherit` rule, and the token-driven
+  page background + text color (so the whole page repaints on a mode change).
+- **`theme/index.jsx`** exports `<ThemeProvider mode>` (wrapping styled-components' `ThemeProvider`) and
+  re-exports `GlobalStyle`/`themes`/`buildTheme`/`MODES`/`DEFAULT_MODE`. `App.jsx` renders
+  `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
+  `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
+  light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
 
 ## Testing
 
