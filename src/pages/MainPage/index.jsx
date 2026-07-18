@@ -175,12 +175,19 @@ const BalancesSentinel = styled.div`
 // line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
 // full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
 // no JS state; the collapsed content stays in the DOM, so aria-describedby references into it
-// (and textContent-based tests) still resolve either way.
+// (and textContent-based tests) still resolve either way. The disclosure marker (▸) is hidden
+// deliberately: no inherent visual clue that the heading expands — players discover it by
+// clicking (screen readers still announce the summary as collapsed/expanded regardless).
 const InfoDetails = styled.details`
   summary {
     cursor: pointer;
+    list-style: none;
     user-select: none;
     width: fit-content;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
   }
 
   summary:hover {
@@ -913,17 +920,17 @@ const MainPage = () => {
                 : ' Spend points to automate autobuyer Upgrades.')}
               {' '}Resets your resources when reached.
             </MutedText>
+            <MutedText>
+              <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
+              {!isFirstRun && (
+                <>
+                  {' · '}{formatAmount(prestige.points)} PP unspent
+                  {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                  {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
+                </>
+              )}
+            </MutedText>
           </InfoDetails>
-          <div>
-            <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
-            {!isFirstRun && (
-              <MutedText>
-                {formatAmount(prestige.points)} PP unspent
-                {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
-                {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
-              </MutedText>
-            )}
-          </div>
           {!isFirstRun && !state.prestigeSpeedBonusUnlocked && speedBonusRevealed && (
             <Button
               aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}

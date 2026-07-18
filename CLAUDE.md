@@ -480,7 +480,12 @@ Strict three-layer separation:
    Description prose is kept out of the always-visible page: the Speed Up and Prestige cards' full
    explanations, and the full-smart-autobuyer notice's, live inside an `InfoDetails` (`styled.details`)
    click-to-expand disclosure — the clickable `<summary>` is the card's own `<h2>` heading (or the
-   notice's one-line label), so the section reads minimal until clicked. Native `<details>`/`<summary>`
+   notice's one-line label), so the section reads minimal until clicked. The Prestige card's status
+   lines (prestiged count · unspent PP · speed bonus) live inside the disclosure too, not just the
+   description — collapsed, the card is nothing but its heading and buttons. The disclosure marker (▸)
+   is hidden (`list-style: none` + `::-webkit-details-marker`), deliberately leaving no inherent visual
+   clue that the heading expands — players discover it by clicking; screen readers still announce the
+   summary's collapsed/expanded state. Native `<details>`/`<summary>`
    needs no JS state, and the collapsed content stays in the DOM, so the Speed Up/Prestige buttons'
    `aria-describedby` references into it (and `toHaveTextContent`-based tests) resolve whether or not
    the section is expanded. It no
@@ -863,8 +868,9 @@ fluctuates as PP is earned and spent):
   so it never overlaps `Header`) shows a compact reminder + Prestige button, while the rest of the
   (disabled) page still renders normally underneath it.
 
-The normal bottom `PrestigeCard` (prestige count, unspent PP, production-speed multiplier) only renders
-when *not* frozen. Its Prestige button carries the effect and progress on itself, Buy-button style —
+The normal bottom `PrestigeCard` only renders when *not* frozen; its prestige count / unspent PP /
+production-speed status lines sit inside its `InfoDetails` disclosure alongside the description (see
+Architecture above), so the collapsed card shows nothing but the heading and its buttons. Its Prestige button carries the effect and progress on itself, Buy-button style —
 visible text `✦ +{award} PP · {percent}%` (award = `max(1, getPrestigePointsAwarded(money))`, since
 below Googol the formula reads 0 but the award on reaching it is always at least 1) over the existing
 `$progress` fill, with the full sentence in `aria-label` ("Prestige (requires 1 Googol Money) — awards
