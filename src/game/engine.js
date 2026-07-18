@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_AUTOMATION_BASE_COST, getTierBaseTickSpeedSeconds, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -84,6 +84,11 @@ export const createInitialGameState = () => ({
   // meta-progression, like autobuyerAutomation/smartAutobuyer/autoPrestige/
   // prestigeSpeedBonusUnlocked above.
   speedUpCount: 0,
+  // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
+  // make Speed Up trigger automatically (see buyAutoSpeedUp/tickGame) the instant it's eligible —
+  // no manual click needed. Never reset by prestige or by Speed Up itself, like
+  // autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
+  autoSpeedUp: false,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -475,9 +480,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // banked rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see
   // TICK_RATE_MS) only makes it react sooner after becoming affordable, not more often per
   // real second.
-  return TIER_DEFINITIONS.reduce((s, tier) => (
+  const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => (
     s.autobuyerAutomation?.[tier.id] ? buyAutobuyer(tier.id)(s) : s
   ), producedState)
+
+  // If Auto Speed Up is bought (see buyAutoSpeedUp), trigger a Speed Up automatically the instant
+  // it's eligible — no manual click needed. speedUpGame re-validates eligibility internally (the
+  // last tier must have reached 10 purchases, and production must not be frozen), so this is a
+  // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
+  // rate-accumulating budget — Speed Up has no cadence to throttle, unlike Auto-Prestige.
+  return stateAfterAutomation.autoSpeedUp ? speedUpGame(stateAfterAutomation) : stateAfterAutomation
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
@@ -715,6 +727,7 @@ export const prestigeGame = state => {
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedUpCount: state.speedUpCount ?? initial.speedUpCount,
+    autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
@@ -729,11 +742,11 @@ export const prestigeGame = state => {
 // other per-run field) back to a fresh game exactly like createInitialGameState, but permanently
 // doubles production speed (see getSpeedUpMultiplier) and — like prestigeGame — collapses any
 // already-active autobuyer to its level-1 baseline rather than deactivating it, while
-// autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked carry over
-// unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through
-// completely untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't
-// award or spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on
-// a real Prestige, not a Speed Up) or before the last tier has reached 10 purchases.
+// autobuyerAutomation/smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoSpeedUp carry
+// over unchanged. Unlike prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed
+// through completely untouched — Speed Up is unrelated to real Prestige or Prestige Points, and
+// doesn't award or spend any. A no-op (returns the same state) while frozen (a frozen state is
+// waiting on a real Prestige, not a Speed Up) or before the last tier has reached 10 purchases.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
@@ -753,7 +766,26 @@ export const speedUpGame = state => {
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     prestige: state.prestige,
     speedUpCount: (state.speedUpCount ?? 0) + 1,
+  }
+}
+
+// One-time PP cost to permanently automate Speed Up (see AUTO_SPEED_UP_COST) — once bought,
+// tickGame calls speedUpGame automatically every tick, which re-validates eligibility internally
+// (no-op unless the last tier has reached 10 purchases and production isn't frozen), so this just
+// removes the need for a manual click once eligible. A no-op if already bought, if there aren't
+// enough unspent points, or while production is frozen — same convention as
+// buyPrestigeSpeedBonus/buyAutobuyerAutomation.
+export const buyAutoSpeedUp = state => {
+  if (isProductionFrozen(state)) return state
+  if (state.autoSpeedUp) return state
+  if (clampNonNegative(state.prestige.points) < AUTO_SPEED_UP_COST) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - AUTO_SPEED_UP_COST },
+    autoSpeedUp: true,
   }
 }
