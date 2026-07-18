@@ -58,9 +58,8 @@ export const createInitialGameState = () => ({
   }), {}),
   // Fractional seconds accumulated per tier toward its next production batch, since each tier
   // only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds rather than
-  // continuously every global tick — see tickGame. tier01's tickspeed is 1s (matching the global
-  // tick), so this stays a no-op for it; later tiers batch every 2s, 3s, … 10s, banking any
-  // remainder below their own tickspeed.
+  // continuously every global tick — see tickGame. Every tier currently shares the same 1s
+  // tickspeed (matching the global tick), banking any remainder below that full second.
   tierProductionAccumulators: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: 0,
@@ -123,7 +122,7 @@ export const formatCurrency = value => {
     : `$${scientificNumberFormatter.format(safeValue)}`
 }
 
-// The Fibonacci exponent a cost epoch raises baseCost to (see getTierCost): 1, 2, 3, 5, 8,
+// The Fibonacci number driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8,
 // 13, … for epochs 0, 1, 2, 3, 4, 5, … A negative epoch is clamped to 0 rather than throwing.
 export const getCostEpochExponent = epoch => {
   let current = 1
@@ -134,13 +133,18 @@ export const getCostEpochExponent = epoch => {
   return current
 }
 
-// Cost is flat across each block of 10 purchases; each block raises baseCost to the next
-// Fibonacci power. epoch = floor(purchased / 10); cost = baseCost ^ (1, 2, 3, 5, 8, …)[epoch] —
-// e.g. a baseCost-10 tier's 4th block (purchases 30–39) costs 10^5 per unit. Deep epochs
-// overflow to Infinity, which is safe: an infinite cost is simply never affordable.
+// Cost is flat across each block of 10 purchases; each block multiplies baseCost by 10 raised
+// to (that epoch's Fibonacci number − 1). epoch = floor(purchased / 10);
+// cost = baseCost * 10^(fib(epoch) - 1), fib = 1, 2, 3, 5, 8, … — e.g. a baseCost-10 tier's 4th
+// block (purchases 30–39) costs 10^5 per unit, same as a literal baseCost^fib reading would give
+// for baseCost 10, but every other tier scales far more gently relative to its own baseCost
+// (e.g. a baseCost-1000 tier's blocks cost 1e3, 1e4, 1e5, 1e7, 1e10, …) rather than compounding
+// baseCost itself into the exponent, which would put high tiers permanently out of reach within
+// a handful of blocks. Deep epochs still eventually overflow to Infinity, which is safe: an
+// infinite cost is simply never affordable.
 export const getTierCost = (tier, purchased) => {
   const epoch = Math.floor(clampNonNegative(purchased) / 10)
-  return tier.baseCost ** getCostEpochExponent(epoch)
+  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the
@@ -211,8 +215,8 @@ export const getSmartAutobuyerCost = tierId =>
   SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerAutomationCost(tierId)
 
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
-// the same boundary where getTierCost jumps to the next Fibonacci power of baseCost, so buying
-// into a fresh cost epoch always pays off with production alongside the steeper price.
+// the same boundary where getTierCost's Fibonacci-driven multiplier steps up, so buying into a
+// fresh cost epoch always pays off with production alongside the steeper price.
 // epoch = floor(purchased/10); multiplier = 2^epoch.
 // Applies to every tier uniformly, regardless of whether the purchases were manual or automatic.
 export const getPurchaseMilestoneMultiplier = purchased =>
@@ -285,7 +289,11 @@ export const getPrestigeProgressPercent = money => {
 // trying to interpolate sub-tick progress itself.
 export const getTierProductionProgressPercent = (state, tierId, previousAccumulator, elapsedSeconds = 1) => {
   const tickSpeed = getTierBaseTickSpeedSeconds(tierId)
-  if (previousAccumulator != null && previousAccumulator + elapsedSeconds >= tickSpeed) return 100
+  // Same TICK_ACCUMULATION_EPSILON tolerance tickGame's own crossing check uses (see there):
+  // absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds. Every tier
+  // now shares a 1s tickspeed, where ten additions of 0.1 land on 0.9999999999999999 rather than
+  // exactly 1 — without this tolerance the "just delivered" 100% flash would be silently skipped.
+  if (previousAccumulator != null && previousAccumulator + elapsedSeconds >= tickSpeed - TICK_ACCUMULATION_EPSILON) return 100
   const accumulated = state.tierProductionAccumulators?.[tierId] ?? 0
   return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))
 }

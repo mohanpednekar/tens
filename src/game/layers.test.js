@@ -54,11 +54,10 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('baseTickSpeedSeconds is 1 for the first tier and increases by exactly 1 per subsequent tier', () => {
-    expect(TIER_DEFINITIONS[0].baseTickSpeedSeconds).toBe(1)
-    for (let i = 1; i < TIER_DEFINITIONS.length; i++) {
-      expect(TIER_DEFINITIONS[i].baseTickSpeedSeconds).toBe(TIER_DEFINITIONS[i - 1].baseTickSpeedSeconds + 1)
-    }
+  it('baseTickSpeedSeconds is 1 for every tier', () => {
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(tier.baseTickSpeedSeconds).toBe(1)
+    })
   })
 
   it('first tier is Tens and both costs and produces Ones (money)', () => {
@@ -107,9 +106,9 @@ describe('getTierBaseTickSpeedSeconds', () => {
     expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
-  it('increases by 1 second per subsequent tier, up to 10 seconds for the 10th', () => {
-    TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
+  it('is 1 second for every tier', () => {
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(1)
     })
   })
 

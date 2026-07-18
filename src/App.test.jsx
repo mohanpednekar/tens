@@ -163,7 +163,7 @@ test('reaching 10 lifetime purchases of a tier doubles its displayed production 
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10')
 })
 
-test('a tier with a slower base tickspeed still shows its full per-tick production amount, not a reduced rate', () => {
+test('a tier shows its full per-tick production amount, not a reduced rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 },
@@ -171,9 +171,9 @@ test('a tier with a slower base tickspeed still shows its full per-tick producti
 
   render(<App />)
 
-  // Thousands' base tickspeed is 2s, but the displayed amount is the raw per-tick credit
-  // (owned(4) × 1, no bonus/milestone) delivered once its tick-progress bar fills — not divided
-  // by tickspeed, since that's no longer shown as an averaged "/sec" rate.
+  // The displayed amount is the raw per-tick credit (owned(4) × 1, no bonus/milestone) delivered
+  // once its tick-progress bar fills — not divided by tickspeed, since that's no longer shown as
+  // an averaged "/sec" rate.
   expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+4 Tens')
 })
 
@@ -209,18 +209,20 @@ test('a tick-progress ring holds at 100% on the tick a batch delivers, then rese
   // in sync with reality, exactly like the real interval firing 100ms apart in production does.
   const advanceOneTick = () => act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   const ticksPerSecond = 1000 / TICK_RATE_MS
+  const halfSecond = ticksPerSecond / 2
 
-  // Thousands' tickspeed is 2s — the first second's worth of ticks only banks half of it.
-  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
+  // Thousands' tickspeed is 1s (same as every tier) — half a second's worth of ticks banks half
+  // of it.
+  for (let i = 0; i < halfSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '50')
 
-  // The second second's worth of ticks crosses the threshold and delivers — the ring should read
-  // 100%, not the freshly-wrapped 0% remainder that tickGame actually banks internally.
-  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
+  // The rest of that second's ticks cross the threshold and deliver — the ring should read 100%,
+  // not the freshly-wrapped 0% remainder that tickGame actually banks internally.
+  for (let i = 0; i < halfSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '100')
 
   // The following ticks start the next cycle, dropping back down to a partial fill.
-  for (let i = 0; i < ticksPerSecond; i++) advanceOneTick()
+  for (let i = 0; i < halfSecond; i++) advanceOneTick()
   expect(getRing()).toHaveAttribute('aria-valuenow', '50')
 
   // Unmount while fake timers are still active so the live tick interval is cancelled against the
