@@ -594,10 +594,25 @@ Strict three-layer separation:
    a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`)
    as a safety net against content forcing a column wider than its track. `RootDiv` sets
    `font-variant-numeric: tabular-nums` so digits render at a uniform width. When the hook reports a non-null
-   `offlineProgress` (see "Offline progress" below), a dismissible `StatCard` ("Welcome back! …", formatted via
-   `formatOfflineDuration`) renders above the money display, with a Dismiss button wired to
-   `dismissOfflineProgress`; it never reappears once dismissed (or once the state is reset) since it's a
-   one-shot summary of what happened between this load and the last, not a recurring status.
+   `offlineProgress` (see "Offline progress" below), a dismissible `OfflineNoticeCard` (`styled(StatCard)`,
+   "Welcome back! …", formatted via `formatOfflineDuration`) renders above the money display; it never
+   reappears once dismissed (or once the state is reset) since it's a one-shot summary of what happened
+   between this load and the last, not a recurring status. It also self-dismisses: a countdown starting at
+   `OFFLINE_NOTICE_AUTO_DISMISS_MS` (10s, a UI-only timing constant local to `MainPage`, not a game/economy
+   value) drives both the Dismiss button's own `$progress` fill (grey, ticking down every
+   `OFFLINE_NOTICE_PROGRESS_INTERVAL_MS` via a plain `setInterval` computing `remaining/total` from two
+   `Date.now()`-based timestamps in `offlineNoticeTiming` state — not a CSS transition, matching the
+   codebase's established on-button-fill convention rather than reintroducing the removed tick-progress
+   ring's animation machinery) and, once it reaches zero, an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms)
+   before `dismissOfflineProgress` actually removes it. Clicking the notice card itself (not the Dismiss
+   button) extends the deadline to `OFFLINE_NOTICE_EXTENDED_DISMISS_MS` (60s) *from that click*, not merely
+   +60s on top of whatever remained — `handleOfflineNoticeClick` simply re-seeds `offlineNoticeTiming` with
+   a fresh start/end pair, which the countdown interval effect (keyed on that state) picks up immediately.
+   The Dismiss button's own click handler calls `event.stopPropagation()` so dismissing doesn't also bubble
+   into the card's extend handler on its way out. The countdown interval effect is guarded on
+   `offlineProgress` itself (not just the timing state) so it — and its `setInterval` — actually stops the
+   instant the notice is dismissed by any path (manual click or the auto-fade), rather than leaking a timer
+   that runs forever in the background once the card is gone.
    Once `isProductionFrozen(state)` is true, every control except Prestige disables and the Prestige UI
    itself switches to one of two presentations depending on prestige history — see "Prestige and the
    Googol freeze" below for the full mechanism.
@@ -1192,18 +1207,25 @@ aliases in imports (as the existing code does), not relative paths like `../../g
   `getByRole('button', { name: … })` still matches even though a labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
   Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
-  `afterEach` (see `App.test.jsx`). If a test ever needs to observe behavior across real tick boundaries
-  again (none currently does — the tick-progress ring tests that did were removed with the ring), use
-  `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))` **once per tick** (not one
-  large jump per assertion — jumping by more than one tick fires the live `setInterval` several times
-  synchronously within the same call stack, which React 18 batches into a single render), and **unmount
-  the rendered component before calling `vi.useRealTimers()`**, not after — unmounting while fake timers
-  are still active lets the effect cleanup's `clearInterval` cancel the pending periodic callback against
-  the same (fake) timer implementation that scheduled it; unmounting afterward calls the *real*
-  `clearInterval` with a stale fake-timer id, which silently fails to cancel it, leaving a live interval
-  running that starves subsequent `userEvent`-based tests into timing out (a real regression caught while
-  raising `TICK_RATE_MS` to 10Hz, not merely a style preference).
-- `yarn test` is green (366 tests). All four test files assert against the current tier/resource id scheme
+  `afterEach` (see `App.test.jsx`). The offline-progress notice's auto-dismiss tests (see "Architecture"
+  above) are the current example of a test observing behavior across real timer boundaries — they use
+  `vi.useFakeTimers()`, `fireEvent.click` rather than `userEvent.click` (avoids the extra async-scheduling
+  work `userEvent` layers on top of a raw click, which doesn't mix cleanly with fake timers without also
+  configuring `advanceTimers`), and **unmount the rendered component before calling `vi.useRealTimers()`**,
+  not after — unmounting while fake timers are still active lets the effect cleanup's `clearInterval`/
+  `clearTimeout` cancel the pending callback against the same (fake) timer implementation that scheduled
+  it; unmounting afterward calls the *real* clear function with a stale fake-timer id, which silently
+  fails to cancel it, leaving a live timer running that starves subsequent tests (the same regression
+  class caught while raising `TICK_RATE_MS` to 10Hz for the now-removed tick-progress ring). A related
+  pitfall specific to *chained* timers (an interval callback's state update causes an effect to register a
+  brand-new `setTimeout`, as the fade-out timeout does): folding the wait for that new timer into the same
+  large `act(() => vi.advanceTimersByTime(N))` call that triggers its creation doesn't work — the new
+  timer is only registered once React flushes the state update *after* that `act()` call's fake-timer loop
+  has already finished advancing to `N`, so the new timer's own target moment ends up past the just-run
+  advance and needs a **separate**, subsequent `act(() => vi.advanceTimersByTime(...))` call to actually
+  fire it (see the "clicking the offline progress notice extends…" test for a worked example: the wait for
+  the extended deadline and the wait for its 400ms fade are two separate advances, not one combined one).
+- `yarn test` is green (369 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished
   rename left behind in the tests; that mismatch has been reconciled in favor of the current
