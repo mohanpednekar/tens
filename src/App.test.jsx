@@ -580,23 +580,22 @@ test('the PP Upgrades page groups purchases into labeled categories', async () =
   expect(screen.getByLabelText(/^tier autobuyers category$/i)).toHaveTextContent(/tier autobuyers/i)
   expect(screen.getByLabelText(/^global automation category$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^global automation category$/i)).toHaveTextContent(/global automation/i)
-  // No unspent PP and the bonus not yet revealed (Auto Speed Up not bought) — the Production
-  // Bonuses category has nothing to show yet, so it shouldn't render at all.
-  expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
+  // No separate reveal gate — Production Bonuses shows as soon as the page itself is reachable.
+  expect(screen.getByLabelText(/^production bonuses category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^production bonuses category$/i)).toHaveTextContent(/production speed bonus/i)
 })
 
-test('the Production Bonuses category appears once revealed, and disappears again once bought (nothing left to show)', async () => {
+test('the Production Bonuses category disappears once the speed bonus is bought (nothing left to show)', async () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    autoSpeedUp: true,
+    prestigeSpeedBonusUnlocked: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByLabelText(/^production bonuses category$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^production bonuses category$/i)).toHaveTextContent(/production speed bonus/i)
+  expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
 })
 
 test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 100 PP to enable it', async () => {
@@ -850,10 +849,8 @@ test('prestige points and the production speed bonus are shown once the bonus is
 test('the production speed bonus reads as locked, and an unlock button is offered on the PP Upgrades page, before it has been bought', async () => {
   const user = userEvent.setup()
 
-  // autoSpeedUp bought: the Speed Bonus unlock only reveals after the cheaper Auto Speed Up.
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    autoSpeedUp: true,
     prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
   }))
 
@@ -878,7 +875,6 @@ test('the Unlock Speed Bonus button stays disabled without enough Prestige Point
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    autoSpeedUp: true,
     prestige: { xp: 0, points: 9999, count: 1, highestMilestone: 1 },
   }))
 
@@ -910,7 +906,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
   expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '100')
 })
 
-test('the Speed Bonus unlock stays hidden (button and locked teaser alike) until Auto Speed Up is bought', async () => {
+test('the Speed Bonus unlock is offered as soon as the PP Upgrades page itself is reachable, with no separate reveal gate (e.g. Auto Speed Up need not be bought first)', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -920,14 +916,11 @@ test('the Speed Bonus unlock stays hidden (button and locked teaser alike) until
 
   render(<App />)
 
-  // Check the Game view's prestige panel first (before navigating away from it).
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
-  expect(screen.getByLabelText(/^prestige points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
-  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/production speed bonus locked/i)
-  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/10000 points/i)
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/production speed bonus locked/i)
 
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
-  expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeEnabled()
 })
 
 test('an Unlock button appears on the PP Upgrades page for a tier whose autobuyer isn\'t unlocked yet, and buying it reveals the Smart button in its place', async () => {

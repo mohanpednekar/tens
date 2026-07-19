@@ -598,13 +598,9 @@ const MainPage = () => {
 
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
+  // Shown as soon as the PP Upgrades page itself is reachable (!isFirstRun) — no separate
+  // "revealed one by one" teaser gate on top of that.
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
-  // PP upgrades reveal one by one, cheapest first: the 10000 PP Speed Bonus unlock (its button,
-  // its "locked" teaser text, and its description sentence alike) stays hidden until the far
-  // cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page isn't fronting
-  // a cost that's still thousands of points away. A save that already unlocked the bonus stays
-  // revealed regardless. This is UI-only — buyPrestigeSpeedBonus in engine.js doesn't check it.
-  const speedBonusRevealed = isAutoSpeedUpActive || state.prestigeSpeedBonusUnlocked
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
   // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
@@ -660,7 +656,7 @@ const MainPage = () => {
       if (!state.smartAutobuyer?.[tier.id]) return prestige.points >= getSmartAutobuyerCost(tier.id)
       return false
     }) ||
-    (speedBonusRevealed && canBuySpeedBonus) ||
+    canBuySpeedBonus ||
     canBuyAutoSpeedUp ||
     canBuyTickspeedAutobuyer ||
     (allTiersSmart && canBuyAutoPrestige)
@@ -847,7 +843,7 @@ const MainPage = () => {
             <MutedText>
               <GoldText>{formatAmount(prestige.points)} PP</GoldText>
               {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
-              {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
+              {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
             </MutedText>
           </CenteredCard>
         )}
@@ -1101,7 +1097,7 @@ const MainPage = () => {
               <MutedText>
                 {formatAmount(prestige.points)} PP unspent
                 {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
-                {!state.prestigeSpeedBonusUnlocked && speedBonusRevealed && ' · production speed bonus locked'}
+                {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
               </MutedText>
             )}
           </div>
@@ -1215,35 +1211,6 @@ const MainPage = () => {
           <UpgradeCategory aria-label="global automation category">
             <CategoryHeading>Global Automation</CategoryHeading>
 
-            <UpgradeRow aria-label="auto speed up upgrade">
-              <TierNameLabel>Auto Speed Up</TierNameLabel>
-              {isAutoSpeedUpActive ? (
-                <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  🔁 Active
-                </PpUpgradeBadge>
-              ) : (
-                <PpUpgradeButton
-                  aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
-                  color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
-                  disabled={!canBuyAutoSpeedUp}
-                  onClick={actions.buyAutoSpeedUp}
-                  title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
-                  type="button"
-                  $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
-                  $progressColor="#38bdf8"
-                >
-                  🔁 Unlock for {AUTO_SPEED_UP_COST} PP
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="Auto Speed Up Prestige Point progress"
-                    aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
-                    aria-valuemin={0}
-                    aria-valuemax={AUTO_SPEED_UP_COST}
-                  />
-                </PpUpgradeButton>
-              )}
-            </UpgradeRow>
-
             <UpgradeRow aria-label="tickspeed autobuyer upgrade">
               <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
               {isTickspeedAutobuyerActive ? (
@@ -1268,6 +1235,35 @@ const MainPage = () => {
                     aria-valuenow={Math.min(prestige.points, TICKSPEED_AUTOBUYER_COST)}
                     aria-valuemin={0}
                     aria-valuemax={TICKSPEED_AUTOBUYER_COST}
+                  />
+                </PpUpgradeButton>
+              )}
+            </UpgradeRow>
+
+            <UpgradeRow aria-label="auto speed up upgrade">
+              <TierNameLabel>Auto Speed Up</TierNameLabel>
+              {isAutoSpeedUpActive ? (
+                <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
+                  🔁 Active
+                </PpUpgradeBadge>
+              ) : (
+                <PpUpgradeButton
+                  aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
+                  color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuyAutoSpeedUp}
+                  onClick={actions.buyAutoSpeedUp}
+                  title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
+                  type="button"
+                  $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
+                  $progressColor="#38bdf8"
+                >
+                  🔁 Unlock for {AUTO_SPEED_UP_COST} PP
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="Auto Speed Up Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
+                    aria-valuemin={0}
+                    aria-valuemax={AUTO_SPEED_UP_COST}
                   />
                 </PpUpgradeButton>
               )}
@@ -1310,7 +1306,7 @@ const MainPage = () => {
             )}
           </UpgradeCategory>
 
-          {speedBonusRevealed && !state.prestigeSpeedBonusUnlocked && (
+          {!state.prestigeSpeedBonusUnlocked && (
             <UpgradeCategory aria-label="production bonuses category">
               <CategoryHeading>Production Bonuses</CategoryHeading>
               <UpgradeRow aria-label="production speed bonus upgrade">

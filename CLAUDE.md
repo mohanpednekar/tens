@@ -388,15 +388,19 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    autobuyer already unlocked (enforced in the engine, not just the UI). Once bought, the row
    disappears. Once *every* tier is smart (`allTiersSmart`), the per-tier list inside this category is
    replaced by a single "full smart autobuyer notice".
-2. **Global Automation** — always at least two rows: **Auto Speed Up** (badge "🔁 Active" once bought,
-   otherwise a button, gated only on `!isFirstRun`), **Tickspeed Autobuyer** (same `!isFirstRun`-gated,
-   one-time-unlock pattern — automates the Money-funded global tickspeed multiplier, which itself lives
-   on the Game view, not here), and **Auto-Prestige** (only once `allTiersSmart`; shows its current
-   level inline when active).
-3. **Production Bonuses** — currently just **Production speed bonus** (once `speedBonusRevealed`); the
-   whole category is omitted once it's bought, since there's nothing left to show there (unlike Auto
-   Speed Up/Tickspeed Autobuyer, it has no persistent "Active" badge — its effect is already visible in
-   the PP balance display and `PrestigeCard`).
+2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (automates the
+   Money-funded global tickspeed multiplier, which itself lives on the Game view, not here), **Auto
+   Speed Up** (badge "🔁 Active" once bought, otherwise a button), both gated only on `!isFirstRun`, and
+   **Auto-Prestige** (only once `allTiersSmart`; shows its current level inline when active).
+3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
+   once it's bought, since there's nothing left to show there (unlike Auto Speed Up/Tickspeed
+   Autobuyer, it has no persistent "Active" badge — its effect is already visible in the PP balance
+   display and `PrestigeCard`).
+
+No item on this page uses the old "reveal one by one, cheapest first" teaser gating anymore — once the
+page itself is reachable (`!isFirstRun`), every purchase shows immediately, subject only to a real
+prerequisite (Smart requiring the autobuyer already unlocked) or a deliberate progression gate
+(Auto-Prestige's `allTiersSmart`, an intentional endgame gate, not a cost-ordering teaser).
 
 The Global Tickspeed Multiplier is *not* one of these PP rows — it's Money-funded and lives on the Game
 view instead (see "Global Tickspeed Multiplier card" above / "The global tickspeed multiplier" below);
@@ -722,9 +726,10 @@ Prestige Points don't exist as a concept for the player until `isFirstRun` (`pre
 false, so `MainPage` keeps every PP-related display/control out of the page during the first run:
 
 - The top-level PP display `StatCard` and the PP Upgrades tab itself don't render until `!isFirstRun`.
-- PP upgrades additionally reveal one by one, cheapest first (`speedBonusRevealed`): the 10000 PP Speed
-  Bonus unlock stays hidden until Auto Speed Up (100 PP) is bought. Auto-Prestige (1000 PP) is gated
-  behind `allTiersSmart`; per-tier Unlock/Smart rows reveal per tier as each is reachable.
+- Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
+  one" teaser gate. The only exceptions are real prerequisites: Auto-Prestige (1000 PP) stays behind
+  `allTiersSmart` (a deliberate endgame gate, not a cost-ordering one), and per-tier Unlock/Smart rows
+  reveal per tier as each tier itself is reachable.
 - The bottom `PrestigeCard`'s unspent-PP/production-speed line only renders once `!isFirstRun`.
 
 The one exception is the first-ever `FullScreenOverlay` (shown the moment Money first reaches GOOGOL),
