@@ -165,6 +165,14 @@ silence and re-triggers the workflow via `workflow_dispatch`, which works regard
 `schedule` trigger is currently disabled. See `CLAUDE.md`'s Scheduled maintenance section for the full
 writeup.
 
+## Reliability: concurrent runs
+
+`autonomous-maintenance.yml` carries a top-level `concurrency: { group: autonomous-maintenance,
+cancel-in-progress: false }` block so a manual `workflow_dispatch` (e.g. from the dormancy watchdog
+above) can never race an in-progress scheduled run — it queues instead. `cancel-in-progress` is `false`
+on purpose: killing a run mid-task would itself orphan a `claude/auto-task-*` branch, so queuing is
+preferred over cancelling.
+
 ## Code review tooling
 
 - `.claude/agents/code-reviewer.md` — a comprehensive, adversarial reviewer subagent for any PR or
