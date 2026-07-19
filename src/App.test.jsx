@@ -726,8 +726,11 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
 
   await user.click(globalTickspeedButton)
 
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.1, \+10%/i)
-  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$100/i })).toBeInTheDocument()
+  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$100/i })
+  expect(upgradeButton).toBeInTheDocument()
+  expect(upgradeButton).toHaveTextContent(/lv\.1/i)
+  // The heading itself stays plain — the level lives on the button only, not duplicated.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).not.toHaveTextContent(/\+10%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
@@ -750,8 +753,9 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2, \+21%/i)
-  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$1,000/i })).toBeDisabled()
+  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$1,000/i })
+  expect(upgradeButton).toBeDisabled()
+  expect(upgradeButton).toHaveTextContent(/lv\.2/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
