@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS } from './layers'
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -96,6 +96,11 @@ export const createInitialGameState = () => ({
   // no manual click needed. Never reset by prestige or by Speed Up itself, like
   // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoSpeedUp: false,
+  // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
+  // make the (Money-funded) global tickspeed multiplier upgrade itself automatically every tick
+  // (see buyTickspeedAutobuyer/tickGame) — no manual click needed. Never reset by prestige or by
+  // Speed Up, like autoSpeedUp above.
+  autoGlobalTickspeed: false,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -550,12 +555,23 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     s.autobuyers?.[tier.id] != null ? buyTickspeedMultiplier(tier.id)(s) : s
   ), producedState)
 
+  // If the global tickspeed multiplier's autobuyer is bought (see buyTickspeedAutobuyer), upgrade
+  // it automatically the instant it's affordable — no manual click needed. buyGlobalTickspeedMultiplier
+  // re-validates eligibility internally (isGlobalTickspeedMultiplierUnlocked, enough Money, not
+  // frozen), so this is the same plain edge-triggered convention as the per-tier tickspeed
+  // self-upgrade loop above, not a rate-accumulating budget.
+  const stateAfterGlobalTickspeedAutobuyer = stateAfterAutomation.autoGlobalTickspeed
+    ? buyGlobalTickspeedMultiplier(stateAfterAutomation)
+    : stateAfterAutomation
+
   // If Auto Speed Up is bought (see buyAutoSpeedUp), trigger a Speed Up automatically the instant
   // it's eligible — no manual click needed. speedUpGame re-validates eligibility internally (the
   // last tier must have reached 10 purchases, and production must not be frozen), so this is a
   // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
   // rate-accumulating budget — Speed Up has no cadence to throttle, unlike Auto-Prestige.
-  return stateAfterAutomation.autoSpeedUp ? speedUpGame(stateAfterAutomation) : stateAfterAutomation
+  return stateAfterGlobalTickspeedAutobuyer.autoSpeedUp
+    ? speedUpGame(stateAfterGlobalTickspeedAutobuyer)
+    : stateAfterGlobalTickspeedAutobuyer
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
@@ -813,6 +829,7 @@ export const prestigeGame = state => {
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
@@ -854,6 +871,7 @@ export const speedUpGame = state => {
     globalTickspeedMultiplier: state.globalTickspeedMultiplier ?? initial.globalTickspeedMultiplier,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     prestige: state.prestige,
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }
@@ -874,5 +892,23 @@ export const buyAutoSpeedUp = state => {
     ...state,
     prestige: { ...state.prestige, points: state.prestige.points - AUTO_SPEED_UP_COST },
     autoSpeedUp: true,
+  }
+}
+
+// One-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see
+// TICKSPEED_AUTOBUYER_COST) — once bought, tickGame calls buyGlobalTickspeedMultiplier
+// automatically every tick, which re-validates its own eligibility internally (no-op unless
+// isGlobalTickspeedMultiplierUnlocked and there's enough Money), so this just removes the need for
+// a manual click once affordable. A no-op if already bought, if there aren't enough unspent
+// points, or while production is frozen — same convention as buyAutoSpeedUp/buyPrestigeSpeedBonus.
+export const buyTickspeedAutobuyer = state => {
+  if (isProductionFrozen(state)) return state
+  if (state.autoGlobalTickspeed) return state
+  if (clampNonNegative(state.prestige.points) < TICKSPEED_AUTOBUYER_COST) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - TICKSPEED_AUTOBUYER_COST },
+    autoGlobalTickspeed: true,
   }
 }

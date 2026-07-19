@@ -565,6 +565,40 @@ test('no Auto Speed Up control appears during the first run, even with the last 
   expect(screen.queryByText(/auto speed up active/i)).not.toBeInTheDocument()
 })
 
+test('the PP Upgrades page groups purchases into labeled categories', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
+
+  expect(screen.getByLabelText(/^tier autobuyers category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^tier autobuyers category$/i)).toHaveTextContent(/tier autobuyers/i)
+  expect(screen.getByLabelText(/^global automation category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^global automation category$/i)).toHaveTextContent(/global automation/i)
+  // No unspent PP and the bonus not yet revealed (Auto Speed Up not bought) — the Production
+  // Bonuses category has nothing to show yet, so it shouldn't render at all.
+  expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
+})
+
+test('the Production Bonuses category appears once revealed, and disappears again once bought (nothing left to show)', async () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autoSpeedUp: true,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /pp upgrades/i }))
+
+  expect(screen.getByLabelText(/^production bonuses category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^production bonuses category$/i)).toHaveTextContent(/production speed bonus/i)
+})
+
 test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 100 PP to enable it', async () => {
   const user = userEvent.setup()
 
@@ -585,6 +619,55 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the global tickspeed panel renders above the tier list, not below it', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier02: 1 },
+  }))
+
+  render(<App />)
+
+  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Tens layer'))
+})
+
+test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
+
+  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })
+  expect(tickspeedAutobuyerButton).toBeEnabled()
+
+  await user.click(tickspeedAutobuyerButton)
+
+  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.queryByRole('button', { name: /enable tickspeed autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Enable Tickspeed Autobuyer button stays disabled without enough Prestige Points', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
+
+  expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })).toBeDisabled()
 })
 
 test('the Enable Auto Speed Up button stays disabled without enough Prestige Points', async () => {

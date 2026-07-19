@@ -66,8 +66,9 @@ export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
 // buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
 // bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
-// Auto-Prestige. The priciest of the three global PP automation unlocks (see AUTO_SPEED_UP_COST/
-// AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather than a one-shot action.
+// Auto-Prestige. The priciest of the four global PP automation unlocks (see AUTO_SPEED_UP_COST/
+// TICKSPEED_AUTOBUYER_COST/AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather
+// than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
@@ -114,7 +115,16 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 export const SPEED_UP_MULTIPLIER_BASE = 2
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
-// click needed. The cheapest of the three global PP automation unlocks (see
-// PRESTIGE_SPEED_BONUS_UNLOCK_COST above and AUTO_PRESTIGE_COST below), since Speed Up itself
-// fires far more often than either of the other two over a run.
+// click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up
+// itself fires far more often than either of those two over a run — but pricier than
+// TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
+// smaller, earlier-game upgrade than Speed Up.
 export const AUTO_SPEED_UP_COST = 100
+// One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
+// tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
+// eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
+// four global PP automation unlocks (see PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_SPEED_UP_COST
+// above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
+// much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
+// the actions those other three automate.
+export const TICKSPEED_AUTOBUYER_COST = 20

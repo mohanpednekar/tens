@@ -2,7 +2,7 @@ import Button, { VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -421,26 +421,51 @@ const NavDot = styled.span`
   width: 0.5em;
 `
 
+// PP Upgrades page: grouped into a handful of labeled categories (Tier Autobuyers, Global
+// Automation, Production Bonuses) rather than one flat list — each category is a single
+// StatCard, with rows inside it (UpgradeRow) as lean, unboxed flex rows separated by a thin
+// divider, instead of the old one-StatCard-per-row layout. This keeps the page compact: N
+// upgrades within a category cost one card's worth of border/padding chrome, not N.
 const UpgradesList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.7rem;
 `
 
-// One row per tier on the PP Upgrades page — a simpler flex layout than the Game view's TierLine
-// grid, since each row holds at most one button (Unlock → Smart → the "Smart" badge, the same
-// single-control-at-a-time progression the Game view's tier rows used to show inline).
-const UpgradeRow = styled(StatCard)`
+const UpgradeCategory = styled(StatCard)`
+  gap: 0.4rem;
+`
+
+const CategoryHeading = styled.h2`
+  color: #a3a3a3;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+`
+
+// One row per tier/upgrade within a category — a simpler flex layout than the Game view's
+// TierLine grid, since each row holds at most one button (Unlock → Smart → the "Smart" badge, the
+// same single-control-at-a-time progression the Game view's tier rows used to show inline). No
+// border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
+// divider between consecutive rows so a whole category still reads as a distinct list.
+const UpgradeRow = styled.div`
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: space-between;
-  padding: 0.5rem 0.8rem;
+  padding: 0.4rem 0;
+
+  & + & {
+    border-top: 1px solid #262626;
+  }
 `
 
 const PpUpgradeButton = styled(Button)`
-  min-width: 10rem;
+  font-size: 0.82em;
+  min-width: 8.5rem;
+  padding: 0.4em 0.6em;
 `
 
 const PpUpgradeBadge = styled.span`
@@ -564,6 +589,13 @@ const MainPage = () => {
   const isAutoSpeedUpActive = state.autoSpeedUp ?? false
   const canBuyAutoSpeedUp = !isFrozen && !isAutoSpeedUpActive && !isFirstRun && prestige.points >= AUTO_SPEED_UP_COST
 
+  // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
+  // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
+  // Auto Speed Up's one-time-unlock pattern rather than Auto-Prestige's leveled one, since there's
+  // no cadence to speed up here either.
+  const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
+  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && prestige.points >= TICKSPEED_AUTOBUYER_COST
+
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
@@ -615,10 +647,11 @@ const MainPage = () => {
   }, [globalTickspeedUnlocked])
 
   // Lights the PP Upgrades tab's dot whenever unspent PP can afford at least one purchase over
-  // there — any tier's Unlock/Smart, the speed bonus unlock (once revealed), Auto Speed Up, or
-  // Auto-Prestige (once revealed via allTiersSmart) — so the player knows to check in without
-  // opening the page on spec every time. The global tickspeed multiplier is Money-funded and lives
-  // on the Game view instead, so it doesn't factor in here.
+  // there — any tier's Unlock/Smart, the speed bonus unlock (once revealed), Auto Speed Up, the
+  // Tickspeed Autobuyer, or Auto-Prestige (once revealed via allTiersSmart) — so the player knows
+  // to check in without opening the page on spec every time. The global tickspeed multiplier
+  // *itself* is Money-funded and lives on the Game view instead, so it doesn't factor in here —
+  // only its PP-funded automation toggle (Tickspeed Autobuyer) does.
   const hasAffordablePpUpgrade = !isFrozen && !isFirstRun && (
     TIER_DEFINITIONS.some(tier => {
       if (!isTierUnlocked(state)(tier)) return false
@@ -629,6 +662,7 @@ const MainPage = () => {
     }) ||
     (speedBonusRevealed && canBuySpeedBonus) ||
     canBuyAutoSpeedUp ||
+    canBuyTickspeedAutobuyer ||
     (allTiersSmart && canBuyAutoPrestige)
   )
 
@@ -844,6 +878,48 @@ const MainPage = () => {
 
       {view === 'game' && (<>
 
+      {globalTickspeedCardEverRevealed && (
+        <GlobalTickspeedCard aria-label="global tickspeed panel">
+          <InfoDetails>
+            <summary>
+              <h2>
+                Global Tickspeed Multiplier
+                {isGlobalTickspeedActive && ` (Lv.${globalTickspeedLevel}, +${formatBonusPercent(globalTickspeedMultiplier)}%)`}
+              </h2>
+            </summary>
+            <MutedText id="global-tickspeed-description">
+              Spend Money to permanently speed up every tier's production by another 10% at once.
+              Each level costs another power of ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
+            </MutedText>
+          </InfoDetails>
+          <Button
+            aria-describedby="global-tickspeed-description"
+            aria-label={
+              isGlobalTickspeedActive
+                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% production on every tier)`
+                : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
+            }
+            color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
+            disabled={!canBuyGlobalTickspeed}
+            onClick={actions.buyGlobalTickspeedMultiplier}
+            title="Spend Money to permanently speed up every tier's production by another 10% at once — each level costs another power of ten"
+            type="button"
+            $progress={globalTickspeedProgressPercent}
+            $progressColor="#3b82f6"
+            $pulse={canBuyGlobalTickspeed}
+          >
+            🌐 {isGlobalTickspeedActive ? `Lv.${globalTickspeedLevel} · Upgrade` : 'Enable'} for {formatCurrency(globalTickspeedCost)}
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Global tickspeed multiplier progress"
+              aria-valuenow={globalTickspeedProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </GlobalTickspeedCard>
+      )}
+
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
@@ -970,48 +1046,6 @@ const MainPage = () => {
         })}
       </TierList>
 
-      {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global tickspeed panel">
-          <InfoDetails>
-            <summary>
-              <h2>
-                Global Tickspeed Multiplier
-                {isGlobalTickspeedActive && ` (Lv.${globalTickspeedLevel}, +${formatBonusPercent(globalTickspeedMultiplier)}%)`}
-              </h2>
-            </summary>
-            <MutedText id="global-tickspeed-description">
-              Spend Money to permanently speed up every tier's production by another 10% at once.
-              Each level costs another power of ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
-            </MutedText>
-          </InfoDetails>
-          <Button
-            aria-describedby="global-tickspeed-description"
-            aria-label={
-              isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% production on every tier)`
-                : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
-            }
-            color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
-            disabled={!canBuyGlobalTickspeed}
-            onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Money to permanently speed up every tier's production by another 10% at once — each level costs another power of ten"
-            type="button"
-            $progress={globalTickspeedProgressPercent}
-            $progressColor="#3b82f6"
-            $pulse={canBuyGlobalTickspeed}
-          >
-            🌐 {isGlobalTickspeedActive ? `Lv.${globalTickspeedLevel} · Upgrade` : 'Enable'} for {formatCurrency(globalTickspeedCost)}
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Global tickspeed multiplier progress"
-              aria-valuenow={globalTickspeedProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-        </GlobalTickspeedCard>
-      )}
-
       {speedUpEverRevealed && (
         <SpeedUpCard aria-label="speed up panel">
           <InfoDetails>
@@ -1104,165 +1138,204 @@ const MainPage = () => {
 
       {view === 'upgrades' && !isFirstRun && (
         <UpgradesList aria-label="PP upgrades page">
-          {allTiersSmart ? (
-            <StatCard aria-label="full smart autobuyer notice">
-              <InfoDetails>
-                <summary>🧠 Every tier is fully smart</summary>
-                <MutedText>
-                  Every tier's autobuyer is fully unlocked and smart — since there's nothing left
-                  to buy, this list won't be shown per tier anymore.
-                </MutedText>
-              </InfoDetails>
-            </StatCard>
-          ) : (
-            TIER_DEFINITIONS.map(tier => {
-              if (!isTierUnlocked(state)(tier)) return null
-              const autobuyerLevel = state.autobuyers[tier.id] ?? null
-              const isAutobuyerLocked = autobuyerLevel === null
-              const isSmart = state.smartAutobuyer?.[tier.id] ?? false
-              if (isSmart) return null
-              const unlockCost = getAutobuyerUnlockCost(tier.id)
-              const canUnlock = !isFrozen && prestige.points >= unlockCost
-              const smartCost = getSmartAutobuyerCost(tier.id)
-              const canBuySmart = !isFrozen && prestige.points >= smartCost
+          <UpgradeCategory aria-label="tier autobuyers category">
+            <CategoryHeading>Tier Autobuyers</CategoryHeading>
+            {allTiersSmart ? (
+              <div aria-label="full smart autobuyer notice">
+                <InfoDetails>
+                  <summary>🧠 Every tier is fully smart</summary>
+                  <MutedText>
+                    Every tier's autobuyer is fully unlocked and smart — since there's nothing left
+                    to buy, this list won't be shown per tier anymore.
+                  </MutedText>
+                </InfoDetails>
+              </div>
+            ) : (
+              TIER_DEFINITIONS.map(tier => {
+                if (!isTierUnlocked(state)(tier)) return null
+                const autobuyerLevel = state.autobuyers[tier.id] ?? null
+                const isAutobuyerLocked = autobuyerLevel === null
+                const isSmart = state.smartAutobuyer?.[tier.id] ?? false
+                if (isSmart) return null
+                const unlockCost = getAutobuyerUnlockCost(tier.id)
+                const canUnlock = !isFrozen && prestige.points >= unlockCost
+                const smartCost = getSmartAutobuyerCost(tier.id)
+                const canBuySmart = !isFrozen && prestige.points >= smartCost
 
-              return (
-                <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>
-                  <TierNameLabel>{tier.name}</TierNameLabel>
-                  {isAutobuyerLocked ? (
-                    <PpUpgradeButton
-                      aria-label={`Unlock ${tier.name}'s autobuyer for ${formatAmount(unlockCost)} Prestige Point${unlockCost === 1 ? '' : 's'}`}
-                      color={canUnlock ? '#38bdf8' : 'darkgrey'}
-                      disabled={!canUnlock}
-                      onClick={() => actions.buyAutobuyerUnlock(tier.id)}
-                      title="Spend Prestige Points to permanently unlock this tier's autobuyer — it then buys units and self-upgrades its tickspeed multiplier automatically, forever"
-                      type="button"
-                      $progress={ppProgressPercent(unlockCost)}
-                      $progressColor="#38bdf8"
-                    >
-                      🤖 Unlock for {formatAmount(unlockCost)} PP
-                      <VisuallyHidden
-                        role="progressbar"
-                        aria-label={`${tier.name} autobuyer unlock Prestige Point progress`}
-                        aria-valuenow={Math.min(prestige.points, unlockCost)}
-                        aria-valuemin={0}
-                        aria-valuemax={unlockCost}
-                      />
-                    </PpUpgradeButton>
-                  ) : (
-                    <PpUpgradeButton
-                      aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                      color={canBuySmart ? '#a78bfa' : 'darkgrey'}
-                      disabled={!canBuySmart}
-                      onClick={() => actions.buySmartAutobuyer(tier.id)}
-                      title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
-                      type="button"
-                      $progress={ppProgressPercent(smartCost)}
-                      $progressColor="#a78bfa"
-                    >
-                      🧠 Smart for {formatAmount(smartCost)} PP
-                      <VisuallyHidden
-                        role="progressbar"
-                        aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
-                        aria-valuenow={Math.min(prestige.points, smartCost)}
-                        aria-valuemin={0}
-                        aria-valuemax={smartCost}
-                      />
-                    </PpUpgradeButton>
+                return (
+                  <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>
+                    <TierNameLabel>{tier.name}</TierNameLabel>
+                    {isAutobuyerLocked ? (
+                      <PpUpgradeButton
+                        aria-label={`Unlock ${tier.name}'s autobuyer for ${formatAmount(unlockCost)} Prestige Point${unlockCost === 1 ? '' : 's'}`}
+                        color={canUnlock ? '#38bdf8' : 'darkgrey'}
+                        disabled={!canUnlock}
+                        onClick={() => actions.buyAutobuyerUnlock(tier.id)}
+                        title="Spend Prestige Points to permanently unlock this tier's autobuyer — it then buys units and self-upgrades its tickspeed multiplier automatically, forever"
+                        type="button"
+                        $progress={ppProgressPercent(unlockCost)}
+                        $progressColor="#38bdf8"
+                      >
+                        🤖 Unlock for {formatAmount(unlockCost)} PP
+                        <VisuallyHidden
+                          role="progressbar"
+                          aria-label={`${tier.name} autobuyer unlock Prestige Point progress`}
+                          aria-valuenow={Math.min(prestige.points, unlockCost)}
+                          aria-valuemin={0}
+                          aria-valuemax={unlockCost}
+                        />
+                      </PpUpgradeButton>
+                    ) : (
+                      <PpUpgradeButton
+                        aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until 10 purchases, then in blocks of 10) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                        color={canBuySmart ? '#a78bfa' : 'darkgrey'}
+                        disabled={!canBuySmart}
+                        onClick={() => actions.buySmartAutobuyer(tier.id)}
+                        title="Spend Prestige Points so this tier buys one at a time until 10 purchases, then in blocks of 10 — fixes an early-game stall where a full 10-unit block isn't affordable yet"
+                        type="button"
+                        $progress={ppProgressPercent(smartCost)}
+                        $progressColor="#a78bfa"
+                      >
+                        🧠 Smart for {formatAmount(smartCost)} PP
+                        <VisuallyHidden
+                          role="progressbar"
+                          aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
+                          aria-valuenow={Math.min(prestige.points, smartCost)}
+                          aria-valuemin={0}
+                          aria-valuemax={smartCost}
+                        />
+                      </PpUpgradeButton>
+                    )}
+                  </UpgradeRow>
+                )
+              })
+            )}
+          </UpgradeCategory>
+
+          <UpgradeCategory aria-label="global automation category">
+            <CategoryHeading>Global Automation</CategoryHeading>
+
+            <UpgradeRow aria-label="auto speed up upgrade">
+              <TierNameLabel>Auto Speed Up</TierNameLabel>
+              {isAutoSpeedUpActive ? (
+                <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
+                  🔁 Active
+                </PpUpgradeBadge>
+              ) : (
+                <PpUpgradeButton
+                  aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
+                  color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuyAutoSpeedUp}
+                  onClick={actions.buyAutoSpeedUp}
+                  title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
+                  type="button"
+                  $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
+                  $progressColor="#38bdf8"
+                >
+                  🔁 Unlock for {AUTO_SPEED_UP_COST} PP
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="Auto Speed Up Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
+                    aria-valuemin={0}
+                    aria-valuemax={AUTO_SPEED_UP_COST}
+                  />
+                </PpUpgradeButton>
+              )}
+            </UpgradeRow>
+
+            <UpgradeRow aria-label="tickspeed autobuyer upgrade">
+              <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
+              {isTickspeedAutobuyerActive ? (
+                <PpUpgradeBadge $color="#4ade80" title="The global tickspeed multiplier now upgrades itself automatically whenever affordable">
+                  🔁 Active
+                </PpUpgradeBadge>
+              ) : (
+                <PpUpgradeButton
+                  aria-label={`Enable Tickspeed Autobuyer for ${TICKSPEED_AUTOBUYER_COST} Prestige Points`}
+                  color={canBuyTickspeedAutobuyer ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuyTickspeedAutobuyer}
+                  onClick={actions.buyTickspeedAutobuyer}
+                  title="Spend Prestige Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable"
+                  type="button"
+                  $progress={ppProgressPercent(TICKSPEED_AUTOBUYER_COST)}
+                  $progressColor="#38bdf8"
+                >
+                  🔁 Unlock for {TICKSPEED_AUTOBUYER_COST} PP
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="Tickspeed Autobuyer Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, TICKSPEED_AUTOBUYER_COST)}
+                    aria-valuemin={0}
+                    aria-valuemax={TICKSPEED_AUTOBUYER_COST}
+                  />
+                </PpUpgradeButton>
+              )}
+            </UpgradeRow>
+
+            {allTiersSmart && (
+              <UpgradeRow aria-label="auto-prestige upgrade">
+                <TierNameLabel>
+                  Auto-Prestige
+                  {isAutoPrestigeActive && (
+                    <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
+                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                    </MutedText>
                   )}
-                </UpgradeRow>
-              )
-            })
-          )}
+                </TierNameLabel>
+                <PpUpgradeButton
+                  aria-label={
+                    isAutoPrestigeActive
+                      ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                      : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                  }
+                  color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuyAutoPrestige}
+                  onClick={actions.buyAutoPrestige}
+                  title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                  type="button"
+                  $progress={ppProgressPercent(autoPrestigeCost)}
+                  $progressColor="#38bdf8"
+                >
+                  🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="Auto-Prestige Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
+                    aria-valuemin={0}
+                    aria-valuemax={autoPrestigeCost}
+                  />
+                </PpUpgradeButton>
+              </UpgradeRow>
+            )}
+          </UpgradeCategory>
 
           {speedBonusRevealed && !state.prestigeSpeedBonusUnlocked && (
-            <UpgradeRow aria-label="production speed bonus upgrade">
-              <TierNameLabel>Production speed bonus</TierNameLabel>
-              <PpUpgradeButton
-                aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
-                color={canBuySpeedBonus ? '#38bdf8' : 'darkgrey'}
-                disabled={!canBuySpeedBonus}
-                onClick={actions.buyPrestigeSpeedBonus}
-                title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
-                type="button"
-                $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
-                $progressColor="#38bdf8"
-              >
-                🚀 Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label="Speed bonus unlock Prestige Point progress"
-                  aria-valuenow={Math.min(prestige.points, PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
-                  aria-valuemin={0}
-                  aria-valuemax={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
-                />
-              </PpUpgradeButton>
-            </UpgradeRow>
-          )}
-
-          <UpgradeRow aria-label="auto speed up upgrade">
-            <TierNameLabel>Auto Speed Up</TierNameLabel>
-            {isAutoSpeedUpActive ? (
-              <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                🔁 Active
-              </PpUpgradeBadge>
-            ) : (
-              <PpUpgradeButton
-                aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
-                color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
-                disabled={!canBuyAutoSpeedUp}
-                onClick={actions.buyAutoSpeedUp}
-                title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
-                type="button"
-                $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
-                $progressColor="#38bdf8"
-              >
-                🔁 Unlock for {AUTO_SPEED_UP_COST} PP
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label="Auto Speed Up Prestige Point progress"
-                  aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
-                  aria-valuemin={0}
-                  aria-valuemax={AUTO_SPEED_UP_COST}
-                />
-              </PpUpgradeButton>
-            )}
-          </UpgradeRow>
-
-          {allTiersSmart && (
-            <UpgradeRow aria-label="auto-prestige upgrade">
-              <TierNameLabel>
-                Auto-Prestige
-                {isAutoPrestigeActive && (
-                  <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
-                    Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-                  </MutedText>
-                )}
-              </TierNameLabel>
-              <PpUpgradeButton
-                aria-label={
-                  isAutoPrestigeActive
-                    ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                    : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                }
-                color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
-                disabled={!canBuyAutoPrestige}
-                onClick={actions.buyAutoPrestige}
-                title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
-                type="button"
-                $progress={ppProgressPercent(autoPrestigeCost)}
-                $progressColor="#38bdf8"
-              >
-                🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label="Auto-Prestige Prestige Point progress"
-                  aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
-                  aria-valuemin={0}
-                  aria-valuemax={autoPrestigeCost}
-                />
-              </PpUpgradeButton>
-            </UpgradeRow>
+            <UpgradeCategory aria-label="production bonuses category">
+              <CategoryHeading>Production Bonuses</CategoryHeading>
+              <UpgradeRow aria-label="production speed bonus upgrade">
+                <TierNameLabel>Production speed bonus</TierNameLabel>
+                <PpUpgradeButton
+                  aria-label={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
+                  color={canBuySpeedBonus ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuySpeedBonus}
+                  onClick={actions.buyPrestigeSpeedBonus}
+                  title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
+                  type="button"
+                  $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+                  $progressColor="#38bdf8"
+                >
+                  🚀 Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="Speed bonus unlock Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
+                    aria-valuemin={0}
+                    aria-valuemax={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
+                  />
+                </PpUpgradeButton>
+              </UpgradeRow>
+            </UpgradeCategory>
           )}
         </UpgradesList>
       )}

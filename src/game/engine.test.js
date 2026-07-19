@@ -7,6 +7,7 @@ import {
   buyGlobalTickspeedMultiplier,
   buyPrestigeSpeedBonus,
   buySmartAutobuyer,
+  buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
   buyTier,
   buyTierQuantity,
@@ -46,7 +47,7 @@ import {
   speedUpGame,
   tickGame,
 } from './engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_SPEED_UP_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -118,6 +119,11 @@ const withSpeedUpCount = (state, count) => ({
 const withAutoSpeedUp = (state, active = true) => ({
   ...state,
   autoSpeedUp: active,
+})
+
+const withAutoGlobalTickspeed = (state, active = true) => ({
+  ...state,
+  autoGlobalTickspeed: active,
 })
 
 // TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
@@ -1384,6 +1390,28 @@ describe('tickGame', () => {
     const after = tickGame(1)(state)
     expect(after.speedUpCount).toBe(0)
   })
+
+  it('automatically upgrades the global tickspeed multiplier when the Tickspeed Autobuyer is bought and it is affordable', () => {
+    const state = withAutoGlobalTickspeed(
+      withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
+    )
+    const after = tickGame(1)(state)
+    expect(after.globalTickspeedMultiplier).toBe(1)
+  })
+
+  it('does not upgrade the global tickspeed multiplier automatically without enough Money', () => {
+    const state = withAutoGlobalTickspeed(
+      withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 9)
+    )
+    const after = tickGame(1)(state)
+    expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('does not upgrade the global tickspeed multiplier automatically without the Tickspeed Autobuyer bought', () => {
+    const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
+    const after = tickGame(1)(state)
+    expect(after.globalTickspeedMultiplier).toBeNull()
+  })
 })
 
 // ─── getOfflineEffectiveSeconds ──────────────────────────────────────────────
@@ -1867,6 +1895,14 @@ describe('prestigeGame', () => {
     expect(after.autoSpeedUp).toBe(true)
   })
 
+  it('keeps the Tickspeed Autobuyer flag permanently across prestige', () => {
+    const state = withAutoGlobalTickspeed(
+      withMoney(createInitialGameState(), GOOGOL)
+    )
+    const after = prestigeGame(state)
+    expect(after.autoGlobalTickspeed).toBe(true)
+  })
+
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
     const state = withAutoPrestigeBudget(
       withAutoPrestige(withMoney(createInitialGameState(), GOOGOL)),
@@ -2024,6 +2060,12 @@ describe('speedUpGame', () => {
     expect(after.autoSpeedUp).toBe(true)
   })
 
+  it('keeps the Tickspeed Autobuyer flag permanently', () => {
+    const state = withAutoGlobalTickspeed(eligibleState())
+    const after = speedUpGame(state)
+    expect(after.autoGlobalTickspeed).toBe(true)
+  })
+
   it('leaves Prestige Points, count, and XP completely untouched', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = speedUpGame(state)
@@ -2061,5 +2103,34 @@ describe('buyAutoSpeedUp', () => {
       GOOGOL
     )
     expect(buyAutoSpeedUp(state)).toBe(state)
+  })
+})
+
+describe('buyTickspeedAutobuyer', () => {
+  it(`spends ${TICKSPEED_AUTOBUYER_COST} PP to permanently automate the global tickspeed multiplier`, () => {
+    const state = withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST)
+    const after = buyTickspeedAutobuyer(state)
+    expect(after.autoGlobalTickspeed).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('returns the same state when there are not enough points', () => {
+    const state = withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST - 1)
+    expect(buyTickspeedAutobuyer(state)).toBe(state)
+  })
+
+  it('returns the same state when already enabled (one-time purchase)', () => {
+    const state = withAutoGlobalTickspeed(
+      withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST)
+    )
+    expect(buyTickspeedAutobuyer(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(
+      withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST),
+      GOOGOL
+    )
+    expect(buyTickspeedAutobuyer(state)).toBe(state)
   })
 })
