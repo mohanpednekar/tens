@@ -213,9 +213,10 @@ describe('schema migration', () => {
     expect(loaded.prestige.count).toBe(9)
   })
 
-  it('defaults prestige.points to 0, smartAutobuyer to false, and autoPrestige to null for saves that predate them', () => {
+  it('defaults prestige.points to 0, smartAutobuyer/tierTickspeedAutobuyer to false, and autoPrestige to null for saves that predate them', () => {
     const oldSave = {
       resources: { Ones: 10 },
+      autobuyers: { [tensTier.id]: 1 },
       prestige: { xp: 0, level: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
@@ -224,6 +225,9 @@ describe('schema migration', () => {
     expect(loaded.autoPrestige).toBeNull()
     TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.smartAutobuyer[tier.id]).toBe(false)
+      // Even for tensTier, already unlocked above — no backward-compat grandfathering, same as
+      // smartAutobuyer: this is a new purchase requirement for every save going forward.
+      expect(loaded.tierTickspeedAutobuyer[tier.id]).toBe(false)
     })
   })
 
@@ -234,6 +238,15 @@ describe('schema migration', () => {
     }
     saveGameState(state)
     expect(loadGameState().smartAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('preserves a saved tierTickspeedAutobuyer flag', () => {
+    const state = {
+      ...createInitialGameState(),
+      tierTickspeedAutobuyer: { ...createInitialGameState().tierTickspeedAutobuyer, [tensTier.id]: true },
+    }
+    saveGameState(state)
+    expect(loadGameState().tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
   it('preserves a saved Auto-Prestige level', () => {

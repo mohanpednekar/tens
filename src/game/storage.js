@@ -43,10 +43,8 @@ const migrateState = saved => {
   // autobuyer at the flat baseline purchase rate, so it degrades gracefully without
   // special-casing. A save from before autobuyer unlock became PP-funded (see engine.js's
   // buyAutobuyerUnlock) already has whatever level its autobuyer reached under the old
-  // Money-funded activation/Upgrade or PP-funded automation — that level (and the free
-  // automatic tickspeed self-upgrading every unlocked tier now gets, previously gated behind a
-  // separate "automation" purchase that no longer exists) carries forward unchanged; an
-  // already-unlocked tier is never punished or relocked by this schema change.
+  // Money-funded activation/Upgrade or PP-funded automation — that level carries forward
+  // unchanged; an already-unlocked tier is never punished or relocked by this schema change.
   const rawAutobuyers = migrateTierKeys(saved.autobuyers)
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
@@ -79,6 +77,7 @@ const migrateState = saved => {
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
+    tierTickspeedAutobuyer: { ...fresh.tierTickspeedAutobuyer, ...migrateTierKeys(saved.tierTickspeedAutobuyer) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
