@@ -90,6 +90,13 @@ export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // times more PP than unlocking that same tier's autobuyer (getAutobuyerUnlockCost) — 10 PP through
 // 100 PP across the ten tiers.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
+// The per-tier tickspeed autobuyer (see engine.js's getTierTickspeedAutobuyerCost/
+// buyTierTickspeedAutobuyer) — automates that tier's own Money-funded tickspeed multiplier —
+// costs this many times more PP than unlocking that same tier's autobuyer
+// (getAutobuyerUnlockCost): 2 PP through 20 PP across the ten tiers. Cheaper than Smart's 10x
+// multiplier, since it only automates one additional purchase rather than the tier's whole buying
+// cadence.
+export const TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2
 // Each global tickspeed multiplier level (see engine.js's getGlobalTickspeedProductionMultiplier/
 // buyGlobalTickspeedMultiplier) compounds *every* tier's production by another 10% at once —
 // unlike the per-tier tickspeed multiplier above, this is a single global upgrade track (mirroring
