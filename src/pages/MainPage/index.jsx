@@ -884,12 +884,7 @@ const MainPage = () => {
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails>
-            <summary>
-              <h2>
-                Global Tickspeed Multiplier
-                {isGlobalTickspeedActive && ` (Lv.${globalTickspeedLevel}, +${formatBonusPercent(globalTickspeedMultiplier)}%)`}
-              </h2>
-            </summary>
+            <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
               Spend Money to permanently speed up every tier's production by another 10% at once.
               Each level costs another power of ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.

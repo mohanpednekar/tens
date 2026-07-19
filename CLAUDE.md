@@ -350,11 +350,11 @@ button are Game-view-only; every PP-spending control lives on the Upgrades view.
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
 the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
 from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself. See
-"The global tickspeed multiplier" below for the underlying `engine.js` mechanics. Its heading doubles
-as the effect display (`Global Tickspeed Multiplier (Lv.N, +N%)` once active), inside the card's
-`InfoDetails` `<summary>` so it's visible even collapsed. The button carries `$progress` (Money ÷ cost)
-the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or `🌐 Lv.N · Upgrade
-for {cost}` after. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
+"The global tickspeed multiplier" below for the underlying `engine.js` mechanics. The heading itself is
+plain (`Global Tickspeed Multiplier`, no level/percent readout — that lives on the button alone, so
+it's never shown twice), inside the card's `InfoDetails` `<summary>`. The button carries `$progress`
+(Money ÷ cost) the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or `🌐
+Lv.N · Upgrade for {cost}` after. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
 `isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
 `SpeedUpCard`/`PrestigeCard` — once tier02 has ever been owned (or the multiplier is already active),
 the card stays visible rather than disappearing if tier02's owned count is later reset by a
