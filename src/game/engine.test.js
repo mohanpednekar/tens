@@ -4,6 +4,7 @@ import {
   buyAutobuyerUnlock,
   buyAutoPrestige,
   buyAutoSpeedUp,
+  buyGlobalTickspeedMultiplier,
   buyPrestigeSpeedBonus,
   buySmartAutobuyer,
   buyTickspeedMultiplier,
@@ -17,6 +18,8 @@ import {
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
   getCostEpochExponent,
+  getGlobalTickspeedMultiplierCost,
+  getGlobalTickspeedProductionMultiplier,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getPrestigePointsAwarded,
@@ -36,6 +39,7 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
+  isGlobalTickspeedMultiplierUnlocked,
   isProductionFrozen,
   isTierUnlocked,
   prestigeGame,
@@ -94,6 +98,11 @@ const withAutoPrestige = (state, level = 1) => ({
 const withAutoPrestigeBudget = (state, budget) => ({
   ...state,
   autoPrestigeAttemptBudget: budget,
+})
+
+const withGlobalTickspeedMultiplier = (state, level = 1) => ({
+  ...state,
+  globalTickspeedMultiplier: level,
 })
 
 const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
@@ -418,9 +427,17 @@ describe('getTickspeedMultiplierCost', () => {
 })
 
 describe('getAutobuyerUnlockCost', () => {
-  it('reuses the tickspeed multiplier cost at level 1', () => {
-    expect(getAutobuyerUnlockCost(tensTier.id)).toBe(getTickspeedMultiplierCost(tensTier.id, 1))
-    expect(getAutobuyerUnlockCost(thousandsTier.id)).toBe(10 ** 9)
+  it('costs 1 PP for the first tier, independent of the (much steeper) tickspeed multiplier ladder', () => {
+    expect(getAutobuyerUnlockCost(tensTier.id)).toBe(1)
+  })
+
+  it('increases by 1 PP per subsequent tier, up to 10 PP for the 10th/last tier', () => {
+    expect(getAutobuyerUnlockCost(thousandsTier.id)).toBe(2)
+    expect(getAutobuyerUnlockCost(TIER_DEFINITIONS[9].id)).toBe(10)
+  })
+
+  it('treats an unrecognized tier id as index 0 (the cheapest tier)', () => {
+    expect(getAutobuyerUnlockCost('does_not_exist')).toBe(1)
   })
 })
 
@@ -437,6 +454,39 @@ describe('getTickspeedProductionMultiplier', () => {
     expect(getTickspeedProductionMultiplier(2)).toBeCloseTo(1.1)
     expect(getTickspeedProductionMultiplier(3)).toBeCloseTo(1.21)
     expect(getTickspeedProductionMultiplier(4)).toBeCloseTo(1.331)
+  })
+})
+
+// ─── getGlobalTickspeedMultiplierCost / getGlobalTickspeedProductionMultiplier ──
+
+describe('getGlobalTickspeedMultiplierCost', () => {
+  it('costs 10 Money to activate (level 0 → 1)', () => {
+    expect(getGlobalTickspeedMultiplierCost(0)).toBe(10)
+  })
+
+  it('costs another power of ten per level after that', () => {
+    expect(getGlobalTickspeedMultiplierCost(1)).toBe(100)
+    expect(getGlobalTickspeedMultiplierCost(2)).toBe(1000)
+  })
+
+  it('treats a negative level as 0', () => {
+    expect(getGlobalTickspeedMultiplierCost(-1)).toBe(10)
+  })
+})
+
+describe('getGlobalTickspeedProductionMultiplier', () => {
+  it('is 1 (no bonus) at level 0 / not yet bought', () => {
+    expect(getGlobalTickspeedProductionMultiplier(0)).toBe(1)
+    expect(getGlobalTickspeedProductionMultiplier(null)).toBe(1)
+  })
+
+  it('grants +10% production on the very first purchase (level 1) — unlike the per-tier tickspeed multiplier, there is no bonus-free baseline level', () => {
+    expect(getGlobalTickspeedProductionMultiplier(1)).toBeCloseTo(1.1)
+  })
+
+  it('compounds multiplicatively across levels, not additively', () => {
+    expect(getGlobalTickspeedProductionMultiplier(2)).toBeCloseTo(1.21)
+    expect(getGlobalTickspeedProductionMultiplier(3)).toBeCloseTo(1.331)
   })
 })
 
@@ -484,12 +534,12 @@ describe('getPrestigePointsAwarded', () => {
 
 describe('getSmartAutobuyerCost', () => {
   it('costs 10x the unlock cost for the first tier', () => {
-    expect(getSmartAutobuyerCost(tensTier.id)).toBe(10 * (10 ** 10))
+    expect(getSmartAutobuyerCost(tensTier.id)).toBe(10)
   })
 
   it('costs 10x the unlock cost for later tiers', () => {
-    expect(getSmartAutobuyerCost(thousandsTier.id)).toBe(10 * (10 ** 9))
-    expect(getSmartAutobuyerCost(TIER_DEFINITIONS[9].id)).toBe(10 * 10)
+    expect(getSmartAutobuyerCost(thousandsTier.id)).toBe(20)
+    expect(getSmartAutobuyerCost(TIER_DEFINITIONS[9].id)).toBe(100)
   })
 })
 
@@ -1278,6 +1328,37 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(12)
   })
 
+  it('credits the global tickspeed multiplier\'s production bonus to every tier at once', () => {
+    // Level 2 → ×1.21 production, applied uniformly (see getGlobalTickspeedProductionMultiplier) —
+    // no autobuyer/tickspeed level involved on this tier at all. Zero money so the starting
+    // balance doesn't get added on top of the production credit under test.
+    const state = withMoney(
+      withGlobalTickspeedMultiplier(
+        withOwned(createInitialGameState(), tensTier.id, 10),
+        2
+      ),
+      0
+    )
+    const after = tickGame(1)(state)
+    // floor(10 owned × 1 tick × 1.21) = floor(12.1) = 12
+    expect(after.resources[MONEY_ID]).toBe(12)
+  })
+
+  it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier, not additively', () => {
+    // Per-tier level 2 → ×1.1, global level 2 → ×1.21 → combined ×1.331, not ×1.31 (which an
+    // additive 10%+21% stack would give). Zero money to isolate this tick to production only.
+    const state = withGlobalTickspeedMultiplier(
+      withMoney(
+        withAutobuyer(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
+        0
+      ),
+      2
+    )
+    const after = tickGame(1)(state)
+    // floor(10 owned × 1 tick × 1.1 × 1.21) = floor(13.31) = 13
+    expect(after.resources[MONEY_ID]).toBe(13)
+  })
+
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUp(
@@ -1458,8 +1539,8 @@ describe('buyAutobuyerUnlock', () => {
     expect(after.prestige.points).toBe(0)
   })
 
-  it('costs the first tier\'s much steeper base (10^10 PP)', () => {
-    const state = withPrestigePoints(createInitialGameState(), 10 ** 10)
+  it('costs just 1 PP for the first tier — the cheapest of the ten', () => {
+    const state = withPrestigePoints(createInitialGameState(), 1)
     const after = buyAutobuyerUnlock(tensTier.id)(state)
     expect(after.autobuyers[tensTier.id]).toBe(1)
     expect(after.prestige.points).toBe(0)
@@ -1501,8 +1582,8 @@ describe('buySmartAutobuyer', () => {
     expect(after.prestige.points).toBe(0)
   })
 
-  it('costs 10x the first tier\'s much steeper unlock cost (10^11 PP)', () => {
-    const state = withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 10 ** 11)
+  it('costs 10x the first tier\'s unlock cost (10 PP)', () => {
+    const state = withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 10)
     const after = buySmartAutobuyer(tensTier.id)(state)
     expect(after.smartAutobuyer[tensTier.id]).toBe(true)
     expect(after.prestige.points).toBe(0)
@@ -1575,6 +1656,80 @@ describe('buyAutoPrestige', () => {
   it('refuses to spend once production is frozen at GOOGOL', () => {
     const state = withMoney(withPrestigePoints(createInitialGameState(), 1000), GOOGOL)
     expect(buyAutoPrestige(state)).toBe(state)
+  })
+})
+
+// ─── buyGlobalTickspeedMultiplier ───────────────────────────────────────────────
+
+describe('isGlobalTickspeedMultiplierUnlocked', () => {
+  it('is false with no tier02 owned and no level bought yet', () => {
+    expect(isGlobalTickspeedMultiplierUnlocked(createInitialGameState())).toBe(false)
+  })
+
+  it('is true once at least 1 of the second tier is owned', () => {
+    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1)
+    expect(isGlobalTickspeedMultiplierUnlocked(state)).toBe(true)
+  })
+
+  it('stays true once the multiplier is already active, even with tier02 owned count back at 0', () => {
+    const state = withGlobalTickspeedMultiplier(createInitialGameState(), 1)
+    expect(isGlobalTickspeedMultiplierUnlocked(state)).toBe(true)
+  })
+})
+
+describe('buyGlobalTickspeedMultiplier', () => {
+  it('spends 10 Money to activate the global tickspeed multiplier at level 1', () => {
+    const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
+    const after = buyGlobalTickspeedMultiplier(state)
+    expect(after.globalTickspeedMultiplier).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(0)
+  })
+
+  it('costs 100 Money for level 1 → 2, another power of ten each level after that', () => {
+    const state = withMoney(
+      withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 1),
+      100
+    )
+    const after = buyGlobalTickspeedMultiplier(state)
+    expect(after.globalTickspeedMultiplier).toBe(2)
+    expect(after.resources[MONEY_ID]).toBe(0)
+
+    const state2 = withMoney(
+      withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 2),
+      1000
+    )
+    const after2 = buyGlobalTickspeedMultiplier(state2)
+    expect(after2.globalTickspeedMultiplier).toBe(3)
+    expect(after2.resources[MONEY_ID]).toBe(0)
+  })
+
+  it('returns the same state when not enough tier02 is owned to unlock it yet, even with plenty of Money', () => {
+    const state = withMoney(createInitialGameState(), 1000)
+    expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
+  })
+
+  it('returns the same state when there is not enough Money to activate', () => {
+    const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 9)
+    expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
+  })
+
+  it('returns the same state when there is not enough Money to upgrade', () => {
+    const state = withMoney(
+      withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 1),
+      99
+    )
+    expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
+  })
+
+  it('stays purchasable even if tier02 is reset back to 0 once the multiplier is already active', () => {
+    const state = withMoney(withGlobalTickspeedMultiplier(createInitialGameState(), 1), 100)
+    const after = buyGlobalTickspeedMultiplier(state)
+    expect(after.globalTickspeedMultiplier).toBe(2)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), GOOGOL)
+    expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 })
 
@@ -1680,6 +1835,12 @@ describe('prestigeGame', () => {
     const state = withAutoPrestige(withMoney(createInitialGameState(), GOOGOL), 3)
     const after = prestigeGame(state)
     expect(after.autoPrestige).toBe(3)
+  })
+
+  it('keeps the global tickspeed multiplier level permanently across prestige', () => {
+    const state = withGlobalTickspeedMultiplier(withMoney(createInitialGameState(), GOOGOL), 3)
+    const after = prestigeGame(state)
+    expect(after.globalTickspeedMultiplier).toBe(3)
   })
 
   it('keeps the prestige speed bonus unlock permanently across prestige', () => {
@@ -1843,6 +2004,12 @@ describe('speedUpGame', () => {
     const state = withAutoPrestige(eligibleState(), 3)
     const after = speedUpGame(state)
     expect(after.autoPrestige).toBe(3)
+  })
+
+  it('keeps the global tickspeed multiplier level permanently', () => {
+    const state = withGlobalTickspeedMultiplier(eligibleState(), 3)
+    const after = speedUpGame(state)
+    expect(after.globalTickspeedMultiplier).toBe(3)
   })
 
   it('keeps the prestige speed bonus unlock permanently', () => {
