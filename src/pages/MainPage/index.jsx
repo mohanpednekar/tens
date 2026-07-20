@@ -1,4 +1,4 @@
-import Button, { VisuallyHidden } from 'components/Button'
+import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
@@ -497,9 +497,9 @@ const formatCost = (amount, resourceId) =>
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
 // Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used for the
-// tickspeed multiplier badge/labels, which show the cumulative production bonus as "+N%" rather
-// than the earlier "×N" purchase-speed multiplier it replaced (see "Tickspeed multiplier" in
-// CLAUDE.md).
+// tickspeed multiplier badge/labels, which show the cumulative delivery-frequency bonus as "+N%"
+// rather than the earlier "×N" purchase-speed multiplier it replaced (see "Tickspeed multiplier"
+// in CLAUDE.md).
 const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 
 const MainPage = () => {
@@ -635,8 +635,9 @@ const MainPage = () => {
     : null
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
-  // Auto-Prestige's null/level pattern — each level compounds *every* tier's production by another
-  // 10% at once (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
+  // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
+  // another 10% at once, not the amount delivered (see
+  // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
   // every other automation upgrade on this page, it's Money-funded (not PP) and lives on the Game
   // view instead of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js:
   // it only becomes purchasable once at least 1 of the second tier is owned, so a player can't
@@ -788,7 +789,7 @@ const MainPage = () => {
             type="button"
             $pulse
           >
-            ✦ Prestige Now
+            <ButtonContent>✦ Prestige Now</ButtonContent>
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
@@ -809,7 +810,8 @@ const MainPage = () => {
               type="button"
               $pulse
             >
-              ✦ Prestige +{formatAmount(prestigeAwardPreview)} PP
+              <ButtonIcon>✦ </ButtonIcon>
+              <ButtonLabel>Prestige +{formatAmount(prestigeAwardPreview)} PP</ButtonLabel>
             </Button>
           </TopPrestigeBar>
           <TopPrestigeBarSpacer />
@@ -902,27 +904,30 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
-              Spend Money to permanently speed up every tier's production by another 10% at once.
-              Each level costs another power of ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
+              Spend Money to permanently speed up every tier's production ticks by another 10% at
+              once — more frequent deliveries, not bigger ones. Each level costs another power of
+              ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
+              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
             </MutedText>
           </InfoDetails>
           <Button
             aria-describedby="global-tickspeed-description"
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% production on every tier)`
+                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier)`
                 : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Money to permanently speed up every tier's production by another 10% at once — each level costs another power of ten"
+            title="Spend Money to permanently speed up every tier's production ticks by another 10% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
             $pulse={canBuyGlobalTickspeed}
           >
-            🌐 {isGlobalTickspeedActive ? `Lv.${globalTickspeedLevel} · Upgrade` : 'Enable'} for {formatCurrency(globalTickspeedCost)}
+            <ButtonIcon>🌐 </ButtonIcon>
+            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Global tickspeed multiplier progress"
@@ -954,35 +959,45 @@ const MainPage = () => {
           const availablePercent = (affordableQuantity / 10) * 100
           // The tier's own Money-funded tickspeed level — enabled by default (no autobuyer unlock
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
-          // level 1 is the baseline ×1, no bonus yet, each further level compounds it by 10%.
+          // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
+          // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
+          // it does NOT change how much lands per delivery, only how often one arrives.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
           const tickspeedBonusPercent = formatBonusPercent(tickspeedMultiplier)
           // Production no longer depends on autobuyer purchase frequency at all — every 10
           // lifetime purchases of a tier (manual or automatic) doubles its own production (see
-          // getPurchaseMilestoneMultiplier/getTierCost), and the tickspeed multiplier above
-          // compounds it further once unlocked. This is the raw amount delivered in one lump
-          // batch once this tier's own tickspeed period completes — not a per-second average —
-          // matching exactly what tickGame credits (see "Tier production tickspeed" in
-          // CLAUDE.md). Floored to match tickGame's own floored production credit — prestigeBonus
-          // and tickspeedMultiplier are the only fractional factors here (getPurchaseMilestoneMultiplier
-          // and getSpeedUpMultiplier are always powers of 2), so without flooring this preview
-          // could show a fraction that never actually lands.
-          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased) * tickspeedMultiplier * globalTickspeedMultiplier)
+          // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
+          // lump batch once this tier's own (tickspeed-shrunk) period completes — not a per-second
+          // average — matching exactly what tickGame credits (see "Tier production tickspeed" in
+          // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
+          // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
+          // tickGame's own floored production credit — prestigeBonus is the only fractional factor
+          // left here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are always powers of
+          // 2), so without flooring this preview could show a fraction that never actually lands.
+          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
           const tickspeedCost = getTickspeedMultiplierCost(tier.id, tickspeedLevel + 1)
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(purchased)})`
-          const tickspeedLabel = `Tickspeed multiplier (+10% production) for ${formatCost(tickspeedCost, tier.id)}`
+          const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/tickspeed word, and the tier's
           // short symbol (via formatCost) in place of its full name. The full sentence stays in
-          // aria-label/title for assistive tech. Buy also carries the tier's level (lifetime
-          // purchase count — the figure the removed "Level:" cell used to show), since Buy is the
-          // action that raises it.
-          const buyVisibleLabel = `🛒 Lv.${formatAmount(purchased)}${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
-          const tickspeedVisibleLabel = `⚙ +10% ${formatCost(tickspeedCost, tier.id)}`
+          // aria-label/title for assistive tech. The level+quantity ("40+3" — current lifetime
+          // purchase count plus the quantity this purchase adds) sits inside ButtonIcon alongside
+          // the 🛒 glyph rather than the centered ButtonLabel, so it's pinned immediately next to
+          // the icon and lines up in a column across tier rows regardless of the cost string's
+          // length; the quantity is omitted (just the level shows) once nothing is affordable.
+          const buyLevelQuantityText = `${formatAmount(purchased)}${affordableQuantity > 0 ? `+${affordableQuantity}` : ''}`
+          // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
+          // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
+          // no separate icon for "+10%" is needed, since that step is fixed
+          // (TICKSPEED_PRODUCTION_STEP) and implied by the button itself; the full "+10% faster
+          // ticks" sentence still lives in tickspeedLabel/title above for assistive tech and
+          // anyone who expands the tooltip.
+          const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = Math.min(100, Math.round(
             (resources / (tickspeedCost + 1)) * 100
@@ -997,9 +1012,12 @@ const MainPage = () => {
               $animateReveal={!initialUnlockedIds.has(tier.id)}
             >
               <TierName>
-                <TierNameLabel>{tier.name}</TierNameLabel>
+                <TierNameLabel title={tier.name}>
+                  <VisuallyHidden>{tier.name}</VisuallyHidden>
+                  <span aria-hidden="true">{tier.symbol}</span>
+                </TierNameLabel>
                 {tickspeedBonusPercent > 0 && (
-                  <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% production`}>
+                  <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
                     ⚙ +{tickspeedBonusPercent}%
                   </GreenText>
                 )}
@@ -1018,11 +1036,11 @@ const MainPage = () => {
                 color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeTickspeed}
                 onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% production) — the next level makes it 10% more`}
+                title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% faster ticks) — the next level makes it 10% more`}
                 $progress={tickspeedProgressPercent}
                 $pulse={canUpgradeTickspeed}
               >
-                {tickspeedVisibleLabel}
+                <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} tickspeed multiplier progress`}
@@ -1041,7 +1059,8 @@ const MainPage = () => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                {buyVisibleLabel}
+                <ButtonIcon>🛒 {buyLevelQuantityText} </ButtonIcon>
+                <ButtonLabel>{formatCurrency(displayCost)}</ButtonLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
@@ -1077,7 +1096,8 @@ const MainPage = () => {
             $progressColor="#22d3ee"
             $pulse={canSpeedUp}
           >
-            ⚡ ×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}
+            <ButtonIcon>⏩ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -1088,7 +1108,7 @@ const MainPage = () => {
           </SpeedUpButton>
           {!isFirstRun && isAutoSpeedUpActive && (
             <MutedText title="Speed Up now triggers automatically the instant it's eligible">
-              🔁 Auto Speed Up active
+              ⏩ Auto Speed Up active
             </MutedText>
           )}
         </SpeedUpCard>
@@ -1126,7 +1146,8 @@ const MainPage = () => {
             $progressColor="#fbbf24"
             $pulse={canPrestige}
           >
-            ✦ +{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%
+            <ButtonIcon>✦ </ButtonIcon>
+            <ButtonLabel>+{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Prestige progress"
@@ -1137,7 +1158,7 @@ const MainPage = () => {
           </Button>
           {allTiersFullyAutomated && isAutoPrestigeActive && (
             <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
-              🔁 Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+              ✦ Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
             </MutedText>
           )}
         </PrestigeCard>
@@ -1175,7 +1196,10 @@ const MainPage = () => {
 
                 return (
                   <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>
-                    <TierNameLabel>{tier.name}</TierNameLabel>
+                    <TierNameLabel title={tier.name}>
+                      <VisuallyHidden>{tier.name}</VisuallyHidden>
+                      <span aria-hidden="true">{tier.symbol}</span>
+                    </TierNameLabel>
                     {isAutobuyerLocked && (
                       <PpUpgradeButton
                         aria-label={`Unlock ${tier.name}'s autobuyer for ${formatAmount(unlockCost)} Prestige Point${unlockCost === 1 ? '' : 's'}`}
@@ -1187,7 +1211,8 @@ const MainPage = () => {
                         $progress={ppProgressPercent(unlockCost)}
                         $progressColor="#38bdf8"
                       >
-                        🤖 Unlock for {formatAmount(unlockCost)} PP
+                        <ButtonIcon>🤖 </ButtonIcon>
+                        <ButtonLabel>Unlock for {formatAmount(unlockCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} autobuyer unlock Prestige Point progress`}
@@ -1212,7 +1237,8 @@ const MainPage = () => {
                         $progress={ppProgressPercent(tierTickspeedAutobuyerCost)}
                         $progressColor="#38bdf8"
                       >
-                        ⚙ Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP
+                        <ButtonIcon>⚙ </ButtonIcon>
+                        <ButtonLabel>Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} tickspeed autobuyer Prestige Point progress`}
@@ -1238,7 +1264,8 @@ const MainPage = () => {
                           $progress={ppProgressPercent(smartCost)}
                           $progressColor="#a78bfa"
                         >
-                          🧠 Smart for {formatAmount(smartCost)} PP
+                          <ButtonIcon>🧠 </ButtonIcon>
+                          <ButtonLabel>Smart for {formatAmount(smartCost)} PP</ButtonLabel>
                           <VisuallyHidden
                             role="progressbar"
                             aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
@@ -1262,7 +1289,7 @@ const MainPage = () => {
               <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
               {isTickspeedAutobuyerActive ? (
                 <PpUpgradeBadge $color="#4ade80" title="The global tickspeed multiplier now upgrades itself automatically whenever affordable">
-                  🔁 Active
+                  🌐 Active
                 </PpUpgradeBadge>
               ) : (
                 <PpUpgradeButton
@@ -1275,7 +1302,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(TICKSPEED_AUTOBUYER_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 Unlock for {TICKSPEED_AUTOBUYER_COST} PP
+                  <ButtonIcon>🌐 </ButtonIcon>
+                  <ButtonLabel>Unlock for {TICKSPEED_AUTOBUYER_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Tickspeed Autobuyer Prestige Point progress"
@@ -1291,7 +1319,7 @@ const MainPage = () => {
               <TierNameLabel>Auto Speed Up</TierNameLabel>
               {isAutoSpeedUpActive ? (
                 <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  🔁 Active
+                  ⏩ Active
                 </PpUpgradeBadge>
               ) : (
                 <PpUpgradeButton
@@ -1304,7 +1332,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 Unlock for {AUTO_SPEED_UP_COST} PP
+                  <ButtonIcon>⏩ </ButtonIcon>
+                  <ButtonLabel>Unlock for {AUTO_SPEED_UP_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Auto Speed Up Prestige Point progress"
@@ -1340,7 +1369,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(autoPrestigeCost)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+                  <ButtonIcon>✦ </ButtonIcon>
+                  <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Auto-Prestige Prestige Point progress"
@@ -1368,7 +1398,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🚀 Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+                  <ButtonIcon>🚀 </ButtonIcon>
+                  <ButtonLabel>Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Speed bonus unlock Prestige Point progress"
@@ -1392,7 +1423,7 @@ const MainPage = () => {
         onClick={handleResetClick}
         title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
       >
-        ↺ Reset
+        <ButtonContent>↺ Reset</ButtonContent>
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
       </ResetButton>
     </RootDiv>

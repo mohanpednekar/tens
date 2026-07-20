@@ -64,12 +64,14 @@ these tokens incrementally (UI-revamp epic #132).
 owns all React state and side-effects (timer, localStorage). The page
 (`MainPage/index.jsx`) is a pure renderer.
 
-There are 10 tiers, ids `tier01` → `tier10` (display names `Tens` →
-`Octillions`) — `id` is a naming-agnostic key decoupled from `name`/`symbol`.
+There are 10 tiers, ids `tier01` → `tier10` (display names `Bytes` →
+`Ronnabytes` — a byte-scale theme: Bytes, Kilobytes, Megabytes, Gigabytes,
+Terabytes, Petabytes, Exabytes, Zettabytes, Yottabytes, Ronnabytes) — `id` is
+a naming-agnostic key decoupled from `name`/`symbol`.
 **Every tier is bought directly with Ones (money)** — `costResourceId` is
 `'Ones'` for all of them. Once owned, a tier produces the tier immediately
 below it (`producesResourceId`), which cascades production down to Ones.
-`tier01` (`Tens`) is the special case: `costResourceId === producesResourceId
+`tier01` (`Bytes`) is the special case: `costResourceId === producesResourceId
 === 'Ones'`, since it's the entry-level generator bought with money to
 produce more money.
 

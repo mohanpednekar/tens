@@ -334,9 +334,26 @@ The mechanic now called "tickspeed multiplier" is the renamed, re-purposed repla
 to be a tier's autobuyer "Upgrade": a Money-funded, per-tier level that used to compound
 purchase-attempt *frequency* by 10% per level. It no longer does that at all — autobuyer
 purchase-attempt frequency is now a flat, level-independent rate; each tickspeed multiplier level
-instead compounds that tier's own **production** by another 10%. This is a deliberate decoupling: the
-old design conflated "how fast this tier buys itself" with "how much this tier produces," which made
-balancing either independently impossible.
+instead affects that tier's own **production** by another 10% (originally by scaling the amount
+delivered per batch — see the next entry for why that changed to scaling delivery frequency instead).
+This is a deliberate decoupling: the old design conflated "how fast this tier buys itself" with "how
+much/how often this tier produces," which made balancing either independently impossible.
+
+### Why tickspeed multipliers shrink the delivery period instead of scaling production
+
+The tickspeed multiplier (per-tier and global) originally worked by multiplying directly into a tier's
+production credit each time it delivered — i.e. a higher level meant *bigger* batches at the same
+cadence, not more frequent ones. This was changed so both multipliers instead divide into
+`getEffectiveTierTickSpeedSeconds`'s effective period (see "Tier production tickspeed" in CLAUDE.md),
+making a higher level mean *more frequent, same-sized* deliveries instead. The aggregate output over
+any fixed time window is mathematically identical either way (multiplying the amount by ×1.21 and
+dividing the period by ×1.21 both scale total throughput by the same factor), but the change makes the
+mechanic honest about its own name: a "tickspeed" multiplier now actually speeds up the tick, rather
+than being a production multiplier wearing a tickspeed-flavored label. It also keeps a tier's `+X`
+production preview meaningful as "what one delivery is worth" — under the old scheme that figure
+changed with tickspeed level even though the player never *saw* individual deliveries speed up or slow
+down, only a bigger number that had nothing to do with the "tickspeed" name on the button that produced
+it.
 
 ### Prestige history: why PP replaced direct production doubling
 

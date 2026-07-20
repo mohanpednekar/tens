@@ -20,6 +20,7 @@ import {
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
   getCostEpochExponent,
+  getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getMoneyExponent,
@@ -138,9 +139,9 @@ const withAutoGlobalTickspeed = (state, active = true) => ({
   autoGlobalTickspeed: active,
 })
 
-// TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
-// entry-level generator. TIER_DEFINITIONS[1] ('Thousands') is the first
-// tier that needs unlocking (10 Tens owned) and produces Tens.
+// TIER_DEFINITIONS[0] ('Bytes') both costs and produces Ones (money) — the
+// entry-level generator. TIER_DEFINITIONS[1] ('Kilobytes') is the first
+// tier that needs unlocking (10 Bytes owned) and produces Bytes.
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
 
@@ -278,11 +279,11 @@ describe('formatCurrency', () => {
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000000)).toBe('$1E6')
+    expect(formatCurrency(1000000)).toBe('$1e6')
   })
 
   it('switches to exponential notation at huge magnitudes', () => {
-    expect(formatCurrency(1e21)).toBe('$1E21')
+    expect(formatCurrency(1e21)).toBe('$1e21')
   })
 
   it('treats negative values as 0', () => {
@@ -437,17 +438,22 @@ describe('getTickspeedMultiplierBaseCost', () => {
 })
 
 describe('getTickspeedMultiplierCost', () => {
-  it('costs the tier base itself for level 1 (the PP unlock cost)', () => {
-    expect(getTickspeedMultiplierCost(tensTier.id, 1)).toBe(10 ** 10)
-    expect(getTickspeedMultiplierCost(thousandsTier.id, 1)).toBe(10 ** 9)
+  it('costs nothing (base^0 = 1) for level 1 — the free baseline every tier already starts at', () => {
+    expect(getTickspeedMultiplierCost(tensTier.id, 1)).toBe(1)
+    expect(getTickspeedMultiplierCost(thousandsTier.id, 1)).toBe(1)
   })
 
-  it('raises the tier base to the target level', () => {
-    expect(getTickspeedMultiplierCost(thousandsTier.id, 4)).toBe((10 ** 9) ** 4)
+  it('costs exactly the tier base for the first real purchase (level 1 → 2)', () => {
+    expect(getTickspeedMultiplierCost(tensTier.id, 2)).toBe(10 ** 10)
+    expect(getTickspeedMultiplierCost(thousandsTier.id, 2)).toBe(10 ** 9)
+  })
+
+  it('raises the tier base to (targetLevel - 1) for later levels', () => {
+    expect(getTickspeedMultiplierCost(thousandsTier.id, 4)).toBe((10 ** 9) ** 3)
   })
 
   it('treats an unrecognized tier id as index 0 (the priciest base)', () => {
-    expect(getTickspeedMultiplierCost('does_not_exist', 1)).toBe(10 ** 10)
+    expect(getTickspeedMultiplierCost('does_not_exist', 2)).toBe(10 ** 10)
   })
 })
 
@@ -773,6 +779,34 @@ describe('getPrestigeProgressPercent', () => {
   })
 })
 
+// ─── getEffectiveTierTickSpeedSeconds ───────────────────────────────────────
+
+describe('getEffectiveTierTickSpeedSeconds', () => {
+  it('equals the tier\'s raw base tickspeed when neither multiplier is active', () => {
+    expect(getEffectiveTierTickSpeedSeconds(createInitialGameState(), tensTier.id)).toBe(1)
+  })
+
+  it('shrinks by the per-tier tickspeed multiplier', () => {
+    const state = withTickspeedLevel(createInitialGameState(), tensTier.id, 3)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
+  })
+
+  it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
+    const state = withGlobalTickspeedMultiplier(createInitialGameState(), 2)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
+    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(1 / 1.21)
+  })
+
+  it('stacks both multiplicatively, not additively', () => {
+    // Per-tier level 2 → ×1.1, global level 2 → ×1.21 → combined ×1.331, not ×1.31.
+    const state = withGlobalTickspeedMultiplier(
+      withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
+      2
+    )
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.331)
+  })
+})
+
 // ─── getTierProductionProgressPercent ───────────────────────────────────────
 
 describe('getTierProductionProgressPercent', () => {
@@ -781,7 +815,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reflects a partial fraction of a tier\'s tickspeed', () => {
-    // Thousands' base tickspeed is 1s (same as every tier) — half a second's worth of elapsed
+    // Kilobytes' base tickspeed is 1s (same as every tier) — half a second's worth of elapsed
     // time banks half of it.
     const state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
@@ -809,7 +843,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reports 100% instead of the wrapped remainder when the previous accumulator just crossed the threshold', () => {
-    // Thousands' tickspeed is 1s (same as every tier): a previous accumulator of 0 plus the
+    // Kilobytes' tickspeed is 1s (same as every tier): a previous accumulator of 0 plus the
     // default 1 elapsed second crosses 1s, so a delivery just happened even though the
     // freshly-wrapped remainder is 0.
     const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
@@ -829,6 +863,17 @@ describe('getTierProductionProgressPercent', () => {
     expect(getTierProductionProgressPercent(state, tensTier.id, 0)).toBe(100)
   })
 
+  it('measures against the shrunk effective tickspeed once a tier has a tickspeed multiplier level', () => {
+    // Level 2 → ×1.1 effective speed (see getEffectiveTierTickSpeedSeconds), so the period shrinks
+    // from 1s to 1/1.1s — half of that banked is 50% of the way there, not 45.45% of the raw 1s.
+    const state = withTickspeedLevel(
+      { tierProductionAccumulators: { [tensTier.id]: 1 / 1.1 / 2 } },
+      tensTier.id,
+      2
+    )
+    expect(getTierProductionProgressPercent(state, tensTier.id)).toBe(50)
+  })
+
   it('ignores a null/undefined previous accumulator, preserving the 2-arg behavior', () => {
     const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
     expect(getTierProductionProgressPercent(state, thousandsTier.id, null)).toBe(0)
@@ -843,7 +888,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('accepts a fractional elapsedSeconds (e.g. a 10Hz live tick) for the just-delivered check', () => {
-    // Tens' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
+    // Bytes' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.05 } }
     expect(getTierProductionProgressPercent(state, tensTier.id, 0.95, 0.1)).toBe(100)
   })
@@ -1011,7 +1056,7 @@ describe('buyTierQuantity', () => {
 // ─── tickGame ────────────────────────────────────────────────────────────────
 
 describe('tickGame', () => {
-  it('produces money from Tens generators over 1 second', () => {
+  it('produces money from Bytes generators over 1 second', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
     const after = tickGame(1)(state)
     // 5 generators × 1 sec = +5 money
@@ -1125,7 +1170,7 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 40) // 10 × 4
   })
 
-  it('Thousands generators produce Tens resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
+  it('Kilobytes generators produce Bytes resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
     let state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
@@ -1146,7 +1191,7 @@ describe('tickGame', () => {
   it('a tier further down the line banks fractional sub-second ticks the same way', () => {
     const millionsTier = TIER_DEFINITIONS[2]
     let state = withOwned(
-      withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Millions
+      withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Megabytes
       millionsTier.id, 5
     )
     // The first 9 sub-second ticks only accumulate toward the 1s threshold — no production yet.
@@ -1278,7 +1323,7 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
     // Cost drains money to 0, but the same tick's production from the 10 owned generators
-    // (Tens produces its own cost resource) is doubled by the purchase-milestone multiplier —
+    // (Bytes produces its own cost resource) is doubled by the purchase-milestone multiplier —
     // purchased just crossed from 0-9 into the 10-19 block (see getPurchaseMilestoneMultiplier)
     // — adding 10 × 2 = 20 back.
     expect(after.resources[MONEY_ID]).toBe(20)
@@ -1299,7 +1344,7 @@ describe('tickGame', () => {
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
-    // $1,000 affords exactly one of: 1 Thousands ($1,000) or 1 Tens ($10) — not both.
+    // $1,000 affords exactly one of: 1 Kilobytes ($1,000) or 1 Bytes ($10) — not both.
     const state = withAutobuyer(
       withAutobuyer(
         withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 1000),
@@ -1314,7 +1359,7 @@ describe('tickGame', () => {
 
   it('automatically upgrades a tier\'s tickspeed multiplier once per tick once its tier tickspeed autobuyer is bought, with no autobuyer unlock required', () => {
     // The last tier (index 9) has the cheapest tickspeed base (10), so level 1 → 2 costs a
-    // testable 10^2 = 100 — the tickspeed cost ladder is otherwise astronomically large for
+    // testable 10^1 = 10 — the tickspeed cost ladder is otherwise astronomically large for
     // earlier tiers (see getTickspeedMultiplierBaseCost). Zero money so the ordinary autobuyer
     // tier-purchase step (which competes for money) can't interfere; withOwned marks the tier as
     // already-unlocked (isTierUnlocked) without needing the full prerequisite chain.
@@ -1323,7 +1368,7 @@ describe('tickGame', () => {
       withResource(
         withTierTickspeedAutobuyer(withOwned(createInitialGameState(), lastTier.id, 1), lastTier.id),
         lastTier.id,
-        101
+        11
       ),
       0
     )
@@ -1368,38 +1413,53 @@ describe('tickGame', () => {
     expect(after.tickspeedLevels[lastTier.id]).toBe(1)
   })
 
-  it('credits the tickspeed multiplier\'s production bonus once a tier has been upgraded past level 1', () => {
-    // Level 3 → ×1.21 production (see getTickspeedProductionMultiplier). Zero money so the
-    // autobuyer purchase step (which would otherwise buy another unit and change `owned` before
-    // production is calculated) can't interfere.
+  it('does not scale a single delivery\'s amount by the tickspeed multiplier — it speeds up delivery frequency instead', () => {
+    // Level 3 → ×1.21 (see getTickspeedProductionMultiplier), so this tier's effective tickspeed
+    // period shrinks from the base 1s to 1/1.21s. Passing exactly that shrunk period as
+    // elapsedSeconds triggers exactly one delivery — confirming it's still just `owned` (10), not
+    // owned × 1.21 (12): the multiplier no longer inflates the delivered amount, only how soon the
+    // next one arrives. Zero money so the autobuyer purchase step (which would otherwise buy
+    // another unit and change `owned` before production is calculated) can't interfere.
+    const tickspeedMultiplier = getTickspeedProductionMultiplier(3)
     const state = withMoney(
       withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 3),
       0
     )
-    const after = tickGame(1)(state)
-    // floor(10 owned × 1 tick × 1.21) = floor(12.1) = 12
-    expect(after.resources[MONEY_ID]).toBe(12)
+    const after = tickGame(1 / tickspeedMultiplier)(state)
+    expect(after.resources[MONEY_ID]).toBe(10)
   })
 
-  it('credits the global tickspeed multiplier\'s production bonus to every tier at once', () => {
-    // Level 2 → ×1.21 production, applied uniformly (see getGlobalTickspeedProductionMultiplier) —
-    // no autobuyer/tickspeed level involved on this tier at all. Zero money so the starting
-    // balance doesn't get added on top of the production credit under test.
-    const state = withMoney(
-      withGlobalTickspeedMultiplier(
-        withOwned(createInitialGameState(), tensTier.id, 10),
-        2
-      ),
+  it('fires more delivery ticks within a fixed elapsed window at a higher tickspeed level, without changing the per-tick amount', () => {
+    // Over a fixed 10-second window, the baseline (level 1, 1s period) delivers 10 batches of 10
+    // = 100 total; level 3 (×1.21 speed, ~0.826s period) delivers floor(10 × 1.21) = 12 batches of
+    // the same 10 each = 120 total — the same ×1.21 economy bonus as before, now arrived at via
+    // more (not bigger) deliveries.
+    const baseline = withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 0)
+    expect(tickGame(10)(baseline).resources[MONEY_ID]).toBe(100)
+
+    const sped = withMoney(
+      withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 3),
       0
     )
-    const after = tickGame(1)(state)
-    // floor(10 owned × 1 tick × 1.21) = floor(12.1) = 12
-    expect(after.resources[MONEY_ID]).toBe(12)
+    expect(tickGame(10)(sped).resources[MONEY_ID]).toBe(120)
   })
 
-  it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier, not additively', () => {
+  it('speeds up every tier\'s delivery frequency at once via the global tickspeed multiplier, without changing the per-tick amount', () => {
+    // Global level 2 → ×1.21 (see getGlobalTickspeedProductionMultiplier) — the same frequency-
+    // scaling effect as the per-tier multiplier above, applied uniformly to every tier at once, no
+    // per-tier tickspeed level involved here at all.
+    const state = withMoney(
+      withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), tensTier.id, 10), 2),
+      0
+    )
+    const after = tickGame(10)(state)
+    expect(after.resources[MONEY_ID]).toBe(120)
+  })
+
+  it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
     // Per-tier level 2 → ×1.1, global level 2 → ×1.21 → combined ×1.331, not ×1.31 (which an
-    // additive 10%+21% stack would give). Zero money to isolate this tick to production only.
+    // additive 10%+21% stack would give). Over a 10-second window: floor(10 × 1.331) = 13 batches
+    // of 10 each = 130 total.
     const state = withGlobalTickspeedMultiplier(
       withMoney(
         withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
@@ -1407,9 +1467,8 @@ describe('tickGame', () => {
       ),
       2
     )
-    const after = tickGame(1)(state)
-    // floor(10 owned × 1 tick × 1.1 × 1.21) = floor(13.31) = 13
-    expect(after.resources[MONEY_ID]).toBe(13)
+    const after = tickGame(10)(state)
+    expect(after.resources[MONEY_ID]).toBe(130)
   })
 
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
@@ -1540,8 +1599,8 @@ const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 const unlockedLastTierState = () => withOwned(createInitialGameState(), lastTier.id, 1)
 
 describe('buyTickspeedMultiplier', () => {
-  it('upgrades from level 1 to 2 with no autobuyer unlock at all, deducting the tier\'s base cost squared (100) of its own resource, keeping 1 generator', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 101)
+  it('upgrades from level 1 to 2 with no autobuyer unlock at all, deducting exactly the tier\'s base cost (10), keeping 1 generator', () => {
+    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
@@ -1553,11 +1612,11 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(thousandsTier.id)(state)).toBe(state)
   })
 
-  it('upgrades from level 2 to 3, deducting the base cost cubed (1000), keeping 1 generator', () => {
+  it('upgrades from level 2 to 3, deducting the base cost squared (100), keeping 1 generator', () => {
     const state = withResource(
       withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2),
       lastTier.id,
-      1001
+      101
     )
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(3)
@@ -1565,13 +1624,13 @@ describe('buyTickspeedMultiplier', () => {
   })
 
   it('returns the same state when the tier\'s own resource is insufficient', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 50)
+    const state = withResource(unlockedLastTierState(), lastTier.id, 5)
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
   it('refuses to level up once production is frozen at GOOGOL, even with plenty of the tier\'s own resource', () => {
     const state = withMoney(
-      withResource(unlockedLastTierState(), lastTier.id, 101),
+      withResource(unlockedLastTierState(), lastTier.id, 11),
       GOOGOL
     )
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
@@ -1580,15 +1639,15 @@ describe('buyTickspeedMultiplier', () => {
   it('refuses to level up when paying the cost would leave zero generators', () => {
     // Exactly enough to cover the cost, but that would drain resources/owned to 0 — since those
     // two move together, the tier would be left with no generators at all.
-    const state = withResource(unlockedLastTierState(), lastTier.id, 100)
+    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
   it('leaves owned in sync with resources after leveling up (keeps 1 generator)', () => {
     const state = withOwned(
-      withResource(unlockedLastTierState(), lastTier.id, 101),
+      withResource(unlockedLastTierState(), lastTier.id, 11),
       lastTier.id,
-      101
+      11
     )
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.owned[lastTier.id]).toBe(1)
