@@ -52,6 +52,7 @@ const Button = styled.button`
   margin: 0;
   padding: 0.5em 0.9em;
   border-radius: 6px;
+  text-align: left;
   color: ${props => props.color};
   border: 1.5px solid ${props => props.color};
   background: #262626;

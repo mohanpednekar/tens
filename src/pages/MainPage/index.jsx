@@ -902,27 +902,29 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
-              Spend Money to permanently speed up every tier's production by another 10% at once.
-              Each level costs another power of ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
+              Spend Money to permanently speed up every tier's production ticks by another 10% at
+              once — more frequent deliveries, not bigger ones. Each level costs another power of
+              ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
+              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
             </MutedText>
           </InfoDetails>
           <Button
             aria-describedby="global-tickspeed-description"
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% production on every tier)`
+                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier)`
                 : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Money to permanently speed up every tier's production by another 10% at once — each level costs another power of ten"
+            title="Spend Money to permanently speed up every tier's production ticks by another 10% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
             $pulse={canBuyGlobalTickspeed}
           >
-            🌐 {isGlobalTickspeedActive ? `Lv.${globalTickspeedLevel} · Upgrade` : 'Enable'} for {formatCurrency(globalTickspeedCost)}
+            🌐 {isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}
             <VisuallyHidden
               role="progressbar"
               aria-label="Global tickspeed multiplier progress"
@@ -954,28 +956,30 @@ const MainPage = () => {
           const availablePercent = (affordableQuantity / 10) * 100
           // The tier's own Money-funded tickspeed level — enabled by default (no autobuyer unlock
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
-          // level 1 is the baseline ×1, no bonus yet, each further level compounds it by 10%.
+          // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
+          // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
+          // it does NOT change how much lands per delivery, only how often one arrives.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
           const tickspeedBonusPercent = formatBonusPercent(tickspeedMultiplier)
           // Production no longer depends on autobuyer purchase frequency at all — every 10
           // lifetime purchases of a tier (manual or automatic) doubles its own production (see
-          // getPurchaseMilestoneMultiplier/getTierCost), and the tickspeed multiplier above
-          // compounds it further once unlocked. This is the raw amount delivered in one lump
-          // batch once this tier's own tickspeed period completes — not a per-second average —
-          // matching exactly what tickGame credits (see "Tier production tickspeed" in
-          // CLAUDE.md). Floored to match tickGame's own floored production credit — prestigeBonus
-          // and tickspeedMultiplier are the only fractional factors here (getPurchaseMilestoneMultiplier
-          // and getSpeedUpMultiplier are always powers of 2), so without flooring this preview
-          // could show a fraction that never actually lands.
-          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased) * tickspeedMultiplier * globalTickspeedMultiplier)
+          // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
+          // lump batch once this tier's own (tickspeed-shrunk) period completes — not a per-second
+          // average — matching exactly what tickGame credits (see "Tier production tickspeed" in
+          // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
+          // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
+          // tickGame's own floored production credit — prestigeBonus is the only fractional factor
+          // left here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are always powers of
+          // 2), so without flooring this preview could show a fraction that never actually lands.
+          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
           const tickspeedCost = getTickspeedMultiplierCost(tier.id, tickspeedLevel + 1)
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(purchased)})`
-          const tickspeedLabel = `Tickspeed multiplier (+10% production) for ${formatCost(tickspeedCost, tier.id)}`
+          const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/tickspeed word, and the tier's
           // short symbol (via formatCost) in place of its full name. The full sentence stays in
           // aria-label/title for assistive tech. Buy also carries the tier's level (lifetime
@@ -999,7 +1003,7 @@ const MainPage = () => {
               <TierName>
                 <TierNameLabel>{tier.name}</TierNameLabel>
                 {tickspeedBonusPercent > 0 && (
-                  <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% production`}>
+                  <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
                     ⚙ +{tickspeedBonusPercent}%
                   </GreenText>
                 )}
@@ -1018,7 +1022,7 @@ const MainPage = () => {
                 color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
                 disabled={!canUpgradeTickspeed}
                 onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% production) — the next level makes it 10% more`}
+                title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% faster ticks) — the next level makes it 10% more`}
                 $progress={tickspeedProgressPercent}
                 $pulse={canUpgradeTickspeed}
               >

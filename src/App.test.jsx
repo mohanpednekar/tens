@@ -138,7 +138,7 @@ test('a money-producing tier shows its per-tick production amount with a $ prefi
   expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('/sec')
 })
 
-test('a tickspeed multiplier level speeds up production, not autobuyer purchase frequency', () => {
+test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
@@ -148,22 +148,24 @@ test('a tickspeed multiplier level speeds up production, not autobuyer purchase 
 
   render(<App />)
 
-  // Level 3 → ×1.21 production (see getTickspeedProductionMultiplier): floor(5 × 1.21) = 6.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$6')
-  // The badge shows the cumulative production bonus as "+N%" (not the old "×N" purchase-speed
+  // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
+  // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
+  // still reads +$5, not +$6.
+  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
+  // The badge shows the cumulative speed bonus as "+N%" (not the old "×N" purchase-speed
   // figure) — no "Lv." (that wording belongs to the Buy button's purchase level); the
   // tickspeed level itself lives in the title tooltip.
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('⚙ +21%')
-  expect(screen.getByTitle(/tickspeed multiplier level 3 — \+21% production/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 3 — \+21% faster ticks/i)).toBeInTheDocument()
 })
 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
   const user = userEvent.setup()
 
   // The last tier (Octillions) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
-  // a testable 100 of its own resource — matching engine.test.js's convention for this ladder.
+  // a testable 10 of its own resource — matching engine.test.js's convention for this ladder.
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10, tier10: 101 },
+    resources: { Ones: 10, tier10: 11 },
     owned: { tier09: 10, tier10: 1 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
@@ -171,12 +173,12 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
 
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% production\) for 100 Os/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 Os/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
 
-  expect(screen.getByTitle(/tickspeed multiplier level 2 — \+10% production/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 — \+10% faster ticks/i)).toBeInTheDocument()
 })
 
 test('reaching 10 lifetime purchases of a tier doubles its displayed production amount', () => {
@@ -574,7 +576,9 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier/i })).toHaveTextContent(/lv\.2/i)
+  // The cumulative level/bonus only shows in the expanded description, not the button itself —
+  // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 
   await user.click(screen.getByRole('button', { name: /speed up \(requires 10/i }))
 
@@ -772,9 +776,13 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$100/i })
   expect(upgradeButton).toBeInTheDocument()
-  expect(upgradeButton).toHaveTextContent(/lv\.1/i)
-  // The heading itself stays plain — the level lives on the button only, not duplicated.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).not.toHaveTextContent(/\+10%/i)
+  // The cumulative level/bonus shows only in the expanded description, never on the button
+  // itself or the heading — both stay compact regardless of level.
+  expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed Multiplier' })).not.toHaveTextContent(/lv\.1|\+10%/i)
+  const panel = screen.getByLabelText(/^global tickspeed panel$/i)
+  expect(panel).toHaveTextContent(/lv\.1/i)
+  expect(panel).toHaveTextContent(/\+10%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
@@ -799,7 +807,9 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$1,000/i })
   expect(upgradeButton).toBeDisabled()
-  expect(upgradeButton).toHaveTextContent(/lv\.2/i)
+  // The cumulative level/bonus shows only in the expanded description, not on the button itself.
+  expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
