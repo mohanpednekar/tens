@@ -1084,7 +1084,7 @@ const MainPage = () => {
             $progressColor="#22d3ee"
             $pulse={canSpeedUp}
           >
-            <ButtonIcon>⚡ </ButtonIcon>
+            <ButtonIcon>⏩ </ButtonIcon>
             <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
@@ -1096,7 +1096,7 @@ const MainPage = () => {
           </SpeedUpButton>
           {!isFirstRun && isAutoSpeedUpActive && (
             <MutedText title="Speed Up now triggers automatically the instant it's eligible">
-              ⚡ Auto Speed Up active
+              ⏩ Auto Speed Up active
             </MutedText>
           )}
         </SpeedUpCard>
@@ -1304,7 +1304,7 @@ const MainPage = () => {
               <TierNameLabel>Auto Speed Up</TierNameLabel>
               {isAutoSpeedUpActive ? (
                 <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  ⚡ Active
+                  ⏩ Active
                 </PpUpgradeBadge>
               ) : (
                 <PpUpgradeButton
@@ -1317,7 +1317,7 @@ const MainPage = () => {
                   $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
                   $progressColor="#38bdf8"
                 >
-                  <ButtonIcon>⚡ </ButtonIcon>
+                  <ButtonIcon>⏩ </ButtonIcon>
                   <ButtonLabel>Unlock for {AUTO_SPEED_UP_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"

@@ -430,10 +430,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    replaced by a single "full smart autobuyer notice".
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
    Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
-   from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⚡, badge "⚡ Active"
+   from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, badge "⏩ Active"
    once bought, otherwise a button), both gated only on `!isFirstRun`, and **Auto-Prestige** (✦, only
    once `allTiersFullyAutomated`; shows its current level inline when active). Each row's icon matches
-   the icon of the feature it automates (🌐 Global Tickspeed Multiplier card, ⚡ Speed Up card, ✦
+   the icon of the feature it automates (🌐 Global Tickspeed Multiplier card, ⏩ Speed Up card, ✦
    Prestige card/button) rather than a generic automation glyph, so the three rows stay visually
    distinct from each other and from the per-tier automation icons in category 1 above (🤖 Unlock, ⚙
    tier tickspeed autobuyer, 🧠 Smart).
@@ -810,12 +810,12 @@ through unchanged too. Can fire without a manual click once Auto Speed Up is bou
 `MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered after `TierList` and
 before `PrestigeCard`. Gated on `speedUpEverRevealed` (see "MainPage reference" above). The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `⚡ ×{next} · {purchased}/{requirement}` — the tier's actual raw
+larger default `Button` size) shows `⏩ ×{next} · {purchased}/{requirement}` — the tier's actual raw
 lifetime-purchase count against `getSpeedUpRequirement(speedUpCount)`, not a percentage, so the player
 sees concretely what's still needed; the on-button `$progress` fill still uses the percentage
 (`speedUpProgressPercent`) for its own calculation. Enabled once the requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoSpeedUp` bought, a static "⚡ Auto Speed Up active" note shows (the purchase button itself
+and `autoSpeedUp` bought, a static "⏩ Auto Speed Up active" note shows (the purchase button itself
 lives on the PP Upgrades page).
 
 ### Prestige info is hidden until first prestige

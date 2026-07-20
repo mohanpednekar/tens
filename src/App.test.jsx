@@ -536,7 +536,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   expect(screen.getByRole('button', {
     name: /speed up \(requires 30 octillions\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⚡ ×8 · 15/30')
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · 15/30')
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
