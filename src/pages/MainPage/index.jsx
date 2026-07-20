@@ -989,7 +989,11 @@ const MainPage = () => {
           // purchase count — the figure the removed "Level:" cell used to show), since Buy is the
           // action that raises it.
           const buyVisibleLabel = `🛒 Lv.${formatAmount(purchased)}${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
-          const tickspeedVisibleLabel = `⚙ +10% ${formatCost(tickspeedCost, tier.id)}`
+          // "+10%" (the fixed per-purchase marginal effect — always the same, see
+          // TICKSPEED_PRODUCTION_STEP) is represented by ⚡ instead of spelled out — the full
+          // "+10% faster ticks" sentence still lives in tickspeedLabel/title above for assistive
+          // tech and anyone who expands the tooltip.
+          const tickspeedVisibleLabel = `⚙ ⚡ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = Math.min(100, Math.round(
             (resources / (tickspeedCost + 1)) * 100
