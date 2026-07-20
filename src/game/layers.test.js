@@ -64,7 +64,7 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('first tier is Tens and both costs and produces Ones (money)', () => {
+  it('first tier is Bytes and both costs and produces Ones (money)', () => {
     expect(TIER_DEFINITIONS[0].id).toBe('tier01')
     expect(TIER_DEFINITIONS[0].costResourceId).toBe(MONEY_ID)
     expect(TIER_DEFINITIONS[0].producesResourceId).toBe(MONEY_ID)

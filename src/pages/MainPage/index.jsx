@@ -1012,7 +1012,10 @@ const MainPage = () => {
               $animateReveal={!initialUnlockedIds.has(tier.id)}
             >
               <TierName>
-                <TierNameLabel>{tier.name}</TierNameLabel>
+                <TierNameLabel title={tier.name}>
+                  <VisuallyHidden>{tier.name}</VisuallyHidden>
+                  <span aria-hidden="true">{tier.symbol}</span>
+                </TierNameLabel>
                 {tickspeedBonusPercent > 0 && (
                   <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
                     ⚙ +{tickspeedBonusPercent}%
@@ -1193,7 +1196,10 @@ const MainPage = () => {
 
                 return (
                   <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>
-                    <TierNameLabel>{tier.name}</TierNameLabel>
+                    <TierNameLabel title={tier.name}>
+                      <VisuallyHidden>{tier.name}</VisuallyHidden>
+                      <span aria-hidden="true">{tier.symbol}</span>
+                    </TierNameLabel>
                     {isAutobuyerLocked && (
                       <PpUpgradeButton
                         aria-label={`Unlock ${tier.name}'s autobuyer for ${formatAmount(unlockCost)} Prestige Point${unlockCost === 1 ? '' : 's'}`}

@@ -139,9 +139,9 @@ const withAutoGlobalTickspeed = (state, active = true) => ({
   autoGlobalTickspeed: active,
 })
 
-// TIER_DEFINITIONS[0] ('Tens') both costs and produces Ones (money) — the
-// entry-level generator. TIER_DEFINITIONS[1] ('Thousands') is the first
-// tier that needs unlocking (10 Tens owned) and produces Tens.
+// TIER_DEFINITIONS[0] ('Bytes') both costs and produces Ones (money) — the
+// entry-level generator. TIER_DEFINITIONS[1] ('Kilobytes') is the first
+// tier that needs unlocking (10 Bytes owned) and produces Bytes.
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
 
@@ -815,7 +815,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reflects a partial fraction of a tier\'s tickspeed', () => {
-    // Thousands' base tickspeed is 1s (same as every tier) — half a second's worth of elapsed
+    // Kilobytes' base tickspeed is 1s (same as every tier) — half a second's worth of elapsed
     // time banks half of it.
     const state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
@@ -843,7 +843,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reports 100% instead of the wrapped remainder when the previous accumulator just crossed the threshold', () => {
-    // Thousands' tickspeed is 1s (same as every tier): a previous accumulator of 0 plus the
+    // Kilobytes' tickspeed is 1s (same as every tier): a previous accumulator of 0 plus the
     // default 1 elapsed second crosses 1s, so a delivery just happened even though the
     // freshly-wrapped remainder is 0.
     const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
@@ -888,7 +888,7 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('accepts a fractional elapsedSeconds (e.g. a 10Hz live tick) for the just-delivered check', () => {
-    // Tens' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
+    // Bytes' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.05 } }
     expect(getTierProductionProgressPercent(state, tensTier.id, 0.95, 0.1)).toBe(100)
   })
@@ -1056,7 +1056,7 @@ describe('buyTierQuantity', () => {
 // ─── tickGame ────────────────────────────────────────────────────────────────
 
 describe('tickGame', () => {
-  it('produces money from Tens generators over 1 second', () => {
+  it('produces money from Bytes generators over 1 second', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
     const after = tickGame(1)(state)
     // 5 generators × 1 sec = +5 money
@@ -1170,7 +1170,7 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 40) // 10 × 4
   })
 
-  it('Thousands generators produce Tens resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
+  it('Kilobytes generators produce Bytes resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
     let state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
@@ -1191,7 +1191,7 @@ describe('tickGame', () => {
   it('a tier further down the line banks fractional sub-second ticks the same way', () => {
     const millionsTier = TIER_DEFINITIONS[2]
     let state = withOwned(
-      withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Millions
+      withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Megabytes
       millionsTier.id, 5
     )
     // The first 9 sub-second ticks only accumulate toward the 1s threshold — no production yet.
@@ -1323,7 +1323,7 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
     // Cost drains money to 0, but the same tick's production from the 10 owned generators
-    // (Tens produces its own cost resource) is doubled by the purchase-milestone multiplier —
+    // (Bytes produces its own cost resource) is doubled by the purchase-milestone multiplier —
     // purchased just crossed from 0-9 into the 10-19 block (see getPurchaseMilestoneMultiplier)
     // — adding 10 × 2 = 20 back.
     expect(after.resources[MONEY_ID]).toBe(20)
@@ -1344,7 +1344,7 @@ describe('tickGame', () => {
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
-    // $1,000 affords exactly one of: 1 Thousands ($1,000) or 1 Tens ($10) — not both.
+    // $1,000 affords exactly one of: 1 Kilobytes ($1,000) or 1 Bytes ($10) — not both.
     const state = withAutobuyer(
       withAutobuyer(
         withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 1000),
