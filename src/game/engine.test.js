@@ -279,11 +279,11 @@ describe('formatCurrency', () => {
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000000)).toBe('$1E6')
+    expect(formatCurrency(1000000)).toBe('$1e6')
   })
 
   it('switches to exponential notation at huge magnitudes', () => {
-    expect(formatCurrency(1e21)).toBe('$1E21')
+    expect(formatCurrency(1e21)).toBe('$1e21')
   })
 
   it('treats negative values as 0', () => {
