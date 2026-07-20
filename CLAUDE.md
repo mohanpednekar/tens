@@ -136,6 +136,14 @@ job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` f
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a 429
 ("session limit") failure is downgraded to a warning (job stays green) since it's purely transient.
 
+**Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
+}` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
+`workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)
+queues behind the first rather than racing it. `cancel-in-progress` is deliberately `false`, not `true`:
+cancelling an in-progress run mid-task would itself produce an orphaned `claude/auto-task-*` branch —
+exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
+avoids causing that unnecessarily rather than trading one race for another failure mode.
+
 **Budget discipline.** Wall-clock time is not a constraint (one task every 5 hours is fine), but the
 per-run turn/token budget is. Before starting whatever task it picks, Claude roughly sizes the work
 against remaining turns, reserving ~15-20% for test + commit + push + PR-open overhead. If a task
