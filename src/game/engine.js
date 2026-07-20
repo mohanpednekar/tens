@@ -40,7 +40,7 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: null,
   }), {}),
-  // Permanent per-tier level for that tier's own Money-funded tickspeed multiplier (see
+  // Per-tier level for that tier's own Money-funded tickspeed multiplier (see
   // getTickspeedProductionMultiplier/buyTickspeedMultiplier) — starts at 1 (baseline, no
   // production bonus) for every tier and is buyable from the moment the tier itself is unlocked,
   // with no PP prerequisite at all; whether that tier's unit-buying autobuyer has ever been
@@ -572,8 +572,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   // Only a tier whose tierTickspeedAutobuyer is bought (see buyTierTickspeedAutobuyer) self-upgrades
   // its own tickspeed multiplier level one step per tick whenever affordable — no manual click
-  // needed. buyTickspeedMultiplier re-validates internally (affordability, frozen state, autobuyer
-  // unlocked) and returns the same state unchanged when a level isn't affordable yet. Unlike the
+  // needed. buyTickspeedMultiplier re-validates internally (affordability, frozen state, tier
+  // itself unlocked) and returns the same state unchanged when a level isn't affordable yet. Unlike the
   // rate-accumulating budgets above, this is edge-triggered on affordability rather than a banked
   // rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see TICK_RATE_MS)
   // only makes it react sooner after becoming affordable, not more often per real second.
@@ -786,11 +786,13 @@ export const buySmartAutobuyer = tierId => state => {
 // more PP than unlocking that tier's (unrelated) unit-buying autobuyer would cost (see
 // getTierTickspeedAutobuyerCost, used purely as a pricing benchmark) — no autobuyer-unlock
 // prerequisite, independent of Smart (see buySmartAutobuyer above), which does still require
-// that unlock. A no-op if already bought or there aren't enough unspent points.
+// that unlock. A no-op if the tier itself isn't unlocked yet (isTierUnlocked, same reachability
+// gate buyTickspeedMultiplier itself uses), if already bought, or if there aren't enough unspent
+// points.
 export const buyTierTickspeedAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier) return state
+  if (!tier || !isTierUnlocked(state)(tier)) return state
   if (state.tierTickspeedAutobuyer?.[tierId]) return state
 
   const cost = getTierTickspeedAutobuyerCost(tierId)
@@ -829,10 +831,10 @@ export const buyAutoPrestige = state => {
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) the global tickspeed multiplier,
 // always by spending Money (Ones) — activation is just the N=0 case of the same cost formula
 // (getGlobalTickspeedMultiplierCost(0) = 10). A single global upgrade track, not per-tier — unlike
-// the per-tier tickspeed multiplier (also Money-funded, but requires that tier's autobuyer already
-// unlocked via PP), this one requires no PP or autobuyer at all, just owning at least 1 of the
-// second tier (see isGlobalTickspeedMultiplierUnlocked). A no-op if not yet unlocked, if Money is
-// short, or while production is frozen.
+// the per-tier tickspeed multiplier (also Money-funded and also buyable with no PP prerequisite),
+// this one requires owning at least 1 of the second tier first (see
+// isGlobalTickspeedMultiplierUnlocked). A no-op if not yet unlocked, if Money is short, or while
+// production is frozen.
 export const buyGlobalTickspeedMultiplier = state => {
   if (isProductionFrozen(state)) return state
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return state

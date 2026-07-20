@@ -1709,6 +1709,11 @@ describe('buyTierTickspeedAutobuyer', () => {
     expect(after.prestige.points).toBe(0)
   })
 
+  it('returns the same state for a tier that is not itself unlocked yet, even with plenty of points', () => {
+    const state = withPrestigePoints(createInitialGameState(), 1000)
+    expect(buyTierTickspeedAutobuyer(thousandsTier.id)(state)).toBe(state)
+  })
+
   it('returns the same state when there are not enough points', () => {
     const state = withPrestigePoints(unlockedLastTierState(), 19)
     expect(buyTierTickspeedAutobuyer(lastTier.id)(state)).toBe(state)

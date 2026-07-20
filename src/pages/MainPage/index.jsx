@@ -545,11 +545,13 @@ const MainPage = () => {
   const [initialUnlockedIds] = useState(() =>
     new Set(TIER_DEFINITIONS.filter(tier => isTierUnlocked(state)(tier)).map(tier => tier.id))
   )
-  // Smart and the tier tickspeed autobuyer both require the tier's autobuyer to already be
-  // unlocked (see buySmartAutobuyer/buyTierTickspeedAutobuyer) — once every tier has bought both,
-  // there's nothing left in this whole progression for any tier, so the per-tier PP Upgrades row
-  // disappears everywhere and a one-line notice explains why, rather than leaving a permanent
-  // "done" row for all 10 tiers forever.
+  // Smart requires the tier's autobuyer to already be unlocked (see buySmartAutobuyer); the tier
+  // tickspeed autobuyer needs no such prerequisite (see buyTierTickspeedAutobuyer) — but since
+  // Smart being bought already implies the autobuyer is unlocked, "both bought" below still means
+  // every purchase available for that tier is done. Once every tier has bought both
+  // (`allTiersFullyAutomated`), there's nothing left in this whole progression for any tier, so the
+  // per-tier PP Upgrades row disappears everywhere and a one-line notice explains why, rather than
+  // leaving a permanent "done" row for all 10 tiers forever.
   const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
     state.smartAutobuyer?.[tier.id] && state.tierTickspeedAutobuyer?.[tier.id]
   )
