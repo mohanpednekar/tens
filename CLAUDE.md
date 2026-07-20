@@ -259,19 +259,32 @@ src/
     storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
                                keyed last-save timestamp used to compute offline progress
   components/
-    Button/index.js        ← styled button; every caller passes `color` explicitly (no defaultProps —
+    Button/index.jsx        ← styled button (`.jsx`, not `.js` — see `ButtonContent` below, which
+                               needs JSX); every caller passes `color` explicitly (no defaultProps —
                                React 19 dropped defaultProps support for function components, so it's a
                                silent no-op there), plus optional progress-fill props (`$progress`,
                                `$secondaryProgress`, `$progressColor`, `$secondaryProgressColor`, `$pulse`)
                                rendered as an on-button gradient fill (reduced alpha when `disabled`), a
                                `:focus-visible` outline colored from the button's own `color` prop, no
                                opacity-based disabled dimming (color + cursor signal disabled state
-                               instead), and `text-align: left` (every button's visible text leads with an
-                               icon — see the compact-label convention throughout MainPage — so left
-                               alignment keeps that icon at a fixed position instead of drifting with the
-                               text length, matching left across a column of buttons of varying width);
-                               also exports `VisuallyHidden`, a clip-hidden node used both for a
-                               nested `role="progressbar"` and for supplementary `aria-describedby` text
+                               instead), and `display: flex` with `align-items`/`justify-content: center`
+                               so plain (icon-less) button text still centers normally. Also exports
+                               `ButtonIcon` (a `flex: 0 0 auto` span, pinned to a fixed-width slot on the
+                               left) and `ButtonLabel` (`flex: 1 1 auto; text-align: center`, filling the
+                               remaining space) — together they keep a button's leading icon at a stable
+                               left position regardless of the label's length, while the label itself
+                               still reads as centered in the space after the icon, rather than the old
+                               behavior of the whole icon+label string sliding left/right together as one
+                               centered block. `ButtonContent` is a small helper component that splits a
+                               single pre-formatted "🛒 Lv.10 $100"-style string (every such label in this
+                               app follows the icon-then-word convention) into `ButtonIcon`/`ButtonLabel`
+                               at the first space — used wherever a caller already builds one combined
+                               label string; callers that compose their visible text from multiple JSX
+                               expressions (interpolated amounts, conditionals) wrap it directly in
+                               `<ButtonIcon>`/`<ButtonLabel>` instead, since `ButtonContent` only accepts
+                               a single string child. Also exports `VisuallyHidden`, a clip-hidden node
+                               used both for a nested `role="progressbar"` and for supplementary
+                               `aria-describedby` text
     Money/index.js          ← styled money/amount display
     StatCard/index.js       ← styled card container used for every panel
   pages/
@@ -415,11 +428,15 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    tickspeed autobuyer are *both* bought (which implies Unlock is done too, since Smart requires it).
    Once every tier has bought both (`allTiersFullyAutomated`), the per-tier list inside this category is
    replaced by a single "full smart autobuyer notice".
-2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (automates the
+2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
    Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
-   from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (badge "🔁 Active" once
-   bought, otherwise a button), both gated only on `!isFirstRun`, and **Auto-Prestige** (only once
-   `allTiersFullyAutomated`; shows its current level inline when active).
+   from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⚡, badge "⚡ Active"
+   once bought, otherwise a button), both gated only on `!isFirstRun`, and **Auto-Prestige** (✦, only
+   once `allTiersFullyAutomated`; shows its current level inline when active). Each row's icon matches
+   the icon of the feature it automates (🌐 Global Tickspeed Multiplier card, ⚡ Speed Up card, ✦
+   Prestige card/button) rather than a generic automation glyph, so the three rows stay visually
+   distinct from each other and from the per-tier automation icons in category 1 above (🤖 Unlock, ⚙
+   tier tickspeed autobuyer, 🧠 Smart).
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
    once it's bought, since there's nothing left to show there (unlike Auto Speed Up/Tickspeed
    Autobuyer, it has no persistent "Active" badge — its effect is already visible in the PP balance
@@ -798,7 +815,7 @@ lifetime-purchase count against `getSpeedUpRequirement(speedUpCount)`, not a per
 sees concretely what's still needed; the on-button `$progress` fill still uses the percentage
 (`speedUpProgressPercent`) for its own calculation. Enabled once the requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoSpeedUp` bought, a static "🔁 Auto Speed Up active" note shows (the purchase button itself
+and `autoSpeedUp` bought, a static "⚡ Auto Speed Up active" note shows (the purchase button itself
 lives on the PP Upgrades page).
 
 ### Prestige info is hidden until first prestige

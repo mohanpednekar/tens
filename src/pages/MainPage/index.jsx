@@ -1,4 +1,4 @@
-import Button, { VisuallyHidden } from 'components/Button'
+import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
@@ -789,7 +789,7 @@ const MainPage = () => {
             type="button"
             $pulse
           >
-            ✦ Prestige Now
+            <ButtonContent>✦ Prestige Now</ButtonContent>
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
@@ -810,7 +810,8 @@ const MainPage = () => {
               type="button"
               $pulse
             >
-              ✦ Prestige +{formatAmount(prestigeAwardPreview)} PP
+              <ButtonIcon>✦ </ButtonIcon>
+              <ButtonLabel>Prestige +{formatAmount(prestigeAwardPreview)} PP</ButtonLabel>
             </Button>
           </TopPrestigeBar>
           <TopPrestigeBarSpacer />
@@ -925,7 +926,8 @@ const MainPage = () => {
             $progressColor="#3b82f6"
             $pulse={canBuyGlobalTickspeed}
           >
-            🌐 {isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}
+            <ButtonIcon>🌐 </ButtonIcon>
+            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Global tickspeed multiplier progress"
@@ -1027,7 +1029,7 @@ const MainPage = () => {
                 $progress={tickspeedProgressPercent}
                 $pulse={canUpgradeTickspeed}
               >
-                {tickspeedVisibleLabel}
+                <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} tickspeed multiplier progress`}
@@ -1046,7 +1048,7 @@ const MainPage = () => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                {buyVisibleLabel}
+                <ButtonContent>{buyVisibleLabel}</ButtonContent>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
@@ -1082,7 +1084,8 @@ const MainPage = () => {
             $progressColor="#22d3ee"
             $pulse={canSpeedUp}
           >
-            ⚡ ×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}
+            <ButtonIcon>⚡ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -1093,7 +1096,7 @@ const MainPage = () => {
           </SpeedUpButton>
           {!isFirstRun && isAutoSpeedUpActive && (
             <MutedText title="Speed Up now triggers automatically the instant it's eligible">
-              🔁 Auto Speed Up active
+              ⚡ Auto Speed Up active
             </MutedText>
           )}
         </SpeedUpCard>
@@ -1131,7 +1134,8 @@ const MainPage = () => {
             $progressColor="#fbbf24"
             $pulse={canPrestige}
           >
-            ✦ +{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%
+            <ButtonIcon>✦ </ButtonIcon>
+            <ButtonLabel>+{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Prestige progress"
@@ -1142,7 +1146,7 @@ const MainPage = () => {
           </Button>
           {allTiersFullyAutomated && isAutoPrestigeActive && (
             <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
-              🔁 Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+              ✦ Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
             </MutedText>
           )}
         </PrestigeCard>
@@ -1192,7 +1196,8 @@ const MainPage = () => {
                         $progress={ppProgressPercent(unlockCost)}
                         $progressColor="#38bdf8"
                       >
-                        🤖 Unlock for {formatAmount(unlockCost)} PP
+                        <ButtonIcon>🤖 </ButtonIcon>
+                        <ButtonLabel>Unlock for {formatAmount(unlockCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} autobuyer unlock Prestige Point progress`}
@@ -1217,7 +1222,8 @@ const MainPage = () => {
                         $progress={ppProgressPercent(tierTickspeedAutobuyerCost)}
                         $progressColor="#38bdf8"
                       >
-                        ⚙ Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP
+                        <ButtonIcon>⚙ </ButtonIcon>
+                        <ButtonLabel>Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} tickspeed autobuyer Prestige Point progress`}
@@ -1243,7 +1249,8 @@ const MainPage = () => {
                           $progress={ppProgressPercent(smartCost)}
                           $progressColor="#a78bfa"
                         >
-                          🧠 Smart for {formatAmount(smartCost)} PP
+                          <ButtonIcon>🧠 </ButtonIcon>
+                          <ButtonLabel>Smart for {formatAmount(smartCost)} PP</ButtonLabel>
                           <VisuallyHidden
                             role="progressbar"
                             aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
@@ -1267,7 +1274,7 @@ const MainPage = () => {
               <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
               {isTickspeedAutobuyerActive ? (
                 <PpUpgradeBadge $color="#4ade80" title="The global tickspeed multiplier now upgrades itself automatically whenever affordable">
-                  🔁 Active
+                  🌐 Active
                 </PpUpgradeBadge>
               ) : (
                 <PpUpgradeButton
@@ -1280,7 +1287,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(TICKSPEED_AUTOBUYER_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 Unlock for {TICKSPEED_AUTOBUYER_COST} PP
+                  <ButtonIcon>🌐 </ButtonIcon>
+                  <ButtonLabel>Unlock for {TICKSPEED_AUTOBUYER_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Tickspeed Autobuyer Prestige Point progress"
@@ -1296,7 +1304,7 @@ const MainPage = () => {
               <TierNameLabel>Auto Speed Up</TierNameLabel>
               {isAutoSpeedUpActive ? (
                 <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  🔁 Active
+                  ⚡ Active
                 </PpUpgradeBadge>
               ) : (
                 <PpUpgradeButton
@@ -1309,7 +1317,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 Unlock for {AUTO_SPEED_UP_COST} PP
+                  <ButtonIcon>⚡ </ButtonIcon>
+                  <ButtonLabel>Unlock for {AUTO_SPEED_UP_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Auto Speed Up Prestige Point progress"
@@ -1345,7 +1354,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(autoPrestigeCost)}
                   $progressColor="#38bdf8"
                 >
-                  🔁 {isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP
+                  <ButtonIcon>✦ </ButtonIcon>
+                  <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Auto-Prestige Prestige Point progress"
@@ -1373,7 +1383,8 @@ const MainPage = () => {
                   $progress={ppProgressPercent(PRESTIGE_SPEED_BONUS_UNLOCK_COST)}
                   $progressColor="#38bdf8"
                 >
-                  🚀 Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP
+                  <ButtonIcon>🚀 </ButtonIcon>
+                  <ButtonLabel>Unlock for {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="Speed bonus unlock Prestige Point progress"
@@ -1397,7 +1408,7 @@ const MainPage = () => {
         onClick={handleResetClick}
         title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
       >
-        ↺ Reset
+        <ButtonContent>↺ Reset</ButtonContent>
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
       </ResetButton>
     </RootDiv>

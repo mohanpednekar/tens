@@ -47,12 +47,14 @@ const progressFill = ({ disabled, $progress, $secondaryProgress, $progressColor 
 // to ~3.2:1 at the previous opacity:0.6, below WCAG AA, even with no progress fill involved).
 const Button = styled.button`
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.95em;
   font-weight: 600;
   margin: 0;
   padding: 0.5em 0.9em;
   border-radius: 6px;
-  text-align: left;
   color: ${props => props.color};
   border: 1.5px solid ${props => props.color};
   background: #262626;
@@ -79,6 +81,37 @@ const Button = styled.button`
     animation: none;
   }
 `
+
+// A button's leading icon glyph, pinned to a fixed-width flex slot on the left — paired with
+// ButtonLabel (flex: 1, centered) so the icon never drifts with the label's length while the
+// label itself still reads as centered in the remaining space, rather than the whole string
+// (icon included) sliding left/right together as one block.
+export const ButtonIcon = styled.span`
+  flex: 0 0 auto;
+`
+
+export const ButtonLabel = styled.span`
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+`
+
+// Splits a button's compact visible text ("🛒 Lv.10 $100") into a fixed-position ButtonIcon and
+// a centered ButtonLabel at the first space — every such label in this app follows the
+// icon-then-word convention (see MainPage), so the first space always lands right after the
+// icon glyph. Falls back to a single centered ButtonLabel for icon-less text (e.g. "Dismiss",
+// or any string with no space at all) rather than misreading its first word as an icon.
+export const ButtonContent = ({ children }) => {
+  const text = String(children)
+  const spaceIndex = text.indexOf(' ')
+  if (spaceIndex === -1) return <ButtonLabel>{text}</ButtonLabel>
+  return (
+    <>
+      <ButtonIcon>{text.slice(0, spaceIndex + 1)}</ButtonIcon>
+      <ButtonLabel>{text.slice(spaceIndex + 1)}</ButtonLabel>
+    </>
+  )
+}
 
 // Visually hidden (clip-rect, not display/visibility) so an element can carry real
 // accessibility semantics (a role="progressbar", or supplementary descriptive text via
