@@ -410,11 +410,12 @@ the moment the tier itself is unlocked, with **no** autobuyer-unlock or PP prere
 tier's own delivery frequency by another 10% (`getTickspeedProductionMultiplier`, divided into the
 tier's effective period rather than multiplied into its production credit — see "Tier production
 tickspeed" below); it changes **neither** the amount delivered per batch **nor** autobuyer
-purchase-attempt frequency (that rate is flat). Visible text is `⚙ ⚡ {cost} {symbol}` — the
-marginal effect of *this* purchase is always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds
-the same fixed 10% step), so rather than spelling out an unvarying "+10%" on every tier's button, a
-⚡ icon stands in for it; `aria-label`/`title` still spell out the full "+10% faster ticks" sentence
-for assistive tech. A compact badge beside the tier name (gated on tickspeed level > 1) shows
+purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {symbol}` — a single ⚙
+icon (matching the badge below and the tier tickspeed autobuyer's `⚙ Active` badge on the PP
+Upgrades page) identifies the button as the tickspeed control; no separate icon marks the marginal
+effect, since it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10%
+step) and implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster
+ticks" sentence for assistive tech. A compact badge beside the tier name (gated on tickspeed level > 1) shows
 `⚙ +N%` — the cumulative speed bonus (faster deliveries, and genuinely level-dependent unlike the
 button's fixed marginal step), not a production-amount bonus.
 

@@ -991,11 +991,13 @@ const MainPage = () => {
           // the icon and lines up in a column across tier rows regardless of the cost string's
           // length; the quantity is omitted (just the level shows) once nothing is affordable.
           const buyLevelQuantityText = `${formatAmount(purchased)}${affordableQuantity > 0 ? `+${affordableQuantity}` : ''}`
-          // "+10%" (the fixed per-purchase marginal effect — always the same, see
-          // TICKSPEED_PRODUCTION_STEP) is represented by ⚡ instead of spelled out — the full
-          // "+10% faster ticks" sentence still lives in tickspeedLabel/title above for assistive
-          // tech and anyone who expands the tooltip.
-          const tickspeedVisibleLabel = `⚙ ⚡ ${formatCost(tickspeedCost, tier.id)}`
+          // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
+          // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
+          // no separate icon for "+10%" is needed, since that step is fixed
+          // (TICKSPEED_PRODUCTION_STEP) and implied by the button itself; the full "+10% faster
+          // ticks" sentence still lives in tickspeedLabel/title above for assistive tech and
+          // anyone who expands the tooltip.
+          const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = Math.min(100, Math.round(
             (resources / (tickspeedCost + 1)) * 100
