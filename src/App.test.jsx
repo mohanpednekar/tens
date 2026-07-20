@@ -143,7 +143,7 @@ test('a tickspeed multiplier level speeds up production, not autobuyer purchase 
     resources: { Ones: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 5 },
-    autobuyers: { tier01: 3 },
+    tickspeedLevels: { tier01: 3 },
   }))
 
   render(<App />)
@@ -155,6 +155,28 @@ test('a tickspeed multiplier level speeds up production, not autobuyer purchase 
   // tickspeed level itself lives in the title tooltip.
   expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('⚙ +21%')
   expect(screen.getByTitle(/tickspeed multiplier level 3 — \+21% production/i)).toBeInTheDocument()
+})
+
+test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
+  const user = userEvent.setup()
+
+  // The last tier (Octillions) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
+  // a testable 100 of its own resource — matching engine.test.js's convention for this ladder.
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10, tier10: 101 },
+    owned: { tier09: 10, tier10: 1 },
+    // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
+    // enabled by default regardless.
+  }))
+
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% production\) for 100 Os/i })
+  expect(upgradeButton).toBeEnabled()
+
+  await user.click(upgradeButton)
+
+  expect(screen.getByTitle(/tickspeed multiplier level 2 — \+10% production/i)).toBeInTheDocument()
 })
 
 test('reaching 10 lifetime purchases of a tier doubles its displayed production amount', () => {
@@ -512,7 +534,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   expect(screen.getByRole('button', {
     name: /speed up \(requires 30 octillions\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⚡ ×8 · 50%')
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⚡ ×8 · 15/30')
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
@@ -538,6 +560,28 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /speed up \(requires 20/i })).toBeDisabled()
+})
+
+test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 12345 },
+    owned: { tier02: 1, tier09: 10, tier10: 25 },
+    purchased: { tier10: 10 },
+    globalTickspeedMultiplier: 2,
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /upgrade global tickspeed multiplier/i })).toHaveTextContent(/lv\.2/i)
+
+  await user.click(screen.getByRole('button', { name: /speed up \(requires 10/i }))
+
+  // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
+  // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
+  // way back to its pre-activation "Enable" state rather than staying at Lv.2.
+  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeInTheDocument()
 })
 
 test('the Speed Up button is disabled once production freezes at a googol', () => {
@@ -1075,6 +1119,35 @@ test('a tier tickspeed autobuyer button appears alongside Smart once a tier is u
   expect(screen.getByLabelText(/^tens pp upgrades$/i)).toHaveTextContent(/active/i)
   expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the tier tickspeed autobuyer button is buyable on the PP Upgrades page even before that tier\'s autobuyer is unlocked, alongside the still-pending Unlock button', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    // autobuyers.tier01 is left at its default (null, locked).
+    prestige: { xp: 0, points: 2, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
+
+  // Unlock is still offered (needed for Smart), and the tier tickspeed autobuyer is offered
+  // independently, at the same time — no autobuyer-unlock prerequisite for the latter.
+  expect(screen.getByRole('button', { name: /unlock tens's autobuyer/i })).toBeInTheDocument()
+  // Smart never shows before Unlock — it still genuinely requires the autobuyer unlocked first.
+  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
+
+  const tickspeedAutoButton = screen.getByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically for 2 prestige points/i })
+  expect(tickspeedAutoButton).toBeEnabled()
+
+  await user.click(tickspeedAutoButton)
+
+  expect(screen.queryByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^tens pp upgrades$/i)).toHaveTextContent(/active/i)
+  // Unlock is still there, untouched by the tickspeed-autobuyer purchase.
+  expect(screen.getByRole('button', { name: /unlock tens's autobuyer/i })).toBeInTheDocument()
 })
 
 test('a tier\'s row disappears only once both Smart and its tier tickspeed autobuyer are bought', async () => {

@@ -99,6 +99,15 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().autobuyers[tensTier.id]).toBe(0)
   })
 
+  it('preserves a saved tickspeedLevels value', () => {
+    const state = {
+      ...createInitialGameState(),
+      tickspeedLevels: { ...createInitialGameState().tickspeedLevels, [tensTier.id]: 4 },
+    }
+    saveGameState(state)
+    expect(loadGameState().tickspeedLevels[tensTier.id]).toBe(4)
+  })
+
   it('preserves a fractional autobuyer attempt budget', () => {
     const state = {
       ...createInitialGameState(),
@@ -247,6 +256,31 @@ describe('schema migration', () => {
     }
     saveGameState(state)
     expect(loadGameState().tierTickspeedAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('defaults tickspeedLevels to 1 for every tier on a save that predates it', () => {
+    const { tickspeedLevels: _dropped, ...oldSave } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.tickspeedLevels[tier.id]).toBe(1)
+    })
+  })
+
+  it('recovers a legacy per-tier tickspeed level that used to be stored directly in autobuyers, before tickspeedLevels existed as its own field', () => {
+    // Before this schema change, a tier's tickspeed level lived in autobuyers[tierId] itself
+    // (autobuyer unlock and the tickspeed level were the same field) — a pre-migration save with
+    // autobuyers.tensTier = 3 must recover that 3 into the new tickspeedLevels field rather than
+    // silently resetting the player's tickspeed progress back to the baseline.
+    const oldSave = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 3 },
+    }
+    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
+    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
+    const loaded = loadGameState()
+    expect(loaded.tickspeedLevels[tensTier.id]).toBe(3)
+    expect(loaded.autobuyers[tensTier.id]).not.toBeNull()
   })
 
   it('preserves a saved Auto-Prestige level', () => {
