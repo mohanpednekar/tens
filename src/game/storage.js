@@ -49,6 +49,16 @@ const migrateState = saved => {
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
   )
+  // tickspeedLevels is a new field (see engine.js) — before this schema change, a tier's Money-
+  // funded tickspeed level was stored directly in autobuyers[tierId] instead (autobuyer unlock
+  // and the tickspeed level were the same field). Recover that old level for any tier where the
+  // raw saved autobuyers value is a genuine number above the baseline (the legacy true/false
+  // booleans never encoded a level, so those are excluded) — otherwise a pre-migration save would
+  // silently lose that tier's tickspeed progress back down to level 1 the first time it loads
+  // under the new schema. A save already on the new schema (its own tickspeedLevels field) wins.
+  const legacyTickspeedLevels = Object.fromEntries(
+    Object.entries(rawAutobuyers).filter(([, v]) => typeof v === 'number' && v > 1)
+  )
   // autoPrestige was originally a plain boolean (bought/not bought) before becoming a levelled
   // upgrade like autobuyers above — migrate the same way: true → level 1, false → null (not yet
   // bought). A numeric value (current schema) passes through unchanged.
@@ -74,6 +84,7 @@ const migrateState = saved => {
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
+    tickspeedLevels: { ...fresh.tickspeedLevels, ...legacyTickspeedLevels, ...migrateTierKeys(saved.tickspeedLevels) },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
