@@ -337,6 +337,17 @@ Strict three-layer separation:
   is omitted (just the bare level shows) once nothing is affordable. The `aria-label` carries a
   `(level N)` suffix in words instead. State field names (`state.purchased`, `getTierPurchasedCount`,
   `getPurchaseMilestoneMultiplier`) are unchanged; only the player-facing term is "level".
+- **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the PP Upgrades page's
+  per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
+  `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
+  (cost/production strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
+  density. The full name isn't dropped: `TierNameLabel` wraps a `<VisuallyHidden>{tier.name}</VisuallyHidden>`
+  ahead of an `aria-hidden="true"` span holding the visible symbol, so the heading's accessible name is
+  still the tier's full name (unchanged for screen-reader heading navigation) even though sighted users
+  only see the glyph; a `title={tier.name}` on the same element gives sighted mouse users an equivalent
+  hover tooltip. Every other `tier.name` usage in this file (row `aria-label`s, button `aria-label`s/
+  `title`s, disclosure prose) is unaffected — it's only these two visible-label render sites that switch
+  to the symbol.
 - **Balances.** Money via `formatCurrency` and (once `!isFirstRun`) the Prestige Point balance are the
   only top-of-page blocks besides `Header` that use a centered `CenteredCard` (`styled(StatCard)`).
   Both are wrapped in a sticky `StickyBalances` container: once scrolled past their normal position
@@ -504,11 +515,13 @@ the Googol freeze" below.
 ## Economy model
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
-display names `Tens` through `Octillions`. `id` is a naming-agnostic key, fully decoupled from `name`/
-`symbol` — a future re-theme only needs to touch `name`/`symbol`, never state keys, tests, or save data.
+display names `Bytes` through `Ronnabytes` (a byte-scale/computing theme — `Bytes`, `Kilobytes`,
+`Megabytes`, `Gigabytes`, `Terabytes`, `Petabytes`, `Exabytes`, `Zettabytes`, `Yottabytes`,
+`Ronnabytes`). `id` is a naming-agnostic key, fully decoupled from `name`/`symbol` — a future re-theme
+only needs to touch `name`/`symbol`, never state keys, tests, or save data.
 **Every tier is bought directly with `Ones` (money)** — `costResourceId` is `MONEY_ID` for all of them.
 Once owned, a tier produces the tier immediately below it (`producesResourceId`), cascading production
-down to `Ones`. `tier01` (`Tens`) is the special case where `costResourceId === producesResourceId ===
+down to `Ones`. `tier01` (`Bytes`) is the special case where `costResourceId === producesResourceId ===
 MONEY_ID`: it's the entry-level generator, bought with money to produce more money.
 
 A tier unlocks once you own **≥ 10** of the tier below it (`isTierUnlocked`); already-owned tiers stay
@@ -1102,7 +1115,7 @@ components migrate onto these tokens one at a time in later sub-issues.
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
 - `yarn test` is green (434 tests). All four test files assert against the current tier/resource id scheme
-  (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't
+  (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
 

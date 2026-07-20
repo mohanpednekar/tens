@@ -11,23 +11,23 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('renders the game title and the Tens tier', () => {
+test('renders the game title and the Bytes tier', () => {
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^tens layer$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes layer$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
-test('buying Tens deducts cost and increases owned count', async () => {
+test('buying Bytes deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
-  // After spending $10 on the first Tens, money=$0. Cost stays $10 (flat within the block of 10) — button disabled.
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  // After spending $10 on the first Bytes, money=$0. Cost stays $10 (flat within the block of 10) — button disabled.
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeDisabled()
 })
 
@@ -43,15 +43,15 @@ test('reset game restores starting state once the confirm dialog is accepted', a
 
   render(<App />)
 
-  // Buy a Tens generator to dirty the state
+  // Buy a Bytes generator to dirty the state
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 0\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
   expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
 })
 
@@ -78,19 +78,19 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
 
   render(<App />)
 
-  // Buy a Tens generator to dirty the state
+  // Buy a Bytes generator to dirty the state
   await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
+test('Kilobytes tier appears and is purchasable once 10 Bytes are owned', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1000 },
     owned: { tier01: 10 },
@@ -98,7 +98,7 @@ test('Thousands tier appears and is purchasable once 10 Tens are owned', () => {
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^thousands layer$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for \$1,000\b/i })).toBeEnabled()
 })
 
@@ -114,8 +114,8 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 
   await user.click(screen.getByRole('button', { name: /buy for \$1,000\b/i }))
 
-  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent(/owned: 1/i)
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 10/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10/i)
 })
 
 test('money balance is shown once at the top in full currency format, centered, with no per-second yield', () => {
@@ -134,8 +134,8 @@ test('a money-producing tier shows its per-tick production amount with a $ prefi
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
-  expect(screen.getByLabelText(/^tens layer$/i)).not.toHaveTextContent('/sec')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$5')
+  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent('/sec')
 })
 
 test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
@@ -151,18 +151,18 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
   // still reads +$5, not +$6.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$5')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$5')
   // The badge shows the cumulative speed bonus as "+N%" (not the old "×N" purchase-speed
   // figure) — no "Lv." (that wording belongs to the Buy button's purchase level); the
   // tickspeed level itself lives in the title tooltip.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('⚙ +21%')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('⚙ +21%')
   expect(screen.getByTitle(/tickspeed multiplier level 3 — \+21% faster ticks/i)).toBeInTheDocument()
 })
 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
   const user = userEvent.setup()
 
-  // The last tier (Octillions) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
+  // The last tier (Ronnabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
   // a testable 10 of its own resource — matching engine.test.js's convention for this ladder.
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10, tier10: 11 },
@@ -173,7 +173,7 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
 
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 Os/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 RB/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
@@ -191,7 +191,7 @@ test('reaching 10 lifetime purchases of a tier doubles its displayed production 
   render(<App />)
 
   // Crossing the 10-purchase milestone doubles production: owned(5) × $1/tick × 2 = $10 per tick.
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent('+$10')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$10')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {
@@ -205,7 +205,7 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   // The displayed amount is the raw per-tick credit (owned(4) × 1, no bonus/milestone) delivered
   // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
   // not shown as an averaged "/sec" rate.
-  expect(screen.getByLabelText(/^thousands layer$/i)).toHaveTextContent('+4 Tens')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+4 B')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
@@ -216,7 +216,7 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
 
   render(<App />)
 
-  const progressBar = screen.getByRole('progressbar', { name: /tens cost-block progress/i })
+  const progressBar = screen.getByRole('progressbar', { name: /bytes cost-block progress/i })
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
   expect(progressBar).toHaveAttribute('aria-valuemax', '10')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
@@ -238,7 +238,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   await user.click(buyButton)
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 10\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10\b/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
@@ -256,14 +256,14 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
 
   await user.click(buyButton)
 
-  expect(screen.getByLabelText(/^tens layer$/i)).toHaveTextContent(/owned: 3\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 3\b/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
 })
 
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 3, name: /^tens$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 3, name: /^bytes$/i })).toBeInTheDocument()
 })
 
 test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
@@ -271,7 +271,7 @@ test('applies offline progress at 10% speed based on elapsed time since the last
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   }))
-  // 100 real seconds ago → 10 simulated seconds at 10% speed → 5 Tens × 10s = +50 money
+  // 100 real seconds ago → 10 simulated seconds at 10% speed → 5 Bytes × 10s = +50 money
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
@@ -534,7 +534,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   // Third activation requires 30 tier10 purchases (15/30 = 50%) and would raise the permanent
   // multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires 30 octillions\) — doubles production speed to ×8/i,
+    name: /speed up \(requires 30 ronnabytes\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · 15/30')
 })
@@ -677,7 +677,7 @@ test('the global tickspeed panel renders above the tier list, not below it', () 
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Tens layer'))
+  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Bytes layer'))
 })
 
 test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
@@ -955,7 +955,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
   // Unlocking tier01's autobuyer costs 1 PP — 50 PP fully covers it (valuenow caps at the cost).
-  const unlockProgress = screen.getByRole('progressbar', { name: /tens autobuyer unlock prestige point progress/i })
+  const unlockProgress = screen.getByRole('progressbar', { name: /bytes autobuyer unlock prestige point progress/i })
   expect(unlockProgress).toHaveAttribute('aria-valuenow', '1')
   expect(unlockProgress).toHaveAttribute('aria-valuemax', '1')
 
@@ -995,17 +995,17 @@ test('an Unlock button appears on the PP Upgrades page for a tier whose autobuye
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  const unlockButton = screen.getByRole('button', { name: /unlock tens's autobuyer for 1 prestige point\b/i })
+  const unlockButton = screen.getByRole('button', { name: /unlock bytes's autobuyer for 1 prestige point\b/i })
   expect(unlockButton).toBeEnabled()
   // Smart isn't purchasable yet — it requires the autobuyer already be unlocked.
-  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make bytes's autobuyer smart/i })).not.toBeInTheDocument()
 
   await user.click(unlockButton)
 
   // Unlock is bought silently in the background; the row immediately shows Smart instead of a
   // lingering "Unlock" button — the two controls are never shown for the same tier.
-  expect(screen.queryByRole('button', { name: /unlock tens's autobuyer/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock bytes's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1020,7 +1020,7 @@ test('the Unlock button stays disabled without enough Prestige Points', async ()
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByRole('button', { name: /unlock tens's autobuyer for 1 prestige point\b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /unlock bytes's autobuyer for 1 prestige point\b/i })).toBeDisabled()
 })
 
 test('a non-first tier\'s Unlock button appears the same way as the first tier\'s, with no special-casing between them', async () => {
@@ -1028,15 +1028,15 @@ test('a non-first tier\'s Unlock button appears the same way as the first tier\'
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: { tier01: 10 }, // unlocks Thousands
-    // thousands' autobuyer is deliberately absent/locked here.
+    owned: { tier01: 10 }, // unlocks Kilobytes
+    // kilobytes' autobuyer is deliberately absent/locked here.
     prestige: { xp: 0, points: 2, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByRole('button', { name: /unlock thousands's autobuyer for 2 prestige points/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /unlock kilobytes's autobuyer for 2 prestige points/i })).toBeEnabled()
 })
 
 test('no PP Upgrades tab or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP', () => {
@@ -1088,17 +1088,17 @@ test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  const smartButton = screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })
+  const smartButton = screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })
   expect(smartButton).toBeEnabled()
   // The Unlock control is already gone — the autobuyer is unlocked, Smart has taken its place.
-  expect(screen.queryByRole('button', { name: /unlock tens's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock bytes's autobuyer/i })).not.toBeInTheDocument()
 
   await user.click(smartButton)
 
   // Smart is bought, but the row stays — the tier tickspeed autobuyer purchase is independent
   // and still pending, so there's still something left to buy for this tier.
-  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^tens pp upgrades$/i)).toHaveTextContent(/smart/i)
+  expect(screen.queryByRole('button', { name: /make bytes's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/smart/i)
   expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1117,17 +1117,17 @@ test('a tier tickspeed autobuyer button appears alongside Smart once a tier is u
 
   // Both controls show at once — Smart isn't affordable (10 PP needed, only 2 held), but the
   // tier tickspeed autobuyer (2 PP, 2x the 1 PP unlock cost) is.
-  const tickspeedAutoButton = screen.getByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically for 2 prestige points/i })
+  const tickspeedAutoButton = screen.getByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically for 2 prestige points/i })
   expect(tickspeedAutoButton).toBeEnabled()
-  expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeDisabled()
 
   await user.click(tickspeedAutoButton)
 
   // Bought: badge replaces the button, Smart's own button is still there (independent, still
   // pending), and the row itself hasn't disappeared.
-  expect(screen.queryByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^tens pp upgrades$/i)).toHaveTextContent(/active/i)
-  expect(screen.getByRole('button', { name: /make tens's autobuyer smart/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1145,19 +1145,19 @@ test('the tier tickspeed autobuyer button is buyable on the PP Upgrades page eve
 
   // Unlock is still offered (needed for Smart), and the tier tickspeed autobuyer is offered
   // independently, at the same time — no autobuyer-unlock prerequisite for the latter.
-  expect(screen.getByRole('button', { name: /unlock tens's autobuyer/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /unlock bytes's autobuyer/i })).toBeInTheDocument()
   // Smart never shows before Unlock — it still genuinely requires the autobuyer unlocked first.
-  expect(screen.queryByRole('button', { name: /make tens's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make bytes's autobuyer smart/i })).not.toBeInTheDocument()
 
-  const tickspeedAutoButton = screen.getByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically for 2 prestige points/i })
+  const tickspeedAutoButton = screen.getByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically for 2 prestige points/i })
   expect(tickspeedAutoButton).toBeEnabled()
 
   await user.click(tickspeedAutoButton)
 
-  expect(screen.queryByRole('button', { name: /make tens's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^tens pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.queryByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
   // Unlock is still there, untouched by the tickspeed-autobuyer purchase.
-  expect(screen.getByRole('button', { name: /unlock tens's autobuyer/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /unlock bytes's autobuyer/i })).toBeInTheDocument()
 })
 
 test('a tier\'s row disappears only once both Smart and its tier tickspeed autobuyer are bought', async () => {
@@ -1172,7 +1172,7 @@ test('a tier\'s row disappears only once both Smart and its tier tickspeed autob
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.queryByLabelText(/^tens pp upgrades$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^bytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
 test('the PP Upgrades tab NavDot lights up when only the tier tickspeed autobuyer (not Smart) is affordable', () => {
@@ -1214,7 +1214,7 @@ test('the Smart button stays disabled without enough Prestige Points', async () 
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
-  expect(screen.getByRole('button', { name: /make tens's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
 })
 
 test('once every tier is smart and tickspeed-automated, a single notice replaces every per-tier row', async () => {
@@ -1251,5 +1251,5 @@ test('a tier fully Smart but not yet tickspeed-automated does not trigger the "e
   await userEvent.setup().click(screen.getByRole('tab', { name: /pp upgrades/i }))
 
   expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^tens pp upgrades$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toBeInTheDocument()
 })

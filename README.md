@@ -18,27 +18,24 @@ The base resource is Money ($, resource id `Ones`). The player starts with $10.
 
 ### Production layers
 
-There are 12 tiers, from Tens up to Decillions. **Every tier is bought directly with Money** and, once
-owned, produces the tier immediately below it (which cascades down to Money). The first tier, Tens, both
-costs and produces Money — it's the entry-level generator.
+There are 10 tiers, from Bytes up to Ronnabytes (a byte-scale/computing theme). **Every tier is bought
+directly with Money** and, once owned, produces the tier immediately below it (which cascades down to
+Money). The first tier, Bytes, both costs and produces Money — it's the entry-level generator.
 
 | Tier | Symbol | Base cost | Produces |
 |------|--------|-----------|----------|
-| Tens | Tens | $1e1 | Money |
-| Thousands | Ks | $1e3 | Tens |
-| Millions | Ms | $1e6 | Thousands |
-| Billions | Bs | $1e9 | Millions |
-| Trillions | Ts | $1e12 | Billions |
-| Quadrillions | Qs | $1e15 | Trillions |
-| Pentillions | Ps | $1e18 | Quadrillions |
-| Hexillions | Hs | $1e21 | Pentillions |
-| Septillions | Ss | $1e24 | Hexillions |
-| Octillions | Os | $1e27 | Septillions |
-| Nonillions | Ns | $1e30 | Octillions |
-| Decillions | Ds | $1e33 | Nonillions |
+| Bytes | B | $1e1 | Money |
+| Kilobytes | KB | $1e3 | Bytes |
+| Megabytes | MB | $1e6 | Kilobytes |
+| Gigabytes | GB | $1e9 | Megabytes |
+| Terabytes | TB | $1e12 | Gigabytes |
+| Petabytes | PB | $1e15 | Terabytes |
+| Exabytes | EB | $1e18 | Petabytes |
+| Zettabytes | ZB | $1e21 | Exabytes |
+| Yottabytes | YB | $1e24 | Zettabytes |
+| Ronnabytes | RB | $1e27 | Yottabytes |
 
-Costs increase **10% per purchase**, then jump **10x every 10 purchases** (e.g. Tens: $10, $11, … $19, then
-$100, $110, … at the 11th purchase).
+Costs scale in Fibonacci-driven jumps every block of 10 purchases (see `getTierCost` in `engine.js`).
 
 A tier unlocks once you own **10 or more** of the tier below it (already-owned tiers stay unlocked even if
 the rule changes later, so old saves remain playable).
