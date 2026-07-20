@@ -196,6 +196,11 @@ full rationale and examples):
    with `Blocked by #N` whenever two issues would edit the same lines/files, even without a strict
    functional dependency, purely to avoid concurrent-edit conflicts.
 
+## Funding
+
+`.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar` (native repo "Sponsor" button).
+Enrollment on `github.com/sponsors` is a separate maintainer-only step tracked in issue #62.
+
 ## Security notes
 
 - Dev and test servers bind to `127.0.0.1` — do not change to `0.0.0.0`.

@@ -1015,6 +1015,13 @@ components migrate onto these tokens one at a time in later sub-issues.
   `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
   light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
 
+## Funding
+
+`.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar`, so the repo shows a native
+"Sponsor" button. The file alone doesn't enroll the account — Sponsors enrollment
+(`github.com/sponsors`) is a separate, maintainer-only step tracked in issue #62's checklist; until
+that's done the Sponsor button simply won't display/function.
+
 ## Testing
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`, `App.test.jsx`.
