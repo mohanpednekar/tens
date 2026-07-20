@@ -329,10 +329,14 @@ Strict three-layer separation:
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, drives cost scaling and — every 10 of them — a production doubling via
-  `getPurchaseMilestoneMultiplier`) has no separate cell: it shows as a `Lv.N` prefix on the Buy
-  button's visible text (and a `(level N)` `aria-label` suffix). State field names
-  (`state.purchased`, `getTierPurchasedCount`, `getPurchaseMilestoneMultiplier`) are unchanged; only
-  the player-facing term is "level".
+  `getPurchaseMilestoneMultiplier`) has no separate cell: it shows on the Buy button's visible text
+  as `{level}+{quantity}` (e.g. `30+10` — current level plus the quantity this purchase adds, so the
+  sum reads as the level the purchase reaches) inside `ButtonIcon` alongside the 🛒 glyph, pinned
+  immediately next to the icon rather than centered — this keeps the level digits starting at the
+  same x position across every tier row regardless of the cost string's length. The quantity suffix
+  is omitted (just the bare level shows) once nothing is affordable. The `aria-label` carries a
+  `(level N)` suffix in words instead. State field names (`state.purchased`, `getTierPurchasedCount`,
+  `getPurchaseMilestoneMultiplier`) are unchanged; only the player-facing term is "level".
 - **Balances.** Money via `formatCurrency` and (once `!isFirstRun`) the Prestige Point balance are the
   only top-of-page blocks besides `Header` that use a centered `CenteredCard` (`styled(StatCard)`).
   Both are wrapped in a sticky `StickyBalances` container: once scrolled past their normal position
@@ -360,7 +364,9 @@ Strict three-layer separation:
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
   `RESOURCE_SYMBOL` (e.g. `Ks`) instead of its full name — while each button's `aria-label` carries the
   full descriptive sentence (`"Buy ×10 for $100"`, `"Prestige (requires 1 Googol Money)"`, `"Reset
-  game"`, …) used by assistive tech and `getByRole('button', { name })` tests.
+  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot also
+  carries the level+quantity text (see "Owned vs. level" above) — see there for why it's pinned next
+  to the icon rather than folded into the centered cost label.
 
 **Game view vs. PP Upgrades view.** `MainPage` renders one of two views, toggled by a local
 `useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
@@ -404,11 +410,12 @@ the moment the tier itself is unlocked, with **no** autobuyer-unlock or PP prere
 tier's own delivery frequency by another 10% (`getTickspeedProductionMultiplier`, divided into the
 tier's effective period rather than multiplied into its production credit — see "Tier production
 tickspeed" below); it changes **neither** the amount delivered per batch **nor** autobuyer
-purchase-attempt frequency (that rate is flat). Visible text is `⚙ ⚡ {cost} {symbol}` — the
-marginal effect of *this* purchase is always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds
-the same fixed 10% step), so rather than spelling out an unvarying "+10%" on every tier's button, a
-⚡ icon stands in for it; `aria-label`/`title` still spell out the full "+10% faster ticks" sentence
-for assistive tech. A compact badge beside the tier name (gated on tickspeed level > 1) shows
+purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {symbol}` — a single ⚙
+icon (matching the badge below and the tier tickspeed autobuyer's `⚙ Active` badge on the PP
+Upgrades page) identifies the button as the tickspeed control; no separate icon marks the marginal
+effect, since it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10%
+step) and implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster
+ticks" sentence for assistive tech. A compact badge beside the tier name (gated on tickspeed level > 1) shows
 `⚙ +N%` — the cumulative speed bonus (faster deliveries, and genuinely level-dependent unlike the
 button's fixed marginal step), not a production-amount bonus.
 
@@ -1005,8 +1012,8 @@ regardless of whether those purchases were manual or automatic.
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
 | `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (getTickspeedProductionMultiplier(tickspeedLevels[tierId]) × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
-| `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above (e.g. `6.5E13`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
-| `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation (e.g. `$6.5E13`) at/above the same threshold — used for all Money amounts, wherever they appear |
+| `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
+| `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `$6.5e13`) — used for all Money amounts, wherever they appear |
 | `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, scales by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (10%), floors — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |

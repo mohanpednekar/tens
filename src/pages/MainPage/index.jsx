@@ -985,15 +985,19 @@ const MainPage = () => {
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy"/tickspeed word, and the tier's
           // short symbol (via formatCost) in place of its full name. The full sentence stays in
-          // aria-label/title for assistive tech. Buy also carries the tier's level (lifetime
-          // purchase count — the figure the removed "Level:" cell used to show), since Buy is the
-          // action that raises it.
-          const buyVisibleLabel = `🛒 Lv.${formatAmount(purchased)}${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} ${formatCurrency(displayCost)}`
-          // "+10%" (the fixed per-purchase marginal effect — always the same, see
-          // TICKSPEED_PRODUCTION_STEP) is represented by ⚡ instead of spelled out — the full
-          // "+10% faster ticks" sentence still lives in tickspeedLabel/title above for assistive
-          // tech and anyone who expands the tooltip.
-          const tickspeedVisibleLabel = `⚙ ⚡ ${formatCost(tickspeedCost, tier.id)}`
+          // aria-label/title for assistive tech. The level+quantity ("40+3" — current lifetime
+          // purchase count plus the quantity this purchase adds) sits inside ButtonIcon alongside
+          // the 🛒 glyph rather than the centered ButtonLabel, so it's pinned immediately next to
+          // the icon and lines up in a column across tier rows regardless of the cost string's
+          // length; the quantity is omitted (just the level shows) once nothing is affordable.
+          const buyLevelQuantityText = `${formatAmount(purchased)}${affordableQuantity > 0 ? `+${affordableQuantity}` : ''}`
+          // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
+          // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
+          // no separate icon for "+10%" is needed, since that step is fixed
+          // (TICKSPEED_PRODUCTION_STEP) and implied by the button itself; the full "+10% faster
+          // ticks" sentence still lives in tickspeedLabel/title above for assistive tech and
+          // anyone who expands the tooltip.
+          const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = Math.min(100, Math.round(
             (resources / (tickspeedCost + 1)) * 100
@@ -1052,7 +1056,8 @@ const MainPage = () => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <ButtonContent>{buyVisibleLabel}</ButtonContent>
+                <ButtonIcon>🛒 {buyLevelQuantityText} </ButtonIcon>
+                <ButtonLabel>{formatCurrency(displayCost)}</ButtonLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}

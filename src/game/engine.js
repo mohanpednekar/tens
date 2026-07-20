@@ -145,14 +145,18 @@ const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'sc
 const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
 // Values at/above this switch from plain comma-grouped digits to exponential notation
-// (e.g. "6.5E13") for readability, shared by formatAmount and formatCurrency.
+// (e.g. "6.5e13") for readability, shared by formatAmount and formatCurrency.
 const EXPONENTIAL_NOTATION_THRESHOLD = 1_000_000
+
+// Intl's scientific notation always renders an uppercase "E" exponent marker with no option to
+// override it, so every exponential display in this app lowercases it after formatting.
+const formatScientific = value => scientificNumberFormatter.format(value).replace('E', 'e')
 
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)
 
   if (safeValue < EXPONENTIAL_NOTATION_THRESHOLD) return plainNumberFormatter.format(safeValue)
-  return scientificNumberFormatter.format(safeValue)
+  return formatScientific(safeValue)
 }
 
 // Comma-grouped currency string below the threshold, exponential above it (same threshold and
@@ -164,7 +168,7 @@ export const formatCurrency = value => {
   const safeValue = Math.floor(clampNonNegative(value))
   return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
     ? `$${currencyNumberFormatter.format(safeValue)}`
-    : `$${scientificNumberFormatter.format(safeValue)}`
+    : `$${formatScientific(safeValue)}`
 }
 
 // The Fibonacci number driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8,
