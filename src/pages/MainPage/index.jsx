@@ -497,9 +497,9 @@ const formatCost = (amount, resourceId) =>
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
 // Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used for the
-// tickspeed multiplier badge/labels, which show the cumulative production bonus as "+N%" rather
-// than the earlier "×N" purchase-speed multiplier it replaced (see "Tickspeed multiplier" in
-// CLAUDE.md).
+// tickspeed multiplier badge/labels, which show the cumulative delivery-frequency bonus as "+N%"
+// rather than the earlier "×N" purchase-speed multiplier it replaced (see "Tickspeed multiplier"
+// in CLAUDE.md).
 const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 
 const MainPage = () => {
@@ -635,8 +635,9 @@ const MainPage = () => {
     : null
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
-  // Auto-Prestige's null/level pattern — each level compounds *every* tier's production by another
-  // 10% at once (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
+  // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
+  // another 10% at once, not the amount delivered (see
+  // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
   // every other automation upgrade on this page, it's Money-funded (not PP) and lives on the Game
   // view instead of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js:
   // it only becomes purchasable once at least 1 of the second tier is owned, so a player can't
