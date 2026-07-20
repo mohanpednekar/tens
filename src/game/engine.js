@@ -41,12 +41,13 @@ export const createInitialGameState = () => ({
     [tier.id]: null,
   }), {}),
   // Per-tier level for that tier's own Money-funded tickspeed multiplier (see
-  // getTickspeedProductionMultiplier/buyTickspeedMultiplier) — starts at 1 (baseline, no
-  // production bonus) for every tier and is buyable from the moment the tier itself is unlocked,
-  // with no PP prerequisite at all; whether that tier's unit-buying autobuyer has ever been
-  // unlocked (see autobuyers above) has no bearing on it. Only the *automatic* self-upgrading of
-  // this level is PP-gated — see tierTickspeedAutobuyer below. Resets to 1 for every tier on
-  // Prestige and Speed Up, same as owned/purchased.
+  // getTickspeedProductionMultiplier/getEffectiveTierTickSpeedSeconds/buyTickspeedMultiplier) —
+  // starts at 1 (baseline, no speed bonus) for every tier and is buyable from the moment the tier
+  // itself is unlocked, with no PP prerequisite at all; whether that tier's unit-buying autobuyer
+  // has ever been unlocked (see autobuyers above) has no bearing on it. Only the *automatic*
+  // self-upgrading of this level is PP-gated — see tierTickspeedAutobuyer below. Resets to 1 for
+  // every tier on Prestige and Speed Up, same as owned/purchased. Speeds up this tier's own
+  // delivery frequency by 10% per level above baseline — it does not scale the amount delivered.
   tickspeedLevels: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: 1,
@@ -91,9 +92,10 @@ export const createInitialGameState = () => ({
   // Permanent global level (not per-tier — there's only one to buy, mirroring autoPrestige above),
   // null = not yet bought: how many times Money has been spent on the global tickspeed multiplier
   // (unlocked once at least 1 of the second tier is owned — see
-  // isGlobalTickspeedMultiplierUnlocked), which compounds *every* tier's production by another 10%
-  // per level (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) — never
-  // reset by prestige.
+  // isGlobalTickspeedMultiplierUnlocked), which speeds up *every* tier's delivery frequency by
+  // another 10% per level, not the amount delivered (see
+  // getGlobalTickspeedProductionMultiplier/getEffectiveTierTickSpeedSeconds/
+  // buyGlobalTickspeedMultiplier) — never reset by prestige.
   globalTickspeedMultiplier: null,
   // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
   // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
@@ -221,13 +223,14 @@ export const getTickspeedMultiplierBaseCost = tierIndex => {
 }
 
 // Resource cost to reach tickspeed multiplier level `targetLevel` on a tier, paid in that tier's
-// own resource: the tier's base cost (see getTickspeedMultiplierBaseCost) raised to targetLevel —
-// e.g. the 2nd tier's (index 1, base 10^9) level-4 cost is (10^9)^4 = 10^36. targetLevel 1 is the
-// PP-funded unlock cost itself (see getAutobuyerUnlockCost) — this function is shared by both the
-// PP unlock (level 1) and every subsequent Money-funded level-up (targetLevel > 1).
+// own resource: the tier's base cost (see getTickspeedMultiplierBaseCost) raised to
+// (targetLevel - 1) — level 1 (the free baseline every tier already starts at) costs base^0 = 1,
+// never actually charged; the first real purchase (level 1 → 2) costs exactly the base cost
+// itself (base^1); each level after that multiplies the cost by another factor of the base
+// (base^2, base^3, …) — e.g. the 2nd tier's (index 1, base 10^9) level-4 cost is (10^9)^3 = 10^27.
 export const getTickspeedMultiplierCost = (tierId, targetLevel) => {
   const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
-  return getTickspeedMultiplierBaseCost(tierIndex) ** Math.max(1, clampNonNegative(targetLevel))
+  return getTickspeedMultiplierBaseCost(tierIndex) ** Math.max(0, clampNonNegative(targetLevel) - 1)
 }
 
 // PP cost to permanently unlock a tier's autobuyer (see buyAutobuyerUnlock) — a flat, small
@@ -239,15 +242,16 @@ export const getAutobuyerUnlockCost = tierId => {
   return AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)
 }
 
-// The production-speed multiplier from a tier's tickspeed multiplier level: level 1 (just
-// unlocked, no Money-funded levels bought yet) is the baseline ×1 — no bonus — and each level
-// after that compounds production by another TICKSPEED_PRODUCTION_STEP (10%): level 2 = ×1.1,
-// level 3 = ×1.21, … This is the exact formula that used to drive autobuyer purchase-attempt
-// frequency before that effect moved to production instead (see "Tickspeed multiplier" in
-// CLAUDE.md) — the tickspeed multiplier button no longer has any effect on how often the
-// autobuyer attempts a purchase (see the flat rate used in tickGame below). `null` (tier has no
-// autobuyer at all — never unlocked) is treated as level 1 (no bonus), same defensive convention
-// used elsewhere in this file.
+// The speed multiplier from a tier's tickspeed multiplier level: level 1 (the free baseline every
+// tier starts at) is ×1 — no bonus — and each level after that speeds up this tier's own delivery
+// frequency by another TICKSPEED_PRODUCTION_STEP (10%): level 2 = ×1.1, level 3 = ×1.21, … Divided
+// into getEffectiveTierTickSpeedSeconds's effective period rather than multiplied into a
+// production credit, so it changes how *often* a batch lands, not how big one is (see "Tickspeed
+// multiplier" in CLAUDE.md). This is the exact formula that used to drive autobuyer
+// purchase-attempt frequency before that effect moved off autobuyers entirely — the tickspeed
+// multiplier button has no effect on how often the autobuyer attempts a purchase (see the flat
+// rate used in tickGame below). `null` (tier has no autobuyer at all — never unlocked) is treated
+// as level 1 (no bonus), same defensive convention used elsewhere in this file.
 export const getTickspeedProductionMultiplier = level =>
   (1 + TICKSPEED_PRODUCTION_STEP) ** clampNonNegative((level ?? 1) - 1)
 
@@ -269,12 +273,13 @@ export const getGlobalTickspeedMultiplierCost = currentLevel =>
 export const isGlobalTickspeedMultiplierUnlocked = state =>
   (state.owned[TIER_DEFINITIONS[1].id] ?? 0) >= 1 || (state.globalTickspeedMultiplier ?? null) !== null
 
-// The production-speed multiplier every tier gets from the global tickspeed multiplier: unlike the
-// per-tier tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP
-// unlock), buying this global track directly grants its effect — level 1 (the first purchase)
-// already compounds every tier's production by GLOBAL_TICKSPEED_PRODUCTION_STEP (10%), level 2 by
-// another 10% on top (×1.21 total), and so on. `null` (never bought) is treated as level 0, i.e. no
-// bonus (×1).
+// The speed multiplier every tier gets from the global tickspeed multiplier: unlike the per-tier
+// tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP unlock),
+// buying this global track directly grants its effect — level 1 (the first purchase) already
+// speeds up every tier's delivery frequency by GLOBAL_TICKSPEED_PRODUCTION_STEP (10%), level 2 by
+// another 10% on top (×1.21 total), and so on — divided into getEffectiveTierTickSpeedSeconds
+// alongside the per-tier multiplier, not multiplied into a production credit. `null` (never
+// bought) is treated as level 0, i.e. no bonus (×1).
 export const getGlobalTickspeedProductionMultiplier = level =>
   (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** clampNonNegative(level ?? 0)
 
@@ -385,24 +390,37 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
+// A tier's actual production period after both tickspeed multipliers shrink it (see "Tier
+// production tickspeed" in CLAUDE.md) — the per-tier tickspeed level and the global tickspeed
+// multiplier both speed up how *often* a tier delivers a batch, not how much lands each time (see
+// "Tickspeed multiplier"/"The global tickspeed multiplier" below), so both divide the tier's own
+// getTierBaseTickSpeedSeconds instead of multiplying its production. Always >= 1 in practice
+// (both multipliers are always >= 1), so this only ever shrinks (never grows) the base period.
+export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
+  const tickspeedMultiplier = getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
+  return getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+}
+
 // How far a tier's production accumulator has filled toward its next delivered batch, as a
 // whole percent — 0 right after a batch is delivered, 100 the instant it's about to fire (see
 // tickGame's tierProductionAccumulators handling and "Tier production tickspeed" in CLAUDE.md).
 // Pass the tier's *previous* banked accumulator (e.g. from a UI-side ref tracking the prior
 // render, since state itself only stores the post-delivery wrapped remainder) to instead report
 // 100 for the one render where a delivery just happened, rather than the wrapped-down remainder —
-// that's previousAccumulator + elapsedSeconds >= this tier's own tickspeed, where elapsedSeconds
-// defaults to 1 (matching a full real second, e.g. one offline-progress replay step) but callers
-// driven by the live tick loop should pass the real per-tick value (TICK_RATE_MS / 1000). The UI
-// then animates the *visual transition* between these once-per-tick values via a CSS
-// custom-property transition (see TickProgressRing in MainPage), rather than this function
-// trying to interpolate sub-tick progress itself.
+// that's previousAccumulator + elapsedSeconds >= this tier's own effective tickspeed, where
+// elapsedSeconds defaults to 1 (matching a full real second, e.g. one offline-progress replay
+// step) but callers driven by the live tick loop should pass the real per-tick value
+// (TICK_RATE_MS / 1000). The UI then animates the *visual transition* between these once-per-tick
+// values via a CSS custom-property transition (see TickProgressRing in MainPage), rather than
+// this function trying to interpolate sub-tick progress itself.
 export const getTierProductionProgressPercent = (state, tierId, previousAccumulator, elapsedSeconds = 1) => {
-  const tickSpeed = getTierBaseTickSpeedSeconds(tierId)
+  const tickSpeed = getEffectiveTierTickSpeedSeconds(state, tierId)
   // Same TICK_ACCUMULATION_EPSILON tolerance tickGame's own crossing check uses (see there):
   // absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds. Every tier
-  // now shares a 1s tickspeed, where ten additions of 0.1 land on 0.9999999999999999 rather than
-  // exactly 1 — without this tolerance the "just delivered" 100% flash would be silently skipped.
+  // now shares a 1s base tickspeed, where ten additions of 0.1 land on 0.9999999999999999 rather
+  // than exactly 1 — without this tolerance the "just delivered" 100% flash would be silently
+  // skipped.
   if (previousAccumulator != null && previousAccumulator + elapsedSeconds >= tickSpeed - TICK_ACCUMULATION_EPSILON) return 100
   const accumulated = state.tierProductionAccumulators?.[tierId] ?? 0
   return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))
@@ -472,10 +490,6 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Speed Up's multiplier, unlike the PP bonus above, needs no unlock step — it applies as soon
   // as speedUpCount > 0 (see getSpeedUpMultiplier/speedUpGame).
   const speedUpMultiplier = getSpeedUpMultiplier(state.speedUpCount ?? 0)
-  // The global tickspeed multiplier applies uniformly to every tier, same as the two multipliers
-  // above — unlike the per-tier tickspeed multiplier below, it needs no per-tier lookup since it's
-  // a single global level (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier).
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
@@ -522,16 +536,19 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
 
-    // Each tier only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds,
-    // as a single batch — and each completed tick period delivers exactly one "tick's worth"
-    // (owned × multipliers), not one tick's worth per elapsed second within it. This means a
-    // slower tier's actual per-second throughput is reduced (divided by its own tickspeed)
-    // compared to a tier that ticks every second — a real slowdown, not just a delayed delivery
-    // of the same total (see tierProductionAccumulators above). Any partial tick below a full
-    // tickspeed's worth stays banked for the next tick. TICK_ACCUMULATION_EPSILON absorbs the
-    // floating-point drift of repeatedly summing a fractional elapsedSeconds (e.g. ten additions
-    // of 0.1 land on 0.9999999999999999, not 1) so a delivery isn't delayed by a stray tick.
-    const tickSpeed = getTierBaseTickSpeedSeconds(tier.id)
+    // Each tier only delivers production once every getEffectiveTierTickSpeedSeconds(state,
+    // tier.id) seconds, as a single batch — and each completed tick period delivers exactly one
+    // "tick's worth" (owned × multipliers), not one tick's worth per elapsed second within it.
+    // This means a slower tier's actual per-second throughput is reduced (divided by its own
+    // effective tickspeed) compared to a tier that ticks every second — a real slowdown, not just
+    // a delayed delivery of the same total (see tierProductionAccumulators above). The per-tier
+    // tickspeed multiplier and the global tickspeed multiplier both shrink this effective period —
+    // they speed up how *often* a batch lands, not how big it is (see "Tickspeed multiplier"/"The
+    // global tickspeed multiplier" in CLAUDE.md). Any partial tick below a full period stays
+    // banked for the next tick. TICK_ACCUMULATION_EPSILON absorbs the floating-point drift of
+    // repeatedly summing a fractional elapsedSeconds (e.g. ten additions of 0.1 land on
+    // 0.9999999999999999, not 1) so a delivery isn't delayed by a stray tick.
+    const tickSpeed = getEffectiveTierTickSpeedSeconds(stateAfterAutobuyers, tier.id)
     const accumulated = (newAccumulators[tier.id] ?? 0) + elapsedSeconds
     const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
@@ -540,13 +557,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // Floored so owned/resources stay integer-valued: owned, ticksElapsed, and tierMultiplier/
     // speedUpMultiplier (both always powers of 2) are already integers, so only the fractional
     // Prestige Point production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent
-    // points → ×1.5), the per-tier tickspeed multiplier (getTickspeedProductionMultiplier, e.g.
-    // level 3 → ×1.21), and the global tickspeed multiplier (getGlobalTickspeedProductionMultiplier,
-    // e.g. level 2 → ×1.21) can introduce a fraction here. All are always >= 1, so flooring never
-    // zeroes out production for a tier with owned > 0.
+    // points → ×1.5) can introduce a fraction here — always >= 1, so flooring never zeroes out
+    // production for a tier with owned > 0. Neither tickspeed multiplier appears in this formula
+    // at all anymore — they've already done their work by shrinking tickSpeed above, which is what
+    // grew ticksElapsed.
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
-    const tickspeedMultiplier = getTickspeedProductionMultiplier(stateAfterAutobuyers.tickspeedLevels?.[tier.id] ?? 1)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * tickspeedMultiplier * globalTickspeedMultiplier)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -720,8 +736,9 @@ export const buyAutobuyerUnlock = tierId => state => {
 // resource — enabled by default (needs no PP prerequisite and no autobuyer unlock at all, see
 // tickspeedLevels in createInitialGameState); only the *automatic* self-upgrading of this level
 // is PP-gated (see buyTierTickspeedAutobuyer/tickGame). Cost is
-// getTickspeedMultiplierCost(tierId, currentLevel + 1); each level compounds that tier's
-// production by another 10% (see getTickspeedProductionMultiplier) — it has no effect on how
+// getTickspeedMultiplierCost(tierId, currentLevel + 1); each level speeds up that tier's own
+// delivery frequency by another 10% (see getTickspeedProductionMultiplier/
+// getEffectiveTierTickSpeedSeconds), without changing the amount delivered per batch or how
 // often the autobuyer attempts a purchase (see the flat rate in tickGame). resources[tier.id] and
 // owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
