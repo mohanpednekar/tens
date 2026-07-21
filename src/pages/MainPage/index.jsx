@@ -107,9 +107,13 @@ const reveal = keyframes`
 // rightmost, not the tickspeed button — Buy is clicked constantly while a tickspeed level-up is
 // an occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again. Bottom line: a single 'details' area spanning all four tracks,
-// holding the per-tier click-to-expand disclosure (see TierDetails below) — collapsed by
-// default, it renders only its <summary> line so the row's footprint is unchanged from before
-// this was added.
+// holding the per-tier click-to-expand disclosure's content (see TierDetails below) — there is
+// no separate visible trigger for it at all (no "Details" label): the disclosure's <summary> is
+// TierName itself (the row's heading, in the 'name' area), and clicking anywhere else on the
+// tile that isn't a button also toggles it (see the row's own onClick below) — collapsed by
+// default, contributing zero height to the 'details' row until expanded, so the row's collapsed
+// footprint is unchanged from before this was added. cursor: pointer signals the whole tile is
+// clickable; Button's own cursor rule overrides it for the two buttons.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
@@ -122,6 +126,7 @@ const TierLine = styled(StatCard)`
   row-gap: 0.3rem;
   padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
+  cursor: pointer;
   transition: border-color 0.15s ease;
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
@@ -273,16 +278,28 @@ const InfoDetails = styled.details`
 // Per-tier click-to-expand disclosure (reusing InfoDetails above, the same pattern SpeedUpCard/
 // PrestigeCard/GlobalTickspeedCard use elsewhere in this file) surfacing numbers that don't fit
 // the row's compact layout — most notably each tier's own base/effective tickspeed, now that
-// base tickspeed diverges per tier again (see "Tier production tickspeed" in CLAUDE.md).
-// Deliberately a plain small summary ("Details"), not another heading — TierName already carries
-// the tier's heading.
+// base tickspeed diverges per tier again (see "Tier production tickspeed" in CLAUDE.md). No
+// separate visible summary/label of its own: `display: contents` on both <details> and <summary>
+// removes their own boxes from the grid entirely, so TierName — nested inside <summary> in the
+// JSX below — becomes the disclosure's real (and only) visible trigger, sitting in its normal
+// 'name' grid slot rather than a redundant "Details" label elsewhere in the row. Native
+// click-to-toggle behavior on <summary> is unaffected by display: contents — it's event-bubbling
+// based, not tied to the summary having its own rendered box (verified: a click anywhere inside
+// it, including on a nested display:contents-wrapped heading, still toggles the disclosure).
 const TierDetails = styled(InfoDetails)`
-  grid-area: details;
-  font-size: 0.8em;
+  display: contents;
 
   summary {
-    color: #737373;
+    display: contents;
   }
+`
+
+// Holds the disclosure's actual content — a plain div (not part of <details> at all structurally
+// besides being TierDetails' non-summary child) so it can occupy the 'details' grid area on its
+// own, independent of TierName's 'name' area above.
+const TierDetailsContent = styled.div`
+  grid-area: details;
+  font-size: 0.8em;
 
   ul {
     color: #a3a3a3;
@@ -1085,6 +1102,12 @@ const MainPage = () => {
             (resources / (tickspeedCost + 1)) * 100
           ))
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
+          // Captured by TierDetails' ref callback below so the row's own onClick (further down)
+          // can toggle it programmatically for clicks anywhere on the tile that aren't already
+          // handled natively by the summary (TierName) or swallowed by a button. Fresh per
+          // render, same as the tier-scoped consts above — safe since both the ref callback and
+          // the onClick reading it come from this same render's closure.
+          let detailsEl = null
 
           return (
             <TierLine
@@ -1092,18 +1115,37 @@ const MainPage = () => {
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
+              onClick={event => {
+                if (event.target.closest('summary') || event.target.closest('button')) return
+                if (detailsEl) detailsEl.open = !detailsEl.open
+              }}
             >
-              <TierName>
-                <TierNameLabel title={tier.name}>
-                  <VisuallyHidden>{tier.name}</VisuallyHidden>
-                  <span aria-hidden="true">{tier.symbol}</span>
-                </TierNameLabel>
-                {tickspeedBonusPercent > 0 && (
-                  <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
-                    ⚙ +{tickspeedBonusPercent}%
-                  </GreenText>
-                )}
-              </TierName>
+              <TierDetails ref={el => { detailsEl = el }}>
+                <summary>
+                  <TierName>
+                    <TierNameLabel title={tier.name}>
+                      <VisuallyHidden>{tier.name}</VisuallyHidden>
+                      <span aria-hidden="true">{tier.symbol}</span>
+                    </TierNameLabel>
+                    {tickspeedBonusPercent > 0 && (
+                      <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
+                        ⚙ +{tickspeedBonusPercent}%
+                      </GreenText>
+                    )}
+                  </TierName>
+                </summary>
+                <TierDetailsContent>
+                  <ul>
+                    <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
+                    <li>
+                      Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
+                    </li>
+                    <li>Purchase milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases</li>
+                    {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
+                    <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
+                  </ul>
+                </TierDetailsContent>
+              </TierDetails>
               <OwnedText title="Owned">
                 <VisuallyHidden>Owned: </VisuallyHidden>
                 {formatAmount(owned)}
@@ -1151,18 +1193,6 @@ const MainPage = () => {
                   aria-valuemax={10}
                 />
               </BuyButton>
-              <TierDetails>
-                <summary>Details</summary>
-                <ul>
-                  <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
-                  <li>
-                    Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
-                  </li>
-                  <li>Purchase milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases</li>
-                  {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
-                  <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
-                </ul>
-              </TierDetails>
             </TierLine>
           )
         })}

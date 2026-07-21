@@ -208,7 +208,7 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+4 B')
 })
 
-test('a tier row\'s details disclosure starts collapsed and reveals its base/effective tickspeed once expanded', async () => {
+test('a tier row has no separate "Details" label — clicking its name reveals base/effective tickspeed', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -219,16 +219,61 @@ test('a tier row\'s details disclosure starts collapsed and reveals its base/eff
   render(<App />)
 
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  const summary = within(kilobytesLayer).getByText('Details')
-  // Collapsed by default — the native <details> hides its body until opened.
-  expect(summary.closest('details')).not.toHaveAttribute('open')
+  expect(within(kilobytesLayer).queryByText(/^details$/i)).not.toBeInTheDocument()
 
-  await user.click(summary)
+  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
+  // Collapsed by default — the native <details> hides its body until opened. The tier's own
+  // heading is the disclosure's summary now, not a separate label.
+  expect(heading.closest('details')).not.toHaveAttribute('open')
 
-  expect(summary.closest('details')).toHaveAttribute('open')
+  await user.click(heading)
 
+  expect(heading.closest('details')).toHaveAttribute('open')
   expect(kilobytesLayer).toHaveTextContent(/base tickspeed: delivers every 2s/i)
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
+})
+
+test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 10, tier02: 4 },
+  }))
+
+  render(<App />)
+
+  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
+  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
+  expect(heading.closest('details')).not.toHaveAttribute('open')
+
+  // Click the row's own container, not the heading and not a button.
+  await user.click(kilobytesLayer)
+
+  expect(heading.closest('details')).toHaveAttribute('open')
+
+  // Clicking the tile again collapses it back.
+  await user.click(kilobytesLayer)
+  expect(heading.closest('details')).not.toHaveAttribute('open')
+})
+
+test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1000 },
+    owned: { tier01: 10, tier02: 4 },
+  }))
+
+  render(<App />)
+
+  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
+  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
+  const buyButton = within(kilobytesLayer).getByRole('button', { name: /^buy/i })
+
+  await user.click(buyButton)
+
+  expect(heading.closest('details')).not.toHaveAttribute('open')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {

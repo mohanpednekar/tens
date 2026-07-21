@@ -519,14 +519,28 @@ hugs the row's edge. Below `40rem`, only fonts/spacing shrink. The owned cell's 
 cells use a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis;
 white-space: nowrap`). `RootDiv` sets `font-variant-numeric: tabular-nums`.
 
-**Tier row details disclosure.** The third grid line holds `TierDetails`, a `styled(InfoDetails)` (same
-native-`<details>` click-to-expand pattern `SpeedUpCard`/`PrestigeCard`/`GlobalTickspeedCard` already
-use, see "Description prose" above) with a plain `Details` `<summary>` — deliberately not another
-heading, since `TierName` already carries the row's heading. Collapsed by default, so it adds no height
-to the row's existing compact footprint; expanding it lists, in a small `<ul>`: the tier's base tickspeed
-(`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective tickspeed
-(`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers named
-inline), the purchase milestone multiplier and the lifetime purchase count driving it
+**Tier row details disclosure.** `TierDetails`, a `styled(InfoDetails)`, wraps the row's per-tier
+click-to-expand disclosure — but unlike `SpeedUpCard`/`PrestigeCard`/`GlobalTickspeedCard`/the page
+`Header` (which each show a visible `<summary>` line of their own, see "Description prose" above), a
+tier row has **no separate visible trigger at all**: both `TierDetails` (the `<details>`) and its
+`<summary>` are styled `display: contents`, which strips their own boxes out of `TierLine`'s CSS Grid
+without affecting the native click-to-toggle behavior (that's event-bubbling-based, not tied to the
+summary having a rendered box). This lets `TierName` — nested inside the `<summary>` — sit in its
+normal `name` grid slot and BE the disclosure's trigger, rather than a redundant "Details" label
+elsewhere in the row. The disclosure's content (a small `<ul>`, see below) is wrapped in
+`TierDetailsContent`, a plain `grid-area: details` div and `TierDetails`' only other child — collapsed,
+neither it nor a label renders, so the row's `details` grid line contributes zero height, an even
+more compact collapsed footprint than a visible "Details" line would give.
+
+Clicking the tier name isn't the only way in: `TierLine` itself carries an `onClick` that toggles the
+same `<details>` element (captured via a per-row ref callback) for a click anywhere else on the tile —
+skipped when the click originated inside the `<summary>` (already handled natively, avoiding a
+double-toggle) or inside a `<button>` (so Buy/tickspeed clicks never also toggle the disclosure).
+`TierLine` sets `cursor: pointer` accordingly, inherited by everything in the row except the two
+buttons, which override it via their own `disabled`-dependent cursor rule. Expanding it lists, in the
+`<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
+tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
+named inline), the purchase milestone multiplier and the lifetime purchase count driving it
 (`getPurchaseMilestoneMultiplier`), the Speed Up multiplier (only shown once `speedUpCount > 0`), and
 the tier's cost/produces resource symbols. This is the only place in `MainPage` that surfaces a tier's
 base/effective tickspeed numbers directly — added once per-tier base tickspeed started diverging again
