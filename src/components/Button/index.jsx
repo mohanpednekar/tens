@@ -93,7 +93,10 @@ export const ButtonIcon = styled.span`
 export const ButtonLabel = styled.span`
   flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 // Splits a button's compact visible text ("🛒 Lv.10 $100") into a fixed-position ButtonIcon and

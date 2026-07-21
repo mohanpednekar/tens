@@ -275,7 +275,13 @@ src/
                                left position regardless of the label's length, while the label itself
                                still reads as centered in the space after the icon, rather than the old
                                behavior of the whole icon+label string sliding left/right together as one
-                               centered block. `ButtonContent` is a small helper component that splits a
+                               centered block. `ButtonLabel` also carries its own `overflow: hidden;
+                               text-overflow: ellipsis; white-space: nowrap` (needed even when the outer
+                               `Button` already clips overflow, since a flex child's own text doesn't
+                               inherit an ancestor's ellipsis truncation — without this a label too wide
+                               for its shrunk flex share renders as a silent hard cut mid-character
+                               instead of a visible `…`). `ButtonContent` is a small helper component that
+                               splits a
                                single pre-formatted "🛒 Lv.10 $100"-style string (every such label in this
                                app follows the icon-then-word convention) into `ButtonIcon`/`ButtonLabel`
                                at the first space — used wherever a caller already builds one combined
@@ -354,13 +360,25 @@ Strict three-layer separation:
   they pin to the viewport top and compress into a compact side-by-side bar, detected via an
   IntersectionObserver on a zero-height `BalancesSentinel` (falls back to always-expanded when
   IntersectionObserver is unavailable, e.g. jsdom); the stick position drops below `TopPrestigeBar`
-  when it's showing, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own `+X`
-  figure is the per-tier replacement.
-- **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice)
-  lives inside an `InfoDetails` (`styled.details`) click-to-expand disclosure, with the card's own
-  `<h2>` as the clickable `<summary>`. The Prestige card's status lines (prestiged count · unspent PP
-  · speed bonus) live inside the disclosure too — collapsed, the card is nothing but its heading and
-  buttons. The disclosure marker is hidden via CSS.
+  when it's showing, by that bar's own live-measured height (`topPrestigeBarHeight`, see below) rather
+  than a guessed constant, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own
+  `+X` figure is the per-tier replacement. In the compressed side-by-side layout, `CenteredCard`'s
+  `align-items: center` (needed so its content centers when expanded) would otherwise let a flex-column
+  child shrink-wrap to its own full content width instead of the card's allotted half-share — silently
+  defeating the `overflow: hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or
+  PP status string from visually spilling into the neighboring card. `Money` and the status `<p>` are
+  both given an explicit `width: 100%` in the compressed styles specifically to pin them to the card's
+  actual width so that truncation has something to truncate against.
+- **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
+  the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
+  click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
+  `<h2>` for every card — as the clickable `<summary>`. The Prestige card's status lines (prestiged
+  count · unspent PP · speed bonus) live inside the disclosure too — collapsed, the card is nothing
+  but its heading and buttons. The disclosure marker is hidden via CSS. `InfoDetails`' `summary` is
+  styled `width: fit-content` so the click target hugs just the heading text rather than spanning the
+  full row; the page header additionally centers that fit-content `summary` with `margin: 0 auto`
+  since it sits in an otherwise `text-align: center` block (a block-level element ignores its
+  parent's `text-align`, which only centers inline content).
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the 10-unit
   cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`) — no player-facing batch-size
   control. Renders its cost-block progress as an on-button gradient fill via `Button`'s
@@ -501,14 +519,38 @@ hugs the row's edge. Below `40rem`, only fonts/spacing shrink. The owned cell's 
 cells use a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis;
 white-space: nowrap`). `RootDiv` sets `font-variant-numeric: tabular-nums`.
 
-**Tier row details disclosure.** The third grid line holds `TierDetails`, a `styled(InfoDetails)` (same
-native-`<details>` click-to-expand pattern `SpeedUpCard`/`PrestigeCard`/`GlobalTickspeedCard` already
-use, see "Description prose" above) with a plain `Details` `<summary>` — deliberately not another
-heading, since `TierName` already carries the row's heading. Collapsed by default, so it adds no height
-to the row's existing compact footprint; expanding it lists, in a small `<ul>`: the tier's base tickspeed
-(`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective tickspeed
-(`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers named
-inline), the purchase milestone multiplier and the lifetime purchase count driving it
+**Tier row details disclosure.** Unlike `SpeedUpCard`/`PrestigeCard`/`GlobalTickspeedCard`/the page
+`Header` (which each show a visible `<summary>` line of their own inside a native `InfoDetails`, see
+"Description prose" above), a tier row has **no separate visible trigger at all**: `TierName` itself,
+wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
+`aria-controls`), is the trigger, sitting in its normal spot rather than a redundant "Details" label
+elsewhere in the row. This is a **plain React-controlled disclosure**, not native `<details>`/
+`<summary>` — a `display: contents`-based version (matching every other `InfoDetails` disclosure) was
+tried first, but hit a real Chromium limitation: a `display: contents` ancestor breaks a promoted grid
+child's ability to span multiple `grid-template-areas` cells, so the details content collapsed to a
+single column's width instead of the full row (confirmed with a minimal repro, independent of whether
+the span was expressed via a named area or explicit `grid-column` line numbers). `openTierDetailIds`
+(a `Set` of expanded tier ids, in `MainPage`) tracks which rows are expanded;
+`TierNameTrigger`'s `onClick` toggles it and calls `event.stopPropagation()`, and its `onKeyDown`
+handles Enter/Space so keyboard operability doesn't regress from what native `<summary>` would give
+for free. Applying `role="button"` to `TierNameTrigger` doesn't affect `TierName`'s own heading
+semantics — ARIA role only overrides an element's *own* implicit role, never a nested descendant's, so
+the `<h3>` inside it stays in the heading-navigation outline. The disclosure's content (a small `<ul>`,
+see below) is `TierDetailsContent`, a plain `grid-area: details` div rendered *only* while its tier id
+is in `openTierDetailIds` — collapsed, nothing renders there at all, so the row's `details` grid line
+contributes zero height, an even more compact collapsed footprint than a visible "Details" line would
+give, and (being a normal, non-`display: contents`-promoted grid item) correctly spans the full row
+width when expanded.
+
+Clicking the tier name isn't the only way in: `TierLine` itself carries an `onClick` that also toggles
+`openTierDetailIds` for a click anywhere else on the tile — skipped when the click originated inside a
+`<button>` (so Buy/tickspeed clicks never also toggle the disclosure); a click inside
+`TierNameTrigger` never reaches this handler at all, since its own `onClick` already stopped
+propagation. `TierLine` sets `cursor: pointer` accordingly, inherited by everything in the row except
+the two buttons, which override it via their own `disabled`-dependent cursor rule. Expanding it lists,
+in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
+tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
+named inline), the purchase milestone multiplier and the lifetime purchase count driving it
 (`getPurchaseMilestoneMultiplier`), the Speed Up multiplier (only shown once `speedUpCount > 0`), and
 the tier's cost/produces resource symbols. This is the only place in `MainPage` that surfaces a tier's
 base/effective tickspeed numbers directly — added once per-tier base tickspeed started diverging again
@@ -816,7 +858,14 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   (`role="dialog" aria-modal="true"`) replaces the entire page, explaining what Prestige does, with a
   single auto-focused Prestige button and no dismiss control.
 - **From the 2nd time onward**: a `TopPrestigeBar` (`position: fixed`, with a `TopPrestigeBarSpacer`
-  reserving the same height) shows a compact reminder + Prestige button over the disabled page.
+  reserving the same height so it never overlaps the `Header` underneath) shows a compact reminder +
+  Prestige button over the disabled page. The bar's `flex-wrap: wrap` lets its reminder sentence wrap
+  to two lines on narrow viewports, so the spacer's height (and `StickyBalances`' stuck offset when
+  scrolled, see "Balances" above) is measured live off the bar's own `offsetHeight` via a
+  `ResizeObserver` (`topPrestigeBarHeight` state) rather than assumed as a fixed single-line constant —
+  a hardcoded height would silently let a wrapped two-line bar overlap the content below it. Falls back
+  to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
+  `ResizeObserver` (e.g. jsdom in tests).
 
 The normal bottom `PrestigeCard` (Game view) only renders when not frozen and once
 `prestigeCardEverRevealed` (during the first run, gated on `purchased.tier10 >= 10`; once the player
