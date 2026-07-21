@@ -805,7 +805,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed Multiplier' })).not.toHaveTextContent(/lv\.1|\+10%/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
-  expect(panel).toHaveTextContent(/\+10%/i)
+  expect(panel).toHaveTextContent(/\+1%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 

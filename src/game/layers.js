@@ -102,10 +102,10 @@ export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
 // cadence.
 export const TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2
 // Each global tickspeed multiplier level (see engine.js's getGlobalTickspeedProductionMultiplier/
-// buyGlobalTickspeedMultiplier) compounds *every* tier's production by another 10% at once —
+// buyGlobalTickspeedMultiplier) compounds *every* tier's production by another 1% at once —
 // unlike the per-tier tickspeed multiplier above, this is a single global upgrade track (mirroring
 // Auto-Prestige's null/level pattern), not something bought separately per tier.
-export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.1
+export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
 // it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it

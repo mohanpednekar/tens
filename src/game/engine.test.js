@@ -511,13 +511,13 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(null)).toBe(1)
   })
 
-  it('grants +10% production on the very first purchase (level 1) — unlike the per-tier tickspeed multiplier, there is no bonus-free baseline level', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1)).toBeCloseTo(1.1)
+  it('grants +1% production on the very first purchase (level 1) — unlike the per-tier tickspeed multiplier, there is no bonus-free baseline level', () => {
+    expect(getGlobalTickspeedProductionMultiplier(1)).toBeCloseTo(1.01)
   })
 
   it('compounds multiplicatively across levels, not additively', () => {
-    expect(getGlobalTickspeedProductionMultiplier(2)).toBeCloseTo(1.21)
-    expect(getGlobalTickspeedProductionMultiplier(3)).toBeCloseTo(1.331)
+    expect(getGlobalTickspeedProductionMultiplier(2)).toBeCloseTo(1.0201)
+    expect(getGlobalTickspeedProductionMultiplier(3)).toBeCloseTo(1.030301)
   })
 })
 
@@ -793,19 +793,19 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
 
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 2)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.0201)
     // Kilobytes' own base tickspeed is 2s (tier index 1 → tierIndex + 1), so the same global
     // multiplier shrinks it from a different starting point than Bytes' 1s.
-    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / 1.21)
+    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / 1.0201)
   })
 
   it('stacks both multiplicatively, not additively', () => {
-    // Per-tier level 2 → ×1.1, global level 2 → ×1.21 → combined ×1.331, not ×1.31.
+    // Per-tier level 2 → ×1.1, global level 2 → ×1.0201 → combined ×1.12211, not ×1.1201.
     const state = withGlobalTickspeedMultiplier(
       withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
       2
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.331)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.12211)
   })
 })
 
@@ -1448,21 +1448,23 @@ describe('tickGame', () => {
   })
 
   it('speeds up every tier\'s delivery frequency at once via the global tickspeed multiplier, without changing the per-tick amount', () => {
-    // Global level 2 → ×1.21 (see getGlobalTickspeedProductionMultiplier) — the same frequency-
+    // Global level 2 → ×1.0201 (see getGlobalTickspeedProductionMultiplier) — the same frequency-
     // scaling effect as the per-tier multiplier above, applied uniformly to every tier at once, no
-    // per-tier tickspeed level involved here at all.
+    // per-tier tickspeed level involved here at all. A 1% step is small enough that a 10-second
+    // window can't show a floored difference, so this uses a 100-second window instead: baseline
+    // delivers 100 batches of 10 = 1000, while floor(100 × 1.0201) = 102 batches of 10 = 1020.
     const state = withMoney(
       withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), tensTier.id, 10), 2),
       0
     )
-    const after = tickGame(10)(state)
-    expect(after.resources[MONEY_ID]).toBe(120)
+    const after = tickGame(100)(state)
+    expect(after.resources[MONEY_ID]).toBe(1020)
   })
 
   it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
-    // Per-tier level 2 → ×1.1, global level 2 → ×1.21 → combined ×1.331, not ×1.31 (which an
-    // additive 10%+21% stack would give). Over a 10-second window: floor(10 × 1.331) = 13 batches
-    // of 10 each = 130 total.
+    // Per-tier level 2 → ×1.1, global level 2 → ×1.0201 → combined ×1.12211, not ×1.1201 (which an
+    // additive 10%+2.01% stack would give). Over a 100-second window: floor(100 × 1.12211) = 112
+    // batches of 10 each = 1120.
     const state = withGlobalTickspeedMultiplier(
       withMoney(
         withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
@@ -1470,8 +1472,8 @@ describe('tickGame', () => {
       ),
       2
     )
-    const after = tickGame(10)(state)
-    expect(after.resources[MONEY_ID]).toBe(130)
+    const after = tickGame(100)(state)
+    expect(after.resources[MONEY_ID]).toBe(1120)
   })
 
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
