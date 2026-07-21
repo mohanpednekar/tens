@@ -43,6 +43,13 @@ const Header = styled.header`
     font-size: 1.75rem;
     letter-spacing: 0.02em;
   }
+
+  /* InfoDetails' summary is a fit-content block (so its click target hugs the text rather than
+     spanning the row) — center that block itself, since text-align only centers inline content,
+     not a block-level child, and the fit-content width is what makes auto margins work here. */
+  details summary {
+    margin: 0 auto;
+  }
 `
 
 const TopRow = styled.div`
@@ -241,6 +248,7 @@ const InfoDetails = styled.details`
     color: #d4d4d4;
   }
 
+  summary h1,
   summary h2 {
     display: inline;
     margin: 0;
@@ -849,8 +857,10 @@ const MainPage = () => {
       )}
 
       <Header>
-        <h1>Tens</h1>
-        <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
+        <InfoDetails>
+          <summary><h1>Tens</h1></summary>
+          <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
+        </InfoDetails>
       </Header>
 
       {offlineProgress && (
@@ -1173,17 +1183,17 @@ const MainPage = () => {
               {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
               {' '}Resets your resources when reached.
             </MutedText>
+            <div>
+              <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
+              {!isFirstRun && (
+                <MutedText>
+                  {formatAmount(prestige.points)} PP unspent
+                  {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                  {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
+                </MutedText>
+              )}
+            </div>
           </InfoDetails>
-          <div>
-            <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
-            {!isFirstRun && (
-              <MutedText>
-                {formatAmount(prestige.points)} PP unspent
-                {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
-                {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
-              </MutedText>
-            )}
-          </div>
           <Button
             aria-describedby="prestige-description"
             aria-label={prestigeAriaLabel}

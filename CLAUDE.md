@@ -356,11 +356,16 @@ Strict three-layer separation:
   IntersectionObserver is unavailable, e.g. jsdom); the stick position drops below `TopPrestigeBar`
   when it's showing, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own `+X`
   figure is the per-tier replacement.
-- **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice)
-  lives inside an `InfoDetails` (`styled.details`) click-to-expand disclosure, with the card's own
-  `<h2>` as the clickable `<summary>`. The Prestige card's status lines (prestiged count · unspent PP
-  · speed bonus) live inside the disclosure too — collapsed, the card is nothing but its heading and
-  buttons. The disclosure marker is hidden via CSS.
+- **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
+  the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
+  click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
+  `<h2>` for every card — as the clickable `<summary>`. The Prestige card's status lines (prestiged
+  count · unspent PP · speed bonus) live inside the disclosure too — collapsed, the card is nothing
+  but its heading and buttons. The disclosure marker is hidden via CSS. `InfoDetails`' `summary` is
+  styled `width: fit-content` so the click target hugs just the heading text rather than spanning the
+  full row; the page header additionally centers that fit-content `summary` with `margin: 0 auto`
+  since it sits in an otherwise `text-align: center` block (a block-level element ignores its
+  parent's `text-align`, which only centers inline content).
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the 10-unit
   cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`) — no player-facing batch-size
   control. Renders its cost-block progress as an on-button gradient fill via `Button`'s
