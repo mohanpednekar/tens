@@ -794,7 +794,9 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 2)
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
-    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(1 / 1.21)
+    // Kilobytes' own base tickspeed is 2s (tier index 1 → tierIndex + 1), so the same global
+    // multiplier shrinks it from a different starting point than Bytes' 1s.
+    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / 1.21)
   })
 
   it('stacks both multiplicatively, not additively', () => {
@@ -815,14 +817,14 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reflects a partial fraction of a tier\'s tickspeed', () => {
-    // Kilobytes' base tickspeed is 1s (same as every tier) — half a second's worth of elapsed
-    // time banks half of it.
+    // Kilobytes' base tickspeed is 2s — half a second's worth of elapsed time banks a quarter of
+    // it.
     const state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
     const afterHalfSecond = tickGame(0.5)(state)
-    expect(getTierProductionProgressPercent(afterHalfSecond, thousandsTier.id)).toBe(50)
+    expect(getTierProductionProgressPercent(afterHalfSecond, thousandsTier.id)).toBe(25)
   })
 
   it('drops back down to the banked remainder once a batch fires', () => {
@@ -830,9 +832,10 @@ describe('getTierProductionProgressPercent', () => {
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
-    const afterOneTick = tickGame(1)(state)
-    // The 1st tick crosses the 1s threshold and delivers a batch, banking 0s of remainder.
-    expect(getTierProductionProgressPercent(afterOneTick, thousandsTier.id)).toBe(0)
+    const afterTwoSeconds = tickGame(2)(state)
+    // Kilobytes' base tickspeed is 2s: a single 2-second tick crosses the threshold and delivers
+    // a batch, banking 0s of remainder.
+    expect(getTierProductionProgressPercent(afterTwoSeconds, thousandsTier.id)).toBe(0)
   })
 
   it('is 100% for a 1s-tickspeed tier with a full second already banked', () => {
@@ -843,19 +846,18 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reports 100% instead of the wrapped remainder when the previous accumulator just crossed the threshold', () => {
-    // Kilobytes' tickspeed is 1s (same as every tier): a previous accumulator of 0 plus the
-    // default 1 elapsed second crosses 1s, so a delivery just happened even though the
-    // freshly-wrapped remainder is 0.
-    const state = { tierProductionAccumulators: { [thousandsTier.id]: 0 } }
-    expect(getTierProductionProgressPercent(state, thousandsTier.id, 0)).toBe(100)
+    // Bytes' tickspeed is 1s: a previous accumulator of 0 plus the default 1 elapsed second
+    // crosses 1s, so a delivery just happened even though the freshly-wrapped remainder is 0.
+    const state = { tierProductionAccumulators: { [tensTier.id]: 0 } }
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0)).toBe(100)
   })
 
   it('falls through to the normal calculation when the previous accumulator has not yet crossed the threshold', () => {
-    // previousAccumulator (0.4) + elapsedSeconds (0.1) = 0.5, below the 1s tickspeed threshold,
-    // so this falls through to the normal accumulated/tickSpeed calculation using the raw stored
-    // accumulator (0.5) instead of reporting 100.
-    const state = { tierProductionAccumulators: { [thousandsTier.id]: 0.5 } }
-    expect(getTierProductionProgressPercent(state, thousandsTier.id, 0.4, 0.1)).toBe(50)
+    // previousAccumulator (0.4) + elapsedSeconds (0.1) = 0.5, below Bytes' 1s tickspeed
+    // threshold, so this falls through to the normal accumulated/tickSpeed calculation using the
+    // raw stored accumulator (0.5) instead of reporting 100.
+    const state = { tierProductionAccumulators: { [tensTier.id]: 0.5 } }
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.4, 0.1)).toBe(50)
   })
 
   it('reports a 1s-tickspeed tier as 100% for any non-negative previous accumulator', () => {
@@ -1170,19 +1172,19 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 40) // 10 × 4
   })
 
-  it('Kilobytes generators produce Bytes resource and owned generators once its 1s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
+  it('Kilobytes generators produce Bytes resource and owned generators once its 2s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
     let state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
-    // Every tier's base tickspeed is 1s — nine 0.1s ticks (the live game's real 10Hz cadence)
+    // Kilobytes' base tickspeed is 2s — nineteen 0.1s ticks (the live game's real 10Hz cadence)
     // only accumulate toward that, they don't produce yet.
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 19; i++) {
       state = tickGame(0.1)(state)
       expect(state.resources[tensTier.id]).toBe(0)
     }
     expect(state.owned[tensTier.id]).toBe(10)
-    // The 10th 0.1s tick crosses the 1s threshold and delivers one tick's worth (owned × 1).
+    // The 20th 0.1s tick crosses the 2s threshold and delivers one tick's worth (owned × 1).
     state = tickGame(0.1)(state)
     expect(state.resources[tensTier.id]).toBe(2)
     expect(state.owned[tensTier.id]).toBe(12) // 10 initial + 2 produced
@@ -1194,12 +1196,13 @@ describe('tickGame', () => {
       withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Megabytes
       millionsTier.id, 5
     )
-    // The first 9 sub-second ticks only accumulate toward the 1s threshold — no production yet.
-    for (let i = 0; i < 9; i++) {
+    // Megabytes' base tickspeed is 3s — the first 29 sub-second ticks only accumulate toward that
+    // threshold, no production yet.
+    for (let i = 0; i < 29; i++) {
       state = tickGame(0.1)(state)
       expect(state.resources[thousandsTier.id]).toBe(0)
     }
-    // The 10th tick crosses the threshold and delivers exactly one tick's worth (owned × 1).
+    // The 30th tick crosses the 3s threshold and delivers exactly one tick's worth (owned × 1).
     state = tickGame(0.1)(state)
     expect(state.resources[thousandsTier.id]).toBe(5)
   })

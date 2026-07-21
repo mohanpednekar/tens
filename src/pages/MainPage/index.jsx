@@ -1,8 +1,8 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -93,18 +93,22 @@ const reveal = keyframes`
 // see MainPage), the production figure, then the owned count — production sits left of owned
 // (not the other way around) so the row reads "what it makes" before "how many you have"; the
 // wider track (1.3fr) follows production's spot since that figure tends to run longer (e.g.
-// currency strings) and the narrower one (0.7fr) follows owned's. Bottom line: just the two
+// currency strings) and the narrower one (0.7fr) follows owned's. Middle line: just the two
 // buttons, each spanning two of the four tracks — the track pairs sum equally
 // (col1+col2 = col3+col4) so the tickspeed multiplier button and Buy each take exactly half the
 // row's width, unaffected by how the top row's own two tracks are split between them. Buy sits
 // rightmost, not the tickspeed button — Buy is clicked constantly while a tickspeed level-up is
 // an occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
-// that's about to click again.
+// that's about to click again. Bottom line: a single 'details' area spanning all four tracks,
+// holding the per-tier click-to-expand disclosure (see TierDetails below) — collapsed by
+// default, it renders only its <summary> line so the row's footprint is unchanged from before
+// this was added.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
     'name name production owned'
-    'upgrade upgrade buy buy';
+    'upgrade upgrade buy buy'
+    'details details details details';
   grid-template-columns: 1.4fr 0.6fr 1.3fr 0.7fr;
   align-items: center;
   column-gap: 0.5rem;
@@ -124,7 +128,7 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same 2-row areas as desktop; only the column weights shift, still summing to equal
+    /* Same row areas as desktop; only the column weights shift, still summing to equal
        halves for the buttons. */
     grid-template-columns: 1.35fr 0.65fr 1.25fr 0.75fr;
     row-gap: 0.3rem;
@@ -244,6 +248,31 @@ const InfoDetails = styled.details`
 
   p {
     margin-top: 0.4rem;
+  }
+`
+
+// Per-tier click-to-expand disclosure (reusing InfoDetails above, the same pattern SpeedUpCard/
+// PrestigeCard/GlobalTickspeedCard use elsewhere in this file) surfacing numbers that don't fit
+// the row's compact layout — most notably each tier's own base/effective tickspeed, now that
+// base tickspeed diverges per tier again (see "Tier production tickspeed" in CLAUDE.md).
+// Deliberately a plain small summary ("Details"), not another heading — TierName already carries
+// the tier's heading.
+const TierDetails = styled(InfoDetails)`
+  grid-area: details;
+  font-size: 0.8em;
+
+  summary {
+    color: #737373;
+  }
+
+  ul {
+    color: #a3a3a3;
+    margin: 0.3rem 0 0;
+    padding-left: 1.1rem;
+  }
+
+  li {
+    margin: 0.15rem 0;
   }
 `
 
@@ -975,7 +1004,15 @@ const MainPage = () => {
           // tickGame's own floored production credit — prestigeBonus is the only fractional factor
           // left here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are always powers of
           // 2), so without flooring this preview could show a fraction that never actually lands.
-          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * getPurchaseMilestoneMultiplier(purchased))
+          const milestoneMultiplier = getPurchaseMilestoneMultiplier(purchased)
+          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * milestoneMultiplier)
+          // Surfaced only in the row's collapsed-by-default TierDetails disclosure below — the
+          // base value is otherwise invisible to players now that it diverges per tier again
+          // (see "Tier production tickspeed" in CLAUDE.md), and the effective value shows how
+          // much of that is currently offset by this tier's own and the global tickspeed
+          // multiplier.
+          const baseTickSpeed = getTierBaseTickSpeedSeconds(tier.id)
+          const effectiveTickSpeed = getEffectiveTierTickSpeedSeconds(state, tier.id)
           const tickspeedCost = getTickspeedMultiplierCost(tier.id, tickspeedLevel + 1)
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
           // button must stay disabled until at least 1 generator would remain afterward —
@@ -1069,6 +1106,18 @@ const MainPage = () => {
                   aria-valuemax={10}
                 />
               </BuyButton>
+              <TierDetails>
+                <summary>Details</summary>
+                <ul>
+                  <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
+                  <li>
+                    Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
+                  </li>
+                  <li>Purchase milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases</li>
+                  {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
+                  <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
+                </ul>
+              </TierDetails>
             </TierLine>
           )
         })}

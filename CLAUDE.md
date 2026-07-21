@@ -493,13 +493,27 @@ timing, since locked tiers render `null` and would otherwise "mount" on every lo
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (+ compact
 `⚙ +N%` badge), then the production figure and the owned count — in that order, production first — on
 the top line, then the tickspeed multiplier button and Buy (each spanning two of four equal-width
-tracks) on the bottom line. `ProductionText` sits in the wider (1.3fr) track and `OwnedText` in the
-narrower (0.7fr) one, matching their typical content length, with `text-align: right` on whichever one
-is currently rightmost (`OwnedText`) so it hugs the row's edge. Below `40rem`, only fonts/spacing
-shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
-`toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width: 0; overflow:
-hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets `font-variant-numeric:
-tabular-nums`.
+tracks) on the middle line, then a third `details`-area line spanning all four tracks. `ProductionText`
+sits in the wider (1.3fr) track and `OwnedText` in the narrower (0.7fr) one, matching their typical
+content length, with `text-align: right` on whichever one is currently rightmost (`OwnedText`) so it
+hugs the row's edge. Below `40rem`, only fonts/spacing shrink. The owned cell's "Owned: " label is a
+`VisuallyHidden` span (plus `title="Owned"`) — assert via `toHaveTextContent`, not `getByText`. Grid
+cells use a shared `gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis;
+white-space: nowrap`). `RootDiv` sets `font-variant-numeric: tabular-nums`.
+
+**Tier row details disclosure.** The third grid line holds `TierDetails`, a `styled(InfoDetails)` (same
+native-`<details>` click-to-expand pattern `SpeedUpCard`/`PrestigeCard`/`GlobalTickspeedCard` already
+use, see "Description prose" above) with a plain `Details` `<summary>` — deliberately not another
+heading, since `TierName` already carries the row's heading. Collapsed by default, so it adds no height
+to the row's existing compact footprint; expanding it lists, in a small `<ul>`: the tier's base tickspeed
+(`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective tickspeed
+(`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers named
+inline), the purchase milestone multiplier and the lifetime purchase count driving it
+(`getPurchaseMilestoneMultiplier`), the Speed Up multiplier (only shown once `speedUpCount > 0`), and
+the tier's cost/produces resource symbols. This is the only place in `MainPage` that surfaces a tier's
+base/effective tickspeed numbers directly — added once per-tier base tickspeed started diverging again
+(see "Tier production tickspeed" above) — everywhere else it only shows up indirectly via the `⚙ +N%`
+badge and the tickspeed button's own tooltip.
 
 **Offline notice.** When the hook reports a non-null `offlineProgress`, a dismissible
 `OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders above the money display;
@@ -531,20 +545,26 @@ unlocked even if the rule changes later, so old saves stay playable.
 
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs a naming-agnostic `id` (next in the
 `tier0N`/`tierNN` sequence), `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`,
-`producesResourceId` set to the previous tier's `id`, and `baseTickSpeedSeconds: 1` (matching every
-other tier — see "Tier production tickspeed" below). No other file should need changing.
+`producesResourceId` set to the previous tier's `id`, and `baseTickSpeedSeconds` set to the next integer
+in the sequence (`tierIndex + 1` seconds — a hypothetical 11th tier would be `11`; see "Tier production
+tickspeed" below). No other file should need changing.
 
 ### Tier production tickspeed
 
 Each tier has its own **independent base tickspeed** — a plain `baseTickSpeedSeconds` field directly on
-its `TIER_DEFINITIONS` entry (read via `getTierBaseTickSpeedSeconds`), not derived from tier order or a
-shared formula. It's how often, in seconds, that tier delivers a single batch of production rather than
-continuously every global tick (the global tick fires every `TICK_RATE_MS` — 100ms/10Hz — much finer
-than any tier's own tickspeed). **Every tier is currently set to the same 1s value** — see
-`docs/DESIGN_HISTORY.md` for why a per-tier-increasing tickspeed was tried and rejected. Nothing
-structurally prevents a future tier/upgrade from diverging again; uniform-1s is a balance choice, not a
-constraint the field enforces. `MainPage` doesn't show this as an averaged `/sec` rate — see
-"Production figure" below.
+its `TIER_DEFINITIONS` entry (read via `getTierBaseTickSpeedSeconds` in `layers.js`), not derived from
+tier order or a shared formula, though the current values happen to follow one (`tierIndex + 1`). It's
+how often, in seconds, that tier delivers a single batch of production rather than continuously every
+global tick (the global tick fires every `TICK_RATE_MS` — 100ms/10Hz — much finer than any tier's own
+tickspeed). **Each tier's cadence increases by 1s down the list** — tier01=1s (matching the global tick)
+up through tier10=10s — so later tiers deliver batches less often by design, offset by the tickspeed
+multipliers below rather than by a faster base cadence. This exact 1s–10s ladder was tried once before
+the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could compensate
+for the slowdown; see `docs/DESIGN_HISTORY.md` for both that original revert and this reintroduction.
+Nothing structurally prevents the per-tier values from diverging from the `tierIndex + 1` pattern in the
+future; it's a balance choice, not a constraint the field enforces. `MainPage` doesn't show this as an
+averaged `/sec` rate — see "Production figure" below, and shows the base/effective values explicitly in
+each tier row's collapsed-by-default Details disclosure — see "MainPage reference" below.
 
 This base period is then shrunk by both tickspeed multipliers — the tier's own
 (`getTickspeedProductionMultiplier`, from `tickspeedLevels[tierId]`) and the global one
@@ -1031,7 +1051,7 @@ regardless of whether those purchases were manual or automatic.
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'$'` fallback for `MONEY_ID`/unknown ids |
-| `getTierBaseTickSpeedSeconds` (`layers.js`) | `tierId → number` | Reads that tier's own independent `baseTickSpeedSeconds` field (currently 1s for every tier) — how often (in seconds) `tickGame` batches that tier's production instead of delivering it continuously every tick. An unrecognized tier id falls back to 1s |
+| `getTierBaseTickSpeedSeconds` (`layers.js`) | `tierId → number` | Reads that tier's own independent `baseTickSpeedSeconds` field (1s for tier01, increasing by 1s per tier up to 10s for tier10) — how often (in seconds) `tickGame` batches that tier's production instead of delivering it continuously every tick. An unrecognized tier id falls back to 1s |
 
 ### Constants (`src/game/layers.js`)
 
@@ -1121,7 +1141,7 @@ that's done the Sponsor button simply won't display/function.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (434 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (435 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
