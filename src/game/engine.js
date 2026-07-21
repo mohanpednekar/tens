@@ -281,8 +281,8 @@ export const isGlobalTickspeedMultiplierUnlocked = state =>
 // The speed multiplier every tier gets from the global tickspeed multiplier: unlike the per-tier
 // tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP unlock),
 // buying this global track directly grants its effect — level 1 (the first purchase) already
-// speeds up every tier's delivery frequency by GLOBAL_TICKSPEED_PRODUCTION_STEP (10%), level 2 by
-// another 10% on top (×1.21 total), and so on — divided into getEffectiveTierTickSpeedSeconds
+// speeds up every tier's delivery frequency by GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), level 2 by
+// another 1% on top (×1.0201 total), and so on — divided into getEffectiveTierTickSpeedSeconds
 // alongside the per-tier multiplier, not multiplied into a production credit. `null` (never
 // bought) is treated as level 0, i.e. no bonus (×1).
 export const getGlobalTickspeedProductionMultiplier = level =>

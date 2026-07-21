@@ -758,7 +758,7 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
 
 A **Money-funded** (not PP-funded) global counterpart to the per-tier tickspeed multiplier above —
 instead of speeding up one tier's delivery frequency, each level speeds up *every* tier's delivery
-frequency by another 10% at once (again with no effect on the size of any single delivery). A single
+frequency by another 1% at once (again with no effect on the size of any single delivery). A single
 leveled upgrade track (not per-tier), mirroring Auto-Prestige's `null`/level pattern, and lives on the
 Game view as its own `GlobalTickspeedCard` (see "MainPage reference" above) rather than on the PP
 Upgrades page or any individual tier row — it has nothing to do with Prestige Points or having ever
@@ -775,11 +775,11 @@ prestiged.
   buying tiers themselves (`resources[MONEY_ID]`), with no "leave 1 behind" reserve, since Money isn't
   itself an "owned" generator count (same as `buyTier`).
 - `getGlobalTickspeedProductionMultiplier(level) = (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** level`
-  (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.1`; `null`/never-bought treated as level 0, i.e. no bonus, ×1).
+  (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`; `null`/never-bought treated as level 0, i.e. no bonus, ×1).
   Unlike the per-tier tickspeed multiplier — where level 1 is a bonus-free baseline granted by a
   separate PP unlock step — buying this global track directly grants its effect: level 1 (the very
-  first purchase) already speeds up every tier's delivery frequency by 10% (×1.1), level 2 by another
-  10% on top (×1.21 total), always compounding multiplicatively across levels, not summed additively.
+  first purchase) already speeds up every tier's delivery frequency by 1% (×1.01), level 2 by another
+  1% on top (×1.0201 total), always compounding multiplicatively across levels, not summed additively.
   Divided directly into `getEffectiveTierTickSpeedSeconds` for every tier alongside that tier's own
   tickspeed multiplier (see "Tier production tickspeed" above) — not multiplied into the production
   credit itself.
@@ -940,7 +940,7 @@ component state, not part of engine state).
                                                           // not yet bought: how many times Money (not PP) has
                                                           // been spent on the global tickspeed multiplier,
                                                           // speeding up EVERY tier's delivery frequency by
-                                                          // another 10% per level, not the amount delivered
+                                                          // another 1% per level, not the amount delivered
                                                           // (see getGlobalTickspeedProductionMultiplier/
                                                           // buyGlobalTickspeedMultiplier) — carried through
                                                           // unchanged by a real Prestige, but reset to null by
@@ -1035,7 +1035,7 @@ regardless of whether those purchases were manual or automatic.
 | `getAutoPrestigeCost` | `currentLevel → number` | `AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel` — 1000 PP to activate (level 0→1), doubling each level after (2000, 4000, …) |
 | `getAutoPrestigeAttemptRate` | `autoPrestigeLevel → number` | `1.1 ** (level - 1) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS` (`null` treated as level 1 defensively); the per-tick Auto-Prestige attempt-budget increment; level 1 fires roughly every 1000 seconds, each level after that 10% sooner, compounding |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
-| `getGlobalTickspeedProductionMultiplier` | `level → number` | `1.1 ** level` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.1`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — unlike the per-tier tickspeed multiplier, level 1 already grants the first +10% (there's no separate unlock step to have already spent it on); compounds multiplicatively across levels, not summed additively |
+| `getGlobalTickspeedProductionMultiplier` | `level → number` | `1.01 ** level` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — unlike the per-tier tickspeed multiplier, level 1 already grants the first +1% (there's no separate unlock step to have already spent it on); compounds multiplicatively across levels, not summed additively |
 | `getPrestigePointsAwarded` | `money → number` | `floor(log10(money) / log10(GOOGOL))` — the log, base GOOGOL, of the money balance; always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased and every tier's `tickspeedLevels` entry back to 1 (the baseline — no speed bonus), keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`globalTickspeedMultiplier`/`speedUpCount`/`autoSpeedUp`/`autoGlobalTickspeed` unchanged (all permanent, including the Auto-Prestige/global-tickspeed-multiplier *levels* and accumulated Speed Up multiplier), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
@@ -1073,7 +1073,7 @@ regardless of whether those purchases were manual or automatic.
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — PP cost per tier index for unlocking a tier's autobuyer (see `getAutobuyerUnlockCost`) — a flat, small per-tier increment: 1 PP for the first tier, up through 10 PP for the 10th/last tier, deliberately independent of the much steeper `TICKSPEED_MULTIPLIER_BASE_EXPONENT` ladder above
 - `SMART_AUTOBUYER_COST_MULTIPLIER = 10` — the "smart" autobuyer costs this many times more PP than unlocking that same tier's autobuyer (10 PP through 100 PP across the ten tiers)
 - `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2` — the per-tier tickspeed autobuyer (see `getTierTickspeedAutobuyerCost`/`buyTierTickspeedAutobuyer`) costs this many times more PP than unlocking that same tier's autobuyer (2 PP through 20 PP across the ten tiers) — cheaper than Smart's 10x since it only automates one additional purchase, not the tier's whole buying cadence
-- `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.1` — each global tickspeed multiplier level speeds up *every* tier's delivery frequency by another 10% at once, not the amount delivered (see `getGlobalTickspeedProductionMultiplier`) — a separate constant from `TICKSPEED_PRODUCTION_STEP` above even though both currently equal 10%, since the two upgrades are independent and could be tuned separately. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
+- `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — each global tickspeed multiplier level speeds up *every* tier's delivery frequency by another 1% at once, not the amount delivered (see `getGlobalTickspeedProductionMultiplier`) — a separate constant from `TICKSPEED_PRODUCTION_STEP` above (which stays 10% for the per-tier multiplier), since the two upgrades are independent and can be tuned separately. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
 - `AUTO_PRESTIGE_COST = 1000` — PP cost to activate Auto-Prestige (level 1); a single global upgrade track, not per-tier. Priced above `AUTO_SPEED_UP_COST` since Auto-Prestige only ever fires once per run at most, versus Speed Up's much higher activation frequency
 - `AUTO_PRESTIGE_COST_MULTIPLIER = 2` — Auto-Prestige's cost doubles with each level purchased
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
