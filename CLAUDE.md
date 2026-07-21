@@ -275,7 +275,13 @@ src/
                                left position regardless of the label's length, while the label itself
                                still reads as centered in the space after the icon, rather than the old
                                behavior of the whole icon+label string sliding left/right together as one
-                               centered block. `ButtonContent` is a small helper component that splits a
+                               centered block. `ButtonLabel` also carries its own `overflow: hidden;
+                               text-overflow: ellipsis; white-space: nowrap` (needed even when the outer
+                               `Button` already clips overflow, since a flex child's own text doesn't
+                               inherit an ancestor's ellipsis truncation — without this a label too wide
+                               for its shrunk flex share renders as a silent hard cut mid-character
+                               instead of a visible `…`). `ButtonContent` is a small helper component that
+                               splits a
                                single pre-formatted "🛒 Lv.10 $100"-style string (every such label in this
                                app follows the icon-then-word convention) into `ButtonIcon`/`ButtonLabel`
                                at the first space — used wherever a caller already builds one combined
@@ -354,8 +360,15 @@ Strict three-layer separation:
   they pin to the viewport top and compress into a compact side-by-side bar, detected via an
   IntersectionObserver on a zero-height `BalancesSentinel` (falls back to always-expanded when
   IntersectionObserver is unavailable, e.g. jsdom); the stick position drops below `TopPrestigeBar`
-  when it's showing, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own `+X`
-  figure is the per-tier replacement.
+  when it's showing, by that bar's own live-measured height (`topPrestigeBarHeight`, see below) rather
+  than a guessed constant, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own
+  `+X` figure is the per-tier replacement. In the compressed side-by-side layout, `CenteredCard`'s
+  `align-items: center` (needed so its content centers when expanded) would otherwise let a flex-column
+  child shrink-wrap to its own full content width instead of the card's allotted half-share — silently
+  defeating the `overflow: hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or
+  PP status string from visually spilling into the neighboring card. `Money` and the status `<p>` are
+  both given an explicit `width: 100%` in the compressed styles specifically to pin them to the card's
+  actual width so that truncation has something to truncate against.
 - **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
   the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
   click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
@@ -821,7 +834,14 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   (`role="dialog" aria-modal="true"`) replaces the entire page, explaining what Prestige does, with a
   single auto-focused Prestige button and no dismiss control.
 - **From the 2nd time onward**: a `TopPrestigeBar` (`position: fixed`, with a `TopPrestigeBarSpacer`
-  reserving the same height) shows a compact reminder + Prestige button over the disabled page.
+  reserving the same height so it never overlaps the `Header` underneath) shows a compact reminder +
+  Prestige button over the disabled page. The bar's `flex-wrap: wrap` lets its reminder sentence wrap
+  to two lines on narrow viewports, so the spacer's height (and `StickyBalances`' stuck offset when
+  scrolled, see "Balances" above) is measured live off the bar's own `offsetHeight` via a
+  `ResizeObserver` (`topPrestigeBarHeight` state) rather than assumed as a fixed single-line constant —
+  a hardcoded height would silently let a wrapped two-line bar overlap the content below it. Falls back
+  to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
+  `ResizeObserver` (e.g. jsdom in tests).
 
 The normal bottom `PrestigeCard` (Game view) only renders when not frozen and once
 `prestigeCardEverRevealed` (during the first run, gated on `purchased.tier10 >= 10`; once the player

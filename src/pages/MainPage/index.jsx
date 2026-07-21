@@ -179,15 +179,15 @@ const CenteredCard = styled(StatCard)`
 // bar while stuck ($compressed — tracked via an IntersectionObserver on the sentinel rendered
 // just above, since CSS alone can't detect "currently stuck"). The solid page-background fill
 // stops scrolled tier rows showing through the gap between the two cards, and when the fixed
-// TopPrestigeBar is showing ($belowBar), the stick position drops below it instead of
-// underlapping it.
+// TopPrestigeBar is showing ($belowBar), the stick position drops below it by $belowBarHeight
+// (measured live, see topPrestigeBarHeight below) instead of underlapping it.
 const StickyBalances = styled.div`
   background: #050505;
   display: flex;
   flex-direction: ${props => (props.$compressed ? 'row' : 'column')};
   gap: ${props => (props.$compressed ? '0.5rem' : '0.85rem')};
   position: sticky;
-  top: ${props => (props.$belowBar ? '3.75rem' : '0')};
+  top: ${props => (props.$belowBar ? `${props.$belowBarHeight}px` : '0')};
   z-index: 100;
 
   ${props => props.$compressed && css`
@@ -202,9 +202,19 @@ const StickyBalances = styled.div`
       padding: 0.3rem 0.6rem;
     }
 
+    /* CenteredCard's align-items: center (needed to center these cards' content when expanded)
+       otherwise lets a flex-column child shrink-wrap to its own full content width instead of the
+       card's allotted share — silently defeating the overflow/ellipsis rules below and letting a
+       long balance or PP status string visually spill into the neighboring card. An explicit
+       width pins each child to the card's actual width so truncation has something to truncate
+       against. */
     ${Money} {
       font-size: 1em;
+      overflow: hidden;
       padding: 0;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
     }
 
     p {
@@ -213,6 +223,7 @@ const StickyBalances = styled.div`
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      width: 100%;
     }
   `}
 `
@@ -346,9 +357,12 @@ const TopPrestigeBar = styled.div`
 `
 
 // Reserves space at the top of the page so TopPrestigeBar (position: fixed) never overlaps the
-// Header underneath it.
+// Header underneath it. $height is measured live from the bar itself (see topPrestigeBarHeight)
+// rather than a fixed constant — TopPrestigeBar's flex-wrap lets its content wrap to two lines on
+// narrow viewports (the reminder sentence is long enough to wrap well before 40rem), and a
+// hardcoded single-line height would silently let the taller bar overlap the Header below it.
 const TopPrestigeBarSpacer = styled.div`
-  height: 3.75rem;
+  height: ${props => props.$height}px;
 `
 
 const MutedText = styled.p`
@@ -748,6 +762,22 @@ const MainPage = () => {
     return () => observer.disconnect()
   }, [showFullScreenPrompt])
 
+  // TopPrestigeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
+  // the reminder sentence wrap to two lines on narrow viewports, and both TopPrestigeBarSpacer
+  // (below) and StickyBalances' stuck offset need the bar's *actual* height to avoid the fixed bar
+  // overlapping the Header/balances underneath it. 60 (3.75rem at the default 16px root) is the
+  // single-line fallback used before this was measured, kept as the initial/no-ResizeObserver
+  // value so behavior is unchanged in environments without ResizeObserver (e.g. jsdom in tests).
+  const topPrestigeBarRef = useRef(null)
+  const [topPrestigeBarHeight, setTopPrestigeBarHeight] = useState(60)
+  useEffect(() => {
+    const bar = topPrestigeBarRef.current
+    if (!bar || typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(() => setTopPrestigeBarHeight(bar.offsetHeight))
+    observer.observe(bar)
+    return () => observer.disconnect()
+  }, [showTopPrestigeBar])
+
   // Offline-progress notice: auto-dismisses after OFFLINE_NOTICE_AUTO_DISMISS_MS unless the
   // player clicks the notice itself, which extends the deadline to
   // OFFLINE_NOTICE_EXTENDED_DISMISS_MS from that click (not merely +60s on top of whatever
@@ -838,7 +868,7 @@ const MainPage = () => {
     <RootDiv>
       {showTopPrestigeBar && (
         <>
-          <TopPrestigeBar aria-label="prestige available banner">
+          <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
             <MutedText>1 Googol Money reached — production has stopped.</MutedText>
             <Button
               aria-label={prestigeAriaLabel}
@@ -852,7 +882,7 @@ const MainPage = () => {
               <ButtonLabel>Prestige +{formatAmount(prestigeAwardPreview)} PP</ButtonLabel>
             </Button>
           </TopPrestigeBar>
-          <TopPrestigeBarSpacer />
+          <TopPrestigeBarSpacer $height={topPrestigeBarHeight} />
         </>
       )}
 
@@ -898,7 +928,11 @@ const MainPage = () => {
       )}
 
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
-      <StickyBalances $compressed={balancesCompressed} $belowBar={showTopPrestigeBar}>
+      <StickyBalances
+        $compressed={balancesCompressed}
+        $belowBar={showTopPrestigeBar}
+        $belowBarHeight={topPrestigeBarHeight}
+      >
         <CenteredCard aria-label="money display">
           <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
         </CenteredCard>
