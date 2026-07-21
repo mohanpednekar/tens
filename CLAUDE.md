@@ -99,11 +99,18 @@ token for `claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs
 its guard step's `gh issue list --label claude-task` doesn't silently return empty).
 
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
-unlimited. The real constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based):
-bounded per-run by `--max-turns` (50 for `autonomous-maintenance.yml`, 30 for
-`autonomous-pr-followup.yml`), and naturally self-limited further by the PR-dedup guard (below), which
-caps concurrently-open autonomous PRs. See `docs/DESIGN_HISTORY.md` for the turn-budget escalation
-history if you're considering changing these caps.
+unlimited. The real constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based).
+`autonomous-maintenance.yml` has no fixed `--max-turns` cap — its prompt instead has Claude
+self-estimate, at the start of every run, how much of the rolling 5-hour usage window is likely still
+available and aim to keep that run's work at or under roughly **50%** of a full window's worth of
+effort, recalculated fresh every invocation rather than tuned by hand after failures. 50% is a soft
+target, not a hard limit: it's a self-estimated heuristic (Claude Code has no API to query metered
+window consumption), with no visibility into concurrent usage from `autonomous-pr-followup.yml` or
+interactive sessions, so a modest overshoot is expected and not treated as a failure. See
+`docs/DESIGN_HISTORY.md` for why the earlier fixed-cap approach — and its `25→40→50` retuning
+history, now historical — was replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns
+30` cap, unaffected by this change. Both workflows are naturally self-limited further by the PR-dedup
+guard (below), which caps concurrently-open autonomous PRs.
 
 ### Orchestration model
 
@@ -116,10 +123,11 @@ one per run; the follow-up + auto-merge workflows carry each PR to merge.
 
 In an interactive session, when the user is discussing features, strategy, or a body of work, the
 default deliverable is well-specified `claude-task` issues, not direct implementation — implement live
-only when the user explicitly asks for that. Write each issue so an unattended 50-turn run can
-complete it without asking questions. Split anything bigger into a sequence of issues ordered with
-"Blocked by #N" lines. An issue's "Explicit authorizations" section is the maintainer's written
-sign-off for changes the workflow otherwise hard-bans; security constraints (no `--no-verify`, no
+only when the user explicitly asks for that. Write each issue so it's small enough for a single
+unattended run to complete without asking questions — roughly at or under half of a 5-hour usage
+window's worth of work (see "Cost implications" above). Split anything bigger into a sequence of
+issues ordered with "Blocked by #N" lines. An issue's "Explicit authorizations" section is the
+maintainer's written sign-off for changes the workflow otherwise hard-bans; security constraints (no `--no-verify`, no
 editing other workflow files, never push to main, never self-merge) can never be authorized away.
 Issues labeled `priority:high` jump the queue; otherwise lowest-number-first. Whoever files a
 `claude-task` issue should assign a `size:S`/`size:M`/`size:L` label; Phase A weighs this against its
@@ -144,16 +152,19 @@ cancelling an in-progress run mid-task would itself produce an orphaned `claude/
 exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
 avoids causing that unnecessarily rather than trading one race for another failure mode.
 
-**Budget discipline.** Wall-clock time is not a constraint (one task every 5 hours is fine), but the
-per-run turn/token budget is. Before starting whatever task it picks, Claude roughly sizes the work
-against remaining turns, reserving ~15-20% for test + commit + push + PR-open overhead. If a task
-looks too large even after buffering, it scopes down rather than risking `error_max_turns`: a Phase A
-task lands its largest coherent, test-covered *slice* first (PR body says `Part of #<number>` instead
-of `Closes #<number>`, plus a `gh issue comment` recording what remains); a Phase B menu task scopes to
-one coherent sub-area and leaves the rest for a future run. Either way, Claude opens the PR as soon as
-there's a meaningful, test-passing first commit and pushes each subsequent commit as it lands. A task
-issue's `size:S`/`size:M`/`size:L` label is advisory context, not a gate. Skipping a task this way is
-noted in reasoning/PR description, not silent.
+**Budget discipline.** Wall-clock time is not a constraint (one task every 5 hours is fine), but Claude
+usage quota is. There's no fixed `--max-turns` cap on this workflow (see "Cost implications" above) —
+instead, before starting whatever task it picks, Claude self-estimates how much of the current rolling
+5-hour usage window is likely still available and roughly sizes the task against a soft ~50% target,
+using elapsed turns/time during the run as the practical signal once underway, and reserving ~15-20% of
+that self-estimated budget for test + commit + push + PR-open overhead. If a task looks too large even
+after buffering, it scopes down rather than risking a runaway run: a Phase A task lands its largest
+coherent, test-covered *slice* first (PR body says `Part of #<number>` instead of `Closes #<number>`,
+plus a `gh issue comment` recording what remains); a Phase B menu task scopes to one coherent sub-area
+and leaves the rest for a future run. Either way, Claude opens the PR as soon as there's a meaningful,
+test-passing first commit and pushes each subsequent commit as it lands. A task issue's
+`size:S`/`size:M`/`size:L` label is advisory context, not a gate. Skipping a task this way is noted in
+reasoning/PR description, not silent.
 
 **Reliability: cron dormancy.** GitHub Actions disables a workflow's cron trigger after 60 days with no
 repository activity. Unlikely in practice since merged automation PRs count as activity and Phase B's
