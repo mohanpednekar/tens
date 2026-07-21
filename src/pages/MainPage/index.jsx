@@ -107,13 +107,14 @@ const reveal = keyframes`
 // rightmost, not the tickspeed button — Buy is clicked constantly while a tickspeed level-up is
 // an occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
 // that's about to click again. Bottom line: a single 'details' area spanning all four tracks,
-// holding the per-tier click-to-expand disclosure's content (see TierDetails below) — there is
-// no separate visible trigger for it at all (no "Details" label): the disclosure's <summary> is
-// TierName itself (the row's heading, in the 'name' area), and clicking anywhere else on the
-// tile that isn't a button also toggles it (see the row's own onClick below) — collapsed by
-// default, contributing zero height to the 'details' row until expanded, so the row's collapsed
-// footprint is unchanged from before this was added. cursor: pointer signals the whole tile is
-// clickable; Button's own cursor rule overrides it for the two buttons.
+// holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) — only
+// rendered at all while expanded, so a collapsed row contributes zero height there. There is no
+// separate visible trigger for it (no "Details" label): TierName itself (wrapped in
+// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
+// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
+// disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
+// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it for
+// the two buttons.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
@@ -275,28 +276,28 @@ const InfoDetails = styled.details`
   }
 `
 
-// Per-tier click-to-expand disclosure (reusing InfoDetails above, the same pattern SpeedUpCard/
-// PrestigeCard/GlobalTickspeedCard use elsewhere in this file) surfacing numbers that don't fit
-// the row's compact layout — most notably each tier's own base/effective tickspeed, now that
-// base tickspeed diverges per tier again (see "Tier production tickspeed" in CLAUDE.md). No
-// separate visible summary/label of its own: `display: contents` on both <details> and <summary>
-// removes their own boxes from the grid entirely, so TierName — nested inside <summary> in the
-// JSX below — becomes the disclosure's real (and only) visible trigger, sitting in its normal
-// 'name' grid slot rather than a redundant "Details" label elsewhere in the row. Native
-// click-to-toggle behavior on <summary> is unaffected by display: contents — it's event-bubbling
-// based, not tied to the summary having its own rendered box (verified: a click anywhere inside
-// it, including on a nested display:contents-wrapped heading, still toggles the disclosure).
-const TierDetails = styled(InfoDetails)`
-  display: contents;
-
-  summary {
-    display: contents;
-  }
+// Per-tier click-to-expand disclosure surfacing numbers that don't fit the row's compact layout —
+// most notably each tier's own base/effective tickspeed, now that base tickspeed diverges per
+// tier again (see "Tier production tickspeed" in CLAUDE.md). No separate visible "Details" label:
+// TierName itself is the trigger. This is a plain React-controlled disclosure (openTierDetailIds,
+// see MainPage), not native <details>/<summary> — a display:contents-based version (matching the
+// pattern every other InfoDetails disclosure in this file uses) was tried first, but hit a real
+// Chromium limitation where a display:contents ancestor breaks a promoted grid child's ability to
+// span multiple grid-template-areas cells, collapsing TierDetailsContent below to a single
+// column's width instead of the full row (confirmed with a minimal repro, independent of whether
+// the span was expressed via a named area or explicit grid-column line numbers). TierNameTrigger
+// carries the interactive role/keyboard handling that native <summary> would otherwise provide
+// for free; TierName (the h3 inside it) keeps its own heading semantics, since applying role via
+// ARIA only overrides an element's OWN implicit role, never a nested descendant's.
+const TierNameTrigger = styled.div`
+  grid-area: name;
+  min-width: 0;
+  cursor: pointer;
 `
 
-// Holds the disclosure's actual content — a plain div (not part of <details> at all structurally
-// besides being TierDetails' non-summary child) so it can occupy the 'details' grid area on its
-// own, independent of TierName's 'name' area above.
+// Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
+// while its tier is in openTierDetailIds (see MainPage), so a collapsed row contributes zero
+// height there, same footprint as before this disclosure existed.
 const TierDetailsContent = styled.div`
   grid-area: details;
   font-size: 0.8em;
@@ -402,7 +403,6 @@ const TierName = styled.h3`
   column-gap: 0.4rem;
   display: flex;
   font-size: 1em;
-  grid-area: name;
   margin: 0;
   min-width: 0;
 
@@ -613,6 +613,24 @@ const MainPage = () => {
   const [initialUnlockedIds] = useState(() =>
     new Set(TIER_DEFINITIONS.filter(tier => isTierUnlocked(state)(tier)).map(tier => tier.id))
   )
+  // Which tier rows currently have their details disclosure expanded — a plain React-controlled
+  // set rather than native <details>/<summary>, because the natural approach (TierName nested
+  // inside a display:contents <summary>/<details> pair, so it can sit in its usual 'name' grid
+  // slot with no separate visible trigger) hits a real Chromium limitation: a display:contents
+  // ancestor breaks a promoted grid child's ability to span multiple grid-template-areas cells —
+  // confirmed with a minimal repro (the details content collapsed to a single column's width
+  // instead of the full row) regardless of whether the span is expressed via a named area or
+  // explicit grid-column line numbers. This keeps TierName as the visible trigger and the
+  // details content spanning the full row width, at the cost of reimplementing the
+  // expand/collapse and keyboard behavior manually (see TierNameTrigger below) instead of getting
+  // it for free from native <details>.
+  const [openTierDetailIds, setOpenTierDetailIds] = useState(() => new Set())
+  const toggleTierDetails = tierId => setOpenTierDetailIds(previous => {
+    const next = new Set(previous)
+    if (next.has(tierId)) next.delete(tierId)
+    else next.add(tierId)
+    return next
+  })
   // Smart requires the tier's autobuyer to already be unlocked (see buySmartAutobuyer); the tier
   // tickspeed autobuyer needs no such prerequisite (see buyTierTickspeedAutobuyer) — but since
   // Smart being bought already implies the autobuyer is unlocked, "both bought" below still means
@@ -1102,12 +1120,8 @@ const MainPage = () => {
             (resources / (tickspeedCost + 1)) * 100
           ))
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
-          // Captured by TierDetails' ref callback below so the row's own onClick (further down)
-          // can toggle it programmatically for clicks anywhere on the tile that aren't already
-          // handled natively by the summary (TierName) or swallowed by a button. Fresh per
-          // render, same as the tier-scoped consts above — safe since both the ref callback and
-          // the onClick reading it come from this same render's closure.
-          let detailsEl = null
+          const isDetailsOpen = openTierDetailIds.has(tier.id)
+          const detailsId = `${tier.id}-details`
 
           return (
             <TierLine
@@ -1116,25 +1130,42 @@ const MainPage = () => {
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
               onClick={event => {
-                if (event.target.closest('summary') || event.target.closest('button')) return
-                if (detailsEl) detailsEl.open = !detailsEl.open
+                // TierNameTrigger's own click handler (below) stops propagation before a click
+                // reaches here, so only a click elsewhere on the tile arrives — still skip a
+                // button, so Buy/tickspeed purchases never also toggle the disclosure.
+                if (event.target.closest('button')) return
+                toggleTierDetails(tier.id)
               }}
             >
-              <TierDetails ref={el => { detailsEl = el }}>
-                <summary>
-                  <TierName>
-                    <TierNameLabel title={tier.name}>
-                      <VisuallyHidden>{tier.name}</VisuallyHidden>
-                      <span aria-hidden="true">{tier.symbol}</span>
-                    </TierNameLabel>
-                    {tickspeedBonusPercent > 0 && (
-                      <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
-                        ⚙ +{tickspeedBonusPercent}%
-                      </GreenText>
-                    )}
-                  </TierName>
-                </summary>
-                <TierDetailsContent>
+              <TierNameTrigger
+                role="button"
+                tabIndex={0}
+                aria-expanded={isDetailsOpen}
+                aria-controls={detailsId}
+                onClick={event => {
+                  event.stopPropagation()
+                  toggleTierDetails(tier.id)
+                }}
+                onKeyDown={event => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  event.preventDefault()
+                  toggleTierDetails(tier.id)
+                }}
+              >
+                <TierName>
+                  <TierNameLabel title={tier.name}>
+                    <VisuallyHidden>{tier.name}</VisuallyHidden>
+                    <span aria-hidden="true">{tier.symbol}</span>
+                  </TierNameLabel>
+                  {tickspeedBonusPercent > 0 && (
+                    <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
+                      ⚙ +{tickspeedBonusPercent}%
+                    </GreenText>
+                  )}
+                </TierName>
+              </TierNameTrigger>
+              {isDetailsOpen && (
+                <TierDetailsContent id={detailsId}>
                   <ul>
                     <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
                     <li>
@@ -1145,7 +1176,7 @@ const MainPage = () => {
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
                   </ul>
                 </TierDetailsContent>
-              </TierDetails>
+              )}
               <OwnedText title="Owned">
                 <VisuallyHidden>Owned: </VisuallyHidden>
                 {formatAmount(owned)}

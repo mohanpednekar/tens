@@ -221,14 +221,16 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
   expect(within(kilobytesLayer).queryByText(/^details$/i)).not.toBeInTheDocument()
 
-  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
-  // Collapsed by default — the native <details> hides its body until opened. The tier's own
-  // heading is the disclosure's summary now, not a separate label.
-  expect(heading.closest('details')).not.toHaveAttribute('open')
+  // The tier's own name (wrapping TierNameTrigger, exposed as a named button) is the
+  // disclosure's trigger now, not a separate label — its content isn't in the DOM at all until
+  // expanded.
+  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  expect(within(kilobytesLayer).queryByText(/base tickspeed/i)).not.toBeInTheDocument()
 
-  await user.click(heading)
+  await user.click(trigger)
 
-  expect(heading.closest('details')).toHaveAttribute('open')
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
   expect(kilobytesLayer).toHaveTextContent(/base tickspeed: delivers every 2s/i)
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
 })
@@ -244,17 +246,17 @@ test('clicking anywhere else on a tier row\'s tile (not a button) also expands i
   render(<App />)
 
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
-  expect(heading.closest('details')).not.toHaveAttribute('open')
+  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
-  // Click the row's own container, not the heading and not a button.
+  // Click the row's own container, not the name trigger and not a button.
   await user.click(kilobytesLayer)
 
-  expect(heading.closest('details')).toHaveAttribute('open')
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
 
   // Clicking the tile again collapses it back.
   await user.click(kilobytesLayer)
-  expect(heading.closest('details')).not.toHaveAttribute('open')
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
@@ -268,12 +270,12 @@ test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its deta
   render(<App />)
 
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  const heading = within(kilobytesLayer).getByRole('heading', { level: 3 })
+  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
   const buyButton = within(kilobytesLayer).getByRole('button', { name: /^buy/i })
 
   await user.click(buyButton)
 
-  expect(heading.closest('details')).not.toHaveAttribute('open')
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
