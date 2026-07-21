@@ -2042,10 +2042,10 @@ describe('prestigeGame', () => {
     expect(after.autoPrestige).toBe(3)
   })
 
-  it('keeps the global tickspeed multiplier level permanently across prestige', () => {
+  it('resets the global tickspeed multiplier level to not-yet-bought across prestige, same as Speed Up', () => {
     const state = withGlobalTickspeedMultiplier(withMoney(createInitialGameState(), GOOGOL), 3)
     const after = prestigeGame(state)
-    expect(after.globalTickspeedMultiplier).toBe(3)
+    expect(after.globalTickspeedMultiplier).toBeNull()
   })
 
   it('keeps the prestige speed bonus unlock permanently across prestige', () => {
