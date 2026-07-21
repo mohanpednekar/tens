@@ -90,13 +90,14 @@ export const createInitialGameState = () => ({
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
   autoPrestige: null,
-  // Permanent global level (not per-tier — there's only one to buy, mirroring autoPrestige above),
-  // null = not yet bought: how many times Money has been spent on the global tickspeed multiplier
-  // (unlocked once at least 1 of the second tier is owned — see
+  // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoPrestige
+  // above), null = not yet bought: how many times Money has been spent on the global tickspeed
+  // multiplier (unlocked once at least 1 of the second tier is owned — see
   // isGlobalTickspeedMultiplierUnlocked), which speeds up *every* tier's delivery frequency by
-  // another 10% per level, not the amount delivered (see
+  // another 1% per level, not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/getEffectiveTierTickSpeedSeconds/
-  // buyGlobalTickspeedMultiplier) — never reset by prestige.
+  // buyGlobalTickspeedMultiplier) — resets to null on both Prestige and Speed Up, same as
+  // tickspeedLevels, since it's funded from the same Money balance both wipe.
   globalTickspeedMultiplier: null,
   // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
   // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
@@ -880,7 +881,9 @@ export const buyGlobalTickspeedMultiplier = state => {
 // unchanged across prestige, while the run-funded tickspeed levels (now tracked independently of
 // it — see tickspeedLevels) reset to their level-1 baseline along with everything else, same as
 // owned/purchased — smartAutobuyer/tierTickspeedAutobuyer, by contrast, are permanent and carry
-// over unchanged.
+// over unchanged. globalTickspeedMultiplier (the Money-funded global tickspeed level) resets to
+// not-yet-bought here too, same as speedUpGame — neither reset preserves it, since it's funded
+// from the same Money balance prestige/Speed Up already wipe, same as tickspeedLevels.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -892,7 +895,6 @@ export const prestigeGame = state => {
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
-    globalTickspeedMultiplier: state.globalTickspeedMultiplier ?? initial.globalTickspeedMultiplier,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
@@ -909,9 +911,9 @@ export const prestigeGame = state => {
 // A more frequent soft-reset than real Prestige, available well before Money reaches GOOGOL:
 // once the last tier reaches getSpeedUpRequirement(speedUpCount) lifetime purchases — 10 for the
 // first activation, 20 for the second, 30 for the third, … — resets resources/owned/purchased
-// (and every other per-run field, including every tier's own tickspeed level back to its level-1
-// baseline and the global tickspeed multiplier back to not-yet-bought) back to a fresh game
-// exactly like createInitialGameState, but permanently doubles production speed (see
+// (and every other per-run field, including every tier's own tickspeed level and the global
+// tickspeed multiplier, both back to not-yet-bought — same reset prestigeGame now does) back to a
+// fresh game exactly like createInitialGameState, but permanently doubles production speed (see
 // getSpeedUpMultiplier). Autobuyer unlock/smartAutobuyer/tierTickspeedAutobuyer/autoPrestige/
 // prestigeSpeedBonusUnlocked/autoSpeedUp/autoGlobalTickspeed (the *automation toggles*, as opposed
 // to the global tickspeed multiplier's own level) carry over unchanged — so if the global
