@@ -418,6 +418,22 @@ XP (`prestige.xp`, earned via money milestones — see `checkMilestones`) has be
 the underlying mechanic (accumulation, `highestMilestone` tracking) is untouched in `engine.js`, just
 no longer displayed, pending being repurposed for something else later.
 
+## Distribution
+
+### Why a PWA instead of Capacitor/native app-store distribution
+
+The maintainer originally asked for Android/iOS "native app" support. Two native routes were
+considered and rejected: Capacitor-wrapped app-store publishing needs an Apple Developer account, a
+Google Play Console account, code-signing secrets, and a human-gated store-review process the
+automation can never fully own end-to-end; a full React Native rewrite is a much larger, indefinitely
+dual-maintained codebase sharing only the DOM-free `engine.js` layer with the web app. A PWA (via
+`vite-plugin-pwa`) was chosen instead specifically because it stays 100% within what this repo's
+existing fully-automated PR/CI/deploy pipeline can build and ship end-to-end, with zero new accounts,
+secrets, or ongoing manual review — at the cost of no real app-store listing. If app-store presence
+becomes a real requirement later, Capacitor is the natural next step (it can wrap the same built
+`dist/` output), but that's a deliberate, human-initiated escalation, not something this repo's
+automation should reach for on its own.
+
 ## Testing
 
 The unmount-before-`vi.useRealTimers()` ordering requirement (see CLAUDE.md's Testing section) isn't
