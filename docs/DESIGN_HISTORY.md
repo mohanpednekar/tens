@@ -272,6 +272,26 @@ instead. `baseTickSpeedSeconds` remains a plain explicit per-tier field rather t
 nothing prevents a future tier or upgrade from diverging again — the uniform-1s state is a balance
 choice, not a structural constraint the field itself enforces.
 
+### Reintroducing the 1s-10s tickspeed ladder
+
+The uniform-1s state above held until the tickspeed-multiplier system (`tickspeedLevels`,
+`globalTickspeedMultiplier`, see "Tickspeed multiplier"/"The global tickspeed multiplier" in
+`CLAUDE.md`) was added — a mechanism that didn't exist when the original 1s-10s ladder was tried and
+reverted, and that specifically shrinks `getEffectiveTierTickSpeedSeconds` back down per tier or
+globally. Once that system existed, the original 1s-10s values (`baseTickSpeedSeconds = tierIndex + 1`)
+were restored on the theory that players could now offset later tiers' slower base cadence by investing
+in tickspeed multipliers, rather than the game being structurally unable to reach Googol as before.
+
+This was re-verified empirically with the `simulate-run-times` skill before merging, using the same
+starting-PP values as the original test (0, 100, 500, 1000, 5000, plus the skill's wider default range).
+Unlike the original attempt — where every one of those values hit the simulator's safety cap without
+reaching Googol — every run now completes, in ~4 days 21 hours of simulated time for the lower PP
+values (0-10000, where the bot's PP gets spent on autobuyer unlocks before it can afford the
+10,000-PP passive speed bonus) down to under an hour for 25,000+ PP (once the passive bonus affords
+unlocking). The tickspeed-multiplier system is enough to compensate this time — confirming the
+original revert's caveat (no compensating mechanism existed yet) was the actual root cause, not
+something inherent to an increasing per-tier tickspeed itself.
+
 ### Why the tick-progress ring was removed
 
 A circular per-tier tick-progress ring (`TickProgressRing`, a conic-gradient "watch face" fed by
@@ -280,7 +300,11 @@ A circular per-tier tick-progress ring (`TickProgressRing`, a conic-gradient "wa
 was unified at 1s: with all ten rings sweeping the same constant 1-second cycle in unison, the ring
 carried no per-tier information and was pure motion noise. `getTierProductionProgressPercent` (and its
 unit tests) remains in `engine.js` as a read-only accessor — it would be the starting point if any
-future design re-surfaces per-tier tickspeed divergence.
+future design re-surfaces per-tier tickspeed divergence. When per-tier tickspeed divergence was in fact
+reintroduced (see "Reintroducing the 1s-10s tickspeed ladder" above), the ring itself wasn't restored —
+instead each tier row gained a collapsed-by-default `Details` disclosure (`TierDetails` in `MainPage`)
+that surfaces the base/effective tickspeed numbers as text on demand, which doesn't add the ring's
+always-on animation cost/clutter to the compact row layout.
 
 ### Why Speed Up exists, and why its requirement escalates
 

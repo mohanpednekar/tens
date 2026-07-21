@@ -58,9 +58,9 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('baseTickSpeedSeconds is 1 for every tier', () => {
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(tier.baseTickSpeedSeconds).toBe(1)
+  it('baseTickSpeedSeconds increases by 1s per tier, from 1s to 10s', () => {
+    TIER_DEFINITIONS.forEach((tier, index) => {
+      expect(tier.baseTickSpeedSeconds).toBe(index + 1)
     })
   })
 
@@ -110,9 +110,9 @@ describe('getTierBaseTickSpeedSeconds', () => {
     expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
-  it('is 1 second for every tier', () => {
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(1)
+  it('matches each tier\'s own defined baseTickSpeedSeconds (1s through 10s)', () => {
+    TIER_DEFINITIONS.forEach((tier, index) => {
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
     })
   })
 

@@ -7,23 +7,27 @@
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier. Every tier is currently set to the same 1s cadence (matching
-// the global 100ms/10Hz tick rate — see TICK_RATE_MS below) rather than a per-tier value that
-// slows down for later tiers, since a slower cadence divides that tier's real throughput (see
-// getTierBaseTickSpeedSeconds below) — a division that used to grow to 10x for the last tier, on
-// top of the already-steep Fibonacci-driven cost curve (see getTierCost in engine.js), and made a
-// full run unable to reach GOOGOL within any practical amount of time.
+// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
+// (matching the global 100ms/10Hz tick rate — see TICK_RATE_MS below) up through tier10=10s — since
+// a slower cadence divides that tier's real throughput (see getTierBaseTickSpeedSeconds below) by
+// up to 10x for the last tier, on top of the already-steep Fibonacci-driven cost curve (see
+// getTierCost in engine.js). This exact 1s-10s ladder was tried once before the tickspeed-multiplier
+// system existed and reverted to a uniform 1s because nothing could offset the slowdown; now that
+// both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier) tickspeed multipliers
+// exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are meant to be sped back
+// up by investing in those rather than being structurally unable to keep pace — see
+// docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
   { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 1 },
-  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 1 },
-  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 1 },
-  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 1 },
-  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 1 },
-  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 1 },
-  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 1 },
-  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 1 },
-  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 1 },
+  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
+  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
+  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
+  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
+  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
+  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
+  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
+  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
+  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
 ]
 
 
@@ -33,9 +37,9 @@ export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tie
 // continuously every global tick (see engine.js's tickGame / tierProductionAccumulators) —
 // simply reads that tier's own independent baseTickSpeedSeconds field above. Not balance-neutral:
 // a tier's real per-second throughput is divided by its own tickspeed (see tickGame in
-// engine.js), which is exactly why every tier now shares the same 1s value rather than the
-// slower, per-tier-increasing cadence used before. An unrecognized tier id falls back to 1s
-// rather than throwing.
+// engine.js), which is why later tiers' 1s-10s ladder above leans on the tickspeed-multiplier
+// system (getEffectiveTierTickSpeedSeconds) to be offset back down. An unrecognized tier id falls
+// back to 1s rather than throwing.
 export const getTierBaseTickSpeedSeconds = tierId =>
   TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
 

@@ -79,8 +79,9 @@ export const createInitialGameState = () => ({
   }), {}),
   // Fractional seconds accumulated per tier toward its next production batch, since each tier
   // only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds rather than
-  // continuously every global tick — see tickGame. Every tier currently shares the same 1s
-  // tickspeed (matching the global tick), banking any remainder below that full second.
+  // continuously every global tick — see tickGame. Each tier's base tickspeed increases down the
+  // list (tier01=1s, matching the global tick, up through tier10=10s), banking any remainder below
+  // that full period.
   tierProductionAccumulators: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: 0,
@@ -421,10 +422,9 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
 export const getTierProductionProgressPercent = (state, tierId, previousAccumulator, elapsedSeconds = 1) => {
   const tickSpeed = getEffectiveTierTickSpeedSeconds(state, tierId)
   // Same TICK_ACCUMULATION_EPSILON tolerance tickGame's own crossing check uses (see there):
-  // absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds. Every tier
-  // now shares a 1s base tickspeed, where ten additions of 0.1 land on 0.9999999999999999 rather
-  // than exactly 1 — without this tolerance the "just delivered" 100% flash would be silently
-  // skipped.
+  // absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds — e.g. ten
+  // additions of 0.1 land on 0.9999999999999999 rather than exactly 1 — without this tolerance the
+  // "just delivered" 100% flash would be silently skipped.
   if (previousAccumulator != null && previousAccumulator + elapsedSeconds >= tickSpeed - TICK_ACCUMULATION_EPSILON) return 100
   const accumulated = state.tierProductionAccumulators?.[tierId] ?? 0
   return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))

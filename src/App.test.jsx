@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import App from './App'
@@ -206,6 +206,29 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
   // not shown as an averaged "/sec" rate.
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+4 B')
+})
+
+test('a tier row\'s details disclosure starts collapsed and reveals its base/effective tickspeed once expanded', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 2s)
+  }))
+
+  render(<App />)
+
+  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
+  const summary = within(kilobytesLayer).getByText('Details')
+  // Collapsed by default — the native <details> hides its body until opened.
+  expect(summary.closest('details')).not.toHaveAttribute('open')
+
+  await user.click(summary)
+
+  expect(summary.closest('details')).toHaveAttribute('open')
+
+  expect(kilobytesLayer).toHaveTextContent(/base tickspeed: delivers every 2s/i)
+  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {

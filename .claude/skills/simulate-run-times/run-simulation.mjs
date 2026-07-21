@@ -7,7 +7,7 @@
 //   - Every tick, "click Buy" on every unlocked tier (buyTierQuantity, same 10-unit batch the real
 //     Buy button uses).
 //   - Every tick, "click Unlock" on any tier whose autobuyer isn't active yet, the instant it's
-//     affordable (buyAutobuyer's first call, level null -> 1).
+//     affordable (buyAutobuyerUnlock, null -> unlocked).
 //   - Autobuyer levels are never manually Upgraded past 1, and no PP is ever spent on Auto-upgrade
 //     automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
 //     bonus (getPrestigeProductionMultiplier) on run length, holding every other lever fixed.
@@ -29,7 +29,7 @@
 //   node run-simulation.mjs 0 100 1000 10000      # custom PP balances (space-separated integers)
 
 import {
-  buyAutobuyer,
+  buyAutobuyerUnlock,
   buyPrestigeSpeedBonus,
   buyTierQuantity,
   createInitialGameState,
@@ -62,7 +62,7 @@ function simulateRun(startingPP) {
     }
     for (const tier of TIER_DEFINITIONS) {
       if (state.autobuyers[tier.id] === null) {
-        state = buyAutobuyer(tier.id)(state)
+        state = buyAutobuyerUnlock(tier.id)(state)
       }
     }
     if (!state.prestigeSpeedBonusUnlocked) {
