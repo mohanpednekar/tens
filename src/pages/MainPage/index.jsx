@@ -665,14 +665,15 @@ const MainPage = () => {
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
-  // another 10% at once, not the amount delivered (see
+  // another 1% at once, not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
   // every other automation upgrade on this page, it's Money-funded (not PP) and lives on the Game
   // view instead of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js:
   // it only becomes purchasable once at least 1 of the second tier is owned, so a player can't
   // accidentally spend their only Money on it before they have a second income source (tier01's
-  // own cost/production resource is Money itself). Once active, it stays purchasable even if
-  // tier02 is later reset to 0 by a Prestige/Speed Up — only the *initial* activation needs it.
+  // own cost/production resource is Money itself). The level itself resets to not-yet-bought on
+  // both Prestige and Speed Up (see prestigeGame/speedUpGame in engine.js), same as tier02's
+  // owned count, so re-unlocking always requires owning tier02 again after either reset.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel)
@@ -933,7 +934,7 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
-              Spend Money to permanently speed up every tier's production ticks by another 10% at
+              Spend Money to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
               ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
               {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
@@ -949,7 +950,7 @@ const MainPage = () => {
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Money to permanently speed up every tier's production ticks by another 10% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
+            title="Spend Money to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
