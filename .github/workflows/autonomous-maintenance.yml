@@ -141,7 +141,6 @@ jobs:
           # the only way to see WHY an unattended run ended without producing anything.
           show_full_output: true
           claude_args: |
-            --max-turns 50
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*)"
           settings: |
             {
@@ -161,10 +160,17 @@ jobs:
           prompt: |
             You are running as a scheduled, unattended maintenance job on this repository
             (REPO: ${{ github.repository }}). Nobody is watching this run, so only make changes
-            you are confident are safe, small, and correct. Your turn budget is deliberately capped
-            (--max-turns 50; every tool call counts as a turn) to keep each run to a small fraction
-            of the weekly Claude usage quota — work efficiently, avoid redundant reads and
-            re-checks, and don't try to raise that cap yourself.
+            you are confident are safe, small, and correct. There is no fixed turn-count cap on this
+            run. Instead, before picking or sizing a task below, estimate how much of the current
+            rolling 5-hour Claude usage window is likely still available and aim to keep this run's
+            planned work at or under roughly 50% of a full window's worth of effort — every tool call
+            counts as a turn, so use elapsed turns/time so far in the run as your practical signal
+            once you're underway. This is a self-estimated heuristic, not a metered value: you have no
+            visibility into how much of the window autonomous-pr-followup.yml or interactive usage may
+            already be consuming concurrently. 50% is a soft aim, not a hard stop — its margin exists
+            to absorb both that estimation inaccuracy and unknown concurrent usage, so modestly
+            overshooting it because a task turned out bigger than expected is fine, not a failure to
+            avoid at all costs. Work efficiently regardless: avoid redundant reads and re-checks.
 
             Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
             setup, and you must follow it exactly.
@@ -188,11 +194,11 @@ jobs:
             ${{ steps.guard.outputs.failing_prs || '(none)' }}
 
             This is a side project — time is not a constraint (one task every 5 hours is fine), but
-            your turn/token budget per run is. Before you start implementing whatever task you pick
-            below, roughly size it against your remaining turns, reserving a buffer of roughly the
-            last 15-20% of your budget for test + commit + push + PR-open overhead, so you don't run
-            out mid-work. If a task looks too large to land safely within that budget even after
-            buffering:
+            your self-estimated usage-window budget per run is (see above). Before you start
+            implementing whatever task you pick below, roughly size it against that budget, reserving
+            a buffer of roughly the last 15-20% of it for test + commit + push + PR-open overhead, so
+            you don't run out mid-work. If a task looks too large to land safely within that budget
+            even after buffering:
             - For a Phase A task issue, implement the largest coherent, independently-valuable,
               test-covered SLICE of the spec first — see the `Part of #<number>` guidance in Phase A
               below, instead of abandoning the task or attempting the whole thing at once.
@@ -203,7 +209,7 @@ jobs:
             Either way, don't wait until everything is finished to create visible progress: open the
             PR as soon as there's a meaningful, buildable, test-passing first commit rather than only
             at the very end, and push each subsequent meaningful commit as you make it rather than
-            batching every commit into one push at the end. If the run is ever cut short by the turn
+            batching every commit into one push at the end. If the run is ever cut short by the usage
             budget, whatever has already landed then stays as real, discoverable progress on a real
             PR instead of being lost with the ephemeral runner.
 
@@ -307,8 +313,9 @@ jobs:
                add a new low-risk task type, or retire one that repeatedly finds nothing to do. You
                may edit ONLY .github/workflows/autonomous-maintenance.yml for this task — no other
                file under .github/workflows/. You must NOT weaken or remove, even in the name of
-               "improving" it: the duplicate-PR guard step, the --max-turns budget cap, the
-               settings.permissions.deny list protecting the other workflow files, the requirement
+               "improving" it: the duplicate-PR guard step, the self-estimated usage-window budgeting
+               instructions (the ~50%-of-window soft target and its self-scoping fallback behavior),
+               the settings.permissions.deny list protecting the other workflow files, the requirement
                that you never merge your own PR, the requirement to always open a PR for human
                review instead of pushing straight to main, or the rule that the Phase A task
                backlog always takes priority over this menu.

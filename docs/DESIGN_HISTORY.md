@@ -44,6 +44,14 @@ against your plan's weekly quota and tighten `--max-turns` (or pin a cheaper mod
 further if runs consistently use too much, but not below what a real task run needs (~30–50 turns), or
 every run will fail with `error_max_turns` before finishing.
 
+This `25→40→50` retuning history is now historical for `autonomous-maintenance.yml` specifically: issue
+#49 removed its fixed `--max-turns` cap entirely in favor of a self-estimated, soft ~50%-of-window
+budget recalculated fresh every run (see `CLAUDE.md`'s "Cost implications"/"Budget discipline"), because
+a number picked in advance couldn't adapt to how large a given task turned out to be or to how much
+quota headroom actually remained going into a run — the mechanism this history describes tuning no
+longer exists for that workflow. The lesson generalizes, though, and still applies as-is to
+`autonomous-pr-followup.yml`, which keeps its own fixed `--max-turns 30` cap unchanged.
+
 ### Orchestration model — background
 
 The maintainer orchestrates; the scheduled workflow develops. Interactive Claude Code sessions are
