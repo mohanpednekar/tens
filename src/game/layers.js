@@ -61,6 +61,14 @@ export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 
+// A tier's production doubles at every block-of-10-purchases milestone (see engine.js's
+// getPurchaseMilestoneMultiplier) — the per-block multiplier normally applied.
+export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 2
+// Every 10th such block (i.e. every 100th lifetime purchase) uses this larger multiplier instead
+// of PURCHASE_MILESTONE_MULTIPLIER_BASE for that one block — a bigger milestone every 100
+// purchases on top of the regular one every 10 (see engine.js's getPurchaseMilestoneMultiplier).
+export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
+
 // Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
 // tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
 // doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
@@ -101,15 +109,16 @@ export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
 // multiplier, since it only automates one additional purchase rather than the tier's whole buying
 // cadence.
 export const TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2
-// Each global tickspeed multiplier level (see engine.js's getGlobalTickspeedProductionMultiplier/
-// buyGlobalTickspeedMultiplier) compounds *every* tier's production by another 1% at once —
-// unlike the per-tier tickspeed multiplier above, this is a single global upgrade track (mirroring
-// Auto-Prestige's null/level pattern), not something bought separately per tier.
-export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
-// Additive bonus stacked on top of the compounding step above for every 10 completed levels of
-// the global tickspeed multiplier (see engine.js's getGlobalTickspeedProductionMultiplier) — +10%
-// at level 10, +20% at level 20, …, exactly +100% at level 100 (10 milestones × 10%), alongside
-// (not replacing) the ongoing compounding growth GLOBAL_TICKSPEED_PRODUCTION_STEP already provides.
+// The global tickspeed multiplier (see engine.js's getGlobalTickspeedProductionMultiplier/
+// buyGlobalTickspeedMultiplier) speeds up *every* tier's production at once — unlike the per-tier
+// tickspeed multiplier, this is a single global upgrade track (mirroring Auto-Prestige's
+// null/level pattern), not something bought separately per tier. There's no bonus between
+// milestones (no per-level compounding step) — only a flat GLOBAL_TICKSPEED_MILESTONE_STEP (10%)
+// added at each milestone level, and the milestone *spacing* itself grows by a factor of ten every
+// time the level crosses another power-of-ten range: every 10th level up to 100 (10, 20, …, 100 —
+// 10 milestones, +100% total), then every 100th level up to 1000 (200, 300, …, 1000 — 9 more
+// milestones), then every 1000th level up to 10000, and so on indefinitely (see
+// getGlobalTickspeedProductionMultiplier's countGlobalTickspeedMilestones helper).
 export const GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above

@@ -845,7 +845,8 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed Multiplier' })).not.toHaveTextContent(/lv\.1|\+1%/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
-  expect(panel).toHaveTextContent(/\+1%/i)
+  // Level 1 is below the first 10-level milestone, so there's no bonus yet.
+  expect(panel).toHaveTextContent(/\+0%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
 
@@ -860,7 +861,7 @@ test('the Enable Global Tickspeed Multiplier button stays disabled without enoug
   expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeDisabled()
 })
 
-test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the cumulative bonus', () => {
+test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows no bonus below the first milestone', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 999 },
     globalTickspeedMultiplier: 2,
@@ -874,12 +875,11 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
   expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.2/i)
-  // Level 2 is still under the first 10-level milestone (1.01^2 ≈ ×1.0201, no milestone bonus
-  // yet), so the bonus shows with its fractional 2 decimal places rather than rounding to +2%.
-  expect(panel).toHaveTextContent(/\+2\.01%/i)
+  // Level 2 is still below the first 10-level milestone, so there's no bonus at all yet.
+  expect(panel).toHaveTextContent(/\+0%/i)
 })
 
-test('the global tickspeed bonus shows up to 2 decimal places below 100%, and a milestone bonus every 10 levels', () => {
+test('the global tickspeed bonus adds a flat +10% at every 10-level milestone, up to level 100', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 10,
@@ -887,13 +887,10 @@ test('the global tickspeed bonus shows up to 2 decimal places below 100%, and a 
 
   render(<App />)
 
-  // Level 10 = 1.01^10 (≈×1.1046) plus the +10% milestone bonus for the first completed block of
-  // 10 levels — the milestone term alone would be a round 10%, but stacked on the fractional
-  // compounding base the cumulative total lands on a non-whole percentage.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+20\.46%/i)
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+10%/i)
 })
 
-test('the global tickspeed bonus rounds to a whole percent once it reaches 100%', () => {
+test('the global tickspeed bonus sums to +100% at level 100, and widens its milestone spacing to every 100 levels beyond that', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 100,
@@ -901,11 +898,21 @@ test('the global tickspeed bonus rounds to a whole percent once it reaches 100%'
 
   render(<App />)
 
-  // Level 100 = 1.01^100 (≈×2.7048) plus 10 completed milestones × 10% (+100%) ≈ ×3.7048 total —
-  // once the cumulative bonus crosses 100% it's shown as a whole percent, not 2 decimal places.
-  const panel = screen.getByLabelText(/^global tickspeed panel$/i)
-  expect(panel).toHaveTextContent(/\+270%/i)
-  expect(panel).not.toHaveTextContent(/\+270\.\d/i)
+  // 10 milestones spaced every 10 levels (levels 10, 20, …, 100) sum to exactly +100%.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+100%/i)
+})
+
+test('the global tickspeed bonus does not add a new milestone until level 200, once spacing has widened to every 100 levels', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e15 },
+    globalTickspeedMultiplier: 150,
+  }))
+
+  render(<App />)
+
+  // Beyond level 100, milestones are spaced every 100 levels (200, 300, …) instead of every 10,
+  // so level 150 still shows the same +100% as level 100 — no new milestone yet.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+100%/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
