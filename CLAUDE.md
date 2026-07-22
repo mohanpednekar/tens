@@ -398,7 +398,17 @@ Strict three-layer separation:
   than an expandable disclosure — omits the "production speed bonus locked" caveat before it's bought;
   that fuller wording only shows in the bottom `PrestigeCard`'s own expandable description (see
   "Description prose" below), which is the appropriate place for it since this compact bar isn't meant
-  to carry that much text permanently.
+  to carry that much text permanently. Once Prestige is actually available (`canPrestige`, i.e. Money
+  `>= GOOGOL`), the PP display card itself doubles as a Prestige button — the whole card gets
+  `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler, `onClick={actions.prestige}`,
+  and a `title` ("Awards Prestige Points and resets your resources", the same wording used on every
+  other Prestige button), driven by a `$actionable` prop on `CenteredCard` (cursor/hover/focus-visible
+  styling only — no visible border/color change, since the disabled/enabled convention used elsewhere
+  in the app relies on button `color`, which this plain `<section>` doesn't have). It's an additional,
+  optional way to trigger Prestige alongside the `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard`
+  buttons, not a replacement for any of them — none of those changed. Before `canPrestige`, none of
+  these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
+  display card never gets `$actionable` — only the PP display can trigger Prestige.
 - **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
   the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
   click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
@@ -1280,7 +1290,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (436 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (438 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

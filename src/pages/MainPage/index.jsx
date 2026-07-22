@@ -186,10 +186,26 @@ const GlobalTickspeedCard = styled(StatCard)`
 `
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
-// Header that are centered rather than left-aligned.
+// Header that are centered rather than left-aligned. $actionable (used only by the PP display,
+// once Prestige is available) makes the whole card double as the Prestige button, matching the
+// tier rows' own whole-tile-clickable-plus-title pattern (see TierNameTrigger) rather than the
+// "don't combine those on a passive tile" call made for the offline notice card.
 const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
+
+  ${props => props.$actionable && css`
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.15);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fbbf24;
+      outline-offset: 2px;
+    }
+  `}
 `
 
 // Keeps both balances visible at all times: the Money + PP pair sticks to the top of the viewport
@@ -970,7 +986,19 @@ const MainPage = () => {
         </CenteredCard>
 
         {!isFirstRun && (
-          <CenteredCard aria-label="prestige points display">
+          <CenteredCard
+            aria-label="prestige points display"
+            $actionable={canPrestige}
+            onClick={canPrestige ? actions.prestige : undefined}
+            onKeyDown={event => {
+              if (!canPrestige || (event.key !== 'Enter' && event.key !== ' ')) return
+              event.preventDefault()
+              actions.prestige()
+            }}
+            role={canPrestige ? 'button' : undefined}
+            tabIndex={canPrestige ? 0 : undefined}
+            title={canPrestige ? 'Awards Prestige Points and resets your resources' : undefined}
+          >
             <MutedText>
               <GoldText>{formatAmount(prestige.points)} PP</GoldText>
               {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}

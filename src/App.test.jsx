@@ -460,6 +460,33 @@ test('from the 2nd prestige onward, reaching a googol shows a top banner instead
   expect(screen.getByRole('button', { name: /prestige \(requires/i })).toBeEnabled()
 })
 
+test('the sticky PP display doubles as a Prestige button once Prestige is available', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /^prestige points display$/i }))
+
+  expect(screen.getByText(/prestiged 2 times/i)).toBeInTheDocument()
+})
+
+test('the sticky PP display is not a clickable button before Prestige is available', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 5, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^prestige points display$/i)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^prestige points display$/i })).not.toBeInTheDocument()
+})
+
 test('production and every other control freeze once money reaches a googol', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e100 },

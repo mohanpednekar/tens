@@ -256,16 +256,29 @@ The following records *why* specific MainPage/component behaviors were built the
 - **Offline notice: click-to-extend removed; card became a centered overlay.** The card used to carry
   both a whole-tile `onClick` (re-seeding the auto-dismiss deadline to a longer duration from that
   click) and a `title` explaining that click behavior — "extend from now" was more intuitive than
-  adding +60s on top of whatever remained, at the time. That combination (an entire tile clickable,
-  with its purpose only discoverable via a hover tooltip) was later flagged as a pattern to avoid
-  generally in this app: a hover-only tooltip doesn't help touch/keyboard users discover a whole-tile
-  click affordance, and it's easy to trigger by accident while merely reading the notice. The
-  click-to-extend behavior and its `title` were removed; only the explicit Dismiss button remains
-  interactive. Separately, the card moved from an inline block (pushed into the normal document flow,
-  above the money display) into a fixed, viewport-centered `OfflineNoticeOverlay` — presenting it as a
-  true centered overlay/dialog instead of content that shifts the page underneath it, with
-  `pointer-events` scoped so only the card itself (not the overlay's surrounding space) intercepts
-  clicks.
+  adding +60s on top of whatever remained, at the time. That combination was flagged specifically for
+  *this* card: the card had no other indication it was interactive (no `role="button"`, no cursor
+  affordance beyond CSS `cursor: pointer`, no visible control), so a hover-only tooltip was the *only*
+  way to discover the whole-tile click at all — undiscoverable to touch/keyboard users, and easy to
+  trigger by accident while merely reading the notice. The click-to-extend behavior and its `title`
+  were removed; only the explicit Dismiss button remains interactive. Separately, the card moved from
+  an inline block (pushed into the normal document flow, above the money display) into a fixed,
+  viewport-centered `OfflineNoticeOverlay` — presenting it as a true centered overlay/dialog instead of
+  content that shifts the page underneath it, with `pointer-events` scoped so only the card itself (not
+  the overlay's surrounding space) intercepts clicks. Note this is *not* a blanket rule against ever
+  pairing a whole-tile click with a `title` — see the next entry and the tier rows' own
+  `TierNameTrigger` (CLAUDE.md's "Tier row details disclosure"), both of which combine the two
+  properly: `role="button"` (or an equivalent semantic cue) plus a supplementary tooltip, rather than
+  the tooltip being the sole explanation of an otherwise-invisible affordance.
+- **Sticky PP display doubles as a Prestige button.** Once Prestige is actually available
+  (`canPrestige`), clicking the sticky "prestige points display" card triggers Prestige directly,
+  alongside the existing `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard` buttons (none of which
+  were removed) — a convenience shortcut, since the PP balance is already visible at the top of the
+  page in exactly the state where Prestige becomes available. Unlike the offline notice above, this
+  card is properly marked interactive (`role="button"`, `tabIndex`, keyboard support) whenever it's
+  clickable, and reverts to a plain non-interactive display before `canPrestige` — so the same
+  click+title combination that was removed from the offline notice is reintroduced here deliberately,
+  now paired with real button semantics instead of being the only cue.
 
 ## Economy model
 
