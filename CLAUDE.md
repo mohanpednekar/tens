@@ -393,7 +393,12 @@ Strict three-layer separation:
   defeating the `overflow: hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or
   PP status string from visually spilling into the neighboring card. `Money` and the status `<p>` are
   both given an explicit `width: 100%` in the compressed styles specifically to pin them to the card's
-  actual width so that truncation has something to truncate against.
+  actual width so that truncation has something to truncate against. This compact PP display shows the
+  production speed bonus percentage once unlocked, but — being always-visible, sticky chrome rather
+  than an expandable disclosure — omits the "production speed bonus locked" caveat before it's bought;
+  that fuller wording only shows in the bottom `PrestigeCard`'s own expandable description (see
+  "Description prose" below), which is the appropriate place for it since this compact bar isn't meant
+  to carry that much text permanently.
 - **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
   the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
   click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
@@ -583,12 +588,18 @@ base/effective tickspeed numbers directly — added once per-tier base tickspeed
 badge and the tickspeed button's own tooltip.
 
 **Offline notice.** When the hook reports a non-null `offlineProgress`, a dismissible
-`OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders above the money display;
-never reappears once dismissed or state is reset. Self-dismisses via a countdown
-(`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's `$progress` fill, then an opacity
-fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before `dismissOfflineProgress` removes it. Clicking the card
-itself (not Dismiss) extends the deadline to `OFFLINE_NOTICE_EXTENDED_DISMISS_MS` (60s) from that
-click. Dismiss's click handler calls `event.stopPropagation()`.
+`OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a fixed,
+viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered regardless of
+scroll position) rather than an inline card pushed into the page's normal document flow; never
+reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets `pointer-events: none` (with
+`pointer-events: auto` restored on the card itself) so the rest of the page stays clickable through
+the overlay's own surrounding space. The card has no click handler or `title` of its own — only the
+Dismiss button is interactive, keeping the whole-tile-is-clickable-and-also-has-a-tooltip pattern out
+of this component (see `docs/DESIGN_HISTORY.md` for why the earlier click-to-extend behavior was
+dropped) — and its content (description + centered Dismiss button) stacks in `StatCard`'s own
+flex-column, centered via `align-items`/`text-align: center` on the card. Self-dismisses via a
+countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's `$progress` fill, then
+an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before `dismissOfflineProgress` removes it.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
@@ -1269,7 +1280,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (437 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (436 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

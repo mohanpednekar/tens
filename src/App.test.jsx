@@ -398,40 +398,6 @@ test('the offline progress notice shows a countdown on its Dismiss button and fa
   vi.useRealTimers()
 })
 
-test('clicking the offline progress notice extends its auto-dismiss to a minute from the click', () => {
-  vi.useFakeTimers()
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 0 },
-    owned: { tier01: 5 },
-  }))
-  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
-
-  const { unmount } = render(<App />)
-  const notice = screen.getByLabelText(/^offline progress notice$/i)
-
-  // Click well before the original 10s deadline would have fired.
-  act(() => { vi.advanceTimersByTime(9_000) })
-  fireEvent.click(notice)
-
-  // 1.5s later (10.5s since mount) — past the original 10s deadline plus its 400ms fade, proving
-  // the click reset the countdown rather than merely letting the original one finish.
-  act(() => { vi.advanceTimersByTime(1_500) })
-  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
-
-  // Advance to (not past) the extended 60s-from-click deadline in its own act() call, then the
-  // 400ms fade in a separate one — the fade's setTimeout is only registered once React flushes
-  // the fading-state update *after* an act() call returns, so folding both into a single larger
-  // advance would register that timeout too late for the same call to also fire it (the same
-  // chained-timer pitfall CLAUDE.md documents for the old tick-progress ring tests).
-  act(() => { vi.advanceTimersByTime(58_500) })
-  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
-  act(() => { vi.advanceTimersByTime(400) })
-  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
-
-  unmount()
-  vi.useRealTimers()
-})
-
 test('clicking Dismiss removes the offline progress notice immediately, without waiting for the fade', () => {
   vi.useFakeTimers()
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -986,7 +952,10 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/production speed bonus locked/i)
+  // The compact sticky balance bar stays terse and omits the "locked" caveat entirely; the full
+  // wording only shows in the Prestige panel's expandable description.
+  expect(screen.getByLabelText(/^prestige points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
+  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/production speed bonus locked/i)
 
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
   const unlockButton = screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })
@@ -1046,7 +1015,6 @@ test('the Speed Bonus unlock is offered as soon as the PP Upgrades page itself i
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/production speed bonus locked/i)
 
   await user.click(screen.getByRole('tab', { name: /pp upgrades/i }))
   expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeEnabled()

@@ -249,12 +249,23 @@ The following records *why* specific MainPage/component behaviors were built the
 - **Offline notice self-dismiss timing.** Uses a plain `setInterval` computing `remaining/total` from
   two `Date.now()`-based timestamps, not a CSS transition — matching the codebase's established
   on-button-fill convention rather than reintroducing the removed tick-progress ring's animation
-  machinery. Clicking the card (not the Dismiss button) re-seeds the deadline from that click rather
-  than adding +60s on top of whatever remained, since "extend from now" is the more intuitive
-  behavior when a player is actively engaging with the notice. The countdown interval effect is keyed
-  on `offlineProgress` itself (not just the timing state) specifically to avoid a real regression that
-  was caught during development: without that guard, a timer could leak and run forever in the
-  background once the card was dismissed by the auto-fade path rather than a manual click.
+  machinery. The countdown interval effect is keyed on `offlineProgress` itself (not just the timing
+  state) specifically to avoid a real regression that was caught during development: without that
+  guard, a timer could leak and run forever in the background once the card was dismissed by the
+  auto-fade path rather than a manual click.
+- **Offline notice: click-to-extend removed; card became a centered overlay.** The card used to carry
+  both a whole-tile `onClick` (re-seeding the auto-dismiss deadline to a longer duration from that
+  click) and a `title` explaining that click behavior — "extend from now" was more intuitive than
+  adding +60s on top of whatever remained, at the time. That combination (an entire tile clickable,
+  with its purpose only discoverable via a hover tooltip) was later flagged as a pattern to avoid
+  generally in this app: a hover-only tooltip doesn't help touch/keyboard users discover a whole-tile
+  click affordance, and it's easy to trigger by accident while merely reading the notice. The
+  click-to-extend behavior and its `title` were removed; only the explicit Dismiss button remains
+  interactive. Separately, the card moved from an inline block (pushed into the normal document flow,
+  above the money display) into a fixed, viewport-centered `OfflineNoticeOverlay` — presenting it as a
+  true centered overlay/dialog instead of content that shifts the page underneath it, with
+  `pointer-events` scoped so only the card itself (not the overlay's surrounding space) intercepts
+  clicks.
 
 ## Economy model
 
