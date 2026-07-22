@@ -144,6 +144,19 @@ export const createInitialGameState = () => ({
   // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Never reset by
   // prestige/Speed Up, or by consumeXpForLastTierTickspeed itself (it only ever grows).
   lastTierXpConsumed: 0,
+  // Permanent per-tier flag: whether isTierUnlocked's live condition (own owned > 0, or the
+  // previous tier's owned >= 10) has ever been satisfied for this tier — latched true forever the
+  // moment that happens (see latchEverUnlockedTiers, called from buyTier and tickGame) and read by
+  // isTierUnlocked as an additional, permanent way to stay unlocked. tier01 starts true (always
+  // unlocked, see isTierUnlocked); every other tier starts false. Exists so a tier that's already
+  // been reached doesn't disappear from the UI again if its own or its predecessor's `owned` count
+  // is later reset by something narrower than a full Prestige/Speed Up (see
+  // consumeXpForLastTierTickspeed) — unlike `owned` itself, this flag is never reset by anything,
+  // including Prestige and Speed Up.
+  everUnlockedTierIds: TIER_DEFINITIONS.reduce((acc, tier, index) => ({
+    ...acc,
+    [tier.id]: index === 0,
+  }), {}),
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -419,13 +432,37 @@ export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
 export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= GOOGOL
 
 // First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
-// Already-owned tiers stay unlocked so older saves remain playable after rule changes.
+// Already-owned tiers stay unlocked so older saves remain playable after rule changes; a tier
+// that has ever satisfied this live condition also stays unlocked forever via the permanent
+// everUnlockedTierIds flag (see latchEverUnlockedTiers), even if `owned` is later reset by
+// something narrower than a full Prestige/Speed Up (see consumeXpForLastTierTickspeed).
 export const isTierUnlocked = state => tier => {
   const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
   if (tierIndex === 0) return true
+  if (state.everUnlockedTierIds?.[tier.id]) return true
   if ((state.owned[tier.id] ?? 0) > 0) return true
   const prevTier = TIER_DEFINITIONS[tierIndex - 1]
   return (state.owned[prevTier.id] ?? 0) >= 10
+}
+
+// Latches everUnlockedTierIds permanently true for any tier whose isTierUnlocked live condition
+// (own owned > 0, or the previous tier's owned >= 10) is currently satisfied but not yet flagged —
+// called from buyTier and tickGame right after `owned` changes, so the flag catches up the same
+// tick/purchase a tier first becomes reachable. Returns the same state reference if nothing newly
+// qualifies (the common case), matching every other engine function's no-op convention.
+const latchEverUnlockedTiers = state => {
+  const previous = state.everUnlockedTierIds ?? {}
+  let changed = false
+  const next = { ...previous }
+  TIER_DEFINITIONS.forEach((tier, index) => {
+    if (index === 0 || next[tier.id]) return
+    const prevTier = TIER_DEFINITIONS[index - 1]
+    if ((state.owned[tier.id] ?? 0) > 0 || (state.owned[prevTier.id] ?? 0) >= 10) {
+      next[tier.id] = true
+      changed = true
+    }
+  })
+  return changed ? { ...state, everUnlockedTierIds: next } : state
 }
 
 // Money's order of magnitude, floored (money < 1 has no positive exponent, so reads as 0).
@@ -623,7 +660,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     }
   })
 
-  const producedState = {
+  const producedState = latchEverUnlockedTiers({
     ...stateAfterAutobuyers,
     resources: newResources,
     owned: newOwned,
@@ -636,7 +673,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ...(autoPrestigeLevel === null ? {} : {
       autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds,
     }),
-  }
+  })
 
   // Only a tier whose tierTickspeedAutobuyer is bought (see buyTierTickspeedAutobuyer) self-upgrades
   // its own tickspeed multiplier level one step per tick whenever affordable — no manual click
@@ -728,7 +765,7 @@ export const buyTier = tierId => state => {
 
   const newPurchased = purchased + 1
 
-  return {
+  const nextState = {
     ...state,
     resources: {
       ...state.resources,
@@ -747,6 +784,10 @@ export const buyTier = tierId => state => {
       ? { lastTierTickspeedXpUnlocked: true }
       : {}),
   }
+
+  // A purchase can be the very first thing that satisfies a tier's (or its successor's) unlock
+  // condition — latch that permanently too (see latchEverUnlockedTiers/isTierUnlocked).
+  return latchEverUnlockedTiers(nextState)
 }
 
 // Buys up to `quantity` units of a tier, capped at the current cost-block boundary so every
@@ -946,7 +987,9 @@ export const buyGlobalTickspeedMultiplier = state => {
 // already wipe, same as tickspeedLevels. lastTierTickspeedXpUnlocked/lastTierXpConsumed are
 // permanent (like autobuyer unlock) — a prestige resets the last tier's own purchased count to 0
 // like every other tier, but the XP-funded mechanic it unlocked, and all XP already invested in
-// it, both carry over unchanged.
+// it, both carry over unchanged. everUnlockedTierIds is permanent too — every tier's `owned`
+// resets to 0 same as always, but a tier that's ever been reached no longer disappears from the
+// Game view just because this reset zeroed its owned count (see isTierUnlocked).
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -964,6 +1007,7 @@ export const prestigeGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
     lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
+    everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
@@ -985,7 +1029,9 @@ export const prestigeGame = state => {
 // tickspeed Autobuyer was already bought, tickGame simply starts re-buying the multiplier back up
 // from scratch once Money allows. lastTierTickspeedXpUnlocked/lastTierXpConsumed are likewise
 // permanent — the last tier's own purchased count resets to 0 like every other tier's, but the
-// XP-funded mechanic and all XP already invested in it both carry over unchanged. Unlike
+// XP-funded mechanic and all XP already invested in it both carry over unchanged.
+// everUnlockedTierIds is permanent too, same as in prestigeGame — every tier's `owned` resets to
+// 0, but a tier that's ever been reached stays visible/unlocked regardless. Unlike
 // prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through completely
 // untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't award or
 // spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
@@ -1007,6 +1053,7 @@ export const speedUpGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
     lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
+    everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
     prestige: state.prestige,
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }

@@ -258,6 +258,25 @@ describe('schema migration', () => {
     expect(loadGameState().tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
+  it('defaults everUnlockedTierIds to the fresh-state default (only the first tier true) on a save that predates it', () => {
+    const { everUnlockedTierIds: _dropped, ...oldSave } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.everUnlockedTierIds[TIER_DEFINITIONS[0].id]).toBe(true)
+    TIER_DEFINITIONS.slice(1).forEach(tier => {
+      expect(loaded.everUnlockedTierIds[tier.id]).toBe(false)
+    })
+  })
+
+  it('preserves a saved everUnlockedTierIds flag', () => {
+    const state = {
+      ...createInitialGameState(),
+      everUnlockedTierIds: { ...createInitialGameState().everUnlockedTierIds, [tensTier.id]: true },
+    }
+    saveGameState(state)
+    expect(loadGameState().everUnlockedTierIds[tensTier.id]).toBe(true)
+  })
+
   it('defaults tickspeedLevels to 1 for every tier on a save that predates it', () => {
     const { tickspeedLevels: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))

@@ -54,7 +54,7 @@ import {
   speedUpGame,
   tickGame,
 } from './engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -153,6 +153,11 @@ const withLastTierXpConsumed = (state, amount) => ({
   lastTierXpConsumed: amount,
 })
 
+const withEverUnlockedTierIds = (state, tierId, unlocked = true) => ({
+  ...state,
+  everUnlockedTierIds: { ...state.everUnlockedTierIds, [tierId]: unlocked },
+})
+
 // TIER_DEFINITIONS[0] ('Bytes') both costs and produces Ones (money) — the
 // entry-level generator. TIER_DEFINITIONS[1] ('Kilobytes') is the first
 // tier that needs unlocking (10 Bytes owned) and produces Bytes.
@@ -248,6 +253,14 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     expect(state.lastTierTickspeedXpUnlocked).toBe(false)
     expect(state.lastTierXpConsumed).toBe(0)
+  })
+
+  it('initialises everUnlockedTierIds with only the first tier true', () => {
+    const state = createInitialGameState()
+    expect(state.everUnlockedTierIds[TIER_DEFINITIONS[0].id]).toBe(true)
+    TIER_DEFINITIONS.slice(1).forEach(tier => {
+      expect(state.everUnlockedTierIds[tier.id]).toBe(false)
+    })
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -749,6 +762,18 @@ describe('isTierUnlocked', () => {
     const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
   })
+
+  it('stays unlocked via the permanent everUnlockedTierIds flag even if both its own and its predecessor\'s owned are 0', () => {
+    const state = withEverUnlockedTierIds(createInitialGameState(), TIER_DEFINITIONS[2].id, true)
+    expect(state.owned[TIER_DEFINITIONS[2].id]).toBe(0)
+    expect(state.owned[TIER_DEFINITIONS[1].id]).toBe(0)
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[2])).toBe(true)
+  })
+
+  it('stays locked when everUnlockedTierIds is false and neither live condition is met', () => {
+    const state = withEverUnlockedTierIds(createInitialGameState(), TIER_DEFINITIONS[1].id, false)
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
+  })
 })
 
 // ─── getMoneyExponent ──────────────────────────────────────────────────────────
@@ -1085,6 +1110,25 @@ describe('buyTier', () => {
     expect(after.purchased[tensTier.id]).toBe(10)
     expect(after.lastTierTickspeedXpUnlocked).toBe(false)
   })
+
+  it('permanently latches everUnlockedTierIds for a tier the instant it becomes newly buyable', () => {
+    // Buying the 10th Bytes (tensTier) unlocks Kilobytes (thousandsTier) — confirm the permanent
+    // flag is set the same instant, not just the live owned >= 10 condition.
+    const state = withMoney(
+      withOwned(createInitialGameState(), tensTier.id, 9),
+      getTierCost(tensTier, 0)
+    )
+    expect(state.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(10)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+  })
+
+  it('leaves everUnlockedTierIds unchanged when the purchase does not cross any tier\'s unlock threshold', () => {
+    const state = withMoney(createInitialGameState(), 1000)
+    const after = buyTier(tensTier.id)(state)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+  })
 })
 
 // ─── buyTierQuantity ─────────────────────────────────────────────────────────
@@ -1141,6 +1185,21 @@ describe('tickGame', () => {
     const state = createInitialGameState()
     const after = tickGame(1)(state)
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID])
+  })
+
+  it('permanently latches everUnlockedTierIds for a tier the instant passive production (not a manual buy) first gives it any owned', () => {
+    // Bootstrap owned generators on the 3rd tier directly (simulating an already-unlocked tier),
+    // with thousandsTier (2nd tier) starting at 0 owned and not yet flagged. The 3rd tier's own
+    // production credits thousandsTier's owned/resources (producesResourceId chains down one
+    // tier at a time) — once that first delivery lands, thousandsTier's live "owned > 0" unlock
+    // condition is satisfied for the first time, purely via production, with no buyTier call at all.
+    const megabytesTier = TIER_DEFINITIONS[2]
+    const state = withOwned(createInitialGameState(), megabytesTier.id, 5)
+    expect(state.owned[thousandsTier.id]).toBe(0)
+    expect(state.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+    const after = tickGame(getTierBaseTickSpeedSeconds(megabytesTier.id))(state)
+    expect(after.owned[thousandsTier.id]).toBeGreaterThan(0)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
   })
 
   it('freezes entirely (returns the same state object) once Money reaches GOOGOL', () => {
@@ -2224,6 +2283,18 @@ describe('prestigeGame', () => {
     expect(after.lastTierTickspeedXpUnlocked).toBe(true)
     expect(after.lastTierXpConsumed).toBe(42)
   })
+
+  it('keeps everUnlockedTierIds permanently across prestige even though owned resets to 0', () => {
+    const state = withEverUnlockedTierIds(
+      withOwned(withMoney(createInitialGameState(), GOOGOL), thousandsTier.id, 50),
+      thousandsTier.id,
+      true
+    )
+    const after = prestigeGame(state)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+  })
 })
 
 // ─── speedUpGame ─────────────────────────────────────────────────────────────
@@ -2371,6 +2442,18 @@ describe('speedUpGame', () => {
     expect(after.lastTierTickspeedXpUnlocked).toBe(true)
     expect(after.lastTierXpConsumed).toBe(42)
   })
+
+  it('keeps everUnlockedTierIds permanently across Speed Up even though owned resets to 0', () => {
+    const state = withEverUnlockedTierIds(
+      withOwned(eligibleState(), thousandsTier.id, 50),
+      thousandsTier.id,
+      true
+    )
+    const after = speedUpGame(state)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+  })
 })
 
 // ─── buyAutoSpeedUp ──────────────────────────────────────────────────────────
@@ -2512,6 +2595,33 @@ describe('consumeXpForLastTierTickspeed', () => {
     expect(after.lastTierXpConsumed).toBe(20)
     expect(after.owned[secondToLastTier.id]).toBe(0)
     expect(after.resources[secondToLastTier.id]).toBe(0)
+  })
+
+  it('does not relock a tier whose owned it resets to 0, as long as it was ever unlocked (the everUnlockedTierIds fix)', () => {
+    // Regression test: a tier reaching owned > 0 always latches everUnlockedTierIds permanently
+    // (see buyTier/tickGame's latchEverUnlockedTiers calls) before this reset could ever run, so
+    // isTierUnlocked must stay true even though both this tier's and its predecessor's owned drop
+    // to 0 in the same action — otherwise every reset tier (and everything cascading from it)
+    // would vanish from the Game view and stop producing/being buyable until it re-earns its way
+    // back up from scratch.
+    const megabytesTier = TIER_DEFINITIONS[2]
+    const state = withXP(
+      withEverUnlockedTierIds(
+        withEverUnlockedTierIds(
+          withOwned(withLastTierTickspeedXpUnlocked(createInitialGameState()), megabytesTier.id, 50),
+          thousandsTier.id,
+          true
+        ),
+        megabytesTier.id,
+        true
+      ),
+      50
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.owned[megabytesTier.id]).toBe(0)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+    expect(isTierUnlocked(after)(megabytesTier)).toBe(true)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
   })
 
   it('does not touch the last tier\'s own owned/resources/purchased counts', () => {

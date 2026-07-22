@@ -89,6 +89,7 @@ const migrateState = saved => {
     tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
     tierTickspeedAutobuyer: { ...fresh.tierTickspeedAutobuyer, ...migrateTierKeys(saved.tierTickspeedAutobuyer) },
+    everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...migrateTierKeys(saved.everUnlockedTierIds) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
   }
