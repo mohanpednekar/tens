@@ -598,6 +598,20 @@ const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/
 // in CLAUDE.md).
 const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 
+// The global tickspeed multiplier's bonus percent, shown with up to 2 decimal places (trimming a
+// trailing ".00"/trailing zero, same style as formatRate) while it's still under 100% — its
+// milestone-driven jump (see GLOBAL_TICKSPEED_MILESTONE_STEP/getGlobalTickspeedProductionMultiplier
+// in engine.js) stacks on top of an already-fractional compounding base, so a whole-percent
+// rounding would otherwise hide most of its actual value. Once it reaches/crosses 100% it's
+// rounded to a whole percent instead, same as formatBonusPercent, since precision matters less at
+// that scale.
+const formatGlobalTickspeedBonusPercent = multiplier => {
+  const percent = (multiplier - 1) * 100
+  return percent < 100
+    ? (Math.round(percent * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
+    : String(Math.round(percent))
+}
+
 const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const { prestige } = state
@@ -1040,14 +1054,14 @@ const MainPage = () => {
               Spend Money to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
               ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
-              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
+              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
             </MutedText>
           </InfoDetails>
           <Button
             aria-describedby="global-tickspeed-description"
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier)`
+                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier)`
                 : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
