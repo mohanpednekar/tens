@@ -2493,38 +2493,58 @@ describe('consumeXpForLastTierTickspeed', () => {
     expect(consumeXpForLastTierTickspeed(50)(state)).toBe(state)
   })
 
-  it('spends XP, grows lastTierXpConsumed, and resets every tier\'s purchased count to 0', () => {
+  it('spends XP, grows lastTierXpConsumed, and resets tier 1 through the second-to-last tier\'s owned/resources counts to 0', () => {
+    const secondToLastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
     const state = withXP(
-      withPurchased(
-        withPurchased(
+      withResource(
+        withOwned(
           withLastTierTickspeedXpUnlocked(createInitialGameState()),
-          tensTier.id,
-          25
+          secondToLastTier.id,
+          77
         ),
-        lastTier.id,
-        10
+        secondToLastTier.id,
+        77
       ),
       50
     )
     const after = consumeXpForLastTierTickspeed(20)(state)
     expect(after.prestige.xp).toBe(30)
     expect(after.lastTierXpConsumed).toBe(20)
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(after.purchased[tier.id]).toBe(0)
-    })
+    expect(after.owned[secondToLastTier.id]).toBe(0)
+    expect(after.resources[secondToLastTier.id]).toBe(0)
   })
 
-  it('leaves owned/resources untouched by the purchased reset', () => {
+  it('does not touch the last tier\'s own owned/resources/purchased counts', () => {
     const state = withXP(
-      withOwned(
+      withResource(
+        withOwned(
+          withPurchased(unlockedLastTierState(), lastTier.id, 15),
+          lastTier.id,
+          15
+        ),
+        lastTier.id,
+        15
+      ),
+      50
+    )
+    const unlocked = withLastTierTickspeedXpUnlocked(state)
+    const after = consumeXpForLastTierTickspeed(1)(unlocked)
+    expect(after.owned[lastTier.id]).toBe(15)
+    expect(after.resources[lastTier.id]).toBe(15)
+    expect(after.purchased[lastTier.id]).toBe(15)
+  })
+
+  it('leaves every tier\'s purchased ("level") count completely untouched', () => {
+    const state = withXP(
+      withPurchased(
         withLastTierTickspeedXpUnlocked(createInitialGameState()),
         tensTier.id,
-        42
+        25
       ),
-      10
+      50
     )
-    const after = consumeXpForLastTierTickspeed(1)(state)
-    expect(after.owned[tensTier.id]).toBe(42)
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.purchased[tensTier.id]).toBe(25)
   })
 
   it('accumulates lastTierXpConsumed across repeated consumptions', () => {

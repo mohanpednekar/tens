@@ -134,9 +134,10 @@ export const createInitialGameState = () => ({
   // Permanent GLOBAL flag, false = not yet unlocked: whether the last tier's Money-funded
   // tickspeed multiplier has been permanently replaced by the XP-funded one (see
   // isLastTierTickspeedXpUnlocked/getEffectiveTierTickSpeedSeconds/buyTickspeedMultiplier below) —
-  // latched true forever the first time the last tier reaches 10 lifetime purchases (see buyTier),
-  // even though consumeXpForLastTierTickspeed itself resets that same purchased count back to 0 on
-  // every use. Never reset by prestige/Speed Up/consumeXpForLastTierTickspeed.
+  // latched true forever the first time the last tier reaches 10 lifetime purchases (see buyTier).
+  // Stored rather than derived live from that same purchased count, since Prestige/Speed Up (like
+  // every other tier's) can reset it back below 10 afterward — a live check would hide the
+  // mechanic again once that happens. Never reset by prestige/Speed Up/consumeXpForLastTierTickspeed.
   lastTierTickspeedXpUnlocked: false,
   // Permanent cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
   // adds a flat, non-compounding 1% to the last tier's own delivery frequency (see
@@ -311,8 +312,8 @@ export const getGlobalTickspeedProductionMultiplier = level =>
 // XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — reads the
 // permanent state.lastTierTickspeedXpUnlocked flag (see buyTier, which latches it true the first
 // time the last tier reaches 10 lifetime purchases), never derived live from the last tier's
-// current purchased count, since consumeXpForLastTierTickspeed itself resets that count back to 0
-// on every use — a live check would hide the mechanic again after its own first use.
+// current purchased count, since a Prestige/Speed Up can reset that count back below 10 — a live
+// check would hide the mechanic again once that happens.
 export const isLastTierTickspeedXpUnlocked = state => state.lastTierTickspeedXpUnlocked === true
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
@@ -1051,10 +1052,11 @@ export const buyTickspeedAutobuyer = state => {
 // LAST_TIER_XP_TICKSPEED_STEP (1%) per XP consumed (see getLastTierXpTickspeedMultiplier) — only
 // available once isLastTierTickspeedXpUnlocked, having permanently replaced that tier's
 // Money-funded tickspeed button (see buyTickspeedMultiplier). Every successful consumption, no
-// matter how small, resets EVERY tier's lifetime purchased count back to 0 (so every tier's cost
-// epoch and purchase-milestone production multiplier both revert to their baseline) — the price
-// of investing further into the last tier's own delivery frequency; owned/resources/everything
-// else is untouched. A single consumption must be at least
+// matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
+// sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
+// `purchased` lifetime count ("level"), which is left completely untouched everywhere, including
+// on the last tier itself. This is the price of investing further into the last tier's own
+// delivery frequency. A single consumption must be at least
 // getLastTierXpTickspeedMinConsumption(xpConsumed so far) — see LAST_TIER_XP_TICKSPEED_MIN_
 // CONSUMPTION_PERCENT in layers.js — so it can't trickle in one XP at a time forever. A no-op if
 // not yet unlocked, if amount isn't a positive integer, if amount is below that minimum, if there
@@ -1072,10 +1074,22 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   const availableXp = clampNonNegative(state.prestige.xp)
   if (safeAmount > availableXp) return state
 
+  const lastTierId = getLastTierId()
+  const resetTierIds = TIER_DEFINITIONS
+    .filter(tier => tier.id !== lastTierId)
+    .map(tier => tier.id)
+
   return {
     ...state,
     prestige: { ...state.prestige, xp: availableXp - safeAmount },
     lastTierXpConsumed: xpConsumedSoFar + safeAmount,
-    purchased: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
+    owned: {
+      ...state.owned,
+      ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
+    },
+    resources: {
+      ...state.resources,
+      ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
+    },
   }
 }

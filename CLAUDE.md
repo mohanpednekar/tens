@@ -496,7 +496,7 @@ Once the **last tier** reaches 10 lifetime purchases (`isLastTierTickspeedXpUnlo
 tier's XP-funded tickspeed" below), this Money-funded `UpgradeButton` is permanently replaced — in the
 same grid slot — by an XP-consume button instead (`🧬 {current unspent XP} XP`,
 `actions.consumeXpForLastTierTickspeed`), gated behind a `window.confirm` prompt since every
-consumption resets every tier's lifetime purchased count. The `⚙ +N%` badge and Details disclosure
+consumption resets every other tier's owned quantity to 0. The `⚙ +N%` badge and Details disclosure
 keep working unchanged for the last tier, just reading the XP-funded multiplier instead of the
 Money-funded one.
 
@@ -914,9 +914,9 @@ its one purpose.
 
 - `state.lastTierTickspeedXpUnlocked` (permanent global flag, default `false`) is latched to `true`
   inside `buyTier` the instant the last tier's `purchased` count first reaches 10 — a stored flag
-  rather than a live `purchased >= 10` check, because `consumeXpForLastTierTickspeed` (below) itself
-  resets that same `purchased` count back to 0 on every use; a live check would hide the mechanic
-  again immediately after its first use. `isLastTierTickspeedXpUnlocked(state)` reads this flag. Never
+  rather than a live `purchased >= 10` check, because Prestige/Speed Up can reset that same
+  `purchased` count back below 10 later (same as every other tier's); a live check would hide the
+  mechanic again once that happens. `isLastTierTickspeedXpUnlocked(state)` reads this flag. Never
   reset by Prestige or Speed Up (permanent, like an autobuyer unlock).
 - `state.lastTierXpConsumed` (permanent global counter, default `0`) is the cumulative total XP ever
   spent via `consumeXpForLastTierTickspeed`. Never reset by Prestige, Speed Up, or by
@@ -937,12 +937,14 @@ its one purpose.
   minimum grows alongside however much has already been invested, mirroring the game's other
   escalating-cost patterns (`getTierCost`'s epoch multiplier, `getSpeedUpRequirement`).
 - `consumeXpForLastTierTickspeed(amount)` spends `amount` XP from `prestige.xp`, adds it to
-  `lastTierXpConsumed`, and — **every time, no matter how small the amount** —
-  **resets every tier's `purchased` count back to 0** (so every tier's cost epoch and
-  `getPurchaseMilestoneMultiplier` production bonus both revert to their baseline); `owned`,
-  `resources`, and everything else are left untouched. A no-op if not yet unlocked, if `amount` isn't a
-  positive integer, if `amount` is below `getLastTierXpTickspeedMinConsumption`, if there isn't enough
-  unspent XP, or while production is frozen.
+  `lastTierXpConsumed`, and — **every time, no matter how small the amount** — **resets the `owned`
+  (and, to keep them in sync, `resources`) count of every tier *except* the last tier back to 0** —
+  i.e. tier 1 through the second-to-last tier's current *quantity*, not their `purchased` lifetime
+  count ("level"). `purchased` is left completely untouched everywhere, including on the last tier
+  itself — cost epochs and `getPurchaseMilestoneMultiplier` production bonuses are unaffected. A
+  no-op if not yet unlocked, if `amount` isn't a positive integer, if `amount` is below
+  `getLastTierXpTickspeedMinConsumption`, if there isn't enough unspent XP, or while production is
+  frozen.
 - `buyTickspeedMultiplier(lastTierId)` becomes a permanent no-op once
   `isLastTierTickspeedXpUnlocked` — there's nothing left for that button to do for the last tier from
   then on; `tickGame`'s per-tier tickspeed self-upgrade loop (see `tierTickspeedAutobuyer`) calling it
@@ -951,11 +953,12 @@ its one purpose.
   `⚙ {cost} {symbol}` Money-funded tickspeed button for an XP-consume button in the same grid slot,
   showing `🧬 {current unspent XP} XP` — clicking it always spends the player's *entire* current XP
   balance in one action (rather than a fixed/typed amount), since every consumption pays the same
-  "reset every tier's purchased count" cost regardless of size, so spending it all at once minimizes
-  how often that cost is paid for the same total investment. Gated behind a `window.confirm` prompt
-  (unlike Speed Up/Prestige, which don't need one) since — unlike those two beneficial resets — this
-  one has a real, easy-to-miss downside (erasing every tier's purchase-milestone progress) alongside
-  its benefit. The row's existing `⚙ +N%` badge and Details disclosure both automatically reflect the
+  "reset every other tier's owned quantity" cost regardless of size, so spending it all at once
+  minimizes how often that cost is paid for the same total investment. Gated behind a
+  `window.confirm` prompt (unlike Speed Up/Prestige, which don't need one) since — unlike those two
+  beneficial resets — this one has a real, easy-to-miss downside (wiping out every other tier's
+  current generator count, though not their lifetime purchase level/cost progress) alongside its
+  benefit. The row's existing `⚙ +N%` badge and Details disclosure both automatically reflect the
   XP-funded multiplier once unlocked (they read `tickspeedMultiplier`, which the row computes from
   `getLastTierXpTickspeedMultiplier` instead of `getTickspeedProductionMultiplier` in this case); the
   Details disclosure additionally lists the current unspent XP balance and the minimum needed for the
@@ -1152,10 +1155,10 @@ component state, not part of engine state).
                                                           // isLastTierTickspeedXpUnlocked/
                                                           // consumeXpForLastTierTickspeed, "The last tier's
                                                           // XP-funded tickspeed" above) — stored rather than
-                                                          // derived live, since consumeXpForLastTierTickspeed
-                                                          // itself resets the last tier's purchased count back
-                                                          // to 0 on every use. Never reset by Speed Up or
-                                                          // prestige
+                                                          // derived live, since a Prestige/Speed Up can reset
+                                                          // the last tier's purchased count back below 10
+                                                          // (same as every other tier's). Never reset by
+                                                          // Speed Up or prestige
   lastTierXpConsumed: 0,                                 // permanent GLOBAL counter: cumulative total XP ever
                                                           // spent via consumeXpForLastTierTickspeed — each XP
                                                           // spent adds a flat, non-compounding 1% to the last
@@ -1240,7 +1243,7 @@ regardless of whether those purchases were manual or automatic.
 | `isLastTierTickspeedXpUnlocked` | `state → bool` | Reads the permanent `state.lastTierTickspeedXpUnlocked` flag (see `buyTier`) — whether the last tier's Money-funded tickspeed multiplier has been permanently replaced by the XP-funded one |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `1 + LAST_TIER_XP_TICKSPEED_STEP * xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — a flat 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, linear rather than compounding (37 XP consumed = +37%, ×1.37) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
-| `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not yet `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier's `purchased` count to 0 (see "The last tier's XP-funded tickspeed" in CLAUDE.md) |
+| `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not yet `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 — `purchased` is untouched everywhere (see "The last tier's XP-funded tickspeed" in CLAUDE.md) |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing Money which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped `$`-prefixed string below `EXPONENTIAL_NOTATION_THRESHOLD`, floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `$6.5e13`) — used for all Money amounts, wherever they appear |
