@@ -1054,9 +1054,10 @@ export const buyTickspeedAutobuyer = state => {
 // Money-funded tickspeed button (see buyTickspeedMultiplier). Every successful consumption, no
 // matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
 // sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
-// `purchased` lifetime count ("level"), which is left completely untouched everywhere, including
-// on the last tier itself. This is the price of investing further into the last tier's own
-// delivery frequency. A single consumption must be at least
+// `purchased` lifetime count ("level"), which is left completely untouched everywhere — plus the
+// Money balance (`resources[MONEY_ID]`) back to 0. The last tier's own `owned`/`resources`/
+// `purchased` are all left untouched. This is the price of investing further into the last tier's
+// own delivery frequency. A single consumption must be at least
 // getLastTierXpTickspeedMinConsumption(xpConsumed so far) — see LAST_TIER_XP_TICKSPEED_MIN_
 // CONSUMPTION_PERCENT in layers.js — so it can't trickle in one XP at a time forever. A no-op if
 // not yet unlocked, if amount isn't a positive integer, if amount is below that minimum, if there
@@ -1089,6 +1090,7 @@ export const consumeXpForLastTierTickspeed = amount => state => {
     },
     resources: {
       ...state.resources,
+      [MONEY_ID]: 0,
       ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
     },
   }

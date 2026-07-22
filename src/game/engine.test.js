@@ -2547,6 +2547,15 @@ describe('consumeXpForLastTierTickspeed', () => {
     expect(after.purchased[tensTier.id]).toBe(25)
   })
 
+  it('resets the Money balance to 0 alongside every other tier\'s owned/resources', () => {
+    const state = withXP(
+      withMoney(withLastTierTickspeedXpUnlocked(createInitialGameState()), 999999),
+      50
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.resources[MONEY_ID]).toBe(0)
+  })
+
   it('accumulates lastTierXpConsumed across repeated consumptions', () => {
     let state = withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 1000)
     state = consumeXpForLastTierTickspeed(10)(state) // min consumption is 1 XP; spend 10

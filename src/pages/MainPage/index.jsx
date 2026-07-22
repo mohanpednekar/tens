@@ -1109,17 +1109,17 @@ const MainPage = () => {
           // Consuming XP for the last tier's tickspeed always spends the player's entire current
           // XP balance in one action (rather than a fixed minimum) — since every consumption,
           // however small, resets every other tier's owned quantity (not their lifetime
-          // purchased/"level" count) to 0, spending it all at once minimizes how often that side
-          // effect is paid for the same total investment.
+          // purchased/"level" count) plus the Money balance to 0, spending it all at once
+          // minimizes how often that side effect is paid for the same total investment.
           const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
           const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
           const lastTierXpProgressPercent = Math.min(100, Math.round((lastTierXpBalance / lastTierXpMinConsumption) * 100))
           const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
           const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
-          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% ${tier.name} tickspeed (resets every other tier's owned quantity to 0)`
+          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% ${tier.name} tickspeed (resets every other tier's owned quantity and Money to 0)`
           const handleConsumeLastTierXp = () => {
             if (!canConsumeLastTierXp) return
-            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) back to 0.`)) {
+            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Money balance back to 0.`)) {
               actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
             }
           }
@@ -1251,7 +1251,7 @@ const MainPage = () => {
                   color={canConsumeLastTierXp ? '#a78bfa' : 'darkgrey'}
                   disabled={!canConsumeLastTierXp}
                   onClick={handleConsumeLastTierXp}
-                  title={`Consume XP for +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity to 0`}
+                  title={`Consume XP for +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Money to 0`}
                   $progress={lastTierXpProgressPercent}
                   $pulse={canConsumeLastTierXp}
                 >
