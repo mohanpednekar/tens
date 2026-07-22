@@ -139,3 +139,22 @@ export const AUTO_SPEED_UP_COST = 100
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
 export const TICKSPEED_AUTOBUYER_COST = 20
+// Once the last tier reaches 10 lifetime purchases, its Money-funded tickspeed multiplier (see
+// TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is permanently replaced by an
+// XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
+// getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
+// adds a flat, non-compounding LAST_TIER_XP_TICKSPEED_STEP (1%) to the last tier's own delivery
+// frequency, permanently. "Last tier" (not a hardcoded tier id) so this stays correct if
+// TIER_DEFINITIONS ever grows a new final entry.
+export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
+// Each single XP-consumption action must be at least this fraction of the cumulative XP already
+// consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
+// consumptions can't trickle in one XP at a time forever; the required minimum grows alongside
+// however much has already been invested, mirroring the game's other escalating-cost patterns
+// (getTierCost's epoch multiplier, getSpeedUpRequirement).
+export const LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1
+// The very first consumption has cumulative XP consumed = 0, so
+// LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT alone would compute a minimum of 0 — this floor
+// gives that first action (and any other case the percentage still rounds to 0) a real minimum of
+// 1 XP instead.
+export const LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1

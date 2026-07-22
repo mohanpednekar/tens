@@ -12,6 +12,7 @@ import {
   buyTickspeedMultiplier,
   buyTier,
   buyTierQuantity,
+  consumeXpForLastTierTickspeed,
   createInitialGameState,
   formatAmount,
   formatCurrency,
@@ -23,6 +24,8 @@ import {
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
+  getLastTierXpTickspeedMinConsumption,
+  getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getPrestigePointsAwarded,
@@ -44,13 +47,14 @@ import {
   getTierQuantityCost,
   getTierSpendableAmount,
   isGlobalTickspeedMultiplierUnlocked,
+  isLastTierTickspeedXpUnlocked,
   isProductionFrozen,
   isTierUnlocked,
   prestigeGame,
   speedUpGame,
   tickGame,
 } from './engine'
-import { AUTO_SPEED_UP_COST, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_SPEED_UP_COST, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -137,6 +141,16 @@ const withAutoSpeedUp = (state, active = true) => ({
 const withAutoGlobalTickspeed = (state, active = true) => ({
   ...state,
   autoGlobalTickspeed: active,
+})
+
+const withLastTierTickspeedXpUnlocked = (state, unlocked = true) => ({
+  ...state,
+  lastTierTickspeedXpUnlocked: unlocked,
+})
+
+const withLastTierXpConsumed = (state, amount) => ({
+  ...state,
+  lastTierXpConsumed: amount,
 })
 
 // TIER_DEFINITIONS[0] ('Bytes') both costs and produces Ones (money) — the
@@ -228,6 +242,12 @@ describe('createInitialGameState', () => {
   it('initialises autoSpeedUp to false', () => {
     const state = createInitialGameState()
     expect(state.autoSpeedUp).toBe(false)
+  })
+
+  it('initialises lastTierTickspeedXpUnlocked to false and lastTierXpConsumed to 0', () => {
+    const state = createInitialGameState()
+    expect(state.lastTierTickspeedXpUnlocked).toBe(false)
+    expect(state.lastTierXpConsumed).toBe(0)
   })
 
   it('initialises all non-money resources to 0', () => {
@@ -807,6 +827,25 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     )
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.12211)
   })
+
+  it('uses the XP-funded multiplier for the last tier once unlocked, ignoring its (stale) tickspeedLevels entry', () => {
+    const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+    const baseTickSpeed = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].baseTickSpeedSeconds
+    const state = withLastTierXpConsumed(
+      withTickspeedLevel(
+        withLastTierTickspeedXpUnlocked(createInitialGameState()),
+        lastTierId,
+        5 // would normally shrink the period a lot — must be ignored once XP-unlocked
+      ),
+      37
+    )
+    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / 1.37)
+  })
+
+  it('leaves every other tier on the normal per-tier tickspeed ladder even once the last tier is XP-unlocked', () => {
+    const state = withLastTierTickspeedXpUnlocked(createInitialGameState())
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
+  })
 })
 
 // ─── getTierProductionProgressPercent ───────────────────────────────────────
@@ -1014,6 +1053,37 @@ describe('buyTier', () => {
     expect(after.resources[MONEY_ID]).toBe(0)
     expect(after.owned[tensTier.id]).toBe(51)
     expect(after.purchased[tensTier.id]).toBe(1)
+  })
+
+  it('permanently latches lastTierTickspeedXpUnlocked once the last tier reaches 10 lifetime purchases', () => {
+    const state = withMoney(
+      withPurchased(unlockedLastTierState(), lastTier.id, 9),
+      getTierCost(lastTier, 9)
+    )
+    expect(state.lastTierTickspeedXpUnlocked).toBe(false)
+    const after = buyTier(lastTier.id)(state)
+    expect(after.purchased[lastTier.id]).toBe(10)
+    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+  })
+
+  it('does not latch lastTierTickspeedXpUnlocked before the last tier reaches 10 purchases', () => {
+    const state = withMoney(
+      withPurchased(unlockedLastTierState(), lastTier.id, 5),
+      getTierCost(lastTier, 5)
+    )
+    const after = buyTier(lastTier.id)(state)
+    expect(after.purchased[lastTier.id]).toBe(6)
+    expect(after.lastTierTickspeedXpUnlocked).toBe(false)
+  })
+
+  it('does not latch lastTierTickspeedXpUnlocked when buying a tier other than the last one', () => {
+    const state = withMoney(
+      withPurchased(createInitialGameState(), tensTier.id, 9),
+      getTierCost(tensTier, 9)
+    )
+    const after = buyTier(tensTier.id)(state)
+    expect(after.purchased[tensTier.id]).toBe(10)
+    expect(after.lastTierTickspeedXpUnlocked).toBe(false)
   })
 })
 
@@ -1663,6 +1733,15 @@ describe('buyTickspeedMultiplier', () => {
     const state = withMoney(createInitialGameState(), 100)
     expect(buyTickspeedMultiplier('does_not_exist')(state)).toBe(state)
   })
+
+  it('is permanently a no-op for the last tier once its tickspeed has been XP-unlocked, even with plenty of the tier\'s own resource', () => {
+    const state = withResource(
+      withLastTierTickspeedXpUnlocked(unlockedLastTierState()),
+      lastTier.id,
+      1_000_000
+    )
+    expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
+  })
 })
 
 // ─── buyAutobuyerUnlock ───────────────────────────────────────────────────────
@@ -2135,6 +2214,16 @@ describe('prestigeGame', () => {
     const after = prestigeGame(state)
     expect(after.autobuyers[tensTier.id]).toBeNull()
   })
+
+  it('keeps the last tier\'s XP tickspeed unlock and consumed total permanently across prestige', () => {
+    const state = withLastTierXpConsumed(
+      withLastTierTickspeedXpUnlocked(withMoney(createInitialGameState(), GOOGOL)),
+      42
+    )
+    const after = prestigeGame(state)
+    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+    expect(after.lastTierXpConsumed).toBe(42)
+  })
 })
 
 // ─── speedUpGame ─────────────────────────────────────────────────────────────
@@ -2272,6 +2361,16 @@ describe('speedUpGame', () => {
     expect(after.prestige.count).toBe(0)
     expect(after.prestige.xp).toBe(7)
   })
+
+  it('keeps the last tier\'s XP tickspeed unlock and consumed total permanently across Speed Up', () => {
+    const state = withLastTierXpConsumed(
+      withLastTierTickspeedXpUnlocked(eligibleState()),
+      42
+    )
+    const after = speedUpGame(state)
+    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+    expect(after.lastTierXpConsumed).toBe(42)
+  })
 })
 
 // ─── buyAutoSpeedUp ──────────────────────────────────────────────────────────
@@ -2331,5 +2430,166 @@ describe('buyTickspeedAutobuyer', () => {
       GOOGOL
     )
     expect(buyTickspeedAutobuyer(state)).toBe(state)
+  })
+})
+
+// ─── isLastTierTickspeedXpUnlocked ──────────────────────────────────────────
+
+describe('isLastTierTickspeedXpUnlocked', () => {
+  it('is false on a fresh state', () => {
+    expect(isLastTierTickspeedXpUnlocked(createInitialGameState())).toBe(false)
+  })
+
+  it('is true once lastTierTickspeedXpUnlocked is latched, regardless of the last tier\'s current purchased count', () => {
+    const state = withPurchased(
+      withLastTierTickspeedXpUnlocked(createInitialGameState()),
+      lastTier.id,
+      0
+    )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
+  })
+})
+
+// ─── getLastTierXpTickspeedMultiplier ───────────────────────────────────────
+
+describe('getLastTierXpTickspeedMultiplier', () => {
+  it('is ×1 (no bonus) with 0 XP consumed', () => {
+    expect(getLastTierXpTickspeedMultiplier(0)).toBe(1)
+  })
+
+  it('adds a flat 1% per XP consumed, linearly rather than compounding', () => {
+    expect(getLastTierXpTickspeedMultiplier(37)).toBeCloseTo(1.37)
+    expect(getLastTierXpTickspeedMultiplier(100)).toBeCloseTo(2)
+  })
+
+  it('treats a negative/undefined amount as 0', () => {
+    expect(getLastTierXpTickspeedMultiplier(-5)).toBe(1)
+    expect(getLastTierXpTickspeedMultiplier(undefined)).toBe(1)
+  })
+})
+
+// ─── getLastTierXpTickspeedMinConsumption ───────────────────────────────────
+
+describe('getLastTierXpTickspeedMinConsumption', () => {
+  it(`is the floor (${LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR}) before any XP has been consumed`, () => {
+    expect(getLastTierXpTickspeedMinConsumption(0)).toBe(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR)
+  })
+
+  it('is 10% of cumulative XP consumed so far, rounded up', () => {
+    expect(getLastTierXpTickspeedMinConsumption(100)).toBe(10)
+    expect(getLastTierXpTickspeedMinConsumption(101)).toBe(11) // ceil(10.1)
+  })
+
+  it('never drops below the floor even for a small non-zero cumulative amount', () => {
+    expect(getLastTierXpTickspeedMinConsumption(5)).toBe(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR)
+  })
+})
+
+// ─── consumeXpForLastTierTickspeed ──────────────────────────────────────────
+
+describe('consumeXpForLastTierTickspeed', () => {
+  it('returns the same state when not yet unlocked, regardless of available XP', () => {
+    const state = withXP(createInitialGameState(), 100)
+    expect(consumeXpForLastTierTickspeed(50)(state)).toBe(state)
+  })
+
+  it('spends XP, grows lastTierXpConsumed, and resets tier 1 through the second-to-last tier\'s owned/resources counts to 0', () => {
+    const secondToLastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    const state = withXP(
+      withResource(
+        withOwned(
+          withLastTierTickspeedXpUnlocked(createInitialGameState()),
+          secondToLastTier.id,
+          77
+        ),
+        secondToLastTier.id,
+        77
+      ),
+      50
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.prestige.xp).toBe(30)
+    expect(after.lastTierXpConsumed).toBe(20)
+    expect(after.owned[secondToLastTier.id]).toBe(0)
+    expect(after.resources[secondToLastTier.id]).toBe(0)
+  })
+
+  it('does not touch the last tier\'s own owned/resources/purchased counts', () => {
+    const state = withXP(
+      withResource(
+        withOwned(
+          withPurchased(unlockedLastTierState(), lastTier.id, 15),
+          lastTier.id,
+          15
+        ),
+        lastTier.id,
+        15
+      ),
+      50
+    )
+    const unlocked = withLastTierTickspeedXpUnlocked(state)
+    const after = consumeXpForLastTierTickspeed(1)(unlocked)
+    expect(after.owned[lastTier.id]).toBe(15)
+    expect(after.resources[lastTier.id]).toBe(15)
+    expect(after.purchased[lastTier.id]).toBe(15)
+  })
+
+  it('leaves every tier\'s purchased ("level") count completely untouched', () => {
+    const state = withXP(
+      withPurchased(
+        withLastTierTickspeedXpUnlocked(createInitialGameState()),
+        tensTier.id,
+        25
+      ),
+      50
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.purchased[tensTier.id]).toBe(25)
+  })
+
+  it('resets the Money balance to 0 alongside every other tier\'s owned/resources', () => {
+    const state = withXP(
+      withMoney(withLastTierTickspeedXpUnlocked(createInitialGameState()), 999999),
+      50
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.resources[MONEY_ID]).toBe(0)
+  })
+
+  it('accumulates lastTierXpConsumed across repeated consumptions', () => {
+    let state = withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 1000)
+    state = consumeXpForLastTierTickspeed(10)(state) // min consumption is 1 XP; spend 10
+    expect(state.lastTierXpConsumed).toBe(10)
+    // Next minimum is ceil(0.1 * 10) = 1, well under the 100 available — spend more than the floor.
+    state = consumeXpForLastTierTickspeed(5)(state)
+    expect(state.lastTierXpConsumed).toBe(15)
+  })
+
+  it('refuses a consumption below the required minimum (10% of cumulative XP consumed so far)', () => {
+    const state = withXP(
+      withLastTierXpConsumed(withLastTierTickspeedXpUnlocked(createInitialGameState()), 100),
+      50
+    )
+    // Minimum is ceil(0.1 * 100) = 10 — 9 is below it.
+    expect(consumeXpForLastTierTickspeed(9)(state)).toBe(state)
+  })
+
+  it('refuses to spend more XP than is available', () => {
+    const state = withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 5)
+    expect(consumeXpForLastTierTickspeed(6)(state)).toBe(state)
+  })
+
+  it('refuses a zero or non-positive amount', () => {
+    const state = withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 100)
+    expect(consumeXpForLastTierTickspeed(0)(state)).toBe(state)
+    expect(consumeXpForLastTierTickspeed(-5)(state)).toBe(state)
+  })
+
+  it('refuses to spend once production is frozen at GOOGOL', () => {
+    const state = withMoney(
+      withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 100),
+      GOOGOL
+    )
+    expect(consumeXpForLastTierTickspeed(10)(state)).toBe(state)
   })
 })

@@ -1,4 +1,10 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+
+// The last tier's own id, read structurally (not hardcoded) so this stays correct if
+// TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
+// (see isLastTierTickspeedXpUnlocked/getEffectiveTierTickSpeedSeconds/buyTier/
+// consumeXpForLastTierTickspeed below).
+const getLastTierId = () => TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 
@@ -125,6 +131,19 @@ export const createInitialGameState = () => ({
   // (see buyTickspeedAutobuyer/tickGame) — no manual click needed. Never reset by prestige or by
   // Speed Up, like autoSpeedUp above.
   autoGlobalTickspeed: false,
+  // Permanent GLOBAL flag, false = not yet unlocked: whether the last tier's Money-funded
+  // tickspeed multiplier has been permanently replaced by the XP-funded one (see
+  // isLastTierTickspeedXpUnlocked/getEffectiveTierTickSpeedSeconds/buyTickspeedMultiplier below) —
+  // latched true forever the first time the last tier reaches 10 lifetime purchases (see buyTier).
+  // Stored rather than derived live from that same purchased count, since Prestige/Speed Up (like
+  // every other tier's) can reset it back below 10 afterward — a live check would hide the
+  // mechanic again once that happens. Never reset by prestige/Speed Up/consumeXpForLastTierTickspeed.
+  lastTierTickspeedXpUnlocked: false,
+  // Permanent cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
+  // adds a flat, non-compounding 1% to the last tier's own delivery frequency (see
+  // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Never reset by
+  // prestige/Speed Up, or by consumeXpForLastTierTickspeed itself (it only ever grows).
+  lastTierXpConsumed: 0,
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
@@ -289,6 +308,32 @@ export const isGlobalTickspeedMultiplierUnlocked = state =>
 export const getGlobalTickspeedProductionMultiplier = level =>
   (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** clampNonNegative(level ?? 0)
 
+// Whether the last tier's Money-funded tickspeed multiplier has been permanently replaced by the
+// XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — reads the
+// permanent state.lastTierTickspeedXpUnlocked flag (see buyTier, which latches it true the first
+// time the last tier reaches 10 lifetime purchases), never derived live from the last tier's
+// current purchased count, since a Prestige/Speed Up can reset that count back below 10 — a live
+// check would hide the mechanic again once that happens.
+export const isLastTierTickspeedXpUnlocked = state => state.lastTierTickspeedXpUnlocked === true
+
+// The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
+// unlike every other tier's compounding (1 + TICKSPEED_PRODUCTION_STEP)^(level-1) tickspeed
+// multiplier, this is a flat LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
+// consumeXpForLastTierTickspeed, linear rather than compounding — e.g. 37 XP consumed = +37%
+// (×1.37), directly matching the amount invested.
+export const getLastTierXpTickspeedMultiplier = xpConsumed =>
+  1 + LAST_TIER_XP_TICKSPEED_STEP * clampNonNegative(xpConsumed)
+
+// The minimum amount a single consumeXpForLastTierTickspeed call may spend: at least
+// LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT (10%) of the XP already consumed this way, so
+// each further investment must be a meaningfully larger commitment than the last one — floored at
+// LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR (1) since the percentage term alone is 0 before any
+// XP has ever been consumed this way.
+export const getLastTierXpTickspeedMinConsumption = xpConsumed => Math.max(
+  LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR,
+  Math.ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * clampNonNegative(xpConsumed))
+)
+
 // The production-speed multiplier at a given unspent-point balance: a flat 1% per point, applied
 // uniformly to every tier — replaces the old "prestige level doubles production" mechanic. This
 // is a pure formula, not a gate — callers must check state.prestigeSpeedBonusUnlocked themselves
@@ -403,7 +448,9 @@ export const getPrestigeProgressPercent = money => {
 // getTierBaseTickSpeedSeconds instead of multiplying its production. Always >= 1 in practice
 // (both multipliers are always >= 1), so this only ever shrinks (never grows) the base period.
 export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
-  const tickspeedMultiplier = getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
+  const tickspeedMultiplier = tierId === getLastTierId() && isLastTierTickspeedXpUnlocked(state)
+    ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0)
+    : getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
   return getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
 }
@@ -679,6 +726,8 @@ export const buyTier = tierId => state => {
     ownedUpdates[tier.costResourceId] = clampNonNegative(costResourceOwnedCount - cost)
   }
 
+  const newPurchased = purchased + 1
+
   return {
     ...state,
     resources: {
@@ -689,8 +738,14 @@ export const buyTier = tierId => state => {
     owned: { ...state.owned, ...ownedUpdates },
     purchased: {
       ...state.purchased,
-      [tierId]: purchased + 1,
+      [tierId]: newPurchased,
     },
+    // Permanently latches the last tier's XP-funded tickspeed mechanic on once it reaches 10
+    // lifetime purchases (see isLastTierTickspeedXpUnlocked) — a live check against `purchased`
+    // alone wouldn't survive consumeXpForLastTierTickspeed's own reset of that same count.
+    ...(tierId === getLastTierId() && newPurchased >= 10 && !state.lastTierTickspeedXpUnlocked
+      ? { lastTierTickspeedXpUnlocked: true }
+      : {}),
   }
 }
 
@@ -752,6 +807,10 @@ export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
+  // The last tier's Money-funded tickspeed ladder is permanently replaced by the XP-funded one
+  // once unlocked (see isLastTierTickspeedXpUnlocked/consumeXpForLastTierTickspeed) — this button
+  // has nothing left to do for that tier from then on.
+  if (tierId === getLastTierId() && isLastTierTickspeedXpUnlocked(state)) return state
   const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
 
   const cost = getTickspeedMultiplierCost(tierId, currentLevel + 1)
@@ -874,16 +933,20 @@ export const buyGlobalTickspeedMultiplier = state => {
 }
 
 // Reaching GOOGOL money awards Prestige Points (see getPrestigePointsAwarded) and resets all
-// progress. XP is untouched by prestige — it's earned independently via money milestones and
-// doesn't fund anything in particular; prestige itself is gated on Money ≥ GOOGOL, not XP.
-// Newly-awarded points add on top of any already-unspent balance (PP is a permanent, cumulative
-// currency, unlike resources/owned/purchased). Autobuyer unlock is a permanent flag, carried over
-// unchanged across prestige, while the run-funded tickspeed levels (now tracked independently of
-// it — see tickspeedLevels) reset to their level-1 baseline along with everything else, same as
-// owned/purchased — smartAutobuyer/tierTickspeedAutobuyer, by contrast, are permanent and carry
-// over unchanged. globalTickspeedMultiplier (the Money-funded global tickspeed level) resets to
-// not-yet-bought here too, same as speedUpGame — neither reset preserves it, since it's funded
-// from the same Money balance prestige/Speed Up already wipe, same as tickspeedLevels.
+// progress. XP is untouched by prestige — it's earned independently via money milestones, and
+// prestige itself is gated on Money ≥ GOOGOL, not XP; the only thing XP funds is
+// consumeXpForLastTierTickspeed, unaffected by this reset. Newly-awarded points add on top of any
+// already-unspent balance (PP is a permanent, cumulative currency, unlike resources/owned/
+// purchased). Autobuyer unlock is a permanent flag, carried over unchanged across prestige, while
+// the run-funded tickspeed levels (now tracked independently of it — see tickspeedLevels) reset to
+// their level-1 baseline along with everything else, same as owned/purchased — smartAutobuyer/
+// tierTickspeedAutobuyer, by contrast, are permanent and carry over unchanged. globalTickspeedMultiplier
+// (the Money-funded global tickspeed level) resets to not-yet-bought here too, same as speedUpGame —
+// neither reset preserves it, since it's funded from the same Money balance prestige/Speed Up
+// already wipe, same as tickspeedLevels. lastTierTickspeedXpUnlocked/lastTierXpConsumed are
+// permanent (like autobuyer unlock) — a prestige resets the last tier's own purchased count to 0
+// like every other tier, but the XP-funded mechanic it unlocked, and all XP already invested in
+// it, both carry over unchanged.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -899,6 +962,8 @@ export const prestigeGame = state => {
     speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
+    lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
@@ -918,11 +983,13 @@ export const prestigeGame = state => {
 // prestigeSpeedBonusUnlocked/autoSpeedUp/autoGlobalTickspeed (the *automation toggles*, as opposed
 // to the global tickspeed multiplier's own level) carry over unchanged — so if the global
 // tickspeed Autobuyer was already bought, tickGame simply starts re-buying the multiplier back up
-// from scratch once Money allows. Unlike prestigeGame, `prestige`
-// (xp/points/count/highestMilestone) is passed through completely untouched — Speed Up is
-// unrelated to real Prestige or Prestige Points, and doesn't award or spend any. A no-op (returns
-// the same state) while frozen (a frozen state is waiting on a real Prestige, not a Speed Up) or
-// before the last tier has reached that cycle's requirement.
+// from scratch once Money allows. lastTierTickspeedXpUnlocked/lastTierXpConsumed are likewise
+// permanent — the last tier's own purchased count resets to 0 like every other tier's, but the
+// XP-funded mechanic and all XP already invested in it both carry over unchanged. Unlike
+// prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through completely
+// untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't award or
+// spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
+// Prestige, not a Speed Up) or before the last tier has reached that cycle's requirement.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
@@ -938,6 +1005,8 @@ export const speedUpGame = state => {
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
+    lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
     prestige: state.prestige,
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }
@@ -976,5 +1045,53 @@ export const buyTickspeedAutobuyer = state => {
     ...state,
     prestige: { ...state.prestige, points: state.prestige.points - TICKSPEED_AUTOBUYER_COST },
     autoGlobalTickspeed: true,
+  }
+}
+
+// Spends XP to permanently raise the last tier's own tickspeed multiplier by
+// LAST_TIER_XP_TICKSPEED_STEP (1%) per XP consumed (see getLastTierXpTickspeedMultiplier) — only
+// available once isLastTierTickspeedXpUnlocked, having permanently replaced that tier's
+// Money-funded tickspeed button (see buyTickspeedMultiplier). Every successful consumption, no
+// matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
+// sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
+// `purchased` lifetime count ("level"), which is left completely untouched everywhere — plus the
+// Money balance (`resources[MONEY_ID]`) back to 0. The last tier's own `owned`/`resources`/
+// `purchased` are all left untouched. This is the price of investing further into the last tier's
+// own delivery frequency. A single consumption must be at least
+// getLastTierXpTickspeedMinConsumption(xpConsumed so far) — see LAST_TIER_XP_TICKSPEED_MIN_
+// CONSUMPTION_PERCENT in layers.js — so it can't trickle in one XP at a time forever. A no-op if
+// not yet unlocked, if amount isn't a positive integer, if amount is below that minimum, if there
+// isn't enough unspent XP, or while production is frozen.
+export const consumeXpForLastTierTickspeed = amount => state => {
+  if (isProductionFrozen(state)) return state
+  if (!isLastTierTickspeedXpUnlocked(state)) return state
+
+  const safeAmount = Math.floor(clampNonNegative(amount))
+  if (safeAmount <= 0) return state
+
+  const xpConsumedSoFar = state.lastTierXpConsumed ?? 0
+  if (safeAmount < getLastTierXpTickspeedMinConsumption(xpConsumedSoFar)) return state
+
+  const availableXp = clampNonNegative(state.prestige.xp)
+  if (safeAmount > availableXp) return state
+
+  const lastTierId = getLastTierId()
+  const resetTierIds = TIER_DEFINITIONS
+    .filter(tier => tier.id !== lastTierId)
+    .map(tier => tier.id)
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, xp: availableXp - safeAmount },
+    lastTierXpConsumed: xpConsumedSoFar + safeAmount,
+    owned: {
+      ...state.owned,
+      ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
+    },
+    resources: {
+      ...state.resources,
+      [MONEY_ID]: 0,
+      ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
+    },
   }
 }
