@@ -43,6 +43,21 @@ yarn test src/game/engine.js.test.js       # single file (vitest run <path>)
 yarn test -t "buyTier"                     # filter by test name
 ```
 
+## Interactive session startup
+
+`.claude/settings.json` registers a `SessionStart` hook (`.claude/hooks/session-start.sh`) that runs
+`yarn install --frozen-lockfile` then `yarn test` synchronously before an interactive session starts
+working, printing a `✅`/`‼️` pass/fail summary for each step — so work begins from a confirmed baseline
+instead of discovering broken state mid-task. It always exits 0 regardless of outcome (the point is
+visibility, not blocking session start) and is idempotent/non-interactive. This is interactive-session-only
+setup — the autonomous workflow (`autonomous-maintenance.yml`) already does equivalent setup via its own
+`Enable Corepack`/`Set up Node` steps before invoking Claude, so there's no duplication to reconcile.
+`.claude/settings.json`/`.claude/hooks/` are otherwise a protected path for unattended runs — the
+`claude-code-action` harness `autonomous-maintenance.yml` runs under refuses any `Write`/`Edit` under
+`.claude/` as a sensitive path, independent of that workflow's own `settings.permissions.deny` list (see
+`docs/DESIGN_HISTORY.md`) — so this hook could only be added from an interactive session, not that
+workflow.
+
 > **Critical:** Vite 8 uses OXC, which infers JSX from the file extension. Any file containing JSX **must**
 > be named `.jsx`, not `.js`, or the build/tests will fail. Plain styled-components definitions (no JSX)
 > stay `.js` (see `src/components/*/index.js`).
@@ -263,6 +278,13 @@ behavior should never ship together. If a change is significant enough to need a
 ## Repo layout
 
 ```
+.claude/
+  settings.json              ← registers the SessionStart hook below (see "Interactive session
+                               startup" above) — not read by the autonomous workflow, which invokes
+                               claude-code-action with its own inline `settings:`/`claude_args:`
+  hooks/
+    session-start.sh          ← runs yarn install --frozen-lockfile + yarn test at interactive
+                               session start, printing a pass/fail summary; always exits 0
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
