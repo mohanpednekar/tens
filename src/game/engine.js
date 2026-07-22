@@ -987,9 +987,11 @@ export const buyGlobalTickspeedMultiplier = state => {
 // already wipe, same as tickspeedLevels. lastTierTickspeedXpUnlocked/lastTierXpConsumed are
 // permanent (like autobuyer unlock) — a prestige resets the last tier's own purchased count to 0
 // like every other tier, but the XP-funded mechanic it unlocked, and all XP already invested in
-// it, both carry over unchanged. everUnlockedTierIds is permanent too — every tier's `owned`
-// resets to 0 same as always, but a tier that's ever been reached no longer disappears from the
-// Game view just because this reset zeroed its owned count (see isTierUnlocked).
+// it, both carry over unchanged. everUnlockedTierIds, by contrast, is NOT carried over — it resets
+// to the fresh initial default same as owned/purchased, so a real Prestige still relocks every
+// tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
+// this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
+// tiers, not to change what Prestige/Speed Up themselves do.
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < GOOGOL) return state
 
@@ -1007,7 +1009,12 @@ export const prestigeGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
     lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
-    everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
+    // everUnlockedTierIds is deliberately NOT carried over here — unlike every permanent flag
+    // above, it resets to the fresh initial default (only the first tier true) same as owned/
+    // purchased, so a real Prestige/Speed Up still relocks every tier beyond the first exactly
+    // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
+    // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
+    // change what a full Prestige/Speed Up reset does.
     prestige: {
       ...initial.prestige,
       xp: state.prestige.xp,
@@ -1030,8 +1037,9 @@ export const prestigeGame = state => {
 // from scratch once Money allows. lastTierTickspeedXpUnlocked/lastTierXpConsumed are likewise
 // permanent — the last tier's own purchased count resets to 0 like every other tier's, but the
 // XP-funded mechanic and all XP already invested in it both carry over unchanged.
-// everUnlockedTierIds is permanent too, same as in prestigeGame — every tier's `owned` resets to
-// 0, but a tier that's ever been reached stays visible/unlocked regardless. Unlike
+// everUnlockedTierIds, by contrast, is NOT carried over here either (same as prestigeGame) — it
+// resets to the fresh default, so Speed Up still relocks every tier beyond the first exactly as
+// it always has. Unlike
 // prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through completely
 // untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't award or
 // spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
@@ -1053,7 +1061,12 @@ export const speedUpGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     lastTierTickspeedXpUnlocked: state.lastTierTickspeedXpUnlocked ?? initial.lastTierTickspeedXpUnlocked,
     lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
-    everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
+    // everUnlockedTierIds is deliberately NOT carried over here — unlike every permanent flag
+    // above, it resets to the fresh initial default (only the first tier true) same as owned/
+    // purchased, so a real Prestige/Speed Up still relocks every tier beyond the first exactly
+    // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
+    // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
+    // change what a full Prestige/Speed Up reset does.
     prestige: state.prestige,
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }

@@ -2284,7 +2284,7 @@ describe('prestigeGame', () => {
     expect(after.lastTierXpConsumed).toBe(42)
   })
 
-  it('keeps everUnlockedTierIds permanently across prestige even though owned resets to 0', () => {
+  it('resets everUnlockedTierIds on prestige, same as owned/purchased, so a tier relocks like it always has', () => {
     const state = withEverUnlockedTierIds(
       withOwned(withMoney(createInitialGameState(), GOOGOL), thousandsTier.id, 50),
       thousandsTier.id,
@@ -2292,8 +2292,8 @@ describe('prestigeGame', () => {
     )
     const after = prestigeGame(state)
     expect(after.owned[thousandsTier.id]).toBe(0)
-    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
-    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
   })
 })
 
@@ -2443,7 +2443,7 @@ describe('speedUpGame', () => {
     expect(after.lastTierXpConsumed).toBe(42)
   })
 
-  it('keeps everUnlockedTierIds permanently across Speed Up even though owned resets to 0', () => {
+  it('resets everUnlockedTierIds on Speed Up, same as owned/purchased, so a tier relocks like it always has', () => {
     const state = withEverUnlockedTierIds(
       withOwned(eligibleState(), thousandsTier.id, 50),
       thousandsTier.id,
@@ -2451,8 +2451,8 @@ describe('speedUpGame', () => {
     )
     const after = speedUpGame(state)
     expect(after.owned[thousandsTier.id]).toBe(0)
-    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
-    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
   })
 })
 
