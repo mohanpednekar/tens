@@ -1025,7 +1025,7 @@ const MainPage = () => {
             role="tab"
             type="button"
           >
-            PP Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
+            Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
           </ViewTabButton>
         </ViewNav>
       )}

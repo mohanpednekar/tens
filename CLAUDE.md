@@ -439,8 +439,12 @@ Strict three-layer separation:
 
 **Game view vs. PP Upgrades view.** `MainPage` renders one of two views, toggled by a local
 `useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
-block renders. A `ViewNav` tab pair (`role="tablist"`) only appears once `!isFirstRun`. The PP Upgrades
-tab shows a `NavDot` (`aria-label="PP upgrade available"`) whenever `hasAffordablePpUpgrade` is true
+block renders. A `ViewNav` tab pair (`role="tablist"`) only appears once `!isFirstRun`. The tab's
+visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out of the tab bar to save space,
+since every purchase on that page already costs Prestige Points, so spelling that out on the tab itself
+is redundant); "PP Upgrades" remains the term used throughout this doc/the codebase's own comments for
+the view/page as a concept. The tab shows a `NavDot` (`aria-label="PP upgrade available"`) whenever
+`hasAffordablePpUpgrade` is true
 (the Money-funded global tickspeed multiplier *itself* doesn't factor into this dot, since it's not a
 PP purchase — only its automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible
 across both views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, `PrestigeCard`, and the Reset
