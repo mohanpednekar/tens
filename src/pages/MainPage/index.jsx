@@ -1,7 +1,7 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
@@ -1094,10 +1094,34 @@ const MainPage = () => {
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
-          // it does NOT change how much lands per delivery, only how often one arrives.
+          // it does NOT change how much lands per delivery, only how often one arrives. Once the
+          // last tier reaches 10 lifetime purchases, this Money-funded ladder is permanently
+          // replaced by an XP-funded one instead (see isLastTierTickspeedXpUnlocked/
+          // getLastTierXpTickspeedMultiplier in engine.js and the last-tier-only controls below).
+          const isLastTier = tier.id === lastTier.id
+          const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
-          const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
+          const lastTierXpConsumed = state.lastTierXpConsumed ?? 0
+          const tickspeedMultiplier = isLastTierXpUnlocked
+            ? getLastTierXpTickspeedMultiplier(lastTierXpConsumed)
+            : getTickspeedProductionMultiplier(tickspeedLevel)
           const tickspeedBonusPercent = formatBonusPercent(tickspeedMultiplier)
+          // Consuming XP for the last tier's tickspeed always spends the player's entire current
+          // XP balance in one action (rather than a fixed minimum) — since every consumption,
+          // however small, resets every tier's lifetime purchased count, spending it all at once
+          // minimizes how often that side effect is paid for the same total investment.
+          const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
+          const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
+          const lastTierXpProgressPercent = Math.min(100, Math.round((lastTierXpBalance / lastTierXpMinConsumption) * 100))
+          const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
+          const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
+          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% ${tier.name} tickspeed (resets every tier's lifetime purchase count)`
+          const handleConsumeLastTierXp = () => {
+            if (!canConsumeLastTierXp) return
+            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpBalance)}% faster ${tier.name} ticks? This resets every tier's lifetime purchase count (cost level and purchase-milestone production bonus) back to 0.`)) {
+              actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
+            }
+          }
           // Production no longer depends on autobuyer purchase frequency at all — every 10
           // lifetime purchases of a tier (manual or automatic) doubles its own production (see
           // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
@@ -1182,7 +1206,11 @@ const MainPage = () => {
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
                   {tickspeedBonusPercent > 0 && (
-                    <GreenText title={`Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`}>
+                    <GreenText title={
+                      isLastTierXpUnlocked
+                        ? `${formatAmount(lastTierXpConsumed)} XP consumed — +${tickspeedBonusPercent}% faster ticks`
+                        : `Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`
+                    }>
                       ⚙ +{tickspeedBonusPercent}%
                     </GreenText>
                   )}
@@ -1197,6 +1225,12 @@ const MainPage = () => {
                     </li>
                     <li>Purchase milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases</li>
                     {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
+                    {isLastTierXpUnlocked && (
+                      <li>
+                        Tickspeed funded by consumed XP — unspent XP: {formatAmount(lastTierXpBalance)}
+                        {' '}(next consumption needs at least {formatAmount(lastTierXpMinConsumption)})
+                      </li>
+                    )}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
                   </ul>
                 </TierDetailsContent>
@@ -1210,24 +1244,45 @@ const MainPage = () => {
                   ? formatCurrency(production)
                   : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
               </ProductionText>
-              <UpgradeButton
-                aria-label={tickspeedLabel}
-                color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
-                disabled={!canUpgradeTickspeed}
-                onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% faster ticks) — the next level makes it 10% more`}
-                $progress={tickspeedProgressPercent}
-                $pulse={canUpgradeTickspeed}
-              >
-                <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`${tier.name} tickspeed multiplier progress`}
-                  aria-valuenow={tickspeedProgressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </UpgradeButton>
+              {isLastTierXpUnlocked ? (
+                <UpgradeButton
+                  aria-label={lastTierXpConsumeLabel}
+                  color={canConsumeLastTierXp ? '#a78bfa' : 'darkgrey'}
+                  disabled={!canConsumeLastTierXp}
+                  onClick={handleConsumeLastTierXp}
+                  title={`Consume XP for +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every tier's lifetime purchase count`}
+                  $progress={lastTierXpProgressPercent}
+                  $pulse={canConsumeLastTierXp}
+                >
+                  <ButtonContent>{lastTierXpConsumeVisibleLabel}</ButtonContent>
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label={`${tier.name} XP tickspeed progress`}
+                    aria-valuenow={lastTierXpProgressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  />
+                </UpgradeButton>
+              ) : (
+                <UpgradeButton
+                  aria-label={tickspeedLabel}
+                  color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
+                  disabled={!canUpgradeTickspeed}
+                  onClick={() => actions.buyTickspeedMultiplier(tier.id)}
+                  title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% faster ticks) — the next level makes it 10% more`}
+                  $progress={tickspeedProgressPercent}
+                  $pulse={canUpgradeTickspeed}
+                >
+                  <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label={`${tier.name} tickspeed multiplier progress`}
+                    aria-valuenow={tickspeedProgressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  />
+                </UpgradeButton>
+              )}
               <BuyButton
                 aria-label={buyLabel}
                 color={canAfford ? 'white' : 'darkgrey'}
