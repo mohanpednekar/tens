@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -335,14 +335,17 @@ const countGlobalTickspeedMilestones = lvl => {
 
 // The speed multiplier every tier gets from the global tickspeed multiplier: unlike the per-tier
 // tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP unlock),
-// buying this global track directly grants its effect — but there is no per-level bonus at all
-// between milestones (level 5, 15, 150, … contribute nothing on their own). Only a milestone level
-// (see countGlobalTickspeedMilestones above) adds a flat, non-compounding
-// GLOBAL_TICKSPEED_MILESTONE_STEP (10%) — divided into getEffectiveTierTickSpeedSeconds alongside
-// the per-tier multiplier, not multiplied into a production credit. `null` (never bought) is
+// buying this global track directly grants its effect — every level compounds
+// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), except a milestone level (see
+// countGlobalTickspeedMilestones above) compounds GLOBAL_TICKSPEED_MILESTONE_STEP (10%) instead,
+// for that one level only — still fully multiplicative, not additive. `null` (never bought) is
 // treated as level 0, i.e. no bonus at all (×1).
-export const getGlobalTickspeedProductionMultiplier = level =>
-  1 + GLOBAL_TICKSPEED_MILESTONE_STEP * countGlobalTickspeedMilestones(clampNonNegative(level ?? 0))
+export const getGlobalTickspeedProductionMultiplier = level => {
+  const lvl = clampNonNegative(level ?? 0)
+  const milestoneLevels = countGlobalTickspeedMilestones(lvl)
+  const regularLevels = lvl - milestoneLevels
+  return (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** regularLevels * (1 + GLOBAL_TICKSPEED_MILESTONE_STEP) ** milestoneLevels
+}
 
 // Whether the last tier's Money-funded tickspeed multiplier has been permanently replaced by the
 // XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — reads the

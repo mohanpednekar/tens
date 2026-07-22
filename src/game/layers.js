@@ -112,13 +112,18 @@ export const TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2
 // The global tickspeed multiplier (see engine.js's getGlobalTickspeedProductionMultiplier/
 // buyGlobalTickspeedMultiplier) speeds up *every* tier's production at once — unlike the per-tier
 // tickspeed multiplier, this is a single global upgrade track (mirroring Auto-Prestige's
-// null/level pattern), not something bought separately per tier. There's no bonus between
-// milestones (no per-level compounding step) — only a flat GLOBAL_TICKSPEED_MILESTONE_STEP (10%)
-// added at each milestone level, and the milestone *spacing* itself grows by a factor of ten every
-// time the level crosses another power-of-ten range: every 10th level up to 100 (10, 20, …, 100 —
-// 10 milestones, +100% total), then every 100th level up to 1000 (200, 300, …, 1000 — 9 more
-// milestones), then every 1000th level up to 10000, and so on indefinitely (see
-// getGlobalTickspeedProductionMultiplier's countGlobalTickspeedMilestones helper).
+// null/level pattern), not something bought separately per tier. Every level compounds this rate
+// (1%) — the same ×1.01-per-level growth the design always had — except a milestone level (see
+// GLOBAL_TICKSPEED_MILESTONE_STEP below) compounds by that larger rate instead, for that one level
+// only.
+export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
+// The compounding rate a *milestone* level of the global tickspeed multiplier uses in place of
+// GLOBAL_TICKSPEED_PRODUCTION_STEP above (10% instead of the regular 1%, still multiplicative —
+// see getGlobalTickspeedProductionMultiplier). Milestone *spacing* widens by a factor of ten every
+// time the level crosses another power-of-ten range: every 10th level up to 100 (10, 20, …, 100),
+// then every 100th level up to 1000 (200, 300, …, 1000), then every 1000th level up to 10000, and
+// so on indefinitely (see getGlobalTickspeedProductionMultiplier's countGlobalTickspeedMilestones
+// helper).
 export const GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above

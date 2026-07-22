@@ -544,40 +544,42 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(null)).toBe(1)
   })
 
-  it('grants no bonus at all below the first 10-level milestone', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1)).toBe(1)
-    expect(getGlobalTickspeedProductionMultiplier(9)).toBe(1)
+  it('compounds the regular 1% step below the first milestone, same as before milestones existed', () => {
+    expect(getGlobalTickspeedProductionMultiplier(1)).toBeCloseTo(1.01)
+    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
   })
 
-  it('adds a flat +10% at the first milestone (level 10)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(10)).toBeCloseTo(1.10)
+  it('compounds the milestone 10% step instead of the regular 1% step at the first milestone (level 10)', () => {
+    // 9 regular levels (1-9) at 1% each, then level 10 (the milestone) at 10% instead of 1%.
+    expect(getGlobalTickspeedProductionMultiplier(10)).toBeCloseTo(1.01 ** 9 * 1.10)
   })
 
-  it('stays at the same bonus between milestones (level 15, still just the level-10 milestone)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(15)).toBeCloseTo(1.10)
+  it('resumes the regular 1% step after a milestone, on top of what came before', () => {
+    // Levels 11-15 are regular (1% each), on top of the level-10 milestone.
+    expect(getGlobalTickspeedProductionMultiplier(15)).toBeCloseTo(1.01 ** 9 * 1.10 * 1.01 ** 5)
   })
 
-  it('adds another flat +10% (total +20%) at the next 10-spaced milestone (level 20)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(20)).toBeCloseTo(1.20)
+  it('compounds a second milestone step at the next 10-spaced milestone (level 20)', () => {
+    expect(getGlobalTickspeedProductionMultiplier(20)).toBeCloseTo(1.01 ** 18 * 1.10 ** 2)
   })
 
-  it('sums to exactly +100% at level 100 (10 milestones spaced every 10 levels × 10%)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(100)).toBeCloseTo(2.00)
+  it('compounds 10 milestone steps and 90 regular steps by level 100', () => {
+    expect(getGlobalTickspeedProductionMultiplier(100)).toBeCloseTo(1.01 ** 90 * 1.10 ** 10)
   })
 
   it('milestone spacing widens to every 100 levels beyond level 100 — no new milestone until level 200', () => {
-    expect(getGlobalTickspeedProductionMultiplier(101)).toBeCloseTo(2.00)
-    expect(getGlobalTickspeedProductionMultiplier(199)).toBeCloseTo(2.00)
-    expect(getGlobalTickspeedProductionMultiplier(200)).toBeCloseTo(2.10)
+    expect(getGlobalTickspeedProductionMultiplier(101)).toBeCloseTo(1.01 ** 91 * 1.10 ** 10)
+    expect(getGlobalTickspeedProductionMultiplier(199)).toBeCloseTo(1.01 ** 189 * 1.10 ** 10)
+    expect(getGlobalTickspeedProductionMultiplier(200)).toBeCloseTo(1.01 ** 189 * 1.10 ** 11)
   })
 
-  it('sums to +190% at level 1000 (10 milestones spaced by 10, plus 9 more spaced by 100)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1000)).toBeCloseTo(2.90)
+  it('compounds 19 milestone steps and 981 regular steps by level 1000', () => {
+    expect(getGlobalTickspeedProductionMultiplier(1000)).toBeCloseTo(1.01 ** 981 * 1.10 ** 19)
   })
 
   it('milestone spacing widens again to every 1000 levels beyond level 1000', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1999)).toBeCloseTo(2.90)
-    expect(getGlobalTickspeedProductionMultiplier(2000)).toBeCloseTo(3.00)
+    expect(getGlobalTickspeedProductionMultiplier(1999)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 19)
+    expect(getGlobalTickspeedProductionMultiplier(2000)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 20)
   })
 })
 
@@ -880,20 +882,24 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   })
 
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
+    // Level 10 = 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%.
+    const globalMultiplier = 1.01 ** 9 * 1.10
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 10)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.10)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / globalMultiplier)
     // Kilobytes' own base tickspeed is 2s (tier index 1 → tierIndex + 1), so the same global
     // multiplier shrinks it from a different starting point than Bytes' 1s.
-    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / 1.10)
+    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / globalMultiplier)
   })
 
   it('stacks both multiplicatively, not additively', () => {
-    // Per-tier level 2 → ×1.1, global level 10 (first milestone) → ×1.10 → combined ×1.21, not ×1.2.
+    // Per-tier level 2 → ×1.1, global level 10 (1.01^9 * 1.10 ≈ ×1.2031) → combined, not simply
+    // additive.
+    const globalMultiplier = 1.01 ** 9 * 1.10
     const state = withGlobalTickspeedMultiplier(
       withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
       10
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.1 * globalMultiplier))
   })
 
   it('uses the XP-funded multiplier for the last tier once unlocked, ignoring its (stale) tickspeedLevels entry', () => {
@@ -1620,23 +1626,24 @@ describe('tickGame', () => {
   })
 
   it('speeds up every tier\'s delivery frequency at once via the global tickspeed multiplier, without changing the per-tick amount', () => {
-    // Global level 10 (its first milestone) → ×1.10 (see getGlobalTickspeedProductionMultiplier) —
-    // the same frequency-scaling effect as the per-tier multiplier above, applied uniformly to
-    // every tier at once, no per-tier tickspeed level involved here at all. Over a 100-second
-    // window: baseline delivers 100 batches of 10 = 1000, while floor(100 × 1.10) = 110 batches of
-    // 10 = 1100.
+    // Global level 10 = 9 regular 1% levels compounded, then the level-10 milestone at 10%
+    // instead of 1% (see getGlobalTickspeedProductionMultiplier) — 1.01^9 * 1.10 ≈ ×1.2031, the
+    // same frequency-scaling effect as the per-tier multiplier above, applied uniformly to every
+    // tier at once, no per-tier tickspeed level involved here at all. Over a 100-second window:
+    // baseline delivers 100 batches of 10 = 1000, while floor(100 × 1.2031) = 120 batches of 10 =
+    // 1200.
     const state = withMoney(
       withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), tensTier.id, 10), 10),
       0
     )
     const after = tickGame(100)(state)
-    expect(after.resources[MONEY_ID]).toBe(1100)
+    expect(after.resources[MONEY_ID]).toBe(1200)
   })
 
   it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
-    // Per-tier level 2 → ×1.1, global level 10 (its first milestone) → ×1.10 → combined ×1.21, not
-    // ×1.20 (which an additive 10%+10% stack would give). Over a 100-second window:
-    // floor(100 × 1.21) = 121 batches of 10 each = 1210.
+    // Per-tier level 2 → ×1.1, global level 10 → 1.01^9 * 1.10 ≈ ×1.2031 → combined ≈ ×1.3234, not
+    // simply additive. Over a 100-second window: floor(100 × 1.3234) = 132 batches of 10 each =
+    // 1320.
     const state = withGlobalTickspeedMultiplier(
       withMoney(
         withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
@@ -1645,7 +1652,7 @@ describe('tickGame', () => {
       10
     )
     const after = tickGame(100)(state)
-    expect(after.resources[MONEY_ID]).toBe(1210)
+    expect(after.resources[MONEY_ID]).toBe(1320)
   })
 
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
