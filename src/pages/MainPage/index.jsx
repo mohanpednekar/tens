@@ -8,10 +8,8 @@ import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
 // Offline-progress notice auto-dismiss timing (UI chrome only — not a game/economy constant, so
-// it lives here rather than in layers.js). Clicking the notice itself (not the Dismiss button)
-// extends the deadline to the longer duration — see handleOfflineNoticeClick in MainPage.
+// it lives here rather than in layers.js).
 const OFFLINE_NOTICE_AUTO_DISMISS_MS = 10_000
-const OFFLINE_NOTICE_EXTENDED_DISMISS_MS = 60_000
 const OFFLINE_NOTICE_FADE_MS = 400
 const OFFLINE_NOTICE_PROGRESS_INTERVAL_MS = 100
 
@@ -52,22 +50,36 @@ const Header = styled.header`
   }
 `
 
-const TopRow = styled.div`
+// Centers the offline notice as a fixed overlay in the middle of the screen, above the page
+// content, rather than an inline card pushed into the normal document flow. `pointer-events: none`
+// on the overlay (re-enabled on the card itself, below) keeps the rest of the page clickable
+// through the overlay's own padding/whitespace.
+const OfflineNoticeOverlay = styled.div`
   align-items: center;
+  bottom: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: space-between;
+  justify-content: center;
+  left: 0;
+  padding: 1.5rem 1rem;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 900;
 `
 
 // Fades out (rather than disappearing abruptly) once the auto-dismiss countdown reaches zero —
-// see the offline-notice timing state in MainPage. Clickable to extend the countdown, hence the
-// pointer cursor; $fading drives the opacity transition, not a remount, so the fade is visible
-// before the notice is actually removed from the DOM by dismissOfflineProgress.
+// see the offline-notice timing state in MainPage. $fading drives the opacity transition, not a
+// remount, so the fade is visible before the notice is actually removed from the DOM by
+// dismissOfflineProgress.
 const OfflineNoticeCard = styled(StatCard)`
-  cursor: pointer;
+  align-items: center;
+  max-width: 26rem;
   opacity: ${props => (props.$fading ? 0 : 1)};
+  pointer-events: auto;
+  text-align: center;
   transition: opacity ${OFFLINE_NOTICE_FADE_MS}ms ease;
+  width: 100%;
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
@@ -174,10 +186,26 @@ const GlobalTickspeedCard = styled(StatCard)`
 `
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
-// Header that are centered rather than left-aligned.
+// Header that are centered rather than left-aligned. $actionable (used only by the PP display,
+// once Prestige is available) makes the whole card double as the Prestige button, matching the
+// tier rows' own whole-tile-clickable-plus-title pattern (see TierNameTrigger) rather than the
+// "don't combine those on a passive tile" call made for the offline notice card.
 const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
+
+  ${props => props.$actionable && css`
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.15);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fbbf24;
+      outline-offset: 2px;
+    }
+  `}
 `
 
 // Keeps both balances visible at all times: the Money + PP pair sticks to the top of the viewport
@@ -813,14 +841,12 @@ const MainPage = () => {
     return () => observer.disconnect()
   }, [showTopPrestigeBar])
 
-  // Offline-progress notice: auto-dismisses after OFFLINE_NOTICE_AUTO_DISMISS_MS unless the
-  // player clicks the notice itself, which extends the deadline to
-  // OFFLINE_NOTICE_EXTENDED_DISMISS_MS from that click (not merely +60s on top of whatever
-  // remained). offlineProgress is a one-shot value fixed at mount (see useIncrementalGame — it
-  // only ever transitions non-null → null via dismissOfflineProgress, never null → non-null after
-  // mount), so a lazy initializer capturing its start/end timestamps at mount time is enough;
-  // no effect is needed to (re)initialize it later.
-  const [offlineNoticeTiming, setOfflineNoticeTiming] = useState(() => {
+  // Offline-progress notice: auto-dismisses after OFFLINE_NOTICE_AUTO_DISMISS_MS. offlineProgress
+  // is a one-shot value fixed at mount (see useIncrementalGame — it only ever transitions
+  // non-null → null via dismissOfflineProgress, never null → non-null after mount), so a lazy
+  // initializer capturing its start/end timestamps at mount time is enough; no effect is needed to
+  // (re)initialize it later, and the timing itself never changes afterward.
+  const [offlineNoticeTiming] = useState(() => {
     if (!offlineProgress) return null
     const now = Date.now()
     return { start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS }
@@ -852,18 +878,7 @@ const MainPage = () => {
     const timeout = setTimeout(dismissOfflineProgress, OFFLINE_NOTICE_FADE_MS)
     return () => clearTimeout(timeout)
   }, [offlineNoticeFading, dismissOfflineProgress])
-  const handleOfflineNoticeClick = () => {
-    if (offlineNoticeFading) return
-    const now = Date.now()
-    setOfflineNoticeTiming({ start: now, end: now + OFFLINE_NOTICE_EXTENDED_DISMISS_MS })
-  }
-  // Dismiss is an explicit, immediate action — it skips the fade and stops the click from also
-  // bubbling up to handleOfflineNoticeClick (which would otherwise re-extend a notice that's
-  // about to be dismissed anyway).
-  const handleOfflineNoticeDismissClick = event => {
-    event.stopPropagation()
-    dismissOfflineProgress()
-  }
+  const handleOfflineNoticeDismissClick = () => dismissOfflineProgress()
 
   if (showFullScreenPrompt) {
     return (
@@ -929,13 +944,11 @@ const MainPage = () => {
       </Header>
 
       {offlineProgress && (
-        <OfflineNoticeCard
-          aria-label="offline progress notice"
-          onClick={handleOfflineNoticeClick}
-          title="Click to keep this notice a little longer"
-          $fading={offlineNoticeFading}
-        >
-          <TopRow>
+        <OfflineNoticeOverlay>
+          <OfflineNoticeCard
+            aria-label="offline progress notice"
+            $fading={offlineNoticeFading}
+          >
             <MutedText>
               Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
               {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 10% speed.
@@ -958,8 +971,8 @@ const MainPage = () => {
                 aria-valuemax={100}
               />
             </Button>
-          </TopRow>
-        </OfflineNoticeCard>
+          </OfflineNoticeCard>
+        </OfflineNoticeOverlay>
       )}
 
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
@@ -973,11 +986,22 @@ const MainPage = () => {
         </CenteredCard>
 
         {!isFirstRun && (
-          <CenteredCard aria-label="prestige points display">
+          <CenteredCard
+            aria-label="prestige points display"
+            $actionable={canPrestige}
+            onClick={canPrestige ? actions.prestige : undefined}
+            onKeyDown={event => {
+              if (!canPrestige || (event.key !== 'Enter' && event.key !== ' ')) return
+              event.preventDefault()
+              actions.prestige()
+            }}
+            role={canPrestige ? 'button' : undefined}
+            tabIndex={canPrestige ? 0 : undefined}
+            title={canPrestige ? 'Awards Prestige Points and resets your resources' : undefined}
+          >
             <MutedText>
               <GoldText>{formatAmount(prestige.points)} PP</GoldText>
               {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
-              {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
             </MutedText>
           </CenteredCard>
         )}
@@ -1001,7 +1025,7 @@ const MainPage = () => {
             role="tab"
             type="button"
           >
-            PP Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
+            Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
           </ViewTabButton>
         </ViewNav>
       )}
