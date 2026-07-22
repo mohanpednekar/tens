@@ -1236,6 +1236,18 @@ reasoning.
 (`github.com/sponsors`) is a separate, maintainer-only step tracked in issue #62's checklist; until
 that's done the Sponsor button simply won't display/function.
 
+## License
+
+`LICENSE` (repo root) is an explicit all-rights-reserved notice — the maintainer's deliberate choice
+over an OSS license (MIT/Apache 2.0/etc.). Code stays publicly visible on GitHub but isn't legally
+reusable by others without written permission. This is an explicit statement of what default
+copyright already implies by omission, added for clarity given the repo's growing public-visibility
+surface (GitHub Sponsors, Releases, the PWA). A `CODE_OF_CONDUCT`/`CONTRIBUTING` guide is deliberately
+not present — this is a solo, AI-driven hobby project not soliciting external contributions, so those
+would only pad out GitHub's Community Standards checklist without adding real value; `README.md`,
+`.github/ISSUE_TEMPLATE/` (`claude-task.yml` + `config.yml`), and `.github/pull_request_template.md`
+already cover the genuinely useful items on that checklist.
+
 ## Testing
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`, `App.test.jsx`.
