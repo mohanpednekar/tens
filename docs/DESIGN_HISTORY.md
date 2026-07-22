@@ -118,6 +118,19 @@ job's red/green with reality by inspecting the action's execution-output JSON
   `blocked` (created idempotently), and the guard step excludes `blocked`-labeled issues from the
   Phase A backlog — a human removes the label after unblocking (e.g. by creating the `.claude/`
   file interactively, where the approval prompt can actually be granted).
+
+  This was later relaxed once it produced its own false positive: a run picked task #79 (add a
+  SessionStart hook, needing `.claude/settings.json`), hit the identical `.claude/` write refusal,
+  and — exactly per the Phase A guidance above — commented on the issue with the specifics and
+  labeled it `blocked`. That's the intended graceful-degradation path, not the silent #78 failure
+  mode this step exists to catch, yet the job still went red for a run that did precisely what it
+  was told to do. The step now only fails the job if the denial *wasn't* followed by the run
+  itself labeling the affected issue `blocked` (detected by scanning the execution output for a
+  `gh issue edit ... --add-label blocked` command) — a run that leaves that comment-plus-label
+  trail has already handed the blocker to a human as a durable, actionable signal on the issue
+  itself, so an additional red workflow badge on top adds no further action a human would take
+  differently, while a run that hits a denial and gives up *without* that hand-off still fails the
+  job exactly as before (the original #78 case).
 - *Red that should be green:* because `CLAUDE_CODE_OAUTH_TOKEN` is subscription-quota-based, a
   scheduled run can die on turn 1 with HTTP 429 ("You've hit your session limit") whenever the
   quota happens to be exhausted at fire time — purely transient, no work attempted, and the next
