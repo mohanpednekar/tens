@@ -398,10 +398,21 @@ jobs:
         # run inside it failed to do its job. Concretely: three consecutive green runs each
         # picked task #78, had every Write into .claude/skills//.claude/agents/ refused by
         # the harness's unattended-session guardrail, and ended "successfully" having only
-        # left an issue comment. A denied Write/Edit means the run wanted to change a file
-        # and couldn't — that's a failed run and should be red, not silently green. Bash
-        # denials are NOT treated as failures: allowlist misses (python3, mkdir, multi-line
-        # gh commands) are routine and the agent works around them.
+        # left an issue comment — silently, with no signal a human would ever see without
+        # reading the transcript. Bash denials are NOT treated as failures: allowlist misses
+        # (python3, mkdir, multi-line gh commands) are routine and the agent works around
+        # them.
+        #
+        # Exception: if the run itself already ran `gh issue edit <n> --add-label blocked`
+        # in response to the denial — the exact recovery Phase A's guidance asks for — the
+        # denial was properly diagnosed and hand-delivered to a human via the issue itself
+        # (comment + label), not silently swallowed like #78 was. That issue comment is
+        # already a durable, actionable signal on its own; a red job on top of it doesn't add
+        # anything a human would act on differently, and the label already keeps future runs
+        # from repeating it (see the guard step's Phase A exclusion). Confirmed for real via
+        # #79: a run hit the same .claude/ restriction, correctly labeled it blocked, and the
+        # job still went red for a task that was, from the run's own perspective, handled
+        # exactly as instructed — see docs/DESIGN_HISTORY.md.
         if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'success'
         run: |
           out="${{ steps.claude.outputs.execution_file }}"
@@ -414,10 +425,21 @@ jobs:
                 | map(select(.tool_name == "Write" or .tool_name == "Edit" or .tool_name == "NotebookEdit"))
                 | .[] | "\(.tool_name): \(.tool_input.file_path // "(unknown path)")"
               ' "$out")
-          if [ -n "$denied" ]; then
-            echo "::error::The Claude run was denied one or more file modifications and could not fully do its work:"
-            echo "$denied"
-            echo "::error::If this was a task issue that needs a path an unattended run can't write (e.g. .claude/skills/), label the issue 'blocked' so future runs skip it, and handle it interactively."
-            exit 1
+          if [ -z "$denied" ]; then
+            echo "No denied file modifications."
+            exit 0
           fi
-          echo "No denied file modifications."
+          echo "::warning::The Claude run was denied one or more file modifications:"
+          echo "$denied"
+          labeled_blocked=$(jq -r '
+                [.. | objects | select(has("command")) | .command // empty]
+                | any(test("add-label\\s+blocked"))
+              ' "$out")
+          if [ "$labeled_blocked" = "true" ]; then
+            echo "The run labeled the affected issue 'blocked' in response — properly diagnosed and handed off to a human, not silently swallowed. Job stays green."
+            exit 0
+          fi
+          echo "::error::...and did not label the affected issue 'blocked' to hand it off — could not fully do its work with no durable signal left behind:"
+          echo "$denied"
+          echo "::error::If this was a task issue that needs a path an unattended run can't write (e.g. .claude/skills/), label the issue 'blocked' so future runs skip it, and handle it interactively."
+          exit 1
