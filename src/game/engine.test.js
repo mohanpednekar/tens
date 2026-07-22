@@ -552,6 +552,22 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(2)).toBeCloseTo(1.0201)
     expect(getGlobalTickspeedProductionMultiplier(3)).toBeCloseTo(1.030301)
   })
+
+  it('has no milestone bonus yet just below the first 10-level milestone', () => {
+    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
+  })
+
+  it('adds a flat +10% milestone bonus on top of the compounding base at level 10', () => {
+    expect(getGlobalTickspeedProductionMultiplier(10)).toBeCloseTo(1.01 ** 10 + 0.10)
+  })
+
+  it('adds another flat +10% (total +20%) at level 20', () => {
+    expect(getGlobalTickspeedProductionMultiplier(20)).toBeCloseTo(1.01 ** 20 + 0.20)
+  })
+
+  it('sums to exactly +100% worth of milestone bonus at level 100 (10 milestones × 10%), on top of the compounding base', () => {
+    expect(getGlobalTickspeedProductionMultiplier(100)).toBeCloseTo(1.01 ** 100 + 1.00)
+  })
 })
 
 // ─── getPrestigeProductionMultiplier ─────────────────────────────────────────
