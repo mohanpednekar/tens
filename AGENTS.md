@@ -217,6 +217,12 @@ full rationale and examples):
 `.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar` (native repo "Sponsor" button).
 Enrollment on `github.com/sponsors` is a separate maintainer-only step tracked in issue #62.
 
+## License
+
+`LICENSE` (repo root) is an explicit all-rights-reserved notice, not an OSS license — code stays
+publicly visible but isn't legally reusable without written permission. No `CODE_OF_CONDUCT`/
+`CONTRIBUTING` — deliberately omitted for this solo, AI-driven hobby project.
+
 ## Security notes
 
 - Dev and test servers bind to `127.0.0.1` — do not change to `0.0.0.0`.
