@@ -641,7 +641,15 @@ down to `Ones`. `tier01` (`Bytes`) is the special case where `costResourceId ===
 MONEY_ID`: it's the entry-level generator, bought with money to produce more money.
 
 A tier unlocks once you own **≥ 10** of the tier below it (`isTierUnlocked`); already-owned tiers stay
-unlocked even if the rule changes later, so old saves stay playable.
+unlocked even if the rule changes later, so old saves stay playable. Beyond that live check,
+`state.everUnlockedTierIds[tierId]` latches a tier's unlocked status the moment it's first reached (see
+`latchEverUnlockedTiers`, called from `buyTier` and `tickGame`) so a narrower reset than a full
+Prestige/Speed Up can't hide/relock it — specifically, this is what keeps `consumeXpForLastTierTickspeed`'s
+owned-quantity reset (see "The last tier's XP-funded tickspeed" below) from relocking every tier it
+resets. This flag is **not** permanent across a real Prestige or Speed Up, though — both still reset it
+to the fresh default (only the first tier true) exactly like `owned`/`purchased`, so those two resets
+keep relocking every tier beyond the first exactly as they always have; only `consumeXpForLastTierTickspeed`'s
+narrower reset is guarded against relocking.
 
 ### Adding a new tier
 
@@ -1168,6 +1176,24 @@ component state, not part of engine state).
                                                           // getLastTierXpTickspeedMultiplier). Never reset by
                                                           // Speed Up, prestige, or by
                                                           // consumeXpForLastTierTickspeed itself (only grows)
+  everUnlockedTierIds: { tier01: true, tier02: false, … }, // RUN-SCOPED per-tier flag: latched true
+                                                          // (see latchEverUnlockedTiers, called from buyTier
+                                                          // and tickGame) the moment isTierUnlocked's live
+                                                          // condition is first satisfied for that tier — tier01
+                                                          // starts true (always unlocked), every other tier
+                                                          // starts false. Read by isTierUnlocked as an
+                                                          // additional way to stay unlocked, so a tier that's
+                                                          // ever been reached within the current run doesn't
+                                                          // disappear from the Game view just because a
+                                                          // narrower reset than a full Prestige/Speed Up zeroed
+                                                          // its `owned` count — specifically
+                                                          // consumeXpForLastTierTickspeed (see "The last
+                                                          // tier's XP-funded tickspeed" below). NOT permanent
+                                                          // like the flags above it, though: prestigeGame and
+                                                          // speedUpGame both reset this back to the fresh
+                                                          // default, same as owned/purchased, so a real
+                                                          // Prestige/Speed Up still relocks every tier beyond
+                                                          // the first exactly as it always has
   prestige:   { xp: 0, points: 0, count: 0, highestMilestone: 1 }, // xp is earned via money milestones (see
                                                           // checkMilestones); its one use is funding
                                                           // consumeXpForLastTierTickspeed (see "The last
@@ -1236,9 +1262,10 @@ regardless of whether those purchases were manual or automatic.
 | `getGlobalTickspeedProductionMultiplier` | `level → number` | `1.01 ** level` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — unlike the per-tier tickspeed multiplier, level 1 already grants the first +1% (there's no separate unlock step to have already spent it on); compounds multiplicatively across levels, not summed additively |
 | `getPrestigePointsAwarded` | `money → number` | `floor(log10(money) / log10(GOOGOL))` — the log, base GOOGOL, of the money balance; always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
-| `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, every tier's `tickspeedLevels` entry back to 1 (the baseline — no speed bonus), and `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`speedUpCount`/`autoSpeedUp`/`autoGlobalTickspeed`/`lastTierTickspeedXpUnlocked`/`lastTierXpConsumed` unchanged (all permanent, including the Auto-Prestige *level*, accumulated Speed Up multiplier, and the last tier's XP-funded tickspeed unlock/total), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
-| `speedUpGame` | `state → state` | Requires `getTierPurchasedCount(lastTier) >= getSpeedUpRequirement(speedUpCount)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels (every tier back to 1)/`globalTickspeedMultiplier` (back to `null`) exactly like a fresh `createInitialGameState`, keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed`/`lastTierTickspeedXpUnlocked`/`lastTierXpConsumed` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier` the same way; see "The global tickspeed multiplier" above) — leaves `prestige` (xp/points/count/highestMilestone) completely untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `speedUpCount` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto Speed Up is bought |
-| `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[prevTier] >= 10` (or already unlocked, so old saves stay playable) |
+| `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, every tier's `tickspeedLevels` entry back to 1 (the baseline — no speed bonus), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`speedUpCount`/`autoSpeedUp`/`autoGlobalTickspeed`/`lastTierTickspeedXpUnlocked`/`lastTierXpConsumed` unchanged (all permanent, including the Auto-Prestige *level*, accumulated Speed Up multiplier, and the last tier's XP-funded tickspeed unlock/total), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
+| `speedUpGame` | `state → state` | Requires `getTierPurchasedCount(lastTier) >= getSpeedUpRequirement(speedUpCount)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels (every tier back to 1)/`globalTickspeedMultiplier` (back to `null`)/`everUnlockedTierIds` (back to the fresh default, same as `prestigeGame`) exactly like a fresh `createInitialGameState`, keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed`/`lastTierTickspeedXpUnlocked`/`lastTierXpConsumed` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier` the same way; see "The global tickspeed multiplier" above) — leaves `prestige` (xp/points/count/highestMilestone) completely untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `speedUpCount` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto Speed Up is bought |
+| `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[tierId] > 0`, `owned[prevTier] >= 10`, or the permanent `everUnlockedTierIds[tierId]` flag (see `latchEverUnlockedTiers`) |
+| `latchEverUnlockedTiers` | `state → state` | Not exported — sets `everUnlockedTierIds[tierId] = true` for any tier whose live `isTierUnlocked` condition is met but not yet flagged; returns the same state reference if nothing newly qualifies. Called from `buyTier` and `tickGame`'s production step, the only two places `owned` can increase |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
 | `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier once `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
@@ -1397,7 +1424,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (465 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (476 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
