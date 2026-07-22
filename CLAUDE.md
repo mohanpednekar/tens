@@ -33,6 +33,7 @@ yarn build        # production build → dist/
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn audit        # yarn npm audit --all --recursive
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
 ```
 
 Run a single test file or test name with Vitest's own filtering:
@@ -316,7 +317,20 @@ src/
                                `mode` defaults to dark and is the seam #140 will drive from system pref + toggle
   App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
   index.jsx                 ← ReactDOM.createRoot entry point
-vite.config.js               ← path aliases + dev/test server config
+vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (see "PWA
+                               support" below)
+scripts/
+  generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
+                               PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
+                               not part of the build — only re-run it if the icon design/palette changes
+public/
+  pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png
+                               ← generated PWA icon assets (see "PWA support" below); the old
+                               create-react-app-era `index.html`/`manifest.json`/`logo192.png`/
+                               `logo512.png` in this directory were unused dead weight (this is a Vite
+                               app — Vite's own root `index.html` is what's actually served) and were
+                               removed rather than left to confuse the new PWA manifest
+  favicon.ico, robots.txt     ← unchanged, still served as-is from this directory
 ```
 
 ## Architecture
@@ -1176,6 +1190,45 @@ components migrate onto these tokens one at a time in later sub-issues.
   `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
   light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
 
+## PWA support
+
+The app is installable as a Progressive Web App on both Android Chrome and iOS Safari — home-screen
+icon, standalone display with no browser chrome, offline-capable after a first visit — via
+`vite-plugin-pwa`, without any app-store presence. This was a deliberate choice over Capacitor/native
+app-store publishing or a React Native rewrite; see `docs/DESIGN_HISTORY.md` for the trade-off
+reasoning.
+
+- **`vite.config.js`** registers `VitePWA({ registerType: 'autoUpdate', includeAssets: [...], manifest:
+  {...} })` alongside the existing `react()` plugin, using the plugin's default `generateSW` strategy
+  (appropriate for this fully static, no-backend SPA — no custom runtime caching rules are configured).
+  `start_url`/`scope` are **not** set explicitly in the manifest config — `vite-plugin-pwa` derives both
+  from the top-level `base: '/tens/'` config automatically, confirmed by inspecting
+  `dist/manifest.webmanifest` after `yarn build` (both resolve to `/tens/`, matching the GitHub Pages
+  project-page subpath).
+- **Manifest fields:** `name`/`short_name: 'Tens'`, `display: 'standalone'`, and `theme_color`/
+  `background_color` both set to `#0c0d11` — the dark theme's `color.page` token value (see "Theming"
+  above) — so the OS install/splash chrome matches the app's own dark ground rather than introducing an
+  unrelated color.
+- **Icons:** `public/pwa-192x192.png`, `public/pwa-512x512.png` (both `purpose` unset, i.e. `any`), and
+  `public/pwa-maskable-512x512.png` (`purpose: 'maskable'`, with extra interior padding so the glyph
+  survives an OS's own icon-mask cropping), plus `public/apple-touch-icon.png` (180×180, iOS's own
+  convention, referenced directly from `index.html` rather than the web manifest since iOS Safari
+  doesn't fully respect the manifest icons list). All four are generated PNGs — see `scripts/
+  generate-pwa-icons.mjs` in "Repo layout" above — rasterized via `sharp` from small inline SVG sources
+  (a centered "10" glyph in the dark theme's `accent` color, `#7c9bff`, on the `page` background,
+  `#0c0d11`) rather than hand-crafted per size.
+- **`index.html`** carries the iOS-specific meta tags `vite-plugin-pwa` doesn't inject on its own:
+  `apple-touch-icon` link, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
+  (`black-translucent`), `apple-mobile-web-app-title`, plus a `theme-color` meta tag (browser-chrome
+  coloring, independent of the manifest's own `theme_color`).
+- **Save data is unaffected.** The service worker (`generateSW`'s precache) only caches build-time
+  static assets (JS/CSS/HTML/icons) — it has no interaction with `localStorage`, which is what
+  `src/game/storage.js`'s save/load already uses exclusively. No change was needed there.
+- **Not wired into `ci.yml`.** `yarn build` already produces a valid `manifest.webmanifest` + service
+  worker as part of the normal production build — no separate PWA-specific CI step exists or is needed;
+  `ci.yml` itself is one of the protected workflow files `autonomous-maintenance.yml` can't edit anyway
+  (see "Automation workflows" below).
+
 ## Funding
 
 `.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar`, so the repo shows a native
@@ -1204,7 +1257,7 @@ that's done the Sponsor button simply won't display/function.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (435 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (437 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

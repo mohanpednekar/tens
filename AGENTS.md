@@ -26,6 +26,7 @@ yarn build        # production build
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn audit        # dependency audit
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png (see PWA support below)
 ```
 
 > **Critical:** Vite 8 uses OXC which infers JSX from extension. Any file
@@ -49,8 +50,21 @@ src/
   theme/                ← design tokens (dark+light) + ThemeProvider + GlobalStyle (see below)
   App.jsx               ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/>
   index.jsx             ← ReactDOM.createRoot entry
-vite.config.js          ← aliases: components/, game/, pages/, theme/ → src/* equivalents
+vite.config.js          ← aliases: components/, game/, pages/, theme/ → src/* equivalents; also
+                           registers the VitePWA plugin (see PWA support below)
+scripts/generate-pwa-icons.mjs ← run via `yarn gen-pwa-icons`; rasterizes PWA icon SVGs with `sharp`
+public/                  ← pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png,
+                           apple-touch-icon.png (generated), favicon.ico, robots.txt
 ```
+
+## PWA support
+
+The app is installable as a PWA (Android Chrome + iOS Safari) via `vite-plugin-pwa`, chosen over
+Capacitor/native app-store publishing or a React Native rewrite specifically because it needs no new
+accounts/secrets/manual review and stays fully within the existing automated build/deploy pipeline —
+see `docs/DESIGN_HISTORY.md`'s Distribution section for the full trade-off reasoning, and `CLAUDE.md`'s
+"PWA support" section for the manifest/icon/meta-tag details. No app-store presence; that's a
+deliberate, human-initiated escalation if ever needed, not something the automation should reach for.
 
 **Theming:** all styling resolves to semantic tokens in `src/theme/tokens.js`, exposing two themes
 (dark default + light) via `themes.{dark,light}` / `buildTheme(mode)`. `theme/index.jsx` provides
