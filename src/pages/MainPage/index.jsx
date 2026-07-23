@@ -1429,18 +1429,30 @@ const MainPage = () => {
                 </InfoDetails>
               </div>
             ) : (
-              TIER_DEFINITIONS.map(tier => {
-                if (!isTierUnlocked(state)(tier)) return null
+              TIER_DEFINITIONS.map((tier, tierIndex) => {
+                const unlocked = isTierUnlocked(state)(tier)
+                // Once any autobuyer-related upgrade (Unlock/Smart/tier tickspeed autobuyer) has
+                // been bought for the previous tier, preview the next tier's row early — showing
+                // its Unlock/tier-tickspeed-autobuyer costs (disabled until the tier itself is
+                // actually reachable) rather than waiting for isTierUnlocked's usual owned-count
+                // gate, so a player who's already investing in automation can see what's coming.
+                const previousTier = tierIndex > 0 ? TIER_DEFINITIONS[tierIndex - 1] : null
+                const previousTierHasAnyAutobuyerUpgrade = previousTier != null && (
+                  (state.autobuyers[previousTier.id] ?? null) !== null ||
+                  (state.smartAutobuyer?.[previousTier.id] ?? false) ||
+                  (state.tierTickspeedAutobuyer?.[previousTier.id] ?? false)
+                )
+                if (!unlocked && !previousTierHasAnyAutobuyerUpgrade) return null
                 const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
                 const isSmart = state.smartAutobuyer?.[tier.id] ?? false
                 const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
                 if (isSmart && isTierTickspeedAutobuyerActive) return null
                 const unlockCost = getAutobuyerUnlockCost(tier.id)
-                const canUnlock = !isFrozen && prestige.points >= unlockCost
+                const canUnlock = unlocked && !isFrozen && prestige.points >= unlockCost
                 const tierTickspeedAutobuyerCost = getTierTickspeedAutobuyerCost(tier.id)
-                const canBuyTierTickspeedAutobuyer = !isFrozen && prestige.points >= tierTickspeedAutobuyerCost
+                const canBuyTierTickspeedAutobuyer = unlocked && !isFrozen && prestige.points >= tierTickspeedAutobuyerCost
                 const smartCost = getSmartAutobuyerCost(tier.id)
-                const canBuySmart = !isFrozen && !isAutobuyerLocked && prestige.points >= smartCost
+                const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && prestige.points >= smartCost
 
                 return (
                   <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>

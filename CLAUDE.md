@@ -547,7 +547,15 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    button until bought, then a persistent badge. The row disappears only once Smart and the tier
    tickspeed autobuyer are *both* bought (which implies Unlock is done too, since Smart requires it).
    Once every tier has bought both (`allTiersFullyAutomated`), the per-tier list inside this category is
-   replaced by a single "full smart autobuyer notice".
+   replaced by a single "full smart autobuyer notice". **Next-tier preview:** a tier's row normally only
+   appears once `isTierUnlocked` (the usual owned-count gate — see "Economy model" below); as an
+   exception, the very next tier's row previews early — Unlock and the tier tickspeed autobuyer costs
+   shown but disabled — as soon as *any one* of the previous tier's three upgrades (Unlock, Smart, or
+   its tier tickspeed autobuyer) has been bought, without waiting for all three. This only ever previews
+   one tier ahead (the tier immediately after the highest currently-unlocked one) and never grants an
+   actually-purchasable row before the tier itself is reachable — `canUnlock`/`canBuySmart`/
+   `canBuyTierTickspeedAutobuyer` all additionally require `isTierUnlocked(state)(tier)`, so a previewed
+   row's buttons stay disabled regardless of PP balance until the tier unlocks for real.
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
    Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
    from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, badge "⏩ Active"
@@ -565,8 +573,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
 No item on this page uses the old "reveal one by one, cheapest first" teaser gating anymore — once the
 page itself is reachable (`!isFirstRun`), every purchase shows immediately, subject only to a real
 prerequisite (Smart requiring that tier's autobuyer already unlocked — the tier tickspeed autobuyer has
-no such prerequisite) or a deliberate progression gate (Auto-Prestige's `allTiersFullyAutomated`, an
-intentional endgame gate, not a cost-ordering teaser).
+no such prerequisite), a deliberate progression gate (Auto-Prestige's `allTiersFullyAutomated`, an
+intentional endgame gate, not a cost-ordering teaser), or the one-tier-ahead automation preview
+described above (Tier Autobuyers category), which is itself not cost-ordered — it triggers off *any*
+upgrade bought on the previous tier, not off which upgrade is cheapest.
 
 The Global Tickspeed Multiplier is *not* one of these PP rows — it's Money-funded and lives on the Game
 view instead (see "Global Tickspeed Multiplier card" above / "The global tickspeed multiplier" below);
@@ -1474,7 +1484,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (488 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (490 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
