@@ -1285,6 +1285,42 @@ test('a tier\'s row disappears only once both Smart and its tier tickspeed autob
   expect(screen.queryByLabelText(/^bytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
+test('the next tier\'s row previews as soon as any autobuyer upgrade is bought for the previous tier, even before the next tier itself is unlocked', async () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    // tier02 isn't unlocked yet: tier01 is owned below the 10-unit unlock threshold, and tier02
+    // itself is unowned.
+    owned: { tier01: 3 },
+    // Only the tier tickspeed autobuyer has been bought for tier01 — Unlock and Smart are both
+    // still untouched, confirming "any" upgrade (not a specific one) triggers the preview.
+    tierTickspeedAutobuyer: { tier01: true },
+    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.getByLabelText(/^kilobytes pp upgrades$/i)).toBeInTheDocument()
+  // Previewed but not actually reachable yet — both controls stay disabled regardless of PP balance.
+  expect(screen.getByRole('button', { name: /unlock kilobytes's autobuyer/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /make kilobytes's tickspeed multiplier upgrade itself automatically/i })).toBeDisabled()
+  // Smart never previews — it requires the autobuyer already unlocked, same as usual.
+  expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
+})
+
+test('the next tier\'s row does not preview before any autobuyer upgrade has been bought for the previous tier', async () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 3 },
+    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.queryByLabelText(/^kilobytes pp upgrades$/i)).not.toBeInTheDocument()
+})
+
 test('the PP Upgrades tab NavDot lights up when only the tier tickspeed autobuyer (not Smart) is affordable', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
