@@ -132,7 +132,7 @@ export const createInitialGameState = () => ({
   // Speed Up, like autoSpeedUp above.
   autoGlobalTickspeed: false,
   // Permanent cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
-  // adds a flat, non-compounding 1% to the last tier's own delivery frequency (see
+  // compounds another 1% into the last tier's own delivery frequency (see
   // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Never reset by
   // prestige/Speed Up, or by consumeXpForLastTierTickspeed itself (it only ever grows).
   lastTierXpConsumed: 0,
@@ -350,12 +350,12 @@ export const getGlobalTickspeedProductionMultiplier = level => {
 export const isLastTierTickspeedXpUnlocked = state => (state.owned?.[getLastTierId()] ?? 0) >= 10
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
-// unlike every other tier's compounding (1 + TICKSPEED_PRODUCTION_STEP)^(level-1) tickspeed
-// multiplier, this is a flat LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
-// consumeXpForLastTierTickspeed, linear rather than compounding — e.g. 37 XP consumed = +37%
-// (×1.37), directly matching the amount invested.
+// compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
+// consumeXpForLastTierTickspeed, matching the same multiplicative form every other tier's own
+// (1 + TICKSPEED_PRODUCTION_STEP)^(level-1) tickspeed multiplier uses — e.g. 37 XP consumed =
+// 1.01^37 ≈ ×1.446, not a flat +37%.
 export const getLastTierXpTickspeedMultiplier = xpConsumed =>
-  1 + LAST_TIER_XP_TICKSPEED_STEP * clampNonNegative(xpConsumed)
+  (1 + LAST_TIER_XP_TICKSPEED_STEP) ** clampNonNegative(xpConsumed)
 
 // The minimum amount a single consumeXpForLastTierTickspeed call may spend: at least
 // LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT (10%) of the XP already consumed this way, so
@@ -1133,8 +1133,8 @@ export const buyTickspeedAutobuyer = state => {
   }
 }
 
-// Spends XP to permanently raise the last tier's own tickspeed multiplier by
-// LAST_TIER_XP_TICKSPEED_STEP (1%) per XP consumed (see getLastTierXpTickspeedMultiplier) — only
+// Spends XP to permanently compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last
+// tier's own tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — only
 // available while isLastTierTickspeedXpUnlocked (the last tier currently owns >= 10), which is
 // when it's currently replacing that tier's Money-funded tickspeed button (see
 // buyTickspeedMultiplier). Every successful consumption, no

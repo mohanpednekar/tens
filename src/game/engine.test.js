@@ -919,7 +919,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       ),
       37
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / 1.37)
+    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / (1.01 ** 37))
   })
 
   it('leaves every other tier on the normal per-tier tickspeed ladder even once the last tier is XP-unlocked', () => {
@@ -2621,9 +2621,14 @@ describe('getLastTierXpTickspeedMultiplier', () => {
     expect(getLastTierXpTickspeedMultiplier(0)).toBe(1)
   })
 
-  it('adds a flat 1% per XP consumed, linearly rather than compounding', () => {
-    expect(getLastTierXpTickspeedMultiplier(37)).toBeCloseTo(1.37)
-    expect(getLastTierXpTickspeedMultiplier(100)).toBeCloseTo(2)
+  it('compounds 1% per XP consumed, matching every other tier\'s multiplicative tickspeed form', () => {
+    expect(getLastTierXpTickspeedMultiplier(37)).toBeCloseTo(1.01 ** 37)
+    expect(getLastTierXpTickspeedMultiplier(100)).toBeCloseTo(1.01 ** 100)
+  })
+
+  it('grows faster than flat/additive growth once enough XP has been consumed', () => {
+    // 1.01^100 ≈ 2.7048 — well above the +100% (×2) a flat/additive formula would give.
+    expect(getLastTierXpTickspeedMultiplier(100)).toBeGreaterThan(2)
   })
 
   it('treats a negative/undefined amount as 0', () => {

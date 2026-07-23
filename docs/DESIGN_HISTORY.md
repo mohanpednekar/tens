@@ -475,6 +475,25 @@ invested) was deliberately kept as a separate, still-permanent counter — the a
 is never lost across a reset, only not *applied* while the live check is unsatisfied; buying back up to
 10 re-engages it at the same cumulative bonus rather than starting over.
 
+### Last tier's XP-funded tickspeed: from additive to multiplicative
+
+`getLastTierXpTickspeedMultiplier` originally computed `1 + LAST_TIER_XP_TICKSPEED_STEP * xpConsumed`
+— a flat, linear +1% per cumulative XP ever consumed (37 XP consumed = exactly +37%, ×1.37). This was a
+deliberate departure at the time from every other tickspeed multiplier in the game (the per-tier
+Money-funded ladder and the global multiplier both compound: `(1 + step) ** level`), chosen so the
+displayed bonus would "directly match the amount invested" — spend 37 XP, see +37%, no mental math.
+
+This was changed to the same multiplicative, compounding form every other tickspeed multiplier uses:
+`(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed`. The additive version meant the last tier's own
+mechanic was the only tickspeed multiplier in the game that didn't compound, an inconsistency with no
+strong gameplay justification once weighed against consistency — and it made the last tier's own
+ceiling different in kind from every other tier's (linear growth is bounded in a way exponential growth
+isn't, which matters for a resource meant to scale toward Prestige-level numbers). The MainPage
+XP-consume button's `+N%` label was updated alongside this to report the actual marginal speedup a given
+consumption contributes (`getLastTierXpTickspeedMultiplier(amount)`, i.e. the ratio of the new multiplier
+to the old one) rather than echoing the raw XP amount spent — under compounding those two numbers
+diverge quickly (100 XP consumed compounds to ×2.70, not ×2.00).
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
