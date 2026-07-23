@@ -1,6 +1,13 @@
 # Tens
 
+[![CI](https://github.com/mohanpednekar/tens/actions/workflows/ci.yml/badge.svg)](https://github.com/mohanpednekar/tens/actions/workflows/ci.yml)
+<!-- Latest-release badge: add [![Release](https://img.shields.io/github/v/release/mohanpednekar/tens)](https://github.com/mohanpednekar/tens/releases/latest) once #52 lands and the first tagged Release exists. -->
+
+Setup status: see the pinned [maintainer checklist](https://github.com/mohanpednekar/tens/issues/62).
+
 Tens is a React incremental game built entirely around the theme of 10. Every mechanic — costs, production, prestige bonuses — uses powers of ten, multiples of ten, or 10% increments.
+
+Play it live at [mohanpednekar.github.io/tens](https://mohanpednekar.github.io/tens/).
 
 ## Scripts
 
