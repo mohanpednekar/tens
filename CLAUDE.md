@@ -18,6 +18,7 @@ of ten. Single page, no routing, no backend — state lives in React and is pers
 | React | 19 | JSX transform enabled |
 | Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
 | Vitest | 4 | jsdom environment, globals enabled |
+| Playwright | 1 | Real-browser end-to-end suite (`yarn test:e2e`), chromium only — see "Testing" below |
 | styled-components | 6 | All component styling |
 | Yarn | 1 (Classic) | `packageManager: yarn@1.22.22` via Corepack; lockfile is v1 format |
 
@@ -32,6 +33,7 @@ yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build → dist/
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
+yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn npm audit --all --recursive
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
 ```
@@ -341,6 +343,13 @@ src/
   index.jsx                 ← ReactDOM.createRoot entry point
 vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (see "PWA
                                support" below)
+playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
+                               "Testing" below) — separate from vite.config.js's own `test` block, which
+                               only configures Vitest
+e2e/
+  golden-path.e2e.js          ← buying Bytes via the real Buy button; Owned/money-balance updates
+  autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
+  prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
 scripts/
   generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
                                PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
@@ -1478,6 +1487,38 @@ already cover the genuinely useful items on that checklist.
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
+
+### End-to-end testing
+
+`yarn test:e2e` (Playwright, config at `playwright.config.js`) is a separate, real-browser suite —
+distinct from `yarn test`'s Vitest/jsdom suite above, and not a replacement for it. It drives the actual
+app in headless Chromium against a real `yarn dev` server (Playwright's `webServer` option starts and
+waits on it automatically; `reuseExistingServer` is enabled outside CI so a session's own already-running
+`yarn dev` is reused instead of a second instance). Bound to `127.0.0.1` (never `0.0.0.0`), matching the
+existing dev/test server convention, and targets the app's real `/tens/` base path.
+
+- **One-time setup**: `npx playwright install --with-deps chromium` (or `yarn playwright install chromium`
+  if the sandboxed environment can't install system package dependencies) — the browser binary isn't
+  bundled with the `@playwright/test` devDependency and isn't pre-installed on the GitHub Actions
+  `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
+- Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
+  `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
+  (488) is unaffected by anything under `e2e/`.
+- Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
+  `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
+  manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
+  object only needs the fields a given test cares about; `storage.js`'s `migrateState` fills in the rest
+  from `createInitialGameState()` on load.
+- Current specs: `e2e/golden-path.e2e.js` (fresh state, buying Bytes via the real Buy button, Owned count
+  and money balance updating including across a real production tick), `e2e/autobuyer-reload.e2e.js` (a
+  save with a tier's autobuyer already unlocked survives a real reload without being silently relocked —
+  a regression class guarded by `migrateState`'s legacy-boolean-vs-numeric handling), and
+  `e2e/prestige.e2e.js` (seeding Money ≥ `GOOGOL`, prestiging from the first-time `FullScreenOverlay`, and
+  confirming resources reset and Prestige Points are awarded).
+- **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
+  the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
+  to `autonomous-maintenance.yml` (see "Automation workflows" below) — a human needs to do that wiring
+  directly. `yarn test:e2e` is a local/manual suite for now.
 
 ## Security notes
 
