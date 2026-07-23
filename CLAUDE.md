@@ -1074,6 +1074,23 @@ and the tickspeed multiplier" below) — this is its one purpose.
   Details disclosure additionally lists the current unspent XP balance and the minimum needed for the
   next consumption.
 
+#### Multiplier overflow safety
+
+`getLastTierXpTickspeedMultiplier` compounds `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (see
+above) against `lastTierXpConsumed`, a counter that's never reset or capped — unlike every other
+tickspeed multiplier in the game, which is funded from a Money balance that's implicitly bounded well
+below the magnitude needed to overflow double-precision float (production freezes at `GOOGOL` = 1e100
+long before a Money-funded multiplier could get anywhere near there). `1.01 ** xpConsumed` overflows to
+`Infinity` around `xpConsumed ≈ 71,333` — reachable in principle over a sufficiently long-running/heavily
+automated save. Dividing `getEffectiveTierTickSpeedSeconds`'s period by an `Infinity` multiplier would
+give exactly `0`, and an unguarded `0` period corrupts `tickGame`'s accumulator math: `ticksElapsed =
+accumulated / 0` becomes `Infinity`, and `accumulated - ticksElapsed * tickSpeed` becomes `Infinity * 0 =
+NaN` — which, via `clampNonNegative` treating any non-finite value as `0`, permanently zeroes the
+produced tier's `owned`/`resources` on every subsequent tick (not a one-off glitch; the `NaN` accumulator
+never recovers on its own). `getEffectiveTierTickSpeedSeconds` guards against this by falling back to
+`MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`) whenever the computed period is non-finite or `<= 0` —
+see its own row in the function table below.
+
 ### Prestige and the Googol freeze
 
 Reaching Money ≥ `GOOGOL` freezes the entire economy. `isProductionFrozen(state)` (`engine.js`) is the
@@ -1357,7 +1374,7 @@ regardless of whether those purchases were manual or automatic.
 | `latchEverUnlockedTiers` | `state → state` | Not exported — sets `everUnlockedTierIds[tierId] = true` for any tier whose live `isTierUnlocked` condition is met but not yet flagged; returns the same state reference if nothing newly qualifies. Called from `buyTier` and `tickGame`'s production step, the only two places `owned` can increase |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
+| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle since `lastTierXpConsumed` compounds unboundedly and is never capped/reset — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
 | `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= 10` — a live check against the last tier's current owned count (not a stored/latched flag), matching the same `>= 10` threshold `isTierUnlocked` uses; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below 10 (e.g. a Prestige/Speed Up reset), then back on again once bought back up to 10 |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
@@ -1516,7 +1533,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (495 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (497 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

@@ -922,6 +922,19 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / (1.01 ** 37))
   })
 
+  it('never returns a non-finite or zero period even once the last tier\'s XP multiplier overflows to Infinity', () => {
+    // 1.01^xpConsumed overflows double-precision float to Infinity somewhere around xpConsumed ~
+    // 71,333 (permanently reachable in principle since prestige.xp/lastTierXpConsumed are never
+    // capped or reset) — dividing the base period by Infinity would give exactly 0, which corrupts
+    // tickGame's accumulator math (see MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS in engine.js).
+    const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+    expect(getLastTierXpTickspeedMultiplier(1_000_000)).toBe(Infinity)
+    const state = withLastTierXpConsumed(withLastTierTickspeedXpUnlocked(createInitialGameState()), 1_000_000)
+    const period = getEffectiveTierTickSpeedSeconds(state, lastTierId)
+    expect(Number.isFinite(period)).toBe(true)
+    expect(period).toBeGreaterThan(0)
+  })
+
   it('leaves every other tier on the normal per-tier tickspeed ladder even once the last tier is XP-unlocked', () => {
     const state = withLastTierTickspeedXpUnlocked(createInitialGameState())
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
@@ -1697,6 +1710,28 @@ describe('tickGame', () => {
     const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
     const after = tickGame(1)(state)
     expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('never corrupts the second-to-last tier\'s owned/resources into NaN even once the last tier\'s XP multiplier overflows to Infinity', () => {
+    // Regression test for MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS: without the safety floor in
+    // getEffectiveTierTickSpeedSeconds, an overflowed (Infinity) multiplier divides the period down
+    // to exactly 0, which turns ticksElapsed into Infinity and the accumulator update into
+    // `Infinity * 0 = NaN` — permanently zeroing the produced tier's owned/resources every tick from
+    // then on (clampNonNegative treats non-finite values as 0).
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const secondToLastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    const state = withOwned(
+      withLastTierXpConsumed(withLastTierTickspeedXpUnlocked(createInitialGameState()), 1_000_000),
+      lastTier.id,
+      50
+    )
+    const after = tickGame(getTierBaseTickSpeedSeconds(lastTier.id))(state)
+    expect(Number.isNaN(after.owned[secondToLastTier.id])).toBe(false)
+    expect(Number.isNaN(after.resources[secondToLastTier.id])).toBe(false)
+    expect(after.owned[secondToLastTier.id]).toBeGreaterThan(0)
+    // A second tick should keep producing normally rather than staying stuck at a corrupted value.
+    const afterTwice = tickGame(getTierBaseTickSpeedSeconds(lastTier.id))(after)
+    expect(afterTwice.owned[secondToLastTier.id]).toBeGreaterThan(after.owned[secondToLastTier.id])
   })
 })
 

@@ -14,6 +14,19 @@ const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0
 // affects actual timing.
 const TICK_ACCUMULATION_EPSILON = 1e-9
 
+// Floor for getEffectiveTierTickSpeedSeconds' returned period — a pure numerical-safety guard,
+// not a balance constant. A sufficiently large tickspeed multiplier (in practice, only the last
+// tier's XP-funded one, which compounds unboundedly since prestige.xp is never reset/capped —
+// see getLastTierXpTickspeedMultiplier) can overflow to Infinity in double-precision float, which
+// would divide the base period down to exactly 0. That 0 then feeds tickGame's
+// `ticksElapsed = accumulated / tickSpeed` as Infinity, and `accumulated - ticksElapsed *
+// tickSpeed` collapses to `Infinity * 0 = NaN`, permanently corrupting that tier's production
+// accumulator (and, via clampNonNegative treating NaN as "not finite", silently zeroing the
+// produced tier's owned/resources every tick from then on — not a one-off glitch, since the NaN
+// accumulator never recovers on its own). Clamping the period to this floor instead keeps
+// ticksElapsed a large-but-finite integer, which is safe.
+const MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS = 1e-9
+
 // Collect all unique resource IDs referenced by the tier definitions
 const allResourceIds = () => {
   const ids = new Set([MONEY_ID])
@@ -517,7 +530,10 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
     ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0)
     : getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
-  return getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
+  // overflow this division to a non-finite/zero period.
+  return Number.isFinite(period) && period > 0 ? period : MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS
 }
 
 // How far a tier's production accumulator has filled toward its next delivered batch, as a

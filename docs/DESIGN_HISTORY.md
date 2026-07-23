@@ -494,6 +494,33 @@ consumption contributes (`getLastTierXpTickspeedMultiplier(amount)`, i.e. the ra
 to the old one) rather than echoing the raw XP amount spent — under compounding those two numbers
 diverge quickly (100 XP consumed compounds to ×2.70, not ×2.00).
 
+### Multiplier overflow safety: the switch to compounding needed a floor
+
+Switching `getLastTierXpTickspeedMultiplier` to compound (previous entry) introduced a real overflow
+path that a code review caught before merge: `lastTierXpConsumed` is a permanent counter, never reset or
+capped, and `1.01 ** xpConsumed` overflows double-precision float to `Infinity` around `xpConsumed ≈
+71,333` — a magnitude that's astronomical but not actually unreachable over a long enough
+heavily-automated save, since nothing in the economy bounds `prestige.xp`/`lastTierXpConsumed` the way
+`GOOGOL` implicitly bounds every Money-funded multiplier. `getEffectiveTierTickSpeedSeconds` used to
+divide the tier's base period by this multiplier with no guard; once the multiplier overflowed, the
+division gave exactly `0`. That `0` period wasn't a safe "instant delivery" — it corrupted
+`tickGame`'s accumulator math: `ticksElapsed = accumulated / 0` became `Infinity`, and `accumulated -
+ticksElapsed * tickSpeed` collapsed to `Infinity * 0 = NaN`. Because `clampNonNegative` treats any
+non-finite value as `0`, the produced (second-to-last) tier's `owned`/`resources` got silently zeroed on
+every tick from that point on — a permanent corruption, not a one-tick glitch, since the `NaN`
+accumulator never recovered on its own.
+
+This is a materially different failure mode than the already-documented, already-accepted overflow in
+`getTierCost` (see "Why `getTierCost` uses a multiplier form" above) — a cost overflowing to `Infinity`
+is harmless because an infinite cost is simply never affordable, a clean no-op. Here the overflowing
+value was a *divisor* feeding a stateful accumulator, so the failure didn't fail safely. The fix adds a
+floor, `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`, deliberately not a
+tunable/exported constant since it's a pure numerical-safety guard rather than a balance value):
+`getEffectiveTierTickSpeedSeconds` now falls back to it whenever the computed period is non-finite or
+`<= 0`. A `1e-9`-second floor still lets `ticksElapsed` grow into a very large but always-finite integer
+(effectively "deliver many times per real tick"), which is safe — only the literal zero/non-finite case
+needed guarding against.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
