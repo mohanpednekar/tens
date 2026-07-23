@@ -1021,10 +1021,11 @@ and the tickspeed multiplier" below) — this is its one purpose.
   spent via `consumeXpForLastTierTickspeed`. Never reset by Prestige, Speed Up, or by
   `consumeXpForLastTierTickspeed` itself (it only ever grows) — so the bonus it drives survives the
   mechanic being temporarily disengaged and later re-engaged.
-- `getLastTierXpTickspeedMultiplier(xpConsumed) = 1 + LAST_TIER_XP_TICKSPEED_STEP * xpConsumed`
-  (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — unlike every other tier's compounding
-  `(1 + TICKSPEED_PRODUCTION_STEP) ** (level - 1)` tickspeed multiplier, this is a flat 1% *per XP ever
-  consumed this way*, linear rather than compounding: 37 XP consumed = +37% (×1.37). While
+- `getLastTierXpTickspeedMultiplier(xpConsumed) = (1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed`
+  (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — the same multiplicative, compounding form every other
+  tier's own `(1 + TICKSPEED_PRODUCTION_STEP) ** (level - 1)` tickspeed multiplier uses, just keyed
+  off cumulative XP consumed instead of a level: 37 XP consumed = `1.01^37` ≈ ×1.446, not a flat
+  +37%. While
   `isLastTierTickspeedXpUnlocked`, `getEffectiveTierTickSpeedSeconds` uses this multiplier for the
   last tier in place of `getTickspeedProductionMultiplier(tickspeedLevels[lastTierId])` — the global
   tickspeed multiplier still applies on top exactly as it does for every other tier.
@@ -1056,7 +1057,13 @@ and the tickspeed multiplier" below) — this is its one purpose.
   showing `🧬 {current unspent XP} XP` — clicking it always spends the player's *entire* current XP
   balance in one action (rather than a fixed/typed amount), since every consumption pays the same
   "reset every other tier's owned quantity and Money" cost regardless of size, so spending it all at
-  once minimizes how often that cost is paid for the same total investment. Gated behind a
+  once minimizes how often that cost is paid for the same total investment. The button's
+  `aria-label`/`title`/confirm-prompt text state the actual resulting `+N%` speedup this specific
+  consumption contributes — computed as `formatBonusPercent(getLastTierXpTickspeedMultiplier(amount))`,
+  not the raw XP amount spent — since the multiplier compounds, that ratio (new ÷ old) happens to be
+  independent of how much XP was already consumed (the prior multiplier cancels out of the ratio), so
+  it's exactly `getLastTierXpTickspeedMultiplier(amount)` regardless of `lastTierXpConsumed` so far.
+  Gated behind a
   `window.confirm` prompt (unlike Speed Up/Prestige, which don't need one) since — unlike those two
   beneficial resets — this one has a real, easy-to-miss downside (wiping out every other tier's
   current generator count and the Money balance, though not their lifetime purchase level/cost
@@ -1066,6 +1073,23 @@ and the tickspeed multiplier" below) — this is its one purpose.
   `getLastTierXpTickspeedMultiplier` instead of `getTickspeedProductionMultiplier` in this case); the
   Details disclosure additionally lists the current unspent XP balance and the minimum needed for the
   next consumption.
+
+#### Multiplier overflow safety
+
+`getLastTierXpTickspeedMultiplier` compounds `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (see
+above) against `lastTierXpConsumed`, a counter that's never reset or capped — unlike every other
+tickspeed multiplier in the game, which is funded from a Money balance that's implicitly bounded well
+below the magnitude needed to overflow double-precision float (production freezes at `GOOGOL` = 1e100
+long before a Money-funded multiplier could get anywhere near there). `1.01 ** xpConsumed` overflows to
+`Infinity` around `xpConsumed ≈ 71,333` — reachable in principle over a sufficiently long-running/heavily
+automated save. Dividing `getEffectiveTierTickSpeedSeconds`'s period by an `Infinity` multiplier would
+give exactly `0`, and an unguarded `0` period corrupts `tickGame`'s accumulator math: `ticksElapsed =
+accumulated / 0` becomes `Infinity`, and `accumulated - ticksElapsed * tickSpeed` becomes `Infinity * 0 =
+NaN` — which, via `clampNonNegative` treating any non-finite value as `0`, permanently zeroes the
+produced tier's `owned`/`resources` on every subsequent tick (not a one-off glitch; the `NaN` accumulator
+never recovers on its own). `getEffectiveTierTickSpeedSeconds` guards against this by falling back to
+`MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`) whenever the computed period is non-finite or `<= 0` —
+see its own row in the function table below.
 
 ### Prestige and the Googol freeze
 
@@ -1252,8 +1276,8 @@ component state, not part of engine state).
                                                           // prestige
   lastTierXpConsumed: 0,                                 // permanent GLOBAL counter: cumulative total XP ever
                                                           // spent via consumeXpForLastTierTickspeed — each XP
-                                                          // spent adds a flat, non-compounding 1% to the last
-                                                          // tier's own delivery frequency (see
+                                                          // spent compounds another 1% into the last tier's
+                                                          // own delivery frequency (see
                                                           // getLastTierXpTickspeedMultiplier). Never reset by
                                                           // Speed Up, prestige, or by
                                                           // consumeXpForLastTierTickspeed itself (only grows)
@@ -1350,9 +1374,9 @@ regardless of whether those purchases were manual or automatic.
 | `latchEverUnlockedTiers` | `state → state` | Not exported — sets `everUnlockedTierIds[tierId] = true` for any tier whose live `isTierUnlocked` condition is met but not yet flagged; returns the same state reference if nothing newly qualifies. Called from `buyTier` and `tickGame`'s production step, the only two places `owned` can increase |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
+| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle since `lastTierXpConsumed` compounds unboundedly and is never capped/reset — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
 | `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= 10` — a live check against the last tier's current owned count (not a stored/latched flag), matching the same `>= 10` threshold `isTierUnlocked` uses; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below 10 (e.g. a Prestige/Speed Up reset), then back on again once bought back up to 10 |
-| `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `1 + LAST_TIER_XP_TICKSPEED_STEP * xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — a flat 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, linear rather than compounding (37 XP consumed = +37%, ×1.37) |
+| `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
 | `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md) |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
@@ -1394,7 +1418,7 @@ regardless of whether those purchases were manual or automatic.
 - `SPEED_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Speed Up (see `getSpeedUpMultiplier`/`speedUpGame`, "Speed Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
 - `AUTO_SPEED_UP_COST = 100` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Speed Up
 - `TICKSPEED_AUTOBUYER_COST = 20` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
-- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP ever consumed via `consumeXpForLastTierTickspeed` permanently adds a flat, non-compounding 1% to the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier while it currently has >= 10 owned (see "The last tier's XP-funded tickspeed" above)
+- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP ever consumed via `consumeXpForLastTierTickspeed` permanently compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier while it currently has >= 10 owned (see "The last tier's XP-funded tickspeed" above)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 
@@ -1509,7 +1533,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (494 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (497 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

@@ -162,10 +162,10 @@ export const TICKSPEED_AUTOBUYER_COST = 20
 // (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
-// adds a flat, non-compounding LAST_TIER_XP_TICKSPEED_STEP (1%) to the last tier's own delivery
-// frequency, permanently (this accumulated bonus is never lost, even while owned dips below 10 and
-// the mechanic is temporarily disengaged). "Last tier" (not a hardcoded tier id) so this stays
-// correct if TIER_DEFINITIONS ever grows a new final entry.
+// compounds another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own delivery frequency,
+// permanently (this accumulated bonus is never lost, even while owned dips below 10 and the
+// mechanic is temporarily disengaged). "Last tier" (not a hardcoded tier id) so this stays correct
+// if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat

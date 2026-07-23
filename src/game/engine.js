@@ -14,6 +14,19 @@ const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0
 // affects actual timing.
 const TICK_ACCUMULATION_EPSILON = 1e-9
 
+// Floor for getEffectiveTierTickSpeedSeconds' returned period — a pure numerical-safety guard,
+// not a balance constant. A sufficiently large tickspeed multiplier (in practice, only the last
+// tier's XP-funded one, which compounds unboundedly since prestige.xp is never reset/capped —
+// see getLastTierXpTickspeedMultiplier) can overflow to Infinity in double-precision float, which
+// would divide the base period down to exactly 0. That 0 then feeds tickGame's
+// `ticksElapsed = accumulated / tickSpeed` as Infinity, and `accumulated - ticksElapsed *
+// tickSpeed` collapses to `Infinity * 0 = NaN`, permanently corrupting that tier's production
+// accumulator (and, via clampNonNegative treating NaN as "not finite", silently zeroing the
+// produced tier's owned/resources every tick from then on — not a one-off glitch, since the NaN
+// accumulator never recovers on its own). Clamping the period to this floor instead keeps
+// ticksElapsed a large-but-finite integer, which is safe.
+const MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS = 1e-9
+
 // Collect all unique resource IDs referenced by the tier definitions
 const allResourceIds = () => {
   const ids = new Set([MONEY_ID])
@@ -132,7 +145,7 @@ export const createInitialGameState = () => ({
   // Speed Up, like autoSpeedUp above.
   autoGlobalTickspeed: false,
   // Permanent cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
-  // adds a flat, non-compounding 1% to the last tier's own delivery frequency (see
+  // compounds another 1% into the last tier's own delivery frequency (see
   // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Never reset by
   // prestige/Speed Up, or by consumeXpForLastTierTickspeed itself (it only ever grows).
   lastTierXpConsumed: 0,
@@ -350,12 +363,12 @@ export const getGlobalTickspeedProductionMultiplier = level => {
 export const isLastTierTickspeedXpUnlocked = state => (state.owned?.[getLastTierId()] ?? 0) >= 10
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
-// unlike every other tier's compounding (1 + TICKSPEED_PRODUCTION_STEP)^(level-1) tickspeed
-// multiplier, this is a flat LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
-// consumeXpForLastTierTickspeed, linear rather than compounding — e.g. 37 XP consumed = +37%
-// (×1.37), directly matching the amount invested.
+// compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
+// consumeXpForLastTierTickspeed, matching the same multiplicative form every other tier's own
+// (1 + TICKSPEED_PRODUCTION_STEP)^(level-1) tickspeed multiplier uses — e.g. 37 XP consumed =
+// 1.01^37 ≈ ×1.446, not a flat +37%.
 export const getLastTierXpTickspeedMultiplier = xpConsumed =>
-  1 + LAST_TIER_XP_TICKSPEED_STEP * clampNonNegative(xpConsumed)
+  (1 + LAST_TIER_XP_TICKSPEED_STEP) ** clampNonNegative(xpConsumed)
 
 // The minimum amount a single consumeXpForLastTierTickspeed call may spend: at least
 // LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT (10%) of the XP already consumed this way, so
@@ -517,7 +530,10 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
     ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0)
     : getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
-  return getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
+  // overflow this division to a non-finite/zero period.
+  return Number.isFinite(period) && period > 0 ? period : MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS
 }
 
 // How far a tier's production accumulator has filled toward its next delivered batch, as a
@@ -1133,8 +1149,8 @@ export const buyTickspeedAutobuyer = state => {
   }
 }
 
-// Spends XP to permanently raise the last tier's own tickspeed multiplier by
-// LAST_TIER_XP_TICKSPEED_STEP (1%) per XP consumed (see getLastTierXpTickspeedMultiplier) — only
+// Spends XP to permanently compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last
+// tier's own tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — only
 // available while isLastTierTickspeedXpUnlocked (the last tier currently owns >= 10), which is
 // when it's currently replacing that tier's Money-funded tickspeed button (see
 // buyTickspeedMultiplier). Every successful consumption, no
