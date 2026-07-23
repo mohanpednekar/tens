@@ -42,7 +42,9 @@ src/
     useIncrementalGame.js ← React hook; wires engine to useState + localStorage
     storage.js          ← localStorage save/load/clear + migration logic
   components/
-    Button/             ← styled button; accepts color prop
+    Button/             ← styled button; accepts a semantic `variant` prop resolved from theme
+                          color tokens (primary/success/prestige/info/smart/neutral/ghost/danger);
+                          the older raw `color` prop still works (deprecated, `variant` wins if both given)
     Money/              ← styled money display
     StatCard/           ← styled card container
   pages/
