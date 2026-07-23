@@ -829,14 +829,14 @@ Unspent PP has one passive effect (gated behind a one-time unlock) and seven act
   automates the Money-funded *global* tickspeed multiplier instead.
 - **Active — Auto Speed Up:** `buyAutoSpeedUp(state)` permanently spends `AUTO_SPEED_UP_COST` PP (`100`
   — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more
-  often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it
-  automates is a much smaller, earlier-game upgrade than Speed Up) to set `autoSpeedUp = true`. Once
+  often, and tied with `TICKSPEED_AUTOBUYER_COST` below) to set `autoSpeedUp = true`. Once
   bought, `tickGame` calls `speedUpGame` every tick (edge-triggered, re-validating eligibility
   internally). No-op if already bought, insufficient points, or frozen. Permanent — never reset.
 - **Active — Tickspeed Autobuyer:** `buyTickspeedAutobuyer(state)` permanently spends
-  `TICKSPEED_AUTOBUYER_COST` PP (`20` — the cheapest of all four global PP automation unlocks, since
-  the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade — unlocked as
-  soon as the second tier is owned — than what any of the other three automate) to set
+  `TICKSPEED_AUTOBUYER_COST` PP (`100` — tied with `AUTO_SPEED_UP_COST` as the cheapest of all four
+  global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller,
+  earlier-game upgrade — unlocked as soon as the second tier is owned — than what any of the other
+  three automate) to set
   `autoGlobalTickspeed = true`. Same one-time-unlock pattern as Auto Speed Up rather than Auto-Prestige's
   leveled one, since there's no cadence to speed up here either: once bought, `tickGame` calls
   `buyGlobalTickspeedMultiplier` every tick (edge-triggered, re-validating its own eligibility
@@ -1357,8 +1357,8 @@ regardless of whether those purchases were manual or automatic.
 - `AUTO_PRESTIGE_COST_MULTIPLIER = 2` — Auto-Prestige's cost doubles with each level purchased
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
 - `SPEED_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Speed Up (see `getSpeedUpMultiplier`/`speedUpGame`, "Speed Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
-- `AUTO_SPEED_UP_COST = 100` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Speed Up
-- `TICKSPEED_AUTOBUYER_COST = 20` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
+- `AUTO_SPEED_UP_COST = 100` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, and tied with `TICKSPEED_AUTOBUYER_COST` below
+- `TICKSPEED_AUTOBUYER_COST = 100` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — tied with `AUTO_SPEED_UP_COST` as the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
 - `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP ever consumed via `consumeXpForLastTierTickspeed` permanently adds a flat, non-compounding 1% to the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier once it reaches 10 lifetime purchases (see "The last tier's XP-funded tickspeed" above)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
