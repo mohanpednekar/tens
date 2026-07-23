@@ -146,17 +146,18 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up
-// itself fires far more often than either of those two over a run — tied with
-// TICKSPEED_AUTOBUYER_COST below.
+// itself fires far more often than either of those two over a run — but pricier than
+// TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
+// smaller, earlier-game upgrade than Speed Up.
 export const AUTO_SPEED_UP_COST = 100
 // One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
 // tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
-// eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). Tied with
-// AUTO_SPEED_UP_COST above as the cheapest of the four global PP automation unlocks (see
-// PRESTIGE_SPEED_BONUS_UNLOCK_COST above and AUTO_PRESTIGE_COST below), since the global
-// tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as
-// the second tier is owned) than any of the actions those other three automate.
-export const TICKSPEED_AUTOBUYER_COST = 100
+// eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
+// four global PP automation unlocks (see PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_SPEED_UP_COST
+// above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
+// much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
+// the actions those other three automate.
+export const TICKSPEED_AUTOBUYER_COST = 20
 // Once the last tier reaches 10 lifetime purchases, its Money-funded tickspeed multiplier (see
 // TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is permanently replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/

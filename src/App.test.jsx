@@ -743,19 +743,19 @@ test('the global tickspeed panel renders above the tier list, not below it', () 
   expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Bytes layer'))
 })
 
-test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 100 PP to enable it', async () => {
+test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 100 prestige points/i })
+  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })
   expect(tickspeedAutobuyerButton).toBeEnabled()
 
   await user.click(tickspeedAutobuyerButton)
@@ -771,13 +771,13 @@ test('the Enable Tickspeed Autobuyer button stays disabled without enough Presti
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 100 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })).toBeDisabled()
 })
 
 test('the Enable Auto Speed Up button stays disabled without enough Prestige Points', async () => {
