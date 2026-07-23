@@ -1478,7 +1478,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (493 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (494 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).
