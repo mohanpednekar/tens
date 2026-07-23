@@ -600,11 +600,10 @@ const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 
 // The global tickspeed multiplier's bonus percent, shown with up to 2 decimal places (trimming a
 // trailing ".00"/trailing zero, same style as formatRate) while it's still under 100% — its
-// milestone-driven jump (see GLOBAL_TICKSPEED_MILESTONE_STEP/getGlobalTickspeedProductionMultiplier
-// in engine.js) stacks on top of an already-fractional compounding base, so a whole-percent
-// rounding would otherwise hide most of its actual value. Once it reaches/crosses 100% it's
-// rounded to a whole percent instead, same as formatBonusPercent, since precision matters less at
-// that scale.
+// regular 1%-per-level compounding (see GLOBAL_TICKSPEED_PRODUCTION_STEP/
+// getGlobalTickspeedProductionMultiplier in engine.js) lands on fractional values that a
+// whole-percent rounding would otherwise obscure. Once it reaches/crosses 100% it's rounded to a
+// whole percent instead, same as formatBonusPercent, since precision matters less at that scale.
 const formatGlobalTickspeedBonusPercent = multiplier => {
   const percent = (multiplier - 1) * 100
   return percent < 100
