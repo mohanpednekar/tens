@@ -296,12 +296,34 @@ src/
                                keyed last-save timestamp used to compute offline progress
   components/
     Button/index.jsx        ← styled button (`.jsx`, not `.js` — see `ButtonContent` below, which
-                               needs JSX); every caller passes `color` explicitly (no defaultProps —
+                               needs JSX); accepts a semantic `variant` prop (`primary`/`success`/
+                               `prestige`/`info`/`smart`/`neutral`/`ghost`/`danger`) resolved against
+                               `theme.color` tokens (`accent`/`good`/`warn`/`info`/`violet`/`textMuted`/
+                               `textMuted`/`danger` respectively — `prestige` deliberately maps to `warn`,
+                               the token whose own palette comment already documents it as "prestige
+                               gold") via a small internal `VARIANT_TOKEN` map, so a variant automatically
+                               renders correctly in both dark and light mode. The older raw `color` prop
+                               (a literal hex/CSS-color string) is **deprecated but still fully
+                               supported** — `resolveColor` prefers `variant` when both are given, and
+                               falls back to `color` when no `variant` is passed, so no existing
+                               `MainPage` call site needed to change (they migrate to `variant`
+                               region-by-region in later token-migration sub-issues; no defaultProps —
                                React 19 dropped defaultProps support for function components, so it's a
-                               silent no-op there), plus optional progress-fill props (`$progress`,
-                               `$secondaryProgress`, `$progressColor`, `$secondaryProgressColor`, `$pulse`)
-                               rendered as an on-button gradient fill (reduced alpha when `disabled`), a
-                               `:focus-visible` outline colored from the button's own `color` prop, no
+                               silent no-op there). The button's own background is
+                               `theme.color.surfaceSunken` (previously a hardcoded `#262626`). The
+                               `$pulse` glow's CSS custom property (`--glow-rgb`) is derived generically
+                               via a small `hexToRgb` helper from whatever color `resolveColor` resolves
+                               to (variant-token hex or a literal hex `color`), with a tiny
+                               `NAMED_GLOW_RGB` fallback table only for the handful of non-hex CSS
+                               keyword colors legacy callers still pass (e.g. `white`) — this replaced
+                               the old hardcoded-per-literal-color `GLOW_RGB` map, so the glow now works
+                               for every variant/token color in both themes without enumerating each one.
+                               Optional progress-fill props (`$progress`, `$secondaryProgress`,
+                               `$progressColor`, `$secondaryProgressColor`, `$pulse`) still render as an
+                               on-button gradient fill (reduced alpha when `disabled`; the fill's own
+                               default colors are `theme.color.good`/`theme.color.warn` when a caller
+                               passes neither `$progressColor` nor `$secondaryProgressColor`), a
+                               `:focus-visible` outline colored from the button's resolved color, no
                                opacity-based disabled dimming (color + cursor signal disabled state
                                instead), and `display: flex` with `align-items`/`justify-content: center`
                                so plain (icon-less) button text still centers normally. Also exports
