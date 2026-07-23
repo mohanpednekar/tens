@@ -357,6 +357,16 @@ describe('schema migration', () => {
       expect(loaded.owned).toHaveProperty(tier.id)
     })
   })
+
+  it('strips a stale lastTierTickspeedXpUnlocked flag from an older save (replaced by a live owned >= 10 check)', () => {
+    const oldSave = {
+      resources: { Ones: 10 },
+      lastTierTickspeedXpUnlocked: true,
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
+  })
 })
 
 describe('clearGameState', () => {

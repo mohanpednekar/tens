@@ -34,6 +34,10 @@ const migrateTierKeys = map =>
 // and old save files remain playable after schema changes.
 const migrateState = saved => {
   const fresh = createInitialGameState()
+  // lastTierTickspeedXpUnlocked was a stored latch flag, since removed in favor of a live
+  // owned[lastTierId] >= 10 check (see engine.js's isLastTierTickspeedXpUnlocked) — strip it from
+  // an old save rather than carrying it forward forever as unread dead data.
+  const { lastTierTickspeedXpUnlocked: _unusedLastTierTickspeedXpUnlocked, ...savedWithoutRemovedFields } = saved
   // Convert legacy boolean autobuyers to level numbers (true → 1, false → null for locked).
   // Numeric values pass through unchanged — they must NOT be remapped to null here, or an
   // in-progress autobuyer would silently relock on the very next load, since a legitimate
@@ -79,7 +83,7 @@ const migrateState = saved => {
   }
   return {
     ...fresh,
-    ...saved,
+    ...savedWithoutRemovedFields,
     resources: { ...fresh.resources, ...migrateTierKeys(saved.resources) },
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
