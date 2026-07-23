@@ -484,14 +484,14 @@ the compact collapsed view never changes shape as the level climbs; the descript
 (and reachable by `aria-describedby`/text-content queries) even while the `<details>` itself is
 collapsed. The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
 not the whole-number `formatBonusPercent` used for the per-tier `⚙ +N%` badge — the global
-multiplier's milestone bonus (see `GLOBAL_TICKSPEED_MILESTONE_STEP`/"The global tickspeed multiplier"
-below) stacks on top of an already-fractional compounding base, so it shows up to 2 decimal places
+multiplier's regular 1%-per-level compounding (see `GLOBAL_TICKSPEED_PRODUCTION_STEP`/"The global
+tickspeed multiplier" below) lands on fractional values, so it shows up to 2 decimal places
 (trimming a trailing `.00`/trailing zero, same style as `formatRate`) while the cumulative bonus is
-still under 100%, then rounds to a whole percent once it reaches/crosses 100% (×2.00), matching every
-other multiplier badge in the app once the numbers get large. The button carries `$progress` (Money ÷
-cost) the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or `🌐 Upgrade for
-{cost}` after — its `aria-label` alone still spells out the current cumulative bonus (same
-`formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
+still under 100%, then rounds to a whole percent once it reaches/crosses 100% (×2.00), matching
+every other multiplier badge in the app once the numbers get large. The button carries `$progress`
+(Money ÷ cost) the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or
+`🌐 Upgrade for {cost}` after — its `aria-label` alone still spells out the current cumulative bonus
+(same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
 `isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
 `SpeedUpCard`/`PrestigeCard` — once tier02 has ever been owned (or the multiplier is already active),
@@ -736,10 +736,12 @@ the autobuyer and Auto-Prestige attempt-budget threshold checks.
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
 speedUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
 `getPrestigeProductionMultiplier(points)` once `prestigeSpeedBonusUnlocked` is true, else a flat `1`),
-`owned`/`ticksElapsed` are already integers and `getPurchaseMilestoneMultiplier`/`getSpeedUpMultiplier`
-are always powers of 2 — the only fractional factor is `getPrestigeProductionMultiplier` (`1 + 0.01 ×
+`owned`/`ticksElapsed` are already integers, `getSpeedUpMultiplier` is always a power of 2, and
+`getPurchaseMilestoneMultiplier` is always a product of powers of 2 and 10 (see its own row above) —
+the only fractional factor is `getPrestigeProductionMultiplier` (`1 + 0.01 ×
 points`). **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
-(`1.1^(level - 1)`) and `getGlobalTickspeedProductionMultiplier` (`1.1^level`) are instead divided into
+(`1.1^(level - 1)`) and `getGlobalTickspeedProductionMultiplier` (compounding, with a milestone level
+using a bigger step — see its own row above) are instead divided into
 the *period* `ticksElapsed` counts against (see `getEffectiveTierTickSpeedSeconds`/"Tier production
 tickspeed" above), so their effect on the eventual total is unchanged but arrives via more completed
 periods rather than a bigger per-period credit. `tickGame` wraps the whole product in `Math.floor(...)`
@@ -897,10 +899,17 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
 #### The global tickspeed multiplier
 
 A **Money-funded** (not PP-funded) global counterpart to the per-tier tickspeed multiplier above —
-instead of speeding up one tier's delivery frequency, each level speeds up *every* tier's delivery
-frequency by another 1% at once (again with no effect on the size of any single delivery). A single
-leveled upgrade track (not per-tier), mirroring Auto-Prestige's `null`/level pattern, and lives on the
-Game view as its own `GlobalTickspeedCard` (see "MainPage reference" above) rather than on the PP
+instead of speeding up one tier's delivery frequency, it speeds up *every* tier's delivery frequency
+at once (again with no effect on the size of any single delivery). Every level compounds
+`GLOBAL_TICKSPEED_PRODUCTION_STEP` (1%, the same regular per-level growth the per-tier multiplier's
+own step is themed on), **except** a milestone level, which compounds
+`GLOBAL_TICKSPEED_MILESTONE_STEP` (10%) instead of the regular 1% for that one level — still fully
+multiplicative, not additive. The milestone *spacing* itself widens by a factor of ten every time
+the level crosses another power-of-ten range: every 10th level up to 100 (10, 20, …, 100 — 10
+milestone levels), then every 100th level from 100 to 1000 (200, 300, …, 1000 — 9 more milestone
+levels), then every 1000th level from 1000 to 10000, and so on indefinitely. A single leveled
+upgrade track (not per-tier), mirroring Auto-Prestige's `null`/level pattern, and lives on the Game
+view as its own `GlobalTickspeedCard` (see "MainPage reference" above) rather than on the PP
 Upgrades page or any individual tier row — it has nothing to do with Prestige Points or having ever
 prestiged.
 
@@ -914,19 +923,23 @@ prestiged.
   100 Money for the next level, 1000 after that, and so on — spent from the same `Ones` balance as
   buying tiers themselves (`resources[MONEY_ID]`), with no "leave 1 behind" reserve, since Money isn't
   itself an "owned" generator count (same as `buyTier`).
-- `getGlobalTickspeedProductionMultiplier(level) = (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** level +
-  GLOBAL_TICKSPEED_MILESTONE_STEP * floor(level / 10)` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`,
-  `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1).
-  Unlike the per-tier tickspeed multiplier — where level 1 is a bonus-free baseline granted by a
-  separate PP unlock step — buying this global track directly grants its effect: level 1 (the very
-  first purchase) already speeds up every tier's delivery frequency by 1% (×1.01), level 2 by another
-  1% on top (×1.0201 total), always compounding multiplicatively across levels for the base term. On
-  top of that ongoing compounding growth, every 10th completed level adds a flat, non-compounding +10%
-  bonus — purely additive, so 10 of these milestones (level 100) sum to exactly +100% on their own,
-  stacked on top of whatever the compounding base has grown to by then (e.g. level 10 is `1.01^10 +
-  0.10` ≈ ×1.2046, not just ×1.10). Divided directly into `getEffectiveTierTickSpeedSeconds` for every
-  tier alongside that tier's own tickspeed multiplier (see "Tier production tickspeed" above) — not
-  multiplied into the production credit itself.
+- `getGlobalTickspeedProductionMultiplier(level)`: let `milestoneLevels =
+  countGlobalTickspeedMilestones(level)` and `regularLevels = level - milestoneLevels`; returns
+  `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** regularLevels * (1 + GLOBAL_TICKSPEED_MILESTONE_STEP)
+  ** milestoneLevels` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`, `GLOBAL_TICKSPEED_MILESTONE_STEP =
+  0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1). `countGlobalTickspeedMilestones`
+  (a module-private helper in `engine.js`) counts how many of the levels up to `level` are milestone
+  levels: spacing starts at 10 (levels 10, 20, …, 100 — 10 milestones by level 100), then widens to
+  100 once past level 100 (200, 300, …, 1000 — 9 more milestones by level 1000), then to 1000 past
+  level 1000, and so on — each range contributes one milestone per multiple of its spacing, and the
+  boundary level itself (100, 1000, …) is only ever counted once, as the last milestone of the
+  *narrower* spacing, not again as the first of the wider one. Every level compounds *something* —
+  a regular level compounds the 1% step, a milestone level compounds the 10% step instead — so
+  unlike a purely milestone-gated design, the bonus keeps growing (fractionally) between milestones
+  too, and a milestone is a *bigger* compounding step at that level rather than an isolated bonus.
+  Divided directly into `getEffectiveTierTickSpeedSeconds` for every tier alongside that tier's own
+  tickspeed multiplier (see "Tier production tickspeed" above) — not multiplied into the production
+  credit itself.
 - `buyGlobalTickspeedMultiplier(state)` spends Money to raise the level by 1 — a no-op if
   `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough
   Money. `state.globalTickspeedMultiplier` (the level) **resets to `null` (not-yet-bought) on both a
@@ -1250,7 +1263,8 @@ it via the tier above's tick, an autobuyer's automatic purchase, and spending it
 upgrade all update both by the same amount. They represent "how many generators you have" and "how much of
 that tier's resource you can spend" respectively, which happen to be the same number by design. `purchased`
 is separate: it only ever increases and is what `getTierCost` scales against; it also drives production
-directly, doubling every time it crosses another block of 10 (see `getPurchaseMilestoneMultiplier`) — the
+directly, normally doubling every time it crosses another block of 10 (see
+`getPurchaseMilestoneMultiplier` — every 10th such block is a bigger ×10 milestone instead) — the
 same boundary where `getTierCost`'s Fibonacci-driven multiplier steps up (see `getTierCost`),
 regardless of whether those purchases were manual or automatic.
 
@@ -1280,7 +1294,7 @@ regardless of whether those purchases were manual or automatic.
 | `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough Money; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getGlobalTickspeedMultiplierCost(currentLevel)`, spending `resources[MONEY_ID]` directly (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
 | `buyAutoSpeedUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoSpeedUp` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SPEED_UP_COST` PP and permanently sets `autoSpeedUp = true`, making `tickGame` call `speedUpGame` automatically every tick |
 | `buyTickspeedAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoGlobalTickspeed` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `TICKSPEED_AUTOBUYER_COST` PP and permanently sets `autoGlobalTickspeed = true`, making `tickGame` call `buyGlobalTickspeedMultiplier` automatically every tick |
-| `getPurchaseMilestoneMultiplier` | `purchased → number` | `2 ** floor(purchased/10)` — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost`'s Fibonacci-driven multiplier steps up. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
+| `getPurchaseMilestoneMultiplier` | `purchased → number` | `blocks = floor(purchased/10)`, `megaBlocks = floor(blocks/10)`, `regularBlocks = blocks - megaBlocks`; returns `PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks` (`2`, `10`) — doubles a tier's own passive production at every block-of-10 purchases, the same boundary where `getTierCost`'s Fibonacci-driven multiplier steps up, **except** every 10th such block (i.e. every 100th lifetime purchase) contributes a 10x factor instead of the regular 2x for that one block, compounding into the rest (e.g. purchased=100 → `2^9 * 10^1` = 5120, not `2^10` = 1024). Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getSpeedUpMultiplier` | `speedUpCount → number` | `SPEED_UP_MULTIPLIER_BASE ** speedUpCount` (2^speedUpCount) — the unconditional, stacking production-speed multiplier from Speed Up activations; no unlock purchase needed, unlike `getPrestigeProductionMultiplier` |
 | `getSpeedUpRequirement` | `speedUpCount → number` | `10 * (speedUpCount + 1)` — how many lifetime purchases of the last tier the *next* Speed Up needs: 10 for the first activation, 20 for the second, 30 for the third, … |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
@@ -1292,7 +1306,7 @@ regardless of whether those purchases were manual or automatic.
 | `getAutoPrestigeCost` | `currentLevel → number` | `AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel` — 1000 PP to activate (level 0→1), doubling each level after (2000, 4000, …) |
 | `getAutoPrestigeAttemptRate` | `autoPrestigeLevel → number` | `1.1 ** (level - 1) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS` (`null` treated as level 1 defensively); the per-tick Auto-Prestige attempt-budget increment; level 1 fires roughly every 1000 seconds, each level after that 10% sooner, compounding |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
-| `getGlobalTickspeedProductionMultiplier` | `level → number` | `1.01 ** level + 0.10 * floor(level / 10)` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`, `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — unlike the per-tier tickspeed multiplier, level 1 already grants the first +1% (there's no separate unlock step to have already spent it on); the `1.01 ** level` term compounds multiplicatively across levels, while the milestone term adds a flat, non-compounding +10% every 10 completed levels on top (so 10 milestones — level 100 — sum to exactly +100%) |
+| `getGlobalTickspeedProductionMultiplier` | `level → number` | `milestoneLevels = countGlobalTickspeedMilestones(level)`, `regularLevels = level - milestoneLevels`; returns `1.01 ** regularLevels * 1.10 ** milestoneLevels` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`, `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — every level compounds, a regular level at 1%, a milestone level at 10% instead. `countGlobalTickspeedMilestones` (module-private) counts milestones with spacing 10 up to level 100 (10 milestones), spacing 100 from 100 to 1000 (9 more), spacing 1000 from 1000 to 10000 (9 more), and so on |
 | `getPrestigePointsAwarded` | `money → number` | `floor(log10(money) / log10(GOOGOL))` — the log, base GOOGOL, of the money balance; always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, every tier's `tickspeedLevels` entry back to 1 (the baseline — no speed bonus), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`speedUpCount`/`autoSpeedUp`/`autoGlobalTickspeed`/`lastTierTickspeedXpUnlocked`/`lastTierXpConsumed` unchanged (all permanent, including the Auto-Prestige *level*, accumulated Speed Up multiplier, and the last tier's XP-funded tickspeed unlock/total), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), leaves XP untouched, adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
@@ -1335,8 +1349,10 @@ regardless of whether those purchases were manual or automatic.
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — PP cost per tier index for unlocking a tier's autobuyer (see `getAutobuyerUnlockCost`) — a flat, small per-tier increment: 1 PP for the first tier, up through 10 PP for the 10th/last tier, deliberately independent of the much steeper `TICKSPEED_MULTIPLIER_BASE_EXPONENT` ladder above
 - `SMART_AUTOBUYER_COST_MULTIPLIER = 10` — the "smart" autobuyer costs this many times more PP than unlocking that same tier's autobuyer (10 PP through 100 PP across the ten tiers)
 - `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2` — the per-tier tickspeed autobuyer (see `getTierTickspeedAutobuyerCost`/`buyTierTickspeedAutobuyer`) costs this many times more PP than unlocking that same tier's autobuyer (2 PP through 20 PP across the ten tiers) — cheaper than Smart's 10x since it only automates one additional purchase, not the tier's whole buying cadence
-- `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — each global tickspeed multiplier level speeds up *every* tier's delivery frequency by another 1% at once, not the amount delivered (see `getGlobalTickspeedProductionMultiplier`) — a separate constant from `TICKSPEED_PRODUCTION_STEP` above (which stays 10% for the per-tier multiplier), since the two upgrades are independent and can be tuned separately. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
-- `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10` — an additive (non-compounding) bonus stacked on top of `GLOBAL_TICKSPEED_PRODUCTION_STEP`'s compounding growth for every 10 completed levels of the global tickspeed multiplier (see `getGlobalTickspeedProductionMultiplier`) — +10% at level 10, +20% at level 20, …, exactly +100% at level 100 (10 milestones × 10%)
+- `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the regular per-level compounding rate for the global tickspeed multiplier (see `getGlobalTickspeedProductionMultiplier`) — every level compounds this rate, except a milestone level, which compounds `GLOBAL_TICKSPEED_MILESTONE_STEP` instead of this. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
+- `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10` — the compounding rate a *milestone* level of the global tickspeed multiplier uses in place of `GLOBAL_TICKSPEED_PRODUCTION_STEP` for that one level (see `getGlobalTickspeedProductionMultiplier`) — still multiplicative, not a flat bonus. Milestone spacing itself starts at every 10 levels (up to level 100), then widens to every 100 levels (100 to 1000), then every 1000 (1000 to 10000), and so on — see "The global tickspeed multiplier" above
+- `PURCHASE_MILESTONE_MULTIPLIER_BASE = 2` — the regular per-block-of-10 production-doubling factor for a tier's own lifetime purchase count (see `getPurchaseMilestoneMultiplier`)
+- `PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10` — every 10th such block (i.e. every 100th lifetime purchase) uses this larger factor instead of `PURCHASE_MILESTONE_MULTIPLIER_BASE` for that one block, compounding into the rest (see `getPurchaseMilestoneMultiplier`)
 - `AUTO_PRESTIGE_COST = 1000` — PP cost to activate Auto-Prestige (level 1); a single global upgrade track, not per-tier. Priced above `AUTO_SPEED_UP_COST` since Auto-Prestige only ever fires once per run at most, versus Speed Up's much higher activation frequency
 - `AUTO_PRESTIGE_COST_MULTIPLIER = 2` — Auto-Prestige's cost doubles with each level purchased
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
@@ -1458,7 +1474,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (482 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (488 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'Ones'`, tier ids `tier01`/`tier02`/… with display names `Bytes`/`Kilobytes`/…) — don't
   reintroduce the older lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) left behind by an unfinished
   earlier rename (see `docs/DESIGN_HISTORY.md`).

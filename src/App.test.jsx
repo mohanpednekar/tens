@@ -845,6 +845,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed Multiplier' })).not.toHaveTextContent(/lv\.1|\+1%/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
+  // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
 })
@@ -860,7 +861,7 @@ test('the Enable Global Tickspeed Multiplier button stays disabled without enoug
   expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeDisabled()
 })
 
-test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the cumulative bonus', () => {
+test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 999 },
     globalTickspeedMultiplier: 2,
@@ -874,12 +875,12 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
   expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.2/i)
-  // Level 2 is still under the first 10-level milestone (1.01^2 ≈ ×1.0201, no milestone bonus
-  // yet), so the bonus shows with its fractional 2 decimal places rather than rounding to +2%.
+  // Level 2 is still below the first 10-level milestone — two regular 1% levels compounded
+  // (1.01^2 ≈ ×1.0201) land on a fractional percentage, shown to 2 decimal places.
   expect(panel).toHaveTextContent(/\+2\.01%/i)
 })
 
-test('the global tickspeed bonus shows up to 2 decimal places below 100%, and a milestone bonus every 10 levels', () => {
+test('the global tickspeed bonus jumps at the first 10-level milestone, compounding the 10% milestone step on top of the regular 1% levels before it', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 10,
@@ -887,25 +888,36 @@ test('the global tickspeed bonus shows up to 2 decimal places below 100%, and a 
 
   render(<App />)
 
-  // Level 10 = 1.01^10 (≈×1.1046) plus the +10% milestone bonus for the first completed block of
-  // 10 levels — the milestone term alone would be a round 10%, but stacked on the fractional
-  // compounding base the cumulative total lands on a non-whole percentage.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+20\.46%/i)
+  // 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%:
+  // 1.01^9 * 1.10 ≈ ×1.2031.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+20\.31%/i)
 })
 
-test('the global tickspeed bonus rounds to a whole percent once it reaches 100%', () => {
+test('the global tickspeed bonus rounds to a whole percent once it reaches 100%, right where a milestone pushes it over', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
-    globalTickspeedMultiplier: 100,
+    globalTickspeedMultiplier: 39,
   }))
 
   render(<App />)
 
-  // Level 100 = 1.01^100 (≈×2.7048) plus 10 completed milestones × 10% (+100%) ≈ ×3.7048 total —
-  // once the cumulative bonus crosses 100% it's shown as a whole percent, not 2 decimal places.
+  // Level 39 (no milestone yet — next one is at 40) is still under 100%, so it shows 2 decimals.
+  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+90\.44%/i)
+})
+
+test('the global tickspeed bonus crosses 100% right at the next milestone', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e15 },
+    globalTickspeedMultiplier: 40,
+  }))
+
+  render(<App />)
+
+  // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses 100%, so
+  // it's shown as a whole percent instead of 2 decimal places.
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
-  expect(panel).toHaveTextContent(/\+270%/i)
-  expect(panel).not.toHaveTextContent(/\+270\.\d/i)
+  expect(panel).toHaveTextContent(/\+109%/i)
+  expect(panel).not.toHaveTextContent(/\+109\.\d/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']

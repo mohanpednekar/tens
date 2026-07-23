@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -311,22 +311,40 @@ export const getGlobalTickspeedMultiplierCost = currentLevel =>
 export const isGlobalTickspeedMultiplierUnlocked = state =>
   (state.owned[TIER_DEFINITIONS[1].id] ?? 0) >= 1 || (state.globalTickspeedMultiplier ?? null) !== null
 
+// Counts how many milestone levels the global tickspeed multiplier has reached by `lvl`. Milestone
+// spacing starts at 10 (levels 10, 20, …, 100 — 10 milestones by level 100) and multiplies by 10
+// every time `lvl` crosses into the next power-of-ten range: spacing becomes 100 from level 100 to
+// 1000 (milestones at 200, 300, …, 1000 — 9 more), then 1000 from 1000 to 10000 (9 more), and so on
+// indefinitely — level 100 itself is only counted once (as the last milestone of the 10-spacing
+// range), not again as the first of the 100-spacing range.
+const countGlobalTickspeedMilestones = lvl => {
+  if (lvl <= 0) return 0
+  let count = 0
+  let phaseStart = 0
+  let phaseEnd = 100
+  let spacing = 10
+  // Bounded by roughly log10(lvl) iterations — cheap even for very large levels.
+  while (true) {
+    count += Math.floor((Math.min(lvl, phaseEnd) - phaseStart) / spacing)
+    if (lvl <= phaseEnd) return count
+    phaseStart = phaseEnd
+    spacing *= 10
+    phaseEnd *= 10
+  }
+}
+
 // The speed multiplier every tier gets from the global tickspeed multiplier: unlike the per-tier
 // tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP unlock),
-// buying this global track directly grants its effect — level 1 (the first purchase) already
-// speeds up every tier's delivery frequency by GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), level 2 by
-// another 1% on top (×1.0201 total), and so on, compounding — divided into
-// getEffectiveTierTickSpeedSeconds alongside the per-tier multiplier, not multiplied into a
-// production credit. On top of that ongoing compounding growth, every 10th completed level adds a
-// flat, non-compounding GLOBAL_TICKSPEED_MILESTONE_STEP (10%) bonus — purely additive, so 10 of
-// these milestones (level 100) sum to exactly +100% on their own, stacked on top of whatever the
-// compounding base has grown to by then. `null` (never bought) is treated as level 0, i.e. no
-// bonus at all (×1).
+// buying this global track directly grants its effect — every level compounds
+// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), except a milestone level (see
+// countGlobalTickspeedMilestones above) compounds GLOBAL_TICKSPEED_MILESTONE_STEP (10%) instead,
+// for that one level only — still fully multiplicative, not additive. `null` (never bought) is
+// treated as level 0, i.e. no bonus at all (×1).
 export const getGlobalTickspeedProductionMultiplier = level => {
   const lvl = clampNonNegative(level ?? 0)
-  const compoundingBase = (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** lvl
-  const milestoneBonus = GLOBAL_TICKSPEED_MILESTONE_STEP * Math.floor(lvl / 10)
-  return compoundingBase + milestoneBonus
+  const milestoneLevels = countGlobalTickspeedMilestones(lvl)
+  const regularLevels = lvl - milestoneLevels
+  return (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** regularLevels * (1 + GLOBAL_TICKSPEED_MILESTONE_STEP) ** milestoneLevels
 }
 
 // Whether the last tier's Money-funded tickspeed multiplier has been permanently replaced by the
@@ -396,11 +414,19 @@ export const getTierTickspeedAutobuyerCost = tierId =>
 
 // Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
 // the same boundary where getTierCost's Fibonacci-driven multiplier steps up, so buying into a
-// fresh cost epoch always pays off with production alongside the steeper price.
-// epoch = floor(purchased/10); multiplier = 2^epoch.
+// fresh cost epoch always pays off with production alongside the steeper price. But every 10th
+// such block (i.e. every 100th lifetime purchase) is a bigger milestone: that one block
+// contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE (10x) instead of the regular
+// PURCHASE_MILESTONE_MULTIPLIER_BASE (2x), compounding into every other block's factor —
+// blocks = floor(purchased/10); megaBlocks = floor(blocks/10); multiplier =
+// PURCHASE_MILESTONE_MULTIPLIER_BASE^(blocks-megaBlocks) * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE^megaBlocks.
 // Applies to every tier uniformly, regardless of whether the purchases were manual or automatic.
-export const getPurchaseMilestoneMultiplier = purchased =>
-  2 ** Math.floor(clampNonNegative(purchased) / 10)
+export const getPurchaseMilestoneMultiplier = purchased => {
+  const blocks = Math.floor(clampNonNegative(purchased) / 10)
+  const megaBlocks = Math.floor(blocks / 10)
+  const regularBlocks = blocks - megaBlocks
+  return PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks
+}
 
 // The unconditional production-speed multiplier from Speed Up activations (see speedUpGame):
 // SPEED_UP_MULTIPLIER_BASE raised to speedUpCount, so each activation doubles it (1x, 2x, 4x,
@@ -651,13 +677,14 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
 
-    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, and tierMultiplier/
-    // speedUpMultiplier (both always powers of 2) are already integers, so only the fractional
-    // Prestige Point production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent
-    // points → ×1.5) can introduce a fraction here — always >= 1, so flooring never zeroes out
-    // production for a tier with owned > 0. Neither tickspeed multiplier appears in this formula
-    // at all anymore — they've already done their work by shrinking tickSpeed above, which is what
-    // grew ticksElapsed.
+    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, speedUpMultiplier
+    // (always a power of 2), and tierMultiplier (always a product of powers of 2 and 10 — see
+    // getPurchaseMilestoneMultiplier) are already integers, so only the fractional Prestige Point
+    // production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent points → ×1.5) can
+    // introduce a fraction here — always >= 1, so flooring never zeroes out production for a tier
+    // with owned > 0. Neither tickspeed multiplier appears in this formula at all anymore —
+    // they've already done their work by shrinking tickSpeed above, which is what grew
+    // ticksElapsed.
     const tierMultiplier = getPurchaseMilestoneMultiplier(getTierPurchasedCount(stateAfterAutobuyers, tier.id))
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier)
 
