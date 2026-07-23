@@ -1107,10 +1107,12 @@ const MainPage = () => {
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
-          // it does NOT change how much lands per delivery, only how often one arrives. Once the
-          // last tier reaches 10 lifetime purchases, this Money-funded ladder is permanently
-          // replaced by an XP-funded one instead (see isLastTierTickspeedXpUnlocked/
-          // getLastTierXpTickspeedMultiplier in engine.js and the last-tier-only controls below).
+          // it does NOT change how much lands per delivery, only how often one arrives. Whenever
+          // the last tier's currently-owned count is >= 10, this Money-funded ladder is instead
+          // replaced by an XP-funded one (see isLastTierTickspeedXpUnlocked/
+          // getLastTierXpTickspeedMultiplier in engine.js and the last-tier-only controls below) —
+          // it reverts back to this Money-funded button if owned later drops below 10 (e.g. after a
+          // Prestige/Speed Up).
           const isLastTier = tier.id === lastTier.id
           const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1

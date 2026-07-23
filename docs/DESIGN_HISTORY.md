@@ -455,6 +455,26 @@ XP (`prestige.xp`, earned via money milestones — see `checkMilestones`) has be
 the underlying mechanic (accumulation, `highestMilestone` tracking) is untouched in `engine.js`, just
 no longer displayed, pending being repurposed for something else later.
 
+### Last tier's XP-funded tickspeed: from a permanent latch to a live owned >= 10 check
+
+`isLastTierTickspeedXpUnlocked` originally read a stored `state.lastTierTickspeedXpUnlocked` flag,
+latched permanently true by `buyTier` the first time the last tier's lifetime `purchased` count ever
+reached 10, and never cleared again — not even by a Prestige or Speed Up, both of which reset the last
+tier's own `owned`/`purchased` back to 0 like every other tier's. The explicit reasoning at the time was
+that a live `purchased >= 10` check "would hide the mechanic again" once a reset dropped the count back
+below 10, which read as a regression for a player who'd already earned it once.
+
+In practice this meant a player could Prestige or Speed Up, immediately own 0 of the last tier, and
+still see the XP-funded tickspeed button/bonus presented as active on a tier they no longer meaningfully
+had — the mechanic never actually reverted to reflect the reset it was supposed to respect. This was
+changed so `isLastTierTickspeedXpUnlocked` is a live check (`owned[lastTierId] >= 10`) instead, with the
+stored latch flag removed entirely — matching the same live `>= 10` threshold `isTierUnlocked` already
+uses for ordinary tier unlocking, and reverting the last tier's row to its normal Money-funded tickspeed
+button whenever owned drops back below 10. `lastTierXpConsumed` (the permanent, ever-growing total XP
+invested) was deliberately kept as a separate, still-permanent counter — the accumulated bonus it drives
+is never lost across a reset, only not *applied* while the live check is unsatisfied; buying back up to
+10 re-engages it at the same cumulative bonus rather than starting over.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

@@ -158,13 +158,14 @@ export const AUTO_SPEED_UP_COST = 100
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
 export const TICKSPEED_AUTOBUYER_COST = 20
-// Once the last tier reaches 10 lifetime purchases, its Money-funded tickspeed multiplier (see
-// TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is permanently replaced by an
+// Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
+// (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
 // adds a flat, non-compounding LAST_TIER_XP_TICKSPEED_STEP (1%) to the last tier's own delivery
-// frequency, permanently. "Last tier" (not a hardcoded tier id) so this stays correct if
-// TIER_DEFINITIONS ever grows a new final entry.
+// frequency, permanently (this accumulated bonus is never lost, even while owned dips below 10 and
+// the mechanic is temporarily disengaged). "Last tier" (not a hardcoded tier id) so this stays
+// correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
