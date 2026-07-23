@@ -1107,10 +1107,12 @@ const MainPage = () => {
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
-          // it does NOT change how much lands per delivery, only how often one arrives. Once the
-          // last tier reaches 10 lifetime purchases, this Money-funded ladder is permanently
-          // replaced by an XP-funded one instead (see isLastTierTickspeedXpUnlocked/
-          // getLastTierXpTickspeedMultiplier in engine.js and the last-tier-only controls below).
+          // it does NOT change how much lands per delivery, only how often one arrives. Whenever
+          // the last tier's currently-owned count is >= 10, this Money-funded ladder is instead
+          // replaced by an XP-funded one (see isLastTierTickspeedXpUnlocked/
+          // getLastTierXpTickspeedMultiplier in engine.js and the last-tier-only controls below) —
+          // it reverts back to this Money-funded button if owned later drops below 10 (e.g. after a
+          // Prestige/Speed Up).
           const isLastTier = tier.id === lastTier.id
           const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
@@ -1429,18 +1431,30 @@ const MainPage = () => {
                 </InfoDetails>
               </div>
             ) : (
-              TIER_DEFINITIONS.map(tier => {
-                if (!isTierUnlocked(state)(tier)) return null
+              TIER_DEFINITIONS.map((tier, tierIndex) => {
+                const unlocked = isTierUnlocked(state)(tier)
+                // Once any autobuyer-related upgrade (Unlock/Smart/tier tickspeed autobuyer) has
+                // been bought for the previous tier, preview the next tier's row early — showing
+                // its Unlock/tier-tickspeed-autobuyer costs (disabled until the tier itself is
+                // actually reachable) rather than waiting for isTierUnlocked's usual owned-count
+                // gate, so a player who's already investing in automation can see what's coming.
+                const previousTier = tierIndex > 0 ? TIER_DEFINITIONS[tierIndex - 1] : null
+                const previousTierHasAnyAutobuyerUpgrade = previousTier != null && (
+                  (state.autobuyers[previousTier.id] ?? null) !== null ||
+                  (state.smartAutobuyer?.[previousTier.id] ?? false) ||
+                  (state.tierTickspeedAutobuyer?.[previousTier.id] ?? false)
+                )
+                if (!unlocked && !previousTierHasAnyAutobuyerUpgrade) return null
                 const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
                 const isSmart = state.smartAutobuyer?.[tier.id] ?? false
                 const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
                 if (isSmart && isTierTickspeedAutobuyerActive) return null
                 const unlockCost = getAutobuyerUnlockCost(tier.id)
-                const canUnlock = !isFrozen && prestige.points >= unlockCost
+                const canUnlock = unlocked && !isFrozen && prestige.points >= unlockCost
                 const tierTickspeedAutobuyerCost = getTierTickspeedAutobuyerCost(tier.id)
-                const canBuyTierTickspeedAutobuyer = !isFrozen && prestige.points >= tierTickspeedAutobuyerCost
+                const canBuyTierTickspeedAutobuyer = unlocked && !isFrozen && prestige.points >= tierTickspeedAutobuyerCost
                 const smartCost = getSmartAutobuyerCost(tier.id)
-                const canBuySmart = !isFrozen && !isAutobuyerLocked && prestige.points >= smartCost
+                const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && prestige.points >= smartCost
 
                 return (
                   <UpgradeRow key={tier.id} aria-label={`${tier.name} PP upgrades`}>

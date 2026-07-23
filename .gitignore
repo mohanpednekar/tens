@@ -9,6 +9,12 @@ bower_components/
 # Test coverage
 /coverage
 
+# Playwright e2e output
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
 # Yarn PnP (Zero-installs: keep .yarn/cache; non-Zero-installs: ignore it)
 .pnp.*
 .pnp/
