@@ -143,9 +143,15 @@ const withAutoGlobalTickspeed = (state, active = true) => ({
   autoGlobalTickspeed: active,
 })
 
+// isLastTierTickspeedXpUnlocked is a live check against the last tier's current owned count (see
+// engine.js) — this helper ensures that's satisfied by raising owned to at least 10 if it isn't
+// already there, without clobbering a test's own higher value for it.
 const withLastTierTickspeedXpUnlocked = (state, unlocked = true) => ({
   ...state,
-  lastTierTickspeedXpUnlocked: unlocked,
+  owned: {
+    ...state.owned,
+    [lastTier.id]: unlocked ? Math.max(state.owned[lastTier.id] ?? 0, 10) : state.owned[lastTier.id],
+  },
 })
 
 const withLastTierXpConsumed = (state, amount) => ({
@@ -249,9 +255,9 @@ describe('createInitialGameState', () => {
     expect(state.autoSpeedUp).toBe(false)
   })
 
-  it('initialises lastTierTickspeedXpUnlocked to false and lastTierXpConsumed to 0', () => {
+  it('initialises with the last tier\'s XP tickspeed mechanic disengaged and lastTierXpConsumed at 0', () => {
     const state = createInitialGameState()
-    expect(state.lastTierTickspeedXpUnlocked).toBe(false)
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
     expect(state.lastTierXpConsumed).toBe(0)
   })
 
@@ -1129,35 +1135,25 @@ describe('buyTier', () => {
     expect(after.purchased[tensTier.id]).toBe(1)
   })
 
-  it('permanently latches lastTierTickspeedXpUnlocked once the last tier reaches 10 lifetime purchases', () => {
+  it('engages the last tier\'s XP tickspeed mechanic (a live owned >= 10 check) once a purchase brings owned to 10', () => {
     const state = withMoney(
-      withPurchased(unlockedLastTierState(), lastTier.id, 9),
+      withPurchased(withOwned(createInitialGameState(), lastTier.id, 9), lastTier.id, 9),
       getTierCost(lastTier, 9)
     )
-    expect(state.lastTierTickspeedXpUnlocked).toBe(false)
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
     const after = buyTier(lastTier.id)(state)
-    expect(after.purchased[lastTier.id]).toBe(10)
-    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+    expect(after.owned[lastTier.id]).toBe(10)
+    expect(isLastTierTickspeedXpUnlocked(after)).toBe(true)
   })
 
-  it('does not latch lastTierTickspeedXpUnlocked before the last tier reaches 10 purchases', () => {
+  it('does not engage the last tier\'s XP tickspeed mechanic before owned reaches 10', () => {
     const state = withMoney(
       withPurchased(unlockedLastTierState(), lastTier.id, 5),
       getTierCost(lastTier, 5)
     )
     const after = buyTier(lastTier.id)(state)
-    expect(after.purchased[lastTier.id]).toBe(6)
-    expect(after.lastTierTickspeedXpUnlocked).toBe(false)
-  })
-
-  it('does not latch lastTierTickspeedXpUnlocked when buying a tier other than the last one', () => {
-    const state = withMoney(
-      withPurchased(createInitialGameState(), tensTier.id, 9),
-      getTierCost(tensTier, 9)
-    )
-    const after = buyTier(tensTier.id)(state)
-    expect(after.purchased[tensTier.id]).toBe(10)
-    expect(after.lastTierTickspeedXpUnlocked).toBe(false)
+    expect(after.owned[lastTier.id]).toBe(2)
+    expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
   })
 
   it('permanently latches everUnlockedTierIds for a tier the instant it becomes newly buyable', () => {
@@ -1828,11 +1824,11 @@ describe('buyTickspeedMultiplier', () => {
   })
 
   it('leaves owned in sync with resources after leveling up (keeps 1 generator)', () => {
-    const state = withOwned(
-      withResource(unlockedLastTierState(), lastTier.id, 11),
-      lastTier.id,
-      11
-    )
+    // owned is deliberately kept below 10 here (unlockedLastTierState's default of 1) so the last
+    // tier's live XP tickspeed check (see isLastTierTickspeedXpUnlocked) doesn't engage and disable
+    // this (Money-funded) tickspeed button — this test is about the owned/resources sync behavior
+    // buyTickspeedMultiplier itself has, not the last-tier XP mechanic.
+    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.owned[lastTier.id]).toBe(1)
     expect(after.resources[lastTier.id]).toBe(1)
@@ -1843,13 +1839,24 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier('does_not_exist')(state)).toBe(state)
   })
 
-  it('is permanently a no-op for the last tier once its tickspeed has been XP-unlocked, even with plenty of the tier\'s own resource', () => {
+  it('is a no-op for the last tier while its tickspeed is XP-unlocked (owned >= 10), even with plenty of the tier\'s own resource', () => {
     const state = withResource(
       withLastTierTickspeedXpUnlocked(unlockedLastTierState()),
       lastTier.id,
       1_000_000
     )
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
+  })
+
+  it('resumes working for the last tier once owned drops back below 10 (XP tickspeed disengaged)', () => {
+    const state = withResource(
+      withOwned(unlockedLastTierState(), lastTier.id, 1),
+      lastTier.id,
+      11
+    )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
+    const after = buyTickspeedMultiplier(lastTier.id)(state)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(2)
   })
 })
 
@@ -2324,14 +2331,19 @@ describe('prestigeGame', () => {
     expect(after.autobuyers[tensTier.id]).toBeNull()
   })
 
-  it('keeps the last tier\'s XP tickspeed unlock and consumed total permanently across prestige', () => {
+  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) but keeps lastTierXpConsumed permanently across prestige', () => {
     const state = withLastTierXpConsumed(
       withLastTierTickspeedXpUnlocked(withMoney(createInitialGameState(), GOOGOL)),
       42
     )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
     const after = prestigeGame(state)
-    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+    expect(after.owned[lastTier.id]).toBe(0)
+    expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
     expect(after.lastTierXpConsumed).toBe(42)
+    // Buying back up to 10 re-engages the mechanic, picking back up at the same accumulated bonus.
+    const reEngaged = withOwned(after, lastTier.id, 10)
+    expect(isLastTierTickspeedXpUnlocked(reEngaged)).toBe(true)
   })
 
   it('resets everUnlockedTierIds on prestige, same as owned/purchased, so a tier relocks like it always has', () => {
@@ -2483,13 +2495,15 @@ describe('speedUpGame', () => {
     expect(after.prestige.xp).toBe(7)
   })
 
-  it('keeps the last tier\'s XP tickspeed unlock and consumed total permanently across Speed Up', () => {
+  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) but keeps lastTierXpConsumed permanently across Speed Up', () => {
     const state = withLastTierXpConsumed(
       withLastTierTickspeedXpUnlocked(eligibleState()),
       42
     )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
     const after = speedUpGame(state)
-    expect(after.lastTierTickspeedXpUnlocked).toBe(true)
+    expect(after.owned[lastTier.id]).toBe(0)
+    expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
     expect(after.lastTierXpConsumed).toBe(42)
   })
 
@@ -2573,13 +2587,30 @@ describe('isLastTierTickspeedXpUnlocked', () => {
     expect(isLastTierTickspeedXpUnlocked(createInitialGameState())).toBe(false)
   })
 
-  it('is true once lastTierTickspeedXpUnlocked is latched, regardless of the last tier\'s current purchased count', () => {
-    const state = withPurchased(
-      withLastTierTickspeedXpUnlocked(createInitialGameState()),
+  it('is false while the last tier\'s owned count is below 10, regardless of its purchased count', () => {
+    const state = withOwned(
+      withPurchased(createInitialGameState(), lastTier.id, 50),
       lastTier.id,
-      0
+      9
     )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
+  })
+
+  it('is true once the last tier\'s owned count reaches 10', () => {
+    const state = withOwned(createInitialGameState(), lastTier.id, 10)
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
+  })
+
+  it('is true above 10 owned too', () => {
+    const state = withOwned(createInitialGameState(), lastTier.id, 250)
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
+  })
+
+  it('reverts to false once owned drops back below 10 after having been unlocked', () => {
+    const unlocked = withOwned(createInitialGameState(), lastTier.id, 10)
+    expect(isLastTierTickspeedXpUnlocked(unlocked)).toBe(true)
+    const droppedBack = withOwned(unlocked, lastTier.id, 3)
+    expect(isLastTierTickspeedXpUnlocked(droppedBack)).toBe(false)
   })
 })
 
