@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -206,12 +206,14 @@ export const formatAmount = value => {
 // notation as formatAmount) — money can reach 100+ digit balances near the Googol prestige
 // requirement, so it can't stay full-digit forever. Floors rather than rounds so a displayed
 // amount never overstates the actual spendable balance (e.g. a fractional 1.6 balance from a
-// non-integer tick shows as $1, not a misleading $2).
+// non-integer tick shows as "1 b", not a misleading "2 b"). Suffixed with the base currency's own
+// symbol (RESOURCE_SYMBOL(MONEY_ID), "b") rather than a hardcoded "$" prefix.
 export const formatCurrency = value => {
   const safeValue = Math.floor(clampNonNegative(value))
+  const symbol = RESOURCE_SYMBOL(MONEY_ID)
   return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
-    ? `$${currencyNumberFormatter.format(safeValue)}`
-    : `$${formatScientific(safeValue)}`
+    ? `${currencyNumberFormatter.format(safeValue)} ${symbol}`
+    : `${formatScientific(safeValue)} ${symbol}`
 }
 
 // The Fibonacci number driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8,
@@ -302,7 +304,7 @@ export const getAutobuyerUnlockCost = tierId => {
 export const getTickspeedProductionMultiplier = level =>
   (1 + TICKSPEED_PRODUCTION_STEP) ** clampNonNegative((level ?? 1) - 1)
 
-// Money (Ones) cost to activate (null → 1) or upgrade (level N → N+1) the global tickspeed
+// Money (Bits) cost to activate (null → 1) or upgrade (level N → N+1) the global tickspeed
 // multiplier — a single global upgrade track, not per-tier (mirroring Auto-Prestige's null/level
 // pattern): level 1 costs 10^1 = 10 Money, level 2 costs 10^2 = 100 Money, level 3 costs 10^3 =
 // 1000 Money, and so on — the same "powers of ten" theme as everything else in this economy.
@@ -996,7 +998,7 @@ export const buyAutoPrestige = state => {
 }
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) the global tickspeed multiplier,
-// always by spending Money (Ones) — activation is just the N=0 case of the same cost formula
+// always by spending Money (Bits) — activation is just the N=0 case of the same cost formula
 // (getGlobalTickspeedMultiplierCost(0) = 10). A single global upgrade track, not per-tier — unlike
 // the per-tier tickspeed multiplier (also Money-funded and also buyable with no PP prerequisite),
 // this one requires owning at least 1 of the second tier first (see

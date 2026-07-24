@@ -630,7 +630,7 @@ const MainPage = () => {
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
-  const prestigeLabel = 'Prestige (requires 1 Googol Money)'
+  const prestigeLabel = 'Prestige (requires 1 Googol Bits)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Which top-level view is showing — a local toggle, not real routing (see ViewNav above). Reset
   // back to 'game' on a full Reset, alongside the reveal flags below.
@@ -899,7 +899,7 @@ const MainPage = () => {
         <FullScreenCard>
           <h2>✦ Prestige Available!</h2>
           <MutedText>
-            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Money. All
+            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bits. All
             production has stopped.
           </MutedText>
           <ul>
@@ -932,7 +932,7 @@ const MainPage = () => {
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
-            <MutedText>1 Googol Money reached — production has stopped.</MutedText>
+            <MutedText>1 Googol Bits reached — production has stopped.</MutedText>
             <Button
               aria-label={prestigeAriaLabel}
               color="#fbbf24"
@@ -1050,7 +1050,7 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
-              Spend Money to permanently speed up every tier's production ticks by another 1% at
+              Spend Bits to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
               ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
               {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
@@ -1066,7 +1066,7 @@ const MainPage = () => {
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Money to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
+            title="Spend Bits to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
@@ -1137,10 +1137,10 @@ const MainPage = () => {
           // consumed (the prior multiplier cancels out), so it's exactly
           // getLastTierXpTickspeedMultiplier(amount) regardless of lastTierXpConsumed so far.
           const lastTierXpConsumeBonusPercent = formatBonusPercent(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
-          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% ${tier.name} tickspeed (resets every other tier's owned quantity and Money to 0)`
+          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% ${tier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
           const handleConsumeLastTierXp = () => {
             if (!canConsumeLastTierXp) return
-            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Money balance back to 0.`)) {
+            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
               actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
             }
           }
@@ -1272,7 +1272,7 @@ const MainPage = () => {
                   color={canConsumeLastTierXp ? '#a78bfa' : 'darkgrey'}
                   disabled={!canConsumeLastTierXp}
                   onClick={handleConsumeLastTierXp}
-                  title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Money to 0`}
+                  title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
                   $progress={lastTierXpProgressPercent}
                   $pulse={canConsumeLastTierXp}
                 >
@@ -1375,7 +1375,7 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Prestige</h2></summary>
             <MutedText id="prestige-description">
-              Reach 1 Googol Money to earn Prestige Points (more the further past Googol you get).
+              Reach 1 Googol Bits to earn Prestige Points (more the further past Googol you get).
               {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
               {' '}Resets your resources when reached.
             </MutedText>
@@ -1413,7 +1413,7 @@ const MainPage = () => {
             />
           </Button>
           {allTiersFullyAutomated && isAutoPrestigeActive && (
-            <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
+            <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
               ✦ Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
             </MutedText>
           )}
@@ -1618,7 +1618,7 @@ const MainPage = () => {
                 <TierNameLabel>
                   Auto-Prestige
                   {isAutoPrestigeActive && (
-                    <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Money reaches 1 Googol`}>
+                    <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
                       Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
                     </MutedText>
                   )}
@@ -1632,7 +1632,7 @@ const MainPage = () => {
                   color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
                   disabled={!canBuyAutoPrestige}
                   onClick={actions.buyAutoPrestige}
-                  title="Spend Prestige Points so Prestige happens automatically once Money reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                  title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
                   type="button"
                   $progress={ppProgressPercent(autoPrestigeCost)}
                   $progressColor="#38bdf8"
@@ -1689,7 +1689,7 @@ const MainPage = () => {
         disabled={isFrozen}
         type="button"
         onClick={handleResetClick}
-        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Money' : 'Erases all progress and starts over (asks for confirmation)'}
+        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Bits' : 'Erases all progress and starts over (asks for confirmation)'}
       >
         <ButtonContent>↺ Reset</ButtonContent>
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>

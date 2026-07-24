@@ -84,12 +84,12 @@ There are 10 tiers, ids `tier01` → `tier10` (display names `Bytes` →
 `Ronnabytes` — a byte-scale theme: Bytes, Kilobytes, Megabytes, Gigabytes,
 Terabytes, Petabytes, Exabytes, Zettabytes, Yottabytes, Ronnabytes) — `id` is
 a naming-agnostic key decoupled from `name`/`symbol`.
-**Every tier is bought directly with Ones (money)** — `costResourceId` is
-`'Ones'` for all of them. Once owned, a tier produces the tier immediately
-below it (`producesResourceId`), which cascades production down to Ones.
-`tier01` (`Bytes`) is the special case: `costResourceId === producesResourceId
-=== 'Ones'`, since it's the entry-level generator bought with money to
-produce more money.
+**Every tier is bought directly with the base currency (display name "Bits")** —
+`costResourceId` is `MONEY_ID` (`'base'`) for all of them. Once owned, a tier
+produces the tier immediately below it (`producesResourceId`), which cascades
+production down to the base currency. `tier01` (`Bytes`) is the special case:
+`costResourceId === producesResourceId === MONEY_ID`, since it's the
+entry-level generator bought with Bits to produce more Bits.
 
 A tier unlocks once you own **≥ 10** of the tier below it (already-owned
 tiers stay unlocked even if the rule changes, so old saves stay playable).
@@ -106,7 +106,7 @@ fully data-driven from that array.
 
 ```js
 {
-  resources: { Ones: 10, tier01: 0, tier02: 0, … },   // spendable balance per resource id
+  resources: { base: 10, tier01: 0, tier02: 0, … },   // spendable balance per resource id (base = MONEY_ID, display name "Bits")
   owned:     { tier01: 0, tier02: 0, … },              // generator count per tier id
   purchased: { tier01: 0, tier02: 0, … },              // lifetime purchase count per tier id (drives cost scaling)
   autobuyers:{ tier01: null, tier02: null, … },        // null = locked; number = active level, survives prestige unlock
@@ -139,7 +139,7 @@ the same number by design.
 
 ### Constants (all in `src/game/layers.js`)
 
-- `MONEY_ID = 'Ones'`
+- `MONEY_ID = 'base'` (display name "Bits", symbol `b`)
 - `PRESTIGE_PP_COST = 10`
 - `TICK_RATE_MS = 1000`
 - `MONEY_STARTING_AMOUNT = 10`
