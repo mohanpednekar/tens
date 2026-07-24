@@ -369,8 +369,28 @@ src/
                                a single string child. Also exports `VisuallyHidden`, a clip-hidden node
                                used both for a nested `role="progressbar"` and for supplementary
                                `aria-describedby` text
-    Money/index.js          ← styled money/amount display
-    StatCard/index.js       ← styled card container used for every panel
+    Money/index.js          ← styled money/amount display; color from `theme.color.text`, with its own
+                               `font-variant-numeric: tabular-nums` (belt-and-suspenders alongside
+                               `RootDiv`'s page-wide rule, so the display reads correctly even if ever
+                               rendered outside `RootDiv`). No `defaultProps` — React 19 dropped
+                               defaultProps support for function components, and `styled.b` doesn't need
+                               it either; the old `Money.defaultProps = {}` was already a dead no-op,
+                               removed
+    StatCard/index.js       ← styled card container used for every panel; background/border/text/
+                               `border-radius`/elevation all resolve from theme tokens
+                               (`theme.color.surface`/`surfaceRaised` per `$raised`, `theme.color.border`,
+                               `theme.color.text`, `theme.radius.md`, `theme.shadow.sm`) rather than
+                               hardcoded hex — see "Theming" below. `$raised` is a boolean prop switching
+                               the base `surface` fill for the lighter `surfaceRaised` panel tone (dark
+                               mode) / relying on `shadow.sm` for depth (light mode, where both surface
+                               tokens are white) — unused by any call site yet, added as the minimal
+                               elevation seam later hero/elevated-panel work (e.g. the top-HUD/prestige
+                               redesign issues) can consume without another StatCard change. Every
+                               `styled(StatCard)` caller in `MainPage` (tier rows, Prestige/Speed Up/
+                               Global Tickspeed cards, the sticky balance cards, PP Upgrades categories)
+                               still layers its own hardcoded accent overrides (e.g. `PrestigeCard`'s
+                               `border-color: #854d0e`) on top — migrating those call sites onto tokens
+                               is later token-migration sub-issue work, not done here
   pages/
     MainPage/index.jsx      ← single page; compact one-line-per-tier layout, data-driven from TIER_DEFINITIONS
   theme/
