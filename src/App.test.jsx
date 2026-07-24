@@ -16,7 +16,7 @@ test('renders the game title and the Bytes tier', () => {
 
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^bytes layer$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy for 10 b\b/i })).toBeEnabled()
 })
 
 test('buying Bytes deducts cost and increases owned count', async () => {
@@ -24,11 +24,11 @@ test('buying Bytes deducts cost and increases owned count', async () => {
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 10 b\b/i }))
 
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
-  // After spending $10 on the first Bytes, money=$0. Cost stays $10 (flat within the block of 10) — button disabled.
-  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeDisabled()
+  // After spending 10 b on the first Bytes, money=0 b. Cost stays 10 b (flat within the block of 10) — button disabled.
+  expect(screen.getByRole('button', { name: /buy for 10 b\b/i })).toBeDisabled()
 })
 
 test('the Reset button is always rendered, not gated behind a dev-only build check', () => {
@@ -44,7 +44,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   render(<App />)
 
   // Buy a Bytes generator to dirty the state
-  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 10 b\b/i }))
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   // Reset
@@ -52,7 +52,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
 
   expect(window.confirm).toHaveBeenCalled()
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
-  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy for 10 b\b/i })).toBeEnabled()
 })
 
 test('reset clears localStorage once the confirm dialog is accepted', async () => {
@@ -61,14 +61,14 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 10 b\b/i }))
 
   // After reset the save-effect fires with fresh state, so money should be back to 10
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved).not.toBeNull()
-  expect(saved.resources.Ones).toBe(10)
+  expect(saved.resources.base).toBe(10)
   expect(saved.owned.tier01).toBe(0)
 })
 
@@ -79,7 +79,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   render(<App />)
 
   // Buy a Bytes generator to dirty the state
-  await user.click(screen.getByRole('button', { name: /buy for \$10\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 10 b\b/i }))
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /reset game/i }))
@@ -99,7 +99,7 @@ test('Kilobytes tier appears and is purchasable once 10 Bytes are owned', () => 
   render(<App />)
 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for \$1,000\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
@@ -112,7 +112,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for \$1,000\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1/i)
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10/i)
@@ -121,12 +121,12 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 test('money balance is shown once at the top in full currency format, centered, with no per-second yield', () => {
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$10')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
   expect(screen.getByLabelText(/^money display$/i)).not.toHaveTextContent('/sec')
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
-test('a money-producing tier shows its per-tick production amount with a $ prefix, not a per-second rate', () => {
+test('a money-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
@@ -134,7 +134,7 @@ test('a money-producing tier shows its per-tick production amount with a $ prefi
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$5')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+5 b')
   expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent('/sec')
 })
 
@@ -150,8 +150,8 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
-  // still reads +$5, not +$6.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$5')
+  // still reads +5 b, not +6 b.
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+5 b')
   // The badge shows the cumulative speed bonus as "+N%" (not the old "×N" purchase-speed
   // figure) — no "Lv." (that wording belongs to the Buy button's purchase level); the
   // tickspeed level itself lives in the title tooltip.
@@ -190,8 +190,8 @@ test('reaching 10 lifetime purchases of a tier doubles its displayed production 
 
   render(<App />)
 
-  // Crossing the 10-purchase milestone doubles production: owned(5) × $1/tick × 2 = $10 per tick.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+$10')
+  // Crossing the 10-purchase milestone doubles production: owned(5) × 1 b/tick × 2 = 10 b per tick.
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+10 b')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {
@@ -290,7 +290,7 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
   expect(progressBar).toHaveAttribute('aria-valuemax', '10')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
-  expect(screen.getByRole('button', { name: /buy for \$10 \(level 4\)/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /buy for 10 b \(level 4\)/i })).toBeInTheDocument()
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
 })
 
@@ -303,31 +303,31 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×10 for \$100\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×10 for 100 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 35 }, // affords 3 at $10/unit, not the full 10
+    resources: { Ones: 35 }, // affords 3 at 10 b/unit, not the full 10
   }))
 
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×3 for \$30\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for 30 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 3\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$5')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('5 b')
 })
 
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
@@ -346,7 +346,7 @@ test('applies offline progress at 10% speed based on elapsed time since the last
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$50')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('50 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -444,7 +444,7 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
   expect(screen.getByText(/prestiged 1 time/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for \$10\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy for 10 b\b/i })).toBeEnabled()
 })
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
@@ -618,7 +618,7 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
 
   await user.click(speedUpButton)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$10')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
   // Speed Up resets owned counts too, so the last tier is no longer unlocked — but since the
   // panel was already revealed once, it stays visible (in a disabled state) rather than
   // disappearing again until the player climbs back up to it. The next cycle now requires 20
@@ -648,7 +648,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
   // way back to its pre-activation "Enable" state rather than staying at Lv.2.
-  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })).toBeInTheDocument()
 })
 
 test('the Speed Up button is disabled once production freezes at a googol', () => {
@@ -832,12 +832,12 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
 
   render(<App />)
 
-  const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })
+  const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })
   expect(globalTickspeedButton).toBeEnabled()
 
   await user.click(globalTickspeedButton)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$100/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 100 b/i })
   expect(upgradeButton).toBeInTheDocument()
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
@@ -847,7 +847,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('$0')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
 test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
@@ -858,7 +858,7 @@ test('the Enable Global Tickspeed Multiplier button stays disabled without enoug
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for \$10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })).toBeDisabled()
 })
 
 test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
@@ -869,7 +869,7 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
 
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for \$1,000/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 1,000 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
   expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)

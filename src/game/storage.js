@@ -81,10 +81,17 @@ const migrateState = saved => {
   if (migratedPrestige.count === undefined && legacyLevel !== undefined) {
     migratedPrestige.count = legacyLevel
   }
+  // MONEY_ID was renamed from 'Ones' to 'base' (see layers.js) — forward a legacy
+  // resources.Ones balance to resources.base so an old save doesn't lose its money on load, same
+  // shape as the prestige.pp → prestige.xp forwarding above.
+  const { Ones: legacyOnes, ...migratedResourcesRaw } = saved.resources ?? {}
+  if (migratedResourcesRaw.base === undefined && legacyOnes !== undefined) {
+    migratedResourcesRaw.base = legacyOnes
+  }
   return {
     ...fresh,
     ...savedWithoutRemovedFields,
-    resources: { ...fresh.resources, ...migrateTierKeys(saved.resources) },
+    resources: { ...fresh.resources, ...migrateTierKeys(migratedResourcesRaw) },
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },

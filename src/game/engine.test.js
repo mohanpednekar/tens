@@ -164,7 +164,7 @@ const withEverUnlockedTierIds = (state, tierId, unlocked = true) => ({
   everUnlockedTierIds: { ...state.everUnlockedTierIds, [tierId]: unlocked },
 })
 
-// TIER_DEFINITIONS[0] ('Bytes') both costs and produces Ones (money) — the
+// TIER_DEFINITIONS[0] ('Bytes') both costs and produces the base currency (Bits) — the
 // entry-level generator. TIER_DEFINITIONS[1] ('Kilobytes') is the first
 // tier that needs unlocking (10 Bytes owned) and produces Bytes.
 const tensTier = TIER_DEFINITIONS[0]
@@ -310,29 +310,29 @@ describe('formatAmount', () => {
 
 describe('formatCurrency', () => {
   it('formats zero', () => {
-    expect(formatCurrency(0)).toBe('$0')
+    expect(formatCurrency(0)).toBe('0 b')
   })
 
-  it('formats a comma-grouped mid-size amount with a $ prefix, just below the exponential threshold', () => {
-    expect(formatCurrency(999999)).toBe('$999,999')
+  it('formats a comma-grouped mid-size amount with a b suffix, just below the exponential threshold', () => {
+    expect(formatCurrency(999999)).toBe('999,999 b')
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000000)).toBe('$1e6')
+    expect(formatCurrency(1000000)).toBe('1e6 b')
   })
 
   it('switches to exponential notation at huge magnitudes', () => {
-    expect(formatCurrency(1e21)).toBe('$1e21')
+    expect(formatCurrency(1e21)).toBe('1e21 b')
   })
 
   it('treats negative values as 0', () => {
-    expect(formatCurrency(-5)).toBe('$0')
+    expect(formatCurrency(-5)).toBe('0 b')
   })
 
   it('floors fractional amounts instead of rounding, so it never overstates the balance', () => {
-    expect(formatCurrency(1.6)).toBe('$1')
-    expect(formatCurrency(1.999)).toBe('$1')
-    expect(formatCurrency(2)).toBe('$2')
+    expect(formatCurrency(1.6)).toBe('1 b')
+    expect(formatCurrency(1.999)).toBe('1 b')
+    expect(formatCurrency(2)).toBe('2 b')
   })
 })
 
@@ -1037,7 +1037,7 @@ describe('getTierProductionProgressPercent', () => {
 // ─── getTierSpendableAmount ──────────────────────────────────────────────────
 
 describe('getTierSpendableAmount', () => {
-  it('returns the balance of the tier\'s cost resource (Ones, for every tier)', () => {
+  it('returns the balance of the tier\'s cost resource (the base currency, for every tier)', () => {
     const state = withMoney(createInitialGameState(), 42)
     TIER_DEFINITIONS.forEach(tier => {
       expect(getTierSpendableAmount(state, tier)).toBe(42)
@@ -1091,7 +1091,7 @@ describe('buyTier', () => {
     expect(state.owned[tensTier.id]).toBe(2)
   })
 
-  it('an unlocked higher tier is purchasable directly with Ones', () => {
+  it('an unlocked higher tier is purchasable directly with the base currency', () => {
     const cost = getTierCost(thousandsTier, 0)
     const state = withMoney(
       withOwned(createInitialGameState(), tensTier.id, 10),

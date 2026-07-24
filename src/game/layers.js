@@ -1,9 +1,9 @@
-// Every tier is bought directly with Ones (Money); production cascades down
+// Every tier is bought directly with the base currency (Bits); production cascades down
 // through `producesResourceId` into the tier below's owned/resource count.
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' intentionally has costResourceId === producesResourceId: it is the
-// entry-level money generator, bought with Ones to produce more Ones.
+// entry-level money generator, bought with Bits to produce more Bits.
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
@@ -18,20 +18,22 @@
 // up by investing in those rather than being structurally unable to keep pace — see
 // docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 10,   costResourceId: 'Ones', producesResourceId: 'Ones',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'Ones', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
-  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'Ones', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
-  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'Ones', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
-  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'Ones', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
-  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'Ones', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
-  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'Ones', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
-  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'Ones', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
-  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'Ones', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
-  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'Ones', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
+  { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 10,   costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1 },
+  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
+  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
+  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
+  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
+  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
+  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
+  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
+  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
+  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
 ]
 
 
-export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || '$'
+// Falls back to 'b' (lowercase — a bit, distinct from tier01's uppercase 'B' byte symbol) for
+// MONEY_ID/an unrecognized resource id.
+export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || 'b'
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
 // continuously every global tick (see engine.js's tickGame / tierProductionAccumulators) —
@@ -43,7 +45,9 @@ export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tie
 export const getTierBaseTickSpeedSeconds = tierId =>
   TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
 
-export const MONEY_ID = 'Ones'
+// A naming-agnostic key, fully decoupled from the "Bits" display name/symbol — same rationale as
+// each tier's own `id` above.
+export const MONEY_ID = 'base'
 export const MONEY_STARTING_AMOUNT = 10
 export const GOOGOL = 1e100
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real

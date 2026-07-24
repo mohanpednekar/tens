@@ -320,6 +320,27 @@ describe('schema migration', () => {
     expect(loadGameState().autoPrestige).toBeNull()
   })
 
+  it('forwards a legacy resources.Ones balance to resources.base (MONEY_ID renamed from Ones to base)', () => {
+    const oldSave = {
+      resources: { Ones: 12345 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(12345)
+    expect(loaded.resources.Ones).toBeUndefined()
+  })
+
+  it('prefers an explicit resources.base value over a legacy resources.Ones value when both are present', () => {
+    const oldSave = {
+      resources: { Ones: 5, base: 999 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(999)
+  })
+
   it('remaps legacy name-based tier ids to the new tier0N ids', () => {
     const oldSave = {
       resources: { Ones: 10, Tens: 3, Thousands: 1 },

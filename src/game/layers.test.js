@@ -64,13 +64,13 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('first tier is Bytes and both costs and produces Ones (money)', () => {
+  it('first tier is Bytes and both costs and produces the base currency (Bits)', () => {
     expect(TIER_DEFINITIONS[0].id).toBe('tier01')
     expect(TIER_DEFINITIONS[0].costResourceId).toBe(MONEY_ID)
     expect(TIER_DEFINITIONS[0].producesResourceId).toBe(MONEY_ID)
   })
 
-  it('every tier is bought with Ones (money)', () => {
+  it('every tier is bought with the base currency (Bits)', () => {
     TIER_DEFINITIONS.forEach(tier => {
       expect(tier.costResourceId).toBe(MONEY_ID)
     })
@@ -90,12 +90,12 @@ describe('RESOURCE_SYMBOL', () => {
     })
   })
 
-  it('falls back to $ for MONEY_ID', () => {
-    expect(RESOURCE_SYMBOL(MONEY_ID)).toBe('$')
+  it('falls back to b for MONEY_ID', () => {
+    expect(RESOURCE_SYMBOL(MONEY_ID)).toBe('b')
   })
 
-  it('falls back to $ for an unknown resource id', () => {
-    expect(RESOURCE_SYMBOL('does_not_exist')).toBe('$')
+  it('falls back to b for an unknown resource id', () => {
+    expect(RESOURCE_SYMBOL('does_not_exist')).toBe('b')
   })
 
   it('does not mutate TIER_DEFINITIONS when called', () => {
@@ -122,8 +122,8 @@ describe('getTierBaseTickSpeedSeconds', () => {
 })
 
 describe('constants', () => {
-  it('MONEY_ID is Ones', () => {
-    expect(MONEY_ID).toBe('Ones')
+  it('MONEY_ID is base', () => {
+    expect(MONEY_ID).toBe('base')
   })
 
   it('GOOGOL is 10^100', () => {
