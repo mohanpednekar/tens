@@ -74,6 +74,11 @@ deliberate, human-initiated escalation if ever needed, not something the automat
 sub-issue) and `GlobalStyle` (replaces the removed `index.css`/`App.css`). Components migrate onto
 these tokens incrementally (UI-revamp epic #132).
 
+**Typography:** `theme.font.display` (Space Grotesk) and `theme.font.body` (Inter) are locally bundled
+via the `@fontsource/inter`/`@fontsource/space-grotesk` deps (imported as a side effect from
+`theme/fonts.js`, wired in from `theme/index.jsx`) — no runtime CDN fetch. `theme.type.scale` pairs
+each step with a `{ size, lineHeight }` rem pair.
+
 ## Architecture
 
 **All game logic is pure** (`engine.js`). The hook (`useIncrementalGame.js`)

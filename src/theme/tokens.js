@@ -102,27 +102,31 @@ const motion = {
   },
 }
 
-// Font families are a deliberate seam: system stacks for now, swapped for locally-bundled faces in
-// the typography sub-issue (#136). `display` is for the wordmark/headings, `body` for UI/running
-// text, `mono` for any code-like/data display. Numeric UI pairs these with
-// `font-variant-numeric: tabular-nums` (see `type.numeric`).
+// Font families: `display` (Space Grotesk, a characterful geometric sans that fits the byte-scale/
+// computing theme) is for the wordmark/headings, `body` (Inter, chosen for its legibility and strong
+// tabular figures — numbers are the star of an incremental game) for UI/running text, `mono` for any
+// code-like/data display (still a system stack — no bundled mono face needed today). Both bundled
+// faces are imported locally from `theme/fonts.js` (no runtime CDN fetch); each family keeps the
+// system stack as a fallback for any weight/character the bundled subset doesn't cover. Numeric UI
+// pairs these with `font-variant-numeric: tabular-nums` (see `type.numeric`).
 const font = {
   display:
-    'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  body: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    '"Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  body: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   mono: 'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 }
 
-// A starting type scale (rem). The typography sub-issue refines sizes/line-heights alongside the
-// bundled faces; kept minimal here so the foundation stays visually inert.
+// Type scale (rem), each step paired with a line-height. Not yet applied per-component beyond the
+// base body size (GlobalStyle) and the wordmark heading (MainPage's Header) — later per-surface
+// redesign sub-issues (HUD/tier-row/prestige) apply the rest of the scale to their own text.
 const type = {
   scale: {
-    xs: '0.72rem',
-    sm: '0.82rem',
-    md: '0.95rem',
-    lg: '1.1rem',
-    xl: '1.75rem',
-    hero: '2.4rem',
+    xs: { size: '0.72rem', lineHeight: '1rem' },
+    sm: { size: '0.82rem', lineHeight: '1.15rem' },
+    md: { size: '0.95rem', lineHeight: '1.35rem' },
+    lg: { size: '1.1rem', lineHeight: '1.5rem' },
+    xl: { size: '1.75rem', lineHeight: '2.1rem' },
+    hero: { size: '2.4rem', lineHeight: '2.7rem' },
   },
   numeric: 'tabular-nums',
 }
