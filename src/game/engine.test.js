@@ -924,9 +924,10 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
 
   it('never returns a non-finite or zero period even once the last tier\'s XP multiplier overflows to Infinity', () => {
     // 1.01^xpConsumed overflows double-precision float to Infinity somewhere around xpConsumed ~
-    // 71,333 (permanently reachable in principle since prestige.xp/lastTierXpConsumed are never
-    // capped or reset) — dividing the base period by Infinity would give exactly 0, which corrupts
-    // tickGame's accumulator math (see MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS in engine.js).
+    // 71,333 — reachable in principle within a single run, before the next Prestige/Speed Up resets
+    // lastTierXpConsumed back to 0 (see MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS in engine.js) —
+    // dividing the base period by Infinity would give exactly 0, which corrupts tickGame's
+    // accumulator math.
     const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
     expect(getLastTierXpTickspeedMultiplier(1_000_000)).toBe(Infinity)
     const state = withLastTierXpConsumed(withLastTierTickspeedXpUnlocked(createInitialGameState()), 1_000_000)
