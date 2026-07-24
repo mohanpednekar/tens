@@ -161,6 +161,14 @@ Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up st
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a 429
 ("session limit") failure is downgraded to a warning (job stays green) since it's purely transient.
+`blocked` covers two distinct situations, not just one: an environment/permission restriction of the
+unattended session itself (the original use case), and — per Phase A's comment-history check below —
+a task issue where a second consecutive run independently reached the same "infeasible as written"
+conclusion with nothing new in between (no maintainer reply, no issue edit, no relevant code change).
+The latter exists because without it, a stale-spec issue that keeps winning FIFO order re-derives the
+identical dead-end analysis every single run indefinitely — issue #101 did this 6 runs in a row before
+being closed manually — instead of self-locking after the second occurrence the way an
+environment/permission blocker already did from the first.
 
 **Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
 }` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
@@ -203,10 +211,14 @@ an obviously safe fix is left for a human. If neither condition applies, falls t
 
 **Phase A — task backlog next.** Claude picks the top eligible open `claude-task` issue —
 `priority:high` first, then lowest issue number; skipping tasks already covered by an open autonomous
-PR and tasks with an open "Blocked by #N" dependency — reads its full spec, and implements it on
+PR and tasks with an open "Blocked by #N" dependency — reads its full spec, checks the issue's own
+comment history for a prior automated investigation before diving in (see below), and implements it on
 `claude/auto-task-<number>-<short-slug>`. The PR body includes `Closes #<number>` unless it's a partial
 slice (see Budget discipline). If the chosen task proves infeasible for reasons other than size, Claude
-comments on the issue explaining what's blocking and ends without a PR.
+comments on the issue explaining what's blocking and ends without a PR — comment-only on the first such
+occurrence, but if the issue's history already shows a prior comment reaching the same "infeasible as
+written" conclusion with nothing new since, Claude also applies the `blocked` label on this run instead
+of leaving it comment-only again, so the same dead-end analysis isn't repeated a third time.
 
 **Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security

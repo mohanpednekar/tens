@@ -87,9 +87,13 @@ jobs:
           # take priority over the built-in maintenance menu — the prompt gets the list
           # (number + title) and reads the chosen issue's full spec with `gh issue view`.
           # Issues also labeled `blocked` are excluded: a previous run already established
-          # they can't be done unattended (environment/permission blocker, documented in an
-          # issue comment), so re-attempting them every 5 hours just burns quota — a human
-          # unblocks and removes the label to make them eligible again.
+          # they can't be done unattended — either an environment/permission blocker, or (see
+          # the prompt's comment-history check below) a confirmed repeat: two consecutive
+          # runs independently concluded the issue can't be implemented as written (e.g. a
+          # stale spec targeting a mechanism the codebase no longer has) with nothing new in
+          # between. Either way, re-attempting every 5 hours just burns quota re-deriving the
+          # same conclusion — a human unblocks (after closing, rewriting, or otherwise
+          # resolving the issue) and removes the label to make it eligible again.
           open_tasks=$(gh issue list --label claude-task --state open \
             --json number,title,labels \
             --jq '.[] | select([.labels[].name] | index("blocked") | not)
@@ -258,12 +262,31 @@ jobs:
               appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
               is not blocked — if the issue body says "Blocked by #N", check #N with
               `gh issue view N` and skip this task while #N is still open. (Issues labeled
-              `blocked` — environment/permission blockers a previous run already documented —
-              are excluded from the backlog list above before you ever see it.)
+              `blocked` — either an environment/permission blocker, or a task issue where a
+              second consecutive run confirmed it can't be implemented as written, see the
+              comment-history check below — are excluded from the backlog list above before you
+              ever see it.)
             - Order: issues labeled priority:high first, then lowest issue number (FIFO).
             - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
               its acceptance criteria are the definition of done, its "Out of scope" section is
               binding, and its "Verification" steps must be run in addition to `yarn test`.
+            - Before investigating, check this issue's own history for a prior automated
+              investigation you'd otherwise just repeat: `gh issue view <number> --json comments
+              --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`. If the
+              most recent comment(s) already reached a "not implementable as currently written"
+              conclusion (stale/superseded spec, unresolvable ambiguity, etc.) — and nothing has
+              changed since that would justify re-deriving it (no maintainer reply or issue-body
+              edit after that comment, and no code change to the mechanism/files that comment
+              discusses) — do not redo the full investigation from scratch. If this issue already
+              has at least ONE prior comment reaching that same conclusion under those conditions,
+              this run's independent look is a confirmed repeat: leave one short comment pointing
+              at the earlier analysis instead of re-deriving pages of reasoning, and apply the
+              `blocked` label immediately (see the label instructions below — the same label and
+              exclusion mechanism now applies to this case too, not just environment/permission
+              blockers), so a third run never re-hits the same wall. If this is the first time you
+              are reaching this conclusion (no qualifying prior comment), proceed normally per the
+              paragraph below — comment-only, no label yet, giving a human one full cycle to catch
+              it before automation locks it out.
             - Name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
               branch name is how future runs know this task is already in flight).
             - The PR body MUST include the line `Closes #<number>` so merging auto-closes the task —
@@ -282,8 +305,13 @@ jobs:
               same wall: `gh label create blocked --color d93f0b --description "Infeasible for
               unattended runs until a human unblocks it" --force`, then
               `gh issue edit <number> --add-label blocked`. A human removes the label once
-              unblocked. Do not use the label for ordinary spec/test problems — those stay
-              comment-only, since a future run (or a spec fix) may resolve them.
+              unblocked. Do not apply the label on an ordinary spec/test problem's FIRST occurrence
+              — stay comment-only initially, since a human may resolve it (close, rewrite, edit)
+              before automation needs to step in. But per the comment-history check above, if this
+              run's conclusion duplicates a prior comment's "infeasible as written" finding with
+              nothing new in between, that's no longer a first occurrence — apply the `blocked`
+              label right then, on this same run, rather than leaving it comment-only again and
+              waiting for a third or later run to notice the pattern.
 
             PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
             eligible task issue in Phase A, pick exactly one of the following menu tasks —
