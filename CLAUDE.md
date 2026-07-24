@@ -209,16 +209,24 @@ a source change, not the dependency bump), Claude comments `@dependabot rebase` 
 comments first, and never pushing its own commits to a `dependabot/*` branch. Any other failure without
 an obviously safe fix is left for a human. If neither condition applies, falls through to Phase A.
 
-**Phase A — task backlog next.** Claude picks the top eligible open `claude-task` issue —
+**Phase A — task backlog next.** Claude walks the open `claude-task` backlog in order —
 `priority:high` first, then lowest issue number; skipping tasks already covered by an open autonomous
-PR and tasks with an open "Blocked by #N" dependency — reads its full spec, checks the issue's own
-comment history for a prior automated investigation before diving in (see below), and implements it on
-`claude/auto-task-<number>-<short-slug>`. The PR body includes `Closes #<number>` unless it's a partial
-slice (see Budget discipline). If the chosen task proves infeasible for reasons other than size, Claude
-comments on the issue explaining what's blocking and ends without a PR — comment-only on the first such
-occurrence, but if the issue's history already shows a prior comment reaching the same "infeasible as
-written" conclusion with nothing new since, Claude also applies the `blocked` label on this run instead
-of leaving it comment-only again, so the same dead-end analysis isn't repeated a third time.
+PR and tasks with an open "Blocked by #N" dependency — and implements the first candidate that's
+actually implementable, rather than stopping at the first one it tries. For each candidate in turn:
+checks the issue's own comment history for a prior automated investigation before diving in (see
+below); if it clears that, reads the full spec. If the candidate proves infeasible for reasons other
+than size, Claude comments on the issue explaining what's blocking, makes no changes, and **moves on to
+the next eligible candidate** instead of ending the run there — comment-only on a given issue's first
+such occurrence, but if that issue's history already shows a prior comment reaching the same
+"infeasible as written" conclusion with nothing new since, Claude also applies the `blocked` label on
+this run instead of leaving it comment-only again, so the same dead-end analysis isn't repeated a third
+time. A running budget check bounds the walk itself: once further skips risk leaving too little of the
+run's self-estimated budget to actually implement whatever comes next, Claude stops the walk and ends
+the run without a PR rather than forcing a rushed implementation. Once it lands on an implementable
+candidate, it proceeds as normal — implements it on `claude/auto-task-<number>-<short-slug>`, PR body
+includes `Closes #<number>` unless it's a partial slice (see Budget discipline). If every eligible
+candidate in the backlog is exhausted without finding one that's implementable, the run ends without a
+PR — the comments (and any new `blocked` labels) left along the way are still real, durable progress.
 
 **Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security
