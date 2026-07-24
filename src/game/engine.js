@@ -16,15 +16,18 @@ const TICK_ACCUMULATION_EPSILON = 1e-9
 
 // Floor for getEffectiveTierTickSpeedSeconds' returned period — a pure numerical-safety guard,
 // not a balance constant. A sufficiently large tickspeed multiplier (in practice, only the last
-// tier's XP-funded one, which compounds unboundedly since prestige.xp is never reset/capped —
-// see getLastTierXpTickspeedMultiplier) can overflow to Infinity in double-precision float, which
-// would divide the base period down to exactly 0. That 0 then feeds tickGame's
-// `ticksElapsed = accumulated / tickSpeed` as Infinity, and `accumulated - ticksElapsed *
-// tickSpeed` collapses to `Infinity * 0 = NaN`, permanently corrupting that tier's production
-// accumulator (and, via clampNonNegative treating NaN as "not finite", silently zeroing the
-// produced tier's owned/resources every tick from then on — not a one-off glitch, since the NaN
-// accumulator never recovers on its own). Clamping the period to this floor instead keeps
-// ticksElapsed a large-but-finite integer, which is safe.
+// tier's XP-funded one, which compounds — see getLastTierXpTickspeedMultiplier) can overflow to
+// Infinity in double-precision float, which would divide the base period down to exactly 0. That
+// 0 then feeds tickGame's `ticksElapsed = accumulated / tickSpeed` as Infinity, and `accumulated -
+// ticksElapsed * tickSpeed` collapses to `Infinity * 0 = NaN`, permanently corrupting that tier's
+// production accumulator (and, via clampNonNegative treating NaN as "not finite", silently
+// zeroing the produced tier's owned/resources every tick from then on — not a one-off glitch,
+// since the NaN accumulator never recovers on its own). lastTierXpConsumed/prestige.xp reset to 0
+// on every Prestige/Speed Up (see prestigeGame/speedUpGame), which makes this overflow far less
+// reachable in practice than when this guard was first added, but this floor is kept regardless as
+// defense in depth — a single long enough run before the next reset could still in principle drive
+// it there. Clamping the period to this floor instead keeps ticksElapsed a large-but-finite
+// integer, which is safe.
 const MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS = 1e-9
 
 // Collect all unique resource IDs referenced by the tier definitions
@@ -144,10 +147,11 @@ export const createInitialGameState = () => ({
   // (see buyTickspeedAutobuyer/tickGame) — no manual click needed. Never reset by prestige or by
   // Speed Up, like autoSpeedUp above.
   autoGlobalTickspeed: false,
-  // Permanent cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
+  // Run-scoped cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
   // compounds another 1% into the last tier's own delivery frequency (see
-  // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Never reset by
-  // prestige/Speed Up, or by consumeXpForLastTierTickspeed itself (it only ever grows).
+  // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Reset to 0 by both
+  // prestigeGame and speedUpGame (same as prestige.xp, the currency that funds it) — never reset by
+  // consumeXpForLastTierTickspeed itself, though (it only ever grows within a run).
   lastTierXpConsumed: 0,
   // Permanent per-tier flag: whether isTierUnlocked's live condition (own owned > 0, or the
   // previous tier's owned >= 10) has ever been satisfied for this tier — latched true forever the
@@ -357,9 +361,10 @@ export const getGlobalTickspeedProductionMultiplier = level => {
 // check against the last tier's current owned count, matching the ≥10 threshold every other
 // tier's own unlock condition uses (see isTierUnlocked). Deliberately live, not a permanent
 // latch: a Prestige/Speed Up resets the last tier's owned count back to 0 along with every other
-// tier's, and this mechanic should revert to the Money-funded multiplier along with it rather
-// than staying engaged on a tier the player no longer actually has 10 of — re-buying back up to
-// 10 re-engages it, picking back up wherever lastTierXpConsumed left off.
+// tier's (and also resets lastTierXpConsumed/prestige.xp to 0 — see prestigeGame/speedUpGame),
+// and this mechanic should revert to the Money-funded multiplier along with it rather than
+// staying engaged on a tier the player no longer actually has 10 of — re-buying back up to 10
+// re-engages it, from the fresh (0) lastTierXpConsumed baseline a Prestige/Speed Up left behind.
 export const isLastTierTickspeedXpUnlocked = state => (state.owned?.[getLastTierId()] ?? 0) >= 10
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
@@ -1014,21 +1019,22 @@ export const buyGlobalTickspeedMultiplier = state => {
 }
 
 // Reaching GOOGOL money awards Prestige Points (see getPrestigePointsAwarded) and resets all
-// progress. XP is untouched by prestige — it's earned independently via money milestones, and
-// prestige itself is gated on Money ≥ GOOGOL, not XP; the only thing XP funds is
-// consumeXpForLastTierTickspeed, unaffected by this reset. Newly-awarded points add on top of any
-// already-unspent balance (PP is a permanent, cumulative currency, unlike resources/owned/
-// purchased). Autobuyer unlock is a permanent flag, carried over unchanged across prestige, while
+// progress. XP (prestige.xp) and lastTierXpConsumed — the cumulative counter the last tier's
+// XP-funded tickspeed multiplier is funded from (see "The last tier's XP-funded tickspeed" in
+// CLAUDE.md) — both reset to 0 on prestige, same as resources/owned/purchased: XP is a run-scoped
+// currency, not a permanent one like Prestige Points, and nothing invested via
+// consumeXpForLastTierTickspeed survives either. highestMilestone (the money-exponent watermark
+// checkMilestones grants further XP against) also resets to the fresh initial value here — as it
+// already did before this change, unrelated to it — consistent with Money itself resetting to the
+// starting amount. Newly-awarded points add on top of
+// any already-unspent balance (PP is a permanent, cumulative currency, unlike resources/owned/
+// purchased/XP). Autobuyer unlock is a permanent flag, carried over unchanged across prestige, while
 // the run-funded tickspeed levels (now tracked independently of it — see tickspeedLevels) reset to
 // their level-1 baseline along with everything else, same as owned/purchased — smartAutobuyer/
 // tierTickspeedAutobuyer, by contrast, are permanent and carry over unchanged. globalTickspeedMultiplier
 // (the Money-funded global tickspeed level) resets to not-yet-bought here too, same as speedUpGame —
 // neither reset preserves it, since it's funded from the same Money balance prestige/Speed Up
-// already wipe, same as tickspeedLevels. lastTierXpConsumed is permanent (like autobuyer unlock) —
-// a prestige resets the last tier's own owned/purchased count to 0 like every other tier, which
-// also (via isLastTierTickspeedXpUnlocked's live owned >= 10 check) disengages the XP-funded
-// mechanic until the player buys back up to 10 — but all XP already invested in it carries over
-// unchanged, so re-engaging picks back up at the same bonus. everUnlockedTierIds, by contrast, is
+// already wipe, same as tickspeedLevels. everUnlockedTierIds, by contrast, is
 // NOT carried over — it resets to the fresh initial default same as owned/purchased, so a real
 // Prestige still relocks every
 // tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
@@ -1049,16 +1055,16 @@ export const prestigeGame = state => {
     speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
-    lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
-    // everUnlockedTierIds is deliberately NOT carried over here — unlike every permanent flag
-    // above, it resets to the fresh initial default (only the first tier true) same as owned/
-    // purchased, so a real Prestige/Speed Up still relocks every tier beyond the first exactly
-    // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
+    // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
+    // with prestige.xp below, since it's funded by spending XP, a run-scoped currency now.
+    // everUnlockedTierIds is deliberately NOT carried over here either — unlike every permanent
+    // flag above, it resets to the fresh initial default (only the first tier true) same as
+    // owned/purchased, so a real Prestige/Speed Up still relocks every tier beyond the first
+    // exactly like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
     prestige: {
       ...initial.prestige,
-      xp: state.prestige.xp,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
       count: state.prestige.count + 1,
     },
@@ -1075,16 +1081,19 @@ export const prestigeGame = state => {
 // prestigeSpeedBonusUnlocked/autoSpeedUp/autoGlobalTickspeed (the *automation toggles*, as opposed
 // to the global tickspeed multiplier's own level) carry over unchanged — so if the global
 // tickspeed Autobuyer was already bought, tickGame simply starts re-buying the multiplier back up
-// from scratch once Money allows. lastTierXpConsumed is likewise permanent — the last tier's own
-// owned/purchased count resets to 0 like every other tier's, which disengages the XP-funded
-// mechanic (see isLastTierTickspeedXpUnlocked's live owned >= 10 check) until it's bought back up
-// to 10, but all XP already invested in it carries over unchanged.
+// from scratch once Money allows. lastTierXpConsumed resets to 0 here too, same as prestigeGame —
+// the last tier's own owned/purchased count also resets to 0 like every other tier's, so the
+// XP-funded mechanic (see isLastTierTickspeedXpUnlocked's live owned >= 10 check) is doubly
+// disengaged: not just inactive until owned is bought back up to 10, but with nothing banked to
+// re-engage with even then, since Speed Up wipes the XP investment along with everything else
+// XP-funded.
 // everUnlockedTierIds, by contrast, is NOT carried over here either (same as prestigeGame) — it
 // resets to the fresh default, so Speed Up still relocks every tier beyond the first exactly as
 // it always has. Unlike
-// prestigeGame, `prestige` (xp/points/count/highestMilestone) is passed through completely
+// prestigeGame, `prestige.points`/`count`/`highestMilestone` are passed through completely
 // untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't award or
-// spend any. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
+// spend any — but `prestige.xp` resets to 0, same as lastTierXpConsumed, since XP is a run-scoped
+// currency now. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
 // Prestige, not a Speed Up) or before the last tier has reached that cycle's requirement.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
@@ -1101,14 +1110,15 @@ export const speedUpGame = state => {
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
-    lastTierXpConsumed: state.lastTierXpConsumed ?? initial.lastTierXpConsumed,
+    // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
+    // with prestige.xp below.
     // everUnlockedTierIds is deliberately NOT carried over here — unlike every permanent flag
     // above, it resets to the fresh initial default (only the first tier true) same as owned/
     // purchased, so a real Prestige/Speed Up still relocks every tier beyond the first exactly
     // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
-    prestige: state.prestige,
+    prestige: { ...state.prestige, xp: initial.prestige.xp },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }
 }
@@ -1149,8 +1159,10 @@ export const buyTickspeedAutobuyer = state => {
   }
 }
 
-// Spends XP to permanently compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last
-// tier's own tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — only
+// Spends XP to compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own
+// tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — durable within the
+// current run (never decays or reverts on its own), but reset to 0 by prestigeGame/speedUpGame
+// along with prestige.xp itself, same as every other run-scoped field. Only
 // available while isLastTierTickspeedXpUnlocked (the last tier currently owns >= 10), which is
 // when it's currently replacing that tier's Money-funded tickspeed button (see
 // buyTickspeedMultiplier). Every successful consumption, no

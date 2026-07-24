@@ -470,10 +470,13 @@ had — the mechanic never actually reverted to reflect the reset it was suppose
 changed so `isLastTierTickspeedXpUnlocked` is a live check (`owned[lastTierId] >= 10`) instead, with the
 stored latch flag removed entirely — matching the same live `>= 10` threshold `isTierUnlocked` already
 uses for ordinary tier unlocking, and reverting the last tier's row to its normal Money-funded tickspeed
-button whenever owned drops back below 10. `lastTierXpConsumed` (the permanent, ever-growing total XP
-invested) was deliberately kept as a separate, still-permanent counter — the accumulated bonus it drives
-is never lost across a reset, only not *applied* while the live check is unsatisfied; buying back up to
-10 re-engages it at the same cumulative bonus rather than starting over.
+button whenever owned drops back below 10. `lastTierXpConsumed` (the ever-growing total XP invested) was
+deliberately kept as a separate counter from the unlock check itself — the accumulated bonus it drives
+is never lost across a *narrower* reset than a full Prestige/Speed Up, only not *applied* while the live
+check is unsatisfied; buying back up to 10 re-engages it at the same cumulative bonus rather than
+starting over. (`lastTierXpConsumed` was permanent — surviving Prestige/Speed Up too — at the time this
+entry was written; a later change made it run-scoped instead, resetting on both. See "XP and everything
+it funds became run-scoped, not permanent" below.)
 
 ### Last tier's XP-funded tickspeed: from additive to multiplicative
 
@@ -520,6 +523,33 @@ tunable/exported constant since it's a pure numerical-safety guard rather than a
 `<= 0`. A `1e-9`-second floor still lets `ticksElapsed` grow into a very large but always-finite integer
 (effectively "deliver many times per real tick"), which is safe — only the literal zero/non-finite case
 needed guarding against.
+
+### XP and everything it funds became run-scoped, not permanent
+
+`prestige.xp` and `lastTierXpConsumed` were both permanent up to this point — carried through unchanged
+by both `prestigeGame` and `speedUpGame`, the same treatment given to genuinely permanent
+meta-progression like `speedUpCount` or an unlocked autobuyer. The maintainer asked for this to change:
+XP, and the last tier's XP-funded tickspeed bonus it funds, should reset to 0 on both Prestige and Speed
+Up, the same as resources/owned/purchased — a run-scoped currency, not a permanent one like Prestige
+Points.
+
+`prestigeGame` and `speedUpGame` both now reset `prestige.xp` and `lastTierXpConsumed` to 0 (`0` is
+already `createInitialGameState`'s default for both, so this is simply *not* explicitly carrying them
+over — the same pattern `everUnlockedTierIds` already used for a run-scoped-not-permanent field).
+`prestige.points`/`count`/`highestMilestone` are unaffected — this only touches the two fields
+XP-consumption actually funds. One pre-existing asymmetry was deliberately left alone rather than
+"fixed" as part of this change: `prestigeGame` already reset `highestMilestone` (the money-exponent
+watermark `checkMilestones` grants further XP against) to the fresh default before this change, simply
+by never explicitly carrying it over, while `speedUpGame` left it untouched (full `prestige` passthrough)
+— an inconsistency between the two reset paths that predates this change and wasn't part of what was
+asked, so it was left as-is rather than second-guessed.
+
+This also happens to make the overflow scenario the previous entry's floor guards against far less
+reachable in practice — `lastTierXpConsumed` resetting every Prestige/Speed Up means the ~71,333-XP
+overflow threshold would need to be earned and spent within a single run between resets, rather than
+accumulating indefinitely across an entire save's lifetime. The `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS`
+floor was kept regardless, as defense in depth — a single long enough run could still in principle reach
+it, and the guard costs nothing when unused.
 
 ## Distribution
 
