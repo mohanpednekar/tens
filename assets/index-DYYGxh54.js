@@ -76,14 +76,16 @@ Error generating stack: `+e.message+`
   white-space: nowrap;
   border: 0;
 `,cr=F.b`
-  color: white;
+  color: ${e=>e.theme.color.text};
   font-size: 1.25em;
   padding: 0.25em 0;
-`;cr.defaultProps={};var lr=F.section`
-  background: #171717;
-  border: 1px solid #333;
-  border-radius: 10px;
-  color: white;
+  font-variant-numeric: tabular-nums;
+`,lr=F.section`
+  background: ${e=>e.$raised?e.theme.color.surfaceRaised:e.theme.color.surface};
+  border: 1px solid ${e=>e.theme.color.border};
+  border-radius: ${e=>e.theme.radius.md};
+  box-shadow: ${e=>e.theme.shadow.sm};
+  color: ${e=>e.theme.color.text};
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
