@@ -482,6 +482,26 @@ Strict three-layer separation:
   buttons, not a replacement for any of them — none of those changed. Before `canPrestige`, none of
   these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
   display card never gets `$actionable` — only the PP display can trigger Prestige.
+- **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
+  display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
+  and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
+  by `handleResetClick`, same convention as `openTierDetailIds`) — via a new `$expandable` `CenteredCard`
+  prop (cursor/hover styling shared with `$actionable`, but its own `#7c9bff` focus-visible outline
+  rather than `$actionable`'s gold one, since this toggle has nothing to do with triggering Prestige).
+  Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override `CenteredCard`'s own
+  `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses) listing every *global*
+  (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
+  `!isFirstRun`), Speed Up, and the Global Tickspeed Multiplier — each gated on the same
+  reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
+  here before its own card would show it either), reading either its live effect (e.g. "+50% production
+  speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
+  (Lv.1)") or a "not yet unlocked/activated/active" status line when revealed but not yet bought. The
+  per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
+  here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
+  list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
+  side-by-side form (`showGlobalMultipliers && !balancesCompressed`), since a multi-line breakdown
+  would overflow that compact bar; the card itself and its toggle state stay unaffected — expanding
+  again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
 - **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
   the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
   click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
@@ -1573,7 +1593,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (499 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (502 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
   behind by prior renames (see `docs/DESIGN_HISTORY.md`). A legacy save's `resources.Ones` balance is

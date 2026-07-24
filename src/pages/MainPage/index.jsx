@@ -194,18 +194,45 @@ const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
 
-  ${props => props.$actionable && css`
+  ${props => (props.$actionable || props.$expandable) && css`
     cursor: pointer;
 
     &:hover {
       filter: brightness(1.15);
     }
+  `}
 
+  ${props => props.$actionable && css`
     &:focus-visible {
       outline: 2px solid #fbbf24;
       outline-offset: 2px;
     }
   `}
+
+  ${props => props.$expandable && css`
+    &:focus-visible {
+      outline: 2px solid #7c9bff;
+      outline-offset: 2px;
+    }
+  `}
+`
+
+// The Money balance card's click-to-expand breakdown of every global (not per-tier) production
+// multiplier currently in effect — Prestige's passive speed bonus, Speed Up, and the Global
+// Tickspeed Multiplier (see "The global tickspeed multiplier"/"Speed Up"/"Prestige Points,
+// autobuyer unlock, and the tickspeed multiplier" in CLAUDE.md). Left-aligned (overriding
+// CenteredCard's own text-align: center) for list readability, same technique FullScreenCard's own
+// ul already uses.
+const GlobalMultipliersList = styled.ul`
+  color: #a3a3a3;
+  font-size: 0.8em;
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  text-align: left;
+
+  li {
+    margin: 0.15rem 0;
+  }
 `
 
 // Keeps both balances visible at all times: the Money + PP pair sticks to the top of the viewport
@@ -672,6 +699,13 @@ const MainPage = () => {
     else next.add(tierId)
     return next
   })
+  // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
+  // (not reset by handleResetClick, same as openTierDetailIds above) rather than a native
+  // <details>/<summary> disclosure, since the disclosure's content is suppressed entirely while
+  // the sticky balances bar is compressed (see its render site below) rather than merely styled
+  // smaller, which a CSS-only native disclosure couldn't express as cleanly.
+  const [showGlobalMultipliers, setShowGlobalMultipliers] = useState(false)
+  const toggleGlobalMultipliers = () => setShowGlobalMultipliers(previous => !previous)
   // Smart requires the tier's autobuyer to already be unlocked (see buySmartAutobuyer); the tier
   // tickspeed autobuyer needs no such prerequisite (see buyTierTickspeedAutobuyer) — but since
   // Smart being bought already implies the autobuyer is unlocked, "both bought" below still means
@@ -994,8 +1028,47 @@ const MainPage = () => {
         $belowBar={showTopPrestigeBar}
         $belowBarHeight={topPrestigeBarHeight}
       >
-        <CenteredCard aria-label="money display">
+        <CenteredCard
+          aria-controls="global-multipliers-details"
+          aria-expanded={showGlobalMultipliers}
+          aria-label="money display"
+          $expandable
+          onClick={toggleGlobalMultipliers}
+          onKeyDown={event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            toggleGlobalMultipliers()
+          }}
+          role="button"
+          tabIndex={0}
+          title="Show or hide the global production multipliers currently in effect"
+        >
           <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
+          {showGlobalMultipliers && !balancesCompressed && (
+            <GlobalMultipliersList id="global-multipliers-details" aria-label="global production multipliers">
+              {!isFirstRun && (
+                <li>
+                  Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
+                    ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed from ${formatAmount(prestige.points)} unspent PP`
+                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on the Upgrades page)`}
+                </li>
+              )}
+              {speedUpEverRevealed && (
+                <li>
+                  Speed Up: {speedUpCount > 0
+                    ? `×${formatRate(speedUpMultiplier)} production speed from ${speedUpCount} activation${speedUpCount === 1 ? '' : 's'}`
+                    : `not yet activated (reach ${formatAmount(speedUpRequirement)} ${lastTier.name} purchases)`}
+                </li>
+              )}
+              {globalTickspeedCardEverRevealed && (
+                <li>
+                  Global Tickspeed Multiplier: {isGlobalTickspeedActive
+                    ? `+${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier (Lv.${globalTickspeedLevel})`
+                    : 'not yet active'}
+                </li>
+              )}
+            </GlobalMultipliersList>
+          )}
         </CenteredCard>
 
         {!isFirstRun && (

@@ -1399,3 +1399,70 @@ test('a tier fully Smart but not yet tickspeed-automated does not trigger the "e
   expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toBeInTheDocument()
 })
+
+test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier02: 1, tier10: 10 },
+    prestigeSpeedBonusUnlocked: true,
+    speedUpCount: 2,
+    globalTickspeedMultiplier: 1,
+    prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+
+  const moneyDisplay = screen.getByRole('button', { name: /^money display$/i })
+  expect(moneyDisplay).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByLabelText(/^global production multipliers$/i)).not.toBeInTheDocument()
+
+  await user.click(moneyDisplay)
+
+  expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
+  const breakdown = screen.getByLabelText(/^global production multipliers$/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
+  expect(breakdown).toHaveTextContent(/speed up: ×4 production speed from 2 activations/i)
+  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+
+  await user.click(moneyDisplay)
+
+  expect(moneyDisplay).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByLabelText(/^global production multipliers$/i)).not.toBeInTheDocument()
+})
+
+test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated status for each global multiplier before it becomes active', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier02: 1, tier10: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^money display$/i }))
+
+  const breakdown = screen.getByLabelText(/^global production multipliers$/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach 10 ronnabytes purchases\)/i)
+  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
+})
+
+test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier02: 1, tier10: 10 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^money display$/i }))
+
+  const breakdown = screen.getByLabelText(/^global production multipliers$/i)
+  expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
+  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
+})
