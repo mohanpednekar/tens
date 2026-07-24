@@ -161,6 +161,14 @@ Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up st
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a 429
 ("session limit") failure is downgraded to a warning (job stays green) since it's purely transient.
+`blocked` covers two distinct situations, not just one: an environment/permission restriction of the
+unattended session itself (the original use case), and — per Phase A's comment-history check below —
+a task issue where a second consecutive run independently reached the same "infeasible as written"
+conclusion with nothing new in between (no maintainer reply, no issue edit, no relevant code change).
+The latter exists because without it, a stale-spec issue that keeps winning FIFO order re-derives the
+identical dead-end analysis every single run indefinitely — issue #101 did this 6 runs in a row before
+being closed manually — instead of self-locking after the second occurrence the way an
+environment/permission blocker already did from the first.
 
 **Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
 }` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
@@ -201,12 +209,24 @@ a source change, not the dependency bump), Claude comments `@dependabot rebase` 
 comments first, and never pushing its own commits to a `dependabot/*` branch. Any other failure without
 an obviously safe fix is left for a human. If neither condition applies, falls through to Phase A.
 
-**Phase A — task backlog next.** Claude picks the top eligible open `claude-task` issue —
+**Phase A — task backlog next.** Claude walks the open `claude-task` backlog in order —
 `priority:high` first, then lowest issue number; skipping tasks already covered by an open autonomous
-PR and tasks with an open "Blocked by #N" dependency — reads its full spec, and implements it on
-`claude/auto-task-<number>-<short-slug>`. The PR body includes `Closes #<number>` unless it's a partial
-slice (see Budget discipline). If the chosen task proves infeasible for reasons other than size, Claude
-comments on the issue explaining what's blocking and ends without a PR.
+PR and tasks with an open "Blocked by #N" dependency — and implements the first candidate that's
+actually implementable, rather than stopping at the first one it tries. For each candidate in turn:
+checks the issue's own comment history for a prior automated investigation before diving in (see
+below); if it clears that, reads the full spec. If the candidate proves infeasible for reasons other
+than size, Claude comments on the issue explaining what's blocking, makes no changes, and **moves on to
+the next eligible candidate** instead of ending the run there — comment-only on a given issue's first
+such occurrence, but if that issue's history already shows a prior comment reaching the same
+"infeasible as written" conclusion with nothing new since, Claude also applies the `blocked` label on
+this run instead of leaving it comment-only again, so the same dead-end analysis isn't repeated a third
+time. A running budget check bounds the walk itself: once further skips risk leaving too little of the
+run's self-estimated budget to actually implement whatever comes next, Claude stops the walk and ends
+the run without a PR rather than forcing a rushed implementation. Once it lands on an implementable
+candidate, it proceeds as normal — implements it on `claude/auto-task-<number>-<short-slug>`, PR body
+includes `Closes #<number>` unless it's a partial slice (see Budget discipline). If every eligible
+candidate in the backlog is exhausted without finding one that's implementable, the run ends without a
+PR — the comments (and any new `blocked` labels) left along the way are still real, durable progress.
 
 **Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security

@@ -87,9 +87,13 @@ jobs:
           # take priority over the built-in maintenance menu — the prompt gets the list
           # (number + title) and reads the chosen issue's full spec with `gh issue view`.
           # Issues also labeled `blocked` are excluded: a previous run already established
-          # they can't be done unattended (environment/permission blocker, documented in an
-          # issue comment), so re-attempting them every 5 hours just burns quota — a human
-          # unblocks and removes the label to make them eligible again.
+          # they can't be done unattended — either an environment/permission blocker, or (see
+          # the prompt's comment-history check below) a confirmed repeat: two consecutive
+          # runs independently concluded the issue can't be implemented as written (e.g. a
+          # stale spec targeting a mechanism the codebase no longer has) with nothing new in
+          # between. Either way, re-attempting every 5 hours just burns quota re-deriving the
+          # same conclusion — a human unblocks (after closing, rewriting, or otherwise
+          # resolving the issue) and removes the label to make it eligible again.
           open_tasks=$(gh issue list --label claude-task --state open \
             --json number,title,labels \
             --jq '.[] | select([.labels[].name] | index("blocked") | not)
@@ -252,38 +256,81 @@ jobs:
             - (c) If neither (a) nor (b) applies (main is green and the failing-PR list is empty),
               fall through to Phase A.
 
-            PHASE A — task backlog next. If the backlog above is non-empty, pick the top
-            eligible task issue and implement it:
+            PHASE A — task backlog next. If the backlog above is non-empty, walk it in order and
+            implement the first candidate that turns out to actually be implementable — do not
+            stop at the first candidate just because it's skippable or turns out infeasible; keep
+            moving down the order until you land on one you can implement, or you've worked through
+            every eligible candidate:
             - Eligible means: no open autonomous PR above already covers it (its issue number
               appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
               is not blocked — if the issue body says "Blocked by #N", check #N with
               `gh issue view N` and skip this task while #N is still open. (Issues labeled
-              `blocked` — environment/permission blockers a previous run already documented —
-              are excluded from the backlog list above before you ever see it.)
-            - Order: issues labeled priority:high first, then lowest issue number (FIFO).
+              `blocked` — either an environment/permission blocker, or a task issue where a
+              second consecutive run confirmed it can't be implemented as written, see the
+              comment-history check below — are excluded from the backlog list above before you
+              ever see it.)
+            - Order: issues labeled priority:high first, then lowest issue number (FIFO). This is
+              the order you walk candidates in, not just how you pick the first one.
+            - For each candidate in turn: first check its own comment history for a prior
+              automated investigation you'd otherwise just repeat: `gh issue view <number> --json
+              comments --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`.
+              If the most recent comment(s) already reached a "not implementable as currently
+              written" conclusion (stale/superseded spec, unresolvable ambiguity, etc.) — and
+              nothing has changed since that would justify re-deriving it (no maintainer reply or
+              issue-body edit after that comment, and no code change to the mechanism/files that
+              comment discusses) — do not redo the full investigation from scratch. If this issue
+              already has at least ONE prior comment reaching that same conclusion under those
+              conditions, this run's independent look is a confirmed repeat: leave one short
+              comment pointing at the earlier analysis instead of re-deriving pages of reasoning,
+              apply the `blocked` label immediately (see the label instructions below — the same
+              label and exclusion mechanism now applies to this case too, not just
+              environment/permission blockers) so a third run never re-hits the same wall, and move
+              on to the next eligible candidate in order. If this is the first time you are
+              reaching this conclusion (no qualifying prior comment), proceed to read the full spec
+              as normal.
             - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
               its acceptance criteria are the definition of done, its "Out of scope" section is
               binding, and its "Verification" steps must be run in addition to `yarn test`.
-            - Name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
-              branch name is how future runs know this task is already in flight).
-            - The PR body MUST include the line `Closes #<number>` so merging auto-closes the task —
-              UNLESS this PR is a partial slice per the budget guidance above, in which case use
+            - If this candidate turns out infeasible for reasons other than size (ambiguous spec,
+              can't get tests green after a reasonable attempt), do NOT half-land it: leave a
+              comment on the issue with `gh issue comment` explaining exactly what's blocking, make
+              no changes, and move on to the next eligible candidate in order (do not stop the run
+              here). If the blocker is an environment/permission restriction of this unattended
+              session itself (e.g. a Write the harness refuses to grant, like new files under
+              .claude/), ALSO label the issue so future runs stop re-attempting it and burning their
+              budget on the same wall: `gh label create blocked --color d93f0b --description
+              "Infeasible for unattended runs until a human unblocks it" --force`, then
+              `gh issue edit <number> --add-label blocked`. A human removes the label once
+              unblocked. Do not apply the label on an ordinary spec/test problem's FIRST occurrence
+              — stay comment-only initially, since a human may resolve it (close, rewrite, edit)
+              before automation needs to step in. But per the comment-history check above, if this
+              run's conclusion duplicates a prior comment's "infeasible as written" finding with
+              nothing new in between, that's no longer a first occurrence — apply the `blocked`
+              label right then, on this same run, rather than leaving it comment-only again and
+              waiting for a third or later run to notice the pattern.
+            - Budget guard on the walk itself: each skipped/infeasible candidate still costs turns
+              (comment history check, spec read, investigation, comment). Weigh that spend against
+              your self-estimated usage-window budget as you go — if you've already burned a
+              meaningful chunk of this run's budget walking past infeasible candidates and there
+              isn't enough left to confidently implement, test, and open a PR for whatever you'd
+              pick up next (even a small slice), stop the walk there rather than continuing to
+              consume budget with nothing to show for it. Ending the run with no PR after having
+              left honest comments on every candidate you actually looked at is a fine outcome —
+              better than forcing a rushed implementation of whatever candidate you happened to
+              reach right as the budget ran out.
+            - Once you land on a candidate you can actually implement, treat it exactly as before:
+              name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
+              branch name is how future runs know this task is already in flight), and make the PR
+              body include the line `Closes #<number>` so merging auto-closes the task — UNLESS
+              this PR is a partial slice per the budget guidance above, in which case use
               `Part of #<number>` instead (no auto-close) and leave a `gh issue comment` on the task
               issue summarizing exactly what this slice covers and what remains, so a future run can
               pick up the rest (the issue stays open and eligible; only the PR that completes the
               full spec includes `Closes #<number>`).
-            - If the chosen task turns out infeasible for reasons other than size (ambiguous spec,
-              can't get tests green after a reasonable attempt), do NOT half-land it or fall through
-              to another task: leave a comment on the issue with `gh issue comment` explaining
-              exactly what's blocking, make no changes, and end the run without a PR. If the
-              blocker is an environment/permission restriction of this unattended session itself
-              (e.g. a Write the harness refuses to grant, like new files under .claude/), ALSO
-              label the issue so future runs stop re-attempting it and burning their budget on the
-              same wall: `gh label create blocked --color d93f0b --description "Infeasible for
-              unattended runs until a human unblocks it" --force`, then
-              `gh issue edit <number> --add-label blocked`. A human removes the label once
-              unblocked. Do not use the label for ordinary spec/test problems — those stay
-              comment-only, since a future run (or a spec fix) may resolve them.
+            - If you work through every eligible candidate in the backlog without finding one you
+              can implement, end the run without a PR — you've still made real progress (comments,
+              and any new `blocked` labels, are durable signal for the next run and for a human),
+              just not a code change this run.
 
             PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
             eligible task issue in Phase A, pick exactly one of the following menu tasks —
