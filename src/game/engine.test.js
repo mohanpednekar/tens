@@ -2319,10 +2319,10 @@ describe('prestigeGame', () => {
     expect(after.autoPrestigeAttemptBudget).toBe(0)
   })
 
-  it('leaves XP untouched', () => {
+  it('resets XP to 0, a run-scoped currency unlike Prestige Points', () => {
     const state = withXP(withMoney(createInitialGameState(), GOOGOL), 7)
     const after = prestigeGame(state)
-    expect(after.prestige.xp).toBe(7)
+    expect(after.prestige.xp).toBe(0)
   })
 
   it('resets money to starting amount', () => {
@@ -2366,7 +2366,7 @@ describe('prestigeGame', () => {
     expect(after.autobuyers[tensTier.id]).toBeNull()
   })
 
-  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) but keeps lastTierXpConsumed permanently across prestige', () => {
+  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) and resets lastTierXpConsumed to 0 across prestige', () => {
     const state = withLastTierXpConsumed(
       withLastTierTickspeedXpUnlocked(withMoney(createInitialGameState(), GOOGOL)),
       42
@@ -2375,10 +2375,12 @@ describe('prestigeGame', () => {
     const after = prestigeGame(state)
     expect(after.owned[lastTier.id]).toBe(0)
     expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
-    expect(after.lastTierXpConsumed).toBe(42)
-    // Buying back up to 10 re-engages the mechanic, picking back up at the same accumulated bonus.
+    expect(after.lastTierXpConsumed).toBe(0)
+    // Buying back up to 10 re-engages the live check, but with nothing banked — the multiplier
+    // starts fresh at the baseline (×1), not at the pre-reset bonus.
     const reEngaged = withOwned(after, lastTier.id, 10)
     expect(isLastTierTickspeedXpUnlocked(reEngaged)).toBe(true)
+    expect(getLastTierXpTickspeedMultiplier(reEngaged.lastTierXpConsumed)).toBe(1)
   })
 
   it('resets everUnlockedTierIds on prestige, same as owned/purchased, so a tier relocks like it always has', () => {
@@ -2522,15 +2524,15 @@ describe('speedUpGame', () => {
     expect(after.autoGlobalTickspeed).toBe(true)
   })
 
-  it('leaves Prestige Points, count, and XP completely untouched', () => {
+  it('leaves Prestige Points and count untouched, but resets XP to 0', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = speedUpGame(state)
     expect(after.prestige.points).toBe(42)
     expect(after.prestige.count).toBe(0)
-    expect(after.prestige.xp).toBe(7)
+    expect(after.prestige.xp).toBe(0)
   })
 
-  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) but keeps lastTierXpConsumed permanently across Speed Up', () => {
+  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) and resets lastTierXpConsumed to 0 across Speed Up', () => {
     const state = withLastTierXpConsumed(
       withLastTierTickspeedXpUnlocked(eligibleState()),
       42
@@ -2539,7 +2541,7 @@ describe('speedUpGame', () => {
     const after = speedUpGame(state)
     expect(after.owned[lastTier.id]).toBe(0)
     expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
-    expect(after.lastTierXpConsumed).toBe(42)
+    expect(after.lastTierXpConsumed).toBe(0)
   })
 
   it('resets everUnlockedTierIds on Speed Up, same as owned/purchased, so a tier relocks like it always has', () => {
