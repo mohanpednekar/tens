@@ -781,6 +781,11 @@ generator, bought with Bits to produce more Bits — completing the byte-scale t
 `RESOURCE_SYMBOL(MONEY_ID)` falls back to `b`, lowercase, distinct from tier01's uppercase `B` byte
 symbol).
 
+Each tier's `baseCost` is that unit's real-world size in bits, decimal/SI scale (1 KB = 1,000 bytes, not
+1,024): `8 * 1000^(n-1)` for `tier0n` — `8` for `tier01` (Bytes), `8E3` for `tier02` (Kilobytes), up
+through `8E27` for `tier10` (Ronnabytes). A clean ×1000 jump between every consecutive tier, including
+`tier01`→`tier02`.
+
 A tier unlocks once you own **≥ 10** of the tier below it (`isTierUnlocked`); already-owned tiers stay
 unlocked even if the rule changes later, so old saves stay playable. Beyond that live check,
 `state.everUnlockedTierIds[tierId]` latches a tier's unlocked status the moment it's first reached (see
