@@ -811,14 +811,23 @@ only needs to touch `name`/`symbol`, never state keys, tests, or save data.
 `MONEY_ID` (`'base'`) for all of them. Once owned, a tier produces the tier immediately below it
 (`producesResourceId`), cascading production down to the base currency. `tier01` (`Bytes`) is the
 special case where `costResourceId === producesResourceId === MONEY_ID`: it's the entry-level
-generator, bought with Bits to produce more Bits — completing the byte-scale theme (1 Byte = 8 Bits;
-`RESOURCE_SYMBOL(MONEY_ID)` falls back to `b`, lowercase, distinct from tier01's uppercase `B` byte
-symbol).
+generator, bought with Bits to produce more Bits — completing the byte-scale theme (`RESOURCE_SYMBOL(MONEY_ID)`
+falls back to `b`, lowercase, distinct from tier01's uppercase `B` byte symbol). At the default block
+size (8), completing tier01's first level costs 8 Bits total (1 Byte = 8 Bits) — see `baseCost` below
+for why that's a level-total figure, not tier01's own per-unit price.
 
-Each tier's `baseCost` is that unit's real-world size in bits, decimal/SI scale (1 KB = 1,000 bytes, not
-1,024): `8 * 1000^(n-1)` for `tier0n` — `8` for `tier01` (Bytes), `8E3` for `tier02` (Kilobytes), up
-through `8E27` for `tier10` (Ronnabytes). A clean ×1000 jump between every consecutive tier, including
-`tier01`→`tier02`.
+Each tier's `baseCost` is a fixed PER-UNIT price, independent of block size: `1000^(n-1)` for `tier0n`
+— `1` for `tier01` (Bytes), `1E3` for `tier02` (Kilobytes), up through `1E27` for `tier10`
+(Ronnabytes). A clean ×1000 jump between every consecutive tier, including `tier01`→`tier02`.
+
+`baseCost` (and the epoch-scaled cost at higher levels, see `getTierCost`) is what a single purchase
+costs — it does not depend on `blockSize` at all. A level's TOTAL cost (every purchase within it,
+summed) is that fixed per-unit price times the CURRENT block size (`getTierQuantityCost`, see the
+function table below) — so completing a level costs more once `blockSize` has grown (see "The
+(configurable) purchase block size" below), even though the per-unit price itself never changes. At
+the default block size (8), a tier's level-1 total reproduces the real-world-bit-size figures the
+byte-scale theme is built on (8 for tier01, 8,000 for tier02, … 8×10²⁷ for tier10) — `baseCost` values
+are exactly those figures divided by 8.
 
 A tier unlocks once you own **≥ `getPurchaseBlockSize(state)`** (a full level's worth, currently 8
 and possibly growing over a run — see "The (configurable) purchase block size" below) of the tier
@@ -1528,7 +1537,7 @@ purchases were manual or automatic.
 | Function | Signature | Purpose |
 |----------|-----------|---------|
 | `createInitialGameState` | `() → state` | Fresh state derived from `TIER_DEFINITIONS`; `resources` is pre-populated with every `costResourceId`/`producesResourceId`, not just money |
-| `getTierCost` | `(tier, level) → number` | `baseCost * 10^(getCostEpochExponent(epoch) - 1)`, epoch = `level - 1` — flat across each level; each level multiplies `baseCost` by 10 raised to (that level's cost-epoch exponent − 1): 1, 2, 4, 7, 11, … for epochs 0, 1, 2, 3, 4, … Takes the tier's current LEVEL directly (`state.purchaseLevels[tierId]`), not a lifetime purchased count. See `docs/DESIGN_HISTORY.md` for why this multiplier form (and its triangular-number sequence, superseding an earlier Fibonacci one) was adopted over a literal `baseCost^exponent`. Deep epochs still eventually overflow to `Infinity`, which is safe — an infinite cost is simply never affordable |
+| `getTierCost` | `(tier, level) → number` | Returns the fixed PER-UNIT price: `baseCost * 10^(getCostEpochExponent(epoch) - 1)`, epoch = `level - 1` — each level multiplies `baseCost` by 10 raised to (that level's cost-epoch exponent − 1): 1, 2, 4, 7, 11, … for epochs 0, 1, 2, 3, 4, … This price is independent of `blockSize` entirely — no division happens anywhere in it, so the result is always an exact integer. A level's TOTAL cost (every purchase within it, summed) is this per-unit price times whatever `blockSize` is in effect (see `getTierQuantityCost`) — the total that scales with block size, not the per-unit price. Takes the tier's current LEVEL directly (`state.purchaseLevels[tierId]`), not a lifetime purchased count. See `docs/DESIGN_HISTORY.md` for why this multiplier form (and its triangular-number sequence, superseding an earlier Fibonacci one) was adopted over a literal `baseCost^exponent`, and for the history of the per-unit/level-total split (an intermediate division-based version was replaced by this fixed-price-times-blockSize version). Deep epochs still eventually overflow to `Infinity`, which is safe — an infinite cost is simply never affordable |
 | `getCostEpochExponent` | `epoch → number` | The exponent driving a cost epoch's multiplier in `getTierCost`: 1, 2, 4, 7, 11, 16, 22, … for epochs 0, 1, 2, 3, 4, 5, 6, … (`exponent(e) = 1 + e*(e+1)/2`, a "1 plus a triangular number" progression); a negative epoch is clamped to 0. Supersedes an earlier Fibonacci-based sequence — see `docs/DESIGN_HISTORY.md` |
 | `getPurchaseBlockSize` | `state → number` | The purchase block size every tier's current level currently requires to complete — a single global value (not per-tier), read fresh from state rather than a hardcoded constant. Starts at `DEFAULT_PURCHASE_BLOCK_SIZE` and grows by `PURCHASE_BLOCK_SIZE_GROWTH_STEP` every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS` the LAST tier completes (see "The (configurable) purchase block size and tier levels" above). Supersedes an earlier `getTierLevel(purchased)` accessor that derived a level via division against a fixed block size — see `docs/DESIGN_HISTORY.md` |
 | `getTierBulkQuantity` | `(blockSize, levelProgress, requestedQuantity) → number` | Caps a bulk purchase at the units remaining to complete the current level (`blockSize - levelProgress`), so every unit bought is the same price |
@@ -1589,7 +1598,10 @@ purchases were manual or automatic.
 
 - `MONEY_ID = 'base'` — naming-agnostic id of the base/root resource, fully decoupled from its display
   name/symbol ("Bits" / `b`), same rationale as each tier's own `id`
-- `MONEY_STARTING_AMOUNT = 10`
+- `MONEY_STARTING_AMOUNT = 1` — a fresh save starts with 1 Bit. Also seeds `prestige.highestMilestone`
+  (`Math.floor(Math.log10(MONEY_STARTING_AMOUNT))`, `checkMilestones`' XP-earning watermark) at `0`
+  rather than `1` — the first XP point is now earned the moment Money first reaches 10 (exponent 1 >
+  the fresh watermark of 0), instead of needing to reach 100
 - `GOOGOL = 1e100` — money balance required to prestige
 - `TICK_RATE_MS = 100` — the global tick fires every 100ms (10Hz); `elapsedSeconds` per live tick is
   `TICK_RATE_MS / 1000 = 0.1`. Every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets)
@@ -1751,7 +1763,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (509 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (514 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
   behind by prior renames (see `docs/DESIGN_HISTORY.md`). A legacy save's `resources.Ones` balance is
