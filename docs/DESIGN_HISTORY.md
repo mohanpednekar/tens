@@ -581,6 +581,20 @@ becomes a real requirement later, Capacitor is the natural next step (it can wra
 `dist/` output), but that's a deliberate, human-initiated escalation, not something this repo's
 automation should reach for on its own.
 
+## Documentation
+
+### Why semver/changelog started at v0.5.0, not v0.1.0-from-inception
+
+`package.json`'s `"version"` sat at the placeholder `"0.1.0"` unchanged since the project's very
+first commit — nothing ever read or bumped it, and there were no git tags. Rather than either leaving
+it meaningless forever or trying to carve the entire pre-changelog commit history into a long, finely
+granular version sequence after the fact, the retroactive `CHANGELOG.md` groups that history into five
+versions (`v0.1.0`–`v0.5.0`) at natural thematic/chronological boundaries in the real commit log —
+coarser than "one version per notable commit," but enough to give the project a real, taggable
+version history instead of an eternal `0.1.0` stub. `v0.5.0` (this change) is where the convention
+actually starts being *maintained* going forward — every subsequent PR is expected to add its own
+`Unreleased` entry, which the retroactive history obviously couldn't have done for itself.
+
 ## Testing
 
 The unmount-before-`vi.useRealTimers()` ordering requirement (see CLAUDE.md's Testing section) isn't
