@@ -31,6 +31,7 @@ import {
   getPrestigePointsAwarded,
   getPrestigeProductionMultiplier,
   getPrestigeProgressPercent,
+  getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
   getTierTickspeedAutobuyerCost,
@@ -42,7 +43,6 @@ import {
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
-  getTierLevel,
   getTierProductionProgressPercent,
   getTierPurchasedCount,
   getTierQuantityCost,
@@ -55,7 +55,7 @@ import {
   speedUpGame,
   tickGame,
 } from './engine'
-import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -77,6 +77,16 @@ const withOwned = (state, tierId, count) => ({
 const withPurchased = (state, tierId, count) => ({
   ...state,
   purchased: { ...state.purchased, [tierId]: count },
+})
+
+const withPurchaseLevel = (state, tierId, level) => ({
+  ...state,
+  purchaseLevels: { ...state.purchaseLevels, [tierId]: level },
+})
+
+const withPurchaseLevelProgress = (state, tierId, progress) => ({
+  ...state,
+  purchaseLevelProgress: { ...state.purchaseLevelProgress, [tierId]: progress },
 })
 
 const withXP = (state, xp) => ({
@@ -144,14 +154,15 @@ const withAutoGlobalTickspeed = (state, active = true) => ({
   autoGlobalTickspeed: active,
 })
 
-// isLastTierTickspeedXpUnlocked is a live check against the last tier's current owned count (see
-// engine.js) — this helper ensures that's satisfied by raising owned to at least PURCHASE_BLOCK_SIZE
-// if it isn't already there, without clobbering a test's own higher value for it.
+// isLastTierTickspeedXpUnlocked is a live check against the last tier's current owned count vs.
+// the current (dynamic) block size (see engine.js) — this helper ensures that's satisfied by
+// raising owned to at least that block size if it isn't already there, without clobbering a test's
+// own higher value for it.
 const withLastTierTickspeedXpUnlocked = (state, unlocked = true) => ({
   ...state,
   owned: {
     ...state.owned,
-    [lastTier.id]: unlocked ? Math.max(state.owned[lastTier.id] ?? 0, PURCHASE_BLOCK_SIZE) : state.owned[lastTier.id],
+    [lastTier.id]: unlocked ? Math.max(state.owned[lastTier.id] ?? 0, getPurchaseBlockSize(state)) : state.owned[lastTier.id],
   },
 })
 
@@ -354,95 +365,80 @@ describe('getCostEpochExponent', () => {
   })
 })
 
-// ─── getTierLevel ────────────────────────────────────────────────────────────
-
-describe('getTierLevel', () => {
-  it('is level 1 for purchased 0 through PURCHASE_BLOCK_SIZE - 1', () => {
-    expect(getTierLevel(0)).toBe(1)
-    expect(getTierLevel(7)).toBe(1)
-  })
-
-  it('advances to level 2 at purchased = PURCHASE_BLOCK_SIZE', () => {
-    expect(getTierLevel(8)).toBe(2)
-    expect(getTierLevel(15)).toBe(2)
-  })
-
-  it('advances to level 3 at purchased = 2 * PURCHASE_BLOCK_SIZE', () => {
-    expect(getTierLevel(16)).toBe(3)
-  })
-
-  it('clamps a negative purchased count to level 1', () => {
-    expect(getTierLevel(-5)).toBe(1)
-  })
-})
-
 // ─── getTierCost ─────────────────────────────────────────────────────────────
+// getTierCost now takes a tier's current LEVEL directly (not a lifetime purchased count) — level
+// is tracked directly in state (purchaseLevels), not derived via division. See getPurchaseBlockSize
+// tests below for the block-size-growth mechanic, and getTierBulkQuantity for within-level capping.
 
 describe('getTierCost', () => {
   const tier = { baseCost: 10 }
 
-  it('costs baseCost when 0 owned', () => {
-    expect(getTierCost(tier, 0)).toBe(10)
-  })
-
-  it('stays flat within the first level (purchased 0 – 7)', () => {
+  it('costs baseCost at level 1', () => {
     expect(getTierCost(tier, 1)).toBe(10)
-    expect(getTierCost(tier, 7)).toBe(10)
   })
 
-  it('jumps to baseCost * 10^1 at purchased = 8 (level 2), then stays flat within it', () => {
-    // epoch=1 → exponent 2 → baseCost * 10^(2-1) = 10 * 10 = 100, flat for purchased 8-15
-    expect(getTierCost(tier, 8)).toBe(100)
-    expect(getTierCost(tier, 15)).toBe(100)
+  it('costs baseCost * 10^1 at level 2', () => {
+    // epoch=1 → exponent 2 → baseCost * 10^(2-1) = 10 * 10 = 100
+    expect(getTierCost(tier, 2)).toBe(100)
   })
 
-  it('jumps to baseCost * 10^3 at purchased = 16 (level 3)', () => {
+  it('costs baseCost * 10^3 at level 3', () => {
     // epoch=2 → exponent 4 → 10 * 10^(4-1) = 10000
-    expect(getTierCost(tier, 16)).toBe(10000)
+    expect(getTierCost(tier, 3)).toBe(10000)
   })
 
-  it('reaches baseCost * 10^6 at purchased = 24 (level 4)', () => {
-    // epoch=3 → exponent 7 → 10 * 10^(7-1) = 1e7, flat for purchased 24-31
-    expect(getTierCost(tier, 24)).toBe(1e7)
-    expect(getTierCost(tier, 31)).toBe(1e7)
+  it('costs baseCost * 10^6 at level 4', () => {
+    // epoch=3 → exponent 7 → 10 * 10^(7-1) = 1e7
+    expect(getTierCost(tier, 4)).toBe(1e7)
   })
 
-  it('reaches baseCost * 10^10 at purchased = 32 (level 5)', () => {
+  it('costs baseCost * 10^10 at level 5', () => {
     // epoch=4 → exponent 11 → 10 * 10^(11-1) = 1e11
-    expect(getTierCost(tier, 32)).toBe(1e11)
+    expect(getTierCost(tier, 5)).toBe(1e11)
   })
 
   it('scales a larger baseCost by the same epoch-exponent multiplier, not a compounded power', () => {
     const thousands = { baseCost: 1e3 }
-    expect(getTierCost(thousands, 0)).toBe(1e3)
-    expect(getTierCost(thousands, 8)).toBe(1e4)
-    expect(getTierCost(thousands, 16)).toBe(1e6)
-    expect(getTierCost(thousands, 24)).toBe(1e9)
-    expect(getTierCost(thousands, 32)).toBe(1e13)
+    expect(getTierCost(thousands, 1)).toBe(1e3)
+    expect(getTierCost(thousands, 2)).toBe(1e4)
+    expect(getTierCost(thousands, 3)).toBe(1e6)
+    expect(getTierCost(thousands, 4)).toBe(1e9)
+    expect(getTierCost(thousands, 5)).toBe(1e13)
   })
 
-  it('treats negative owned as 0', () => {
+  it('treats level 0 and negative levels as level 1', () => {
+    expect(getTierCost(tier, 0)).toBe(10)
     expect(getTierCost(tier, -1)).toBe(10)
   })
 })
 
 // ─── getTierBulkQuantity / getTierQuantityCost ────────────────────────────────
+// Both now take blockSize/levelProgress explicitly (read directly from state by callers) instead
+// of a tier + lifetime purchased count.
 
 describe('getTierBulkQuantity', () => {
-  const tier = { baseCost: 10 }
-
   it('returns the requested quantity when it fits entirely in the current block', () => {
-    expect(getTierBulkQuantity(tier, 0, 8)).toBe(8)
-    expect(getTierBulkQuantity(tier, 0, 1)).toBe(1)
+    expect(getTierBulkQuantity(8, 0, 8)).toBe(8)
+    expect(getTierBulkQuantity(8, 0, 1)).toBe(1)
   })
 
   it('caps at the units remaining in the current block', () => {
-    expect(getTierBulkQuantity(tier, 5, 8)).toBe(3)
-    expect(getTierBulkQuantity(tier, 7, 8)).toBe(1)
+    expect(getTierBulkQuantity(8, 5, 8)).toBe(3)
+    expect(getTierBulkQuantity(8, 7, 8)).toBe(1)
   })
 
   it('returns 0 when nothing was requested', () => {
-    expect(getTierBulkQuantity(tier, 0, 0)).toBe(0)
+    expect(getTierBulkQuantity(8, 0, 0)).toBe(0)
+  })
+
+  it('supports a block size other than the default (configurable block size)', () => {
+    expect(getTierBulkQuantity(12, 0, 100)).toBe(12)
+    expect(getTierBulkQuantity(12, 10, 100)).toBe(2)
+  })
+
+  it('returns 0 once progress already meets or exceeds the block size', () => {
+    expect(getTierBulkQuantity(8, 8, 8)).toBe(0)
+    expect(getTierBulkQuantity(8, 9, 8)).toBe(0)
   })
 })
 
@@ -450,9 +446,9 @@ describe('getTierQuantityCost', () => {
   const tier = { baseCost: 10 }
 
   it('multiplies the flat per-unit cost by the capped bulk quantity', () => {
-    expect(getTierQuantityCost(tier, 0, 8)).toBe(80)
-    expect(getTierQuantityCost(tier, 5, 8)).toBe(30) // only 3 fit in the current block
-    expect(getTierQuantityCost(tier, 8, 8)).toBe(800) // next block, flat cost 100 × 8
+    expect(getTierQuantityCost(tier, 1, 8, 0, 8)).toBe(80)
+    expect(getTierQuantityCost(tier, 1, 8, 5, 8)).toBe(30) // only 3 fit in the current block
+    expect(getTierQuantityCost(tier, 2, 8, 0, 8)).toBe(800) // next level, flat cost 100 × 8
   })
 })
 
@@ -460,20 +456,45 @@ describe('getTierAffordableQuantity', () => {
   const tier = { baseCost: 10 }
 
   it('returns the full block-capped quantity when fully affordable', () => {
-    expect(getTierAffordableQuantity(tier, 0, 1000, 8)).toBe(8)
+    expect(getTierAffordableQuantity(tier, 1, 8, 0, 1000, 8)).toBe(8)
   })
 
   it('caps at what can actually be afforded, partial-filling a bulk request', () => {
     // $35 at $10/unit affords 3, even though 8 were requested
-    expect(getTierAffordableQuantity(tier, 0, 35, 8)).toBe(3)
+    expect(getTierAffordableQuantity(tier, 1, 8, 0, 35, 8)).toBe(3)
   })
 
   it('returns 0 when nothing is affordable', () => {
-    expect(getTierAffordableQuantity(tier, 0, 5, 8)).toBe(0)
+    expect(getTierAffordableQuantity(tier, 1, 8, 0, 5, 8)).toBe(0)
   })
 
   it('never exceeds the block boundary even with unlimited funds', () => {
-    expect(getTierAffordableQuantity(tier, 5, 1_000_000, 8)).toBe(3)
+    expect(getTierAffordableQuantity(tier, 1, 8, 5, 1_000_000, 8)).toBe(3)
+  })
+})
+
+// ─── getPurchaseBlockSize ──────────────────────────────────────────────────────
+
+describe('getPurchaseBlockSize', () => {
+  it('is DEFAULT_PURCHASE_BLOCK_SIZE (8) on a fresh state', () => {
+    expect(getPurchaseBlockSize(createInitialGameState())).toBe(8)
+  })
+
+  it('stays at the default while the last tier is below level 101', () => {
+    expect(getPurchaseBlockSize(withPurchaseLevel(createInitialGameState(), lastTier.id, 100))).toBe(8)
+  })
+
+  it('grows by 1 once the last tier reaches level 101 (100 levels completed)', () => {
+    expect(getPurchaseBlockSize(withPurchaseLevel(createInitialGameState(), lastTier.id, 101))).toBe(9)
+  })
+
+  it('grows by 1 again at level 201 (200 levels completed)', () => {
+    expect(getPurchaseBlockSize(withPurchaseLevel(createInitialGameState(), lastTier.id, 201))).toBe(10)
+  })
+
+  it('is unaffected by any other tier\'s level, only the last tier\'s', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 500)
+    expect(getPurchaseBlockSize(state)).toBe(8)
   })
 })
 
@@ -713,42 +734,38 @@ describe('getAutoPrestigeAttemptRate', () => {
 
 // ─── getAutobuyerProductionMultiplier ────────────────────────────────────────
 
+// getPurchaseMilestoneMultiplier now takes a tier's current LEVEL directly, not a lifetime
+// purchased count.
 describe('getPurchaseMilestoneMultiplier', () => {
-  it('returns 1 within the first level (purchased 0-7)', () => {
+  it('returns 1 at level 1', () => {
+    expect(getPurchaseMilestoneMultiplier(1)).toBe(1)
+  })
+
+  it('doubles at each level, same as the cost epoch', () => {
+    expect(getPurchaseMilestoneMultiplier(2)).toBe(2)
+    expect(getPurchaseMilestoneMultiplier(3)).toBe(4)
+    expect(getPurchaseMilestoneMultiplier(4)).toBe(8)
+  })
+
+  it('treats level 0 and negative levels as level 1', () => {
     expect(getPurchaseMilestoneMultiplier(0)).toBe(1)
-    expect(getPurchaseMilestoneMultiplier(7)).toBe(1)
-  })
-
-  it('doubles at each level boundary, same as the cost epoch', () => {
-    expect(getPurchaseMilestoneMultiplier(8)).toBe(2)
-    expect(getPurchaseMilestoneMultiplier(15)).toBe(2)
-    expect(getPurchaseMilestoneMultiplier(16)).toBe(4)
-    expect(getPurchaseMilestoneMultiplier(24)).toBe(8)
-  })
-
-  it('treats negative purchased counts as 0', () => {
     expect(getPurchaseMilestoneMultiplier(-1)).toBe(1)
   })
 
-  it('uses a 10x block instead of 2x for the 10th completed level (i.e. purchased 79 → 80, the level-11 boundary)', () => {
+  it('uses a 10x jump instead of 2x for the 10th completed level (level 11)', () => {
     // 9 regular levels (2^9 = 512) × 1 mega level (10x) = 5120, not the 2^10 = 1024 a plain
     // doubling ladder would give. This "every 10th level" mega cadence stays fixed at 10 levels,
-    // independent of PURCHASE_BLOCK_SIZE — only which purchased count reaches it changes (79/80
-    // instead of the old block-of-10 scheme's 99/100).
-    expect(getPurchaseMilestoneMultiplier(79)).toBe(2 ** 9)
-    expect(getPurchaseMilestoneMultiplier(80)).toBe(5120)
-    expect(getPurchaseMilestoneMultiplier(87)).toBe(5120)
+    // independent of the (now variable) purchase block size.
+    expect(getPurchaseMilestoneMultiplier(10)).toBe(2 ** 9)
+    expect(getPurchaseMilestoneMultiplier(11)).toBe(5120)
   })
 
   it('resumes regular 2x levels after a mega level, on top of its 10x', () => {
-    expect(getPurchaseMilestoneMultiplier(88)).toBe(2 ** 10 * 10)
+    expect(getPurchaseMilestoneMultiplier(12)).toBe(2 ** 10 * 10)
   })
 
-  it('applies a second 10x mega level at purchased 160 (the level-21 boundary)', () => {
-    // Same multiplier value as the old block-of-10 scheme's purchased=200 case (2^18 * 10^2) —
-    // only the purchased-count input that reaches it changes, since the formula depends on
-    // completed levels, not raw purchased count.
-    expect(getPurchaseMilestoneMultiplier(160)).toBe(2 ** 18 * 10 ** 2)
+  it('applies a second 10x mega level at level 21', () => {
+    expect(getPurchaseMilestoneMultiplier(21)).toBe(2 ** 18 * 10 ** 2)
   })
 })
 
@@ -770,19 +787,21 @@ describe('getSpeedUpMultiplier', () => {
   })
 })
 
+// getSpeedUpRequirement now returns a LEVEL target for the last tier (not a lifetime-purchased-count
+// threshold), since how many purchases a level corresponds to depends on the current block size.
 describe('getSpeedUpRequirement', () => {
-  it('is PURCHASE_BLOCK_SIZE (8) for the first activation (speedUpCount 0)', () => {
-    expect(getSpeedUpRequirement(0)).toBe(8)
+  it('is level 2 for the first activation (speedUpCount 0)', () => {
+    expect(getSpeedUpRequirement(0)).toBe(2)
   })
 
-  it('increases by another full block of PURCHASE_BLOCK_SIZE per prior activation', () => {
-    expect(getSpeedUpRequirement(1)).toBe(16)
-    expect(getSpeedUpRequirement(2)).toBe(24)
-    expect(getSpeedUpRequirement(3)).toBe(32)
+  it('increases by one level per prior activation', () => {
+    expect(getSpeedUpRequirement(1)).toBe(3)
+    expect(getSpeedUpRequirement(2)).toBe(4)
+    expect(getSpeedUpRequirement(3)).toBe(5)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getSpeedUpRequirement(-1)).toBe(8)
+    expect(getSpeedUpRequirement(-1)).toBe(2)
   })
 })
 
@@ -1104,12 +1123,10 @@ describe('buyTier', () => {
     expect(buyTier(tensTier.id)(state)).toBe(state)
   })
 
-  it('cost stays flat within a block of 8, then jumps 10x at the boundary', () => {
-    const costAt0 = getTierCost(tensTier, 0)
-    const costAt7 = getTierCost(tensTier, 7)
-    const costAt8 = getTierCost(tensTier, 8)
-    expect(costAt7).toBe(costAt0)
-    expect(costAt8).toBe(costAt0 * 10)
+  it('cost is flat within a level, then jumps 10x at the next level', () => {
+    const costAtLevel1 = getTierCost(tensTier, 1)
+    const costAtLevel2 = getTierCost(tensTier, 2)
+    expect(costAtLevel2).toBe(costAtLevel1 * 10)
   })
 
   it('can chain multiple purchases', () => {
@@ -1120,7 +1137,7 @@ describe('buyTier', () => {
   })
 
   it('an unlocked higher tier is purchasable directly with the base currency', () => {
-    const cost = getTierCost(thousandsTier, 0)
+    const cost = getTierCost(thousandsTier, 1)
     const state = withMoney(
       withOwned(createInitialGameState(), tensTier.id, 10),
       cost
@@ -1132,7 +1149,7 @@ describe('buyTier', () => {
   })
 
   it('buying a higher tier does not touch the tier below\'s owned/resource count', () => {
-    const cost = getTierCost(thousandsTier, 0)
+    const cost = getTierCost(thousandsTier, 1)
     const state = withMoney(
       withOwned(createInitialGameState(), tensTier.id, 10),
       cost
@@ -1158,18 +1175,14 @@ describe('buyTier', () => {
     expect(state.resources[MONEY_ID]).toBe(1000 - 8 - 8)
   })
 
-  it('uses purchased count (not owned) for cost scaling', () => {
+  it('uses purchaseLevels (not owned) for cost scaling', () => {
     const state = withMoney(
-      withPurchased(
-        withOwned(createInitialGameState(), tensTier.id, 50),
-        tensTier.id,
-        0
-      ),
+      withOwned(createInitialGameState(), tensTier.id, 50),
       8
     )
 
-    expect(getTierPurchasedCount(state, tensTier.id)).toBe(0)
-    expect(getTierCost(tensTier, getTierPurchasedCount(state, tensTier.id))).toBe(8)
+    expect(state.purchaseLevels[tensTier.id]).toBe(1)
+    expect(getTierCost(tensTier, state.purchaseLevels[tensTier.id])).toBe(8)
 
     const after = buyTier(tensTier.id)(state)
     expect(after.resources[MONEY_ID]).toBe(0)
@@ -1177,10 +1190,14 @@ describe('buyTier', () => {
     expect(after.purchased[tensTier.id]).toBe(1)
   })
 
-  it('engages the last tier\'s XP tickspeed mechanic (a live owned >= PURCHASE_BLOCK_SIZE check) once a purchase brings owned to 8', () => {
+  it('engages the last tier\'s XP tickspeed mechanic (a live owned >= current block size check) once a purchase brings owned to a full level', () => {
     const state = withMoney(
-      withPurchased(withOwned(createInitialGameState(), lastTier.id, 7), lastTier.id, 7),
-      getTierCost(lastTier, 7)
+      withPurchaseLevelProgress(
+        withPurchased(withOwned(createInitialGameState(), lastTier.id, 7), lastTier.id, 7),
+        lastTier.id,
+        7
+      ),
+      getTierCost(lastTier, 1)
     )
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
     const after = buyTier(lastTier.id)(state)
@@ -1188,10 +1205,10 @@ describe('buyTier', () => {
     expect(isLastTierTickspeedXpUnlocked(after)).toBe(true)
   })
 
-  it('does not engage the last tier\'s XP tickspeed mechanic before owned reaches PURCHASE_BLOCK_SIZE (8)', () => {
+  it('does not engage the last tier\'s XP tickspeed mechanic before owned reaches a full block', () => {
     const state = withMoney(
       withPurchased(unlockedLastTierState(), lastTier.id, 5),
-      getTierCost(lastTier, 5)
+      getTierCost(lastTier, 1)
     )
     const after = buyTier(lastTier.id)(state)
     expect(after.owned[lastTier.id]).toBe(2)
@@ -1200,10 +1217,10 @@ describe('buyTier', () => {
 
   it('permanently latches everUnlockedTierIds for a tier the instant it becomes newly buyable', () => {
     // Buying the 8th Bytes (tensTier) unlocks Kilobytes (thousandsTier) — confirm the permanent
-    // flag is set the same instant, not just the live owned >= PURCHASE_BLOCK_SIZE condition.
+    // flag is set the same instant, not just the live owned >= current-block-size condition.
     const state = withMoney(
       withOwned(createInitialGameState(), tensTier.id, 7),
-      getTierCost(tensTier, 0)
+      getTierCost(tensTier, 1)
     )
     expect(state.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     const after = buyTier(tensTier.id)(state)
@@ -1231,11 +1248,14 @@ describe('buyTierQuantity', () => {
 
   it('caps the purchase at the block boundary even with unlimited funds', () => {
     const state = withMoney(
-      withPurchased(createInitialGameState(), tensTier.id, 5),
+      withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 5),
       1_000_000
     )
     const after = buyTierQuantity(tensTier.id, 10)(state)
-    expect(after.purchased[tensTier.id]).toBe(8) // only 3 more fit in the block
+    // Only 3 more fit in the current level (5 already done, block size 8) — completes the level.
+    expect(after.purchased[tensTier.id]).toBe(3)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
   it('stops early when funds run out partway through', () => {
@@ -1519,16 +1539,17 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(3)
   })
 
-  it('a smart tier reverts to the normal (full-block) batch size once past its first 8 purchases', () => {
+  it('a smart tier reverts to the normal (full-block) batch size once past its first level', () => {
     const state = withSmartAutobuyer(
       withAutobuyer(
-        withMoney(withPurchased(createInitialGameState(), tensTier.id, 8), 65), // 2nd level: unit cost is now $80 (10x epoch jump), $65 affords 0
+        withMoney(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), 65), // 2nd level: unit cost is now $80 (10x epoch jump), $65 affords 0
         tensTier.id
       ),
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
-    expect(after.purchased[tensTier.id]).toBe(8) // unchanged — holds for the full block, same as non-smart
+    expect(after.purchaseLevels[tensTier.id]).toBe(2) // unchanged — holds for the full block, same as non-smart
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
     expect(after.resources[MONEY_ID]).toBe(65)
   })
 
@@ -1551,16 +1572,17 @@ describe('tickGame', () => {
 
   it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
     const state = withAutobuyer(
-      withMoney(withPurchased(createInitialGameState(), tensTier.id, 5), 30), // only 3 units left in this block
+      withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 5), 30), // only 3 units left in this block
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
-    expect(after.purchased[tensTier.id]).toBe(8)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
     // Pays for the 3 remaining units in the block at the normal rate ($8 each, $24 total) — no
     // purchase-yield bonus. $30 - $24 = $6.
     expect(after.owned[tensTier.id]).toBe(3)
     // 3 owned generators produce 3 money each, doubled by the purchase-milestone multiplier —
-    // purchased just crossed into the second level (8-15 purchases): 3 × 1sec × 2 = 6 money, plus
+    // purchased just crossed into the second level: 3 × 1sec × 2 = 6 money, plus
     // the $6 left over from the purchase = 12.
     expect(after.resources[MONEY_ID]).toBe(12)
   })
@@ -1699,17 +1721,17 @@ describe('tickGame', () => {
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUp(
-      withPurchased(createInitialGameState(), lastTier.id, 10)
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
     )
     const after = tickGame(1)(state)
     expect(after.speedUpCount).toBe(1)
-    expect(after.purchased[lastTier.id]).toBe(0)
+    expect(after.purchaseLevels[lastTier.id]).toBe(1)
   })
 
   it('does not trigger Speed Up automatically when the last tier is not yet eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUp(
-      withPurchased(createInitialGameState(), lastTier.id, 7)
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
     )
     const after = tickGame(1)(state)
     expect(after.speedUpCount).toBe(0)
@@ -2363,15 +2385,25 @@ describe('prestigeGame', () => {
     expect(after.resources[MONEY_ID]).toBe(10)
   })
 
-  it('resets all owned counts to 0', () => {
-    const state = withOwned(
-      withMoney(createInitialGameState(), GOOGOL),
-      tensTier.id, 50
+  it('resets all owned counts to 0, along with every tier\'s purchaseLevels/purchaseLevelProgress', () => {
+    const state = withPurchaseLevelProgress(
+      withPurchaseLevel(
+        withOwned(
+          withMoney(createInitialGameState(), GOOGOL),
+          tensTier.id, 50
+        ),
+        tensTier.id, 5
+      ),
+      tensTier.id, 3
     )
     const after = prestigeGame(state)
     TIER_DEFINITIONS.forEach(tier => {
       expect(after.owned[tier.id]).toBe(0)
+      expect(after.purchaseLevels[tier.id]).toBe(1)
+      expect(after.purchaseLevelProgress[tier.id]).toBe(0)
     })
+    // Resetting the last tier's level also resets the (derived) block size back to the default.
+    expect(getPurchaseBlockSize(after)).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
   })
 
   it('keeps an unlocked tier\'s autobuyer flag active across prestige', () => {
@@ -2432,10 +2464,10 @@ describe('prestigeGame', () => {
 
 describe('speedUpGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  const eligibleState = () => withPurchased(createInitialGameState(), lastTier.id, 10)
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
 
-  it('does nothing when the last tier has fewer than 8 lifetime purchases', () => {
-    const state = withPurchased(createInitialGameState(), lastTier.id, 7)
+  it('does nothing when the last tier is below the required level', () => {
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
     expect(speedUpGame(state)).toBe(state)
   })
 
@@ -2449,24 +2481,24 @@ describe('speedUpGame', () => {
     expect(after.speedUpCount).toBe(1)
   })
 
-  it('requires a full block of 8 more on each subsequent activation', () => {
-    // After 1 prior activation, the requirement is 16, not the flat 8 the first cycle needed.
-    const stillTen = withSpeedUpCount(
-      withPurchased(createInitialGameState(), lastTier.id, 10), 1
+  it('requires one more level on each subsequent activation', () => {
+    // After 1 prior activation, the requirement is level 3, not the level 2 the first cycle needed.
+    const stillLevel2 = withSpeedUpCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
     )
-    expect(speedUpGame(stillTen)).toBe(stillTen)
+    expect(speedUpGame(stillLevel2)).toBe(stillLevel2)
 
-    const twenty = withSpeedUpCount(
-      withPurchased(createInitialGameState(), lastTier.id, 20), 1
+    const level3 = withSpeedUpCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 1
     )
-    const after = speedUpGame(twenty)
+    const after = speedUpGame(level3)
     expect(after.speedUpCount).toBe(2)
   })
 
   it('stacks across repeated activations', () => {
-    // getSpeedUpRequirement(2) = 24
+    // getSpeedUpRequirement(2) = level 4
     const state = withSpeedUpCount(
-      withPurchased(createInitialGameState(), lastTier.id, 30), 2
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 4), 2
     )
     const after = speedUpGame(state)
     expect(after.speedUpCount).toBe(3)
@@ -2478,13 +2510,20 @@ describe('speedUpGame', () => {
     expect(after.resources[MONEY_ID]).toBe(10)
   })
 
-  it('resets all owned and purchased counts to 0', () => {
-    const state = withOwned(eligibleState(), tensTier.id, 50)
+  it('resets all owned and purchased counts to 0, along with every tier\'s purchaseLevels/purchaseLevelProgress', () => {
+    const state = withPurchaseLevelProgress(
+      withOwned(eligibleState(), tensTier.id, 50),
+      tensTier.id, 3
+    )
     const after = speedUpGame(state)
     TIER_DEFINITIONS.forEach(tier => {
       expect(after.owned[tier.id]).toBe(0)
       expect(after.purchased[tier.id]).toBe(0)
+      expect(after.purchaseLevels[tier.id]).toBe(1)
+      expect(after.purchaseLevelProgress[tier.id]).toBe(0)
     })
+    // Resetting the last tier's level also resets the (derived) block size back to the default.
+    expect(getPurchaseBlockSize(after)).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
   })
 
   it('keeps an unlocked tier\'s autobuyer flag active across Speed Up', () => {
