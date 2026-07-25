@@ -262,33 +262,29 @@ export const getPurchaseBlockSize = state => {
   return DEFAULT_PURCHASE_BLOCK_SIZE + PURCHASE_BLOCK_SIZE_GROWTH_STEP * Math.floor(levelsCompleted / PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS)
 }
 
-// A level's TOTAL cost (every purchase within it, summed) is baseCost * 10^(getCostEpochExponent(epoch)
-// - 1); each level multiplies baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch =
-// level - 1 — e.g. a baseCost-10 tier's 4th level (epoch 3, exponent 7) costs 10^7 in total. Every
-// tier scales gently relative to its own baseCost (the exponent is added to baseCost's own power of
-// ten, not compounded into it), so high tiers don't become permanently out of reach within a
-// handful of levels. Deep epochs still eventually overflow to Infinity, which is safe: an infinite
-// cost is simply never affordable. Takes the tier's current LEVEL directly (see
-// state.purchaseLevels) rather than a lifetime purchased count — level is tracked directly in
-// state, purchase by purchase, not derived via division (see getPurchaseBlockSize above for why:
-// the block size a level requires can change mid-run, so there's no fixed divisor to derive a
-// level from after the fact).
+// The PER-UNIT price of a single purchase — fixed for a given tier+level, independent of the
+// current block size: baseCost * 10^(getCostEpochExponent(epoch) - 1); each level multiplies
+// baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. a
+// baseCost-10 tier's 4th level (epoch 3, exponent 7) costs 10^7 per unit. Every tier scales gently
+// relative to its own baseCost (the exponent is added to baseCost's own power of ten, not
+// compounded into it), so high tiers don't become permanently out of reach within a handful of
+// levels. Deep epochs still eventually overflow to Infinity, which is safe: an infinite cost is
+// simply never affordable. Takes the tier's current LEVEL directly (see state.purchaseLevels)
+// rather than a lifetime purchased count — level is tracked directly in state, purchase by
+// purchase, not derived via division (see getPurchaseBlockSize above for why: the block size a
+// level requires can change mid-run, so there's no fixed divisor to derive a level from after the
+// fact).
 //
-// Every purchase within a level costs the same, even share of that level total — this function
-// returns that per-unit price (the level total divided by `blockSize`), so buying all `blockSize`
-// units of a level costs exactly the level-total price above, split evenly across them — while
-// `blockSize` stays at its default (every real tier's baseCost is a multiple of
-// DEFAULT_PURCHASE_BLOCK_SIZE, so this division is always exact there). Once `blockSize` grows
-// (see getPurchaseBlockSize) it stops evenly dividing levelTotalCost in general, so the division is
-// rounded UP (never down): `resources`/`owned` must stay integer-valued (see CLAUDE.md's integer
-// invariant), and rounding down could floor a real, positive cost all the way to 0 once
-// levelTotalCost < blockSize (an infinite-free-purchase exploit) — rounding up instead means buying
-// a full block can cost up to `blockSize - 1` more than levelTotalCost in that case, a minor, safe
-// overcharge rather than either failure mode.
-export const getTierCost = (tier, level, blockSize) => {
+// `baseCost` itself is this per-unit price at level 1 (epoch 0) — a fixed constant (see
+// TIER_DEFINITIONS in layers.js), not a level-total. A level's TOTAL cost (every purchase within
+// it, summed) is this per-unit price times the current `blockSize` (see getTierQuantityCost below)
+// — the total that scales with block size, not the per-unit price, so a full level costs more
+// once `blockSize` has grown (see getPurchaseBlockSize), even though each individual unit's price
+// hasn't changed. No division is involved anywhere in this, so the result is always an exact
+// integer — no rounding needed.
+export const getTierCost = (tier, level) => {
   const epoch = Math.max(0, clampNonNegative(level) - 1)
-  const levelTotalCost = tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
-  return Math.ceil(levelTotalCost / clampNonNegative(blockSize))
+  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
@@ -299,8 +295,12 @@ export const getTierBulkQuantity = (blockSize, levelProgress, requestedQuantity)
   return Math.max(0, Math.min(clampNonNegative(requestedQuantity), remaining))
 }
 
+// Total cost of a bulk purchase: the fixed per-unit price (see getTierCost, independent of
+// blockSize) times however many units the purchase is capped to (see getTierBulkQuantity) — so
+// buying an entire level (requestedQuantity >= blockSize) costs per-unit price * blockSize, the
+// level's total price at the block size in effect right now.
 export const getTierQuantityCost = (tier, level, blockSize, levelProgress, requestedQuantity) =>
-  getTierCost(tier, level, blockSize) * getTierBulkQuantity(blockSize, levelProgress, requestedQuantity)
+  getTierCost(tier, level) * getTierBulkQuantity(blockSize, levelProgress, requestedQuantity)
 
 // How many units are actually affordable: capped by the level boundary (getTierBulkQuantity)
 // and further capped by what `spendable` can pay for at the flat per-unit price. This is what
@@ -308,7 +308,7 @@ export const getTierQuantityCost = (tier, level, blockSize, levelProgress, reque
 // UI previews should use this rather than getTierBulkQuantity alone.
 export const getTierAffordableQuantity = (tier, level, blockSize, levelProgress, spendable, requestedQuantity) => {
   const blockCapped = getTierBulkQuantity(blockSize, levelProgress, requestedQuantity)
-  const unitCost = getTierCost(tier, level, blockSize)
+  const unitCost = getTierCost(tier, level)
   if (unitCost <= 0) return blockCapped
   return Math.min(blockCapped, Math.floor(clampNonNegative(spendable) / unitCost))
 }
@@ -864,7 +864,7 @@ export const buyTier = tierId => state => {
 
   const level = state.purchaseLevels?.[tierId] ?? 1
   const blockSize = getPurchaseBlockSize(state)
-  const cost = getTierCost(tier, level, blockSize)
+  const cost = getTierCost(tier, level)
 
   if (getTierSpendableAmount(state, tier) < cost) return state
 

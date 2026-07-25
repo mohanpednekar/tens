@@ -18,16 +18,16 @@
 // up by investing in those rather than being structurally unable to keep pace — see
 // docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 8,    costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 8E3,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
-  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 8E6,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
-  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 8E9,  costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
-  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 8E12, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
-  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 8E15, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
-  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 8E18, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
-  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 8E21, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
-  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 8E24, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
-  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 8E27, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
+  { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 1,    costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1 },
+  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
+  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
+  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
+  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
+  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
+  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
+  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
+  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
+  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
 ]
 
 
