@@ -532,9 +532,21 @@ const BuyButton = styled(Button)`
 // each take a fixed half of the button's width, and the cost label is left-aligned (rather than
 // centered) from that halfway point — so every tier row's cost figure starts at the same x
 // position (the button's horizontal center) regardless of how many digits the level/progress or
-// cost strings have, instead of drifting as those change.
+// cost strings have, instead of drifting as those change. `padding-right` reserves a real gap
+// before the cost label — a trailing space character in the JSX content isn't reliable here, since
+// browsers trim trailing whitespace at a flex item's own box edge (border-box sizing, set globally
+// in GlobalStyle.js, keeps this box exactly 50% wide including the padding). `min-width: 0` +
+// overflow/ellipsis clip a level/progress string too long to fit its half (e.g. once the block size
+// has grown, or at a high level number) instead of letting it spill into the cost label's box —
+// without min-width: 0, a flex item's default min-width: auto prevents overflow: hidden from
+// engaging at all.
 const BuyButtonIcon = styled(ButtonIcon)`
   flex: 0 0 50%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-right: 0.35em;
 `
 
 const BuyButtonCostLabel = styled(ButtonLabel)`
