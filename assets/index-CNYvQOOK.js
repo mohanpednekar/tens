@@ -429,6 +429,11 @@ Error generating stack: `+e.message+`
   }
 `,Oa=I(rr)`
   flex: 0 0 50%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-right: 0.35em;
 `,ka=I(ir)`
   flex: 0 0 50%;
   text-align: left;
