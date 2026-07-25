@@ -38,7 +38,9 @@ const Header = styled.header`
 
   h1 {
     margin: 0 0 0.25rem;
+    font-family: ${props => props.theme.font.display};
     font-size: 1.75rem;
+    font-weight: 700;
     letter-spacing: 0.02em;
   }
 
