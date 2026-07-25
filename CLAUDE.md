@@ -298,6 +298,19 @@ behavior should never ship together. If a change is significant enough to need a
 (a superseded formula, a rejected alternative, an incident write-up), add it to
 `docs/DESIGN_HISTORY.md` in the same commit rather than folding narrative into this file.
 
+### Changelog convention
+
+`CHANGELOG.md` (repo root, [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format) tracks
+user-facing and behaviorally-relevant changes going forward from `v0.5.0`. Every PR that changes
+such behavior adds an entry to the `## [Unreleased]` section at the top, under the matching
+subheading — `### Added` for new features, `### Changed` for behavior changes, `### Fixed` for bug
+fixes (`### Removed`/`### Security`/`### Deprecated` as needed). Purely internal changes (docs-only,
+CI/workflow tweaks with no user-visible effect) don't need an entry. `package.json`'s `"version"`
+field (currently `0.5.0`) and future git tags (`v0.1.0`–`v0.5.0` retroactively, then onward) mirror
+this file's version sections — see `docs/DESIGN_HISTORY.md` for why versioning/tagging started here
+rather than at project inception. Bumping the version and pushing/tagging a release is handled by
+separate follow-up tooling, not by every individual PR.
+
 ## Repo layout
 
 ```
