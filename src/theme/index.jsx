@@ -1,3 +1,4 @@
+import './fonts' // side-effect import: registers the bundled @font-face rules (see fonts.js)
 import GlobalStyle from './GlobalStyle'
 import { buildTheme, DEFAULT_MODE, MODES, themes } from './tokens'
 import { ThemeProvider as StyledThemeProvider } from 'styled-components'

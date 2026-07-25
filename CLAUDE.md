@@ -20,6 +20,7 @@ of ten. Single page, no routing, no backend — state lives in React and is pers
 | Vitest | 4 | jsdom environment, globals enabled |
 | Playwright | 1 | Real-browser end-to-end suite (`yarn test:e2e`), chromium only — see "Testing" below |
 | styled-components | 6 | All component styling |
+| @fontsource/inter, @fontsource/space-grotesk | 5 | Locally-bundled font faces (see `theme/fonts.js`, "Theming" below) — no runtime CDN fetch |
 | Yarn | 1 (Classic) | `packageManager: yarn@1.22.22` via Corepack; lockfile is v1 format |
 
 A stray `package-lock.json` is committed alongside `yarn.lock` (yarn warns about this on install) — use Yarn
@@ -397,10 +398,14 @@ src/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
                                exports buildTheme(mode) + themes.{dark,light} (see "Theming" below)
+    fonts.js                 ← locally bundles the `font.display`/`font.body` faces (Space Grotesk /
+                               Inter, via @fontsource) as side-effect CSS imports — no runtime CDN
+                               fetch (see "Theming" below)
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
-                               `mode` defaults to dark and is the seam #140 will drive from system pref + toggle
+                               imports `./fonts` as a side effect; `mode` defaults to dark and is the
+                               seam #140 will drive from system pref + toggle
   App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
   index.jsx                 ← ReactDOM.createRoot entry point
 vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (see "PWA
@@ -1528,8 +1533,25 @@ components migrate onto these tokens one at a time in later sub-issues.
   semantics kept distinct from the accent, `disabled`), `shadow` (`sm`/`md`, per-mode), `tierAccents`
   (per-mode 8-hue cycle for the tier left-edge stripe), plus mode-independent `space`, `radius`,
   `motion` (`duration`/`easing`), `font` (`display`/`body`/`mono`), and `type` (`scale` + `numeric`).
-  Font families are system stacks for now — a deliberate seam the typography sub-issue (#136) swaps for
-  locally-bundled faces.
+  `font.display` is `"Space Grotesk"` (a characterful geometric sans fitting the byte-scale/computing
+  theme) and `font.body` is `"Inter"` (chosen for legibility and strong tabular figures — numbers are
+  the star of an incremental game); both are locally bundled (see `theme/fonts.js` below), each with
+  the prior system-stack values kept as a fallback. `font.mono` stays a system stack — no bundled mono
+  face was needed. `type.scale` pairs each step (`xs`/`sm`/`md`/`lg`/`xl`/`hero`) with a `{ size,
+  lineHeight }` rem pair; `type.numeric` is `'tabular-nums'`. The scale isn't applied per-component
+  beyond the base body size and the wordmark heading yet — later per-surface redesign sub-issues (HUD
+  #137/tier-row #138/prestige #139) apply the rest of it to their own text.
+- **`fonts.js`** locally bundles the two faces above via `@fontsource/inter`/`@fontsource/space-grotesk`
+  side-effect imports (`import '@fontsource/inter/latin-400.css'`, etc.) — no runtime CDN fetch, so the
+  game stays fully self-contained after the GH Pages deploy (confirmed via `yarn build`: `dist/assets/`
+  carries the woff2/woff files directly, no external font URL in the built output). Only 4 specific
+  weight/subset files are imported, not each package's full weight/subset set: Inter 400 (body
+  baseline), 600 (`Button`'s `font-weight: 600`), and 700 (h2/h3 headings, which inherit the body face
+  at the browser's default heading bold weight), plus Space Grotesk 700 (the wordmark). Each import
+  targets the package's `latin-*.css` file specifically (not the aggregate `NNN.css`, which pulls in
+  every script subset — cyrillic, greek, vietnamese, …) to keep the bundled weight/subset count
+  intentionally small. Imported once from `theme/index.jsx` as a side effect, so it loads regardless of
+  theme mode.
 - **`GlobalStyle.js`** (`createGlobalStyle`) replaces the removed `src/index.css` + `src/App.css`: the
   `box-sizing` reset, base font/smoothing, the form-control `font: inherit` rule, and the token-driven
   page background + text color (so the whole page repaints on a mode change).
