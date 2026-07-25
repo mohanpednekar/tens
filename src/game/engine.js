@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -83,9 +83,9 @@ export const createInitialGameState = () => ({
     [tier.id]: 0,
   }), {}),
   // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
-  // autobuyer "smart" — buys one unit at a time until 10 lifetime purchases, then switches to
-  // the normal full-block batching from then on (see tickGame/buySmartAutobuyer) — never reset
-  // by prestige.
+  // autobuyer "smart" — buys one unit at a time until PURCHASE_BLOCK_SIZE lifetime purchases, then
+  // switches to the normal full-block batching from then on (see tickGame/buySmartAutobuyer) —
+  // never reset by prestige.
   smartAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: false,
@@ -216,36 +216,44 @@ export const formatCurrency = value => {
     : `${formatScientific(safeValue)} ${symbol}`
 }
 
-// The Fibonacci number driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8,
-// 13, … for epochs 0, 1, 2, 3, 4, 5, … A negative epoch is clamped to 0 rather than throwing.
+// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 4, 7, 11, 16, 22, …
+// for epochs 0, 1, 2, 3, 4, 5, 6, … — each epoch adds one more than the last epoch's increment (a
+// "1 plus a triangular number" progression: exponent(e) = 1 + e*(e+1)/2). A negative epoch is
+// clamped to 0 rather than throwing. Supersedes an earlier Fibonacci-based version — see
+// docs/DESIGN_HISTORY.md.
 export const getCostEpochExponent = epoch => {
-  let current = 1
-  let next = 2
-  for (let i = 0; i < clampNonNegative(epoch); i += 1) {
-    [current, next] = [next, current + next]
-  }
-  return current
+  const e = clampNonNegative(epoch)
+  return 1 + (e * (e + 1)) / 2
 }
 
-// Cost is flat across each block of 10 purchases; each block multiplies baseCost by 10 raised
-// to (that epoch's Fibonacci number − 1). epoch = floor(purchased / 10);
-// cost = baseCost * 10^(fib(epoch) - 1), fib = 1, 2, 3, 5, 8, … — e.g. a baseCost-10 tier's 4th
-// block (purchases 30–39) costs 10^5 per unit, same as a literal baseCost^fib reading would give
-// for baseCost 10, but every other tier scales far more gently relative to its own baseCost
-// (e.g. a baseCost-1000 tier's blocks cost 1e3, 1e4, 1e5, 1e7, 1e10, …) rather than compounding
-// baseCost itself into the exponent, which would put high tiers permanently out of reach within
-// a handful of blocks. Deep epochs still eventually overflow to Infinity, which is safe: an
-// infinite cost is simply never affordable.
+// A tier's current level (1-indexed): purchased 0 through PURCHASE_BLOCK_SIZE-1 is level 1,
+// PURCHASE_BLOCK_SIZE through 2*PURCHASE_BLOCK_SIZE-1 is level 2, and so on. Completing a level
+// (buying all PURCHASE_BLOCK_SIZE pieces of it) advances the tier to its next, more expensive
+// level and doubles its production (see getTierCost/getPurchaseMilestoneMultiplier below) — every
+// formula (and the UI) that needs to know which level a purchase count falls in reads this rather
+// than recomputing purchased/PURCHASE_BLOCK_SIZE inline.
+export const getTierLevel = purchased =>
+  Math.floor(clampNonNegative(purchased) / PURCHASE_BLOCK_SIZE) + 1
+
+// Cost is flat across each level (PURCHASE_BLOCK_SIZE purchases); each level multiplies baseCost
+// by 10 raised to (that level's cost-epoch exponent − 1). epoch = getTierLevel(purchased) - 1;
+// cost = baseCost * 10^(getCostEpochExponent(epoch) - 1) — e.g. a baseCost-10 tier's 4th level
+// (epoch 3, exponent 7) costs 10^7 per unit. Every tier scales gently relative to its own baseCost
+// (the exponent is added to baseCost's own power of ten, not compounded into it), so high tiers
+// don't become permanently out of reach within a handful of levels. Deep epochs still eventually
+// overflow to Infinity, which is safe: an infinite cost is simply never affordable.
 export const getTierCost = (tier, purchased) => {
-  const epoch = Math.floor(clampNonNegative(purchased) / 10)
+  const epoch = getTierLevel(purchased) - 1
   return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the
-// units remaining in the current cost block (so every unit bought is at the same price).
+// units remaining in the current level (so every unit bought is at the same price).
 export const getTierBulkQuantity = (tier, purchased, requestedQuantity) => {
-  const within = clampNonNegative(purchased) % 10
-  return Math.max(0, Math.min(clampNonNegative(requestedQuantity), 10 - within))
+  const safePurchased = clampNonNegative(purchased)
+  const level = getTierLevel(safePurchased)
+  const within = safePurchased - (level - 1) * PURCHASE_BLOCK_SIZE
+  return Math.max(0, Math.min(clampNonNegative(requestedQuantity), PURCHASE_BLOCK_SIZE - within))
 }
 
 export const getTierQuantityCost = (tier, purchased, requestedQuantity) =>
@@ -360,14 +368,15 @@ export const getGlobalTickspeedProductionMultiplier = level => {
 
 // Whether the last tier's Money-funded tickspeed multiplier is currently replaced by the
 // XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — a live
-// check against the last tier's current owned count, matching the ≥10 threshold every other
-// tier's own unlock condition uses (see isTierUnlocked). Deliberately live, not a permanent
-// latch: a Prestige/Speed Up resets the last tier's owned count back to 0 along with every other
-// tier's (and also resets lastTierXpConsumed/prestige.xp to 0 — see prestigeGame/speedUpGame),
-// and this mechanic should revert to the Money-funded multiplier along with it rather than
-// staying engaged on a tier the player no longer actually has 10 of — re-buying back up to 10
-// re-engages it, from the fresh (0) lastTierXpConsumed baseline a Prestige/Speed Up left behind.
-export const isLastTierTickspeedXpUnlocked = state => (state.owned?.[getLastTierId()] ?? 0) >= 10
+// check against the last tier's current owned count, matching the ≥PURCHASE_BLOCK_SIZE threshold
+// every other tier's own unlock condition uses (see isTierUnlocked). Deliberately live, not a
+// permanent latch: a Prestige/Speed Up resets the last tier's owned count back to 0 along with
+// every other tier's (and also resets lastTierXpConsumed/prestige.xp to 0 — see prestigeGame/
+// speedUpGame), and this mechanic should revert to the Money-funded multiplier along with it
+// rather than staying engaged on a tier the player no longer actually has a full level of —
+// re-buying back up to PURCHASE_BLOCK_SIZE re-engages it, from the fresh (0) lastTierXpConsumed
+// baseline a Prestige/Speed Up left behind.
+export const isLastTierTickspeedXpUnlocked = state => (state.owned?.[getLastTierId()] ?? 0) >= PURCHASE_BLOCK_SIZE
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
 // compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
@@ -426,19 +435,21 @@ export const getSmartAutobuyerCost = tierId =>
 export const getTierTickspeedAutobuyerCost = tierId =>
   TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER * getAutobuyerUnlockCost(tierId)
 
-// Production doubles every time a tier's lifetime purchase count crosses another block of 10 —
-// the same boundary where getTierCost's Fibonacci-driven multiplier steps up, so buying into a
-// fresh cost epoch always pays off with production alongside the steeper price. But every 10th
-// such block (i.e. every 100th lifetime purchase) is a bigger milestone: that one block
-// contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE (10x) instead of the regular
-// PURCHASE_MILESTONE_MULTIPLIER_BASE (2x), compounding into every other block's factor —
-// blocks = floor(purchased/10); megaBlocks = floor(blocks/10); multiplier =
-// PURCHASE_MILESTONE_MULTIPLIER_BASE^(blocks-megaBlocks) * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE^megaBlocks.
-// Applies to every tier uniformly, regardless of whether the purchases were manual or automatic.
+// Production doubles every time a tier completes another level (see getTierLevel) — the same
+// boundary where getTierCost's cost-epoch exponent steps up, so completing a fresh level always
+// pays off with production alongside the steeper price. But every 10th level is a bigger
+// milestone: that one level contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE (10x) instead of
+// the regular PURCHASE_MILESTONE_MULTIPLIER_BASE (2x), compounding into every other level's factor
+// — levelsCompleted = getTierLevel(purchased) - 1; megaBlocks = floor(levelsCompleted/10);
+// multiplier = PURCHASE_MILESTONE_MULTIPLIER_BASE^(levelsCompleted-megaBlocks) *
+// PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE^megaBlocks. This "every 10th level" mega cadence is
+// independent of PURCHASE_BLOCK_SIZE (see layers.js) — it stays a fixed 10, regardless of how many
+// purchases make up one level. Applies to every tier uniformly, regardless of whether the
+// purchases were manual or automatic.
 export const getPurchaseMilestoneMultiplier = purchased => {
-  const blocks = Math.floor(clampNonNegative(purchased) / 10)
-  const megaBlocks = Math.floor(blocks / 10)
-  const regularBlocks = blocks - megaBlocks
+  const levelsCompleted = getTierLevel(purchased) - 1
+  const megaBlocks = Math.floor(levelsCompleted / 10)
+  const regularBlocks = levelsCompleted - megaBlocks
   return PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks
 }
 
@@ -449,14 +460,14 @@ export const getPurchaseMilestoneMultiplier = purchased => {
 export const getSpeedUpMultiplier = speedUpCount =>
   SPEED_UP_MULTIPLIER_BASE ** clampNonNegative(speedUpCount)
 
-// How many lifetime purchases of the last tier the *next* Speed Up requires: one more full block
-// of 10 than the last time — 10 for the first activation (speedUpCount 0), 20 for the second,
-// 30 for the third, and so on (10 * (speedUpCount + 1)). Unlike the flat 10-per-cycle requirement
-// this replaced, this keeps climbing indefinitely, so later cycles' last-tier purchases do cross
-// into deeper Fibonacci-driven cost epochs (see getTierCost) — no longer dodging that escalation
-// by resetting exactly at the epoch-0/epoch-1 boundary every time.
+// How many lifetime purchases of the last tier the *next* Speed Up requires: one more full level
+// than the last time — PURCHASE_BLOCK_SIZE for the first activation (speedUpCount 0), 2x that for
+// the second, 3x for the third, and so on (PURCHASE_BLOCK_SIZE * (speedUpCount + 1)). Unlike the
+// flat per-cycle requirement this replaced, this keeps climbing indefinitely, so later cycles'
+// last-tier purchases do cross into deeper cost epochs (see getTierCost) — no longer dodging that
+// escalation by resetting exactly at the epoch-0/epoch-1 boundary every time.
 export const getSpeedUpRequirement = speedUpCount =>
-  10 * (clampNonNegative(speedUpCount) + 1)
+  PURCHASE_BLOCK_SIZE * (clampNonNegative(speedUpCount) + 1)
 
 // PP cost to activate/upgrade Auto-Prestige from currentLevel to currentLevel+1 (null/not yet
 // bought treated as currentLevel 0) — doubles each level: 100 PP to activate (level 0→1), 200 for
@@ -479,25 +490,27 @@ export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
 // every other control) that the engine itself enforces on tickGame/buyTier/buyAutobuyer below.
 export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= GOOGOL
 
-// First tier is always unlocked; each subsequent tier unlocks when you own ≥10 of the tier below.
-// Already-owned tiers stay unlocked so older saves remain playable after rule changes; a tier
-// that has ever satisfied this live condition also stays unlocked forever via the permanent
-// everUnlockedTierIds flag (see latchEverUnlockedTiers), even if `owned` is later reset by
-// something narrower than a full Prestige/Speed Up (see consumeXpForLastTierTickspeed).
+// First tier is always unlocked; each subsequent tier unlocks when you own ≥PURCHASE_BLOCK_SIZE of
+// the tier below (a full level's worth). Already-owned tiers stay unlocked so older saves remain
+// playable after rule changes; a tier that has ever satisfied this live condition also stays
+// unlocked forever via the permanent everUnlockedTierIds flag (see latchEverUnlockedTiers), even if
+// `owned` is later reset by something narrower than a full Prestige/Speed Up (see
+// consumeXpForLastTierTickspeed).
 export const isTierUnlocked = state => tier => {
   const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
   if (tierIndex === 0) return true
   if (state.everUnlockedTierIds?.[tier.id]) return true
   if ((state.owned[tier.id] ?? 0) > 0) return true
   const prevTier = TIER_DEFINITIONS[tierIndex - 1]
-  return (state.owned[prevTier.id] ?? 0) >= 10
+  return (state.owned[prevTier.id] ?? 0) >= PURCHASE_BLOCK_SIZE
 }
 
 // Latches everUnlockedTierIds permanently true for any tier whose isTierUnlocked live condition
-// (own owned > 0, or the previous tier's owned >= 10) is currently satisfied but not yet flagged —
-// called from buyTier and tickGame right after `owned` changes, so the flag catches up the same
-// tick/purchase a tier first becomes reachable. Returns the same state reference if nothing newly
-// qualifies (the common case), matching every other engine function's no-op convention.
+// (own owned > 0, or the previous tier's owned >= PURCHASE_BLOCK_SIZE) is currently satisfied but
+// not yet flagged — called from buyTier and tickGame right after `owned` changes, so the flag
+// catches up the same tick/purchase a tier first becomes reachable. Returns the same state
+// reference if nothing newly qualifies (the common case), matching every other engine function's
+// no-op convention.
 const latchEverUnlockedTiers = state => {
   const previous = state.everUnlockedTierIds ?? {}
   let changed = false
@@ -505,7 +518,7 @@ const latchEverUnlockedTiers = state => {
   TIER_DEFINITIONS.forEach((tier, index) => {
     if (index === 0 || next[tier.id]) return
     const prevTier = TIER_DEFINITIONS[index - 1]
-    if ((state.owned[tier.id] ?? 0) > 0 || (state.owned[prevTier.id] ?? 0) >= 10) {
+    if ((state.owned[tier.id] ?? 0) > 0 || (state.owned[prevTier.id] ?? 0) >= PURCHASE_BLOCK_SIZE) {
       next[tier.id] = true
       changed = true
     }
@@ -596,11 +609,11 @@ const checkMilestones = (resources, prestige) => {
 // single unit as soon as it's affordable, same as always. Above 1, each attempt only buys once
 // the tier can afford the *entire* current cost block up to that size — it holds and waits
 // rather than trickling in a partial purchase. A "smart" tier (see buySmartAutobuyer) overrides
-// this with an effective batch size of 1 for its very first cost block (purchased < 10) —
-// otherwise a tier that's never been manually bought can never afford autobuyerBatchSize's full
-// first block (0 owned generators produce $0 income, and the starting balance only ever covers
+// this with an effective batch size of 1 for its very first level (purchased < PURCHASE_BLOCK_SIZE)
+// — otherwise a tier that's never been manually bought can never afford autobuyerBatchSize's full
+// first level (0 owned generators produce $0 income, and the starting balance only ever covers
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
-// block onward.
+// level onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const autoPrestigeLevel = state.autoPrestige ?? null
 
@@ -654,7 +667,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // triggering a purchase that should fire exactly on schedule.
     while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
       const purchased = getTierPurchasedCount(result, tier.id)
-      const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && purchased < 10 ? 1 : autobuyerBatchSize
+      const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && purchased < PURCHASE_BLOCK_SIZE ? 1 : autobuyerBatchSize
       const blockMax = getTierBulkQuantity(tier, purchased, effectiveBatchSize)
       const affordable = getTierAffordableQuantity(tier, purchased, getTierSpendableAmount(result, tier), effectiveBatchSize)
       if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold, bank the attempt
@@ -923,9 +936,9 @@ export const buyTickspeedMultiplier = tierId => state => {
 }
 
 // Permanently makes a tier's autobuyer "smart": in tickGame, that tier buys one unit at a time
-// (rather than waiting for a full 10-unit block) until it reaches 10 lifetime purchases, then
-// switches to the normal full-block batching from then on — fixes an otherwise-permanent stall
-// where a tier with 0 owned generators (0 income) can never afford a full first block on its
+// (rather than waiting for a full level) until it reaches PURCHASE_BLOCK_SIZE lifetime purchases,
+// then switches to the normal full-block batching from then on — fixes an otherwise-permanent
+// stall where a tier with 0 owned generators (0 income) can never afford a full first level on its
 // own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than unlocking that tier's autobuyer
 // (see getSmartAutobuyerCost) — and requires the autobuyer already be unlocked first. Smart and
 // the tier tickspeed autobuyer (see buyTierTickspeedAutobuyer below) are independent, parallel
@@ -1074,8 +1087,9 @@ export const prestigeGame = state => {
 }
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches GOOGOL:
-// once the last tier reaches getSpeedUpRequirement(speedUpCount) lifetime purchases — 10 for the
-// first activation, 20 for the second, 30 for the third, … — resets resources/owned/purchased
+// once the last tier reaches getSpeedUpRequirement(speedUpCount) lifetime purchases —
+// PURCHASE_BLOCK_SIZE for the first activation, 2x that for the second, 3x for the third, … —
+// resets resources/owned/purchased
 // (and every other per-run field, including every tier's own tickspeed level and the global
 // tickspeed multiplier, both back to not-yet-bought — same reset prestigeGame now does) back to a
 // fresh game exactly like createInitialGameState, but permanently doubles production speed (see
@@ -1165,12 +1179,13 @@ export const buyTickspeedAutobuyer = state => {
 // tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — durable within the
 // current run (never decays or reverts on its own), but reset to 0 by prestigeGame/speedUpGame
 // along with prestige.xp itself, same as every other run-scoped field. Only
-// available while isLastTierTickspeedXpUnlocked (the last tier currently owns >= 10), which is
-// when it's currently replacing that tier's Money-funded tickspeed button (see
-// buyTickspeedMultiplier). Every successful consumption, no
+// available while isLastTierTickspeedXpUnlocked (the last tier currently owns >=
+// PURCHASE_BLOCK_SIZE), which is when it's currently replacing that tier's Money-funded tickspeed
+// button (see buyTickspeedMultiplier). Every successful consumption, no
 // matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
 // sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
-// `purchased` lifetime count ("level"), which is left completely untouched everywhere — plus the
+// `purchased` lifetime count (and hence not their level, see getTierLevel), which is left
+// completely untouched everywhere — plus the
 // Money balance (`resources[MONEY_ID]`) back to 0. The last tier's own `owned`/`resources`/
 // `purchased` are all left untouched. This is the price of investing further into the last tier's
 // own delivery frequency. A single consumption must be at least

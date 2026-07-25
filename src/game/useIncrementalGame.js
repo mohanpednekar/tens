@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { applyOfflineProgress, buyAutobuyerUnlock, buyAutoPrestige, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, buyTierTickspeedAutobuyer, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, speedUpGame, tickGame } from './engine'
-import { TICK_RATE_MS } from './layers'
+import { PURCHASE_BLOCK_SIZE, TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
-// 10-unit cost-block boundary. This used to be a player-facing ×1/×10 "Bulk" toggle; it's now a
-// fixed engine behavior (the toggle's former default), so there's nothing left to persist.
-const BUY_QUANTITY = 10
+// level's (PURCHASE_BLOCK_SIZE-unit) cost-block boundary. This used to be a player-facing ×1/×10
+// "Bulk" toggle; it's now a fixed engine behavior (the toggle's former default), so there's
+// nothing left to persist.
+const BUY_QUANTITY = PURCHASE_BLOCK_SIZE
 
 // Runs once, at mount, before the regular tick timer starts. Computes the resting game state
 // (with offline progress already folded in, if applicable) and a summary of that offline

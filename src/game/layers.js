@@ -10,8 +10,8 @@
 // shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
 // (matching the global 100ms/10Hz tick rate — see TICK_RATE_MS below) up through tier10=10s — since
 // a slower cadence divides that tier's real throughput (see getTierBaseTickSpeedSeconds below) by
-// up to 10x for the last tier, on top of the already-steep Fibonacci-driven cost curve (see
-// getTierCost in engine.js). This exact 1s-10s ladder was tried once before the tickspeed-multiplier
+// up to 10x for the last tier, on top of the already-steep cost curve (see getTierCost/
+// getCostEpochExponent in engine.js). This exact 1s-10s ladder was tried once before the tickspeed-multiplier
 // system existed and reverted to a uniform 1s because nothing could offset the slowdown; now that
 // both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier) tickspeed multipliers
 // exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are meant to be sped back
@@ -65,12 +65,24 @@ export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 
-// A tier's production doubles at every block-of-10-purchases milestone (see engine.js's
-// getPurchaseMilestoneMultiplier) — the per-block multiplier normally applied.
+// The shared purchase-block size that defines a tier "level": completing a level means buying
+// this many pieces of it (see engine.js's getTierLevel). Every formula that needs to know which
+// level a lifetime purchase count falls in — getTierCost's cost epoch, getTierBulkQuantity's bulk-
+// purchase cap, getPurchaseMilestoneMultiplier's doubling cadence, the manual/autobuyer batch size
+// (BUY_QUANTITY in useIncrementalGame.js), the smart-autobuyer bootstrap threshold, and
+// getSpeedUpRequirement's per-cycle step — reads this single constant rather than each hardcoding
+// its own copy of the same block size. isTierUnlocked/isLastTierTickspeedXpUnlocked's owned-count
+// thresholds also read this value, even though they gate on `owned` rather than `purchased` (a
+// different field, but the same "one level's worth" concept).
+export const PURCHASE_BLOCK_SIZE = 8
+
+// A tier's production doubles at every level milestone (see engine.js's
+// getPurchaseMilestoneMultiplier) — the per-level multiplier normally applied.
 export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 2
-// Every 10th such block (i.e. every 100th lifetime purchase) uses this larger multiplier instead
-// of PURCHASE_MILESTONE_MULTIPLIER_BASE for that one block — a bigger milestone every 100
-// purchases on top of the regular one every 10 (see engine.js's getPurchaseMilestoneMultiplier).
+// Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
+// that one level — a bigger milestone every 10 levels on top of the regular one every level (see
+// engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of
+// PURCHASE_BLOCK_SIZE — it stays a fixed 10, regardless of how many purchases make up one level.
 export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
 // Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
