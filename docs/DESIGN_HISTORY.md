@@ -699,6 +699,107 @@ by deriving an equivalent level/progress from its legacy `purchased` count again
 the growth mechanic didn't exist yet when it was written. This is explicitly a one-time interpretation
 of old data on load, not a reintroduction of division into the ongoing engine logic.
 
+### `getTierCost` split into per-unit price vs. level-total price
+
+Every purchase within a level was priced at the *level's full flat cost* — `getTierCost(tier, level)`
+returned that flat value, and every one of the `blockSize` purchases needed to complete a level was
+charged that same amount. This meant completing an entire level actually cost `blockSize ×
+getTierCost(...)` — e.g. tier01's level 1 (`baseCost` 8) charged $8 for *each* of the 8 units needed
+to complete it, $64 in total.
+
+The maintainer's request — "the cost of each purchase within a level is 1en (`1 × 10ⁿ`); 8en is the
+cost of the entire level" (n = the cost-epoch exponent driving `getCostEpochExponent`) — asked for the
+opposite: `getTierCost`'s existing formula output should represent the level's *total* cost, with each
+individual purchase costing an even `1/blockSize` share of it. `getTierCost` now takes `blockSize` as
+a third argument and returns `Math.ceil(levelTotalCost / blockSize)`, where `levelTotalCost` is exactly
+the formula's old return value (`baseCost * 10^(getCostEpochExponent(epoch) - 1)`) — unchanged. Its 3
+call sites (`getTierQuantityCost`, `getTierAffordableQuantity`, `buyTier`) were updated to thread
+`blockSize` through; no other call site existed (`MainPage` already only calls the blockSize-aware
+wrapper functions).
+
+**A real bug caught by review, before merging.** The first implementation returned the plain division
+(`levelTotalCost / blockSize`) with no rounding. Since every real tier's `baseCost` is a multiple of
+`DEFAULT_PURCHASE_BLOCK_SIZE` (8), this happened to divide evenly at the default block size — every
+test in the initial diff used `blockSize=8` and passed cleanly, masking the problem. But
+`getPurchaseBlockSize` (see above) grows past 8 once the last tier completes level 101, 201, … — a
+state a long-running idle game is explicitly designed to reach — at which point the division stops
+being exact for tiers whose own level total hasn't grown to keep pace, producing a fractional Money
+balance (a direct violation of this codebase's integer-resource invariant) after every purchase from
+then on. A `code-reviewer` subagent pass caught this before merge by reproducing it directly:
+`getTierCost({baseCost: 8}, 1, 9)` returned `0.888…`, not `1`. Worse, in principle: a plain `Math.floor`
+"fix" would have rounded a small `levelTotalCost` all the way down to `0` once `blockSize` grew large
+enough relative to it — an infinite-free-purchase exploit, not just a display glitch. `Math.ceil` was
+used instead of `Math.floor` specifically to rule out this failure mode: the per-unit cost is always
+at least 1 whenever `levelTotalCost` is positive, and the only cost is a small, safe overcharge (up to
+`blockSize - 1` extra) when a block doesn't divide evenly — never an underpayment or a free purchase.
+
+**Net effect**: completing an entire level now costs exactly what the raw formula computes (tier01
+level 1: $8, not $64) — an intentional ~`blockSize`x reduction in the total price of finishing a
+level, split more granularly across individual purchases. This surfaced a real, structural side
+effect during the test rewrite: a non-`smartAutobuyer` tier with a full-block batch size used to
+stall forever on tier01's very first level, since `MONEY_STARTING_AMOUNT` (10) couldn't afford the
+old $64 full-block price — this is the entire reason `smartAutobuyer`/`buySmartAutobuyer` exists (buy
+singly until the first level completes, then revert to normal batching). Under the new $8 full-block
+price, the (then-current) $10 starting balance would have afforded it outright, so at the time this
+change was reviewed the bootstrap stall no longer applied to tier01 specifically — confirmed
+acceptable by the maintainer rather than adjusting `MONEY_STARTING_AMOUNT` to preserve the old stall.
+**This was superseded almost immediately** by the unrelated starting-money change below
+(`MONEY_STARTING_AMOUNT` 10 → 1): at $1, tier01's $8 full-block price is unaffordable again, so the
+stall is back in practice for every tier including tier01 — not because anyone reverted or tuned
+anything to restore it, but as a side effect of a separate, independently-requested change landing
+right after. `smartAutobuyer` remains meaningful either way — see `engine.test.js`'s `tickGame`
+describe block for the current (stalls-again) tier01 case and the always-stalls bigger-tier case.
+
+### Starting Money reduced from 10 to 1
+
+`MONEY_STARTING_AMOUNT` (`layers.js`) changed from 10 to 1 — a fresh save now starts with 1 Bit
+instead of 10. This is a standalone request, made independently of (and shortly after) the
+`getTierCost` per-unit/level-total split above; the two happened to interact (see the note above)
+but neither was chosen to compensate for the other.
+
+One knock-on effect worth recording: `createInitialGameState`'s `prestige.highestMilestone` seeds
+from `Math.floor(Math.log10(MONEY_STARTING_AMOUNT))` — this is `0` at the new starting amount, versus
+`1` at the old one. `checkMilestones` awards XP once `getMoneyExponent(money) > highestMilestone`, so
+the first-ever XP point now arrives as soon as Money first reaches 10 (exponent 1, clearing the fresh
+watermark of 0) rather than needing to reach 100 (exponent 2, the threshold needed to clear the old
+watermark of 1). This is a direct, intended mathematical consequence of the formula already in place
+(not a new formula), not a separate design decision — XP itself is otherwise inert in the UI outside
+the last tier's XP-funded tickspeed mechanic (see "XP status" above), so this mainly matters for
+players relying on that mechanic early.
+
+### `getTierCost`'s division-based split was replaced by a fixed-price-times-blockSize model
+
+The two entries just above this one describe an intermediate design: `getTierCost(tier, level,
+blockSize)` divided a level's total cost (the raw `baseCost * 10^(epochExponent-1)` formula output)
+evenly across `blockSize` purchases, rounding up to stay integer-safe. That version shipped and was
+reviewed, but a further maintainer clarification revealed it had the relationship backwards: "when a
+level requires X purchases, its total cost should be X×eN — every purchase is still 1×eN" (eN = the
+epoch-scaled value `10^n`). Worked through concretely against Kilobytes (tier02): at the default
+block size (8), both the division model and this corrected model produce the same numbers (per-unit
+1,000, level-total 8,000) — but they diverge the moment block size changes. The maintainer confirmed:
+if block size were ever 13, Kilobytes' level-1 total should become 13,000 (per-unit price fixed at
+1,000, level total scaling *up* with block size) — not the division model's roughly-unchanged total
+with a *shrinking* per-unit price.
+
+This means `baseCost` itself needed to change, not just how the formula uses it: `baseCost` is now
+the tier's fixed per-unit price (`1000^(n-1)` for `tier0n` — 1, 1,000, 1e6, … 1e27), one-eighth of the
+values it held before (8, 8,000, 8e6, … 8e27) — exactly undoing the `÷8` the division model used to
+apply at runtime, now baked into the stored constant instead. `getTierCost(tier, level)` dropped the
+`blockSize` parameter entirely and reverted to the simple, non-divided formula (`baseCost *
+10^(epochExponent-1)`) — a level's total cost is this fixed per-unit price *times* the current
+`blockSize` (`getTierQuantityCost`), which grows if `blockSize` grows, rather than dividing a fixed
+total across a growing `blockSize`. This also makes the `Math.ceil` rounding from the previous entry
+entirely unnecessary — there's no division left anywhere in the cost path, so results are always
+exact integers by construction, not by a safety-net rounding rule.
+
+Net effect at the default block size (8, true for the vast majority of any run): identical numbers to
+both the very first (pre-any-of-this-arc) behavior and the intermediate division model — a
+coincidence of `baseCost`'s new values being exactly the old ones ÷ 8, and blockSize defaulting to
+exactly 8. The only place this design actually differs in practice is once `getPurchaseBlockSize`
+grows past its default (see above) — level totals now grow (proportionally to the larger block),
+whereas the division model would have shrunk the per-unit price instead while leaving the total
+roughly flat.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
