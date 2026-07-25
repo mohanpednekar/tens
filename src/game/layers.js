@@ -48,7 +48,7 @@ export const getTierBaseTickSpeedSeconds = tierId =>
 // A naming-agnostic key, fully decoupled from the "Bits" display name/symbol — same rationale as
 // each tier's own `id` above.
 export const MONEY_ID = 'base'
-export const MONEY_STARTING_AMOUNT = 10
+export const MONEY_STARTING_AMOUNT = 1
 export const GOOGOL = 1e100
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,

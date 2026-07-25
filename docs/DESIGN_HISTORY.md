@@ -740,12 +740,32 @@ effect during the test rewrite: a non-`smartAutobuyer` tier with a full-block ba
 stall forever on tier01's very first level, since `MONEY_STARTING_AMOUNT` (10) couldn't afford the
 old $64 full-block price — this is the entire reason `smartAutobuyer`/`buySmartAutobuyer` exists (buy
 singly until the first level completes, then revert to normal batching). Under the new $8 full-block
-price, the $10 starting balance affords it outright, so the bootstrap stall no longer applies to
-tier01 specifically under default settings — confirmed acceptable by the maintainer rather than
-adjusting `MONEY_STARTING_AMOUNT` to preserve the old stall. Every other tier still stalls normally
-(their `baseCost` is far larger relative to whatever money has accumulated by the time they're
-reachable), so `smartAutobuyer` still has a real purpose elsewhere — see `engine.test.js`'s `tickGame`
-describe block for both the "tier01 now bootstraps" and "a bigger tier still stalls" cases.
+price, the (then-current) $10 starting balance would have afforded it outright, so at the time this
+change was reviewed the bootstrap stall no longer applied to tier01 specifically — confirmed
+acceptable by the maintainer rather than adjusting `MONEY_STARTING_AMOUNT` to preserve the old stall.
+**This was superseded almost immediately** by the unrelated starting-money change below
+(`MONEY_STARTING_AMOUNT` 10 → 1): at $1, tier01's $8 full-block price is unaffordable again, so the
+stall is back in practice for every tier including tier01 — not because anyone reverted or tuned
+anything to restore it, but as a side effect of a separate, independently-requested change landing
+right after. `smartAutobuyer` remains meaningful either way — see `engine.test.js`'s `tickGame`
+describe block for the current (stalls-again) tier01 case and the always-stalls bigger-tier case.
+
+### Starting Money reduced from 10 to 1
+
+`MONEY_STARTING_AMOUNT` (`layers.js`) changed from 10 to 1 — a fresh save now starts with 1 Bit
+instead of 10. This is a standalone request, made independently of (and shortly after) the
+`getTierCost` per-unit/level-total split above; the two happened to interact (see the note above)
+but neither was chosen to compensate for the other.
+
+One knock-on effect worth recording: `createInitialGameState`'s `prestige.highestMilestone` seeds
+from `Math.floor(Math.log10(MONEY_STARTING_AMOUNT))` — this is `0` at the new starting amount, versus
+`1` at the old one. `checkMilestones` awards XP once `getMoneyExponent(money) > highestMilestone`, so
+the first-ever XP point now arrives as soon as Money first reaches 10 (exponent 1, clearing the fresh
+watermark of 0) rather than needing to reach 100 (exponent 2, the threshold needed to clear the old
+watermark of 1). This is a direct, intended mathematical consequence of the formula already in place
+(not a new formula), not a separate design decision — XP itself is otherwise inert in the UI outside
+the last tier's XP-funded tickspeed mechanic (see "XP status" above), so this mainly matters for
+players relying on that mechanic early.
 
 ## Distribution
 

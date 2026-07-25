@@ -1595,7 +1595,10 @@ purchases were manual or automatic.
 
 - `MONEY_ID = 'base'` — naming-agnostic id of the base/root resource, fully decoupled from its display
   name/symbol ("Bits" / `b`), same rationale as each tier's own `id`
-- `MONEY_STARTING_AMOUNT = 10`
+- `MONEY_STARTING_AMOUNT = 1` — a fresh save starts with 1 Bit. Also seeds `prestige.highestMilestone`
+  (`Math.floor(Math.log10(MONEY_STARTING_AMOUNT))`, `checkMilestones`' XP-earning watermark) at `0`
+  rather than `1` — the first XP point is now earned the moment Money first reaches 10 (exponent 1 >
+  the fresh watermark of 0), instead of needing to reach 100
 - `GOOGOL = 1e100` — money balance required to prestige
 - `TICK_RATE_MS = 100` — the global tick fires every 100ms (10Hz); `elapsedSeconds` per live tick is
   `TICK_RATE_MS / 1000 = 0.1`. Every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets)

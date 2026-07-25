@@ -187,7 +187,7 @@ const thousandsTier = TIER_DEFINITIONS[1]
 describe('createInitialGameState', () => {
   it('starts with MONEY_STARTING_AMOUNT money', () => {
     const state = createInitialGameState()
-    expect(state.resources[MONEY_ID]).toBe(10)
+    expect(state.resources[MONEY_ID]).toBe(1)
   })
 
   it('initialises all tiers with owned = 0', () => {
@@ -1144,12 +1144,12 @@ describe('getTierSpendableAmount', () => {
 
 describe('buyTier', () => {
   it('deducts cost and increments owned/purchased', () => {
-    const state = createInitialGameState() // $10
+    const state = createInitialGameState() // $1
     // tensTier (baseCost 8) level 1, default blockSize 8: per-unit cost = 8/8 = 1
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.resources[MONEY_ID]).toBe(9)
+    expect(after.resources[MONEY_ID]).toBe(0)
   })
 
   it('returns the same state object when funds are insufficient', () => {
@@ -1394,7 +1394,7 @@ describe('tickGame', () => {
     )
     const after = tickGame(1)(state)
     expect(after.prestige.count).toBe(1)
-    expect(after.resources[MONEY_ID]).toBe(10)
+    expect(after.resources[MONEY_ID]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.autoPrestigeAttemptBudget).toBe(0)
   })
@@ -1408,7 +1408,7 @@ describe('tickGame', () => {
     for (let i = 0; i < 500; i++) state = tickGame(1)(state)
     // Another 500 ticks crosses the 1.0 threshold — fires now, exactly once.
     expect(state.prestige.count).toBe(1)
-    expect(state.resources[MONEY_ID]).toBe(10)
+    expect(state.resources[MONEY_ID]).toBe(1)
   })
 
   it('accumulates the Auto-Prestige attempt budget during ordinary (non-frozen) play too, not only once frozen', () => {
@@ -1431,7 +1431,7 @@ describe('tickGame', () => {
     // granularity.
     let state = withOwned(createInitialGameState(), tensTier.id, 1)
     for (let i = 0; i < 10; i++) state = tickGame(0.1)(state)
-    expect(state.resources[MONEY_ID]).toBe(11) // 10 starting + 1 tick's worth of production
+    expect(state.resources[MONEY_ID]).toBe(2) // 1 starting + 1 tick's worth of production
   })
 
   it('does not apply the Prestige Points production-speed bonus until it has been unlocked', () => {
@@ -1581,33 +1581,27 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(7)
   })
 
-  it('without smart, tier01 now bootstraps its entire first level from the $10 starting balance alone (no stall)', () => {
-    // Before this change, tier01's flat per-unit cost was $8, so buying the whole first block (8
-    // units) cost $64 — unaffordable from the $10 starting balance, stalling a non-"smart"
-    // autobuyer forever (the reason smartAutobuyer exists). Now that cost is split evenly across
-    // the block (per-unit $8/8=$1, full block $8 total), $10 is enough to complete the whole first
-    // level in a single tick — the bootstrap-stall problem no longer applies to tier01 specifically
-    // (see docs/DESIGN_HISTORY.md; other tiers still stall normally, see the next test).
+  it('without smart, a tier with only its $1 starting balance never buys anything at batch size 10 (the bootstrap stall)', () => {
+    // tier01's per-unit cost at level 1, blockSize 8, is 8/8=$1 — the entire first block costs $8
+    // total. MONEY_STARTING_AMOUNT is $1, well short of that, so a non-"smart" autobuyer with a
+    // full-block batch size holds rather than trickling in a partial purchase — the reason
+    // smartAutobuyer exists (see the next test). This stall isn't specific to tier01: every tier
+    // stalls the same way from a starting balance smaller than its own full-block price (see the
+    // following test for a much pricier tier).
     const state = withAutobuyer(
       createInitialGameState(),
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
-    expect(after.owned[tensTier.id]).toBe(8)
-    expect(after.purchased[tensTier.id]).toBe(8)
-    expect(after.purchaseLevels[tensTier.id]).toBe(2) // first level completed
-    // $10 - $8 (full block) = $2, plus this tick's own production once the level completes: the
-    // purchase-milestone multiplier doubles (level 1→2) partway through the same tick, crediting
-    // 8 owned × 1sec × ×2 milestone = 16, for $2 + $16 = $18.
-    expect(after.resources[MONEY_ID]).toBe(18)
+    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.purchased[tensTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('the bootstrap stall still applies to a tier whose baseCost is large relative to available money', () => {
     // thousandsTier (baseCost 8000) at level 1, blockSize 8: per-unit cost 8000/8=1000, full block
     // $8000. With only $500 available, a batch-size-10 (non-smart) autobuyer still holds rather
-    // than buying anything — the stall this mechanic guards against isn't eliminated everywhere,
-    // just no longer reachable for tier01 under its own default starting balance (see the test
-    // above and docs/DESIGN_HISTORY.md).
+    // than buying anything.
     const state = withAutobuyer(
       withMoney(withOwned(createInitialGameState(), tensTier.id, 8), 500),
       thousandsTier.id
@@ -1624,7 +1618,7 @@ describe('tickGame', () => {
   it('a smart tier buys one at a time (ignoring the batch size) instead of stalling on the first block', () => {
     const state = withSmartAutobuyer(
       withAutobuyer(
-        createInitialGameState(), // $10 starting balance
+        createInitialGameState(), // $1 starting balance
         tensTier.id
       ),
       tensTier.id
@@ -1632,10 +1626,10 @@ describe('tickGame', () => {
     const after = tickGame(1, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(1)
-    // Per-unit cost at level 1 is 8/8=1: money spent on the single unit ($10 → $9) but that unit's
+    // Per-unit cost at level 1 is 8/8=1: money spent on the single unit ($1 → $0) but that unit's
     // own production adds $1 back this same tick (owned(1) × 1sec × 1 prestige multiplier × 1
     // milestone multiplier).
-    expect(after.resources[MONEY_ID]).toBe(10)
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('a smart tier reverts to the normal (full-block) batch size once past its first level', () => {
@@ -2483,7 +2477,7 @@ describe('prestigeGame', () => {
   it('resets money to starting amount', () => {
     const state = withMoney(createInitialGameState(), GOOGOL + 99999)
     const after = prestigeGame(state)
-    expect(after.resources[MONEY_ID]).toBe(10)
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('resets all owned counts to 0, along with every tier\'s purchaseLevels/purchaseLevelProgress', () => {
@@ -2608,7 +2602,7 @@ describe('speedUpGame', () => {
   it('resets money to the starting amount', () => {
     const state = withMoney(eligibleState(), 99999)
     const after = speedUpGame(state)
-    expect(after.resources[MONEY_ID]).toBe(10)
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('resets all owned and purchased counts to 0, along with every tier\'s purchaseLevels/purchaseLevelProgress', () => {
