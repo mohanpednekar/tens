@@ -562,6 +562,13 @@ Strict three-layer separation:
   full row; the page header additionally centers that fit-content `summary` with `margin: 0 auto`
   since it sits in an otherwise `text-align: center` block (a block-level element ignores its
   parent's `text-align`, which only centers inline content).
+- **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })` — rendered as a
+  `<span>` rather than `MutedText`'s default `<p>`, since `<summary>` only permits phrasing content)
+  shows the app's current version (`v{version}`, e.g. `v0.5.0`) directly beside the `<h1>Tens</h1>`
+  inside the same `<summary>` — always visible on load, unlike the tagline in `InfoDetails`' collapsed
+  body below it. Sourced from `package.json`'s `"version"` field via a build-time JSON import
+  (`import { version } from '../../../package.json'`) — the single source of truth; no separate
+  constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an
@@ -1744,7 +1751,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (508 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (509 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
   behind by prior renames (see `docs/DESIGN_HISTORY.md`). A legacy save's `resources.Ones` balance is
@@ -1765,7 +1772,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (488) is unaffected by anything under `e2e/`.
+  (503) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

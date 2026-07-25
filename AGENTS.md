@@ -83,7 +83,10 @@ each step with a `{ size, lineHeight }` rem pair.
 
 **All game logic is pure** (`engine.js`). The hook (`useIncrementalGame.js`)
 owns all React state and side-effects (timer, localStorage). The page
-(`MainPage/index.jsx`) is a pure renderer.
+(`MainPage/index.jsx`) is a pure renderer. It also shows the current app
+version (`v{version}`) beside the page `<h1>`, sourced at build time from
+`package.json`'s `"version"` field via a JSON import — the single source of
+truth, no separate constant.
 
 There are 10 tiers, ids `tier01` → `tier10` (display names `Bytes` →
 `Ronnabytes` — a byte-scale theme: Bytes, Kilobytes, Megabytes, Gigabytes,

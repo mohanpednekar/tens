@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
+import { version } from '../package.json'
 import App from './App'
 
 beforeEach(() => {
@@ -17,6 +18,12 @@ test('renders the game title and the Bytes tier', () => {
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^bytes layer$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for 8 b\b/i })).toBeEnabled()
+})
+
+test('renders the current app version beside the title', () => {
+  render(<App />)
+
+  expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
 test('buying Bytes deducts cost and increases owned count', async () => {
