@@ -623,6 +623,82 @@ it used to display under the same "level" label — a genuine meaning change to 
 resize, since "level" previously meant "how many you've bought total" and now means "which cost step
 you're on."
 
+### Purchase block size became a runtime-configurable, growing value — `getTierLevel` replaced by direct state tracking
+
+The entry above ("Purchase level resized from 10 to 8...") introduced `PURCHASE_BLOCK_SIZE` as a
+shared *constant* and `getTierLevel(purchased) = Math.floor(purchased / PURCHASE_BLOCK_SIZE) + 1` as
+a *derived* accessor — level was still computed on demand from a lifetime purchased count and a fixed
+divisor. The maintainer asked for this to change on the very same day: block size should not be
+hardcoded at all (8 is only the starting/default value for early game) and should not be computed via
+division — a tier's level and its progress toward completing it should be tracked directly, citing
+Clicker Heroes as the reference for the kind of explicit per-entity level/progress tracking intended.
+
+**Why division had to go.** Once block size can change mid-run, there is no longer a single divisor
+that can reconstruct "which level is this" from a lifetime purchased count after the fact — a tier's
+purchases before a block-size increase and after it don't correspond to the same-size levels, so
+`purchased / blockSize` stops meaning anything coherent partway through a run. The fix: `purchased`
+stays as a simple, ever-incrementing lifetime counter (kept for display and backwards compatibility),
+but a tier's current level and its progress within that level become their own state fields —
+`state.purchaseLevels[tierId]` (1-indexed) and `state.purchaseLevelProgress[tierId]` (0 up to the
+current block size) — incremented directly, purchase by purchase, inside `buyTier`. The old
+`getTierLevel(purchased)` accessor was deleted entirely rather than kept alongside the new fields, to
+avoid two competing sources of truth for the same concept. `getTierCost`, `getTierBulkQuantity`,
+`getTierQuantityCost`, `getTierAffordableQuantity`, and `getPurchaseMilestoneMultiplier` all changed
+signature accordingly — from `(tier, purchased, ...)` to explicit `(tier, level, ...)` /
+`(blockSize, levelProgress, ...)` parameters — rather than reaching into `state` themselves, keeping
+them pure and testable against explicit inputs; call sites (`buyTier`, `tickGame`'s autobuyer loop,
+`MainPage`) now read `state.purchaseLevels`/`state.purchaseLevelProgress` directly and pass them in.
+
+**The growth rule.** `getPurchaseBlockSize(state)` (`engine.js`) is a single global value — one
+number shared by every tier, not per-tier, per an explicit maintainer decision weighing simplicity
+("simplest mental model, matches how the mechanic works today") against the alternative of letting
+tiers diverge independently. It starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (`8`, renamed from the old
+`PURCHASE_BLOCK_SIZE` to make clear it's only a starting value) and grows by
+`PURCHASE_BLOCK_SIZE_GROWTH_STEP` (`1`) every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS` (`100`)
+levels the **last tier** completes. The maintainer specified this trigger directly ("every 100
+levels") after a round of back-and-forth about which progress marker should drive it; the last tier
+was chosen (by the implementer, as the most consistent option) because it's the same "flagship"
+marker `getSpeedUpRequirement`/`isLastTierTickspeedXpUnlocked`/`prestigeCardEverRevealed` already key
+off, rather than introducing a new kind of progress signal. A deliberately-considered consequence:
+because every earlier tier must already be unlocked (and permanently latched via
+`everUnlockedTierIds`) by the time the last tier can reach level 100+, a block-size increase can
+never retroactively raise an *already-unlocked* tier's own unlock threshold — it only makes whatever
+level a tier is currently mid-way through require more purchases than it did when that level started.
+`isTierUnlocked`/`isLastTierTickspeedXpUnlocked`'s owned-count thresholds and
+`getSpeedUpRequirement`'s per-cycle step all now read `getPurchaseBlockSize(state)` instead of the
+old fixed constant. `getSpeedUpRequirement` itself changed from a purchased-count threshold
+(`PURCHASE_BLOCK_SIZE * (speedUpCount + 1)`) to a **level target** (`speedUpCount + 2`), since a
+purchased-count requirement stops being a stable comparison point once block size can grow mid-run,
+while a level number stays meaningful regardless. `MainPage`'s Speed Up card/button display changed
+to match (showing the last tier's level and level-based requirement instead of a raw purchase count).
+Both `purchaseLevels` and `purchaseLevelProgress` reset to their fresh defaults on Prestige and Speed
+Up, same as `owned`/`purchased` — which, as a side effect, also resets `getPurchaseBlockSize` back
+down to `DEFAULT_PURCHASE_BLOCK_SIZE` for every tier, since it's derived from the last tier's own
+(now-reset) level; growth is a within-a-run phenomenon only.
+
+**A real bug caught during this change.** The first implementation used `Infinity` as the "buy as
+many as fit this level" sentinel quantity passed to `buyTierQuantity`/`tickGame` (replacing the old
+fixed `BUY_QUANTITY = PURCHASE_BLOCK_SIZE`, which no longer makes sense once block size varies).
+`engine.js`'s `clampNonNegative` helper (`Math.max(0, Number.isFinite(value) ? value : 0)`) treats any
+non-finite value — including `Infinity` — as invalid and clamps it to `0`, so `getTierBulkQuantity`
+silently returned `0` for every purchase, both manual Buy and every autobuyer, a complete (silent)
+soft-lock of the entire economy. Caught by a scratch sanity script exercising the real functions
+before handing off test-file work, rather than by an early test run. Fixed by using
+`Number.MAX_SAFE_INTEGER` instead of `Infinity` as the sentinel everywhere it's needed
+(`useIncrementalGame.js`'s `BUY_QUANTITY`, `MainPage`'s affordable-quantity preview) — finite, so it
+passes through `clampNonNegative` unchanged, while still being large enough that `Math.min` against
+the real remaining-in-level count always yields the real count. `clampNonNegative` itself was left
+unchanged rather than special-cased to allow `Infinity` through, since its non-finite-rejection
+behavior is a deliberate guard against `NaN`/`Infinity` propagating from corrupted state elsewhere in
+the app, and loosening it for this one caller would have widened that guard's blast radius for every
+other caller instead of just fixing the one broken call site.
+
+A save from before `purchaseLevels`/`purchaseLevelProgress` existed is migrated on load (`storage.js`)
+by deriving an equivalent level/progress from its legacy `purchased` count against
+`DEFAULT_PURCHASE_BLOCK_SIZE` — the only block size that could ever have applied to such a save, since
+the growth mechanic didn't exist yet when it was written. This is explicitly a one-time interpretation
+of old data on load, not a reintroduction of division into the ongoing engine logic.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

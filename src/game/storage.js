@@ -1,4 +1,5 @@
 import { createInitialGameState } from './engine'
+import { DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
 
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
@@ -88,12 +89,35 @@ const migrateState = saved => {
   if (migratedResourcesRaw.base === undefined && legacyOnes !== undefined) {
     migratedResourcesRaw.base = legacyOnes
   }
+  // purchaseLevels/purchaseLevelProgress are new fields (see engine.js) replacing a fixed
+  // PURCHASE_BLOCK_SIZE constant that used to define what a tier "level" was (see
+  // docs/DESIGN_HISTORY.md) — an old save predating them only has a lifetime `purchased` count,
+  // with no notion of "level" or "progress within a level" at all. For any tier missing its own
+  // purchaseLevels/purchaseLevelProgress entry, derive an equivalent level/progress from that
+  // legacy purchased count using DEFAULT_PURCHASE_BLOCK_SIZE (the only block size that could ever
+  // have applied to a save from before block size became variable) — a one-time interpretation of
+  // old data on load, not an ongoing engine mechanism (the running game never derives a tier's
+  // level from its purchased count via division any more).
+  const migratedPurchased = migrateTierKeys(saved.purchased ?? saved.owned ?? {})
+  const savedPurchaseLevels = migrateTierKeys(saved.purchaseLevels)
+  const savedPurchaseLevelProgress = migrateTierKeys(saved.purchaseLevelProgress)
+  const derivedPurchaseLevels = {}
+  const derivedPurchaseLevelProgress = {}
+  Object.keys(fresh.purchaseLevels).forEach(tierId => {
+    if (savedPurchaseLevels[tierId] !== undefined) return
+    const legacyPurchased = migratedPurchased[tierId] ?? 0
+    const level = Math.floor(legacyPurchased / DEFAULT_PURCHASE_BLOCK_SIZE) + 1
+    derivedPurchaseLevels[tierId] = level
+    derivedPurchaseLevelProgress[tierId] = legacyPurchased - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
+  })
   return {
     ...fresh,
     ...savedWithoutRemovedFields,
     resources: { ...fresh.resources, ...migrateTierKeys(migratedResourcesRaw) },
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
     purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
+    purchaseLevels: { ...fresh.purchaseLevels, ...derivedPurchaseLevels, ...savedPurchaseLevels },
+    purchaseLevelProgress: { ...fresh.purchaseLevelProgress, ...derivedPurchaseLevelProgress, ...savedPurchaseLevelProgress },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
     tickspeedLevels: { ...fresh.tickspeedLevels, ...legacyTickspeedLevels, ...migrateTierKeys(saved.tickspeedLevels) },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },

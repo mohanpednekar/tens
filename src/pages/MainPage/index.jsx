@@ -1,8 +1,8 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierLevel, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -515,6 +515,22 @@ const BuyButton = styled(Button)`
   }
 `
 
+// Scoped to the tier row's Buy button cost label only — not the shared Button component used
+// elsewhere in the app (Prestige, Reset, PP Upgrades, …), which keep ButtonIcon/ButtonLabel's
+// default fixed-icon/centered-label layout unchanged. Here, the icon+level slot and the cost label
+// each take a fixed half of the button's width, and the cost label is left-aligned (rather than
+// centered) from that halfway point — so every tier row's cost figure starts at the same x
+// position (the button's horizontal center) regardless of how many digits the level/progress or
+// cost strings have, instead of drifting as those change.
+const BuyButtonIcon = styled(ButtonIcon)`
+  flex: 0 0 50%;
+`
+
+const BuyButtonCostLabel = styled(ButtonLabel)`
+  flex: 0 0 50%;
+  text-align: left;
+`
+
 const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
@@ -726,17 +742,23 @@ const MainPage = () => {
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
   const isFirstRun = prestige.count === 0
+  // The purchase block size every tier's current level currently requires to complete — a single
+  // global value (see getPurchaseBlockSize in engine.js), starting at DEFAULT_PURCHASE_BLOCK_SIZE
+  // and growing over the course of a run; computed once here rather than per-tier below, since
+  // every tier shares the same value.
+  const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPrestigeBar = isFrozen && !isFirstRun
   // During the first run only, the normal Prestige card is only worth showing once the player has
-  // bought a full level (getSpeedUpRequirement(0), the first Speed Up's own requirement) of the
+  // reached a full level (getSpeedUpRequirement(0), the first Speed Up's own level target) on the
   // very last tier — once they've prestiged at least once, it's always relevant. Once *either*
   // condition has ever been true, the card stays visible (in a disabled state once no longer
   // immediately relevant, e.g. the moment after prestiging, or after a Speed Up wipes tier10's
-  // purchase count back down during the first run) rather than disappearing again — see the
+  // level back down during the first run) rather than disappearing again — see the
   // prestigeCardEverRevealed effect below.
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  const prestigeCardRelevant = !isFirstRun || getTierPurchasedCount(state, lastTier.id) >= getSpeedUpRequirement(0)
+  const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
+  const prestigeCardRelevant = !isFirstRun || lastTierLevel >= getSpeedUpRequirement(0)
   const [prestigeCardEverRevealed, setPrestigeCardEverRevealed] = useState(prestigeCardRelevant)
   useEffect(() => {
     if (prestigeCardRelevant) setPrestigeCardEverRevealed(true)
@@ -745,8 +767,8 @@ const MainPage = () => {
 
   // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
   // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
-  // (getSpeedUpRequirement(speedUpCount): a full level of lifetime purchases for the first
-  // activation, 2 levels for the second, 3 for the third, …), it resets tiers/resources but permanently doubles
+  // (getSpeedUpRequirement(speedUpCount): level 2 for the first activation, level 3 for the
+  // second, level 4 for the third, …), it resets tiers/resources but permanently doubles
   // production speed, stacking with every prior activation. Gated on the last tier having ever
   // been unlocked, same progressive-disclosure principle as the Prestige card gate above, so it
   // doesn't clutter the page before tier10 first exists — but once shown, stays shown (in a
@@ -762,9 +784,8 @@ const MainPage = () => {
   const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
   const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
   const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
-  const lastTierPurchased = getTierPurchasedCount(state, lastTier.id)
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierPurchased / speedUpRequirement) * 100))
-  const canSpeedUp = !isFrozen && lastTierPurchased >= speedUpRequirement
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevel / speedUpRequirement) * 100))
+  const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
   // allTiersFullyAutomated the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
@@ -1060,7 +1081,7 @@ const MainPage = () => {
                 <li>
                   Speed Up: {speedUpCount > 0
                     ? `×${formatRate(speedUpMultiplier)} production speed from ${speedUpCount} activation${speedUpCount === 1 ? '' : 's'}`
-                    : `not yet activated (reach ${formatAmount(speedUpRequirement)} ${lastTier.name} purchases)`}
+                    : `not yet activated (reach level ${formatAmount(speedUpRequirement)} on ${lastTier.name})`}
                 </li>
               )}
               {globalTickspeedCardEverRevealed && (
@@ -1169,28 +1190,30 @@ const MainPage = () => {
           const owned = state.owned[tier.id] ?? 0
           const purchased = getTierPurchasedCount(state, tier.id)
           const costResource = getTierSpendableAmount(state, tier)
-          // Manual Buy always grabs as many units as are currently affordable, up to the
-          // current level's PURCHASE_BLOCK_SIZE-unit cost block boundary (the former ×1/×10
-          // "Bulk" toggle's default, now the only behavior — see useIncrementalGame's
-          // BUY_QUANTITY).
-          const affordableQuantity = getTierAffordableQuantity(tier, purchased, costResource, PURCHASE_BLOCK_SIZE)
-          const unitCost = getTierQuantityCost(tier, purchased, 1)
-          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, purchased, affordableQuantity) : unitCost
+          // The tier's current level and how many of this level's pieces are already bought are
+          // tracked directly in state (see engine.js's createInitialGameState/buyTier) rather than
+          // derived from `purchased` via division — the block size a level requires can grow over
+          // a run (see getPurchaseBlockSize below), so there's no fixed divisor to derive a level
+          // from after the fact. Drives both the Buy button's compact "Lv.N (x/8)" text and the
+          // cost-block progress fill.
+          const tierLevel = state.purchaseLevels?.[tier.id] ?? 1
+          const doneInBlock = state.purchaseLevelProgress?.[tier.id] ?? 0
+          // Manual Buy always grabs as many units as are currently affordable, up to the current
+          // level's cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
+          // behavior — see useIncrementalGame's BUY_QUANTITY).
+          const affordableQuantity = getTierAffordableQuantity(tier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
+          const unitCost = getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, 1)
+          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
           const canAfford = affordableQuantity > 0 && !isFrozen
-          // The tier's current level (see getTierLevel in engine.js) and how many of this level's
-          // PURCHASE_BLOCK_SIZE pieces are already bought — drives both the Buy button's compact
-          // "Lv.N (x/8)" text and the cost-block progress fill.
-          const tierLevel = getTierLevel(purchased)
-          const doneInBlock = purchased - (tierLevel - 1) * PURCHASE_BLOCK_SIZE
-          const donePercent = (doneInBlock / PURCHASE_BLOCK_SIZE) * 100
-          const availablePercent = (affordableQuantity / PURCHASE_BLOCK_SIZE) * 100
+          const donePercent = (doneInBlock / purchaseBlockSize) * 100
+          const availablePercent = (affordableQuantity / purchaseBlockSize) * 100
           // The tier's own Money-funded tickspeed level — enabled by default (no autobuyer unlock
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
           // it does NOT change how much lands per delivery, only how often one arrives. Whenever
-          // the last tier's currently-owned count is >= PURCHASE_BLOCK_SIZE (a full level), this
-          // Money-funded ladder is instead replaced by an XP-funded one (see
+          // the last tier's currently-owned count is >= the current block size (a full level, see
+          // getPurchaseBlockSize), this Money-funded ladder is instead replaced by an XP-funded one (see
           // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js and the
           // last-tier-only controls below) — it reverts back to this Money-funded button if owned
           // later drops below that (e.g. after a Prestige/Speed Up).
@@ -1226,9 +1249,8 @@ const MainPage = () => {
             }
           }
           // Production no longer depends on autobuyer purchase frequency at all — completing
-          // every level (PURCHASE_BLOCK_SIZE lifetime purchases, manual or automatic) doubles a
-          // tier's own production (see getPurchaseMilestoneMultiplier/getTierCost/getTierLevel).
-          // This is the raw amount delivered in one
+          // every level (manual or automatic) doubles a tier's own production (see
+          // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
           // lump batch once this tier's own (tickspeed-shrunk) period completes — not a per-second
           // average — matching exactly what tickGame credits (see "Tier production tickspeed" in
           // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
@@ -1236,7 +1258,7 @@ const MainPage = () => {
           // tickGame's own floored production credit — prestigeBonus is the only fractional factor
           // left here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are always powers of
           // 2), so without flooring this preview could show a fraction that never actually lands.
-          const milestoneMultiplier = getPurchaseMilestoneMultiplier(purchased)
+          const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
           const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * milestoneMultiplier)
           // Surfaced only in the row's collapsed-by-default TierDetails disclosure below — the
           // base value is otherwise invisible to players now that it diverges per tier again
@@ -1250,16 +1272,16 @@ const MainPage = () => {
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
-          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(tierLevel)}, ${formatAmount(doneInBlock)} of ${PURCHASE_BLOCK_SIZE} purchased)`
+          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(tierLevel)}, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
           // title for assistive tech. The level+progress ("Lv.4 (5/8)" — the tier's current level
-          // and how many of that level's PURCHASE_BLOCK_SIZE pieces are already bought) sits
-          // inside ButtonIcon alongside the 🛒 glyph rather than the centered ButtonLabel, so it's
-          // pinned immediately next to the icon and lines up in a column across tier rows
-          // regardless of the cost string's length.
-          const buyLevelQuantityText = `Lv.${formatAmount(tierLevel)} (${formatAmount(doneInBlock)}/${PURCHASE_BLOCK_SIZE})`
+          // and how many of that level's pieces are already bought) sits inside ButtonIcon
+          // alongside the 🛒 glyph rather than the centered ButtonLabel, so it's pinned immediately
+          // next to the icon and lines up in a column across tier rows regardless of the cost
+          // string's length.
+          const buyLevelQuantityText = `Lv.${formatAmount(tierLevel)} (${formatAmount(doneInBlock)}/${purchaseBlockSize})`
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1328,7 +1350,7 @@ const MainPage = () => {
                       Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
                     </li>
                     <li>
-                      Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{PURCHASE_BLOCK_SIZE} purchased) — purchase
+                      Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased) — purchase
                       milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases
                     </li>
                     {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
@@ -1395,19 +1417,19 @@ const MainPage = () => {
                 color={canAfford ? 'white' : 'darkgrey'}
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${PURCHASE_BLOCK_SIZE} purchases) also doubles it`}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also doubles it`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <ButtonIcon>🛒 {buyLevelQuantityText} </ButtonIcon>
-                <ButtonLabel>{formatCurrency(displayCost)}</ButtonLabel>
+                <BuyButtonIcon>🛒 {buyLevelQuantityText} </BuyButtonIcon>
+                <BuyButtonCostLabel>{formatCurrency(displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
                   aria-valuenow={doneInBlock}
                   aria-valuemin={0}
-                  aria-valuemax={PURCHASE_BLOCK_SIZE}
+                  aria-valuemax={purchaseBlockSize}
                 />
               </BuyButton>
             </TierLine>
@@ -1420,14 +1442,14 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Speed Up</h2></summary>
             <MutedText id="speed-up-description">
-              Buy {speedUpRequirement} {lastTier.name} to trigger a Speed Up: resets your tiers and
-              resources (keeps unlocked autobuyers and Prestige Points) and permanently doubles
-              production speed. Each Speed Up needs a full level ({PURCHASE_BLOCK_SIZE} purchases) more than the last.
+              Reach level {speedUpRequirement} on {lastTier.name} to trigger a Speed Up: resets your
+              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs one more level than the last.
             </MutedText>
           </InfoDetails>
           <SpeedUpButton
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${speedUpRequirement} ${lastTier.name}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirement}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -1438,7 +1460,7 @@ const MainPage = () => {
             $pulse={canSpeedUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}{formatAmount(lastTierPurchased)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -1603,16 +1625,16 @@ const MainPage = () => {
                     )}
                     {!isAutobuyerLocked && (
                       isSmart ? (
-                        <PpUpgradeBadge $color="#a78bfa" title={`This tier buys one at a time until ${PURCHASE_BLOCK_SIZE} purchases, then in blocks of ${PURCHASE_BLOCK_SIZE}`}>
+                        <PpUpgradeBadge $color="#a78bfa" title={`This tier buys one at a time until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}`}>
                           🧠 Smart
                         </PpUpgradeBadge>
                       ) : (
                         <PpUpgradeButton
-                          aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until ${PURCHASE_BLOCK_SIZE} purchases, then in blocks of ${PURCHASE_BLOCK_SIZE}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                          aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
                           color={canBuySmart ? '#a78bfa' : 'darkgrey'}
                           disabled={!canBuySmart}
                           onClick={() => actions.buySmartAutobuyer(tier.id)}
-                          title={`Spend Prestige Points so this tier buys one at a time until ${PURCHASE_BLOCK_SIZE} purchases, then in blocks of ${PURCHASE_BLOCK_SIZE} — fixes an early-game stall where a full level isn't affordable yet`}
+                          title={`Spend Prestige Points so this tier buys one at a time until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize} — fixes an early-game stall where a full level isn't affordable yet`}
                           type="button"
                           $progress={ppProgressPercent(smartCost)}
                           $progressColor="#a78bfa"

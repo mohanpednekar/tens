@@ -65,16 +65,26 @@ export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 
-// The shared purchase-block size that defines a tier "level": completing a level means buying
-// this many pieces of it (see engine.js's getTierLevel). Every formula that needs to know which
-// level a lifetime purchase count falls in — getTierCost's cost epoch, getTierBulkQuantity's bulk-
-// purchase cap, getPurchaseMilestoneMultiplier's doubling cadence, the manual/autobuyer batch size
-// (BUY_QUANTITY in useIncrementalGame.js), the smart-autobuyer bootstrap threshold, and
-// getSpeedUpRequirement's per-cycle step — reads this single constant rather than each hardcoding
-// its own copy of the same block size. isTierUnlocked/isLastTierTickspeedXpUnlocked's owned-count
-// thresholds also read this value, even though they gate on `owned` rather than `purchased` (a
-// different field, but the same "one level's worth" concept).
-export const PURCHASE_BLOCK_SIZE = 8
+// The purchase block size a tier's level 1 (the very start of a run) requires to complete: buying
+// this many pieces of it advances a tier from level 1 to level 2. This is only the *default/
+// starting* value, not a fixed constant used throughout the game — the effective, current block
+// size is computed at runtime by engine.js's getPurchaseBlockSize(state) and can grow over the
+// course of a run (see PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS/PURCHASE_BLOCK_SIZE_GROWTH_STEP
+// below), so nothing in the game should treat this value as fixed forever. A tier's current level
+// and its progress toward completing that level are tracked directly in state
+// (purchaseLevels/purchaseLevelProgress, see engine.js's createInitialGameState) rather than
+// derived by dividing a lifetime purchase count by a block size — see docs/DESIGN_HISTORY.md for
+// why (the block size isn't fixed, so there's no single divisor to derive a level from after the
+// fact).
+export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
+
+// Every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase
+// block size grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP (see engine.js's getPurchaseBlockSize) — ties
+// growth to the same "flagship" progress marker getSpeedUpRequirement/isLastTierTickspeedXpUnlocked/
+// prestigeCardEverRevealed already key off, rather than any other tier or a global total.
+export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
+// The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
+export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 
 // A tier's production doubles at every level milestone (see engine.js's
 // getPurchaseMilestoneMultiplier) — the per-level multiplier normally applied.
@@ -82,7 +92,8 @@ export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 2
 // Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
 // that one level — a bigger milestone every 10 levels on top of the regular one every level (see
 // engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of
-// PURCHASE_BLOCK_SIZE — it stays a fixed 10, regardless of how many purchases make up one level.
+// the (now variable) purchase block size — it stays a fixed 10, regardless of how many purchases
+// make up one level.
 export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
 // Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every

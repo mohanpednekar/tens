@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { applyOfflineProgress, buyAutobuyerUnlock, buyAutoPrestige, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, buyTierTickspeedAutobuyer, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, speedUpGame, tickGame } from './engine'
-import { PURCHASE_BLOCK_SIZE, TICK_RATE_MS } from './layers'
+import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
-// level's (PURCHASE_BLOCK_SIZE-unit) cost-block boundary. This used to be a player-facing ×1/×10
-// "Bulk" toggle; it's now a fixed engine behavior (the toggle's former default), so there's
-// nothing left to persist.
-const BUY_QUANTITY = PURCHASE_BLOCK_SIZE
+// level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
+// getTierBulkQuantity/getPurchaseBlockSize in engine.js), since the block size itself can grow
+// over the course of a run — so this is deliberately a "buy as many as fit" request, not a fixed
+// batch-size constant. Number.MAX_SAFE_INTEGER (not Infinity) specifically: engine.js's
+// clampNonNegative treats any non-finite value (including Infinity) as invalid input and clamps it
+// to 0 — a real bug this exact constant tripped during development, silently turning every
+// purchase into a no-op — so this must stay a finite (if enormous) sentinel. This used to be a
+// player-facing ×1/×10 "Bulk" toggle; it's now a fixed engine behavior (the toggle's former
+// default), so there's nothing left to persist.
+const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 
 // Runs once, at mount, before the regular tick timer starts. Computes the resting game state
 // (with offline progress already folded in, if applicable) and a summary of that offline
