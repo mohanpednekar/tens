@@ -711,11 +711,27 @@ The maintainer's request — "the cost of each purchase within a level is 1en (`
 cost of the entire level" (n = the cost-epoch exponent driving `getCostEpochExponent`) — asked for the
 opposite: `getTierCost`'s existing formula output should represent the level's *total* cost, with each
 individual purchase costing an even `1/blockSize` share of it. `getTierCost` now takes `blockSize` as
-a third argument and returns `levelTotalCost / blockSize`, where `levelTotalCost` is exactly the
-formula's old return value (`baseCost * 10^(getCostEpochExponent(epoch) - 1)`) — unchanged. Its 3 call
-sites (`getTierQuantityCost`, `getTierAffordableQuantity`, `buyTier`) were updated to thread
+a third argument and returns `Math.ceil(levelTotalCost / blockSize)`, where `levelTotalCost` is exactly
+the formula's old return value (`baseCost * 10^(getCostEpochExponent(epoch) - 1)`) — unchanged. Its 3
+call sites (`getTierQuantityCost`, `getTierAffordableQuantity`, `buyTier`) were updated to thread
 `blockSize` through; no other call site existed (`MainPage` already only calls the blockSize-aware
 wrapper functions).
+
+**A real bug caught by review, before merging.** The first implementation returned the plain division
+(`levelTotalCost / blockSize`) with no rounding. Since every real tier's `baseCost` is a multiple of
+`DEFAULT_PURCHASE_BLOCK_SIZE` (8), this happened to divide evenly at the default block size — every
+test in the initial diff used `blockSize=8` and passed cleanly, masking the problem. But
+`getPurchaseBlockSize` (see above) grows past 8 once the last tier completes level 101, 201, … — a
+state a long-running idle game is explicitly designed to reach — at which point the division stops
+being exact for tiers whose own level total hasn't grown to keep pace, producing a fractional Money
+balance (a direct violation of this codebase's integer-resource invariant) after every purchase from
+then on. A `code-reviewer` subagent pass caught this before merge by reproducing it directly:
+`getTierCost({baseCost: 8}, 1, 9)` returned `0.888…`, not `1`. Worse, in principle: a plain `Math.floor`
+"fix" would have rounded a small `levelTotalCost` all the way down to `0` once `blockSize` grew large
+enough relative to it — an infinite-free-purchase exploit, not just a display glitch. `Math.ceil` was
+used instead of `Math.floor` specifically to rule out this failure mode: the per-unit cost is always
+at least 1 whenever `levelTotalCost` is positive, and the only cost is a small, safe overcharge (up to
+`blockSize - 1` extra) when a block doesn't divide evenly — never an underpayment or a free purchase.
 
 **Net effect**: completing an entire level now costs exactly what the raw formula computes (tier01
 level 1: $8, not $64) — an intentional ~`blockSize`x reduction in the total price of finishing a

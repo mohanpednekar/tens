@@ -276,11 +276,19 @@ export const getPurchaseBlockSize = state => {
 //
 // Every purchase within a level costs the same, even share of that level total — this function
 // returns that per-unit price (the level total divided by `blockSize`), so buying all `blockSize`
-// units of a level costs exactly the level-total price above, split evenly across them.
+// units of a level costs exactly the level-total price above, split evenly across them — while
+// `blockSize` stays at its default (every real tier's baseCost is a multiple of
+// DEFAULT_PURCHASE_BLOCK_SIZE, so this division is always exact there). Once `blockSize` grows
+// (see getPurchaseBlockSize) it stops evenly dividing levelTotalCost in general, so the division is
+// rounded UP (never down): `resources`/`owned` must stay integer-valued (see CLAUDE.md's integer
+// invariant), and rounding down could floor a real, positive cost all the way to 0 once
+// levelTotalCost < blockSize (an infinite-free-purchase exploit) — rounding up instead means buying
+// a full block can cost up to `blockSize - 1` more than levelTotalCost in that case, a minor, safe
+// overcharge rather than either failure mode.
 export const getTierCost = (tier, level, blockSize) => {
   const epoch = Math.max(0, clampNonNegative(level) - 1)
   const levelTotalCost = tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
-  return levelTotalCost / clampNonNegative(blockSize)
+  return Math.ceil(levelTotalCost / clampNonNegative(blockSize))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units

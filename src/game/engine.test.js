@@ -373,53 +373,57 @@ describe('getCostEpochExponent', () => {
 // getTierCost also now takes the current blockSize and returns the PER-UNIT price — a level's
 // total cost (every purchase within it, summed) is baseCost * 10^(epochExponent - 1), unchanged
 // from before; each individual purchase costs an even 1/blockSize share of that total, since every
-// purchase within a level is priced identically. All cases below use blockSize 8
-// (DEFAULT_PURCHASE_BLOCK_SIZE) unless noted.
+// purchase within a level is priced identically. This division is rounded UP (Math.ceil), never
+// down, so it never produces a fractional resource amount or (worse) rounds a real cost down to 0
+// once blockSize grows past its default — see the dedicated "rounds up" cases below. Tier fixtures
+// below use baseCost 8 (matching every real tier's baseCost being a multiple of
+// DEFAULT_PURCHASE_BLOCK_SIZE) so blockSize 8 divides evenly and the rounding is a no-op for these
+// cases; the rounding itself is exercised separately.
 
 describe('getTierCost', () => {
-  const tier = { baseCost: 10 }
+  const tier = { baseCost: 8 }
 
   it('costs baseCost / blockSize at level 1', () => {
-    expect(getTierCost(tier, 1, 8)).toBe(10 / 8)
+    expect(getTierCost(tier, 1, 8)).toBe(1)
   })
 
   it('costs (baseCost * 10^1) / blockSize at level 2', () => {
-    // epoch=1 → exponent 2 → levelTotal = baseCost * 10^(2-1) = 10 * 10 = 100
-    expect(getTierCost(tier, 2, 8)).toBe(100 / 8)
+    // epoch=1 → exponent 2 → levelTotal = baseCost * 10^(2-1) = 8 * 10 = 80
+    expect(getTierCost(tier, 2, 8)).toBe(10)
   })
 
   it('costs (baseCost * 10^3) / blockSize at level 3', () => {
-    // epoch=2 → exponent 4 → levelTotal = 10 * 10^(4-1) = 10000
-    expect(getTierCost(tier, 3, 8)).toBe(10000 / 8)
+    // epoch=2 → exponent 4 → levelTotal = 8 * 10^(4-1) = 8000
+    expect(getTierCost(tier, 3, 8)).toBe(1000)
   })
 
   it('costs (baseCost * 10^6) / blockSize at level 4', () => {
-    // epoch=3 → exponent 7 → levelTotal = 10 * 10^(7-1) = 1e7
-    expect(getTierCost(tier, 4, 8)).toBe(1e7 / 8)
+    // epoch=3 → exponent 7 → levelTotal = 8 * 10^(7-1) = 8e6
+    expect(getTierCost(tier, 4, 8)).toBe(1e6)
   })
 
   it('costs (baseCost * 10^10) / blockSize at level 5', () => {
-    // epoch=4 → exponent 11 → levelTotal = 10 * 10^(11-1) = 1e11
-    expect(getTierCost(tier, 5, 8)).toBe(1e11 / 8)
+    // epoch=4 → exponent 11 → levelTotal = 8 * 10^(11-1) = 8e10
+    expect(getTierCost(tier, 5, 8)).toBe(1e10)
   })
 
   it('scales a larger baseCost by the same epoch-exponent multiplier, not a compounded power', () => {
-    const thousands = { baseCost: 1e3 }
-    expect(getTierCost(thousands, 1, 8)).toBe(1e3 / 8)
-    expect(getTierCost(thousands, 2, 8)).toBe(1e4 / 8)
-    expect(getTierCost(thousands, 3, 8)).toBe(1e6 / 8)
-    expect(getTierCost(thousands, 4, 8)).toBe(1e9 / 8)
-    expect(getTierCost(thousands, 5, 8)).toBe(1e13 / 8)
+    const thousands = { baseCost: 8e3 }
+    expect(getTierCost(thousands, 1, 8)).toBe(1e3)
+    expect(getTierCost(thousands, 2, 8)).toBe(1e4)
+    expect(getTierCost(thousands, 3, 8)).toBe(1e6)
+    expect(getTierCost(thousands, 4, 8)).toBe(1e9)
+    expect(getTierCost(thousands, 5, 8)).toBe(1e13)
   })
 
   it('treats level 0 and negative levels as level 1', () => {
-    expect(getTierCost(tier, 0, 8)).toBe(10 / 8)
-    expect(getTierCost(tier, -1, 8)).toBe(10 / 8)
+    expect(getTierCost(tier, 0, 8)).toBe(1)
+    expect(getTierCost(tier, -1, 8)).toBe(1)
   })
 
   it('divides the level total evenly across a different block size', () => {
-    expect(getTierCost(tier, 1, 10)).toBe(1)
-    expect(getTierCost(tier, 1, 5)).toBe(2)
+    expect(getTierCost(tier, 1, 4)).toBe(2)
+    expect(getTierCost(tier, 1, 2)).toBe(4)
   })
 
   it('completing an entire level (blockSize purchases) costs exactly the level-total price', () => {
@@ -427,8 +431,25 @@ describe('getTierCost', () => {
     // i.e. today's level-total formula, now just split evenly across blockSize purchases.
     const blockSize = 8
     const levelTotal = getTierCost(tier, 1, blockSize) * blockSize
-    expect(levelTotal).toBe(10)
+    expect(levelTotal).toBe(8)
     expect(getTierQuantityCost(tier, 1, blockSize, 0, blockSize)).toBe(levelTotal)
+  })
+
+  it('rounds up (never down) when blockSize does not evenly divide the level total, keeping the result an integer', () => {
+    // levelTotal 8, blockSize 9: 8/9 ≈ 0.889 — flooring would give a fractional 0.889 (breaking the
+    // integer resource invariant); this rounds up to 1 instead. Reachable in real play once
+    // getPurchaseBlockSize grows past its default 8 (see "The (configurable) purchase block size"
+    // in CLAUDE.md) while a tier's own level total hasn't grown to keep pace.
+    expect(getTierCost(tier, 1, 9)).toBe(1)
+    expect(Number.isInteger(getTierCost(tier, 1, 9))).toBe(true)
+    // levelTotal 8, blockSize 3: 8/3 ≈ 2.667 → rounds up to 3 (not down to 2).
+    expect(getTierCost(tier, 1, 3)).toBe(3)
+  })
+
+  it('never rounds a positive level total down to a free (0-cost) purchase, even when blockSize far exceeds it', () => {
+    // levelTotal 8, blockSize 100: flooring (8/100 = 0.08) would give 0 — an infinite-free-purchase
+    // exploit. Rounding up guarantees at least 1.
+    expect(getTierCost(tier, 1, 100)).toBe(1)
   })
 })
 
@@ -463,31 +484,36 @@ describe('getTierBulkQuantity', () => {
 })
 
 describe('getTierQuantityCost', () => {
-  const tier = { baseCost: 10 }
+  const tier = { baseCost: 8 } // divides evenly by blockSize 8, matching every real tier
 
   it('multiplies the per-unit cost (level total ÷ blockSize) by the capped bulk quantity', () => {
-    // Per-unit cost at level 1, blockSize 8: 10 / 8 = 1.25. Buying the full block (8 units) costs
-    // exactly the level-total price (10) — unchanged from before this split.
-    expect(getTierQuantityCost(tier, 1, 8, 0, 8)).toBe(10)
-    expect(getTierQuantityCost(tier, 1, 8, 5, 8)).toBe(3.75) // only 3 fit in the current block: 1.25 × 3
-    expect(getTierQuantityCost(tier, 2, 8, 0, 8)).toBe(100) // next level: per-unit 100/8=12.5 × 8 = 100 (level total)
+    // Per-unit cost at level 1, blockSize 8: 8 / 8 = 1. Buying the full block (8 units) costs
+    // exactly the level-total price (8) — unchanged from before this split.
+    expect(getTierQuantityCost(tier, 1, 8, 0, 8)).toBe(8)
+    expect(getTierQuantityCost(tier, 1, 8, 5, 8)).toBe(3) // only 3 fit in the current block: 1 × 3
+    expect(getTierQuantityCost(tier, 2, 8, 0, 8)).toBe(80) // next level: per-unit 80/8=10 × 8 = 80 (level total)
+  })
+
+  it('can cost slightly more than the level total when blockSize does not evenly divide it (rounds up, never down)', () => {
+    const oddTier = { baseCost: 10 } // 10/8 rounds up to a per-unit cost of 2, not 1.25
+    expect(getTierQuantityCost(oddTier, 1, 8, 0, 8)).toBe(16) // 2 × 8 — a bit more than the level total of 10
   })
 })
 
 describe('getTierAffordableQuantity', () => {
-  const tier = { baseCost: 10 }
+  const tier = { baseCost: 8 } // per-unit cost at level 1, blockSize 8: 8/8=1
 
   it('returns the full block-capped quantity when fully affordable', () => {
     expect(getTierAffordableQuantity(tier, 1, 8, 0, 1000, 8)).toBe(8)
   })
 
   it('caps at what can actually be afforded, partial-filling a bulk request', () => {
-    // $3 at $1.25/unit (10/8) affords 2, even though 8 were requested
-    expect(getTierAffordableQuantity(tier, 1, 8, 0, 3, 8)).toBe(2)
+    // $5 at $1/unit affords 5, even though 8 were requested
+    expect(getTierAffordableQuantity(tier, 1, 8, 0, 5, 8)).toBe(5)
   })
 
   it('returns 0 when nothing is affordable', () => {
-    expect(getTierAffordableQuantity(tier, 1, 8, 0, 1, 8)).toBe(0)
+    expect(getTierAffordableQuantity(tier, 1, 8, 0, 0, 8)).toBe(0)
   })
 
   it('never exceeds the block boundary even with unlimited funds', () => {
@@ -1255,6 +1281,21 @@ describe('buyTier', () => {
     const state = withMoney(createInitialGameState(), 1000)
     const after = buyTier(tensTier.id)(state)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+  })
+
+  it('keeps resources integer-valued even once blockSize has grown past its default (cost rounds up, not down)', () => {
+    // Growing blockSize to 9 (last tier at level 101) while tensTier itself is still at level 1
+    // (levelTotal 8) means 8/9 no longer divides evenly — a plain division would produce a
+    // fractional 0.888... cost. getTierCost rounds up instead, so the purchase still costs a whole
+    // number (1), never a fraction and never 0.
+    const state = withMoney(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 101),
+      100
+    )
+    expect(getPurchaseBlockSize(state)).toBe(9)
+    const after = buyTier(tensTier.id)(state)
+    expect(after.resources[MONEY_ID]).toBe(99)
+    expect(Number.isInteger(after.resources[MONEY_ID])).toBe(true)
   })
 })
 
