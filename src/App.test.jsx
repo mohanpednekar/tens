@@ -188,16 +188,16 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 — \+10% faster ticks/i)).toBeInTheDocument()
 })
 
-test('reaching 10 lifetime purchases of a tier doubles its displayed production amount', () => {
+test('reaching 8 lifetime purchases of a tier doubles its displayed production amount', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
-    purchased: { tier01: 10 },
+    purchased: { tier01: 8 },
   }))
 
   render(<App />)
 
-  // Crossing the 10-purchase milestone doubles production: owned(5) × 1 b/tick × 2 = 10 b per tick.
+  // Crossing the 8-purchase milestone doubles production: owned(5) × 1 b/tick × 2 = 10 b per tick.
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+10 b')
 })
 
@@ -295,9 +295,9 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
 
   const progressBar = screen.getByRole('progressbar', { name: /bytes cost-block progress/i })
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
-  expect(progressBar).toHaveAttribute('aria-valuemax', '10')
+  expect(progressBar).toHaveAttribute('aria-valuemax', '8')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
-  expect(screen.getByRole('button', { name: /buy for 8 b \(level 4\)/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /buy for 8 b \(level 1, 4 of 8 purchased\)/i })).toBeInTheDocument()
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
 })
 
@@ -310,20 +310,20 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×10 for 80 b\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×8 for 64 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('20 b')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('36 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 30 }, // affords 3 at 8 b/unit, not the full 10
+    resources: { Ones: 30 }, // affords 3 at 8 b/unit, not the full 8
   }))
 
   render(<App />)
@@ -507,10 +507,10 @@ test('production and every other control freeze once money reaches a googol', ()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
 })
 
-test('during the first run, the Prestige panel stays hidden until 10 of the last tier are bought', () => {
+test('during the first run, the Prestige panel stays hidden until 8 of the last tier are bought', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    purchased: { tier10: 9 },
+    purchased: { tier10: 7 },
   }))
 
   render(<App />)
@@ -518,10 +518,10 @@ test('during the first run, the Prestige panel stays hidden until 10 of the last
   expect(screen.queryByLabelText(/^prestige panel$/i)).not.toBeInTheDocument()
 })
 
-test('during the first run, the Prestige panel appears once 10 of the last tier are bought', () => {
+test('during the first run, the Prestige panel appears once 8 of the last tier are bought', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    purchased: { tier10: 10 },
+    purchased: { tier10: 8 },
   }))
 
   render(<App />)
@@ -551,62 +551,62 @@ test('the Speed Up panel stays hidden before the last tier unlocks', () => {
   expect(screen.queryByLabelText(/^speed up panel$/i)).not.toBeInTheDocument()
 })
 
-test('the Speed Up panel appears once the last tier unlocks, with the button disabled below 10 purchases', () => {
+test('the Speed Up panel appears once the last tier unlocks, with the button disabled below the required level', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchased: { tier10: 9 },
+    purchaseLevels: { tier10: 1 },
   }))
 
   render(<App />)
 
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
 })
 
-test('the Speed Up button is enabled once the last tier reaches 10 purchases', () => {
+test('the Speed Up button is enabled once the last tier reaches the required level', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchased: { tier10: 10 },
+    purchaseLevels: { tier10: 2 },
   }))
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeEnabled()
 })
 
-test('the second Speed Up requires a full block of 10 more than the first, not the same flat 10', () => {
+test('the second Speed Up requires one more level than the first, not the same level 2', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchased: { tier10: 10 },
+    purchaseLevels: { tier10: 2 },
     speedUpCount: 1,
   }))
 
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /speed up \(requires 20/i })
+  const button = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /speed up \(requires 10/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /speed up \(requires ronnabytes level 2\b/i })).not.toBeInTheDocument()
 })
 
 test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchased: { tier10: 15 },
+    purchaseLevels: { tier10: 2 },
     speedUpCount: 2,
   }))
 
   render(<App />)
 
-  // Third activation requires 30 tier10 purchases (15/30 = 50%) and would raise the permanent
-  // multiplier to ×8 — both shown on the button itself, with no separate status text line.
+  // Third activation requires the last tier to reach level 4 (Lv.2/4 = 50%) and would raise the
+  // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires 30 ronnabytes\) — doubles production speed to ×8/i,
+    name: /speed up \(requires ronnabytes level 4\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · 15/30')
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.2/4')
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
@@ -615,12 +615,12 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
-    purchased: { tier10: 10 },
+    purchaseLevels: { tier10: 2 },
   }))
 
   render(<App />)
 
-  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires 10/i })
+  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })
   expect(speedUpButton).toBeEnabled()
 
   await user.click(speedUpButton)
@@ -628,10 +628,10 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
   // Speed Up resets owned counts too, so the last tier is no longer unlocked — but since the
   // panel was already revealed once, it stays visible (in a disabled state) rather than
-  // disappearing again until the player climbs back up to it. The next cycle now requires 20
+  // disappearing again until the player climbs back up to it. The next cycle now requires level 3
   // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires 20/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })).toBeDisabled()
 })
 
 test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
@@ -640,7 +640,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
-    purchased: { tier10: 10 },
+    purchaseLevels: { tier10: 2 },
     globalTickspeedMultiplier: 2,
   }))
 
@@ -650,7 +650,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /speed up \(requires 10/i }))
+  await user.click(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i }))
 
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -662,13 +662,13 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e100 },
     owned: { tier09: 10 },
-    purchased: { tier10: 10 },
+    purchaseLevels: { tier10: 2 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   }))
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
 })
 
 test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
@@ -1295,7 +1295,7 @@ test('a tier\'s row disappears only once both Smart and its tier tickspeed autob
 test('the next tier\'s row previews as soon as any autobuyer upgrade is bought for the previous tier, even before the next tier itself is unlocked', async () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    // tier02 isn't unlocked yet: tier01 is owned below the 10-unit unlock threshold, and tier02
+    // tier02 isn't unlocked yet: tier01 is owned below the 8-unit unlock threshold, and tier02
     // itself is unowned.
     owned: { tier01: 3 },
     // Only the tier tickspeed autobuyer has been bought for tier01 — Unlock and Smart are both
@@ -1453,7 +1453,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach 10 ronnabytes purchases\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 2 on ronnabytes\)/i)
   expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
 })
 
