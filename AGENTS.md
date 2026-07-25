@@ -164,6 +164,13 @@ Directory imports resolve to that dir's `index.jsx`/`index.js` (e.g. `from 'them
 - Setup file: `src/setupTests.js` (imports `@testing-library/jest-dom`).
 - Globals are enabled (`describe`, `it`, `expect`, etc. without imports).
 
+## Changelog convention
+
+`CHANGELOG.md` (repo root, Keep a Changelog format) tracks user-facing/behaviorally-relevant changes
+from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading (`### Added`/
+`### Changed`/`### Fixed`/etc.) for any such PR; skip it for docs-only/internal CI changes.
+`package.json`'s `"version"` mirrors this file's released sections.
+
 ## Issue tracking conventions
 
 - `claude-task`-labeled issues are the work backlog for the scheduled automation (see `CLAUDE.md`'s
