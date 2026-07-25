@@ -1053,7 +1053,7 @@ describe('buyTier', () => {
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.resources[MONEY_ID]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(2)
   })
 
   it('returns the same state object when funds are insufficient', () => {
@@ -1123,11 +1123,11 @@ describe('buyTier', () => {
 
   it('deducts the current flat cost on each consecutive purchase within a block', () => {
     let state = withMoney(createInitialGameState(), 1000)
-    state = buyTier(tensTier.id)(state) // cost 10, purchased 0→1
-    state = buyTier(tensTier.id)(state) // cost 10 (flat), purchased 1→2
+    state = buyTier(tensTier.id)(state) // cost 8, purchased 0→1
+    state = buyTier(tensTier.id)(state) // cost 8 (flat), purchased 1→2
     expect(state.owned[tensTier.id]).toBe(2)
     expect(state.purchased[tensTier.id]).toBe(2)
-    expect(state.resources[MONEY_ID]).toBe(1000 - 10 - 10)
+    expect(state.resources[MONEY_ID]).toBe(1000 - 8 - 8)
   })
 
   it('uses purchased count (not owned) for cost scaling', () => {
@@ -1137,11 +1137,11 @@ describe('buyTier', () => {
         tensTier.id,
         0
       ),
-      10
+      8
     )
 
     expect(getTierPurchasedCount(state, tensTier.id)).toBe(0)
-    expect(getTierCost(tensTier, getTierPurchasedCount(state, tensTier.id))).toBe(10)
+    expect(getTierCost(tensTier, getTierPurchasedCount(state, tensTier.id))).toBe(8)
 
     const after = buyTier(tensTier.id)(state)
     expect(after.resources[MONEY_ID]).toBe(0)
@@ -1198,7 +1198,7 @@ describe('buyTierQuantity', () => {
     const after = buyTierQuantity(tensTier.id, 10)(state)
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
-    expect(after.resources[MONEY_ID]).toBe(1000 - 10 * 10)
+    expect(after.resources[MONEY_ID]).toBe(1000 - 8 * 10)
   })
 
   it('caps the purchase at the block boundary even with unlimited funds', () => {
@@ -1211,10 +1211,10 @@ describe('buyTierQuantity', () => {
   })
 
   it('stops early when funds run out partway through', () => {
-    const state = withMoney(createInitialGameState(), 35) // affords 3 at cost 10 each
+    const state = withMoney(createInitialGameState(), 30) // affords 3 at cost 8 each
     const after = buyTierQuantity(tensTier.id, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(3)
-    expect(after.resources[MONEY_ID]).toBe(5)
+    expect(after.resources[MONEY_ID]).toBe(6)
   })
 
   it('returns the same state object for a locked tier', () => {
@@ -1418,9 +1418,9 @@ describe('tickGame', () => {
     expect(after.purchased[tensTier.id]).toBe(1)
     // Production depends only on purchased milestones now (see getPurchaseMilestoneMultiplier) —
     // the tickspeed multiplier at level 0/1 is still ×1, no bonus yet (see
-    // getTickspeedProductionMultiplier): 100 - 10 (cost) + 1 × 1sec × 1 (still under 10
-    // purchases) = 91.
-    expect(after.resources[MONEY_ID]).toBe(91)
+    // getTickspeedProductionMultiplier): 100 - 8 (cost) + 1 × 1sec × 1 (still under 10
+    // purchases) = 93.
+    expect(after.resources[MONEY_ID]).toBe(93)
   })
 
   it('the tickspeed multiplier level has no effect on purchase-attempt frequency — every unlocked level buys exactly 1 per tick', () => {
@@ -1457,7 +1457,7 @@ describe('tickGame', () => {
 
   it('with a batch size above 1, autobuyer holds until it can afford the entire block', () => {
     const state = withAutobuyer(
-      withMoney(createInitialGameState(), 65), // affords 6 at $10/unit, not the full block of 10
+      withMoney(createInitialGameState(), 65), // affords 8 at $8/unit, not the full block of 10
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
@@ -1486,15 +1486,15 @@ describe('tickGame', () => {
     const after = tickGame(1, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(1)
-    // Money is spent on the single unit ($10 → $0) but that unit's own production adds $1 back
+    // Money is spent on the single unit ($10 → $2) but that unit's own production adds $1 back
     // this same tick (owned(1) × 1sec × 1 prestige multiplier × 1 milestone multiplier).
-    expect(after.resources[MONEY_ID]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(3)
   })
 
   it('a smart tier reverts to the normal (full-block) batch size once past its first 10 purchases', () => {
     const state = withSmartAutobuyer(
       withAutobuyer(
-        withMoney(withPurchased(createInitialGameState(), tensTier.id, 10), 65), // 2nd block: unit cost is now $100 (10x epoch jump), $65 affords 0
+        withMoney(withPurchased(createInitialGameState(), tensTier.id, 10), 65), // 2nd block: unit cost is now $80 (10x epoch jump), $65 affords 0
         tensTier.id
       ),
       tensTier.id
@@ -1510,14 +1510,14 @@ describe('tickGame', () => {
       tensTier.id
     )
     const after = tickGame(1, 10)(state)
-    // Pays for 10 units ($100 total) at the normal rate — no purchase-yield bonus.
+    // Pays for 10 units ($80 total) at the normal rate — no purchase-yield bonus.
     expect(after.owned[tensTier.id]).toBe(10)
     expect(after.purchased[tensTier.id]).toBe(10)
-    // Cost drains money to 0, but the same tick's production from the 10 owned generators
+    // Cost drains money to $20, and the same tick's production from the 10 owned generators
     // (Bytes produces its own cost resource) is doubled by the purchase-milestone multiplier —
     // purchased just crossed from 0-9 into the 10-19 block (see getPurchaseMilestoneMultiplier)
-    // — adding 10 × 2 = 20 back.
-    expect(after.resources[MONEY_ID]).toBe(20)
+    // — adding 10 × 2 = 20 back, for 40 total.
+    expect(after.resources[MONEY_ID]).toBe(40)
   })
 
   it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
@@ -1527,18 +1527,20 @@ describe('tickGame', () => {
     )
     const after = tickGame(1, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(10)
-    // Pays for the 3 remaining units in the block at the normal rate — no purchase-yield bonus.
+    // Pays for the 3 remaining units in the block at the normal rate ($8 each, $24 total) — no
+    // purchase-yield bonus. $30 - $24 = $6.
     expect(after.owned[tensTier.id]).toBe(3)
     // 3 owned generators produce 3 money each, doubled by the purchase-milestone multiplier —
-    // purchased just crossed into the 10-19 block: 3 × 1sec × 2 = 6 money.
-    expect(after.resources[MONEY_ID]).toBe(6)
+    // purchased just crossed into the 10-19 block: 3 × 1sec × 2 = 6 money, plus the $6 left over
+    // from the purchase = 12.
+    expect(after.resources[MONEY_ID]).toBe(12)
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
-    // $1,000 affords exactly one of: 1 Kilobytes ($1,000) or 1 Bytes ($10) — not both.
+    // $8,000 affords exactly 1 Kilobytes ($8,000), leaving nothing for a Bytes purchase ($8).
     const state = withAutobuyer(
       withAutobuyer(
-        withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 1000),
+        withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 8000),
         tensTier.id
       ),
       thousandsTier.id

@@ -305,6 +305,20 @@ tier still scales by the same Fibonacci-driven exponent progression, but relativ
 `baseCost` rather than compounding `baseCost` itself into the exponent, so a baseCost-1000 tier's
 blocks cost 1e3, 1e4, 1e5, 1e7, 1e10, … instead of exploding immediately.
 
+### Repricing tiers to real-world bit values
+
+Every tier's `baseCost` originally followed an arbitrary `10^n` sequence (`10`, `1E3`, `1E6`, …) —
+a leftover from before the byte-scale tier rename (`Bytes`→`Ronnabytes`, see the tier `name`/`symbol`
+values in `layers.js`) and the base currency's rename to "Bits". Once tiers were named for real
+byte-scale units and the currency was named "Bits", pricing them at an unrelated round number read as
+inconsistent with the theme — a real Kilobyte *is* 8,000 bits, so that's what it now costs
+(`baseCost = 8 * 1000^(n-1)`, decimal/SI scale, matching the SI-prefix rationale already used to name
+`tier10` `Ronnabytes` rather than the informal `Brontobytes`). This also regularizes the previous
+sequence's irregular first jump (`10`→`1E3` was ×100, every later jump was ×1000) into a clean ×1000
+step between every consecutive tier including `tier01`→`tier02`. Purely a data change — `getTierCost`'s
+scaling formula, `getTierBulkQuantity`, and every other cost-scaling mechanic are unaffected, since they
+all scale relative to whatever `baseCost` is rather than assuming its value.
+
 ### Why every tier's tickspeed is uniform at 1s
 
 An earlier design had `tier02` = 2s, `tier03` = 3s, … `tier10` = 10s (each subsequent tier producing
