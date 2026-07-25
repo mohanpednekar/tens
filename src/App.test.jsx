@@ -17,7 +17,7 @@ test('renders the game title and the Bytes tier', () => {
 
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^bytes layer$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for 8 b\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i })).toBeEnabled()
 })
 
 test('renders the current app version beside the title', () => {
@@ -31,11 +31,13 @@ test('buying Bytes deducts cost and increases owned count', async () => {
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 8 b\b/i }))
+  // Money=10, per-unit cost 8/8=1 — manual Buy always grabs as many as affordable up to the block
+  // boundary, so a single click completes the entire first level (8 units) at once.
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i }))
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
-  // After spending 8 b on the first Bytes, money=2 b. Cost stays 8 b (flat within the block of 10) — button disabled.
-  expect(screen.getByRole('button', { name: /buy for 8 b\b/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+  // Money=2 left; level 2's per-unit cost (80/8=10) is now unaffordable — button disabled.
+  expect(screen.getByRole('button', { name: /buy for 10 b\b/i })).toBeDisabled()
 })
 
 test('the Reset button is always rendered, not gated behind a dev-only build check', () => {
@@ -50,16 +52,17 @@ test('reset game restores starting state once the confirm dialog is accepted', a
 
   render(<App />)
 
-  // Buy a Bytes generator to dirty the state
-  await user.click(screen.getByRole('button', { name: /buy for 8 b\b/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  // Buy Bytes to dirty the state — a single click completes the entire first level (8 units) at
+  // the new, cheaper per-unit cost (8/8=1).
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i }))
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
-  expect(screen.getByRole('button', { name: /buy for 8 b\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i })).toBeEnabled()
 })
 
 test('reset clears localStorage once the confirm dialog is accepted', async () => {
@@ -68,7 +71,7 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 8 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i }))
 
   // After reset the save-effect fires with fresh state, so money should be back to 10
   await user.click(screen.getByRole('button', { name: /reset game/i }))
@@ -85,16 +88,16 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
 
   render(<App />)
 
-  // Buy a Bytes generator to dirty the state
-  await user.click(screen.getByRole('button', { name: /buy for 8 b\b/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  // Buy Bytes to dirty the state — a single click completes the entire first level (8 units).
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i }))
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.owned.tier01).toBe(1)
+  expect(saved.owned.tier01).toBe(8)
 })
 
 test('Kilobytes tier appears and is purchasable once 10 Bytes are owned', () => {
@@ -106,7 +109,9 @@ test('Kilobytes tier appears and is purchasable once 10 Bytes are owned', () => 
   render(<App />)
 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for 8,000 b\b/i })).toBeEnabled()
+  // Kilobytes (baseCost 8000) level 1, blockSize 8: per-unit cost 8000/8=1000, full block $8,000
+  // (level total is unchanged from before this cost-model change — only the per-unit split is new).
+  expect(screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
@@ -119,9 +124,9 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 8,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i }))
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8/i)
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10/i)
 })
 
@@ -297,7 +302,8 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
   expect(progressBar).toHaveAttribute('aria-valuemax', '8')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
-  expect(screen.getByRole('button', { name: /buy for 8 b \(level 1, 4 of 8 purchased\)/i })).toBeInTheDocument()
+  // 4 of 8 already done — 4 remain in the block; per-unit cost 8/8=1, so 4 units cost $4 total.
+  expect(screen.getByRole('button', { name: /buy ×4 for 4 b \(level 1, 4 of 8 purchased\)/i })).toBeInTheDocument()
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
 })
 
@@ -310,31 +316,33 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×8 for 64 b\b/i })
+  // Per-unit cost 8/8=1: $100 affords far more than the 8-unit block, so the full block (capped
+  // there, not by funds) is what's bought — $8 total.
+  const buyButton = screen.getByRole('button', { name: /buy ×8 for 8 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('36 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('92 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 30 }, // affords 3 at 8 b/unit, not the full 8
+    resources: { Ones: 3 }, // affords 3 at $1/unit (8/8), not the full block of 8
   }))
 
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×3 for 24 b\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for 3 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 3\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('6 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
@@ -451,7 +459,7 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
   expect(screen.getByText(/prestiged 1 time/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for 8 b\b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /buy ×8 for 8 b\b/i })).toBeEnabled()
 })
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {

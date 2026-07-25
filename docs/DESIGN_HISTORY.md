@@ -699,6 +699,38 @@ by deriving an equivalent level/progress from its legacy `purchased` count again
 the growth mechanic didn't exist yet when it was written. This is explicitly a one-time interpretation
 of old data on load, not a reintroduction of division into the ongoing engine logic.
 
+### `getTierCost` split into per-unit price vs. level-total price
+
+Every purchase within a level was priced at the *level's full flat cost* — `getTierCost(tier, level)`
+returned that flat value, and every one of the `blockSize` purchases needed to complete a level was
+charged that same amount. This meant completing an entire level actually cost `blockSize ×
+getTierCost(...)` — e.g. tier01's level 1 (`baseCost` 8) charged $8 for *each* of the 8 units needed
+to complete it, $64 in total.
+
+The maintainer's request — "the cost of each purchase within a level is 1en (`1 × 10ⁿ`); 8en is the
+cost of the entire level" (n = the cost-epoch exponent driving `getCostEpochExponent`) — asked for the
+opposite: `getTierCost`'s existing formula output should represent the level's *total* cost, with each
+individual purchase costing an even `1/blockSize` share of it. `getTierCost` now takes `blockSize` as
+a third argument and returns `levelTotalCost / blockSize`, where `levelTotalCost` is exactly the
+formula's old return value (`baseCost * 10^(getCostEpochExponent(epoch) - 1)`) — unchanged. Its 3 call
+sites (`getTierQuantityCost`, `getTierAffordableQuantity`, `buyTier`) were updated to thread
+`blockSize` through; no other call site existed (`MainPage` already only calls the blockSize-aware
+wrapper functions).
+
+**Net effect**: completing an entire level now costs exactly what the raw formula computes (tier01
+level 1: $8, not $64) — an intentional ~`blockSize`x reduction in the total price of finishing a
+level, split more granularly across individual purchases. This surfaced a real, structural side
+effect during the test rewrite: a non-`smartAutobuyer` tier with a full-block batch size used to
+stall forever on tier01's very first level, since `MONEY_STARTING_AMOUNT` (10) couldn't afford the
+old $64 full-block price — this is the entire reason `smartAutobuyer`/`buySmartAutobuyer` exists (buy
+singly until the first level completes, then revert to normal batching). Under the new $8 full-block
+price, the $10 starting balance affords it outright, so the bootstrap stall no longer applies to
+tier01 specifically under default settings — confirmed acceptable by the maintainer rather than
+adjusting `MONEY_STARTING_AMOUNT` to preserve the old stall. Every other tier still stalls normally
+(their `baseCost` is far larger relative to whatever money has accumulated by the time they're
+reachable), so `smartAutobuyer` still has a real purpose elsewhere — see `engine.test.js`'s `tickGame`
+describe block for both the "tier01 now bootstraps" and "a bigger tier still stalls" cases.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
