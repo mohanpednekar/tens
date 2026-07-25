@@ -4,6 +4,7 @@ import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
+import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -443,6 +444,16 @@ const TopPrestigeBarSpacer = styled.div`
 const MutedText = styled.p`
   color: #a3a3a3;
   margin: 0;
+`
+
+// The app version, always visible beside the page title (no interaction/expansion needed) —
+// unlike the tagline in InfoDetails' collapsed body below it. Reuses MutedText's muted-text
+// convention rather than a one-off color, rendered `as` a span since `<summary>` only allows
+// phrasing content, not MutedText's default block-level `<p>`.
+const VersionText = styled(MutedText).attrs({ as: 'span' })`
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
 `
 
 const GoldText = styled.b`
@@ -987,7 +998,10 @@ const MainPage = () => {
 
       <Header>
         <InfoDetails>
-          <summary><h1>Tens</h1></summary>
+          <summary>
+            <h1>Tens</h1>
+            <VersionText>v{version}</VersionText>
+          </summary>
           <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
         </InfoDetails>
       </Header>
