@@ -502,44 +502,76 @@ Strict three-layer separation:
   hover tooltip. Every other `tier.name` usage in this file (row `aria-label`s, button `aria-label`s/
   `title`s, disclosure prose) is unaffected — it's only these two visible-label render sites that switch
   to the symbol.
-- **Balances.** Money via `formatCurrency` and (once `!isFirstRun`) the Prestige Point balance are the
-  only top-of-page blocks besides `Header` that use a centered `CenteredCard` (`styled(StatCard)`).
-  Both are wrapped in a sticky `StickyBalances` container: once scrolled past their normal position
-  they pin to the viewport top and compress into a compact side-by-side bar, detected via an
-  IntersectionObserver on a zero-height `BalancesSentinel` (falls back to always-expanded when
-  IntersectionObserver is unavailable, e.g. jsdom); the stick position drops below `TopPrestigeBar`
-  when it's showing, by that bar's own live-measured height (`topPrestigeBarHeight`, see below) rather
-  than a guessed constant, to avoid underlap. There is no aggregate `+X/sec` line — each tier row's own
-  `+X` figure is the per-tier replacement. In the compressed side-by-side layout, `CenteredCard`'s
-  `align-items: center` (needed so its content centers when expanded) would otherwise let a flex-column
-  child shrink-wrap to its own full content width instead of the card's allotted half-share — silently
-  defeating the `overflow: hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or
-  PP status string from visually spilling into the neighboring card. `Money` and the status `<p>` are
-  both given an explicit `width: 100%` in the compressed styles specifically to pin them to the card's
-  actual width so that truncation has something to truncate against. This compact PP display shows the
-  production speed bonus percentage once unlocked, but — being always-visible, sticky chrome rather
-  than an expandable disclosure — omits the "production speed bonus locked" caveat before it's bought;
-  that fuller wording only shows in the bottom `PrestigeCard`'s own expandable description (see
-  "Description prose" below), which is the appropriate place for it since this compact bar isn't meant
-  to carry that much text permanently. Once Prestige is actually available (`canPrestige`, i.e. Money
-  `>= GOOGOL`), the PP display card itself doubles as a Prestige button — the whole card gets
-  `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler, `onClick={actions.prestige}`,
-  and a `title` ("Awards Prestige Points and resets your resources", the same wording used on every
-  other Prestige button), driven by a `$actionable` prop on `CenteredCard` (cursor/hover/focus-visible
-  styling only — no visible border/color change, since the disabled/enabled convention used elsewhere
-  in the app relies on button `color`, which this plain `<section>` doesn't have). It's an additional,
-  optional way to trigger Prestige alongside the `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard`
-  buttons, not a replacement for any of them — none of those changed. Before `canPrestige`, none of
-  these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
-  display card never gets `$actionable` — only the PP display can trigger Prestige.
+- **Balances (top HUD).** Money via `formatCurrency` and (once `!isFirstRun`) the Prestige Point
+  balance are the only top-of-page blocks besides `Header` that use a centered `CenteredCard`
+  (`styled(StatCard)`). Both are wrapped in a sticky `StickyBalances` container (background
+  `theme.color.page`, matching the page ground so scrolled tier rows never show through the gap
+  between the two cards): once scrolled past their normal position they pin to the viewport top and
+  compress into a compact side-by-side bar, detected via an IntersectionObserver on a zero-height
+  `BalancesSentinel` (falls back to always-expanded when IntersectionObserver is unavailable, e.g.
+  jsdom); the stick position drops below `TopPrestigeBar` when it's showing, by that bar's own
+  live-measured height (`topPrestigeBarHeight`, see below) rather than a guessed constant, to avoid
+  underlap. There is no aggregate `+X/sec` line — each tier row's own `+X` figure is the per-tier
+  replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
+  so its content centers when expanded) would otherwise let a flex-column child shrink-wrap to its own
+  full content width instead of the card's allotted half-share — silently defeating the `overflow:
+  hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or PP status string from
+  visually spilling into the neighboring card. `Money` and the status `<p>` are both given an explicit
+  `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
+  truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
+  extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
+  compact PP display shows the production speed bonus percentage once unlocked, but — being
+  always-visible, sticky chrome rather than an expandable disclosure — omits the "production speed
+  bonus locked" caveat before it's bought; that fuller wording only shows in the bottom `PrestigeCard`'s
+  own expandable description (see "Description prose" below), which is the appropriate place for it
+  since this compact bar isn't meant to carry that much text permanently. Once Prestige is actually
+  available (`canPrestige`, i.e. Money `>= GOOGOL`), the PP display card itself doubles as a Prestige
+  button — the whole card gets `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
+  `onClick={actions.prestige}`, and a `title` ("Awards Prestige Points and resets your resources", the
+  same wording used on every other Prestige button), driven by a `$actionable` prop on `CenteredCard`
+  (cursor/hover/focus-visible styling only — its outline color is `theme.color.warn`, the same
+  "prestige gold" token `Button`'s own `prestige` variant resolves to — no visible border/color change
+  otherwise, since the disabled/enabled convention used elsewhere in the app relies on button `color`,
+  which this plain `<section>` doesn't have). It's an additional, optional way to trigger Prestige
+  alongside the `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard` buttons, not a replacement for any
+  of them — none of those changed. Before `canPrestige`, none of these props are set, so the card stays
+  a plain, non-interactive display exactly as before. The Money display card never gets `$actionable` —
+  only the PP display can trigger Prestige.
+- **Money hero + Googol progress bar.** The Money `CenteredCard` renders a `MoneyHero`
+  (`styled(Money)`, sized at `theme.type.scale.hero` in `theme.font.display`) rather than plain `Money`,
+  and carries `$raised` (the `surfaceRaised` elevation tier `StatCard` already supports) so it reads as
+  the HUD's dominant, elevated element — Prestige Points, by contrast, render in a `PpHeaderCard`
+  (`styled(CenteredCard)` with `box-shadow: none` and tighter padding), a deliberately flattened,
+  visually subordinate "header line" beneath it rather than a second card of equal weight; the two
+  sit in `StickyBalances`' now-tighter `0.6rem` uncompressed gap (was `0.85rem`) so they read as one
+  connected HUD block rather than two separate cards. Directly beneath the hero figure (suppressed
+  while `balancesCompressed`, since the compact sticky bar has no room for it), a `GoogolProgressTrack`/
+  `GoogolProgressFill` bar shows progress toward Prestige becoming available, reusing the same
+  `prestigeProgressPercent` (`getPrestigeProgressPercent(state.resources[MONEY_ID])`) `PrestigeCard`'s
+  own button fill already computes — no separate economy calculation — paired with a `VisuallyHidden
+  role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
+  visible `GoogolProgressLabel` ("N% to Prestige") underneath.
+- **HUD-scoped muted/accent text.** `Header`'s tagline, the offline notice's body text, and the PP
+  header line's "N PP" figure render via `HudMutedText`/`HudGoldText` — a fork of the app-wide
+  `MutedText`/`GoldText` (still hardcoded `#a3a3a3`/`#fbbf24`, still used by `TierList`/`SpeedUpCard`/
+  `PrestigeCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
+  (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
+  migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
+  `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
+  surface measures roughly 3.6:1 — below the 4.5:1 AA floor for normal text — but a `styled.b` renders
+  bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also >=14pt (18.66px);
+  1.1em (17.6px against the 16px root) fell just short of that threshold, so it's sized up to clear it
+  with margin. `Header`'s own text color and the offline notice's Dismiss button (`variant="neutral"`,
+  replacing the deprecated `color="darkgrey"` prop) are also token-driven as part of this same pass.
 - **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
   display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
   by `handleResetClick`, same convention as `openTierDetailIds`) — via a new `$expandable` `CenteredCard`
-  prop (cursor/hover styling shared with `$actionable`, but its own `#7c9bff` focus-visible outline
-  rather than `$actionable`'s gold one, since this toggle has nothing to do with triggering Prestige).
-  Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override `CenteredCard`'s own
-  `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses) listing every *global*
+  prop (cursor/hover styling shared with `$actionable`, but its own `theme.color.accent` focus-visible
+  outline rather than `$actionable`'s gold one, since this toggle has nothing to do with triggering
+  Prestige). Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
+  `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
+  text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
   `!isFirstRun`), Speed Up, and the Global Tickspeed Multiplier — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
