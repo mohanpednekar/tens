@@ -34,7 +34,7 @@ const gridCell = css`
 `
 
 const Header = styled.header`
-  color: white;
+  color: ${props => props.theme.color.text};
   text-align: center;
 
   h1 {
@@ -207,17 +207,88 @@ const CenteredCard = styled(StatCard)`
 
   ${props => props.$actionable && css`
     &:focus-visible {
-      outline: 2px solid #fbbf24;
+      outline: 2px solid ${props.theme.color.warn};
       outline-offset: 2px;
     }
   `}
 
   ${props => props.$expandable && css`
     &:focus-visible {
-      outline: 2px solid #7c9bff;
+      outline: 2px solid ${props.theme.color.accent};
       outline-offset: 2px;
     }
   `}
+`
+
+// Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
+// MutedText/GoldText (still hardcoded, still used by TierList/SpeedUpCard/PrestigeCard/
+// GlobalTickspeedCard) rather than migrating those shared components here: they're each other
+// sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
+// of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
+// hardcoded #a3a3a3 fails contrast against the light theme's white surface) without reaching into
+// those other regions' still-unmigrated styling.
+const HudMutedText = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  margin: 0;
+`
+
+// 1.25em (20px against the 16px root) is deliberate, not decorative: theme.color.warn against a
+// white light-theme surface measures ~3.6:1 — below the 4.5:1 AA floor for normal text, but a
+// styled.b is bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also
+// >=14pt (18.66px); 1.1em (17.6px) fell just short of that, so this is sized up to clear it with
+// margin rather than picked for visual weight alone.
+const HudGoldText = styled.b`
+  color: ${props => props.theme.color.warn};
+  font-size: 1.25em;
+`
+
+// The money hero figure — Money's own default size stays a smaller, general-purpose default (it's
+// only used here today, but isn't renamed/moved so a future non-hero usage isn't forced into hero
+// sizing); this wrapper is what actually renders at the HUD's largest, most prominent scale. Money
+// keeps rendering its own generated class alongside MoneyHero's, so StickyBalances' existing
+// `${Money} { ... }` compressed-layout override below still matches this element too.
+const MoneyHero = styled(Money)`
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.hero.size};
+  line-height: ${props => props.theme.type.scale.hero.lineHeight};
+  padding: 0;
+`
+
+// Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
+// call site) progress-to-Prestige bar living inside the money hero card. Reuses
+// getPrestigeProgressPercent's already-computed value (see MainPage) rather than recomputing it.
+const GoogolProgressTrack = styled.div`
+  background: ${props => props.theme.color.surfaceSunken};
+  border-radius: ${props => props.theme.radius.pill};
+  height: 0.4rem;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+`
+
+const GoogolProgressFill = styled.div`
+  background: ${props => props.theme.color.accent};
+  height: 100%;
+  transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
+  width: ${props => props.$percent}%;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`
+
+const GoogolProgressLabel = styled(HudMutedText)`
+  font-size: ${props => props.theme.type.scale.xs.size};
+  margin-top: 0.3rem;
+`
+
+// Prestige Points as a secondary header line beneath the money hero — same CenteredCard base
+// (so it keeps $actionable's Prestige-button behavior once canPrestige), just flattened (no
+// shadow, tighter padding) so it visually reads as subordinate to the money hero above it rather
+// than a second card of equal visual weight.
+const PpHeaderCard = styled(CenteredCard)`
+  box-shadow: none;
+  padding: 0.5rem 1rem;
 `
 
 // The Money balance card's click-to-expand breakdown of every global (not per-tier) production
@@ -227,7 +298,7 @@ const CenteredCard = styled(StatCard)`
 // CenteredCard's own text-align: center) for list readability, same technique FullScreenCard's own
 // ul already uses.
 const GlobalMultipliersList = styled.ul`
-  color: #a3a3a3;
+  color: ${props => props.theme.color.textMuted};
   font-size: 0.8em;
   margin: 0.5rem 0 0;
   padding-left: 1.1rem;
@@ -246,16 +317,16 @@ const GlobalMultipliersList = styled.ul`
 // TopPrestigeBar is showing ($belowBar), the stick position drops below it by $belowBarHeight
 // (measured live, see topPrestigeBarHeight below) instead of underlapping it.
 const StickyBalances = styled.div`
-  background: #050505;
+  background: ${props => props.theme.color.page};
   display: flex;
   flex-direction: ${props => (props.$compressed ? 'row' : 'column')};
-  gap: ${props => (props.$compressed ? '0.5rem' : '0.85rem')};
+  gap: ${props => (props.$compressed ? '0.5rem' : '0.6rem')};
   position: sticky;
   top: ${props => (props.$belowBar ? `${props.$belowBarHeight}px` : '0')};
   z-index: 100;
 
   ${props => props.$compressed && css`
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.6);
+    box-shadow: ${props.theme.shadow.md};
     padding: 0.25rem 0;
 
     ${CenteredCard} {
@@ -651,6 +722,23 @@ const PpUpgradeBadge = styled.span`
   color: ${props => props.$color};
 `
 
+// Groups an "Active"/"Paused" badge with its pause/resume toggle as a single flex item, so an
+// UpgradeRow's existing two-child (label, control) `justify-content: space-between` layout still
+// holds once a bought global automation gets a second, smaller control alongside its badge.
+const UpgradeRowControls = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+`
+
+// Small secondary control, visually subordinate to the badge/level text it sits beside (see #171)
+// — a plain icon toggle rather than a costed action button.
+const PauseToggleButton = styled(Button)`
+  font-size: 0.75em;
+  min-width: 0;
+  padding: 0.3em 0.5em;
+`
+
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
@@ -815,6 +903,9 @@ const MainPage = () => {
   // that endgame milestone.
   const isAutoSpeedUpActive = state.autoSpeedUp ?? false
   const canBuyAutoSpeedUp = !isFrozen && !isAutoSpeedUpActive && !isFirstRun && prestige.points >= AUTO_SPEED_UP_COST
+  // Whether Auto Speed Up currently acts, independent of whether it's been bought (see
+  // setAutoSpeedUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
+  const autoSpeedUpEnabled = state.autoSpeedUpEnabled ?? true
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -822,6 +913,9 @@ const MainPage = () => {
   // no cadence to speed up here either.
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
   const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && prestige.points >= TICKSPEED_AUTOBUYER_COST
+  // Whether the global Tickspeed Autobuyer currently acts, independent of whether it's been
+  // bought (see setAutoGlobalTickspeedEnabled/tickGame in engine.js).
+  const tickspeedAutobuyerEnabled = state.autoGlobalTickspeedEnabled ?? true
 
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
@@ -841,6 +935,9 @@ const MainPage = () => {
   const autoPrestigeIntervalSeconds = isAutoPrestigeActive
     ? Math.round(1 / getAutoPrestigeAttemptRate(autoPrestigeLevel))
     : null
+  // Whether Auto-Prestige currently acts, independent of whether it's been bought (see
+  // setAutoPrestigeEnabled/tickGame in engine.js).
+  const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
@@ -1036,7 +1133,7 @@ const MainPage = () => {
             <h1>Tens</h1>
             <VersionText>v{version}</VersionText>
           </summary>
-          <MutedText>Build by powers of ten. Prestige for Prestige Points.</MutedText>
+          <HudMutedText>Build by powers of ten. Prestige for Prestige Points.</HudMutedText>
         </InfoDetails>
       </Header>
 
@@ -1046,13 +1143,13 @@ const MainPage = () => {
             aria-label="offline progress notice"
             $fading={offlineNoticeFading}
           >
-            <MutedText>
+            <HudMutedText>
               Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
               {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 10% speed.
-            </MutedText>
+            </HudMutedText>
             <Button
               aria-label="Dismiss offline progress notice"
-              color="darkgrey"
+              variant="neutral"
               onClick={handleOfflineNoticeDismissClick}
               title="Dismiss this notice"
               type="button"
@@ -1083,6 +1180,7 @@ const MainPage = () => {
           aria-expanded={showGlobalMultipliers}
           aria-label="money display"
           $expandable
+          $raised
           onClick={toggleGlobalMultipliers}
           onKeyDown={event => {
             if (event.key !== 'Enter' && event.key !== ' ') return
@@ -1093,7 +1191,22 @@ const MainPage = () => {
           tabIndex={0}
           title="Show or hide the global production multipliers currently in effect"
         >
-          <Money>{formatCurrency(state.resources[MONEY_ID])}</Money>
+          <MoneyHero>{formatCurrency(state.resources[MONEY_ID])}</MoneyHero>
+          {!balancesCompressed && (
+            <>
+              <GoogolProgressTrack aria-hidden="true">
+                <GoogolProgressFill $percent={prestigeProgressPercent} />
+              </GoogolProgressTrack>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="progress toward 1 Googol Bits, when Prestige becomes available"
+                aria-valuenow={prestigeProgressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+              <GoogolProgressLabel>{prestigeProgressPercent}% to Prestige</GoogolProgressLabel>
+            </>
+          )}
           {showGlobalMultipliers && !balancesCompressed && (
             <GlobalMultipliersList id="global-multipliers-details" aria-label="global production multipliers">
               {!isFirstRun && (
@@ -1122,7 +1235,7 @@ const MainPage = () => {
         </CenteredCard>
 
         {!isFirstRun && (
-          <CenteredCard
+          <PpHeaderCard
             aria-label="prestige points display"
             $actionable={canPrestige}
             onClick={canPrestige ? actions.prestige : undefined}
@@ -1135,11 +1248,11 @@ const MainPage = () => {
             tabIndex={canPrestige ? 0 : undefined}
             title={canPrestige ? 'Awards Prestige Points and resets your resources' : undefined}
           >
-            <MutedText>
-              <GoldText>{formatAmount(prestige.points)} PP</GoldText>
+            <HudMutedText>
+              <HudGoldText>{formatAmount(prestige.points)} PP</HudGoldText>
               {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
-            </MutedText>
-          </CenteredCard>
+            </HudMutedText>
+          </PpHeaderCard>
         )}
       </StickyBalances>
 
@@ -1689,9 +1802,28 @@ const MainPage = () => {
             <UpgradeRow aria-label="tickspeed autobuyer upgrade">
               <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
               {isTickspeedAutobuyerActive ? (
-                <PpUpgradeBadge $color="#4ade80" title="The global tickspeed multiplier now upgrades itself automatically whenever affordable">
-                  🌐 Active
-                </PpUpgradeBadge>
+                <UpgradeRowControls>
+                  <PpUpgradeBadge
+                    $color={tickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                    title={
+                      tickspeedAutobuyerEnabled
+                        ? 'The global tickspeed multiplier now upgrades itself automatically whenever affordable'
+                        : 'The global tickspeed multiplier is currently paused — it will not upgrade itself until resumed'
+                    }
+                  >
+                    {tickspeedAutobuyerEnabled ? '🌐 Active' : '🌐 Paused'}
+                  </PpUpgradeBadge>
+                  <PauseToggleButton
+                    aria-pressed={tickspeedAutobuyerEnabled}
+                    aria-label={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
+                    onClick={() => actions.setAutoGlobalTickspeedEnabled(!tickspeedAutobuyerEnabled)}
+                    title={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
+                    type="button"
+                    variant="ghost"
+                  >
+                    {tickspeedAutobuyerEnabled ? '⏸' : '▶'}
+                  </PauseToggleButton>
+                </UpgradeRowControls>
               ) : (
                 <PpUpgradeButton
                   aria-label={`Enable Tickspeed Autobuyer for ${TICKSPEED_AUTOBUYER_COST} Prestige Points`}
@@ -1719,9 +1851,28 @@ const MainPage = () => {
             <UpgradeRow aria-label="auto speed up upgrade">
               <TierNameLabel>Auto Speed Up</TierNameLabel>
               {isAutoSpeedUpActive ? (
-                <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  ⏩ Active
-                </PpUpgradeBadge>
+                <UpgradeRowControls>
+                  <PpUpgradeBadge
+                    $color={autoSpeedUpEnabled ? '#4ade80' : '#facc15'}
+                    title={
+                      autoSpeedUpEnabled
+                        ? "Speed Up now triggers automatically the instant it's eligible"
+                        : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+                    }
+                  >
+                    {autoSpeedUpEnabled ? '⏩ Active' : '⏩ Paused'}
+                  </PpUpgradeBadge>
+                  <PauseToggleButton
+                    aria-pressed={autoSpeedUpEnabled}
+                    aria-label={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
+                    onClick={() => actions.setAutoSpeedUpEnabled(!autoSpeedUpEnabled)}
+                    title={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
+                    type="button"
+                    variant="ghost"
+                  >
+                    {autoSpeedUpEnabled ? '⏸' : '▶'}
+                  </PauseToggleButton>
+                </UpgradeRowControls>
               ) : (
                 <PpUpgradeButton
                   aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
@@ -1752,34 +1903,48 @@ const MainPage = () => {
                   Auto-Prestige
                   {isAutoPrestigeActive && (
                     <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
-                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s){!autoPrestigeEnabled && ' · Paused'}
                     </MutedText>
                   )}
                 </TierNameLabel>
-                <PpUpgradeButton
-                  aria-label={
-                    isAutoPrestigeActive
-                      ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                      : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                  }
-                  color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
-                  disabled={!canBuyAutoPrestige}
-                  onClick={actions.buyAutoPrestige}
-                  title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
-                  type="button"
-                  $progress={ppProgressPercent(autoPrestigeCost)}
-                  $progressColor="#38bdf8"
-                >
-                  <ButtonIcon>✦ </ButtonIcon>
-                  <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="Auto-Prestige Prestige Point progress"
-                    aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
-                    aria-valuemin={0}
-                    aria-valuemax={autoPrestigeCost}
-                  />
-                </PpUpgradeButton>
+                <UpgradeRowControls>
+                  <PpUpgradeButton
+                    aria-label={
+                      isAutoPrestigeActive
+                        ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                        : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                    }
+                    color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+                    disabled={!canBuyAutoPrestige}
+                    onClick={actions.buyAutoPrestige}
+                    title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                    type="button"
+                    $progress={ppProgressPercent(autoPrestigeCost)}
+                    $progressColor="#38bdf8"
+                  >
+                    <ButtonIcon>✦ </ButtonIcon>
+                    <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
+                    <VisuallyHidden
+                      role="progressbar"
+                      aria-label="Auto-Prestige Prestige Point progress"
+                      aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
+                      aria-valuemin={0}
+                      aria-valuemax={autoPrestigeCost}
+                    />
+                  </PpUpgradeButton>
+                  {isAutoPrestigeActive && (
+                    <PauseToggleButton
+                      aria-pressed={autoPrestigeEnabled}
+                      aria-label={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
+                      onClick={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
+                      title={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
+                      type="button"
+                      variant="ghost"
+                    >
+                      {autoPrestigeEnabled ? '⏸' : '▶'}
+                    </PauseToggleButton>
+                  )}
+                </UpgradeRowControls>
               </UpgradeRow>
             )}
           </UpgradeCategory>

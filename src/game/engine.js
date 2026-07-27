@@ -131,6 +131,14 @@ export const createInitialGameState = () => ({
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
   autoPrestige: null,
+  // Permanent GLOBAL flag, default true: whether Auto-Prestige (once bought — see autoPrestige
+  // above) currently acts, independent of whether it's been bought at all. Split "unlocked" (the
+  // autoPrestige level above, permanent, unaffected) from "enabled" (this field, also permanent —
+  // pausing is a standing preference, not run-scoped state) so a player can temporarily stop
+  // Auto-Prestige from firing without losing the level/PP already invested — see
+  // setAutoPrestigeEnabled/tickGame. Meaningless while autoPrestige is null; toggling it then is a
+  // no-op (see setAutoPrestigeEnabled).
+  autoPrestigeEnabled: true,
   // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoPrestige
   // above), null = not yet bought: how many times Money has been spent on the global tickspeed
   // multiplier (unlocked once at least 1 of the second tier is owned — see
@@ -162,11 +170,22 @@ export const createInitialGameState = () => ({
   // no manual click needed. Never reset by prestige or by Speed Up itself, like
   // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoSpeedUp: false,
+  // Permanent GLOBAL flag, default true: whether Auto Speed Up (once bought — see autoSpeedUp
+  // above) currently acts — split from "unlocked" the same way autoPrestigeEnabled splits from
+  // autoPrestige (see its own comment above). Never reset by prestige or Speed Up. Meaningless
+  // (and a no-op to toggle, see setAutoSpeedUpEnabled) while autoSpeedUp is false.
+  autoSpeedUpEnabled: true,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make the (Money-funded) global tickspeed multiplier upgrade itself automatically every tick
   // (see buyTickspeedAutobuyer/tickGame) — no manual click needed. Never reset by prestige or by
   // Speed Up, like autoSpeedUp above.
   autoGlobalTickspeed: false,
+  // Permanent GLOBAL flag, default true: whether the global Tickspeed Autobuyer (once bought —
+  // see autoGlobalTickspeed above) currently acts — split from "unlocked" the same way
+  // autoPrestigeEnabled/autoSpeedUpEnabled split from their own parent flags above. Never reset by
+  // prestige or Speed Up. Meaningless (and a no-op to toggle, see
+  // setAutoGlobalTickspeedEnabled) while autoGlobalTickspeed is false.
+  autoGlobalTickspeedEnabled: true,
   // Run-scoped cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
   // compounds another 1% into the last tier's own delivery frequency (see
   // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Reset to 0 by both
@@ -663,14 +682,20 @@ const checkMilestones = (resources, prestige) => {
 // level onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const autoPrestigeLevel = state.autoPrestige ?? null
+  // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
+  // "never bought" for every automation purpose below — the level and any PP already spent stay
+  // untouched, and the manual Prestige button keeps working regardless, but tickGame itself
+  // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
+  const autoPrestigeActive = autoPrestigeLevel !== null && (state.autoPrestigeEnabled ?? true)
 
   // Once at/above GOOGOL, everything freezes — no passive production, no autobuyer purchases —
   // until the player prestiges. Returning the same reference (rather than an equivalent copy)
   // lets React's setState bail out of re-rendering while frozen, same as any other no-op action;
-  // that optimization only applies when Auto-Prestige isn't bought at all, since its attempt
-  // budget (see below) needs to keep accumulating even while otherwise frozen.
+  // that optimization only applies when Auto-Prestige isn't bought (or is currently paused) at
+  // all, since its attempt budget (see below) needs to keep accumulating even while otherwise
+  // frozen.
   if (isProductionFrozen(state)) {
-    if (autoPrestigeLevel === null) return state
+    if (!autoPrestigeActive) return state
     const nextBudget = (state.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
@@ -783,10 +808,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
     // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
     // start counting once Money first reaches GOOGOL — but it can only ever actually fire from
-    // the frozen branch above, once Money has actually gotten there.
-    ...(autoPrestigeLevel === null ? {} : {
+    // the frozen branch above, once Money has actually gotten there. Paused (autoPrestigeActive
+    // false) stops this accumulation too, same as the frozen branch above.
+    ...(autoPrestigeActive ? {
       autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds,
-    }),
+    } : {}),
   })
 
   // Only a tier whose tierTickspeedAutobuyer is bought (see buyTierTickspeedAutobuyer) self-upgrades
@@ -804,8 +830,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // it automatically the instant it's affordable — no manual click needed. buyGlobalTickspeedMultiplier
   // re-validates eligibility internally (isGlobalTickspeedMultiplierUnlocked, enough Money, not
   // frozen), so this is the same plain edge-triggered convention as the per-tier tickspeed
-  // self-upgrade loop above, not a rate-accumulating budget.
-  const stateAfterGlobalTickspeedAutobuyer = stateAfterAutomation.autoGlobalTickspeed
+  // self-upgrade loop above, not a rate-accumulating budget. Gated on autoGlobalTickspeedEnabled
+  // (see setAutoGlobalTickspeedEnabled) — paused behaves exactly as if autoGlobalTickspeed were
+  // still false, for automation purposes only.
+  const stateAfterGlobalTickspeedAutobuyer = stateAfterAutomation.autoGlobalTickspeed && (stateAfterAutomation.autoGlobalTickspeedEnabled ?? true)
     ? buyGlobalTickspeedMultiplier(stateAfterAutomation)
     : stateAfterAutomation
 
@@ -813,8 +841,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // it's eligible — no manual click needed. speedUpGame re-validates eligibility internally (the
   // last tier must have reached 10 purchases, and production must not be frozen), so this is a
   // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
-  // rate-accumulating budget — Speed Up has no cadence to throttle, unlike Auto-Prestige.
-  return stateAfterGlobalTickspeedAutobuyer.autoSpeedUp
+  // rate-accumulating budget — Speed Up has no cadence to throttle, unlike Auto-Prestige. Gated on
+  // autoSpeedUpEnabled (see setAutoSpeedUpEnabled) — paused behaves exactly as if autoSpeedUp were
+  // still false, for automation purposes only; the manual Speed Up button is unaffected.
+  return stateAfterGlobalTickspeedAutobuyer.autoSpeedUp && (stateAfterGlobalTickspeedAutobuyer.autoSpeedUpEnabled ?? true)
     ? speedUpGame(stateAfterGlobalTickspeedAutobuyer)
     : stateAfterGlobalTickspeedAutobuyer
 }
@@ -1076,6 +1106,16 @@ export const buyAutoPrestige = state => {
   }
 }
 
+// Toggles whether Auto-Prestige currently acts (see autoPrestigeEnabled/tickGame) — a plain
+// preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing should
+// always be possible), and independently permanent from autoPrestige itself (never reset by
+// Prestige/Speed Up — see prestigeGame/speedUpGame). A no-op if Auto-Prestige hasn't been bought
+// at all yet (autoPrestige is null) — nothing to enable/disable before that.
+export const setAutoPrestigeEnabled = enabled => state => {
+  if ((state.autoPrestige ?? null) === null) return state
+  return { ...state, autoPrestigeEnabled: !!enabled }
+}
+
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) the global tickspeed multiplier,
 // always by spending Money (Bits) — activation is just the N=0 case of the same cost formula
 // (getGlobalTickspeedMultiplierCost(0) = 10). A single global upgrade track, not per-tier — unlike
@@ -1140,9 +1180,16 @@ export const prestigeGame = state => {
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
+    // The three automations' "enabled" (pause/resume) flags are just as permanent as their parent
+    // "unlocked" flags above — a paused preference should survive a Prestige exactly like the
+    // purchase itself does (see setAutoPrestigeEnabled/setAutoSpeedUpEnabled/
+    // setAutoGlobalTickspeedEnabled).
+    autoPrestigeEnabled: state.autoPrestigeEnabled ?? initial.autoPrestigeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoSpeedUpEnabled: state.autoSpeedUpEnabled ?? initial.autoSpeedUpEnabled,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // speedUpCount is NOT carried over here — it resets to 0 (initial.speedUpCount) same as
     // globalTickspeedMultiplier above, so the stacking 2^speedUpCount production multiplier from
     // Speed Up doesn't survive a real Prestige (a real Prestige is the bigger, rarer reset; Speed
@@ -1206,9 +1253,13 @@ export const speedUpGame = state => {
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
+    // Same permanence as prestigeGame gives these three "enabled" flags above — see there.
+    autoPrestigeEnabled: state.autoPrestigeEnabled ?? initial.autoPrestigeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoSpeedUpEnabled: state.autoSpeedUpEnabled ?? initial.autoSpeedUpEnabled,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
     // with prestige.xp below.
     // everUnlockedTierIds is deliberately NOT carried over here — unlike every permanent flag
@@ -1240,6 +1291,14 @@ export const buyAutoSpeedUp = state => {
   }
 }
 
+// Toggles whether Auto Speed Up currently acts (see autoSpeedUpEnabled/tickGame) — same
+// unconditional, permanent-preference convention as setAutoPrestigeEnabled above. A no-op if
+// Auto Speed Up hasn't been bought yet.
+export const setAutoSpeedUpEnabled = enabled => state => {
+  if (!state.autoSpeedUp) return state
+  return { ...state, autoSpeedUpEnabled: !!enabled }
+}
+
 // One-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see
 // TICKSPEED_AUTOBUYER_COST) — once bought, tickGame calls buyGlobalTickspeedMultiplier
 // automatically every tick, which re-validates its own eligibility internally (no-op unless
@@ -1256,6 +1315,14 @@ export const buyTickspeedAutobuyer = state => {
     prestige: { ...state.prestige, points: state.prestige.points - TICKSPEED_AUTOBUYER_COST },
     autoGlobalTickspeed: true,
   }
+}
+
+// Toggles whether the global Tickspeed Autobuyer currently acts (see
+// autoGlobalTickspeedEnabled/tickGame) — same unconditional, permanent-preference convention as
+// setAutoPrestigeEnabled/setAutoSpeedUpEnabled above. A no-op if it hasn't been bought yet.
+export const setAutoGlobalTickspeedEnabled = enabled => state => {
+  if (!state.autoGlobalTickspeed) return state
+  return { ...state, autoGlobalTickspeedEnabled: !!enabled }
 }
 
 // Spends XP to compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own
