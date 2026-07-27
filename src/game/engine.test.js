@@ -2508,12 +2508,12 @@ describe('prestigeGame', () => {
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
-  it('keeps the Speed Up count permanently across prestige', () => {
+  it('resets the Speed Up count to 0 across prestige', () => {
     const state = withSpeedUpCount(
       withMoney(createInitialGameState(), GOOGOL), 3
     )
     const after = prestigeGame(state)
-    expect(after.speedUpCount).toBe(3)
+    expect(after.speedUpCount).toBe(0)
   })
 
   it('keeps the Auto Speed Up flag permanently across prestige', () => {
