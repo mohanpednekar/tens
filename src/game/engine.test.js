@@ -14,6 +14,9 @@ import {
   buyTierQuantity,
   consumeXpForLastTierTickspeed,
   createInitialGameState,
+  setAutoGlobalTickspeedEnabled,
+  setAutoPrestigeEnabled,
+  setAutoSpeedUpEnabled,
   formatAmount,
   formatCurrency,
   formatOfflineDuration,
@@ -154,6 +157,21 @@ const withAutoGlobalTickspeed = (state, active = true) => ({
   autoGlobalTickspeed: active,
 })
 
+const withAutoSpeedUpEnabled = (state, enabled) => ({
+  ...state,
+  autoSpeedUpEnabled: enabled,
+})
+
+const withAutoGlobalTickspeedEnabled = (state, enabled) => ({
+  ...state,
+  autoGlobalTickspeedEnabled: enabled,
+})
+
+const withAutoPrestigeEnabled = (state, enabled) => ({
+  ...state,
+  autoPrestigeEnabled: enabled,
+})
+
 // isLastTierTickspeedXpUnlocked is a live check against the last tier's current owned count vs.
 // the current (dynamic) block size (see engine.js) — this helper ensures that's satisfied by
 // raising owned to at least that block size if it isn't already there, without clobbering a test's
@@ -265,6 +283,13 @@ describe('createInitialGameState', () => {
   it('initialises autoSpeedUp to false', () => {
     const state = createInitialGameState()
     expect(state.autoSpeedUp).toBe(false)
+  })
+
+  it('initialises the three global automations\' enabled (pause/resume) flags to true', () => {
+    const state = createInitialGameState()
+    expect(state.autoSpeedUpEnabled).toBe(true)
+    expect(state.autoGlobalTickspeedEnabled).toBe(true)
+    expect(state.autoPrestigeEnabled).toBe(true)
   })
 
   it('initialises with the last tier\'s XP tickspeed mechanic disengaged and lastTierXpConsumed at 0', () => {
@@ -1374,6 +1399,39 @@ describe('tickGame', () => {
     expect(after.autoPrestigeAttemptBudget).toBe(0)
   })
 
+  it('does not accumulate or fire the Auto-Prestige attempt budget while paused (autoPrestigeEnabled false), even at GOOGOL', () => {
+    const state = withAutoPrestigeEnabled(
+      withAutoPrestigeBudget(
+        withAutoPrestige(withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5)),
+        0.9995
+      ),
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after).toBe(state) // frozen + paused Auto-Prestige short-circuits to a same-reference no-op
+    expect(after.prestige.count).toBe(0)
+    expect(after.autoPrestigeAttemptBudget).toBe(0.9995)
+  })
+
+  it('does not accumulate the Auto-Prestige attempt budget during ordinary play while paused', () => {
+    const state = withAutoPrestigeEnabled(withAutoPrestige(createInitialGameState()), false)
+    const after = tickGame(1)(state)
+    expect(after.autoPrestigeAttemptBudget).toBe(0)
+  })
+
+  it('resumes accumulating/firing the Auto-Prestige attempt budget once re-enabled', () => {
+    const paused = withAutoPrestigeEnabled(
+      withAutoPrestigeBudget(
+        withAutoPrestige(withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5)),
+        0.9995
+      ),
+      false
+    )
+    const resumed = setAutoPrestigeEnabled(true)(paused)
+    const after = tickGame(1)(resumed)
+    expect(after.prestige.count).toBe(1)
+  })
+
   it('keeps banking the Auto-Prestige attempt budget tick after tick while frozen, without firing early', () => {
     let state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5))
     for (let i = 0; i < 500; i++) state = tickGame(1)(state)
@@ -1814,6 +1872,27 @@ describe('tickGame', () => {
     expect(after.speedUpCount).toBe(0)
   })
 
+  it('does not trigger Speed Up automatically while Auto Speed Up is paused (autoSpeedUpEnabled false), even when eligible', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withAutoSpeedUpEnabled(
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.speedUpCount).toBe(0)
+  })
+
+  it('resumes triggering Speed Up automatically once Auto Speed Up is re-enabled', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const paused = withAutoSpeedUpEnabled(
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      false
+    )
+    const resumed = setAutoSpeedUpEnabled(true)(paused)
+    const after = tickGame(1)(resumed)
+    expect(after.speedUpCount).toBe(1)
+  })
+
   it('automatically upgrades the global tickspeed multiplier when the Tickspeed Autobuyer is bought and it is affordable', () => {
     const state = withAutoGlobalTickspeed(
       withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
@@ -1834,6 +1913,25 @@ describe('tickGame', () => {
     const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)
     const after = tickGame(1)(state)
     expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('does not upgrade the global tickspeed multiplier automatically while the Tickspeed Autobuyer is paused (autoGlobalTickspeedEnabled false)', () => {
+    const state = withAutoGlobalTickspeedEnabled(
+      withAutoGlobalTickspeed(withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)),
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('resumes automatically upgrading the global tickspeed multiplier once the Tickspeed Autobuyer is re-enabled', () => {
+    const paused = withAutoGlobalTickspeedEnabled(
+      withAutoGlobalTickspeed(withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), 10)),
+      false
+    )
+    const resumed = setAutoGlobalTickspeedEnabled(true)(paused)
+    const after = tickGame(1)(resumed)
+    expect(after.globalTickspeedMultiplier).toBe(1)
   })
 
   it('never corrupts the second-to-last tier\'s owned/resources into NaN even once the last tier\'s XP multiplier overflows to Infinity', () => {
@@ -2434,6 +2532,28 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeed).toBe(true)
   })
 
+  it('keeps a paused (disabled) global automation permanently paused across prestige, same as the parent unlock flag', () => {
+    const state = withAutoPrestigeEnabled(
+      withAutoGlobalTickspeedEnabled(
+        withAutoSpeedUpEnabled(
+          withAutoPrestige(
+            withAutoGlobalTickspeed(
+              withAutoSpeedUp(withMoney(createInitialGameState(), GOOGOL))
+            ),
+            1
+          ),
+          false
+        ),
+        false
+      ),
+      false
+    )
+    const after = prestigeGame(state)
+    expect(after.autoSpeedUpEnabled).toBe(false)
+    expect(after.autoGlobalTickspeedEnabled).toBe(false)
+    expect(after.autoPrestigeEnabled).toBe(false)
+  })
+
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
     const state = withAutoPrestigeBudget(
       withAutoPrestige(withMoney(createInitialGameState(), GOOGOL)),
@@ -2665,6 +2785,26 @@ describe('speedUpGame', () => {
     expect(after.autoGlobalTickspeed).toBe(true)
   })
 
+  it('keeps a paused (disabled) global automation permanently paused, same as the parent unlock flag', () => {
+    const state = withAutoPrestigeEnabled(
+      withAutoGlobalTickspeedEnabled(
+        withAutoSpeedUpEnabled(
+          withAutoPrestige(
+            withAutoGlobalTickspeed(withAutoSpeedUp(eligibleState())),
+            1
+          ),
+          false
+        ),
+        false
+      ),
+      false
+    )
+    const after = speedUpGame(state)
+    expect(after.autoSpeedUpEnabled).toBe(false)
+    expect(after.autoGlobalTickspeedEnabled).toBe(false)
+    expect(after.autoPrestigeEnabled).toBe(false)
+  })
+
   it('leaves Prestige Points and count untouched, but resets XP to 0', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = speedUpGame(state)
@@ -2755,6 +2895,71 @@ describe('buyTickspeedAutobuyer', () => {
       GOOGOL
     )
     expect(buyTickspeedAutobuyer(state)).toBe(state)
+  })
+})
+
+// ─── setAutoSpeedUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPrestigeEnabled ─────────────
+
+describe('setAutoSpeedUpEnabled', () => {
+  it('toggles autoSpeedUpEnabled once Auto Speed Up is bought', () => {
+    const state = withAutoSpeedUp(createInitialGameState())
+    const paused = setAutoSpeedUpEnabled(false)(state)
+    expect(paused.autoSpeedUpEnabled).toBe(false)
+    const resumed = setAutoSpeedUpEnabled(true)(paused)
+    expect(resumed.autoSpeedUpEnabled).toBe(true)
+  })
+
+  it('returns the same state when Auto Speed Up has not been bought yet', () => {
+    const state = createInitialGameState()
+    expect(setAutoSpeedUpEnabled(false)(state)).toBe(state)
+  })
+
+  it('is not gated by isProductionFrozen — toggling a preference is always possible', () => {
+    const state = withMoney(withAutoSpeedUp(createInitialGameState()), GOOGOL)
+    const after = setAutoSpeedUpEnabled(false)(state)
+    expect(after.autoSpeedUpEnabled).toBe(false)
+  })
+})
+
+describe('setAutoGlobalTickspeedEnabled', () => {
+  it('toggles autoGlobalTickspeedEnabled once the Tickspeed Autobuyer is bought', () => {
+    const state = withAutoGlobalTickspeed(createInitialGameState())
+    const paused = setAutoGlobalTickspeedEnabled(false)(state)
+    expect(paused.autoGlobalTickspeedEnabled).toBe(false)
+    const resumed = setAutoGlobalTickspeedEnabled(true)(paused)
+    expect(resumed.autoGlobalTickspeedEnabled).toBe(true)
+  })
+
+  it('returns the same state when the Tickspeed Autobuyer has not been bought yet', () => {
+    const state = createInitialGameState()
+    expect(setAutoGlobalTickspeedEnabled(false)(state)).toBe(state)
+  })
+
+  it('is not gated by isProductionFrozen', () => {
+    const state = withMoney(withAutoGlobalTickspeed(createInitialGameState()), GOOGOL)
+    const after = setAutoGlobalTickspeedEnabled(false)(state)
+    expect(after.autoGlobalTickspeedEnabled).toBe(false)
+  })
+})
+
+describe('setAutoPrestigeEnabled', () => {
+  it('toggles autoPrestigeEnabled once Auto-Prestige is bought', () => {
+    const state = withAutoPrestige(createInitialGameState(), 1)
+    const paused = setAutoPrestigeEnabled(false)(state)
+    expect(paused.autoPrestigeEnabled).toBe(false)
+    const resumed = setAutoPrestigeEnabled(true)(paused)
+    expect(resumed.autoPrestigeEnabled).toBe(true)
+  })
+
+  it('returns the same state when Auto-Prestige has not been bought yet (still null)', () => {
+    const state = createInitialGameState()
+    expect(setAutoPrestigeEnabled(false)(state)).toBe(state)
+  })
+
+  it('is not gated by isProductionFrozen', () => {
+    const state = withMoney(withAutoPrestige(createInitialGameState(), 1), GOOGOL)
+    const after = setAutoPrestigeEnabled(false)(state)
+    expect(after.autoPrestigeEnabled).toBe(false)
   })
 })
 

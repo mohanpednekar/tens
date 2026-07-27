@@ -722,6 +722,23 @@ const PpUpgradeBadge = styled.span`
   color: ${props => props.$color};
 `
 
+// Groups an "Active"/"Paused" badge with its pause/resume toggle as a single flex item, so an
+// UpgradeRow's existing two-child (label, control) `justify-content: space-between` layout still
+// holds once a bought global automation gets a second, smaller control alongside its badge.
+const UpgradeRowControls = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+`
+
+// Small secondary control, visually subordinate to the badge/level text it sits beside (see #171)
+// — a plain icon toggle rather than a costed action button.
+const PauseToggleButton = styled(Button)`
+  font-size: 0.75em;
+  min-width: 0;
+  padding: 0.3em 0.5em;
+`
+
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
@@ -886,6 +903,9 @@ const MainPage = () => {
   // that endgame milestone.
   const isAutoSpeedUpActive = state.autoSpeedUp ?? false
   const canBuyAutoSpeedUp = !isFrozen && !isAutoSpeedUpActive && !isFirstRun && prestige.points >= AUTO_SPEED_UP_COST
+  // Whether Auto Speed Up currently acts, independent of whether it's been bought (see
+  // setAutoSpeedUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
+  const autoSpeedUpEnabled = state.autoSpeedUpEnabled ?? true
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -893,6 +913,9 @@ const MainPage = () => {
   // no cadence to speed up here either.
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
   const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && prestige.points >= TICKSPEED_AUTOBUYER_COST
+  // Whether the global Tickspeed Autobuyer currently acts, independent of whether it's been
+  // bought (see setAutoGlobalTickspeedEnabled/tickGame in engine.js).
+  const tickspeedAutobuyerEnabled = state.autoGlobalTickspeedEnabled ?? true
 
   // One-time PP unlock for the passive production-speed bonus (see buyPrestigeSpeedBonus in
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
@@ -912,6 +935,9 @@ const MainPage = () => {
   const autoPrestigeIntervalSeconds = isAutoPrestigeActive
     ? Math.round(1 / getAutoPrestigeAttemptRate(autoPrestigeLevel))
     : null
+  // Whether Auto-Prestige currently acts, independent of whether it's been bought (see
+  // setAutoPrestigeEnabled/tickGame in engine.js).
+  const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
@@ -1776,9 +1802,28 @@ const MainPage = () => {
             <UpgradeRow aria-label="tickspeed autobuyer upgrade">
               <TierNameLabel>Tickspeed Autobuyer</TierNameLabel>
               {isTickspeedAutobuyerActive ? (
-                <PpUpgradeBadge $color="#4ade80" title="The global tickspeed multiplier now upgrades itself automatically whenever affordable">
-                  🌐 Active
-                </PpUpgradeBadge>
+                <UpgradeRowControls>
+                  <PpUpgradeBadge
+                    $color={tickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                    title={
+                      tickspeedAutobuyerEnabled
+                        ? 'The global tickspeed multiplier now upgrades itself automatically whenever affordable'
+                        : 'The global tickspeed multiplier is currently paused — it will not upgrade itself until resumed'
+                    }
+                  >
+                    {tickspeedAutobuyerEnabled ? '🌐 Active' : '🌐 Paused'}
+                  </PpUpgradeBadge>
+                  <PauseToggleButton
+                    aria-pressed={tickspeedAutobuyerEnabled}
+                    aria-label={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
+                    onClick={() => actions.setAutoGlobalTickspeedEnabled(!tickspeedAutobuyerEnabled)}
+                    title={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
+                    type="button"
+                    variant="ghost"
+                  >
+                    {tickspeedAutobuyerEnabled ? '⏸' : '▶'}
+                  </PauseToggleButton>
+                </UpgradeRowControls>
               ) : (
                 <PpUpgradeButton
                   aria-label={`Enable Tickspeed Autobuyer for ${TICKSPEED_AUTOBUYER_COST} Prestige Points`}
@@ -1806,9 +1851,28 @@ const MainPage = () => {
             <UpgradeRow aria-label="auto speed up upgrade">
               <TierNameLabel>Auto Speed Up</TierNameLabel>
               {isAutoSpeedUpActive ? (
-                <PpUpgradeBadge $color="#4ade80" title="Speed Up now triggers automatically the instant it's eligible">
-                  ⏩ Active
-                </PpUpgradeBadge>
+                <UpgradeRowControls>
+                  <PpUpgradeBadge
+                    $color={autoSpeedUpEnabled ? '#4ade80' : '#facc15'}
+                    title={
+                      autoSpeedUpEnabled
+                        ? "Speed Up now triggers automatically the instant it's eligible"
+                        : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+                    }
+                  >
+                    {autoSpeedUpEnabled ? '⏩ Active' : '⏩ Paused'}
+                  </PpUpgradeBadge>
+                  <PauseToggleButton
+                    aria-pressed={autoSpeedUpEnabled}
+                    aria-label={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
+                    onClick={() => actions.setAutoSpeedUpEnabled(!autoSpeedUpEnabled)}
+                    title={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
+                    type="button"
+                    variant="ghost"
+                  >
+                    {autoSpeedUpEnabled ? '⏸' : '▶'}
+                  </PauseToggleButton>
+                </UpgradeRowControls>
               ) : (
                 <PpUpgradeButton
                   aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
@@ -1839,34 +1903,48 @@ const MainPage = () => {
                   Auto-Prestige
                   {isAutoPrestigeActive && (
                     <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
-                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s){!autoPrestigeEnabled && ' · Paused'}
                     </MutedText>
                   )}
                 </TierNameLabel>
-                <PpUpgradeButton
-                  aria-label={
-                    isAutoPrestigeActive
-                      ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                      : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                  }
-                  color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
-                  disabled={!canBuyAutoPrestige}
-                  onClick={actions.buyAutoPrestige}
-                  title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
-                  type="button"
-                  $progress={ppProgressPercent(autoPrestigeCost)}
-                  $progressColor="#38bdf8"
-                >
-                  <ButtonIcon>✦ </ButtonIcon>
-                  <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="Auto-Prestige Prestige Point progress"
-                    aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
-                    aria-valuemin={0}
-                    aria-valuemax={autoPrestigeCost}
-                  />
-                </PpUpgradeButton>
+                <UpgradeRowControls>
+                  <PpUpgradeButton
+                    aria-label={
+                      isAutoPrestigeActive
+                        ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                        : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`
+                    }
+                    color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
+                    disabled={!canBuyAutoPrestige}
+                    onClick={actions.buyAutoPrestige}
+                    title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                    type="button"
+                    $progress={ppProgressPercent(autoPrestigeCost)}
+                    $progressColor="#38bdf8"
+                  >
+                    <ButtonIcon>✦ </ButtonIcon>
+                    <ButtonLabel>{isAutoPrestigeActive ? 'Upgrade' : 'Auto-Prestige'} for {autoPrestigeCost} PP</ButtonLabel>
+                    <VisuallyHidden
+                      role="progressbar"
+                      aria-label="Auto-Prestige Prestige Point progress"
+                      aria-valuenow={Math.min(prestige.points, autoPrestigeCost)}
+                      aria-valuemin={0}
+                      aria-valuemax={autoPrestigeCost}
+                    />
+                  </PpUpgradeButton>
+                  {isAutoPrestigeActive && (
+                    <PauseToggleButton
+                      aria-pressed={autoPrestigeEnabled}
+                      aria-label={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
+                      onClick={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
+                      title={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
+                      type="button"
+                      variant="ghost"
+                    >
+                      {autoPrestigeEnabled ? '⏸' : '▶'}
+                    </PauseToggleButton>
+                  )}
+                </UpgradeRowControls>
               </UpgradeRow>
             )}
           </UpgradeCategory>

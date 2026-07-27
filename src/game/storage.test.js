@@ -240,6 +240,38 @@ describe('schema migration', () => {
     })
   })
 
+  it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves that predate the pause/resume feature', () => {
+    const oldSave = {
+      resources: { Ones: 10 },
+      autoSpeedUp: true,
+      autoGlobalTickspeed: true,
+      autoPrestige: 2,
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.autoSpeedUpEnabled).toBe(true)
+    expect(loaded.autoGlobalTickspeedEnabled).toBe(true)
+    expect(loaded.autoPrestigeEnabled).toBe(true)
+  })
+
+  it('preserves an explicitly-paused (false) autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
+    const state = {
+      ...createInitialGameState(),
+      autoSpeedUp: true,
+      autoSpeedUpEnabled: false,
+      autoGlobalTickspeed: true,
+      autoGlobalTickspeedEnabled: false,
+      autoPrestige: 1,
+      autoPrestigeEnabled: false,
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    expect(loaded.autoSpeedUpEnabled).toBe(false)
+    expect(loaded.autoGlobalTickspeedEnabled).toBe(false)
+    expect(loaded.autoPrestigeEnabled).toBe(false)
+  })
+
   it('preserves a saved smartAutobuyer flag', () => {
     const state = {
       ...createInitialGameState(),

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
+import { TICK_RATE_MS } from 'game/layers'
 import App from './App'
 
 beforeEach(() => {
@@ -779,6 +780,33 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
+test('a pause toggle appears beside the Tickspeed Autobuyer badge once bought, and pausing/resuming updates the badge and aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    autoGlobalTickspeed: true,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: /pause tickspeed autobuyer automation/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume tickspeed autobuyer automation/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+})
+
 test('the Enable Tickspeed Autobuyer button stays disabled without enough Prestige Points', async () => {
   const user = userEvent.setup()
 
@@ -824,6 +852,67 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
 
   expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
+})
+
+test('a pause toggle appears beside the Auto Speed Up badge once bought, and pausing/resuming updates the badge and aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    autoSpeedUp: true,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: /pause auto speed up automation/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume auto speed up automation/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByRole('button', { name: /pause auto speed up automation/i })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('pausing Auto Speed Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
+  vi.useFakeTimers()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 12345 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 2 },
+    autoSpeedUp: true,
+    autoSpeedUpEnabled: false,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  const { unmount } = render(<App />)
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  // Still eligible (purchaseLevels.tier10 untouched) since Auto Speed Up starts paused.
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeEnabled()
+
+  // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
+  // regardless of which view is currently rendered.
+  fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
+  fireEvent.click(screen.getByRole('button', { name: /resume auto speed up automation/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /game/i }))
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 3.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })).toBeDisabled()
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('no Global Tickspeed Multiplier panel appears before the second tier has ever been owned', () => {
@@ -995,6 +1084,48 @@ test('the Auto-Prestige button stays disabled without enough Prestige Points', a
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   expect(screen.getByRole('button', { name: /enable auto-prestige for 1000 prestige points/i })).toBeDisabled()
+})
+
+test('a pause toggle appears beside the Auto-Prestige level once activated, and pausing/resuming updates the label and aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    autoPrestige: 1,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: /pause auto-prestige automation/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume auto-prestige automation/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).not.toHaveTextContent(/paused/i)
+})
+
+test('no pause toggle appears for Auto-Prestige before it has ever been activated', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.queryByRole('button', { name: /pause auto-prestige automation/i })).not.toBeInTheDocument()
 })
 
 test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', async () => {
