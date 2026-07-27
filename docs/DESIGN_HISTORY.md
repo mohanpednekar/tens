@@ -393,6 +393,25 @@ economy is built around.
 `speedUpGame`'s reset pattern deliberately mirrors `prestigeGame`'s, matching the original framing for
 this feature: "similar to starting the first run but with automations retained and 2x the speed."
 
+### Why `speedUpCount` now resets on Prestige, reversing the original design
+
+For most of this mechanic's life, `speedUpCount` (and the `2^speedUpCount` multiplier it drives) was
+explicitly permanent — `prestigeGame` carried it through unchanged, on the theory that Speed Up's whole
+point (per the "Why Speed Up exists" analysis above) was to keep compounding a production multiplier
+that outruns the cost curve, and stripping that on Prestige would undermine it. The maintainer asked
+for this reversed: Prestige is the bigger, much rarer reset (Money must reach `GOOGOL`, vs. Speed Up's
+comparatively frequent per-cycle level requirement), and letting `speedUpCount` also survive it meant a
+long-lived save could accumulate an unbounded, ever-compounding production multiplier across every
+future Prestige forever, with no analogous escalating requirement of the kind that keeps Speed Up's
+*own* cost-curve dodge in check (see above) — nothing similarly re-prices a Prestige cycle as
+`speedUpCount` climbs. Resetting it to 0 on `prestigeGame` (kept unbounded within a single Prestige
+cycle, same as before) makes each Prestige cycle rebuild its Speed Up progression from scratch, mirroring
+how `globalTickspeedMultiplier` already resets on both Prestige and Speed Up (see "The global tickspeed
+multiplier" in `CLAUDE.md`). `autoSpeedUp` (the
+automation toggle deciding whether Speed Up fires automatically) was deliberately left permanent — the
+player doesn't need to re-buy that PP unlock every Prestige, only rebuild the multiplier it happens to
+be driving at the time.
+
 ### Why autobuyer unlock is PP-funded only, with no first-tier bypass
 
 There used to be a separate Money-funded activation path with a first-tier special case (bypassing the

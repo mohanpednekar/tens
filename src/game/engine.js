@@ -150,11 +150,12 @@ export const createInitialGameState = () => ({
   // buyPrestigeSpeedBonus. Never reset by prestige, like smartAutobuyer/
   // autoPrestige above.
   prestigeSpeedBonusUnlocked: false,
-  // Permanent count of how many times Speed Up has been triggered (see speedUpGame) — drives
+  // RUN-SCOPED count of how many times Speed Up has been triggered (see speedUpGame) — drives
   // getSpeedUpMultiplier's unconditional production-speed multiplier. Never reset by Speed Up
-  // itself (it's the thing being incremented) or by a real Prestige (see prestigeGame) — it's
-  // meta-progression, like smartAutobuyer/autoPrestige/
-  // prestigeSpeedBonusUnlocked above.
+  // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
+  // prestigeGame) — unlike the automation toggles/levels around it (smartAutobuyer/autoPrestige/
+  // prestigeSpeedBonusUnlocked/autoSpeedUp), the Speed Up multiplier itself doesn't survive a real
+  // Prestige and has to be rebuilt from scratch each Prestige cycle.
   speedUpCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make Speed Up trigger automatically (see buyAutoSpeedUp/tickGame) the instant it's eligible —
@@ -1117,7 +1118,12 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tierTickspeedAutobuyer, by contrast, are permanent and carry over unchanged. globalTickspeedMultiplier
 // (the Money-funded global tickspeed level) resets to not-yet-bought here too, same as speedUpGame —
 // neither reset preserves it, since it's funded from the same Money balance prestige/Speed Up
-// already wipe, same as tickspeedLevels. everUnlockedTierIds, by contrast, is
+// already wipe, same as tickspeedLevels. speedUpCount (the stacking 2^speedUpCount production
+// multiplier Speed Up builds up) ALSO resets to 0 here — unlike every other automation flag/level
+// in this function, which are all permanent, this one doesn't survive a real Prestige, so a fresh
+// post-Prestige run has to rebuild its Speed Up multiplier from scratch; autoSpeedUp (the
+// automation toggle) is unaffected and still carries over permanently, so it simply starts
+// re-accumulating speedUpCount on its own. everUnlockedTierIds, by contrast, is
 // NOT carried over — it resets to the fresh initial default same as owned/purchased, so a real
 // Prestige still relocks every
 // tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
@@ -1135,9 +1141,15 @@ export const prestigeGame = state => {
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
-    speedUpCount: state.speedUpCount ?? initial.speedUpCount,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    // speedUpCount is NOT carried over here — it resets to 0 (initial.speedUpCount) same as
+    // globalTickspeedMultiplier above, so the stacking 2^speedUpCount production multiplier from
+    // Speed Up doesn't survive a real Prestige (a real Prestige is the bigger, rarer reset; Speed
+    // Up's multiplier is meant to be rebuilt within a single Prestige cycle, not to keep
+    // compounding across them). autoSpeedUp (the automation toggle) is unaffected by this — it
+    // still carries over permanently above, so a player who already bought Auto Speed Up doesn't
+    // need to re-buy it; it simply starts re-accumulating speedUpCount from 0 on the next cycle.
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
     // with prestige.xp below, since it's funded by spending XP, a run-scoped currency now.
     // everUnlockedTierIds is deliberately NOT carried over here either — unlike every permanent
