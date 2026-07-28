@@ -185,6 +185,16 @@ export const AUTO_SPEED_UP_COST = 100
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
 export const TICKSPEED_AUTOBUYER_COST = 20
+// One-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see engine.js's
+// buyAutoPrestigeAutobuyer) — once bought, tickGame calls buyAutoPrestige automatically every
+// tick once affordable, so a level-up beyond the first no longer needs a manual click. This is a
+// "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one
+// like the other two autobuyer toggles above), and only ever does anything once Auto-Prestige has
+// already been activated once — so it's priced below AUTO_PRESTIGE_COST's own initial-activation
+// cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but
+// well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
+// allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
+export const AUTO_PRESTIGE_AUTOBUYER_COST = 500
 // Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
 // (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/

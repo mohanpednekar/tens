@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { TICK_RATE_MS } from 'game/layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, TICK_RATE_MS } from 'game/layers'
 import App from './App'
 
 beforeEach(() => {
@@ -1143,6 +1143,88 @@ test('the Auto-Prestige Upgrade button costs double the previous level, and stay
 
   expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/lv\.1/i)
   expect(screen.getByRole('button', { name: /upgrade auto-prestige for 2000 prestige points/i })).toBeDisabled()
+})
+
+test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been activated', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.queryByText(/auto-prestige autobuyer/i)).not.toBeInTheDocument()
+})
+
+test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, and spends ${AUTO_PRESTIGE_AUTOBUYER_COST} PP to unlock it`, async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    autoPrestige: 1,
+    prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const unlockButton = screen.getByRole('button', { name: new RegExp(`enable auto-prestige autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} prestige points`, 'i') })
+  expect(unlockButton).toBeEnabled()
+
+  await user.click(unlockButton)
+
+  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('the Auto-Prestige Autobuyer button stays disabled without enough Prestige Points', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    autoPrestige: 1,
+    prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST - 1, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.getByRole('button', { name: new RegExp(`enable auto-prestige autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} prestige points`, 'i') })).toBeDisabled()
+})
+
+test('a pause toggle appears beside the Auto-Prestige Autobuyer badge once bought, and pausing/resuming updates the label and aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...allTiersSmartSeed(),
+    autoPrestige: 1,
+    autoPrestigeAutobuyer: true,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: /pause auto-prestige autobuyer automation/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume auto-prestige autobuyer automation/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
 })
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {

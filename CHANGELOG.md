@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Auto-Prestige Autobuyer: a new PP Upgrades purchase that automates re-leveling Auto-Prestige itself once activated, with its own pause/resume toggle.
 
 ### Changed
 - Speed Up's stacking production multiplier (`speedUpCount`) now resets to 0 on Prestige instead of carrying over permanently — it must be rebuilt within each Prestige cycle. The Auto Speed Up automation toggle itself is unaffected and still carries over.

@@ -2,7 +2,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockCost, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerCost, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
@@ -938,6 +938,15 @@ const MainPage = () => {
   // Whether Auto-Prestige currently acts, independent of whether it's been bought (see
   // setAutoPrestigeEnabled/tickGame in engine.js).
   const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
+
+  // Automates RE-LEVELING Auto-Prestige itself (see buyAutoPrestigeAutobuyer in engine.js) — a
+  // "meta-automation" companion to Auto-Prestige, distinct from activating it in the first place;
+  // only buyable once Auto-Prestige is already active (isAutoPrestigeActive).
+  const isAutoPrestigeAutobuyerActive = state.autoPrestigeAutobuyer ?? false
+  const canBuyAutoPrestigeAutobuyer = !isFrozen && isAutoPrestigeActive && !isAutoPrestigeAutobuyerActive && prestige.points >= AUTO_PRESTIGE_AUTOBUYER_COST
+  // Whether the Auto-Prestige Autobuyer currently acts, independent of whether it's been bought
+  // (see setAutoPrestigeAutobuyerEnabled/tickGame in engine.js).
+  const autoPrestigeAutobuyerEnabled = state.autoPrestigeAutobuyerEnabled ?? true
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
@@ -1899,6 +1908,57 @@ const MainPage = () => {
                 </PpUpgradeButton>
               )}
             </UpgradeRow>
+
+            {allTiersFullyAutomated && isAutoPrestigeActive && (
+              <UpgradeRow aria-label="auto-prestige autobuyer upgrade">
+                <TierNameLabel>Auto-Prestige Autobuyer</TierNameLabel>
+                {isAutoPrestigeAutobuyerActive ? (
+                  <UpgradeRowControls>
+                    <PpUpgradeBadge
+                      $color={autoPrestigeAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                      title={
+                        autoPrestigeAutobuyerEnabled
+                          ? 'Auto-Prestige now re-levels itself automatically whenever affordable'
+                          : 'The Auto-Prestige Autobuyer is currently paused — it will not re-level Auto-Prestige until resumed'
+                      }
+                    >
+                      {autoPrestigeAutobuyerEnabled ? '🔁 Active' : '🔁 Paused'}
+                    </PpUpgradeBadge>
+                    <PauseToggleButton
+                      aria-pressed={autoPrestigeAutobuyerEnabled}
+                      aria-label={autoPrestigeAutobuyerEnabled ? 'Pause Auto-Prestige Autobuyer automation' : 'Resume Auto-Prestige Autobuyer automation'}
+                      onClick={() => actions.setAutoPrestigeAutobuyerEnabled(!autoPrestigeAutobuyerEnabled)}
+                      title={autoPrestigeAutobuyerEnabled ? 'Pause Auto-Prestige Autobuyer automation' : 'Resume Auto-Prestige Autobuyer automation'}
+                      type="button"
+                      variant="ghost"
+                    >
+                      {autoPrestigeAutobuyerEnabled ? '⏸' : '▶'}
+                    </PauseToggleButton>
+                  </UpgradeRowControls>
+                ) : (
+                  <PpUpgradeButton
+                    aria-label={`Enable Auto-Prestige Autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} Prestige Points`}
+                    color={canBuyAutoPrestigeAutobuyer ? '#38bdf8' : 'darkgrey'}
+                    disabled={!canBuyAutoPrestigeAutobuyer}
+                    onClick={actions.buyAutoPrestigeAutobuyer}
+                    title="Spend Prestige Points so Auto-Prestige keeps re-leveling itself automatically, forever, whenever affordable"
+                    type="button"
+                    $progress={ppProgressPercent(AUTO_PRESTIGE_AUTOBUYER_COST)}
+                    $progressColor="#38bdf8"
+                  >
+                    <ButtonIcon>🔁 </ButtonIcon>
+                    <ButtonLabel>Unlock for {AUTO_PRESTIGE_AUTOBUYER_COST} PP</ButtonLabel>
+                    <VisuallyHidden
+                      role="progressbar"
+                      aria-label="Auto-Prestige Autobuyer Prestige Point progress"
+                      aria-valuenow={Math.min(prestige.points, AUTO_PRESTIGE_AUTOBUYER_COST)}
+                      aria-valuemin={0}
+                      aria-valuemax={AUTO_PRESTIGE_AUTOBUYER_COST}
+                    />
+                  </PpUpgradeButton>
+                )}
+              </UpgradeRow>
+            )}
 
             {allTiersFullyAutomated && (
               <UpgradeRow aria-label="auto-prestige upgrade">

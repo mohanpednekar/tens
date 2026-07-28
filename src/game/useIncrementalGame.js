@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutobuyerUnlock, buyAutoPrestige, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, buyTierTickspeedAutobuyer, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, setAutoGlobalTickspeedEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, speedUpGame, tickGame } from './engine'
+import { applyOfflineProgress, buyAutobuyerUnlock, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, buyTierTickspeedAutobuyer, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, speedUpGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -64,6 +64,7 @@ export const useIncrementalGame = () => {
     buySmartAutobuyer: tierId => setState(buySmartAutobuyer(tierId)),
     buyTierTickspeedAutobuyer: tierId => setState(buyTierTickspeedAutobuyer(tierId)),
     buyAutoPrestige: () => setState(buyAutoPrestige),
+    buyAutoPrestigeAutobuyer: () => setState(buyAutoPrestigeAutobuyer),
     buyGlobalTickspeedMultiplier: () => setState(buyGlobalTickspeedMultiplier),
     buyPrestigeSpeedBonus: () => setState(buyPrestigeSpeedBonus),
     prestige: () => setState(prestigeGame),
@@ -74,6 +75,7 @@ export const useIncrementalGame = () => {
     setAutoSpeedUpEnabled: enabled => setState(setAutoSpeedUpEnabled(enabled)),
     setAutoGlobalTickspeedEnabled: enabled => setState(setAutoGlobalTickspeedEnabled(enabled)),
     setAutoPrestigeEnabled: enabled => setState(setAutoPrestigeEnabled(enabled)),
+    setAutoPrestigeAutobuyerEnabled: enabled => setState(setAutoPrestigeAutobuyerEnabled(enabled)),
   }), [])
 
   const resetGame = useCallback(() => {
