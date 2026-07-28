@@ -1590,6 +1590,128 @@ test('the Smart button stays disabled without enough Prestige Points', async () 
   expect(screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
 })
 
+test('an autobuyer on/paused indicator and toggle appear on the tier row once its autobuyer is unlocked', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+  }))
+
+  render(<App />)
+
+  const pauseButton = screen.getByRole('button', { name: /pause bytes's autobuyer/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/active/i)
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume bytes's autobuyer/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/active/i)
+})
+
+test('no autobuyer on/paused indicator appears on a tier row before its autobuyer is unlocked', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /pause bytes's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/paused/i)
+})
+
+test('pausing a tier\'s autobuyer via its tier-row toggle stops it from buying automatically; resuming resumes it', () => {
+  vi.useFakeTimers()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10000 },
+    autobuyers: { tier01: 1 },
+    autobuyersEnabled: { tier01: false },
+  }))
+
+  const { unmount } = render(<App />)
+
+  // The autobuyer attempt budget accumulates at a flat rate of 1 per real second, so a single
+  // 100ms tick isn't enough to trigger a purchase attempt either way — advance a full second
+  // (10 ticks) so a paused autobuyer's lack of purchases is a meaningful assertion, not just "not
+  // enough time has passed yet".
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
+
+  fireEvent.click(screen.getByRole('button', { name: /resume bytes's autobuyer/i }))
+  act(() => { vi.advanceTimersByTime(1000) })
+
+  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('a pause toggle appears beside a tier\'s tickspeed autobuyer "⚙ Active" badge on the PP Upgrades page, and pausing/resuming updates the badge and aria-pressed', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    autobuyers: { tier01: 1 },
+    tierTickspeedAutobuyer: { tier01: true },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: /pause bytes's tickspeed autobuyer/i })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/paused/i)
+  const resumeButton = screen.getByRole('button', { name: /resume bytes's tickspeed autobuyer/i })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+})
+
+test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it from upgrading automatically; resuming resumes it', () => {
+  vi.useFakeTimers()
+
+  // tier09 (Yottabytes, tierIndex 8) has a much cheaper tickspeed multiplier base cost (100) than
+  // an earlier tier, keeping the seeded resource amount small; owned > 0 already satisfies
+  // isTierUnlocked for this tier directly, with no dependency on any other tier's state.
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10, tier09: 101 },
+    owned: { tier09: 101 },
+    tierTickspeedAutobuyer: { tier09: true },
+    tierTickspeedAutobuyerEnabled: { tier09: false },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  }))
+
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  expect(screen.getByRole('button', { name: /resume yottabytes's tickspeed autobuyer/i })).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /resume yottabytes's tickspeed autobuyer/i }))
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  expect(screen.getByRole('button', { name: /pause yottabytes's tickspeed autobuyer/i })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('tab', { name: /game/i }))
+  expect(screen.getByLabelText(/^yottabytes layer$/i)).toHaveTextContent(/⚙ \+10%/)
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('once every tier is smart and tickspeed-automated, a single notice replaces every per-tier row', async () => {
   const user = userEvent.setup()
 

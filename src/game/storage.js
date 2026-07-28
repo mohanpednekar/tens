@@ -119,11 +119,17 @@ const migrateState = saved => {
     purchaseLevels: { ...fresh.purchaseLevels, ...derivedPurchaseLevels, ...savedPurchaseLevels },
     purchaseLevelProgress: { ...fresh.purchaseLevelProgress, ...derivedPurchaseLevelProgress, ...savedPurchaseLevelProgress },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
+    // New fields (see engine.js) — a save predating them has no autobuyersEnabled/
+    // tierTickspeedAutobuyerEnabled key at all, so merging fresh's all-true defaults underneath
+    // backfills every tier to true, matching every already-permanent automation the player had
+    // running before this pause/resume feature existed.
+    autobuyersEnabled: { ...fresh.autobuyersEnabled, ...migrateTierKeys(saved.autobuyersEnabled) },
     tickspeedLevels: { ...fresh.tickspeedLevels, ...legacyTickspeedLevels, ...migrateTierKeys(saved.tickspeedLevels) },
     autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
     tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
     smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
     tierTickspeedAutobuyer: { ...fresh.tierTickspeedAutobuyer, ...migrateTierKeys(saved.tierTickspeedAutobuyer) },
+    tierTickspeedAutobuyerEnabled: { ...fresh.tierTickspeedAutobuyerEnabled, ...migrateTierKeys(saved.tierTickspeedAutobuyerEnabled) },
     everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...migrateTierKeys(saved.everUnlockedTierIds) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
