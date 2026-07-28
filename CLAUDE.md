@@ -480,17 +480,24 @@ Strict three-layer separation:
   (`state.purchaseLevels[tierId]`, 1-indexed, and `state.purchaseLevelProgress[tierId]`, see
   "Economy model") rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
-  model"). This shows on the Buy button's visible text as `Lv.{level} ({progress}/{blockSize})` (e.g.
-  `Lv.4 (5/8)`) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon rather
-  than centered — this keeps the level text starting at the same x position across every tier row
-  regardless of the cost string's length. The `aria-label` carries a `(level N, X of Y purchased)`
-  suffix in words instead. The cost label itself (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is
-  left-aligned rather than centered, and both it and the icon+level slot (`BuyButtonIcon`) are pinned
-  to a fixed half of the button's width — so every tier row's cost figure starts at the same x
-  position (the button's horizontal center) regardless of digit count, instead of drifting as the
-  level/progress or cost strings change length. This scoped pair lives only in `MainPage/index.jsx`
-  and doesn't affect the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the
-  app (Prestige, Reset, PP Upgrades, …), which keep their default fixed-icon/centered-label layout.
+  model"). This shows on the Buy button's visible text as `{progress}+{affordable}/{blockSize}` (e.g.
+  `5+3/8` — how many of the current level's pieces are already bought, plus how many more are
+  affordable right now, over the block size; the `+{affordable}` segment is omitted once nothing is
+  currently affordable) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
+  rather than centered — this keeps the progress text starting at the same x position across every
+  tier row regardless of the cost string's length. This deliberately doesn't show the level number
+  itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — level is still available
+  via the `aria-label` (a `(level N, X of Y purchased)` suffix in words) and the row's Details
+  disclosure; the button text is purely "how close is the current level," echoing the even earlier
+  pre-level-system `{purchased}+{affordable}` convention (see `docs/DESIGN_HISTORY.md`) now expressed
+  as a fraction of the current block size instead of a raw lifetime count. The cost label itself
+  (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is left-aligned rather than centered, and both it and
+  the icon+progress slot (`BuyButtonIcon`) are pinned to a fixed half of the button's width — so every
+  tier row's cost figure starts at the same x position (the button's horizontal center) regardless of
+  digit count, instead of drifting as the progress or cost strings change length. This scoped pair
+  lives only in `MainPage/index.jsx` and doesn't affect the shared `Button`/`ButtonIcon`/`ButtonLabel`
+  components used elsewhere in the app (Prestige, Reset, PP Upgrades, …), which keep their default
+  fixed-icon/centered-label layout.
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the PP Upgrades page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
