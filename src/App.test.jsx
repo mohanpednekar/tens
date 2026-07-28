@@ -780,63 +780,6 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('a pause toggle appears beside the Tickspeed Autobuyer badge once bought, and pausing/resuming updates the badge and aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    autoGlobalTickspeed: true,
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  const pauseButton = screen.getByRole('button', { name: /pause tickspeed autobuyer automation/i })
-  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-
-  await user.click(pauseButton)
-
-  expect(screen.getByLabelText('Tickspeed Autobuyer paused')).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume tickspeed autobuyer automation/i })
-  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(resumeButton)
-
-  expect(screen.getByLabelText('Tickspeed Autobuyer active')).toBeInTheDocument()
-})
-
-test('the Enable Tickspeed Autobuyer button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })).toBeDisabled()
-})
-
-test('the Enable Auto Speed Up button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /enable auto speed up for 100 prestige points/i })).toBeDisabled()
-})
-
 test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up has been bought', async () => {
   const user = userEvent.setup()
 
@@ -852,34 +795,6 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
 
   expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
-})
-
-test('a pause toggle appears beside the Auto Speed Up badge once bought, and pausing/resuming updates the badge and aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    owned: { tier09: 10 },
-    autoSpeedUp: true,
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  const pauseButton = screen.getByRole('button', { name: /pause auto speed up automation/i })
-  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-
-  await user.click(pauseButton)
-
-  expect(screen.getByLabelText('Auto Speed Up paused')).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume auto speed up automation/i })
-  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(resumeButton)
-
-  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /pause auto speed up automation/i })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('pausing Auto Speed Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
@@ -996,7 +911,7 @@ test('the global tickspeed bonus jumps at the first 10-level milestone, compound
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+20\.31%/i)
 })
 
-test('the global tickspeed bonus rounds to a whole percent once it reaches 100%, right where a milestone pushes it over', () => {
+test('the global tickspeed bonus still shows fractional percent precision one level before a milestone pushes it past 100%', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 39,
@@ -1035,6 +950,126 @@ const allTiersSmartSeed = () => ({
   tierTickspeedAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
 })
 
+// Every PP-spending button independently gates on its own cost vs. prestige.points — one seed
+// short of each button's own cost below, table-driven since the shape (seed state, find button by
+// name, assert disabled) is identical across all of them and only the seed/cost/button name differ.
+test.each([
+  {
+    name: 'Enable Tickspeed Autobuyer',
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 } },
+    buttonName: /enable tickspeed autobuyer for 20 prestige points/i,
+  },
+  {
+    name: 'Enable Auto Speed Up',
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto speed up for 100 prestige points/i,
+  },
+  {
+    name: 'Auto-Prestige',
+    seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto-prestige for 1000 prestige points/i,
+  },
+  {
+    name: 'Auto-Prestige Autobuyer',
+    seed: {
+      ...allTiersSmartSeed(),
+      autoPrestige: 1,
+      prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST - 1, count: 1, highestMilestone: 1 },
+    },
+    buttonName: new RegExp(`enable auto-prestige autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} prestige points`, 'i'),
+  },
+  {
+    name: 'Unlock Speed Bonus',
+    seed: { prestige: { xp: 0, points: 9999, count: 1, highestMilestone: 1 } },
+    buttonName: /unlock prestige point production speed bonus for 10000 prestige points/i,
+  },
+  {
+    name: "Bytes's Unlock",
+    seed: { prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 } },
+    buttonName: /unlock bytes's autobuyer for 1 prestige point\b/i,
+  },
+  {
+    name: "Bytes's Smart",
+    seed: { autobuyers: { tier01: 1 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
+    buttonName: /make bytes's autobuyer smart .* for 10 prestige points/i,
+  },
+])('the $name button stays disabled without enough Prestige Points', async ({ seed, buttonName }) => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    ...seed,
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  expect(screen.getByRole('button', { name: buttonName })).toBeDisabled()
+})
+
+// Every automation's pause/resume toggle follows the same shape (bought → badge + pause button →
+// pause flips the badge/aria-pressed → resume flips them back) — table-driven since only the seed
+// state and aria-label/name strings differ per automation.
+test.each([
+  {
+    name: 'Tickspeed Autobuyer',
+    seed: { owned: { tier09: 10 }, autoGlobalTickspeed: true },
+    pauseName: /pause tickspeed autobuyer automation/i,
+    resumeName: /resume tickspeed autobuyer automation/i,
+  },
+  {
+    name: 'Auto Speed Up',
+    seed: { owned: { tier09: 10 }, autoSpeedUp: true },
+    pauseName: /pause auto speed up automation/i,
+    resumeName: /resume auto speed up automation/i,
+  },
+  {
+    name: 'Auto-Prestige',
+    seed: { ...allTiersSmartSeed(), autoPrestige: 1 },
+    pauseName: /pause auto-prestige automation/i,
+    resumeName: /resume auto-prestige automation/i,
+  },
+  {
+    name: 'Auto-Prestige Autobuyer',
+    seed: { ...allTiersSmartSeed(), autoPrestige: 1, autoPrestigeAutobuyer: true },
+    pauseName: /pause auto-prestige autobuyer automation/i,
+    resumeName: /resume auto-prestige autobuyer automation/i,
+  },
+  {
+    name: "Bytes's tickspeed autobuyer",
+    seed: { autobuyers: { tier01: 1 }, tierTickspeedAutobuyer: { tier01: true } },
+    pauseName: /pause bytes's tickspeed autobuyer/i,
+    resumeName: /resume bytes's tickspeed autobuyer/i,
+  },
+])('a pause toggle appears beside the $name badge once bought, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+    ...seed,
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+
+  const pauseButton = screen.getByRole('button', { name: pauseName })
+  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByLabelText(`${name} active`)).toBeInTheDocument()
+
+  await user.click(pauseButton)
+
+  expect(screen.getByLabelText(`${name} paused`)).toBeInTheDocument()
+  const resumeButton = screen.getByRole('button', { name: resumeName })
+  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
+
+  await user.click(resumeButton)
+
+  expect(screen.queryByLabelText(`${name} paused`)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(`${name} active`)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', async () => {
   const user = userEvent.setup()
 
@@ -1070,49 +1105,6 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
   expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/lv\.1/i)
   expect(screen.getByRole('button', { name: /upgrade auto-prestige for 2000 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
-})
-
-test('the Auto-Prestige button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    ...allTiersSmartSeed(),
-    prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /enable auto-prestige for 1000 prestige points/i })).toBeDisabled()
-})
-
-test('a pause toggle appears beside the Auto-Prestige level once activated, and pausing/resuming updates the label and aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    ...allTiersSmartSeed(),
-    autoPrestige: 1,
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  const pauseButton = screen.getByRole('button', { name: /pause auto-prestige automation/i })
-  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-
-  await user.click(pauseButton)
-
-  expect(screen.getByLabelText('Auto-Prestige paused')).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume auto-prestige automation/i })
-  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(resumeButton)
-
-  expect(screen.queryByLabelText('Auto-Prestige paused')).not.toBeInTheDocument()
-  expect(screen.getByLabelText('Auto-Prestige active')).toBeInTheDocument()
 })
 
 test('no pause toggle appears for Auto-Prestige before it has ever been activated', async () => {
@@ -1184,51 +1176,6 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('the Auto-Prestige Autobuyer button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    ...allTiersSmartSeed(),
-    autoPrestige: 1,
-    prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST - 1, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: new RegExp(`enable auto-prestige autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} prestige points`, 'i') })).toBeDisabled()
-})
-
-test('a pause toggle appears beside the Auto-Prestige Autobuyer badge once bought, and pausing/resuming updates the label and aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    ...allTiersSmartSeed(),
-    autoPrestige: 1,
-    autoPrestigeAutobuyer: true,
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  const pauseButton = screen.getByRole('button', { name: /pause auto-prestige autobuyer automation/i })
-  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
-
-  await user.click(pauseButton)
-
-  expect(screen.getByLabelText('Auto-Prestige Autobuyer paused')).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume auto-prestige autobuyer automation/i })
-  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(resumeButton)
-
-  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
-})
-
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
@@ -1271,20 +1218,6 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
 })
 
-test('the Unlock Speed Bonus button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    prestige: { xp: 0, points: 9999, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeDisabled()
-})
-
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
   const user = userEvent.setup()
 
@@ -1305,22 +1238,6 @@ test('PP-spending buttons report how much of their cost the current balance cove
   const autoSpeedUpProgress = screen.getByRole('progressbar', { name: /auto speed up prestige point progress/i })
   expect(autoSpeedUpProgress).toHaveAttribute('aria-valuenow', '50')
   expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '100')
-})
-
-test('the Speed Bonus unlock is offered as soon as the PP Upgrades page itself is reachable, with no separate reveal gate (e.g. Auto Speed Up need not be bought first)', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
-
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-  expect(screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })).toBeEnabled()
 })
 
 test('an Unlock button appears on the PP Upgrades page for a tier whose autobuyer isn\'t unlocked yet, and buying it reveals the Smart button in its place', async () => {
@@ -1348,20 +1265,6 @@ test('an Unlock button appears on the PP Upgrades page for a tier whose autobuye
   expect(screen.queryByRole('button', { name: /unlock bytes's autobuyer/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
-})
-
-test('the Unlock button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /unlock bytes's autobuyer for 1 prestige point\b/i })).toBeDisabled()
 })
 
 test('a non-first tier\'s Unlock button appears the same way as the first tier\'s, with no special-casing between them', async () => {
@@ -1579,21 +1482,6 @@ test('the PP Upgrades tab NavDot goes dark once a tier is fully done and nothing
   expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
 })
 
-test('the Smart button stays disabled without enough Prestige Points', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    autobuyers: { tier01: 1 },
-    prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
-})
-
 test('an autobuyer on/paused indicator appears on the tier row once its autobuyer is unlocked, toggled from the PP Upgrades page', async () => {
   const user = userEvent.setup()
 
@@ -1667,34 +1555,6 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
   vi.useRealTimers()
 })
 
-test('a pause toggle appears beside a tier\'s tickspeed autobuyer "⚙ Active" badge on the PP Upgrades page, and pausing/resuming updates the badge and aria-pressed', async () => {
-  const user = userEvent.setup()
-
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    autobuyers: { tier01: 1 },
-    tierTickspeedAutobuyer: { tier01: true },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-
-  const pauseButton = screen.getByRole('button', { name: /pause bytes's tickspeed autobuyer/i })
-  expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
-
-  await user.click(pauseButton)
-
-  expect(screen.getByLabelText("Bytes's tickspeed autobuyer paused")).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume bytes's tickspeed autobuyer/i })
-  expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
-
-  await user.click(resumeButton)
-
-  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
-})
-
 test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it from upgrading automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
@@ -1745,13 +1605,11 @@ test('once every tier is smart and tickspeed-automated, a single notice replaces
 })
 
 test('a tier fully Smart but not yet tickspeed-automated does not trigger the "every tier" notice', async () => {
-  const tierIds = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
-
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: Object.fromEntries(tierIds.slice(0, 9).map(id => [id, 10])),
-    autobuyers: Object.fromEntries(tierIds.map(id => [id, 1])),
-    smartAutobuyer: Object.fromEntries(tierIds.map(id => [id, true])),
+    owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
+    autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
+    smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
     // tierTickspeedAutobuyer deliberately left unbought for every tier.
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
