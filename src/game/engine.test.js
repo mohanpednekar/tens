@@ -15,10 +15,12 @@ import {
   buyTierQuantity,
   consumeXpForLastTierTickspeed,
   createInitialGameState,
+  setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
   setAutoPrestigeEnabled,
   setAutoSpeedUpEnabled,
+  setTierTickspeedAutobuyerEnabled,
   formatAmount,
   formatCurrency,
   formatOfflineDuration,
@@ -122,6 +124,16 @@ const withSmartAutobuyer = (state, tierId, smart = true) => ({
 const withTierTickspeedAutobuyer = (state, tierId, active = true) => ({
   ...state,
   tierTickspeedAutobuyer: { ...state.tierTickspeedAutobuyer, [tierId]: active },
+})
+
+const withAutobuyerEnabled = (state, tierId, enabled) => ({
+  ...state,
+  autobuyersEnabled: { ...state.autobuyersEnabled, [tierId]: enabled },
+})
+
+const withTierTickspeedAutobuyerEnabled = (state, tierId, enabled) => ({
+  ...state,
+  tierTickspeedAutobuyerEnabled: { ...state.tierTickspeedAutobuyerEnabled, [tierId]: enabled },
 })
 
 const withAutoPrestige = (state, level = 1) => ({
@@ -238,6 +250,14 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
       expect(state.autobuyers[tier.id]).toBeNull()
+    })
+  })
+
+  it('initialises all tiers with autobuyersEnabled/tierTickspeedAutobuyerEnabled = true', () => {
+    const state = createInitialGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(state.autobuyersEnabled[tier.id]).toBe(true)
+      expect(state.tierTickspeedAutobuyerEnabled[tier.id]).toBe(true)
     })
   })
 
@@ -2038,6 +2058,96 @@ describe('tickGame', () => {
     expect(after.autoPrestige).toBe(2)
   })
 
+  it('does not purchase automatically while a tier\'s autobuyer is paused (autobuyersEnabled false), even when affordable', () => {
+    const state = withAutobuyerEnabled(
+      withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id),
+      tensTier.id,
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBe(0)
+    // Treated exactly like "never unlocked" for automation purposes — the attempt budget stops
+    // accumulating too, not just the purchase itself.
+    expect(after.autobuyerAttemptBudgets[tensTier.id]).toBe(0)
+  })
+
+  it('resumes purchasing automatically once a paused tier\'s autobuyer is re-enabled', () => {
+    const paused = withAutobuyerEnabled(
+      withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id),
+      tensTier.id,
+      false
+    )
+    const resumed = setAutobuyerEnabled(tensTier.id, true)(paused)
+    const after = tickGame(1)(resumed)
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('pausing one tier\'s autobuyer does not affect a different tier\'s autobuyer', () => {
+    const state = withAutobuyerEnabled(
+      withAutobuyer(
+        withAutobuyer(withMoney(withOwned(createInitialGameState(), thousandsTier.id, 1), 100000), tensTier.id),
+        thousandsTier.id
+      ),
+      tensTier.id,
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.owned[thousandsTier.id]).toBeGreaterThan(1)
+  })
+
+  it('does not upgrade a tier\'s own tickspeed multiplier automatically while its tier tickspeed autobuyer is paused (tierTickspeedAutobuyerEnabled false)', () => {
+    const tier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    const state = withTierTickspeedAutobuyerEnabled(
+      withTierTickspeedAutobuyer(
+        withResource(withOwned(createInitialGameState(), tier.id, 1), tier.id, 101),
+        tier.id
+      ),
+      tier.id,
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.tickspeedLevels[tier.id]).toBe(1)
+  })
+
+  it('resumes automatically upgrading a tier\'s own tickspeed multiplier once its tier tickspeed autobuyer is re-enabled', () => {
+    const tier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    const paused = withTierTickspeedAutobuyerEnabled(
+      withTierTickspeedAutobuyer(
+        withResource(withOwned(createInitialGameState(), tier.id, 1), tier.id, 101),
+        tier.id
+      ),
+      tier.id,
+      false
+    )
+    const resumed = setTierTickspeedAutobuyerEnabled(tier.id, true)(paused)
+    const after = tickGame(1)(resumed)
+    expect(after.tickspeedLevels[tier.id]).toBe(2)
+  })
+
+  it('pausing one tier\'s tier tickspeed autobuyer does not affect a different tier\'s', () => {
+    const tierA = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    const tierB = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 3]
+    const state = withTierTickspeedAutobuyerEnabled(
+      withTierTickspeedAutobuyer(
+        withTierTickspeedAutobuyer(
+          withResource(
+            withResource(withOwned(withOwned(createInitialGameState(), tierA.id, 1), tierB.id, 1), tierA.id, 101),
+            tierB.id,
+            1001
+          ),
+          tierA.id
+        ),
+        tierB.id
+      ),
+      tierA.id,
+      false
+    )
+    const after = tickGame(1)(state)
+    expect(after.tickspeedLevels[tierA.id]).toBe(1)
+    expect(after.tickspeedLevels[tierB.id]).toBe(2)
+  })
+
   it('never corrupts the second-to-last tier\'s owned/resources into NaN even once the last tier\'s XP multiplier overflows to Infinity', () => {
     // Regression test for MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS: without the safety floor in
     // getEffectiveTierTickSpeedSeconds, an overflowed (Infinity) multiplier divides the period down
@@ -2626,6 +2736,24 @@ describe('prestigeGame', () => {
     expect(after.tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
+  it('keeps a paused (disabled) per-tier autobuyer/tier tickspeed autobuyer permanently paused across prestige', () => {
+    const state = withTierTickspeedAutobuyerEnabled(
+      withAutobuyerEnabled(
+        withTierTickspeedAutobuyer(
+          withAutobuyer(withMoney(createInitialGameState(), GOOGOL), tensTier.id),
+          tensTier.id
+        ),
+        tensTier.id,
+        false
+      ),
+      tensTier.id,
+      false
+    )
+    const after = prestigeGame(state)
+    expect(after.autobuyersEnabled[tensTier.id]).toBe(false)
+    expect(after.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(false)
+  })
+
   it('keeps the Auto-Prestige level permanently across prestige', () => {
     const state = withAutoPrestige(withMoney(createInitialGameState(), GOOGOL), 3)
     const after = prestigeGame(state)
@@ -2897,6 +3025,21 @@ describe('speedUpGame', () => {
     expect(after.tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
+  it('keeps a paused (disabled) per-tier autobuyer/tier tickspeed autobuyer permanently paused', () => {
+    const state = withTierTickspeedAutobuyerEnabled(
+      withAutobuyerEnabled(
+        withTierTickspeedAutobuyer(withAutobuyer(eligibleState(), tensTier.id), tensTier.id),
+        tensTier.id,
+        false
+      ),
+      tensTier.id,
+      false
+    )
+    const after = speedUpGame(state)
+    expect(after.autobuyersEnabled[tensTier.id]).toBe(false)
+    expect(after.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(false)
+  })
+
   it('keeps the Auto-Prestige level permanently', () => {
     const state = withAutoPrestige(eligibleState(), 3)
     const after = speedUpGame(state)
@@ -3145,6 +3288,62 @@ describe('setAutoPrestigeAutobuyerEnabled', () => {
     const state = withMoney(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), GOOGOL)
     const after = setAutoPrestigeAutobuyerEnabled(false)(state)
     expect(after.autoPrestigeAutobuyerEnabled).toBe(false)
+  })
+})
+
+describe('setAutobuyerEnabled', () => {
+  it('toggles a tier\'s autobuyersEnabled once its autobuyer is unlocked', () => {
+    const state = withAutobuyer(createInitialGameState(), thousandsTier.id)
+    const paused = setAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(paused.autobuyersEnabled[thousandsTier.id]).toBe(false)
+    const resumed = setAutobuyerEnabled(thousandsTier.id, true)(paused)
+    expect(resumed.autobuyersEnabled[thousandsTier.id]).toBe(true)
+  })
+
+  it('returns the same state when this tier\'s autobuyer has not been unlocked yet', () => {
+    const state = createInitialGameState()
+    expect(setAutobuyerEnabled(thousandsTier.id, false)(state)).toBe(state)
+  })
+
+  it('only affects the targeted tier', () => {
+    const state = withAutobuyer(withAutobuyer(createInitialGameState(), tensTier.id), thousandsTier.id)
+    const after = setAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(after.autobuyersEnabled[thousandsTier.id]).toBe(false)
+    expect(after.autobuyersEnabled[tensTier.id]).toBe(true)
+  })
+
+  it('is not gated by isProductionFrozen — toggling a preference is always possible', () => {
+    const state = withMoney(withAutobuyer(createInitialGameState(), thousandsTier.id), GOOGOL)
+    const after = setAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(after.autobuyersEnabled[thousandsTier.id]).toBe(false)
+  })
+})
+
+describe('setTierTickspeedAutobuyerEnabled', () => {
+  it('toggles a tier\'s tierTickspeedAutobuyerEnabled once its tier tickspeed autobuyer is bought', () => {
+    const state = withTierTickspeedAutobuyer(createInitialGameState(), thousandsTier.id)
+    const paused = setTierTickspeedAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(paused.tierTickspeedAutobuyerEnabled[thousandsTier.id]).toBe(false)
+    const resumed = setTierTickspeedAutobuyerEnabled(thousandsTier.id, true)(paused)
+    expect(resumed.tierTickspeedAutobuyerEnabled[thousandsTier.id]).toBe(true)
+  })
+
+  it('returns the same state when this tier\'s tier tickspeed autobuyer has not been bought yet', () => {
+    const state = createInitialGameState()
+    expect(setTierTickspeedAutobuyerEnabled(thousandsTier.id, false)(state)).toBe(state)
+  })
+
+  it('only affects the targeted tier', () => {
+    const state = withTierTickspeedAutobuyer(withTierTickspeedAutobuyer(createInitialGameState(), tensTier.id), thousandsTier.id)
+    const after = setTierTickspeedAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(after.tierTickspeedAutobuyerEnabled[thousandsTier.id]).toBe(false)
+    expect(after.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(true)
+  })
+
+  it('is not gated by isProductionFrozen', () => {
+    const state = withMoney(withTierTickspeedAutobuyer(createInitialGameState(), thousandsTier.id), GOOGOL)
+    const after = setTierTickspeedAutobuyerEnabled(thousandsTier.id, false)(state)
+    expect(after.tierTickspeedAutobuyerEnabled[thousandsTier.id]).toBe(false)
   })
 })
 

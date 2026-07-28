@@ -272,6 +272,35 @@ describe('schema migration', () => {
     expect(loaded.autoPrestigeEnabled).toBe(false)
   })
 
+  it('backfills autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save that predates the per-tier pause/resume feature', () => {
+    const oldSave = {
+      resources: { Ones: 10 },
+      autobuyers: { [tensTier.id]: 1 },
+      tierTickspeedAutobuyer: { [tensTier.id]: true },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.autobuyersEnabled[tier.id]).toBe(true)
+      expect(loaded.tierTickspeedAutobuyerEnabled[tier.id]).toBe(true)
+    })
+  })
+
+  it('preserves an explicitly-paused (false) autobuyersEnabled/tierTickspeedAutobuyerEnabled value', () => {
+    const state = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 1 },
+      autobuyersEnabled: { ...createInitialGameState().autobuyersEnabled, [tensTier.id]: false },
+      tierTickspeedAutobuyer: { ...createInitialGameState().tierTickspeedAutobuyer, [tensTier.id]: true },
+      tierTickspeedAutobuyerEnabled: { ...createInitialGameState().tierTickspeedAutobuyerEnabled, [tensTier.id]: false },
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    expect(loaded.autobuyersEnabled[tensTier.id]).toBe(false)
+    expect(loaded.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(false)
+  })
+
   it('preserves a saved smartAutobuyer flag', () => {
     const state = {
       ...createInitialGameState(),

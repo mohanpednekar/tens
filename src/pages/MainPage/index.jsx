@@ -134,6 +134,7 @@ const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
     'name name production owned'
+    'autobuyer autobuyer autobuyer autobuyer'
     'upgrade upgrade buy buy'
     'details details details details';
   grid-template-columns: 1.4fr 0.6fr 1.3fr 0.7fr;
@@ -422,6 +423,23 @@ const TierNameTrigger = styled.div`
   grid-area: name;
   min-width: 0;
   cursor: pointer;
+`
+
+// Always-visible per-tier indicator (once its unit-buying autobuyer is unlocked, see
+// autobuyersEnabled/setAutobuyerEnabled in engine.js) for whether it's currently buying units
+// automatically or paused — previously there was no visible indicator for this at all once
+// bought, unlike the tier tickspeed autobuyer's own "⚙ Active" badge on the PP Upgrades page. A
+// sibling of TierNameTrigger (not nested inside it) occupying its own grid row that contributes
+// zero height when nothing renders into it — same convention as TierDetailsContent below — which
+// also means a click on its own toggle button never reaches TierNameTrigger's disclosure-toggle
+// handler at all (TierLine's own onClick above already skips a click whose target is inside a
+// <button>, and this row's button isn't a descendant of TierNameTrigger to begin with).
+const AutobuyerStatusRow = styled.div`
+  grid-area: autobuyer;
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.78em;
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -1447,6 +1465,11 @@ const MainPage = () => {
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
+          // Whether this tier's unit-buying autobuyer has ever been unlocked (see buyAutobuyerUnlock
+          // in engine.js) — the new on/paused indicator below only shows once that's true, same gate
+          // the PP Upgrades page's own per-tier controls use.
+          const isAutobuyerUnlocked = (state.autobuyers[tier.id] ?? null) !== null
+          const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
 
           return (
             <TierLine
@@ -1493,6 +1516,30 @@ const MainPage = () => {
                   )}
                 </TierName>
               </TierNameTrigger>
+              {isAutobuyerUnlocked && (
+                <AutobuyerStatusRow>
+                  <PpUpgradeBadge
+                    $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                    title={
+                      autobuyerEnabled
+                        ? "This tier's autobuyer is buying units automatically"
+                        : "This tier's autobuyer is currently paused — it will not buy units until resumed"
+                    }
+                  >
+                    {autobuyerEnabled ? '🤖 Active' : '🤖 Paused'}
+                  </PpUpgradeBadge>
+                  <PauseToggleButton
+                    aria-pressed={autobuyerEnabled}
+                    aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                    onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
+                    title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                    type="button"
+                    variant="ghost"
+                  >
+                    {autobuyerEnabled ? '⏸' : '▶'}
+                  </PauseToggleButton>
+                </AutobuyerStatusRow>
+              )}
               {isDetailsOpen && (
                 <TierDetailsContent id={detailsId}>
                   <ul>
@@ -1712,6 +1759,7 @@ const MainPage = () => {
                 const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
                 const isSmart = state.smartAutobuyer?.[tier.id] ?? false
                 const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
+                const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
                 if (isSmart && isTierTickspeedAutobuyerActive) return null
                 const unlockCost = getAutobuyerUnlockCost(tier.id)
                 const canUnlock = unlocked && !isFrozen && prestige.points >= unlockCost
@@ -1749,9 +1797,28 @@ const MainPage = () => {
                       </PpUpgradeButton>
                     )}
                     {isTierTickspeedAutobuyerActive ? (
-                      <PpUpgradeBadge $color="#4ade80" title="This tier's tickspeed multiplier now upgrades itself automatically whenever affordable">
-                        ⚙ Active
-                      </PpUpgradeBadge>
+                      <UpgradeRowControls>
+                        <PpUpgradeBadge
+                          $color={tierTickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                          title={
+                            tierTickspeedAutobuyerEnabled
+                              ? "This tier's tickspeed multiplier now upgrades itself automatically whenever affordable"
+                              : "This tier's tickspeed autobuyer is currently paused — it will not upgrade until resumed"
+                          }
+                        >
+                          {tierTickspeedAutobuyerEnabled ? '⚙ Active' : '⚙ Paused'}
+                        </PpUpgradeBadge>
+                        <PauseToggleButton
+                          aria-pressed={tierTickspeedAutobuyerEnabled}
+                          aria-label={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
+                          onClick={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tierTickspeedAutobuyerEnabled)}
+                          title={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
+                          type="button"
+                          variant="ghost"
+                        >
+                          {tierTickspeedAutobuyerEnabled ? '⏸' : '▶'}
+                        </PauseToggleButton>
+                      </UpgradeRowControls>
                     ) : (
                       <PpUpgradeButton
                         aria-label={`Make ${tier.name}'s tickspeed multiplier upgrade itself automatically for ${formatAmount(tierTickspeedAutobuyerCost)} Prestige Point${tierTickspeedAutobuyerCost === 1 ? '' : 's'}`}

@@ -81,6 +81,16 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: null,
   }), {}),
+  // Permanent per-tier flag, default true: whether this tier's unit-buying autobuyer (once
+  // unlocked — see autobuyers above) currently acts — split "unlocked" (autobuyers, permanent,
+  // unaffected) from "enabled" (this field, also permanent — pausing is a standing preference, not
+  // run-scoped state), same convention as the global automations' own *Enabled fields below (see
+  // setAutobuyerEnabled/tickGame). Meaningless (and a no-op to toggle) while autobuyers[tierId] is
+  // still null. The manual Buy button is unaffected either way.
+  autobuyersEnabled: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: true,
+  }), {}),
   // Per-tier level for that tier's own Money-funded tickspeed multiplier (see
   // getTickspeedProductionMultiplier/getEffectiveTierTickSpeedSeconds/buyTickspeedMultiplier) —
   // starts at 1 (baseline, no speed bonus) for every tier and is buyable from the moment the tier
@@ -117,6 +127,16 @@ export const createInitialGameState = () => ({
   tierTickspeedAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
     ...acc,
     [tier.id]: false,
+  }), {}),
+  // Permanent per-tier flag, default true: whether this tier's tier tickspeed autobuyer (once
+  // bought — see tierTickspeedAutobuyer above) currently acts — split "unlocked" from "enabled" the
+  // same way autobuyersEnabled splits from autobuyers above (see
+  // setTierTickspeedAutobuyerEnabled/tickGame). Meaningless (and a no-op to toggle) while
+  // tierTickspeedAutobuyer[tierId] is still false. The manual tickspeed-multiplier button is
+  // unaffected either way.
+  tierTickspeedAutobuyerEnabled: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: true,
   }), {}),
   // Fractional seconds accumulated per tier toward its next production batch, since each tier
   // only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds rather than
@@ -743,7 +763,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // so a higher tier always gets first claim on limited funds.
   const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? null
-    if (level === null || !isTierUnlocked(s)(tier)) return s
+    // Paused (see setAutobuyerEnabled) is treated exactly like "never unlocked" here — the
+    // attempt-budget accumulation below is skipped entirely too, so a paused stretch banks no
+    // attempts, same as tickGame's other paused automations.
+    if (level === null || !isTierUnlocked(s)(tier) || !(s.autobuyersEnabled?.[tier.id] ?? true)) return s
     let result = s
     let budget = (s.autobuyerAttemptBudgets[tier.id] ?? 0) + elapsedSeconds
     // The epsilon tolerance absorbs the same repeated-fractional-elapsedSeconds floating-point
@@ -841,7 +864,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // consumeXpForLastTierTickspeed automatically instead, spending the tier's entire current XP
   // balance each tick it's eligible, same as the manual "🧬 {XP} XP" button always does.
   const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => {
-    if (!s.tierTickspeedAutobuyer?.[tier.id]) return s
+    // Gated on tierTickspeedAutobuyerEnabled (see setTierTickspeedAutobuyerEnabled) — paused
+    // behaves exactly as if tierTickspeedAutobuyer were still false, for automation purposes only.
+    if (!s.tierTickspeedAutobuyer?.[tier.id] || !(s.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true)) return s
     if (tier.id === getLastTierId() && isLastTierTickspeedXpUnlocked(s)) {
       return consumeXpForLastTierTickspeed(s.prestige.xp)(s)
     }
@@ -1021,6 +1046,17 @@ export const buyAutobuyerUnlock = tierId => state => {
   }
 }
 
+// Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
+// a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
+// should always be possible), and independently permanent from the autobuyer's own unlock (never
+// reset by Prestige/Speed Up — see prestigeGame/speedUpGame). A no-op if this tier's autobuyer
+// hasn't been unlocked at all yet (autobuyers[tierId] is still null) — nothing to enable/disable
+// before that. The player can always still manually Buy regardless of this flag.
+export const setAutobuyerEnabled = (tierId, enabled) => state => {
+  if ((state.autobuyers[tierId] ?? null) === null) return state
+  return { ...state, autobuyersEnabled: { ...state.autobuyersEnabled, [tierId]: !!enabled } }
+}
+
 // Upgrades a tier's own tickspeed multiplier from level N to N+1, spending the tier's own
 // resource — enabled by default (needs no PP prerequisite and no autobuyer unlock at all, see
 // tickspeedLevels in createInitialGameState); only the *automatic* self-upgrading of this level
@@ -1114,6 +1150,15 @@ export const buyTierTickspeedAutobuyer = tierId => state => {
     prestige: { ...state.prestige, points: state.prestige.points - cost },
     tierTickspeedAutobuyer: { ...state.tierTickspeedAutobuyer, [tierId]: true },
   }
+}
+
+// Toggles whether a tier's own tickspeed multiplier currently self-upgrades automatically (see
+// tierTickspeedAutobuyerEnabled/tickGame) — same unconditional, permanent-preference convention as
+// setAutobuyerEnabled above. A no-op if this tier's tier tickspeed autobuyer hasn't been bought at
+// all yet. The manual tickspeed-multiplier button is unaffected either way.
+export const setTierTickspeedAutobuyerEnabled = (tierId, enabled) => state => {
+  if (!state.tierTickspeedAutobuyer?.[tierId]) return state
+  return { ...state, tierTickspeedAutobuyerEnabled: { ...state.tierTickspeedAutobuyerEnabled, [tierId]: !!enabled } }
 }
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) Auto-Prestige, always by spending
@@ -1240,8 +1285,13 @@ export const prestigeGame = state => {
   return {
     ...initial,
     autobuyers: state.autobuyers ?? initial.autobuyers,
+    // Same permanence as the four global automations' own "enabled" flags below — a paused
+    // preference should survive a Prestige exactly like the autobuyer unlock itself does (see
+    // setAutobuyerEnabled/setTierTickspeedAutobuyerEnabled).
+    autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
+    tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     // The four automations' "enabled" (pause/resume) flags are just as permanent as their parent
     // "unlocked" flags above — a paused preference should survive a Prestige exactly like the
@@ -1315,8 +1365,11 @@ export const speedUpGame = state => {
   return {
     ...initial,
     autobuyers: state.autobuyers ?? initial.autobuyers,
+    // Same permanence as prestigeGame gives these two "enabled" flags — see there.
+    autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
+    tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
     // Same permanence as prestigeGame gives these four "enabled" flags above — see there.
     autoPrestigeEnabled: state.autoPrestigeEnabled ?? initial.autoPrestigeEnabled,
