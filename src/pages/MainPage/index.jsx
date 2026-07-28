@@ -1415,12 +1415,15 @@ const MainPage = () => {
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
-          // title for assistive tech. The level+progress ("Lv.4 (5/8)" — the tier's current level
-          // and how many of that level's pieces are already bought) sits inside ButtonIcon
-          // alongside the 🛒 glyph rather than the centered ButtonLabel, so it's pinned immediately
-          // next to the icon and lines up in a column across tier rows regardless of the cost
-          // string's length.
-          const buyLevelQuantityText = `Lv.${formatAmount(tierLevel)} (${formatAmount(doneInBlock)}/${purchaseBlockSize})`
+          // title for assistive tech. The block progress ("5+3/8" — how many of the current
+          // level's pieces are already bought, plus how many more are affordable right now, over
+          // the block size — mirroring the pre-level design's `purchased+affordable` convention,
+          // see docs/DESIGN_HISTORY.md) sits inside ButtonIcon alongside the 🛒 glyph rather than
+          // the centered ButtonLabel, so it's pinned immediately next to the icon and lines up in
+          // a column across tier rows regardless of the cost string's length. The level number
+          // itself isn't shown here (still available via aria-label and the row's Details
+          // disclosure) — this is purely "how close is the current level."
+          const buyLevelQuantityText = `${formatAmount(doneInBlock)}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${formatAmount(purchaseBlockSize)}`
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
