@@ -2072,7 +2072,7 @@ already cover the genuinely useful items on that checklist.
   `setInterval` several times synchronously within the same call stack, which React 18 batches into a
   single render), and **unmount the rendered component before calling `vi.useRealTimers()`**, not after —
   see `docs/DESIGN_HISTORY.md` for the real regression this ordering avoids.
-- `yarn test` is green (586 tests). All four test files assert against the current tier/resource id scheme
+- `yarn test` is green (590 tests). All four test files assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
   behind by prior renames (see `docs/DESIGN_HISTORY.md`). A legacy save's `resources.Ones` balance is
@@ -2093,7 +2093,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (540) is unaffected by anything under `e2e/`.
+  (590) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

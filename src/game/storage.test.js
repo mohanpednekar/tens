@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createInitialGameState } from './engine'
-import { MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
+const thousandsTier = TIER_DEFINITIONS[1]
 
 beforeEach(() => {
   localStorage.clear()
@@ -189,6 +190,58 @@ describe('schema migration', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.purchased[tensTier.id]).toBe(7)
+  })
+
+  it('derives purchaseLevels/purchaseLevelProgress from a legacy purchased count on a save that predates those fields', () => {
+    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
+      ...createInitialGameState(),
+      purchased: { ...createInitialGameState().purchased, [tensTier.id]: 19 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    // 19 purchased at the default block size of 8: two full levels (16) completed, 3 left over —
+    // level 3 (1-indexed), progress 3.
+    expect(loaded.purchaseLevels[tensTier.id]).toBe(3)
+    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(3)
+  })
+
+  it('derives level 1 / progress 0 from a legacy purchased count of 0', () => {
+    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(loaded.purchaseLevels[tier.id]).toBe(1)
+      expect(loaded.purchaseLevelProgress[tier.id]).toBe(0)
+    })
+  })
+
+  it('derives exactly level 2 / progress 0 from a legacy purchased count equal to one full block size', () => {
+    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
+      ...createInitialGameState(),
+      purchased: { ...createInitialGameState().purchased, [tensTier.id]: DEFAULT_PURCHASE_BLOCK_SIZE },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.purchaseLevels[tensTier.id]).toBe(2)
+    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(0)
+  })
+
+  it('prefers an explicit purchaseLevels/purchaseLevelProgress value over deriving one from purchased, per tier', () => {
+    const base = createInitialGameState()
+    const oldSave = {
+      ...base,
+      purchased: { ...base.purchased, [tensTier.id]: 19, [thousandsTier.id]: 19 },
+      // Only tensTier carries an explicit (current-schema) value — thousandsTier has none, so it
+      // must still be derived from its own purchased count instead of falling back to a default.
+      purchaseLevels: { [tensTier.id]: 99 },
+      purchaseLevelProgress: { [tensTier.id]: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.purchaseLevels[tensTier.id]).toBe(99)
+    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(1)
+    expect(loaded.purchaseLevels[thousandsTier.id]).toBe(3)
+    expect(loaded.purchaseLevelProgress[thousandsTier.id]).toBe(3)
   })
 
   it('migrates a legacy save\'s prestige.pp into prestige.xp, and level into count', () => {
