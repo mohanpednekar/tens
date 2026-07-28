@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - Speed Up's stacking production multiplier (`speedUpCount`) now resets to 0 on Prestige instead of carrying over permanently — it must be rebuilt within each Prestige cycle. The Auto Speed Up automation toggle itself is unaffected and still carries over.
 - The Buy button's visible block-progress text drops the `Lv.` prefix and now shows `{progress}+{affordable}/{blockSize}` (e.g. `5+3/8`) instead of `Lv.{level} ({progress}/{blockSize})`.
+- Once the last tier's XP-funded tickspeed is unlocked, its existing tier tickspeed autobuyer (if bought) now automatically consumes XP each tick instead of sitting inert — no manual click needed. This repurposes the existing toggle: a player who bought it earlier for its original Money-funded purpose will start getting automatic, periodic resets of every other tier's progress once the last tier crosses the XP-unlock threshold.
 
 ### Fixed
 

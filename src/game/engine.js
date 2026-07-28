@@ -835,9 +835,18 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // rate-accumulating budgets above, this is edge-triggered on affordability rather than a banked
   // rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see TICK_RATE_MS)
   // only makes it react sooner after becoming affordable, not more often per real second.
-  const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => (
-    s.tierTickspeedAutobuyer?.[tier.id] ? buyTickspeedMultiplier(tier.id)(s) : s
-  ), producedState)
+  // For the last tier specifically, once isLastTierTickspeedXpUnlocked holds, its own
+  // buyTickspeedMultiplier call becomes a permanent no-op (see "The last tier's XP-funded
+  // tickspeed" in CLAUDE.md) — this same bought flag is repurposed to drive
+  // consumeXpForLastTierTickspeed automatically instead, spending the tier's entire current XP
+  // balance each tick it's eligible, same as the manual "🧬 {XP} XP" button always does.
+  const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => {
+    if (!s.tierTickspeedAutobuyer?.[tier.id]) return s
+    if (tier.id === getLastTierId() && isLastTierTickspeedXpUnlocked(s)) {
+      return consumeXpForLastTierTickspeed(s.prestige.xp)(s)
+    }
+    return buyTickspeedMultiplier(tier.id)(s)
+  }, producedState)
 
   // If the global tickspeed multiplier's autobuyer is bought (see buyTickspeedAutobuyer), upgrade
   // it automatically the instant it's affordable — no manual click needed. buyGlobalTickspeedMultiplier

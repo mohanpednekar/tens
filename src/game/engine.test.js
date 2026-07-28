@@ -1797,6 +1797,57 @@ describe('tickGame', () => {
     expect(after.tickspeedLevels[lastTier.id]).toBe(1)
   })
 
+  it('automatically consumes XP for the last tier once it is XP-unlocked and its tier tickspeed autobuyer is bought, resetting every other tier and Money the same way a manual consumption does', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    let state = createInitialGameState()
+    state = withLastTierTickspeedXpUnlocked(state)
+    state = withTierTickspeedAutobuyer(state, lastTier.id)
+    state = withOwned(state, thousandsTier.id, 30)
+    state = withResource(state, thousandsTier.id, 30)
+    state = withMoney(state, 5) // stays within the same milestone exponent as the default watermark, so checkMilestones doesn't grant incidental XP
+    state = withXP(state, 50)
+
+    const after = tickGame(1)(state)
+    expect(after.lastTierXpConsumed).toBe(50)
+    expect(after.prestige.xp).toBe(0)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+    expect(after.resources[thousandsTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(0)
+  })
+
+  it('does not auto-consume XP for the last tier when unspent XP is below the minimum required consumption', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    let state = createInitialGameState()
+    state = withLastTierTickspeedXpUnlocked(state)
+    state = withTierTickspeedAutobuyer(state, lastTier.id)
+    state = withLastTierXpConsumed(state, 100) // min consumption is ceil(0.1 * 100) = 10
+    state = withOwned(state, thousandsTier.id, 30)
+    state = withResource(state, thousandsTier.id, 30)
+    state = withXP(state, 5) // below the 10 XP minimum
+
+    const after = tickGame(1)(state)
+    expect(after.lastTierXpConsumed).toBe(100)
+    expect(after.prestige.xp).toBe(5)
+    expect(after.owned[thousandsTier.id]).toBe(30)
+    expect(after.resources[thousandsTier.id]).toBe(30)
+  })
+
+  it('regression: before the last tier is XP-unlocked, its tier tickspeed autobuyer still drives the ordinary buyTickspeedMultiplier auto-upgrade, untouched by the XP-consumption branch', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    let state = createInitialGameState()
+    state = withOwned(state, lastTier.id, 1) // below the block-size threshold, so not XP-unlocked
+    state = withResource(state, lastTier.id, 11)
+    state = withTierTickspeedAutobuyer(state, lastTier.id)
+    state = withXP(state, 50)
+    state = withMoney(state, 0)
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
+
+    const after = tickGame(1)(state)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+    expect(after.prestige.xp).toBe(50)
+    expect(after.lastTierXpConsumed).toBe(0)
+  })
+
   it('does not scale a single delivery\'s amount by the tickspeed multiplier — it speeds up delivery frequency instead', () => {
     // Level 3 → ×1.21 (see getTickspeedProductionMultiplier), so this tier's effective tickspeed
     // period shrinks from the base 1s to 1/1.21s. Passing exactly that shrunk period as
