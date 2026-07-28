@@ -913,7 +913,13 @@ const MainPage = () => {
   const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
   const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
   const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevel / speedUpRequirement) * 100))
+  // purchaseLevels/getSpeedUpRequirement are internally 1-indexed so that "level 1" means "no
+  // completed block yet" (see CLAUDE.md's "purchase block size and tier levels"). Displayed to the
+  // player, that reads as an off-by-one — this subtracts 1 so the visible "Lv." instead counts
+  // completed blocks directly: Lv.1 after the first 8 purchases, Lv.2 after 16, etc.
+  const lastTierLevelDisplay = lastTierLevel - 1
+  const speedUpRequirementDisplay = speedUpRequirement - 1
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevelDisplay / speedUpRequirementDisplay) * 100))
   const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
@@ -1247,7 +1253,7 @@ const MainPage = () => {
                 <li>
                   Speed Up: {speedUpCount > 0
                     ? `×${formatRate(speedUpMultiplier)} production speed from ${speedUpCount} activation${speedUpCount === 1 ? '' : 's'}`
-                    : `not yet activated (reach level ${formatAmount(speedUpRequirement)} on ${lastTier.name})`}
+                    : `not yet activated (reach level ${formatAmount(speedUpRequirementDisplay)} on ${lastTier.name})`}
                 </li>
               )}
               {globalTickspeedCardEverRevealed && (
@@ -1528,16 +1534,6 @@ const MainPage = () => {
                   >
                     {autobuyerEnabled ? '🤖 Active' : '🤖 Paused'}
                   </PpUpgradeBadge>
-                  <PauseToggleButton
-                    aria-pressed={autobuyerEnabled}
-                    aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                    onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
-                    title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                    type="button"
-                    variant="ghost"
-                  >
-                    {autobuyerEnabled ? '⏸' : '▶'}
-                  </PauseToggleButton>
                 </AutobuyerStatusRow>
               )}
               {isDetailsOpen && (
@@ -1640,14 +1636,14 @@ const MainPage = () => {
           <InfoDetails>
             <summary><h2>Speed Up</h2></summary>
             <MutedText id="speed-up-description">
-              Reach level {speedUpRequirement} on {lastTier.name} to trigger a Speed Up: resets your
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
               tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
               doubles production speed. Each Speed Up needs one more level than the last.
             </MutedText>
           </InfoDetails>
           <SpeedUpButton
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirement}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -1658,7 +1654,7 @@ const MainPage = () => {
             $pulse={canSpeedUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -1757,6 +1753,7 @@ const MainPage = () => {
                 )
                 if (!unlocked && !previousTierHasAnyAutobuyerUpgrade) return null
                 const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
+                const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
                 const isSmart = state.smartAutobuyer?.[tier.id] ?? false
                 const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
                 const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
@@ -1796,6 +1793,30 @@ const MainPage = () => {
                         />
                       </PpUpgradeButton>
                     )}
+                    {!isAutobuyerLocked && (
+                      <UpgradeRowControls>
+                        <PpUpgradeBadge
+                          $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                          title={
+                            autobuyerEnabled
+                              ? "This tier's autobuyer is buying units automatically"
+                              : "This tier's autobuyer is currently paused — it will not buy units until resumed"
+                          }
+                        >
+                          {autobuyerEnabled ? '🤖 Active' : '🤖 Paused'}
+                        </PpUpgradeBadge>
+                        <PauseToggleButton
+                          aria-pressed={autobuyerEnabled}
+                          aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                          onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
+                          title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                          type="button"
+                          variant="ghost"
+                        >
+                          {autobuyerEnabled ? '⏸' : '▶'}
+                        </PauseToggleButton>
+                      </UpgradeRowControls>
+                    )}
                     {isTierTickspeedAutobuyerActive ? (
                       <UpgradeRowControls>
                         <PpUpgradeBadge
@@ -1831,7 +1852,7 @@ const MainPage = () => {
                         $progressColor="#38bdf8"
                       >
                         <ButtonIcon>⚙ </ButtonIcon>
-                        <ButtonLabel>Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
+                        <ButtonLabel>Auto-Tickspeed for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} tickspeed autobuyer Prestige Point progress`}

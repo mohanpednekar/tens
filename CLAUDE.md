@@ -701,14 +701,15 @@ this slot back to the normal Money-funded button until the player buys back up t
 tier's XP-funded tickspeed" below for why.
 
 **Unit autobuyer status (Game view, per tier).** Once a tier's unit-buying autobuyer is unlocked (see
-`autobuyers`/`buyAutobuyerUnlock`), its row shows an always-visible `AutobuyerStatusRow` — a small
-badge (`🤖 Active`/`🤖 Paused`) plus a secondary `PauseToggleButton` — in its own zero-height-when-absent
-grid row (`grid-area: autobuyer`, a sibling of `TierNameTrigger`, not nested inside it, so a click on
-its toggle button never reaches the name's disclosure-toggle handler — `TierLine`'s own `onClick`
-already skips a click whose target is inside a `<button>`). Before this existed, an unlocked unit
-autobuyer had no visible indicator at all once the Unlock button disappeared; this is that indicator,
-distinct from the tier tickspeed autobuyer's own pause toggle on the PP Upgrades page (see "Pause/resume
-for per-tier automations" below for the underlying `autobuyersEnabled`/`setAutobuyerEnabled`).
+`autobuyers`/`buyAutobuyerUnlock`), its row shows an always-visible `AutobuyerStatusRow` — a small,
+read-only badge (`🤖 Active`/`🤖 Paused`) — in its own zero-height-when-absent grid row
+(`grid-area: autobuyer`, a sibling of `TierNameTrigger`, not nested inside it). Before this existed, an
+unlocked unit autobuyer had no visible indicator at all once the Unlock button disappeared; this is
+that indicator. It carries no pause/resume control of its own — the Game view is meant to stay
+uncluttered, so the actual `PauseToggleButton` for this same `autobuyersEnabled`/`setAutobuyerEnabled`
+state lives on the PP Upgrades page instead (in the Tier Autobuyers category, alongside the tier
+tickspeed autobuyer's own pause toggle — see "PP Upgrades view" below); toggling it there updates this
+badge immediately.
 
 **PP Upgrades view.** A `UpgradesList` groups every purchase into a small number of labeled
 **categories** rather than one flat list — each category is a single `UpgradeCategory`
@@ -718,11 +719,17 @@ between consecutive rows), rather than the older one-`StatCard`-per-row layout: 
 purchases costs one card's worth of chrome, not *N*. Three categories, in order:
 1. **Tier Autobuyers** — per unlocked tier, up to three independent controls: **Unlock** (blue, 🤖,
    `actions.buyAutobuyerUnlock`, cost `getAutobuyerUnlockCost` — every tier, including `tier01`, unlocks
-   identically) shows only while the tier's autobuyer is still locked. Alongside it (shown regardless of
-   Unlock's state — see "Prestige Points, autobuyer unlock, and the tickspeed multiplier" below) is the
-   **tier tickspeed autobuyer** (⚙, `actions.buyTierTickspeedAutobuyer`, cost
+   identically) shows only while the tier's autobuyer is still locked; once bought, that same slot shows
+   a persistent `🤖 Active`/`🤖 Paused` badge plus a secondary `PauseToggleButton`
+   (`aria-pressed`-driven, same convention as the tier tickspeed autobuyer's own toggle below) for
+   `autobuyersEnabled`/`setAutobuyerEnabled` — this is the only control for that state; the matching
+   badge on the tier's Game-view row (see "Unit autobuyer status" above) is read-only. Alongside it
+   (shown regardless of Unlock's state — see "Prestige Points, autobuyer unlock, and the tickspeed
+   multiplier" below) is the **tier tickspeed autobuyer** (⚙, `actions.buyTierTickspeedAutobuyer`, cost
    `getTierTickspeedAutobuyerCost` — 2x the unlock cost — automates that tier's own Money-funded
-   tickspeed multiplier, which is itself buyable by default with no PP gate at all). **Smart** (🧠,
+   tickspeed multiplier, which is itself buyable by default with no PP gate at all; its buy button reads
+   "⚙ Auto-Tickspeed for {cost} PP" — distinct wording from the bare "Auto" this used to say, which read
+   as ambiguous next to Unlock/Smart's own labels). **Smart** (🧠,
    `actions.buySmartAutobuyer`, cost `getSmartAutobuyerCost` — 10x the unlock cost) only appears once
    Unlock is bought, since it specifically optimizes unit-buying autobuyer behavior. Each shows as a
    button until bought, then a persistent badge. Once the tier tickspeed autobuyer is bought, its badge
@@ -1479,10 +1486,19 @@ Speed Up is bought.
 `MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered after `TierList` and
 before `PrestigeCard`. Gated on `speedUpEverRevealed` (see "MainPage reference" above). The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — the last tier's actual
-current level against `getSpeedUpRequirement(speedUpCount)`, not a percentage, so the player
-sees concretely what's still needed; the on-button `$progress` fill still uses the percentage
-(`speedUpProgressPercent`) for its own calculation. Enabled once the requirement is met and disabled
+larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
+player sees concretely what's still needed. `state.purchaseLevels[lastTier.id]` and
+`getSpeedUpRequirement(speedUpCount)` are both internally 1-indexed so that "level 1" means "no
+completed block yet" (see "The (configurable) purchase block size and tier levels" above); displayed
+raw, that reads as an off-by-one to the player, so `MainPage` subtracts 1 from both
+(`lastTierLevelDisplay`/`speedUpRequirementDisplay`) before rendering — the visible "Lv." and the
+requirement sentence/`aria-label` ("Reach level N…"/"requires … level N") instead count completed
+blocks directly: Lv.1 once the last tier finishes its first block (8 purchases at the default block
+size), Lv.2 after two, and the first Speed Up requires reaching (displayed) level 1. The underlying
+`purchaseLevels`/`getSpeedUpRequirement` values driving eligibility (`canSpeedUp`) are unchanged — only
+the two numbers rendered to the player are shifted. The on-button `$progress` fill (`speedUpProgressPercent`)
+is computed from these same displayed values, not the raw ones, so it reads 0% before any block is
+completed rather than already partway filled. Enabled once the requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoSpeedUp` bought, a static "⏩ Auto Speed Up active" note shows (the purchase button itself
 lives on the PP Upgrades page).
