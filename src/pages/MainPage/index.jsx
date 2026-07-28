@@ -251,7 +251,7 @@ const HudGoldText = styled.b`
 // keeps rendering its own generated class alongside MoneyHero's, so StickyBalances' existing
 // `${Money} { ... }` compressed-layout override below still matches this element too.
 const MoneyHero = styled(Money)`
-  font-family: ${props => props.theme.font.display};
+  font-family: ${props => props.theme.font.body};
   font-size: ${props => props.theme.type.scale.hero.size};
   line-height: ${props => props.theme.type.scale.hero.lineHeight};
   padding: 0;

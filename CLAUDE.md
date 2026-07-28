@@ -547,13 +547,17 @@ Strict three-layer separation:
   props are set, so the card stays a plain, non-interactive display exactly as before. The Money display
   card never gets `$actionable` — only the PP display can trigger Prestige.
 - **Money hero + Googol progress bar.** The Money `CenteredCard` renders a `MoneyHero`
-  (`styled(Money)`, sized at `theme.type.scale.hero` in `theme.font.display`) rather than plain `Money`,
-  and carries `$raised` (the `surfaceRaised` elevation tier `StatCard` already supports) so it reads as
-  the HUD's dominant, elevated element — Prestige Points, by contrast, render in a `PpHeaderCard`
-  (`styled(CenteredCard)` with `box-shadow: none` and tighter padding), a deliberately flattened,
-  visually subordinate "header line" beneath it rather than a second card of equal weight; the two
-  sit in `StickyBalances`' now-tighter `0.6rem` uncompressed gap (was `0.85rem`) so they read as one
-  connected HUD block rather than two separate cards. Directly beneath the hero figure (suppressed
+  (`styled(Money)`, sized at `theme.type.scale.hero`) rather than plain `Money`, and carries `$raised`
+  (the `surfaceRaised` elevation tier `StatCard` already supports) so it reads as the HUD's dominant,
+  elevated element — Prestige Points, by contrast, render in a `PpHeaderCard` (`styled(CenteredCard)`
+  with `box-shadow: none` and tighter padding), a deliberately flattened, visually subordinate "header
+  line" beneath it rather than a second card of equal weight; the two sit in `StickyBalances`'
+  now-tighter `0.6rem` uncompressed gap (was `0.85rem`) so they read as one connected HUD block rather
+  than two separate cards. `MoneyHero`'s `font-family` is `theme.font.body` (Inter), not
+  `theme.font.display` (Space Grotesk, used for the page wordmark/headings) — an earlier version used
+  the display font here, but its more stylized, geometric letterforms read worse for a large numeric
+  balance than Inter's tabular figures; the hero treatment is about size/elevation, not typeface.
+  Directly beneath the hero figure (suppressed
   while `balancesCompressed`, since the compact sticky bar has no room for it), a `GoogolProgressTrack`/
   `GoogolProgressFill` bar shows progress toward Prestige becoming available, reusing the same
   `prestigeProgressPercent` (`getPrestigeProgressPercent(state.resources[MONEY_ID])`) `PrestigeCard`'s
