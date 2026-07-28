@@ -569,7 +569,7 @@ test('the Speed Up panel appears once the last tier unlocks, with the button dis
   render(<App />)
 
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeDisabled()
 })
 
 test('the Speed Up button is enabled once the last tier reaches the required level', () => {
@@ -581,10 +581,10 @@ test('the Speed Up button is enabled once the last tier reaches the required lev
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeEnabled()
 })
 
-test('the second Speed Up requires one more level than the first, not the same level 2', () => {
+test('the second Speed Up requires one more level than the first, not the same level 1', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
@@ -594,9 +594,9 @@ test('the second Speed Up requires one more level than the first, not the same l
 
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })
+  const button = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /speed up \(requires ronnabytes level 2\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /speed up \(requires ronnabytes level 1\b/i })).not.toBeInTheDocument()
 })
 
 test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
@@ -609,12 +609,12 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
 
   render(<App />)
 
-  // Third activation requires the last tier to reach level 4 (Lv.2/4 = 50%) and would raise the
+  // Third activation requires the last tier to reach level 3 (Lv.1/3) and would raise the
   // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires ronnabytes level 4\) — doubles production speed to ×8/i,
+    name: /speed up \(requires ronnabytes level 3\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.2/4')
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/3')
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
@@ -628,7 +628,7 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
 
   render(<App />)
 
-  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })
+  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })
   expect(speedUpButton).toBeEnabled()
 
   await user.click(speedUpButton)
@@ -636,10 +636,10 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Speed Up resets owned counts too, so the last tier is no longer unlocked — but since the
   // panel was already revealed once, it stays visible (in a disabled state) rather than
-  // disappearing again until the player climbs back up to it. The next cycle now requires level 3
+  // disappearing again until the player climbs back up to it. The next cycle now requires level 2
   // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
 })
 
 test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
@@ -658,7 +658,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i }))
+  await user.click(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i }))
 
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -676,7 +676,7 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeDisabled()
 })
 
 test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
@@ -741,7 +741,7 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
 
   await user.click(autoSpeedUpButton)
 
-  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -775,7 +775,7 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
 
   await user.click(tickspeedAutobuyerButton)
 
-  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Tickspeed Autobuyer active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable tickspeed autobuyer/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -798,13 +798,13 @@ test('a pause toggle appears beside the Tickspeed Autobuyer badge once bought, a
 
   await user.click(pauseButton)
 
-  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/paused/i)
+  expect(screen.getByLabelText('Tickspeed Autobuyer paused')).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume tickspeed autobuyer automation/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
 
-  expect(screen.getByLabelText(/^tickspeed autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Tickspeed Autobuyer active')).toBeInTheDocument()
 })
 
 test('the Enable Tickspeed Autobuyer button stays disabled without enough Prestige Points', async () => {
@@ -850,7 +850,7 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
 })
 
@@ -872,13 +872,13 @@ test('a pause toggle appears beside the Auto Speed Up badge once bought, and pau
 
   await user.click(pauseButton)
 
-  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/paused/i)
+  expect(screen.getByLabelText('Auto Speed Up paused')).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume auto speed up automation/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
 
-  expect(screen.getByLabelText(/^auto speed up upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /pause auto speed up automation/i })).toHaveAttribute('aria-pressed', 'true')
 })
 
@@ -898,7 +898,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   // Still eligible (purchaseLevels.tier10 untouched) since Auto Speed Up starts paused.
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
@@ -907,9 +907,9 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 3.
+  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 2.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 3/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -1008,7 +1008,7 @@ test('the global tickspeed bonus rounds to a whole percent once it reaches 100%,
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+90\.44%/i)
 })
 
-test('the global tickspeed bonus crosses 100% right at the next milestone', () => {
+test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses +100% at a milestone', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 40,
@@ -1016,11 +1016,12 @@ test('the global tickspeed bonus crosses 100% right at the next milestone', () =
 
   render(<App />)
 
-  // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses 100%, so
-  // it's shown as a whole percent instead of 2 decimal places.
+  // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses +100%
+  // (×2.0948), so it's shown as a "2.09x" multiplier (formatBonusOrMultiplier) instead of a
+  // percentage.
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
-  expect(panel).toHaveTextContent(/\+109%/i)
-  expect(panel).not.toHaveTextContent(/\+109\.\d/i)
+  expect(panel).toHaveTextContent(/2\.09x/i)
+  expect(panel).not.toHaveTextContent(/109%/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
@@ -1104,13 +1105,14 @@ test('a pause toggle appears beside the Auto-Prestige level once activated, and 
 
   await user.click(pauseButton)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/paused/i)
+  expect(screen.getByLabelText('Auto-Prestige paused')).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume auto-prestige automation/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).not.toHaveTextContent(/paused/i)
+  expect(screen.queryByLabelText('Auto-Prestige paused')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Auto-Prestige active')).toBeInTheDocument()
 })
 
 test('no pause toggle appears for Auto-Prestige before it has ever been activated', async () => {
@@ -1178,7 +1180,7 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
 
   await user.click(unlockButton)
 
-  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1214,17 +1216,17 @@ test('a pause toggle appears beside the Auto-Prestige Autobuyer badge once bough
 
   const pauseButton = screen.getByRole('button', { name: /pause auto-prestige autobuyer automation/i })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
 
   await user.click(pauseButton)
 
-  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/paused/i)
+  expect(screen.getByLabelText('Auto-Prestige Autobuyer paused')).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume auto-prestige autobuyer automation/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
 
-  expect(screen.getByLabelText(/^auto-prestige autobuyer upgrade$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
 })
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {
@@ -1263,7 +1265,9 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   await user.click(unlockButton)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('500 PP')
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('+500% production speed')
+  // 500 unspent PP → ×6 production speed (1 + 0.01×500) — at/above +100%, this shows as a "6x"
+  // multiplier (formatBonusOrMultiplier) rather than a percentage.
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('6x production speed')
   expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
 })
 
@@ -1463,7 +1467,7 @@ test('a tier tickspeed autobuyer button appears alongside Smart once a tier is u
   // Bought: badge replaces the button, Smart's own button is still there (independent, still
   // pending), and the row itself hasn't disappeared.
   expect(screen.queryByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1492,7 +1496,7 @@ test('the tier tickspeed autobuyer button is buyable on the PP Upgrades page eve
   await user.click(tickspeedAutoButton)
 
   expect(screen.queryByRole('button', { name: /make bytes's tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
   // Unlock is still there, untouched by the tickspeed-autobuyer purchase.
   expect(screen.getByRole('button', { name: /unlock bytes's autobuyer/i })).toBeInTheDocument()
 })
@@ -1590,29 +1594,34 @@ test('the Smart button stays disabled without enough Prestige Points', async () 
   expect(screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })).toBeDisabled()
 })
 
-test('an autobuyer on/paused indicator and toggle appear on the tier row once its autobuyer is unlocked', async () => {
+test('an autobuyer on/paused indicator appears on the tier row once its autobuyer is unlocked, toggled from the PP Upgrades page', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
 
+  expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
+
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
   const pauseButton = screen.getByRole('button', { name: /pause bytes's autobuyer/i })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/active/i)
 
   await user.click(pauseButton)
-
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/paused/i)
   const resumeButton = screen.getByRole('button', { name: /resume bytes's autobuyer/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
-  await user.click(resumeButton)
+  await user.click(screen.getByRole('tab', { name: /game/i }))
+  expect(screen.getByLabelText("Bytes's autobuyer paused")).toBeInTheDocument()
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/active/i)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
+  await user.click(screen.getByRole('button', { name: /resume bytes's autobuyer/i }))
+  await user.click(screen.getByRole('tab', { name: /game/i }))
+  expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
 })
 
 test('no autobuyer on/paused indicator appears on a tier row before its autobuyer is unlocked', () => {
@@ -1626,27 +1635,32 @@ test('no autobuyer on/paused indicator appears on a tier row before its autobuye
   expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/paused/i)
 })
 
-test('pausing a tier\'s autobuyer via its tier-row toggle stops it from buying automatically; resuming resumes it', () => {
+test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buying automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10000 },
     autobuyers: { tier01: 1 },
     autobuyersEnabled: { tier01: false },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
 
   const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   // The autobuyer attempt budget accumulates at a flat rate of 1 per real second, so a single
   // 100ms tick isn't enough to trigger a purchase attempt either way — advance a full second
   // (10 ticks) so a paused autobuyer's lack of purchases is a meaningful assertion, not just "not
   // enough time has passed yet".
   act(() => { vi.advanceTimersByTime(1000) })
+  fireEvent.click(screen.getByRole('tab', { name: /game/i }))
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
 
+  fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /resume bytes's autobuyer/i }))
   act(() => { vi.advanceTimersByTime(1000) })
 
+  fireEvent.click(screen.getByRole('tab', { name: /game/i }))
   expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
 
   unmount()
@@ -1668,17 +1682,17 @@ test('a pause toggle appears beside a tier\'s tickspeed autobuyer "⚙ Active" b
 
   const pauseButton = screen.getByRole('button', { name: /pause bytes's tickspeed autobuyer/i })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
 
   await user.click(pauseButton)
 
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/paused/i)
+  expect(screen.getByLabelText("Bytes's tickspeed autobuyer paused")).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume bytes's tickspeed autobuyer/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
 
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/active/i)
+  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
 })
 
 test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it from upgrading automatically; resuming resumes it', () => {
@@ -1795,7 +1809,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 2 on ronnabytes\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on ronnabytes\)/i)
   expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
 })
 
