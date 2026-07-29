@@ -3120,6 +3120,15 @@ describe('speedUpGame', () => {
     expect(after.prestige.xp).toBe(0)
   })
 
+  it('resets the highestMilestone watermark to the fresh initial value, so the next run earns XP from scratch instead of only past the previous run\'s peak', () => {
+    const state = {
+      ...eligibleState(),
+      prestige: { ...eligibleState().prestige, highestMilestone: 30 },
+    }
+    const after = speedUpGame(state)
+    expect(after.prestige.highestMilestone).toBe(createInitialGameState().prestige.highestMilestone)
+  })
+
   it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) and resets lastTierXpConsumed to 0 across Speed Up', () => {
     const state = withLastTierXpConsumed(
       withLastTierTickspeedXpUnlocked(eligibleState()),

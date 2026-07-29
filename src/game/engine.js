@@ -1350,11 +1350,16 @@ export const prestigeGame = state => {
 // everUnlockedTierIds, by contrast, is NOT carried over here either (same as prestigeGame) — it
 // resets to the fresh default, so Speed Up still relocks every tier beyond the first exactly as
 // it always has. Unlike
-// prestigeGame, `prestige.points`/`count`/`highestMilestone` are passed through completely
-// untouched — Speed Up is unrelated to real Prestige or Prestige Points, and doesn't award or
-// spend any — but `prestige.xp` resets to 0, same as lastTierXpConsumed, since XP is a run-scoped
-// currency now. A no-op (returns the same state) while frozen (a frozen state is waiting on a real
-// Prestige, not a Speed Up) or before the last tier has reached that cycle's requirement.
+// prestigeGame, `prestige.points`/`count` are passed through completely untouched — Speed Up is
+// unrelated to real Prestige or Prestige Points, and doesn't award or spend any — but
+// `prestige.xp` resets to 0, same as lastTierXpConsumed, since XP is a run-scoped currency now.
+// `prestige.highestMilestone` (the money-exponent watermark checkMilestones grants further XP
+// against) resets to the fresh initial value here too, same as prestigeGame already did — it must
+// track the reset resources, not the previous run's peak, or a fresh run would earn no XP at all
+// until money climbs back past wherever the last run left off (previously an asymmetry between the
+// two reset paths — see docs/DESIGN_HISTORY.md). A no-op (returns the same state) while frozen (a
+// frozen state is waiting on a real Prestige, not a Speed Up) or before the last tier has reached
+// that cycle's requirement.
 export const speedUpGame = state => {
   if (isProductionFrozen(state)) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
@@ -1388,7 +1393,7 @@ export const speedUpGame = state => {
     // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
-    prestige: { ...state.prestige, xp: initial.prestige.xp },
+    prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
   }
 }
