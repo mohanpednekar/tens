@@ -35,7 +35,8 @@ yarn build        # production build → dist/
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
-yarn audit        # yarn npm audit --all --recursive
+yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
+                  # already covers dependencies/devDependencies/optionalDependencies by default)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
 ```
 
