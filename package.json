@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "yarn@1.22.22",
   "resolutions": {
-    "**/glob/minimatch/brace-expansion": "^5.0.8"
+    "**/glob/minimatch/brace-expansion": "^5.0.8",
+    "**/filelist/minimatch/brace-expansion": "^5.0.8"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -36,7 +37,7 @@
     "test": "vitest run",
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",
-    "audit": "yarn npm audit --all --recursive",
+    "audit": "yarn audit",
     "gen-pwa-icons": "node scripts/generate-pwa-icons.mjs"
   },
   "browserslist": {
