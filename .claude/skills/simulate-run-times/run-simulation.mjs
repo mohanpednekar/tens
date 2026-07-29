@@ -16,13 +16,13 @@
 //     bot doesn't hold back, since without it a run's starting PP balance is otherwise inert
 //     (the bot never actually prestiges mid-run, so points never grow beyond the starting value —
 //     see startingPP below). Only starting balances at/above the unlock cost ever afford this.
-//   - Every tick, the instant the last tier reaches that cycle's requirement
-//     (getSpeedUpRequirement(speedUpCount): 10 lifetime purchases for the first activation, 20 for
-//     the second, 30 for the third, …), "click Speed Up" (speedUpGame) immediately. Unlike
-//     Auto-upgrade automation/Smart above, this isn't an optional PP-gated lever being
-//     deliberately held fixed — it's a core, always-on mechanic with no PP cost, so always
-//     accepting it the moment it's available is the natural "attentive player" behavior this bot
-//     otherwise already models for autobuyer unlocks.
+//   - Every tick, the instant the last tier's current LEVEL reaches that cycle's requirement
+//     (state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount): level 2 for the
+//     first activation, level 3 for the second, level 4 for the third, …), "click Speed Up"
+//     (speedUpGame) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an
+//     optional PP-gated lever being deliberately held fixed — it's a core, always-on mechanic with
+//     no PP cost, so always accepting it the moment it's available is the natural "attentive
+//     player" behavior this bot otherwise already models for autobuyer unlocks.
 //
 // Usage:
 //   node run-simulation.mjs                      # default PP balances
@@ -35,14 +35,16 @@ import {
   createInitialGameState,
   formatCurrency,
   getSpeedUpRequirement,
-  getTierPurchasedCount,
   isProductionFrozen,
   speedUpGame,
   tickGame,
 } from '../../../src/game/engine.js'
 import { MONEY_ID, TIER_DEFINITIONS } from '../../../src/game/layers.js'
 
-const BUY_QUANTITY = 10 // matches useIncrementalGame's fixed autobuyer/manual-buy batch size
+// A fixed 10-unit-per-tick cap chosen for this simulation's bot strategy — not a claim that it
+// matches the real Buy button, which batches up to the current cost-block boundary (a value that
+// can grow past 10 over a run; see docs/ECONOMY_REFERENCE.md's purchase-block-size section).
+const BUY_QUANTITY = 10
 const MAX_TICKS = 5_000_000 // safety cap (~58 simulated days) so a pathological input can't hang
 const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
@@ -68,7 +70,7 @@ function simulateRun(startingPP) {
     if (!state.prestigeSpeedBonusUnlocked) {
       state = buyPrestigeSpeedBonus(state)
     }
-    if (getTierPurchasedCount(state, lastTier.id) >= getSpeedUpRequirement(state.speedUpCount ?? 0)) {
+    if (state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(state.speedUpCount ?? 0)) {
       const next = speedUpGame(state)
       if (next !== state) speedUps += 1
       state = next

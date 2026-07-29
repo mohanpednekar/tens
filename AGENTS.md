@@ -1,223 +1,158 @@
 # AGENTS.md
 
-Context for AI agents working on this repository. Read this file first to avoid
-redundant exploration.
+Context for AI agents working on this repository. This is a condensed pointer, not a second source
+of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for current behavior. If
+anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
+change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
 ## Project
 
-**Tens** — a React incremental game. Every mechanic uses powers of ten. Single
-page; no routing.
+**Tens** — a React incremental game. Every mechanic uses powers of ten. Single page; no routing; no
+backend — state lives in React and persists to `localStorage`.
 
 ## Tech stack
 
 | Tool | Version | Notes |
 |------|---------|-------|
 | React | 19 | JSX transform enabled |
-| Vite | 8 | OXC-based; JSX files **must** use `.jsx` extension |
+| Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
 | Vitest | 4 | Runs via `yarn test` |
+| Playwright | 1 | Real-browser e2e suite, `yarn test:e2e`, chromium only |
 | styled-components | 6 | All component styling |
-| Yarn | 1 (Classic) | Uses `yarn@1.22.22`; lockfile is v1 format; no `.yarnrc.yml` |
+| Yarn | 1 (Classic) | `yarn@1.22.22` via Corepack; lockfile is v1 format |
 
 ## Commands
 
 ```sh
+yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locally after lockfile changes
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
+yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
 yarn audit        # dependency audit
-yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png (see PWA support below)
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png
 ```
 
-> **Critical:** Vite 8 uses OXC which infers JSX from extension. Any file
-> containing JSX **must** be `.jsx`, not `.js`, or the build/tests will fail.
+> **Critical:** Vite 8 uses OXC, which infers JSX from the file extension. Any file containing JSX
+> **must** be `.jsx`, not `.js`, or the build/tests will fail.
 
 ## Repo layout
 
 ```
+CLAUDE.md                ← authoritative current-behavior reference (start here)
+docs/
+  DESIGN_HISTORY.md       ← the "why": superseded formulas, incident write-ups, rejected alternatives —
+                            check before changing a formula/workflow a past iteration may have tried
+  AUTOMATION.md           ← full autonomous-workflow phase-by-phase reference
+  ECONOMY_REFERENCE.md    ← full economy/prestige/tickspeed mechanic + engine function/constants reference
+  MAINPAGE_REFERENCE.md   ← full MainPage UI field-by-field reference
+  COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
 src/
   game/
-    layers.js           ← TIER_DEFINITIONS array + all constants (single source of truth)
-    engine.js           ← pure state functions (no React, no side-effects)
-    useIncrementalGame.js ← React hook; wires engine to useState + localStorage
-    storage.js          ← localStorage save/load/clear + migration logic
+    layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
+    engine.js              ← pure state functions (no React, no side effects)
+    useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
+    storage.js             ← localStorage save/load/clear + migration logic
   components/
-    Button/             ← styled button; accepts a semantic `variant` prop resolved from theme
-                          color tokens (primary/success/prestige/info/smart/neutral/ghost/danger);
-                          the older raw `color` prop still works (deprecated, `variant` wins if both given)
-    Money/              ← styled money display
-    StatCard/           ← styled card container
+    Button/, Money/, StatCard/  ← shared styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
-    MainPage/index.jsx  ← single page; renders all tiers data-driven from TIER_DEFINITIONS
-  theme/                ← design tokens (dark+light) + ThemeProvider + GlobalStyle (see below)
-  App.jsx               ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/>
-  index.jsx             ← ReactDOM.createRoot entry
-vite.config.js          ← aliases: components/, game/, pages/, theme/ → src/* equivalents; also
-                           registers the VitePWA plugin (see PWA support below)
-scripts/generate-pwa-icons.mjs ← run via `yarn gen-pwa-icons`; rasterizes PWA icon SVGs with `sharp`
-public/                  ← pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png,
-                           apple-touch-icon.png (generated), favicon.ico, robots.txt
+    MainPage/index.jsx     ← single page; renders all tiers data-driven from TIER_DEFINITIONS
+  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
+  App.jsx                  ← root component
+  index.jsx                ← ReactDOM.createRoot entry
+vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
 ```
-
-## PWA support
-
-The app is installable as a PWA (Android Chrome + iOS Safari) via `vite-plugin-pwa`, chosen over
-Capacitor/native app-store publishing or a React Native rewrite specifically because it needs no new
-accounts/secrets/manual review and stays fully within the existing automated build/deploy pipeline —
-see `docs/DESIGN_HISTORY.md`'s Distribution section for the full trade-off reasoning, and `CLAUDE.md`'s
-"PWA support" section for the manifest/icon/meta-tag details. No app-store presence; that's a
-deliberate, human-initiated escalation if ever needed, not something the automation should reach for.
-
-**Theming:** all styling resolves to semantic tokens in `src/theme/tokens.js`, exposing two themes
-(dark default + light) via `themes.{dark,light}` / `buildTheme(mode)`. `theme/index.jsx` provides
-`<ThemeProvider mode>` (mode defaults to dark; system-pref + persisted toggle deferred to a later
-sub-issue) and `GlobalStyle` (replaces the removed `index.css`/`App.css`). Components migrate onto
-these tokens incrementally (UI-revamp epic #132).
-
-**Typography:** `theme.font.display` (Space Grotesk) and `theme.font.body` (Inter) are locally bundled
-via the `@fontsource/inter`/`@fontsource/space-grotesk` deps (imported as a side effect from
-`theme/fonts.js`, wired in from `theme/index.jsx`) — no runtime CDN fetch. `theme.type.scale` pairs
-each step with a `{ size, lineHeight }` rem pair.
 
 ## Architecture
 
-**All game logic is pure** (`engine.js`). The hook (`useIncrementalGame.js`)
-owns all React state and side-effects (timer, localStorage). The page
-(`MainPage/index.jsx`) is a pure renderer. It also shows the current app
-version (`v{version}`) beside the page `<h1>`, sourced at build time from
-`package.json`'s `"version"` field via a JSON import — the single source of
-truth, no separate constant.
+**All game logic is pure** (`src/game/engine.js`) — functions of `(args) => state => newState`, no
+React, no side effects. `useIncrementalGame.js` is the only place holding React state (tick timer,
+localStorage persistence). `MainPage/index.jsx` is a pure renderer driven entirely by
+`TIER_DEFINITIONS` and hook state.
 
-There are 10 tiers, ids `tier01` → `tier10` (display names `Bytes` →
-`Ronnabytes` — a byte-scale theme: Bytes, Kilobytes, Megabytes, Gigabytes,
-Terabytes, Petabytes, Exabytes, Zettabytes, Yottabytes, Ronnabytes) — `id` is
-a naming-agnostic key decoupled from `name`/`symbol`.
-**Every tier is bought directly with the base currency (display name "Bits")** —
-`costResourceId` is `MONEY_ID` (`'base'`) for all of them. Once owned, a tier
-produces the tier immediately below it (`producesResourceId`), which cascades
-production down to the base currency. `tier01` (`Bytes`) is the special case:
-`costResourceId === producesResourceId === MONEY_ID`, since it's the
-entry-level generator bought with Bits to produce more Bits.
-
-A tier unlocks once you own **≥ 10** of the tier below it (already-owned
-tiers stay unlocked even if the rule changes, so old saves stay playable).
+There are 10 tiers, ids `tier01`–`tier10` (display names `Bytes`–`Ronnabytes`, a byte-scale theme).
+Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and produces the
+tier below it; `tier01` is the special case where cost and production resource are both the base
+currency. **Do not guess at cost/production formulas, the purchase-level system, prestige, or
+tickspeed mechanics here** — they're intricate and have changed shape multiple times (see
+`docs/DESIGN_HISTORY.md`). Read `docs/ECONOMY_REFERENCE.md` (or the matching section of `CLAUDE.md`)
+before touching `src/game/engine.js`, `src/game/layers.js`, or any economy constant.
 
 ### Adding a new tier
 
-Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` (needs a
-naming-agnostic `id` next in the `tier0N`/`tierNN` sequence, `name`, `symbol`,
-`baseCost`, `costResourceId: MONEY_ID`, and `producesResourceId` set to the
-previous tier's `id`). No other file needs changing — the page and engine are
-fully data-driven from that array.
+Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` (naming-agnostic `id` next in the
+`tier0N`/`tierNN` sequence, `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`,
+`producesResourceId` set to the previous tier's `id`, `baseTickSpeedSeconds` set to the next integer
+in the sequence). No other file needs changing.
 
-### Game state shape
+### Path aliases (`vite.config.js`)
 
-```js
-{
-  resources: { base: 10, tier01: 0, tier02: 0, … },   // spendable balance per resource id (base = MONEY_ID, display name "Bits")
-  owned:     { tier01: 0, tier02: 0, … },              // generator count per tier id
-  purchased: { tier01: 0, tier02: 0, … },              // lifetime purchase count per tier id (drives cost scaling)
-  autobuyers:{ tier01: null, tier02: null, … },        // null = locked; number = active level, survives prestige unlock
-  prestige: { pp: 0, level: 0, highestMilestone: 1 }
-}
-```
-
-`owned[tierId]` and `resources[tierId]` for the same tier id always move
-together (buying, producing, and autobuyer-upgrading a tier update both by
-the same amount) — they represent "how many generators you have" and "how
-much of that tier's resource you can spend" respectively, which happen to be
-the same number by design.
-
-### Key engine functions
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `getTierCost` | `(tier, purchasedCount) → number` | Scaled cost: `baseCost * 10^epoch * (1 + 0.1*within)`, epoch = `floor(purchased/10)` |
-| `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` |
-| `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases, used for cost scaling |
-| `tickGame` | `(elapsedSecs) → state → state` | Runs autobuyers, then produces resources for unlocked tiers, then checks milestones |
-| `buyTier` | `(tierId) → state → state` | Validates unlock + affordability, deducts cost, increments `owned`/`purchased` |
-| `buyAutobuyer` | `(tierId) → state → state` | First call unlocks (spends PP); later calls upgrade the level (spends the tier's own resource) |
-| `getAutobuyerUnlockPPCost` | `(tierIndex) → number` | `AUTOBUYER_PP_COST_BASE * 2^tierIndex` |
-| `getAutobuyerCost` | `(currentLevel) → number` | `10^(currentLevel+1)` |
-| `prestigeGame` | `state → state` | Resets progress, keeps autobuyer *unlock* status (levels reset to 0), increments level |
-| `isTierUnlocked` | `(state) → tier → bool` | Tier 0 always unlocked; others need ≥10 owned of the tier below (or already owned) |
-| `productionMultiplier` | `(level) → number` | `2^level` |
-| `formatAmount` | `(value) → string` | Locale integer below 1,000,000; scientific notation at/above |
-
-### Constants (all in `src/game/layers.js`)
-
-- `MONEY_ID = 'base'` (display name "Bits", symbol `b`)
-- `PRESTIGE_PP_COST = 10`
-- `TICK_RATE_MS = 1000`
-- `MONEY_STARTING_AMOUNT = 10`
-- `AUTOBUYER_PP_COST_BASE = 1` (doubles per layer index: layer 0 → 1 PP, layer 1 → 2 PP …)
-
-### Path aliases (vite.config.js)
-
-`components/X` → `src/components/X`, `game/X` → `src/game/X`,
-`pages/X` → `src/pages/X`, `theme/X` → `src/theme/X`. Use these aliases in imports, not relative paths.
-Directory imports resolve to that dir's `index.jsx`/`index.js` (e.g. `from 'theme'` → `src/theme/index.jsx`).
+`components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`,
+`theme/X` → `src/theme/X`. Use these aliases in imports, not relative paths. Directory imports
+resolve to that dir's `index.jsx`/`index.js`.
 
 ## Testing
 
-- Test files live next to source files: `engine.test.js`, `layers.test.js`,
-  `storage.test.js`, `App.test.jsx`.
-- Test environment: jsdom (configured in `vite.config.js`).
-- Setup file: `src/setupTests.js` (imports `@testing-library/jest-dom`).
-- Globals are enabled (`describe`, `it`, `expect`, etc. without imports).
+- Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
+  `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
+- `yarn test` is green (589 tests as of this writing — see `CLAUDE.md`'s Testing section for the
+  current count; update both together if it changes).
 
 ## Changelog convention
 
 `CHANGELOG.md` (repo root, Keep a Changelog format) tracks user-facing/behaviorally-relevant changes
-from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading (`### Added`/
-`### Changed`/`### Fixed`/etc.) for any such PR; skip it for docs-only/internal CI changes.
-`package.json`'s `"version"` mirrors this file's released sections.
+from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading for any such PR;
+skip it for docs-only/internal CI changes. `package.json`'s `"version"` mirrors this file's released
+sections.
 
 ## Issue tracking conventions
 
 - `claude-task`-labeled issues are the work backlog for the scheduled automation (see `CLAUDE.md`'s
-  Orchestration model). Milestones and the Project's `Track` field are complementary: a Milestone
-  targets one planned release (native GitHub due-date + closed/open progress tracking); `Track`
-  groups issues by theme/dependency chain and can span multiple releases. Assign a milestone to
-  player-facing feature/economy issues when a next release is planned; process/infrastructure issues
-  typically don't need one.
+  Orchestration model / `docs/AUTOMATION.md`). Order: `priority:high` first, then normal (unlabeled)
+  issues by lowest issue number, then `priority:low` last (only picked once nothing higher-tier is
+  eligible — not an absolute ban, a maintainer/interactive session can still ask for one directly).
 - Whoever files a `claude-task` issue should also apply a `size:S`/`size:M`/`size:L` label (S = a
   single small focused change; M = a normal run-sized task; L = large, likely needs a partial
-  `Part of #N` slice) — a prior signal Phase A weighs against its own remaining budget when picking
-  a task. See `CLAUDE.md`'s Orchestration model / Budget discipline sections for the full picking
-  logic.
+  `Part of #N` slice) — Phase A weighs this against its own remaining budget when picking a task.
+- Milestones and the Project's `Track` field are complementary: a Milestone targets one planned
+  release; `Track` groups issues by theme/dependency chain and can span multiple releases.
+
+## Budget discipline (applies to every session, not just automation)
+
+There's no fixed turn cap. Before sizing a task, self-estimate how much of the current rolling 5-hour
+Claude usage window is likely still available and aim to keep that session's work at or under roughly
+**50%** of a full window's worth of effort — a soft target, not a hard limit; a modest overshoot from
+estimation inaccuracy or unknown concurrent usage is expected and not a failure. If a task looks too
+large even after buffering, land the largest coherent, test-covered slice first.
 
 ## Reliability: cron dormancy
 
 GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository
 activity. `autonomous-maintenance.yml`'s primary mitigation is its own regular activity (merged PRs
 reset the dormancy clock) plus Phase B gap analysis keeping the backlog non-empty; the actual backstop
-is an external, out-of-band periodic check (outside this repo/issue system) that notices prolonged
-silence and re-triggers the workflow via `workflow_dispatch`, which works regardless of whether the
-`schedule` trigger is currently disabled. See `CLAUDE.md`'s Scheduled maintenance section for the full
-writeup.
+is an external, out-of-band periodic check that re-triggers the workflow via `workflow_dispatch` if
+it's gone quiet longer than expected.
 
 ## Reliability: concurrent runs
 
 `autonomous-maintenance.yml` carries a top-level `concurrency: { group: autonomous-maintenance,
-cancel-in-progress: false }` block so a manual `workflow_dispatch` (e.g. from the dormancy watchdog
-above) can never race an in-progress scheduled run — it queues instead. `cancel-in-progress` is `false`
-on purpose: killing a run mid-task would itself orphan a `claude/auto-task-*` branch, so queuing is
-preferred over cancelling.
+cancel-in-progress: false }` block so a manual `workflow_dispatch` can never race an in-progress
+scheduled run — it queues instead, since cancelling mid-task would orphan a `claude/auto-task-*`
+branch.
 
 ## Code review tooling
 
 - `.claude/agents/code-reviewer.md` — a comprehensive, adversarial reviewer subagent for any PR or
   working diff: verified `file:line`-cited findings with confidence labels, a merge verdict, and an
-  explicit coverage report. Read-only (never edits code). Use before merging any non-trivial change.
+  explicit coverage report. Read-only. Use before merging any non-trivial change.
 - `.claude/skills/economy-change-review/SKILL.md` — a narrow, mechanical spec-vs-implementation
   cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
   code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
 
 ## Automation design principles
 
-Three conventions guide this repo's automation design (see `CLAUDE.md`'s Orchestration model for the
+Three conventions guide this repo's automation design (see `CLAUDE.md` / `docs/AUTOMATION.md` for the
 full rationale and examples):
 
 1. **Determinism-first** — prefer a plain deterministic script over a Claude invocation whenever no
@@ -243,10 +178,12 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 ## Security notes
 
 - Dev and test servers bind to `127.0.0.1` — do not change to `0.0.0.0`.
-- All purchases and prestige are validated in the engine, not just via disabled
-  UI buttons.
+- All purchases, autobuyer upgrades, and prestige are validated in `engine.js`, not just via disabled
+  UI buttons — every action is re-checked server-side-equivalent (there is no server, but the engine
+  is the single point of truth regardless of which UI control triggered it).
 - Timer effects are cleaned up on unmount.
-- Save/load wraps localStorage in try/catch to handle quota errors silently.
+- Save/load wraps `localStorage` access in try/catch and fails silently on quota/private-browsing
+  errors.
 - `.github/workflows/**` changes require the repo owner's review, enforced two ways:
-  `pr-auto-merge.yml`'s script-level exclusion, and (once branch protection enables
-  "Require review from Code Owners") `.github/CODEOWNERS`.
+  `pr-auto-merge.yml`'s script-level exclusion, and (once branch protection enables "Require review
+  from Code Owners") `.github/CODEOWNERS`.

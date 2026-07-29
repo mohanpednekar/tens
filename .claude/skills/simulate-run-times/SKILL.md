@@ -17,10 +17,12 @@ It uses the actual, current `src/game/engine.js`/`src/game/layers.js` source —
 reimplementation — so results automatically reflect any balance changes made to the engine.
 
 **Bot strategy** (fixed across every row, so PP balance is the only thing varying):
-- Every tick, "clicks Buy" on every unlocked tier (`buyTierQuantity`, the same 10-unit batch the
-  real Buy button uses).
+- Every tick, "clicks Buy" on every unlocked tier (`buyTierQuantity`, a fixed 10-unit-per-tick cap
+  chosen for this simulation — not literally matching the real Buy button, which batches up to the
+  current cost-block boundary, a value that can grow past 10 over a run; see
+  `docs/ECONOMY_REFERENCE.md`'s purchase-block-size section).
 - Every tick, "clicks Unlock" on any tier whose autobuyer isn't active yet, the moment it's
-  affordable (`buyAutobuyer`'s first call, level `null` → 1).
+  affordable (`buyAutobuyerUnlock`, `null` → unlocked).
 - Autobuyer levels are never manually Upgraded past 1, and no PP is spent on Auto-upgrade
   automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
   bonus (`getPrestigeProductionMultiplier`) on run length, holding every other lever fixed. If the
@@ -34,13 +36,13 @@ reimplementation — so results automatically reflect any balance changes made t
   above `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) ever afford this — lower balances leave it
   permanently locked for the whole run, and the output table's "Speed bonus" column reports
   `locked` rather than a fictional `+N%` in that case.
-- Every tick, the instant the last tier reaches that cycle's requirement
-  (`getSpeedUpRequirement(speedUpCount)`: 10 lifetime purchases for the first activation, 20 for
-  the second, 30 for the third, …), "clicks Speed Up" (`speedUpGame`) immediately. Unlike
-  Auto-upgrade automation/Smart above, this isn't an optional PP-gated lever being deliberately
-  held fixed for isolation — it's a core, always-on, no-cost mechanic, so always accepting it the
-  moment it's available is the natural "attentive player" behavior, matching how the bot already
-  treats autobuyer unlocks.
+- Every tick, the instant the last tier's current LEVEL reaches that cycle's requirement
+  (`state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)`: level 2 for the
+  first activation, level 3 for the second, level 4 for the third, …), "clicks Speed Up"
+  (`speedUpGame`) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an optional
+  PP-gated lever being deliberately held fixed for isolation — it's a core, always-on, no-cost
+  mechanic, so always accepting it the moment it's available is the natural "attentive player"
+  behavior, matching how the bot already treats autobuyer unlocks.
 
 ## Usage
 
@@ -53,7 +55,8 @@ Prints a markdown table straight to stdout: PP balance, the production-speed bon
 granted (`locked` if the run's starting balance never reached the unlock cost — see the bot
 strategy above), ticks elapsed (= simulated seconds), a human-readable duration, the money balance
 at the moment Googol was crossed (which can overshoot substantially in the final tick — see
-`getPrestigePointsAwarded` in `CLAUDE.md`), and how many times Speed Up fired during the run. The
+`getPrestigePointsAwarded` in `docs/ECONOMY_REFERENCE.md`), and how many times Speed Up fired during
+the run. The
 default PP range (`0` through `50000`) deliberately spans `PRESTIGE_SPEED_BONUS_UNLOCK_COST`
 (10000) so both the locked and unlocked cases show up. A run capped by the script's `MAX_TICKS`
 safety net (5,000,000 simulated seconds) is marked "(capped)" in the duration column rather than a

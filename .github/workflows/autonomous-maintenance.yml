@@ -269,8 +269,16 @@ jobs:
               second consecutive run confirmed it can't be implemented as written, see the
               comment-history check below — are excluded from the backlog list above before you
               ever see it.)
-            - Order: issues labeled priority:high first, then lowest issue number (FIFO). This is
-              the order you walk candidates in, not just how you pick the first one.
+            - Order: issues labeled priority:high first, then normal (unlabeled) issues by lowest
+              issue number (FIFO), then issues labeled priority:low last — a priority:low issue is
+              only picked once no priority:high or normal-priority eligible candidate remains open.
+              This is the order you walk candidates in, not just how you pick the first one.
+              priority:low means "wait your turn behind everything else by default," not an
+              absolute ban: a priority:low issue can still be picked earlier if a maintainer or an
+              interactive session asks for it directly, or if it's genuinely the only eligible
+              candidate left (everything else is blocked/covered/exhausted). Idempotently ensure
+              the label exists before relying on it: `gh label create priority:low --color c5def5
+              --description "Deferred until the rest of the backlog clears" --force`.
             - For each candidate in turn: first check its own comment history for a prior
               automated investigation you'd otherwise just repeat: `gh issue view <number> --json
               comments --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`.
