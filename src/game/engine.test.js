@@ -541,6 +541,11 @@ describe('getTierAffordableQuantity', () => {
   it('never exceeds the block boundary even with unlimited funds', () => {
     expect(getTierAffordableQuantity(tier, 1, 8, 5, 1_000_000, 8)).toBe(3)
   })
+
+  it('falls back to the block-capped quantity when the per-unit cost is 0, avoiding a divide-by-zero', () => {
+    const freeTier = { baseCost: 0 }
+    expect(getTierAffordableQuantity(freeTier, 1, 8, 0, 0, 8)).toBe(8)
+  })
 })
 
 // ─── getPurchaseBlockSize ──────────────────────────────────────────────────────
@@ -740,6 +745,12 @@ describe('getPrestigePointsAwarded', () => {
 
   it('awards 3 points at exponent 300', () => {
     expect(getPrestigePointsAwarded(GOOGOL * 1e200)).toBe(3)
+  })
+
+  it('awards 0 points below 1 money, including negative input clamped to 0', () => {
+    expect(getPrestigePointsAwarded(0)).toBe(0)
+    expect(getPrestigePointsAwarded(0.5)).toBe(0)
+    expect(getPrestigePointsAwarded(-100)).toBe(0)
   })
 })
 
@@ -1370,6 +1381,12 @@ describe('buyTierQuantity', () => {
   it('returns the same state object for an unknown tier ID', () => {
     const state = createInitialGameState()
     expect(buyTierQuantity('does_not_exist', 10)(state)).toBe(state)
+  })
+
+  it('returns the same state object as a no-op for a zero or negative quantity', () => {
+    const state = withMoney(createInitialGameState(), 1000)
+    expect(buyTierQuantity(tensTier.id, 0)(state)).toBe(state)
+    expect(buyTierQuantity(tensTier.id, -5)(state)).toBe(state)
   })
 })
 
