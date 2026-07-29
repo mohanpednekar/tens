@@ -207,7 +207,7 @@ The following records *why* specific MainPage/component behaviors were built the
 - **No aggregate `+X/sec` line.** Previously summed `owned` across every money-producing tier; removed
   once each tier row got its own `+X` production figure (the per-tier replacement), since an
   aggregate no longer added information once tickspeeds diverged in principle (even though they're
-  currently uniform — see "Tier production tickspeed" below).
+  currently uniform — see "Tier production tickspeed" in `docs/ECONOMY_REFERENCE.md`).
 - **On-button gradient fill instead of a separate progress bar.** Buy/Prestige/Speed Up/PP-spending
   buttons all render `$progress`/`$secondaryProgress` fills rather than a bar below them, to avoid a
   second visual element per row; green = units already bought in the current cost block, amber = units

@@ -50,9 +50,12 @@ inventory is your coverage checklist for the rest of the review.
 
 ### 2. Load the repo's invariants
 
-Read the sections of `CLAUDE.md` covering the areas the diff touches (it is the single source of
-truth for this repo's documented behavior) and list which documented invariants the diff could
-plausibly violate. The recurring high-value ones:
+Read the sections of `CLAUDE.md` covering the areas the diff touches, plus whichever `docs/*.md`
+reference file covers it in depth (`docs/ECONOMY_REFERENCE.md` for `engine.js`/`layers.js`,
+`docs/MAINPAGE_REFERENCE.md` for `MainPage`, `docs/COMPONENTS_REFERENCE.md` for `Button`/`Money`/
+`StatCard`, `docs/AUTOMATION.md` for workflow files) — together these are the single source of truth
+for this repo's documented behavior. List which documented invariants the diff could plausibly
+violate. The recurring high-value ones:
 
 - **Engine purity** (`src/game/engine.js`): pure `(args) => state => newState` functions, no
   React, no side effects; invalid actions return the **same state reference** unchanged — callers
@@ -65,9 +68,9 @@ plausibly violate. The recurring high-value ones:
   `prestigeGame` (and Auto-Prestige's budget accumulation) must no-op — check any new action
   respects this in the engine, not just via a disabled button.
 - **Prestige reset boundary**: which state is wiped by `prestigeGame` vs. permanent
-  meta-progression is enumerated in CLAUDE.md's state-shape section — a new state field must
-  explicitly pick a side, and `prestigeGame`/`createInitialGameState`/`storage.js` migration must
-  all agree.
+  meta-progression is enumerated in `docs/ECONOMY_REFERENCE.md`'s "Game state shape" section — a new
+  state field must explicitly pick a side, and `prestigeGame`/`createInitialGameState`/`storage.js`
+  migration must all agree.
 - **Save-data compatibility** (`src/game/storage.js`): renamed/removed/added state keys need
   migration coverage so an existing player's save loads without silently orphaning data.
 - **Float drift**: per-tick accumulation sums fractional `elapsedSeconds`; threshold comparisons
@@ -108,9 +111,10 @@ Run each of these explicitly and record a per-check result — silence is not a 
 - **Tests**: every behavior change has a test that would fail without the change (check the test
   actually exercises the new path, not just runs near it). Deleted/weakened assertions are
   findings. If the diff claims a bug fix, look for the regression test.
-- **Docs sync**: CLAUDE.md (and AGENTS.md where it overlaps) must be updated in the *same* diff
-  as any change to function signatures, constants, state shape, behavior, file layout, or test
-  counts it documents. Grep CLAUDE.md for each renamed symbol and changed constant value; a
+- **Docs sync**: CLAUDE.md (and the `docs/*.md` reference file covering the touched area, and
+  AGENTS.md where it overlaps) must be updated in the *same* diff as any change to function
+  signatures, constants, state shape, behavior, file layout, or test counts it documents. Grep
+  CLAUDE.md and the relevant `docs/*.md` for each renamed symbol and changed constant value; a
   stale doc shipping alongside the code change is a finding, per CLAUDE.md's own Documentation
   section.
 - **Economy gate**: if the diff touches `TIER_DEFINITIONS` or economy constants/formulas in

@@ -24,10 +24,10 @@ out two things verbatim:
   `id`/`name`/`symbol`/`baseCost`/`costResourceId`/`producesResourceId`/`baseTickSpeedSeconds`
   values, or of old→new key mappings for a rename.
 - The **Explicit authorizations** section — the maintainer's written sign-off for exactly which
-  economy-rule changes this issue permits. Per `CLAUDE.md`'s "Adding a new tier" and Automation
-  workflows sections, a change to `TIER_DEFINITIONS` or other game-design/economy behavior is
-  banned outside of a task issue whose Explicit Authorizations section explicitly permits that
-  specific change.
+  economy-rule changes this issue permits. Per `docs/ECONOMY_REFERENCE.md`'s "Adding a new tier"
+  and `CLAUDE.md`'s Automation workflows section, a change to `TIER_DEFINITIONS` or other
+  game-design/economy behavior is banned outside of a task issue whose Explicit Authorizations
+  section explicitly permits that specific change.
 
 ## 3. Field-by-field diff against the approved table
 
@@ -39,7 +39,8 @@ specifically for:
 - A `producesResourceId` that doesn't chain to the correct previous tier's `id` (this is what
   cascades production down to `MONEY_ID` — a wrong link silently breaks a tier's output).
 - A `baseTickSpeedSeconds` that doesn't match the table's intended progression (see "Tier
-  production tickspeed" in `CLAUDE.md` — currently each tier is one second slower than the last).
+  production tickspeed" in `docs/ECONOMY_REFERENCE.md` — currently each tier is one second slower
+  than the last).
 - An `id`/`name`/`symbol` that doesn't match the table's naming exactly, including case.
 - Any tier reordered, added, or removed beyond what the table specifies.
 
