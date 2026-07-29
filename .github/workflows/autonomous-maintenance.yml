@@ -34,7 +34,13 @@ jobs:
           # currently-open autonomous PRs to the prompt so Claude can avoid opening a
           # second PR for the same task while still opening a separate PR for a genuinely
           # independent one.
-          open_prs=$(gh pr list --state open --json headRefName,title \
+          # --limit 100 is explicit everywhere below (not the gh CLI default of 30) — a
+          # missing --limit silently truncates instead of erroring, and this repo has
+          # already hit that: with 30+ open claude-task issues, gh issue list's default
+          # newest-first order silently dropped every issue below the cutoff, including
+          # several priority:high ones (#45-49) that should have outranked what Phase A
+          # was actually shown. See #45/#81's comment history for the incident.
+          open_prs=$(gh pr list --state open --limit 100 --json headRefName,title \
             --jq '[.[] | select(.headRefName | startswith("claude/auto-"))]')
           count=$(jq 'length' <<<"$open_prs")
 
@@ -64,7 +70,7 @@ jobs:
           # owned by autonomous-pr-followup.yml's webhook-driven fixes) and fork PRs (never
           # ours to touch). In practice this mostly surfaces Dependabot PRs that have gone
           # stale against main and nothing currently re-syncs them.
-          failing_prs=$(gh pr list --state open \
+          failing_prs=$(gh pr list --state open --limit 100 \
             --json number,headRefName,title,isCrossRepository,statusCheckRollup \
             --jq '[.[] | select(.isCrossRepository == false)
                         | select(.headRefName | startswith("claude/auto-") | not)
@@ -94,10 +100,32 @@ jobs:
           # between. Either way, re-attempting every 5 hours just burns quota re-deriving the
           # same conclusion — a human unblocks (after closing, rewriting, or otherwise
           # resolving the issue) and removes the label to make it eligible again.
-          open_tasks=$(gh issue list --label claude-task --state open \
+          #
+          # --limit 200 (well above realistic backlog size) plus an explicit priority-aware
+          # sort/cap below is deliberate, not decoration: see the --limit 100 comment above
+          # for the truncation incident this guards against. The list handed to the prompt
+          # is additionally capped at TASK_DISPLAY_CAP entries — sorted priority:high first,
+          # then normal, then priority:low, each tier by ascending issue number (matching
+          # Phase A's own walk order) — so a growing backlog can never silently push a
+          # priority:high issue out of what Claude actually sees, and the per-run token cost
+          # of this feed stays bounded rather than growing unboundedly with backlog size.
+          TASK_DISPLAY_CAP=30
+          open_tasks_json=$(gh issue list --label claude-task --state open --limit 200 \
             --json number,title,labels \
-            --jq '.[] | select([.labels[].name] | index("blocked") | not)
-                      | "- #\(.number): \(.title)"')
+            --jq '[.[] | select([.labels[].name] | index("blocked") | not)]')
+          open_tasks_count=$(jq 'length' <<<"$open_tasks_json")
+          open_tasks=$(jq -r --argjson cap "$TASK_DISPLAY_CAP" '
+            def prio: if ([.labels[].name] | index("priority:high")) then 0
+                      elif ([.labels[].name] | index("priority:low")) then 2
+                      else 1 end;
+            (sort_by(prio, .number))[0:$cap][]
+            | "- #\(.number): \(.title)"
+          ' <<<"$open_tasks_json")
+          if [ "$open_tasks_count" -gt "$TASK_DISPLAY_CAP" ]; then
+            hidden=$((open_tasks_count - TASK_DISPLAY_CAP))
+            open_tasks="$open_tasks
+            - (+$hidden more open claude-task issue(s) not shown, lowest-priority/highest-numbered end of the backlog — see \`gh issue list --label claude-task --state open\` for the rest)"
+          fi
           {
             echo "open_tasks<<TASK_EOF"
             echo "$open_tasks"
@@ -106,7 +134,7 @@ jobs:
 
           # Separately surface already-open gap-analysis proposals, so the Phase B gap
           # analysis task can skip re-proposing something already in the backlog above.
-          open_gap_issues=$(gh issue list --label gap-analysis --state open \
+          open_gap_issues=$(gh issue list --label gap-analysis --state open --limit 100 \
             --json number,title --jq '.[] | "- #\(.number): \(.title)"')
           {
             echo "open_gap_issues<<GAP_EOF"
@@ -129,9 +157,10 @@ jobs:
         id: claude
         if: steps.guard.outputs.skip != 'true'
         # Tolerated-failure handling: the step below re-fails the job for any real error,
-        # but downgrades a pure Claude usage-quota exhaustion (HTTP 429 on turn 1) to a
-        # warning — the run did no work and the next scheduled run simply retries, so a
-        # red X adds alert noise without any actionable signal.
+        # but downgrades a pure Claude-side transient failure (HTTP 429 usage-quota
+        # exhaustion, or a 5xx server overload like 529 "Overloaded") to a warning — the
+        # run did no work and the next scheduled run simply retries, so a red X adds alert
+        # noise without any actionable signal.
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
@@ -429,23 +458,35 @@ jobs:
 
       - name: Classify Claude step failure
         # Companion to the continue-on-error above: keep every real failure red, but treat
-        # a run that died on turn 1 because the Claude subscription's usage quota was
-        # exhausted (429 "session limit") as a skipped run — it made no changes, cost no
-        # quota, and the next scheduled run (every 5 hours) retries automatically.
+        # a run that died before doing any work because of a transient, Claude-side error —
+        # the subscription's usage quota was exhausted (429 "session limit"), or the API
+        # itself was briefly overloaded (5xx, e.g. 529 "Overloaded") — as a skipped run: it
+        # made no changes, cost no quota, and the next scheduled run (every 5 hours) retries
+        # automatically. Confirmed via a real run (2026-07-29) that exhausted the SDK's own
+        # 10-attempt retry budget against a 529 and then hard-failed under the old
+        # 429-only check, which would otherwise have looked like a real break to Phase 0 of
+        # the *next* run.
         if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'failure'
         run: |
           out="${{ steps.claude.outputs.execution_file }}"
           [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
-          if [ -f "$out" ] && jq -e '
-                (if type == "array" then . else [.] end)
-                | map(select(.type == "result"))
-                | last
-                | .is_error == true and .api_error_status == 429
-              ' "$out" >/dev/null 2>&1; then
-            echo "::warning::Run skipped: Claude usage limit hit (HTTP 429) before any work was done. The next scheduled run will retry."
+          transient_status=""
+          if [ -f "$out" ]; then
+            transient_status=$(jq -r '
+                  (if type == "array" then . else [.] end)
+                  | map(select(.type == "result"))
+                  | last
+                  | if (.is_error == true) and (.api_error_status as $s | [429, 500, 502, 503, 529] | index($s) != null)
+                    then .api_error_status
+                    else empty
+                    end
+                ' "$out" 2>/dev/null)
+          fi
+          if [ -n "$transient_status" ]; then
+            echo "::warning::Run skipped: transient Claude API error (HTTP $transient_status) before any work was done. The next scheduled run will retry."
             exit 0
           fi
-          echo "::error::Claude run failed for a reason other than usage-quota exhaustion — see the 'Run autonomous maintenance task' step logs."
+          echo "::error::Claude run failed for a reason other than a transient quota/server error — see the 'Run autonomous maintenance task' step logs."
           exit 1
 
       - name: Fail on denied file modifications
