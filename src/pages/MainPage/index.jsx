@@ -110,31 +110,33 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: name (+ compact tickspeed multiplier badge, spanning the first two tracks — the
-// width the PP-based Automate control used to occupy before it moved to the PP Upgrades page,
-// see MainPage), the production figure, then the owned count — production sits left of owned
-// (not the other way around) so the row reads "what it makes" before "how many you have"; the
-// wider track (1.3fr) follows production's spot since that figure tends to run longer (e.g.
-// currency strings) and the narrower one (0.7fr) follows owned's. Middle line: just the two
-// buttons, each spanning two of the four tracks — the track pairs sum equally
-// (col1+col2 = col3+col4) so the tickspeed multiplier button and Buy each take exactly half the
-// row's width, unaffected by how the top row's own two tracks are split between them. Buy sits
-// rightmost, not the tickspeed button — Buy is clicked constantly while a tickspeed level-up is
-// an occasional action, and the rightmost slot is the natural resting spot for a thumb/mouse
-// that's about to click again. Bottom line: a single 'details' area spanning all four tracks,
-// holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) — only
-// rendered at all while expanded, so a collapsed row contributes zero height there. There is no
-// separate visible trigger for it (no "Details" label): TierName itself (wrapped in
-// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
-// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
-// disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it for
-// the two buttons.
+// Top line: name (+ compact tickspeed multiplier badge and, once unlocked, the icon-only
+// autobuyer status indicator — see MainPage — both sharing the first two tracks, the width the
+// PP-based Automate control used to occupy before it moved to the PP Upgrades page), the
+// production figure, then the owned count — production sits left of owned (not the other way
+// around) so the row reads "what it makes" before "how many you have"; the wider track (1.3fr)
+// follows production's spot since that figure tends to run longer (e.g. currency strings) and the
+// narrower one (0.7fr) follows owned's. Middle line: just the two buttons, each spanning two of
+// the four tracks — the track pairs sum equally (col1+col2 = col3+col4) so the tickspeed
+// multiplier button and Buy each take exactly half the row's width, unaffected by how the top
+// row's own two tracks are split between them. Buy sits rightmost, not the tickspeed button — Buy
+// is clicked constantly while a tickspeed level-up is an occasional action, and the rightmost slot
+// is the natural resting spot for a thumb/mouse that's about to click again. Bottom line: a single
+// 'details' area spanning all four tracks, holding the per-tier click-to-expand disclosure's
+// content (see TierDetailsContent below) — only rendered at all while expanded, so a collapsed row
+// contributes zero height there. There is no separate visible trigger for it (no "Details" label):
+// TierName itself (wrapped in TierNameTrigger, in the 'name' area) is the trigger, and clicking
+// anywhere else on the tile that isn't a button also toggles it (see the row's own onClick below)
+// — a React-controlled disclosure rather than native <details>/<summary>, see openTierDetailIds in
+// MainPage for why. cursor: pointer signals the whole tile is clickable; Button's own cursor rule
+// overrides it for the two buttons. There used to be a dedicated 'autobuyer' grid row for the
+// per-tier autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
+// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
+// needs the extra vertical space for it.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
     'name name production owned'
-    'autobuyer autobuyer autobuyer autobuyer'
     'upgrade upgrade buy buy'
     'details details details details';
   grid-template-columns: 1.4fr 0.6fr 1.3fr 0.7fr;
@@ -249,7 +251,7 @@ const HudGoldText = styled.b`
 // keeps rendering its own generated class alongside MoneyHero's, so StickyBalances' existing
 // `${Money} { ... }` compressed-layout override below still matches this element too.
 const MoneyHero = styled(Money)`
-  font-family: ${props => props.theme.font.display};
+  font-family: ${props => props.theme.font.body};
   font-size: ${props => props.theme.type.scale.hero.size};
   line-height: ${props => props.theme.type.scale.hero.lineHeight};
   padding: 0;
@@ -325,6 +327,11 @@ const StickyBalances = styled.div`
   position: sticky;
   top: ${props => (props.$belowBar ? `${props.$belowBarHeight}px` : '0')};
   z-index: 100;
+  /* Promotes this sticky element to its own compositor layer so Chromium repaints it via GPU
+     compositing while scrolling instead of repainting from scratch each frame — without this, a
+     sticky element with a background fill (needed here so scrolled tier rows don't show through
+     the gap between the two cards) can visibly flicker/flash during scroll. */
+  will-change: transform;
 
   ${props => props.$compressed && css`
     box-shadow: ${props.theme.shadow.md};
@@ -423,23 +430,6 @@ const TierNameTrigger = styled.div`
   grid-area: name;
   min-width: 0;
   cursor: pointer;
-`
-
-// Always-visible per-tier indicator (once its unit-buying autobuyer is unlocked, see
-// autobuyersEnabled/setAutobuyerEnabled in engine.js) for whether it's currently buying units
-// automatically or paused — previously there was no visible indicator for this at all once
-// bought, unlike the tier tickspeed autobuyer's own "⚙ Active" badge on the PP Upgrades page. A
-// sibling of TierNameTrigger (not nested inside it) occupying its own grid row that contributes
-// zero height when nothing renders into it — same convention as TierDetailsContent below — which
-// also means a click on its own toggle button never reaches TierNameTrigger's disclosure-toggle
-// handler at all (TierLine's own onClick above already skips a click whose target is inside a
-// <button>, and this row's button isn't a descendant of TierNameTrigger to begin with).
-const AutobuyerStatusRow = styled.div`
-  grid-area: autobuyer;
-  align-items: center;
-  display: flex;
-  gap: 0.4rem;
-  font-size: 0.78em;
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -736,11 +726,16 @@ const PpUpgradeButton = styled(Button)`
   padding: 0.4em 0.6em;
 `
 
+// $dimmed is the "paused" signal — a subtle opacity reduction on the same icon rather than a
+// separate written "Paused" word (see MainPage): the badge's visible content is icon-only, with
+// the active/paused state conveyed by this dimming (plus the existing $color green/amber split)
+// and spelled out in aria-label/title for assistive tech.
 const PpUpgradeBadge = styled.span`
   color: ${props => props.$color};
+  opacity: ${props => (props.$dimmed ? 0.5 : 1)};
 `
 
-// Groups an "Active"/"Paused" badge with its pause/resume toggle as a single flex item, so an
+// Groups an active/paused status badge with its pause/resume toggle as a single flex item, so an
 // UpgradeRow's existing two-child (label, control) `justify-content: space-between` layout still
 // holds once a bought global automation gets a second, smaller control alongside its badge.
 const UpgradeRowControls = styled.div`
@@ -766,23 +761,48 @@ const formatCost = (amount, resourceId) =>
 // used for multiplier displays (Speed Up's next multiplier, the PP production speed bonus).
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
-// Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used for the
-// tickspeed multiplier badge/labels, which show the cumulative delivery-frequency bonus as "+N%"
-// rather than the earlier "×N" purchase-speed multiplier it replaced (see "Tickspeed multiplier"
-// in CLAUDE.md).
+// Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used below +100% for
+// the tickspeed multiplier badge/labels; see formatBonusOrMultiplier below for +100% and beyond.
 const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 
 // The global tickspeed multiplier's bonus percent, shown with up to 2 decimal places (trimming a
-// trailing ".00"/trailing zero, same style as formatRate) while it's still under 100% — its
-// regular 1%-per-level compounding (see GLOBAL_TICKSPEED_PRODUCTION_STEP/
-// getGlobalTickspeedProductionMultiplier in engine.js) lands on fractional values that a
-// whole-percent rounding would otherwise obscure. Once it reaches/crosses 100% it's rounded to a
-// whole percent instead, same as formatBonusPercent, since precision matters less at that scale.
-const formatGlobalTickspeedBonusPercent = multiplier => {
-  const percent = (multiplier - 1) * 100
-  return percent < 100
-    ? (Math.round(percent * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
-    : String(Math.round(percent))
+// trailing ".00"/trailing zero, same style as formatRate) — its regular 1%-per-level compounding
+// (see GLOBAL_TICKSPEED_PRODUCTION_STEP/getGlobalTickspeedProductionMultiplier in engine.js) lands
+// on fractional values a whole-percent rounding would otherwise obscure. Always called below
+// +100% — formatBonusOrMultiplier below switches to the ×N multiplier form at/above that, where
+// this fractional precision no longer matters.
+const formatGlobalTickspeedBonusPercent = multiplier =>
+  (Math.round((multiplier - 1) * 100 * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
+
+// A bonus multiplier reads as a percentage below +100% ("+21%"), and as a Speed-Up-style "Nx"
+// multiplier at/above it ("2x", "5.5x") — a percentage gets unwieldy once it doubles the baseline,
+// and "Nx" is already this app's convention for large stacking bonuses (Speed Up's own ×N). Pass
+// `precise: true` to use the global tickspeed multiplier's fractional-percent formatting for the
+// below-100% case instead of the whole-number one.
+const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
+  multiplier >= 2
+    ? `${formatRate(multiplier)}x`
+    : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
+
+// Auto-collapses a native <details> disclosure once it scrolls fully out of the viewport (either
+// direction) — every InfoDetails instance in this file is uncontrolled (no `open` prop passed by
+// React), so setting the DOM node's `.open` property directly here is safe and won't be fought by
+// a re-render. isIntersecting only flips false once the element has zero overlap with the
+// viewport (the default threshold: 0), i.e. "scrolled beyond screen" rather than merely partially
+// cut off. Returns a ref to attach to the <details> element; a no-op in environments without
+// IntersectionObserver (e.g. jsdom in tests), where a disclosure simply stays open once expanded.
+const useAutoCollapseDetails = () => {
+  const detailsRef = useRef(null)
+  useEffect(() => {
+    const details = detailsRef.current
+    if (!details || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting && details.open) details.open = false
+    })
+    observer.observe(details)
+    return () => observer.disconnect()
+  }, [])
+  return detailsRef
 }
 
 const MainPage = () => {
@@ -846,6 +866,58 @@ const MainPage = () => {
     else next.add(tierId)
     return next
   })
+  // Auto-collapses a tier's Details disclosure once its row scrolls fully out of the viewport, the
+  // React-controlled-disclosure equivalent of useAutoCollapseDetails above (native <details> can't
+  // be used here — see TierDetailsContent's own comment for why). A single shared
+  // IntersectionObserver watches every currently-rendered tier row (registered/unregistered via a
+  // stable per-tier ref callback, cached in tierRowRefCallbacksRef so its identity doesn't change
+  // across re-renders — a fresh callback identity every render would make React re-invoke it with
+  // null then the element again on every tick, needlessly churning observe/unobserve) rather than
+  // one observer per row, since rows come and go as tiers unlock/lock across Prestige/Speed Up.
+  const tierRowObserverRef = useRef(null)
+  const tierRowElementsRef = useRef(new Map())
+  const tierRowRefCallbacksRef = useRef(new Map())
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) return
+        const tierId = entry.target.dataset.tierId
+        setOpenTierDetailIds(previous => {
+          if (!previous.has(tierId)) return previous
+          const next = new Set(previous)
+          next.delete(tierId)
+          return next
+        })
+      })
+    })
+    tierRowObserverRef.current = observer
+    return () => observer.disconnect()
+  }, [])
+  const registerTierRowRef = tierId => {
+    if (!tierRowRefCallbacksRef.current.has(tierId)) {
+      tierRowRefCallbacksRef.current.set(tierId, element => {
+        const observer = tierRowObserverRef.current
+        const previousElement = tierRowElementsRef.current.get(tierId)
+        if (observer && previousElement && previousElement !== element) observer.unobserve(previousElement)
+        if (element) {
+          tierRowElementsRef.current.set(tierId, element)
+          if (observer) observer.observe(element)
+        } else {
+          tierRowElementsRef.current.delete(tierId)
+        }
+      })
+    }
+    return tierRowRefCallbacksRef.current.get(tierId)
+  }
+  // Native <details> disclosures (see useAutoCollapseDetails above) get the same treatment, one
+  // ref per fixed card — there's no list/remount churn to worry about for these, unlike the tier
+  // rows above, so a plain per-instance hook call is simpler than a shared-observer registry.
+  const headerDetailsRef = useAutoCollapseDetails()
+  const globalTickspeedDetailsRef = useAutoCollapseDetails()
+  const speedUpDetailsRef = useAutoCollapseDetails()
+  const prestigeDetailsRef = useAutoCollapseDetails()
+  const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
   // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
   // (not reset by handleResetClick, same as openTierDetailIds above) rather than a native
   // <details>/<summary> disclosure, since the disclosure's content is suppressed entirely while
@@ -913,7 +985,13 @@ const MainPage = () => {
   const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
   const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
   const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevel / speedUpRequirement) * 100))
+  // purchaseLevels/getSpeedUpRequirement are internally 1-indexed so that "level 1" means "no
+  // completed block yet" (see CLAUDE.md's "purchase block size and tier levels"). Displayed to the
+  // player, that reads as an off-by-one — this subtracts 1 so the visible "Lv." instead counts
+  // completed blocks directly: Lv.1 after the first 8 purchases, Lv.2 after 16, etc.
+  const lastTierLevelDisplay = lastTierLevel - 1
+  const speedUpRequirementDisplay = speedUpRequirement - 1
+  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevelDisplay / speedUpRequirementDisplay) * 100))
   const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
@@ -1036,11 +1114,22 @@ const MainPage = () => {
   useEffect(() => {
     const sentinel = balancesSentinelRef.current
     if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined
+    // The expanded/compressed layouts differ enough (flex direction, padding, box-shadow, extra
+    // progress-bar/breakdown content) that flipping between them right at the sentinel's boundary
+    // pixel — which momentum/trackpad scrolling can hover over for several frames — visibly
+    // flickers. A short debounce absorbs that rapid back-and-forth into a single, settled update;
+    // 60ms is well under human perception of a deliberate scroll pause but long enough to smooth
+    // out the crossing itself.
+    let debounceTimer = null
     const observer = new IntersectionObserver(([entry]) => {
-      setBalancesCompressed(!entry.isIntersecting)
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => setBalancesCompressed(!entry.isIntersecting), 60)
     })
     observer.observe(sentinel)
-    return () => observer.disconnect()
+    return () => {
+      clearTimeout(debounceTimer)
+      observer.disconnect()
+    }
   }, [showFullScreenPrompt])
 
   // TopPrestigeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
@@ -1155,7 +1244,7 @@ const MainPage = () => {
       )}
 
       <Header>
-        <InfoDetails>
+        <InfoDetails ref={headerDetailsRef}>
           <summary>
             <h1>Tens</h1>
             <VersionText>v{version}</VersionText>
@@ -1239,7 +1328,7 @@ const MainPage = () => {
               {!isFirstRun && (
                 <li>
                   Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
-                    ? `+${Math.round((prestigeBonus - 1) * 100)}% production speed from ${formatAmount(prestige.points)} unspent PP`
+                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(prestige.points)} unspent PP`
                     : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on the Upgrades page)`}
                 </li>
               )}
@@ -1247,13 +1336,13 @@ const MainPage = () => {
                 <li>
                   Speed Up: {speedUpCount > 0
                     ? `×${formatRate(speedUpMultiplier)} production speed from ${speedUpCount} activation${speedUpCount === 1 ? '' : 's'}`
-                    : `not yet activated (reach level ${formatAmount(speedUpRequirement)} on ${lastTier.name})`}
+                    : `not yet activated (reach level ${formatAmount(speedUpRequirementDisplay)} on ${lastTier.name})`}
                 </li>
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
                   Global Tickspeed Multiplier: {isGlobalTickspeedActive
-                    ? `+${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier (Lv.${globalTickspeedLevel})`
+                    ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
               )}
@@ -1277,7 +1366,7 @@ const MainPage = () => {
           >
             <HudMutedText>
               <HudGoldText>{formatAmount(prestige.points)} PP</HudGoldText>
-              {state.prestigeSpeedBonusUnlocked && ` · +${Math.round((prestigeBonus - 1) * 100)}% production speed`}
+              {state.prestigeSpeedBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
             </HudMutedText>
           </PpHeaderCard>
         )}
@@ -1310,20 +1399,20 @@ const MainPage = () => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
-          <InfoDetails>
+          <InfoDetails ref={globalTickspeedDetailsRef}>
             <summary><h2>Global Tickspeed Multiplier</h2></summary>
             <MutedText id="global-tickspeed-description">
               Spend Bits to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
               ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
-              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — +${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier.`}
+              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.`}
             </MutedText>
           </InfoDetails>
           <Button
             aria-describedby="global-tickspeed-description"
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently +${formatGlobalTickspeedBonusPercent(globalTickspeedMultiplier)}% faster ticks on every tier)`
+                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
                 : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
@@ -1390,7 +1479,7 @@ const MainPage = () => {
           const tickspeedMultiplier = isLastTierXpUnlocked
             ? getLastTierXpTickspeedMultiplier(lastTierXpConsumed)
             : getTickspeedProductionMultiplier(tickspeedLevel)
-          const tickspeedBonusPercent = formatBonusPercent(tickspeedMultiplier)
+          const tickspeedBonusLabel = formatBonusOrMultiplier(tickspeedMultiplier)
           // Consuming XP for the last tier's tickspeed always spends the player's entire current
           // XP balance in one action (rather than a fixed minimum) — since every consumption,
           // however small, resets every other tier's owned quantity (not their lifetime
@@ -1406,11 +1495,11 @@ const MainPage = () => {
           // because it's multiplicative, that ratio is independent of how much XP was already
           // consumed (the prior multiplier cancels out), so it's exactly
           // getLastTierXpTickspeedMultiplier(amount) regardless of lastTierXpConsumed so far.
-          const lastTierXpConsumeBonusPercent = formatBonusPercent(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
-          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% ${tier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
+          const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
+          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${tier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
           const handleConsumeLastTierXp = () => {
             if (!canConsumeLastTierXp) return
-            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for +${formatAmount(lastTierXpConsumeBonusPercent)}% faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
+            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
               actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
             }
           }
@@ -1474,6 +1563,8 @@ const MainPage = () => {
           return (
             <TierLine
               key={tier.id}
+              ref={registerTierRowRef(tier.id)}
+              data-tier-id={tier.id}
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
@@ -1505,41 +1596,31 @@ const MainPage = () => {
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
-                  {tickspeedBonusPercent > 0 && (
+                  {tickspeedMultiplier > 1 && (
                     <GreenText title={
                       isLastTierXpUnlocked
-                        ? `${formatAmount(lastTierXpConsumed)} XP consumed — +${tickspeedBonusPercent}% faster ticks`
-                        : `Tickspeed multiplier level ${tickspeedLevel} — +${tickspeedBonusPercent}% faster ticks`
+                        ? `${formatAmount(lastTierXpConsumed)} XP consumed — ${tickspeedBonusLabel} faster ticks`
+                        : `Tickspeed multiplier level ${tickspeedLevel} — ${tickspeedBonusLabel} faster ticks`
                     }>
-                      ⚙ +{tickspeedBonusPercent}%
+                      ⚙ {tickspeedBonusLabel}
                     </GreenText>
+                  )}
+                  {isAutobuyerUnlocked && (
+                    <PpUpgradeBadge
+                      $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                      $dimmed={!autobuyerEnabled}
+                      aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
+                      title={
+                        autobuyerEnabled
+                          ? "This tier's autobuyer is buying units automatically"
+                          : "This tier's autobuyer is currently paused — it will not buy units until resumed"
+                      }
+                    >
+                      🤖
+                    </PpUpgradeBadge>
                   )}
                 </TierName>
               </TierNameTrigger>
-              {isAutobuyerUnlocked && (
-                <AutobuyerStatusRow>
-                  <PpUpgradeBadge
-                    $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
-                    title={
-                      autobuyerEnabled
-                        ? "This tier's autobuyer is buying units automatically"
-                        : "This tier's autobuyer is currently paused — it will not buy units until resumed"
-                    }
-                  >
-                    {autobuyerEnabled ? '🤖 Active' : '🤖 Paused'}
-                  </PpUpgradeBadge>
-                  <PauseToggleButton
-                    aria-pressed={autobuyerEnabled}
-                    aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                    onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
-                    title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                    type="button"
-                    variant="ghost"
-                  >
-                    {autobuyerEnabled ? '⏸' : '▶'}
-                  </PauseToggleButton>
-                </AutobuyerStatusRow>
-              )}
               {isDetailsOpen && (
                 <TierDetailsContent id={detailsId}>
                   <ul>
@@ -1596,7 +1677,7 @@ const MainPage = () => {
                   color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
                   disabled={!canUpgradeTickspeed}
                   onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                  title={`Tickspeed multiplier level ${tickspeedLevel} (+${tickspeedBonusPercent}% faster ticks) — the next level makes it 10% more`}
+                  title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
                   $progress={tickspeedProgressPercent}
                   $pulse={canUpgradeTickspeed}
                 >
@@ -1637,17 +1718,17 @@ const MainPage = () => {
 
       {speedUpEverRevealed && (
         <SpeedUpCard aria-label="speed up panel">
-          <InfoDetails>
+          <InfoDetails ref={speedUpDetailsRef}>
             <summary><h2>Speed Up</h2></summary>
             <MutedText id="speed-up-description">
-              Reach level {speedUpRequirement} on {lastTier.name} to trigger a Speed Up: resets your
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
               tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
               doubles production speed. Each Speed Up needs one more level than the last.
             </MutedText>
           </InfoDetails>
           <SpeedUpButton
             aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirement}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
             onClick={actions.speedUp}
@@ -1658,7 +1739,7 @@ const MainPage = () => {
             $pulse={canSpeedUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(speedUpRequirement)}</ButtonLabel>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Speed Up progress"
@@ -1668,8 +1749,12 @@ const MainPage = () => {
             />
           </SpeedUpButton>
           {!isFirstRun && isAutoSpeedUpActive && (
-            <MutedText title="Speed Up now triggers automatically the instant it's eligible">
-              ⏩ Auto Speed Up active
+            <MutedText title={
+              autoSpeedUpEnabled
+                ? "Speed Up now triggers automatically the instant it's eligible"
+                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+            }>
+              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
             </MutedText>
           )}
         </SpeedUpCard>
@@ -1677,51 +1762,35 @@ const MainPage = () => {
 
       {showBottomPrestigeCard && (
         <PrestigeCard aria-label="prestige panel">
-          <InfoDetails>
+          <InfoDetails ref={prestigeDetailsRef}>
             <summary><h2>Prestige</h2></summary>
             <MutedText id="prestige-description">
               Reach 1 Googol Bits to earn Prestige Points (more the further past Googol you get).
               {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
-              {' '}Resets your resources when reached.
+              {' '}Resets your resources when reached — use the Prestige Points display up top to
+              Prestige once available, {prestigeProgressPercent}% there now.
             </MutedText>
             <div>
               <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
               {!isFirstRun && (
                 <MutedText>
                   {formatAmount(prestige.points)} PP unspent
-                  {state.prestigeSpeedBonusUnlocked && ` · ×${formatRate(prestigeBonus)} production speed`}
+                  {state.prestigeSpeedBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
                   {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
+                </MutedText>
+              )}
+              {allTiersFullyAutomated && isAutoPrestigeActive && (
+                <MutedText title={
+                  autoPrestigeEnabled
+                    ? `Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`
+                    : 'Auto-Prestige is currently paused — it will not fire until resumed'
+                }>
+                  <PpUpgradeBadge $dimmed={!autoPrestigeEnabled} aria-label={autoPrestigeEnabled ? 'Auto-Prestige active' : 'Auto-Prestige paused'}>✦</PpUpgradeBadge>
+                  {' '}Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
                 </MutedText>
               )}
             </div>
           </InfoDetails>
-          <Button
-            aria-describedby="prestige-description"
-            aria-label={prestigeAriaLabel}
-            color={canPrestige ? '#fbbf24' : 'darkgrey'}
-            disabled={!canPrestige}
-            onClick={actions.prestige}
-            title="Awards Prestige Points and resets your resources"
-            type="button"
-            $progress={prestigeProgressPercent}
-            $progressColor="#fbbf24"
-            $pulse={canPrestige}
-          >
-            <ButtonIcon>✦ </ButtonIcon>
-            <ButtonLabel>+{formatAmount(prestigeAwardPreview)} PP{' · '}{prestigeProgressPercent}%</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Prestige progress"
-              aria-valuenow={prestigeProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-          {allTiersFullyAutomated && isAutoPrestigeActive && (
-            <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
-              ✦ Auto-Prestige Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-            </MutedText>
-          )}
         </PrestigeCard>
       )}
 
@@ -1733,7 +1802,7 @@ const MainPage = () => {
             <CategoryHeading>Tier Autobuyers</CategoryHeading>
             {allTiersFullyAutomated ? (
               <div aria-label="full smart autobuyer notice">
-                <InfoDetails>
+                <InfoDetails ref={fullSmartAutobuyerDetailsRef}>
                   <summary>🧠 Every tier is fully smart</summary>
                   <MutedText>
                     Every tier's autobuyer is fully unlocked, smart, and tickspeed-automated — since
@@ -1757,6 +1826,7 @@ const MainPage = () => {
                 )
                 if (!unlocked && !previousTierHasAnyAutobuyerUpgrade) return null
                 const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
+                const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
                 const isSmart = state.smartAutobuyer?.[tier.id] ?? false
                 const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
                 const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
@@ -1796,17 +1866,45 @@ const MainPage = () => {
                         />
                       </PpUpgradeButton>
                     )}
+                    {!isAutobuyerLocked && (
+                      <UpgradeRowControls>
+                        <PpUpgradeBadge
+                          $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                          $dimmed={!autobuyerEnabled}
+                          aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
+                          title={
+                            autobuyerEnabled
+                              ? "This tier's autobuyer is buying units automatically"
+                              : "This tier's autobuyer is currently paused — it will not buy units until resumed"
+                          }
+                        >
+                          🤖
+                        </PpUpgradeBadge>
+                        <PauseToggleButton
+                          aria-pressed={autobuyerEnabled}
+                          aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                          onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
+                          title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                          type="button"
+                          variant="ghost"
+                        >
+                          {autobuyerEnabled ? '⏸' : '▶'}
+                        </PauseToggleButton>
+                      </UpgradeRowControls>
+                    )}
                     {isTierTickspeedAutobuyerActive ? (
                       <UpgradeRowControls>
                         <PpUpgradeBadge
                           $color={tierTickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                          $dimmed={!tierTickspeedAutobuyerEnabled}
+                          aria-label={tierTickspeedAutobuyerEnabled ? `${tier.name}'s tickspeed autobuyer active` : `${tier.name}'s tickspeed autobuyer paused`}
                           title={
                             tierTickspeedAutobuyerEnabled
                               ? "This tier's tickspeed multiplier now upgrades itself automatically whenever affordable"
                               : "This tier's tickspeed autobuyer is currently paused — it will not upgrade until resumed"
                           }
                         >
-                          {tierTickspeedAutobuyerEnabled ? '⚙ Active' : '⚙ Paused'}
+                          ⚙
                         </PpUpgradeBadge>
                         <PauseToggleButton
                           aria-pressed={tierTickspeedAutobuyerEnabled}
@@ -1831,7 +1929,7 @@ const MainPage = () => {
                         $progressColor="#38bdf8"
                       >
                         <ButtonIcon>⚙ </ButtonIcon>
-                        <ButtonLabel>Auto for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
+                        <ButtonLabel>Auto-Tickspeed for {formatAmount(tierTickspeedAutobuyerCost)} PP</ButtonLabel>
                         <VisuallyHidden
                           role="progressbar"
                           aria-label={`${tier.name} tickspeed autobuyer Prestige Point progress`}
@@ -1884,13 +1982,15 @@ const MainPage = () => {
                 <UpgradeRowControls>
                   <PpUpgradeBadge
                     $color={tickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                    $dimmed={!tickspeedAutobuyerEnabled}
+                    aria-label={tickspeedAutobuyerEnabled ? 'Tickspeed Autobuyer active' : 'Tickspeed Autobuyer paused'}
                     title={
                       tickspeedAutobuyerEnabled
                         ? 'The global tickspeed multiplier now upgrades itself automatically whenever affordable'
                         : 'The global tickspeed multiplier is currently paused — it will not upgrade itself until resumed'
                     }
                   >
-                    {tickspeedAutobuyerEnabled ? '🌐 Active' : '🌐 Paused'}
+                    🌐
                   </PpUpgradeBadge>
                   <PauseToggleButton
                     aria-pressed={tickspeedAutobuyerEnabled}
@@ -1933,13 +2033,15 @@ const MainPage = () => {
                 <UpgradeRowControls>
                   <PpUpgradeBadge
                     $color={autoSpeedUpEnabled ? '#4ade80' : '#facc15'}
+                    $dimmed={!autoSpeedUpEnabled}
+                    aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}
                     title={
                       autoSpeedUpEnabled
                         ? "Speed Up now triggers automatically the instant it's eligible"
                         : 'Auto Speed Up is currently paused — it will not trigger until resumed'
                     }
                   >
-                    {autoSpeedUpEnabled ? '⏩ Active' : '⏩ Paused'}
+                    ⏩
                   </PpUpgradeBadge>
                   <PauseToggleButton
                     aria-pressed={autoSpeedUpEnabled}
@@ -1983,13 +2085,15 @@ const MainPage = () => {
                   <UpgradeRowControls>
                     <PpUpgradeBadge
                       $color={autoPrestigeAutobuyerEnabled ? '#4ade80' : '#facc15'}
+                      $dimmed={!autoPrestigeAutobuyerEnabled}
+                      aria-label={autoPrestigeAutobuyerEnabled ? 'Auto-Prestige Autobuyer active' : 'Auto-Prestige Autobuyer paused'}
                       title={
                         autoPrestigeAutobuyerEnabled
                           ? 'Auto-Prestige now re-levels itself automatically whenever affordable'
                           : 'The Auto-Prestige Autobuyer is currently paused — it will not re-level Auto-Prestige until resumed'
                       }
                     >
-                      {autoPrestigeAutobuyerEnabled ? '🔁 Active' : '🔁 Paused'}
+                      🔁
                     </PpUpgradeBadge>
                     <PauseToggleButton
                       aria-pressed={autoPrestigeAutobuyerEnabled}
@@ -2033,7 +2137,8 @@ const MainPage = () => {
                   Auto-Prestige
                   {isAutoPrestigeActive && (
                     <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
-                      Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s){!autoPrestigeEnabled && ' · Paused'}
+                      <PpUpgradeBadge $dimmed={!autoPrestigeEnabled} aria-label={autoPrestigeEnabled ? 'Auto-Prestige active' : 'Auto-Prestige paused'}>✦</PpUpgradeBadge>
+                      {' '}Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
                     </MutedText>
                   )}
                 </TierNameLabel>
