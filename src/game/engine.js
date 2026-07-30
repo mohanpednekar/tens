@@ -664,9 +664,10 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
 // that's previousAccumulator + elapsedSeconds >= this tier's own effective tickspeed, where
 // elapsedSeconds defaults to 1 (matching a full real second, e.g. one offline-progress replay
 // step) but callers driven by the live tick loop should pass the real per-tick value
-// (TICK_RATE_MS / 1000). The UI then animates the *visual transition* between these once-per-tick
-// values via a CSS custom-property transition (see TickProgressRing in MainPage), rather than
-// this function trying to interpolate sub-tick progress itself.
+// (TICK_RATE_MS / 1000). Not currently called from MainPage — the per-tier tick-progress ring
+// that once consumed this was removed (every tier's tickspeed being unified at 1s made all ten
+// rings sweep in unison and carry no information); kept here with its own unit tests for a future
+// consumer that needs sub-tick production progress.
 export const getTierProductionProgressPercent = (state, tierId, previousAccumulator, elapsedSeconds = 1) => {
   const tickSpeed = getEffectiveTierTickSpeedSeconds(state, tierId)
   // Same TICK_ACCUMULATION_EPSILON tolerance tickGame's own crossing check uses (see there):
