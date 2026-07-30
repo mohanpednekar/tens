@@ -757,6 +757,10 @@ const formatCost = (amount, resourceId) =>
     ? formatCurrency(amount)
     : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
+// Live "how close am I" fill percent for a progress meter (PP/tickspeed/Speed Up buttons, XP
+// consumption) — how much of `denominator` the current `numerator` already covers, capped at 100.
+const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
+
 // "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero,
 // used for multiplier displays (Speed Up's next multiplier, the PP production speed bonus).
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
@@ -811,7 +815,7 @@ const MainPage = () => {
   // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
   // on-button progress treatment: how much of a given PP cost the current unspent balance
   // already covers.
-  const ppProgressPercent = cost => Math.min(100, Math.round((prestige.points / cost) * 100))
+  const ppProgressPercent = cost => progressPercent(prestige.points, cost)
   const canPrestige = state.resources[MONEY_ID] >= GOOGOL
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
@@ -991,7 +995,7 @@ const MainPage = () => {
   // completed blocks directly: Lv.1 after the first 8 purchases, Lv.2 after 16, etc.
   const lastTierLevelDisplay = lastTierLevel - 1
   const speedUpRequirementDisplay = speedUpRequirement - 1
-  const speedUpProgressPercent = Math.min(100, Math.round((lastTierLevelDisplay / speedUpRequirementDisplay) * 100))
+  const speedUpProgressPercent = progressPercent(lastTierLevelDisplay, speedUpRequirementDisplay)
   const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
@@ -1061,9 +1065,7 @@ const MainPage = () => {
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
-  const globalTickspeedProgressPercent = Math.min(100, Math.round(
-    (state.resources[MONEY_ID] / globalTickspeedCost) * 100
-  ))
+  const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID], globalTickspeedCost)
   // Progressive disclosure, same pattern as speedUpEverRevealed/prestigeCardEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
@@ -1487,7 +1489,7 @@ const MainPage = () => {
           // minimizes how often that side effect is paid for the same total investment.
           const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
           const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
-          const lastTierXpProgressPercent = Math.min(100, Math.round((lastTierXpBalance / lastTierXpMinConsumption) * 100))
+          const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
           const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
           const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
           // getLastTierXpTickspeedMultiplier compounds, so the marginal speedup this consumption
@@ -1548,9 +1550,7 @@ const MainPage = () => {
           // anyone who expands the tooltip.
           const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
-          const tickspeedProgressPercent = Math.min(100, Math.round(
-            (resources / (tickspeedCost + 1)) * 100
-          ))
+          const tickspeedProgressPercent = progressPercent(resources, tickspeedCost + 1)
           const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`

@@ -59,8 +59,30 @@ Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
 `anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
-motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a 429
-("session limit") failure is downgraded to a warning (job stays green) since it's purely transient.
+motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a transient
+Claude-side failure — HTTP 429 ("session limit") or a 5xx server overload (429/500/502/503/529,
+e.g. "Overloaded") — is downgraded to a warning (job stays green) since it made no changes and the
+next scheduled run retries automatically. Confirmed live on 2026-07-29: a run exhausted the SDK's own
+10-attempt retry budget against a 529 and hard-failed under the classifier's original 429-only check
+— broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
+read as a real break to the next run's Phase 0 CI check.
+
+**Guard-step list feeds are explicitly `--limit`-ed and, for the task backlog, capped/sorted for
+display.** `gh issue list`/`gh pr list` default to `--limit 30`, newest-first — a silent truncation,
+not an error, on any repo with more open items than that. This repo hit it for real: with 30+ open
+`claude-task` issues, the guard step's unlimited `gh issue list` call silently dropped every issue
+below the cutoff, including several `priority:high` ones (#45-49) that should have outranked what
+Phase A was actually shown (see #45/#81's comment history). Every `gh issue list`/`gh pr list` call in
+the guard step now passes an explicit `--limit` (200 for the task backlog, 100 elsewhere) well above
+this solo project's realistic backlog size, so the CLI itself never silently drops an item. The task
+backlog is additionally capped for *display* at 30 entries — sorted `priority:high` first, then
+normal, then `priority:low`, each tier by ascending issue number (mirroring Phase A's own walk order)
+— with a one-line "+N more, see the tracker directly" note appended if the real count exceeds the
+cap, so a priority:high issue can never be silently pushed out of what the prompt shows, and the
+feed's per-run token cost stays bounded rather than growing unboundedly with backlog size. This is a
+narrower, already-landed slice of what #81 originally scoped (which assumed a larger set of guard-step
+context feeds — Project summary, checklist status, Discussions ideas, etc. — that turned out not to
+exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 `blocked` covers two distinct situations, not just one: an environment/permission restriction of the
 unattended session itself (the original use case), and — per Phase A's comment-history check below —
 a task issue where a second consecutive run independently reached the same "infeasible as written"

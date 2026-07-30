@@ -584,6 +584,28 @@ accumulating indefinitely across an entire save's lifetime. The `MIN_EFFECTIVE_T
 floor was kept regardless, as defense in depth — a single long enough run could still in principle reach
 it, and the guard costs nothing when unused.
 
+### `speedUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry
+
+The previous entry's "left as-is rather than second-guessed" call on `speedUpGame` carrying
+`prestige.highestMilestone` through untouched turned out to be wrong in practice, not just
+inconsistent. A player who had already Speed Up'd at least once reported their post-Speed-Up run
+showing far less unspent XP than expected — e.g. Money back at `1.319e30` (exponent 30) with 0 XP
+ever spent this run, but only 1 XP available instead of the expected 30.
+
+The cause: `checkMilestones` only awards XP for the delta between the current money exponent and
+`prestige.highestMilestone` (`xp: prestige.xp + (currentMilestone - prestige.highestMilestone)`).
+Money itself resets to `MONEY_STARTING_AMOUNT` on Speed Up, but `highestMilestone` — left fully
+passed through — stayed at the previous run's peak (e.g. 29). The new run then had to silently
+re-climb past that old watermark before any XP resumed accruing, so by the time money reached
+exponent 30 again, only the 1-exponent delta above the stale watermark (30 − 29) had actually been
+credited, not the full 30 a fresh run's watermark of 0 would have earned.
+
+Fixed by having `speedUpGame` reset `prestige.highestMilestone` to `createInitialGameState()`'s
+value (`0`, since `MONEY_STARTING_AMOUNT = 1`) exactly like `prestigeGame` already did, while still
+leaving `prestige.points`/`count` untouched — those two remain genuinely permanent meta-progression
+that Speed Up doesn't touch, unlike the milestone watermark which only exists to gate a run-scoped
+currency and must track that same run's money, not a stale higher-water-mark from before the reset.
+
 ### Purchase level resized from 10 to 8, and the cost-epoch sequence changed from Fibonacci to triangular
 
 The maintainer asked for the tier purchase-level mechanic to be redefined: a "level" should mean one

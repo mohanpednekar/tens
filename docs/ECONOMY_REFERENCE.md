@@ -611,9 +611,12 @@ unchanged — but **`globalTickspeedMultiplier` (the level itself) resets to `nu
 behavior across a real Prestige (see "The global tickspeed multiplier" above) — so neither a
 repeatedly-Speed-Up'd nor a repeatedly-Prestiged run can keep stacking it for free.
 `lastTierXpConsumed`/`prestige.xp` reset to 0 the same way (see "The last tier's XP-funded tickspeed"
-above) — everything XP-related is run-scoped, not permanent meta-progression. Unlike `prestigeGame`:
-`prestige.points`/`count`/`highestMilestone` are passed through completely untouched (Speed Up
-doesn't award/spend PP), and the gate condition is `getTierPurchasedCount(lastTier) >=
+above) — everything XP-related is run-scoped, not permanent meta-progression. `prestige.highestMilestone`
+(the money-exponent watermark `checkMilestones` grants further XP against) resets to the fresh initial
+value here too, same as `prestigeGame` — otherwise a fresh run (money reset to `MONEY_STARTING_AMOUNT`)
+would earn no XP at all until money climbed back past wherever the previous run's peak left off. Unlike
+`prestigeGame`: `prestige.points`/`count` are passed through completely untouched (Speed Up doesn't
+award/spend PP), and the gate condition is `getTierPurchasedCount(lastTier) >=
 getSpeedUpRequirement(speedUpCount)`, not `Money >= GOOGOL` — also refuses while `isProductionFrozen`.
 `speedUpCount` itself is run-scoped, NOT permanent: `speedUpGame` increments it by 1 on every
 activation (stacking within a run), but **`prestigeGame` resets it back to 0** — a real Prestige is
