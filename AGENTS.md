@@ -96,7 +96,7 @@ resolve to that dir's `index.jsx`/`index.js`.
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
   `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
-- `yarn test` is green (589 tests as of this writing — see `CLAUDE.md`'s Testing section for the
+- `yarn test` is green (593 tests as of this writing — see `CLAUDE.md`'s Testing section for the
   current count; update both together if it changes).
 
 ## Changelog convention
