@@ -49,11 +49,13 @@ specifically for:
 If any tier `id` is renamed or removed, check `src/game/storage.js`'s `LEGACY_TIER_ID_MAP` (old id
 → new id) and `LEGACY_REMOVED_TIER_IDS` (dropped entirely) cover **every** old→new mapping the
 issue specifies — an old id missing from either one silently orphans that tier's saved
-`resources`/`owned`/`purchased`/`autobuyers`/`autobuyerAttemptBudgets`/
-`tierProductionAccumulators`/`autobuyerAutomation`/`smartAutobuyer` data on existing players' next
-load, rather than carrying it forward or making a deliberate, spec'd decision to discard it (see
-`migrateTierKeys`/`migrateState` in `storage.js`, and the `LEGACY_REMOVED_TIER_IDS` comment for an
-example of a deliberate, documented drop).
+`resources`/`owned`/`purchased`/`purchaseLevels`/`purchaseLevelProgress`/`autobuyers`/
+`autobuyersEnabled`/`tickspeedLevels`/`autobuyerAttemptBudgets`/`tierProductionAccumulators`/
+`smartAutobuyer`/`tierTickspeedAutobuyer`/`tierTickspeedAutobuyerEnabled`/`everUnlockedTierIds`
+data on existing players' next load, rather than carrying it forward or making a deliberate,
+spec'd decision to discard it (see every `migrateTierKeys(saved.<field>)` call site in
+`migrateState`, `storage.js`, and the `LEGACY_REMOVED_TIER_IDS` comment for an example of a
+deliberate, documented drop).
 
 ## 5. Authorization boundary
 
