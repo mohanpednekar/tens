@@ -958,15 +958,6 @@ export const buyTier = tierId => state => {
 
   if (getTierSpendableAmount(state, tier) < cost) return state
 
-  const costResourceOwnedCount = state.owned[tier.costResourceId]
-  const ownedUpdates = {
-    [tierId]: (state.owned[tierId] ?? 0) + 1,
-  }
-
-  if (costResourceOwnedCount !== undefined) {
-    ownedUpdates[tier.costResourceId] = clampNonNegative(costResourceOwnedCount - cost)
-  }
-
   const newPurchased = getTierPurchasedCount(state, tierId) + 1
 
   // Advance level/progress directly rather than deriving them from newPurchased after the fact —
@@ -983,7 +974,7 @@ export const buyTier = tierId => state => {
       [tier.costResourceId]: clampNonNegative((state.resources[tier.costResourceId] ?? 0) - cost),
       [tierId]: (state.resources[tierId] ?? 0) + 1,
     },
-    owned: { ...state.owned, ...ownedUpdates },
+    owned: { ...state.owned, [tierId]: (state.owned[tierId] ?? 0) + 1 },
     purchased: {
       ...state.purchased,
       [tierId]: newPurchased,
