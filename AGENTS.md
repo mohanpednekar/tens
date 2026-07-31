@@ -96,8 +96,8 @@ resolve to that dir's `index.jsx`/`index.js`.
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
   `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
-- `yarn test` is green (593 tests as of this writing — see `CLAUDE.md`'s Testing section for the
-  current count; update both together if it changes).
+- `yarn test` is green — see `CLAUDE.md`'s Testing section for the current test count (the
+  authoritative number; don't restate it here, to avoid the two drifting apart).
 
 ## Changelog convention
 
@@ -118,13 +118,12 @@ sections.
 - Milestones and the Project's `Track` field are complementary: a Milestone targets one planned
   release; `Track` groups issues by theme/dependency chain and can span multiple releases.
 
-## Budget discipline (applies to every session, not just automation)
+## Budget discipline
 
-There's no fixed turn cap. Before sizing a task, self-estimate how much of the current rolling 5-hour
-Claude usage window is likely still available and aim to keep that session's work at or under roughly
-**50%** of a full window's worth of effort — a soft target, not a hard limit; a modest overshoot from
-estimation inaccuracy or unknown concurrent usage is expected and not a failure. If a task looks too
-large even after buffering, land the largest coherent, test-covered slice first.
+Applies to every session, not just automation — self-estimate remaining 5-hour Claude usage window
+and target roughly half of it per session. See `CLAUDE.md`'s "Budget discipline" paragraph (under
+Automation workflows) for the full soft-target/overshoot/partial-slice policy — not restated here to
+avoid drift between the two copies.
 
 ## Reliability: cron dormancy
 
