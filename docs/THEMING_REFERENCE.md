@@ -1,0 +1,48 @@
+# Theming reference
+
+Referenced from `CLAUDE.md`'s "Theming" section. Full per-file breakdown of the design-token system,
+so `CLAUDE.md` keeps only a short summary — the same split already applied to
+`docs/MAINPAGE_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`. Read this before touching
+`src/theme/tokens.js`, `src/theme/fonts.js`, `src/theme/GlobalStyle.js`, or `src/theme/index.jsx`. For
+the *why* behind the token/font choices (rejected alternatives, trade-off reasoning), see
+`docs/DESIGN_HISTORY.md`.
+
+All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
+the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
+values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
+components migrate onto these tokens one at a time in later sub-issues.
+
+- **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
+  `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
+  `color` (per-mode: `page`, `surface`, `surfaceRaised`, `surfaceSunken`, `border`, `borderStrong`,
+  `text`, `textMuted`, `textFaint`, `accent` (indigo brand), `good`/`warn`/`info`/`violet`/`danger`
+  semantics kept distinct from the accent, `disabled`), `shadow` (`sm`/`md`, per-mode), `tierAccents`
+  (per-mode 8-hue cycle for the tier left-edge stripe), plus mode-independent `space`, `radius`,
+  `motion` (`duration`/`easing`), `font` (`display`/`body`/`mono`), and `type` (`scale` + `numeric`).
+  `font.display` is `"Space Grotesk"` (a characterful geometric sans fitting the byte-scale/computing
+  theme) and `font.body` is `"Inter"` (chosen for legibility and strong tabular figures — numbers are
+  the star of an incremental game); both are locally bundled (see `fonts.js` below), each with
+  the prior system-stack values kept as a fallback. `font.mono` stays a system stack — no bundled mono
+  face was needed. `type.scale` pairs each step (`xs`/`sm`/`md`/`lg`/`xl`/`hero`) with a `{ size,
+  lineHeight }` rem pair; `type.numeric` is `'tabular-nums'`. The scale isn't applied per-component
+  beyond the base body size and the wordmark heading yet — later per-surface redesign sub-issues (HUD
+  #137/tier-row #138/prestige #139) apply the rest of it to their own text.
+- **`fonts.js`** locally bundles the two faces above via `@fontsource/inter`/`@fontsource/space-grotesk`
+  side-effect imports (`import '@fontsource/inter/latin-400.css'`, etc.) — no runtime CDN fetch, so the
+  game stays fully self-contained after the GH Pages deploy (confirmed via `yarn build`: `dist/assets/`
+  carries the woff2/woff files directly, no external font URL in the built output). Only 4 specific
+  weight/subset files are imported, not each package's full weight/subset set: Inter 400 (body
+  baseline), 600 (`Button`'s `font-weight: 600`), and 700 (h2/h3 headings, which inherit the body face
+  at the browser's default heading bold weight), plus Space Grotesk 700 (the wordmark). Each import
+  targets the package's `latin-*.css` file specifically (not the aggregate `NNN.css`, which pulls in
+  every script subset — cyrillic, greek, vietnamese, …) to keep the bundled weight/subset count
+  intentionally small. Imported once from `theme/index.jsx` as a side effect, so it loads regardless of
+  theme mode.
+- **`GlobalStyle.js`** (`createGlobalStyle`) replaces the removed `src/index.css` + `src/App.css`: the
+  `box-sizing` reset, base font/smoothing, the form-control `font: inherit` rule, and the token-driven
+  page background + text color (so the whole page repaints on a mode change).
+- **`theme/index.jsx`** exports `<ThemeProvider mode>` (wrapping styled-components' `ThemeProvider`) and
+  re-exports `GlobalStyle`/`themes`/`buildTheme`/`MODES`/`DEFAULT_MODE`. `App.jsx` renders
+  `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
+  `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
+  light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
