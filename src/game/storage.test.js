@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
@@ -10,6 +10,10 @@ beforeEach(() => {
   localStorage.clear()
 })
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
 describe('loadGameState', () => {
   it('returns null when nothing is saved', () => {
     expect(loadGameState()).toBeNull()
@@ -17,6 +21,13 @@ describe('loadGameState', () => {
 
   it('returns null for corrupt localStorage data', () => {
     localStorage.setItem('tens_game_state', 'not-json!!!')
+    expect(loadGameState()).toBeNull()
+  })
+
+  it('returns null (rather than throwing) when localStorage.getItem itself throws', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: private browsing')
+    })
     expect(loadGameState()).toBeNull()
   })
 })
@@ -510,6 +521,34 @@ describe('clearGameState', () => {
     clearGameState()
     expect(loadGameState()).toBeNull()
   })
+
+  it('fails silently (rather than throwing) when localStorage.removeItem throws', () => {
+    saveGameState(createInitialGameState())
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
+    expect(() => clearGameState()).not.toThrow()
+  })
+})
+
+describe('saveGameState error handling', () => {
+  it('fails silently (rather than throwing) when localStorage.setItem throws', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    expect(() => saveGameState(createInitialGameState())).not.toThrow()
+  })
+
+  it('fails silently even when only the second of its two setItem calls throws', () => {
+    // saveGameState writes the game-state key, then the last-save-timestamp key — confirm a
+    // failure specifically on the second write is caught too, not just a failure on the first.
+    let callCount = 0
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      callCount += 1
+      if (callCount === 2) throw new Error('QuotaExceededError')
+    })
+    expect(() => saveGameState(createInitialGameState())).not.toThrow()
+  })
 })
 
 describe('saveGameState / loadLastSaveTimestamp', () => {
@@ -529,6 +568,14 @@ describe('saveGameState / loadLastSaveTimestamp', () => {
   it('returns null for a corrupt stored timestamp', () => {
     saveGameState(createInitialGameState())
     localStorage.setItem('tens_last_save_timestamp', 'not-a-number')
+    expect(loadLastSaveTimestamp()).toBeNull()
+  })
+
+  it('returns null (rather than throwing) when localStorage.getItem itself throws', () => {
+    saveGameState(createInitialGameState())
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: private browsing')
+    })
     expect(loadLastSaveTimestamp()).toBeNull()
   })
 
