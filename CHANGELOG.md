@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 - Pinned the `vite-plugin-pwa` build toolchain's `glob > minimatch > brace-expansion` dependency to `^5.0.8` via a `resolutions` override, fixing a high-severity ReDoS/OOM advisory (`yarn audit`) in the version it previously resolved to. Build-time only — no runtime/user-facing impact.
+- Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
 
 ## [0.5.0] - 2026-07-14
 
