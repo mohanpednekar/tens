@@ -365,6 +365,11 @@ describe('formatAmount', () => {
     expect(formatAmount(1000)).toBe('1,000')
   })
 
+  it('switches to exponential notation at the threshold, like formatCurrency', () => {
+    expect(formatAmount(999999)).toBe('999,999')
+    expect(formatAmount(1000000)).toBe('1e6')
+  })
+
   it('treats negative values as 0', () => {
     expect(formatAmount(-5)).toBe('0')
   })
@@ -1598,6 +1603,21 @@ describe('tickGame', () => {
     }
     const after = tickGame(1)(state) // +10 money → crosses 100
     expect(after.prestige.xp).toBeGreaterThan(0)
+  })
+
+  it('does not reduce xp or highestMilestone when money is below the watermark exponent (e.g. just after spending it)', () => {
+    // owned: 0 so no production changes money across the tick — isolates the
+    // currentMilestone <= highestMilestone guard: money's exponent (1, for 50) is now below the
+    // watermark (2), which without the guard would compute a negative XP delta and regress
+    // highestMilestone.
+    const state = {
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 50 },
+      prestige: { xp: 10, points: 0, count: 0, highestMilestone: 2 },
+    }
+    const after = tickGame(1)(state)
+    expect(after.prestige.xp).toBe(10)
+    expect(after.prestige.highestMilestone).toBe(2)
   })
 
   it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 generator per tick', () => {

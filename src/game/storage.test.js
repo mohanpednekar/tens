@@ -203,6 +203,19 @@ describe('schema migration', () => {
     expect(loaded.purchased[tensTier.id]).toBe(7)
   })
 
+  it('derives purchaseLevels/purchaseLevelProgress from owned when both purchased and the new fields predate the save', () => {
+    const { purchased: _droppedPurchased, purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
+      ...createInitialGameState(),
+      owned: { ...createInitialGameState().owned, [tensTier.id]: 19 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    // Same derivation as the purchased-count case above, fed through the saved.purchased ??
+    // saved.owned fallback since this save has no purchased field at all.
+    expect(loaded.purchaseLevels[tensTier.id]).toBe(3)
+    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(3)
+  })
+
   it('derives purchaseLevels/purchaseLevelProgress from a legacy purchased count on a save that predates those fields', () => {
     const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
       ...createInitialGameState(),
@@ -425,6 +438,28 @@ describe('schema migration', () => {
     const loaded = loadGameState()
     expect(loaded.tickspeedLevels[tensTier.id]).toBe(3)
     expect(loaded.autobuyers[tensTier.id]).not.toBeNull()
+  })
+
+  it('recovers a legacy per-tier tickspeed level of exactly 2, the lowest value above the v > 1 baseline', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 2 },
+    }
+    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
+    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
+    const loaded = loadGameState()
+    expect(loaded.tickspeedLevels[tensTier.id]).toBe(2)
+  })
+
+  it('does not recover a legacy tickspeed level from a legacy autobuyer value of exactly 1, since 1 is the baseline, not a level above it', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 1 },
+    }
+    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
+    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
+    const loaded = loadGameState()
+    expect(loaded.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
   it('preserves a saved Auto-Prestige level', () => {
