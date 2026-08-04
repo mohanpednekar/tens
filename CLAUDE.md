@@ -219,7 +219,10 @@ src/
                                imports `./fonts` as a side effect; `mode` defaults to dark and is the
                                seam #140 will drive from system pref + toggle
   App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
-  index.jsx                 ← ReactDOM.createRoot entry point
+  index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
+  reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
+                               passed a callback function — currently called with no argument, so it
+                               is a no-op in practice today
 vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin. Full PWA
                                reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
@@ -385,7 +388,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (598, see "Testing" above) is unaffected by anything under `e2e/`.
+  (603, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
