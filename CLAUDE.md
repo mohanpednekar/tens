@@ -185,6 +185,8 @@ docs/
   ECONOMY_REFERENCE.md         ← full Economy model reference (see below)
   MAINPAGE_REFERENCE.md        ← full MainPage reference (see Architecture below)
   COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference (see below)
+  THEMING_REFERENCE.md         ← full design-token/font/ThemeProvider reference (see Theming below)
+  PWA_REFERENCE.md             ← full installable-PWA reference (see PWA support below)
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
@@ -206,10 +208,11 @@ src/
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
-                               exports buildTheme(mode) + themes.{dark,light} (see "Theming" below)
+                               exports buildTheme(mode) + themes.{dark,light}. Full reference:
+                               `docs/THEMING_REFERENCE.md`
     fonts.js                 ← locally bundles the `font.display`/`font.body` faces (Space Grotesk /
                                Inter, via @fontsource) as side-effect CSS imports — no runtime CDN
-                               fetch (see "Theming" below)
+                               fetch. Full reference: `docs/THEMING_REFERENCE.md`
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
@@ -217,8 +220,8 @@ src/
                                seam #140 will drive from system pref + toggle
   App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
   index.jsx                 ← ReactDOM.createRoot entry point
-vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (see "PWA
-                               support" below)
+vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin. Full PWA
+                               reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
                                "Testing" below) — separate from vite.config.js's own `test` block, which
                                only configures Vitest
@@ -232,7 +235,7 @@ scripts/
                                not part of the build — only re-run it if the icon design/palette changes
 public/
   pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png
-                               ← generated PWA icon assets (see "PWA support" below); the old
+                               ← generated PWA icon assets (see `docs/PWA_REFERENCE.md`); the old
                                create-react-app-era `index.html`/`manifest.json`/`logo192.png`/
                                `logo512.png` in this directory were unused dead weight (this is a Vite
                                app — Vite's own root `index.html` is what's actually served) and were
@@ -293,84 +296,27 @@ change a formula a past iteration may already have tried and rejected.
 
 ## Theming
 
-All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
-the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
-values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
-components migrate onto these tokens one at a time in later sub-issues.
+All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`
+(`buildTheme(mode)` + `themes.dark`/`themes.light`), so the app's two themes — an evolved **dark**
+(default) and a **light** theme — fall out of swapping palette values rather than forking any component
+on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
+at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
+bundled via `theme/fonts.js` — no runtime CDN fetch. `mode` is currently a plain prop defaulting to
+`dark` on `<ThemeProvider>`; system-preference detection + a persisted toggle is deferred to #140.
 
-- **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
-  `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
-  `color` (per-mode: `page`, `surface`, `surfaceRaised`, `surfaceSunken`, `border`, `borderStrong`,
-  `text`, `textMuted`, `textFaint`, `accent` (indigo brand), `good`/`warn`/`info`/`violet`/`danger`
-  semantics kept distinct from the accent, `disabled`), `shadow` (`sm`/`md`, per-mode), `tierAccents`
-  (per-mode 8-hue cycle for the tier left-edge stripe), plus mode-independent `space`, `radius`,
-  `motion` (`duration`/`easing`), `font` (`display`/`body`/`mono`), and `type` (`scale` + `numeric`).
-  `font.display` is `"Space Grotesk"` (a characterful geometric sans fitting the byte-scale/computing
-  theme) and `font.body` is `"Inter"` (chosen for legibility and strong tabular figures — numbers are
-  the star of an incremental game); both are locally bundled (see `theme/fonts.js` below), each with
-  the prior system-stack values kept as a fallback. `font.mono` stays a system stack — no bundled mono
-  face was needed. `type.scale` pairs each step (`xs`/`sm`/`md`/`lg`/`xl`/`hero`) with a `{ size,
-  lineHeight }` rem pair; `type.numeric` is `'tabular-nums'`. The scale isn't applied per-component
-  beyond the base body size and the wordmark heading yet — later per-surface redesign sub-issues (HUD
-  #137/tier-row #138/prestige #139) apply the rest of it to their own text.
-- **`fonts.js`** locally bundles the two faces above via `@fontsource/inter`/`@fontsource/space-grotesk`
-  side-effect imports (`import '@fontsource/inter/latin-400.css'`, etc.) — no runtime CDN fetch, so the
-  game stays fully self-contained after the GH Pages deploy (confirmed via `yarn build`: `dist/assets/`
-  carries the woff2/woff files directly, no external font URL in the built output). Only 4 specific
-  weight/subset files are imported, not each package's full weight/subset set: Inter 400 (body
-  baseline), 600 (`Button`'s `font-weight: 600`), and 700 (h2/h3 headings, which inherit the body face
-  at the browser's default heading bold weight), plus Space Grotesk 700 (the wordmark). Each import
-  targets the package's `latin-*.css` file specifically (not the aggregate `NNN.css`, which pulls in
-  every script subset — cyrillic, greek, vietnamese, …) to keep the bundled weight/subset count
-  intentionally small. Imported once from `theme/index.jsx` as a side effect, so it loads regardless of
-  theme mode.
-- **`GlobalStyle.js`** (`createGlobalStyle`) replaces the removed `src/index.css` + `src/App.css`: the
-  `box-sizing` reset, base font/smoothing, the form-control `font: inherit` rule, and the token-driven
-  page background + text color (so the whole page repaints on a mode change).
-- **`theme/index.jsx`** exports `<ThemeProvider mode>` (wrapping styled-components' `ThemeProvider`) and
-  re-exports `GlobalStyle`/`themes`/`buildTheme`/`MODES`/`DEFAULT_MODE`. `App.jsx` renders
-  `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
-  `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
-  light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
+The full per-file token/font/GlobalStyle/ThemeProvider breakdown lives in `docs/THEMING_REFERENCE.md`.
+Read it before touching `src/theme/*`.
 
 ## PWA support
 
 The app is installable as a Progressive Web App on both Android Chrome and iOS Safari — home-screen
 icon, standalone display with no browser chrome, offline-capable after a first visit — via
-`vite-plugin-pwa`, without any app-store presence. This was a deliberate choice over Capacitor/native
-app-store publishing or a React Native rewrite; see `docs/DESIGN_HISTORY.md` for the trade-off
-reasoning.
-
-- **`vite.config.js`** registers `VitePWA({ registerType: 'autoUpdate', includeAssets: [...], manifest:
-  {...} })` alongside the existing `react()` plugin, using the plugin's default `generateSW` strategy
-  (appropriate for this fully static, no-backend SPA — no custom runtime caching rules are configured).
-  `start_url`/`scope` are **not** set explicitly in the manifest config — `vite-plugin-pwa` derives both
-  from the top-level `base: '/tens/'` config automatically, confirmed by inspecting
-  `dist/manifest.webmanifest` after `yarn build` (both resolve to `/tens/`, matching the GitHub Pages
-  project-page subpath).
-- **Manifest fields:** `name`/`short_name: 'Tens'`, `display: 'standalone'`, and `theme_color`/
-  `background_color` both set to `#0c0d11` — the dark theme's `color.page` token value (see "Theming"
-  above) — so the OS install/splash chrome matches the app's own dark ground rather than introducing an
-  unrelated color.
-- **Icons:** `public/pwa-192x192.png`, `public/pwa-512x512.png` (both `purpose` unset, i.e. `any`), and
-  `public/pwa-maskable-512x512.png` (`purpose: 'maskable'`, with extra interior padding so the glyph
-  survives an OS's own icon-mask cropping), plus `public/apple-touch-icon.png` (180×180, iOS's own
-  convention, referenced directly from `index.html` rather than the web manifest since iOS Safari
-  doesn't fully respect the manifest icons list). All four are generated PNGs — see `scripts/
-  generate-pwa-icons.mjs` in "Repo layout" above — rasterized via `sharp` from small inline SVG sources
-  (a centered "10" glyph in the dark theme's `accent` color, `#7c9bff`, on the `page` background,
-  `#0c0d11`) rather than hand-crafted per size.
-- **`index.html`** carries the iOS-specific meta tags `vite-plugin-pwa` doesn't inject on its own:
-  `apple-touch-icon` link, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
-  (`black-translucent`), `apple-mobile-web-app-title`, plus a `theme-color` meta tag (browser-chrome
-  coloring, independent of the manifest's own `theme_color`).
-- **Save data is unaffected.** The service worker (`generateSW`'s precache) only caches build-time
-  static assets (JS/CSS/HTML/icons) — it has no interaction with `localStorage`, which is what
-  `src/game/storage.js`'s save/load already uses exclusively. No change was needed there.
-- **Not wired into `ci.yml`.** `yarn build` already produces a valid `manifest.webmanifest` + service
-  worker as part of the normal production build — no separate PWA-specific CI step exists or is needed;
-  `ci.yml` itself is one of the protected workflow files `autonomous-maintenance.yml` can't edit anyway
-  (see docs/AUTOMATION.md).
+`vite-plugin-pwa` (`generateSW` strategy, no custom runtime caching), without any app-store presence.
+This was a deliberate choice over Capacitor/native app-store publishing or a React Native rewrite; see
+`docs/DESIGN_HISTORY.md` for the trade-off reasoning. Manifest/icons/meta-tag details, and why save data
+in `localStorage` is unaffected by the service worker's precache, are in `docs/PWA_REFERENCE.md`. Read
+it before touching `vite.config.js`'s `VitePWA` block, the manifest fields, or `public/pwa-*`/
+`scripts/generate-pwa-icons.mjs`.
 
 ## Funding
 
@@ -439,7 +385,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (593, see "Testing" above) is unaffected by anything under `e2e/`.
+  (598, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

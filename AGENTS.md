@@ -48,6 +48,8 @@ docs/
   ECONOMY_REFERENCE.md    ← full economy/prestige/tickspeed mechanic + engine function/constants reference
   MAINPAGE_REFERENCE.md   ← full MainPage UI field-by-field reference
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
+  THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
+  PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)

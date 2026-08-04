@@ -53,9 +53,10 @@ inventory is your coverage checklist for the rest of the review.
 Read the sections of `CLAUDE.md` covering the areas the diff touches, plus whichever `docs/*.md`
 reference file covers it in depth (`docs/ECONOMY_REFERENCE.md` for `engine.js`/`layers.js`,
 `docs/MAINPAGE_REFERENCE.md` for `MainPage`, `docs/COMPONENTS_REFERENCE.md` for `Button`/`Money`/
-`StatCard`, `docs/AUTOMATION.md` for workflow files) — together these are the single source of truth
-for this repo's documented behavior. List which documented invariants the diff could plausibly
-violate. The recurring high-value ones:
+`StatCard`, `docs/THEMING_REFERENCE.md` for `src/theme/*`, `docs/PWA_REFERENCE.md` for
+`vite.config.js`'s `VitePWA` block/manifest/icons, `docs/AUTOMATION.md` for workflow files) —
+together these are the single source of truth for this repo's documented behavior. List which
+documented invariants the diff could plausibly violate. The recurring high-value ones:
 
 - **Engine purity** (`src/game/engine.js`): pure `(args) => state => newState` functions, no
   React, no side effects; invalid actions return the **same state reference** unchanged — callers
