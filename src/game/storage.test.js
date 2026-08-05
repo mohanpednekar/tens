@@ -168,6 +168,30 @@ describe('schema migration', () => {
     })
   })
 
+  it('retroactively unlocks tier autobuyers a save\'s prestige.count already qualifies for under the new milestone-based unlock', () => {
+    const saved = {
+      ...createInitialGameState(),
+      prestige: { ...createInitialGameState().prestige, count: 3 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(saved))
+    const loaded = loadGameState()
+    expect(loaded.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(loaded.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
+    expect(loaded.autobuyers[TIER_DEFINITIONS[2].id]).toBe(1)
+    expect(loaded.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
+  })
+
+  it('never revokes a tier autobuyer already unlocked via the old PP-cost purchase', () => {
+    const saved = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [TIER_DEFINITIONS[5].id]: 1 },
+      prestige: { ...createInitialGameState().prestige, count: 0 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(saved))
+    const loaded = loadGameState()
+    expect(loaded.autobuyers[TIER_DEFINITIONS[5].id]).toBe(1)
+  })
+
   it('fills in missing resource keys from newer tiers', () => {
     const partial = {
       ...createInitialGameState(),

@@ -425,11 +425,35 @@ be driving at the time.
 ### Why autobuyer unlock is PP-funded only, with no first-tier bypass
 
 There used to be a separate Money-funded activation path with a first-tier special case (bypassing the
-activation cost for `tier01` only). That path no longer exists — `buyAutobuyerUnlock` is now the
-*only* way to get a tier's autobuyer running, funded entirely by Prestige Points, uniformly across
-every tier including the first. Unlocking now does both what "activation" and "automation upgrade"
-used to do separately: it makes the tier self-buy and self-upgrade its own tickspeed level, with no
-further purchase needed.
+activation cost for `tier01` only). That path no longer exists — for a long stretch, `buyAutobuyerUnlock`
+was the *only* way to get a tier's autobuyer running, funded entirely by Prestige Points, uniformly
+across every tier including the first. That PP-cost mechanism has since been superseded again — see
+"Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks" below —
+but the "uniform across every tier, no first-tier special case" principle it established still holds
+under the milestone system that replaced it.
+
+### Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks
+
+Both a tier's unit-buying autobuyer unlock (`buyAutobuyerUnlock`) and its own tier tickspeed autobuyer
+(`buyTierTickspeedAutobuyer`) used to be ordinary PP purchases, priced off `getAutobuyerUnlockCost`
+(1–10 PP-equivalent across the ten tiers) directly or via a multiplier on it. A maintainer request asked for these two specifically to become automatic instead: each tier's autobuyer now unlocks
+for free the moment `prestige.count` reaches that tier's own milestone
+(`getAutobuyerUnlockMilestone` — prestige 1 through 10, one tier per prestige), and its tier tickspeed
+autobuyer similarly at a later, more slowly-spaced milestone (`getTierTickspeedAutobuyerMilestone` —
+prestige 12 through 30, every 2 prestiges). `applyAutobuyerMilestones` is the pure function that
+performs the actual unlocking, called from `prestigeGame` (so the very prestige that crosses a
+milestone unlocks it immediately) and from `storage.js`'s `migrateState` on load (so an existing save
+that had already prestiged past a milestone before this feature existed receives it retroactively,
+without needing to prestige again). `getAutobuyerUnlockCost` itself was deliberately kept, unchanged,
+rather than deleted — `getSmartAutobuyerCost` still multiplies it as a pricing benchmark, and Smart
+remains a genuine PP purchase (the maintainer request only asked to make Unlock and the tier tickspeed
+autobuyer automatic, "all other upgrades still cost PP as before"). `getTierTickspeedAutobuyerCost`/
+`TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER`, by contrast, had no other caller once the tier tickspeed
+autobuyer itself stopped costing PP, so those were removed outright rather than kept as unused dead
+code. A new **Milestones** view (a third `MainPage` tab, alongside Game/Upgrades) was added specifically
+to track progress on both tracks in one place, since neither one costs anything to check in on and the
+Upgrades page's own "Tier Autobuyers" category only shows a locked tier once it's reachable in the
+current run — the Milestones view shows every tier's status for both tracks regardless.
 
 ### Why "Smart" autobuyers exist
 

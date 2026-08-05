@@ -121,21 +121,30 @@ export const TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10
 // compounding rate that used to drive autobuyer purchase-attempt frequency before that effect was
 // moved to production instead (see "Tickspeed multiplier" in CLAUDE.md).
 export const TICKSPEED_PRODUCTION_STEP = 0.1
-// PP cost to permanently unlock the first tier's autobuyer (see engine.js's
-// getAutobuyerUnlockCost) — a flat, small per-tier increment (not a power-of-ten ladder like the
-// tickspeed multiplier above): 1 PP for the first tier, up through 10 PP for the 10th/last tier.
+// Historical per-tier PP-cost formula (see engine.js's getAutobuyerUnlockCost) — no longer an
+// actual purchase (a tier's autobuyer now unlocks automatically at a prestige-count milestone
+// instead, see AUTOBUYER_UNLOCK_MILESTONE_START below), kept only as the pricing benchmark
+// SMART_AUTOBUYER_COST_MULTIPLIER below multiplies: 1 "PP-equivalent" for the first tier, up
+// through 10 for the 10th/last tier.
 export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
-// times more PP than unlocking that same tier's autobuyer (getAutobuyerUnlockCost) — 10 PP through
-// 100 PP across the ten tiers.
+// times more PP than AUTOBUYER_UNLOCK_BASE_COST's benchmark above — 10 PP through 100 PP across
+// the ten tiers. Still a genuine PP purchase, unlike autobuyer unlock itself.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
-// The per-tier tickspeed autobuyer (see engine.js's getTierTickspeedAutobuyerCost/
-// buyTierTickspeedAutobuyer) — automates that tier's own Money-funded tickspeed multiplier —
-// costs this many times more PP than unlocking that same tier's autobuyer
-// (getAutobuyerUnlockCost): 2 PP through 20 PP across the ten tiers. Cheaper than Smart's 10x
-// multiplier, since it only automates one additional purchase rather than the tier's whole buying
-// cadence.
-export const TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER = 2
+// How many times the player must have prestiged before a tier's unit-buying autobuyer unlocks
+// automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
+// the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
+// prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10
+// after the tenth (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
+export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
+export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
+// Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
+// own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
+// later (prestige 12 for tier01) and spaces out twice as slowly (every 2 prestiges: 12, 14, 16, …
+// 30 for tier10), reflecting that it's a later-game convenience layered on top of the (now free)
+// unit-buying autobuyer above. Also no longer PP-funded.
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 12
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
 // The global tickspeed multiplier (see engine.js's getGlobalTickspeedProductionMultiplier/
 // buyGlobalTickspeedMultiplier) speeds up *every* tier's production at once — unlike the per-tier
 // tickspeed multiplier, this is a single global upgrade track (mirroring Auto-Prestige's

@@ -1,4 +1,4 @@
-import { createInitialGameState } from './engine'
+import { applyAutobuyerMilestones, createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
 
 const STORAGE_KEY = 'tens_game_state'
@@ -110,7 +110,12 @@ const migrateState = saved => {
     derivedPurchaseLevels[tierId] = level
     derivedPurchaseLevelProgress[tierId] = legacyPurchased - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
   })
-  return {
+  // applyAutobuyerMilestones (see engine.js) retroactively unlocks any tier autobuyer/tier-
+  // tickspeed-autobuyer a save's prestige.count already qualifies for under the new
+  // milestone-based unlock — a player who prestiged several times before this feature existed
+  // shouldn't have to prestige again just to receive what they've already earned. Never revokes
+  // anything already unlocked (e.g. via the old PP-cost purchase), only adds.
+  return applyAutobuyerMilestones({
     ...fresh,
     ...savedWithoutRemovedFields,
     resources: { ...fresh.resources, ...migrateTierKeys(migratedResourcesRaw) },
@@ -133,7 +138,7 @@ const migrateState = saved => {
     everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...migrateTierKeys(saved.everUnlockedTierIds) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
-  }
+  })
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

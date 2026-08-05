@@ -163,18 +163,22 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
   to the icon rather than folded into the centered cost label.
 
-**Game view vs. PP Upgrades view.** `MainPage` renders one of two views, toggled by a local
-`useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
-block renders. A `ViewNav` tab pair (`role="tablist"`) only appears once `!isFirstRun`. The tab's
-visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out of the tab bar to save space,
-since every purchase on that page already costs Prestige Points, so spelling that out on the tab itself
-is redundant); "PP Upgrades" remains the term used throughout this doc/the codebase's own comments for
-the view/page as a concept. The tab shows a `NavDot` (`aria-label="PP upgrade available"`) whenever
-`hasAffordablePpUpgrade` is true
-(the Money-funded global tickspeed multiplier *itself* doesn't factor into this dot, since it's not a
-PP purchase — only its automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible
-across both views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and the Reset button are
-Game-view-only; every PP-spending control lives on the Upgrades view.
+**Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
+by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
+toggle is just which JSX block renders. A `ViewNav` tab trio (`role="tablist"`) only appears once
+`!isFirstRun`. The Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
+of the tab bar to save space, since every purchase on that page already costs Prestige Points, so
+spelling that out on the tab itself is redundant); "PP Upgrades" remains the term used throughout this
+doc/the codebase's own comments for the view/page as a concept. That tab shows a `NavDot`
+(`aria-label="PP upgrade available"`) whenever `hasAffordablePpUpgrade` is true — since a tier's
+autobuyer unlock and its tier tickspeed autobuyer are both free milestone unlocks now (see "Tier
+Autobuyers" below), this only checks tier Smart purchases plus the global automations' PP costs, not
+the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
+since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
+tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
+balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and the
+Reset button are Game-view-only; every PP-spending control lives on the Upgrades view; the Milestones
+view is its own standalone read-only page (see "Milestones view" below).
 
 **Global Tickspeed Multiplier card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
@@ -239,7 +243,8 @@ this slot back to the normal Money-funded button until the player buys back up t
 tier's XP-funded tickspeed" below for why.
 
 **Unit autobuyer status (Game view, per tier).** Once a tier's unit-buying autobuyer is unlocked (see
-`autobuyers`/`buyAutobuyerUnlock`), its row shows an always-visible, read-only `PpUpgradeBadge` sharing
+`autobuyers`/`applyAutobuyerMilestones` — a free, prestige-count-milestone-triggered unlock, not a PP
+purchase), its row shows an always-visible, read-only `PpUpgradeBadge` sharing
 the `name` grid area with `TierName` (no separate grid row for it — see "Tier row visuals" below for why
 that row was removed) — a single 🤖 glyph, not the word "Active"/"Paused": active renders at full
 opacity, paused at a dimmed `$dimmed` opacity (both still colored green/amber via the existing `$color`
@@ -261,40 +266,35 @@ own pause toggle — see "PP Upgrades view" below); toggling it there updates th
 lean, unboxed flex row (no border/padding/background of its own — just a thin `border-top` divider
 between consecutive rows), rather than the older one-`StatCard`-per-row layout: a category of *N*
 purchases costs one card's worth of chrome, not *N*. Three categories, in order:
-1. **Tier Autobuyers** — per unlocked tier, up to three independent controls: **Unlock** (blue, 🤖,
-   `actions.buyAutobuyerUnlock`, cost `getAutobuyerUnlockCost` — every tier, including `tier01`, unlocks
-   identically) shows only while the tier's autobuyer is still locked; once bought, that same slot shows
-   a persistent icon-only `PpUpgradeBadge` (🤖, dimmed via `$dimmed` while paused — see "Unit autobuyer
-   status" above for the icon-instead-of-text convention shared by every automation status badge in the
-   app) plus a secondary `PauseToggleButton` (`aria-pressed`-driven, same convention as the tier
-   tickspeed autobuyer's own toggle below) for `autobuyersEnabled`/`setAutobuyerEnabled` — this is the
-   only control for that state; the matching badge on the tier's Game-view row (see "Unit autobuyer
-   status" above) is read-only. Alongside it (shown regardless of Unlock's state — see "Prestige Points,
-   autobuyer unlock, and the tickspeed multiplier" below) is the **tier tickspeed autobuyer** (⚙,
-   `actions.buyTierTickspeedAutobuyer`, cost `getTierTickspeedAutobuyerCost` — 2x the unlock cost —
-   automates that tier's own Money-funded tickspeed multiplier, which is itself buyable by default with
-   no PP gate at all; its buy button reads "⚙ Auto-Tickspeed for {cost} PP" — distinct wording from the
-   bare "Auto" this used to say, which read as ambiguous next to Unlock/Smart's own labels). **Smart**
-   (🧠, `actions.buySmartAutobuyer`, cost `getSmartAutobuyerCost` — 10x the unlock cost) only appears once
-   Unlock is bought, since it specifically optimizes unit-buying autobuyer behavior. Each shows as a
-   button until bought, then a persistent badge (Smart's stays a plain "🧠 Smart" text badge — see below
-   for why it has no active/paused state to iconify). Once the tier tickspeed autobuyer is bought, its
-   badge (icon-only ⚙, dimmed while paused, same convention as Unlock's above) carries a secondary
-   `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven, same convention as the Global
-   Automation category's own toggles below); see "Pause/resume for per-tier automations" below for the
-   underlying `tierTickspeedAutobuyerEnabled`/`setTierTickspeedAutobuyerEnabled`. Smart has no pause
-   toggle of its own (see that section for why). The row disappears only once Smart and the tier
-   tickspeed autobuyer are *both* bought (which implies Unlock is done too, since Smart requires it).
-   Once every tier has bought both (`allTiersFullyAutomated`), the per-tier list inside this category is
-   replaced by a single "full smart autobuyer notice". **Next-tier preview:** a tier's row normally only
-   appears once `isTierUnlocked` (the usual owned-count gate — see docs/ECONOMY_REFERENCE.md); as an
-   exception, the very next tier's row previews early — Unlock and the tier tickspeed autobuyer costs
-   shown but disabled — as soon as *any one* of the previous tier's three upgrades (Unlock, Smart, or
-   its tier tickspeed autobuyer) has been bought, without waiting for all three. This only ever previews
-   one tier ahead (the tier immediately after the highest currently-unlocked one) and never grants an
-   actually-purchasable row before the tier itself is reachable — `canUnlock`/`canBuySmart`/
-   `canBuyTierTickspeedAutobuyer` all additionally require `isTierUnlocked(state)(tier)`, so a previewed
-   row's buttons stay disabled regardless of PP balance until the tier unlocks for real.
+1. **Tier Autobuyers** — per unlocked tier (`isTierUnlocked`, the usual owned-count gate — see
+   docs/ECONOMY_REFERENCE.md; there's no next-tier preview any more, since there's nothing left to
+   preview a cost for), up to three independent controls. **Autobuyer unlock** and the **tier tickspeed
+   autobuyer** are no longer PP purchases at all — both unlock automatically once `prestige.count`
+   reaches their own milestone (`getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`, see
+   `applyAutobuyerMilestones` in docs/ECONOMY_REFERENCE.md). While locked, each renders as a dimmed,
+   non-interactive `PpUpgradeBadge` reading `🔒 Prestige {milestone}` (`aria-label`/`title` spell out the
+   full "unlocks automatically at Prestige N — no PP cost" sentence) rather than a Buy button — there's
+   nothing to click. Once unlocked, the unit-buying autobuyer's slot shows a persistent icon-only
+   `PpUpgradeBadge` (🤖, dimmed via `$dimmed` while paused — see "Unit autobuyer status" above for the
+   icon-instead-of-text convention shared by every automation status badge in the app) plus a secondary
+   `PauseToggleButton` (`aria-pressed`-driven, same convention as the tier tickspeed autobuyer's own
+   toggle below) for `autobuyersEnabled`/`setAutobuyerEnabled` — this is the only control for that state;
+   the matching badge on the tier's Game-view row (see "Unit autobuyer status" above) is read-only. Once
+   the tier tickspeed autobuyer unlocks, its badge (icon-only ⚙, dimmed while paused, same convention as
+   the unit-buying autobuyer's above) carries a secondary `PauseToggleButton` (`variant="ghost"`,
+   `aria-pressed`-driven, same convention as the Global Automation category's own toggles below); see
+   "Pause/resume for per-tier automations" below for the underlying
+   `tierTickspeedAutobuyerEnabled`/`setTierTickspeedAutobuyerEnabled`. **Smart** (🧠,
+   `actions.buySmartAutobuyer`, cost `getSmartAutobuyerCost` — still a genuine PP purchase) only appears
+   once the unit-buying autobuyer is unlocked, since it specifically optimizes unit-buying autobuyer
+   behavior; it shows as a button until bought, then a persistent plain "🧠 Smart" text badge (see below
+   for why it has no active/paused state to iconify) — no pause toggle of its own (see that section for
+   why). The row disappears only once Smart and the tier tickspeed autobuyer are *both* unlocked (which
+   implies the unit-buying autobuyer is unlocked too, since Smart requires it). Once every tier has both
+   (`allTiersFullyAutomated`), the per-tier list inside this category is replaced by a single "full smart
+   autobuyer notice". The full unlock/pending status for every tier on both milestone tracks is also
+   tracked in one place on the dedicated **Milestones** view (see below), independent of whether a tier
+   is currently reachable in this run.
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
    Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
    from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, an icon-only badge
@@ -325,14 +325,31 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
 No item on this page uses the old "reveal one by one, cheapest first" teaser gating anymore — once the
 page itself is reachable (`!isFirstRun`), every purchase shows immediately, subject only to a real
 prerequisite (Smart requiring that tier's autobuyer already unlocked — the tier tickspeed autobuyer has
-no such prerequisite), a deliberate progression gate (Auto-Prestige's `allTiersFullyAutomated`, an
-intentional endgame gate, not a cost-ordering teaser), or the one-tier-ahead automation preview
-described above (Tier Autobuyers category), which is itself not cost-ordered — it triggers off *any*
-upgrade bought on the previous tier, not off which upgrade is cheapest.
+no such prerequisite, only its own milestone) or a deliberate progression gate (Auto-Prestige's
+`allTiersFullyAutomated`, an intentional endgame gate, not a cost-ordering teaser).
 
 The Global Tickspeed Multiplier is *not* one of these PP rows — it's Money-funded and lives on the Game
 view instead (see "Global Tickspeed Multiplier card" above / "The global tickspeed multiplier" below);
 only its automation toggle (Tickspeed Autobuyer) is PP-funded and lives here.
+
+**Milestones view.** A third, read-only view (`view === 'milestones'`, gated on `!isFirstRun` the same
+way as the Upgrades view) tracking both free, prestige-count-milestone-triggered unlocks in full —
+independent of whether a given tier is currently reachable in this run (unlike the Upgrades view's
+"Tier Autobuyers" category, which only shows a tier once `isTierUnlocked`). Reuses the same
+`UpgradesList`/`UpgradeCategory`/`CategoryHeading`/`UpgradeRow`/`PpUpgradeBadge`/`TierNameLabel` styled
+components the Upgrades view itself uses — structurally this is the same "categorized list of rows"
+shape, just with every row read-only — rather than introducing a parallel set of near-identical styled
+components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
+`getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md):
+1. **Tier Autobuyer Unlocks** — a green `✅ Prestige {milestone}` badge once
+   `autobuyers[tier.id] != null`, otherwise a dimmed `🔒 Prestige {milestone}` badge (`aria-label`/`title`
+   spell out both the milestone and the player's current `prestige.count`) plus a `VisuallyHidden
+   role="progressbar"` (`aria-valuenow = min(prestige.count, milestone)`, `aria-valuemax = milestone`).
+2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
+   `getTierTickspeedAutobuyerMilestone` instead.
+
+Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
+is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
 
 **Speed Up card stays visible once revealed.** A `speedUpEverRevealed` boolean (seeded from,
 and latched permanently true the first time, `lastTierUnlocked`) drives `SpeedUpCard`'s render

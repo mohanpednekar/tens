@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -72,8 +72,8 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
-  // null = not yet unlocked (see buyAutobuyerUnlock — a permanent, PP-funded purchase); once
-  // unlocked, `1` (a plain truthy flag — its value no longer means anything beyond "unlocked",
+  // null = not yet unlocked (see applyAutobuyerMilestones — a permanent, prestige-count-milestone
+  // triggered unlock, no PP cost); once unlocked, `1` (a plain truthy flag — its value no longer means anything beyond "unlocked",
   // see tickspeedLevels below), and the tier's autobuyer buys tier units automatically every
   // tick. Buying/self-upgrading the tier's own tickspeed multiplier is entirely independent of
   // this flag — see tickspeedLevels/buyTickspeedMultiplier and tierTickspeedAutobuyer below.
@@ -119,9 +119,9 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: false,
   }), {}),
-  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's own
-  // (Money-funded) tickspeed multiplier upgrade itself automatically — see
-  // buyTierTickspeedAutobuyer/tickGame. Needs no other prerequisite (the manual purchase itself
+  // Permanent per-tier flag: whether this tier's own (Money-funded) tickspeed multiplier upgrades
+  // itself automatically — see applyAutobuyerMilestones/tickGame; unlocked automatically at a
+  // prestige-count milestone, no PP cost. Needs no other prerequisite (the manual purchase itself
   // is unlocked by default — see tickspeedLevels above); independent of smartAutobuyer and of
   // whether the tier's own autobuyer has ever been unlocked — never reset by prestige.
   tierTickspeedAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
@@ -241,7 +241,8 @@ export const createInitialGameState = () => ({
   prestige: {
     xp: 0,
     // Spendable Prestige Point balance — earned via prestigeGame (see getPrestigePointsAwarded),
-    // spent via buyAutobuyerUnlock/buyPrestigeSpeedBonus. Unspent points also drive
+    // spent via buySmartAutobuyer/buyPrestigeSpeedBonus/etc. (tier autobuyer unlock itself no
+    // longer spends PP — see applyAutobuyerMilestones). Unspent points also drive
     // production speed (see getPrestigeProductionMultiplier), but only once
     // prestigeSpeedBonusUnlocked is true.
     points: 0,
@@ -386,13 +387,59 @@ export const getTickspeedMultiplierCost = (tierId, targetLevel) => {
   return getTickspeedMultiplierBaseCost(tierIndex) ** Math.max(0, clampNonNegative(targetLevel) - 1)
 }
 
-// PP cost to permanently unlock a tier's autobuyer (see buyAutobuyerUnlock) — a flat, small
-// per-tier increment, independent of the (much steeper) Money-funded tickspeed multiplier ladder:
-// 1 PP for the first tier, up through 10 PP for the 10th/last tier. There is no other way to get
-// an autobuyer running on a tier — see "Autobuyer unlock" in CLAUDE.md.
+// Historical PP-cost formula — a tier's autobuyer no longer costs PP to unlock at all; it unlocks
+// automatically at a prestige-count milestone instead (see getAutobuyerUnlockMilestone/
+// applyAutobuyerMilestones below and "Autobuyer unlock" in CLAUDE.md). Kept only as the pricing
+// benchmark getSmartAutobuyerCost multiplies — unchanged formula/values so Smart's own cost didn't
+// shift when Unlock itself was made free: 1 PP-equivalent for the first tier, up through 10 for
+// the 10th/last tier.
 export const getAutobuyerUnlockCost = tierId => {
   const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
   return AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)
+}
+
+// Number of prestiges required before a tier's unit-buying autobuyer unlocks automatically (see
+// applyAutobuyerMilestones) — no PP cost at all: tier01 unlocks after the 1st prestige, tier02
+// after the 2nd, … tier10 after the 10th.
+export const getAutobuyerUnlockMilestone = tierId => {
+  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  return AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP
+}
+
+// Number of prestiges required before a tier's own tickspeed autobuyer unlocks automatically (see
+// applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 12 for
+// tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (2) per tier after that, up through
+// prestige 30 for tier10. Also no PP cost.
+export const getTierTickspeedAutobuyerMilestone = tierId => {
+  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  return TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP
+}
+
+// Auto-unlocks every tier's autobuyer/tier-tickspeed-autobuyer whose milestone (see
+// getAutobuyerUnlockMilestone/getTierTickspeedAutobuyerMilestone) is met by state.prestige.count —
+// called from prestigeGame right after count is incremented, and also from storage.js's
+// migrateState on load (so a save from before this feature existed retroactively receives whatever
+// it's already earned, without needing another prestige to trigger it). Never revokes an
+// already-unlocked tier and returns the same state reference if nothing newly qualifies, matching
+// every other engine function's no-op convention — safe to call as often as needed since
+// prestige.count only ever grows.
+export const applyAutobuyerMilestones = state => {
+  const count = clampNonNegative(state.prestige?.count ?? 0)
+  let changed = false
+  const nextAutobuyers = { ...state.autobuyers }
+  const nextTierTickspeedAutobuyer = { ...state.tierTickspeedAutobuyer }
+  TIER_DEFINITIONS.forEach(tier => {
+    if ((nextAutobuyers[tier.id] ?? null) === null && count >= getAutobuyerUnlockMilestone(tier.id)) {
+      nextAutobuyers[tier.id] = 1
+      changed = true
+    }
+    if (!nextTierTickspeedAutobuyer[tier.id] && count >= getTierTickspeedAutobuyerMilestone(tier.id)) {
+      nextTierTickspeedAutobuyer[tier.id] = true
+      changed = true
+    }
+  })
+  if (!changed) return state
+  return { ...state, autobuyers: nextAutobuyers, tierTickspeedAutobuyer: nextTierTickspeedAutobuyer }
 }
 
 // The speed multiplier from a tier's tickspeed multiplier level: level 1 (the free baseline every
@@ -497,8 +544,8 @@ export const getLastTierXpTickspeedMinConsumption = xpConsumed => Math.max(
 // is a pure formula, not a gate — callers must check state.prestigeSpeedBonusUnlocked themselves
 // (see buyPrestigeSpeedBonus/tickGame) before applying it, since the bonus is inert until that
 // one-time PP cost is paid; before then, every caller uses a flat ×1 instead of calling this at
-// all. Spending points (see buyAutobuyerUnlock) reduces the points available to this formula
-// in exchange for permanent autobuyer automation.
+// all. Spending points (see buySmartAutobuyer/buyAutoPrestige/etc.) reduces the points available
+// to this formula in exchange for permanent automation.
 export const getPrestigeProductionMultiplier = points =>
   1 + PRESTIGE_POINT_SPEED_BONUS * clampNonNegative(points)
 
@@ -523,13 +570,6 @@ export const buyPrestigeSpeedBonus = state => {
 // (getAutobuyerUnlockCost), since it's a separate, more powerful capability bought after unlock.
 export const getSmartAutobuyerCost = tierId =>
   SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerUnlockCost(tierId)
-
-// PP cost to permanently make a tier's own tickspeed multiplier upgrade itself automatically (see
-// buyTierTickspeedAutobuyer) — TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER times the cost of
-// unlocking that same tier's autobuyer, deliberately cheaper than Smart's 10x multiplier since it
-// only automates one additional purchase (the tickspeed level), not the tier's own buying cadence.
-export const getTierTickspeedAutobuyerCost = tierId =>
-  TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER * getAutobuyerUnlockCost(tierId)
 
 // Production doubles every time a tier completes another level — the same boundary where
 // getTierCost's cost-epoch exponent steps up, so completing a fresh level always pays off with
@@ -852,9 +892,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     } : {}),
   })
 
-  // Only a tier whose tierTickspeedAutobuyer is bought (see buyTierTickspeedAutobuyer) self-upgrades
-  // its own tickspeed multiplier level one step per tick whenever affordable — no manual click
-  // needed. buyTickspeedMultiplier re-validates internally (affordability, frozen state, tier
+  // Only a tier whose tierTickspeedAutobuyer is unlocked (see applyAutobuyerMilestones)
+  // self-upgrades its own tickspeed multiplier level one step per tick whenever affordable — no
+  // manual click needed. buyTickspeedMultiplier re-validates internally (affordability, frozen state, tier
   // itself unlocked) and returns the same state unchanged when a level isn't affordable yet. Unlike the
   // rate-accumulating budgets above, this is edge-triggered on affordability rather than a banked
   // rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see TICK_RATE_MS)
@@ -1013,31 +1053,6 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   return result
 }
 
-// Permanently unlocks a tier's autobuyer — the only way to get it buying units automatically at
-// all; there is no Money-funded activation path (see "Autobuyer unlock" in CLAUDE.md). Spends
-// Prestige Points (getAutobuyerUnlockCost) from the shared prestige.points balance — this trades
-// away some of the flat 1%-per-point production speed bonus in exchange for a permanent
-// autobuyer (never reset by prestige/Speed Up). Sets autobuyers[tierId] to a plain truthy flag,
-// which immediately makes the tier buy units automatically — it has no bearing on the tier's own
-// (Money-funded) tickspeed multiplier at all, which is buyable by default regardless of this flag
-// (see tickspeedLevels/buyTickspeedMultiplier). A no-op if already unlocked, if the tier itself
-// isn't unlocked yet, or if there aren't enough unspent points.
-export const buyAutobuyerUnlock = tierId => state => {
-  if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier || !isTierUnlocked(state)(tier)) return state
-  if (state.autobuyers[tierId] != null) return state
-
-  const cost = getAutobuyerUnlockCost(tierId)
-  if (clampNonNegative(state.prestige.points) < cost) return state
-
-  return {
-    ...state,
-    autobuyers: { ...state.autobuyers, [tierId]: 1 },
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
-  }
-}
-
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
 // a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
 // should always be possible), and independently permanent from the autobuyer's own unlock (never
@@ -1052,7 +1067,7 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // Upgrades a tier's own tickspeed multiplier from level N to N+1, spending the tier's own
 // resource — enabled by default (needs no PP prerequisite and no autobuyer unlock at all, see
 // tickspeedLevels in createInitialGameState); only the *automatic* self-upgrading of this level
-// is PP-gated (see buyTierTickspeedAutobuyer/tickGame). Cost is
+// is gated behind its own prestige-count milestone (see applyAutobuyerMilestones/tickGame). Cost is
 // getTickspeedMultiplierCost(tierId, currentLevel + 1); each level speeds up that tier's own
 // delivery frequency by another 10% (see getTickspeedProductionMultiplier/
 // getEffectiveTierTickSpeedSeconds), without changing the amount delivered per batch or how
@@ -1096,12 +1111,13 @@ export const buyTickspeedMultiplier = tierId => state => {
 // (rather than waiting for a full level) until it completes its first level, then switches to the
 // normal full-block batching from then on — fixes an otherwise-permanent
 // stall where a tier with 0 owned generators (0 income) can never afford a full first level on its
-// own. Costs SMART_AUTOBUYER_COST_MULTIPLIER times more PP than unlocking that tier's autobuyer
-// (see getSmartAutobuyerCost) — and requires the autobuyer already be unlocked first. Smart and
-// the tier tickspeed autobuyer (see buyTierTickspeedAutobuyer below) are independent, parallel
-// purchases — both only require Unlock first, neither depends on the other — so the MainPage PP
-// Upgrades page shows both controls at once once Unlock is bought, not one after the other. A
-// no-op if not yet unlocked, already smart, or there aren't enough unspent points.
+// own. Costs a PP amount set by getSmartAutobuyerCost (still a real PP purchase, unlike the
+// autobuyer unlock prerequisite itself, which is now free — see applyAutobuyerMilestones) — and
+// requires the autobuyer already be unlocked first. Smart and the tier tickspeed autobuyer (also
+// milestone-unlocked, independently) require that same prerequisite but not each other — so the
+// MainPage PP Upgrades page can show Smart's button and the tier tickspeed autobuyer's status at
+// the same time once the autobuyer itself is unlocked. A no-op if not yet unlocked, already smart,
+// or there aren't enough unspent points.
 export const buySmartAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
@@ -1116,31 +1132,6 @@ export const buySmartAutobuyer = tierId => state => {
     ...state,
     prestige: { ...state.prestige, points: state.prestige.points - cost },
     smartAutobuyer: { ...state.smartAutobuyer, [tierId]: true },
-  }
-}
-
-// Permanently makes a tier's own (Money-funded) tickspeed multiplier upgrade itself
-// automatically — the multiplier itself is buyable by default (see tickspeedLevels), so this is
-// the only thing about it that's PP-gated. Costs TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER times
-// more PP than unlocking that tier's (unrelated) unit-buying autobuyer would cost (see
-// getTierTickspeedAutobuyerCost, used purely as a pricing benchmark) — no autobuyer-unlock
-// prerequisite, independent of Smart (see buySmartAutobuyer above), which does still require
-// that unlock. A no-op if the tier itself isn't unlocked yet (isTierUnlocked, same reachability
-// gate buyTickspeedMultiplier itself uses), if already bought, or if there aren't enough unspent
-// points.
-export const buyTierTickspeedAutobuyer = tierId => state => {
-  if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
-  if (!tier || !isTierUnlocked(state)(tier)) return state
-  if (state.tierTickspeedAutobuyer?.[tierId]) return state
-
-  const cost = getTierTickspeedAutobuyerCost(tierId)
-  if (clampNonNegative(state.prestige.points) < cost) return state
-
-  return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
-    tierTickspeedAutobuyer: { ...state.tierTickspeedAutobuyer, [tierId]: true },
   }
 }
 
@@ -1249,7 +1240,9 @@ export const buyGlobalTickspeedMultiplier = state => {
 // already did before this change, unrelated to it — consistent with Money itself resetting to the
 // starting amount. Newly-awarded points add on top of
 // any already-unspent balance (PP is a permanent, cumulative currency, unlike resources/owned/
-// purchased/XP). Autobuyer unlock is a permanent flag, carried over unchanged across prestige, while
+// purchased/XP). Autobuyer unlock is a permanent flag, carried over unchanged across prestige (and
+// this same call is what applies applyAutobuyerMilestones — see below — auto-unlocking the next
+// tier(s) whose milestone this prestige's incremented count now meets), while
 // the run-funded tickspeed levels (now tracked independently of it — see tickspeedLevels) reset to
 // their level-1 baseline along with everything else, same as owned/purchased — as do every tier's
 // own purchaseLevels/purchaseLevelProgress (see createInitialGameState), which also resets
@@ -1274,7 +1267,12 @@ export const prestigeGame = state => {
 
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const initial = createInitialGameState()
-  return {
+  // applyAutobuyerMilestones runs last, against the freshly-incremented prestige.count below —
+  // it's what actually unlocks the next tier's autobuyer/tier-tickspeed-autobuyer the instant this
+  // prestige crosses their milestone (see getAutobuyerUnlockMilestone/
+  // getTierTickspeedAutobuyerMilestone), on top of whatever autobuyers/tierTickspeedAutobuyer were
+  // already carried over unchanged below.
+  return applyAutobuyerMilestones({
     ...initial,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused
@@ -1317,7 +1315,7 @@ export const prestigeGame = state => {
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
       count: state.prestige.count + 1,
     },
-  }
+  })
 }
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches GOOGOL:
@@ -1395,7 +1393,7 @@ export const speedUpGame = state => {
 // (no-op unless the last tier has reached 10 purchases and production isn't frozen), so this just
 // removes the need for a manual click once eligible. A no-op if already bought, if there aren't
 // enough unspent points, or while production is frozen — same convention as
-// buyPrestigeSpeedBonus/buyAutobuyerUnlock.
+// buyPrestigeSpeedBonus/buySmartAutobuyer.
 export const buyAutoSpeedUp = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoSpeedUp) return state
