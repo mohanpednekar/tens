@@ -96,7 +96,7 @@ Error generating stack: `+e.message+`
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: 1.25rem 0;
+  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom));
   font-variant-numeric: tabular-nums;
 `,H=Un`
   min-width: 0;
@@ -127,7 +127,8 @@ Error generating stack: `+e.message+`
   display: flex;
   justify-content: center;
   left: 0;
-  padding: 1.5rem 1rem;
+  padding: calc(1.5rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+    calc(1.5rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
   pointer-events: none;
   position: fixed;
   right: 0;
@@ -269,7 +270,7 @@ Error generating stack: `+e.message+`
   flex-direction: ${e=>e.$compressed?`row`:`column`};
   gap: ${e=>e.$compressed?`0.5rem`:`0.6rem`};
   position: sticky;
-  top: ${e=>e.$belowBar?`${e.$belowBarHeight}px`:`0`};
+  top: ${e=>e.$belowBar?`${e.$belowBarHeight}px`:`env(safe-area-inset-top)`};
   z-index: 100;
   /* Promotes this sticky element to its own compositor layer so Chromium repaints it via GPU
      compositing while scrolling instead of repainting from scratch each frame — without this, a
@@ -365,7 +366,8 @@ Error generating stack: `+e.message+`
   display: flex;
   justify-content: center;
   left: 0;
-  padding: 2rem 1rem;
+  padding: calc(2rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+    calc(2rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -401,7 +403,8 @@ Error generating stack: `+e.message+`
   gap: 0.75rem;
   justify-content: center;
   left: 0;
-  padding: 0.6rem 1rem;
+  padding: calc(0.6rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right)) 0.6rem
+    calc(1rem + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
