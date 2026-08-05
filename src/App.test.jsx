@@ -1215,7 +1215,7 @@ test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer 
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocks automatically at prestige 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
   // Smart isn't purchasable yet — it requires the autobuyer already be unlocked, regardless of PP held.
   expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
 })
@@ -1232,7 +1232,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^kilobytes's autobuyer unlocks automatically at prestige/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
   // Kilobytes' Smart cost is 20 PP (SMART_AUTOBUYER_COST_MULTIPLIER × its 2 PP-equivalent benchmark).
   expect(screen.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeEnabled()
@@ -1292,7 +1292,7 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText(/^bytes's tickspeed autobuyer unlocks automatically at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^bytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
   // Smart is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 10 PP held).
   expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeEnabled()
 })
@@ -1307,7 +1307,7 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^bytes's tickspeed autobuyer unlocks automatically at prestige/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^bytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
