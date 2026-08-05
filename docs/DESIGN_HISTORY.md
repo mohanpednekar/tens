@@ -235,11 +235,12 @@ The following records *why* specific MainPage/component behaviors were built the
   "Automate" button had a bypass for the first tier's Money-funded activation step; that step no
   longer exists (autobuyer unlock is PP-funded uniformly across all tiers now), so the special-casing
   was simply removed rather than ported forward.
-- **Speed Up / Prestige cards stay visible once revealed.** `SpeedUpCard` used to disappear again the
+- **Speed Up card stays visible once revealed.** `SpeedUpCard` used to disappear again the
   moment a successful Speed Up reset `owned` and re-locked the last tier. It no longer does — the
   `speedUpEverRevealed` flag replaced a live `lastTierUnlocked` check specifically to avoid the
   disappear/reappear churn every Speed Up cycle would otherwise cause, which was jarring in practice.
-  `PrestigeCard` got the identical treatment for the same reason.
+  The bottom `PrestigeCard` got the identical treatment for the same reason when it existed, before
+  being removed entirely — see "Bottom Prestige panel removed" below.
 - **`aria-describedby` only on Prestige and Reset.** These two are the app's only irreversible
   actions, and their most important fact (resources get wiped) previously lived only in a mouse-hover
   `title` — undiscoverable to keyboard/screen-reader users. Every other button's `title` genuinely just
@@ -285,13 +286,22 @@ The following records *why* specific MainPage/component behaviors were built the
   the tooltip being the sole explanation of an otherwise-invisible affordance.
 - **Sticky PP display doubles as a Prestige button.** Once Prestige is actually available
   (`canPrestige`), clicking the sticky "prestige points display" card triggers Prestige directly,
-  alongside the existing `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard` buttons (none of which
-  were removed) — a convenience shortcut, since the PP balance is already visible at the top of the
-  page in exactly the state where Prestige becomes available. Unlike the offline notice above, this
-  card is properly marked interactive (`role="button"`, `tabIndex`, keyboard support) whenever it's
-  clickable, and reverts to a plain non-interactive display before `canPrestige` — so the same
-  click+title combination that was removed from the offline notice is reintroduced here deliberately,
-  now paired with real button semantics instead of being the only cue.
+  alongside the existing `TopPrestigeBar`/`FullScreenOverlay` buttons — a convenience shortcut, since
+  the PP balance is already visible at the top of the page in exactly the state where Prestige becomes
+  available. Unlike the offline notice above, this card is properly marked interactive (`role="button"`,
+  `tabIndex`, keyboard support) whenever it's clickable, and reverts to a plain non-interactive display
+  before `canPrestige` — so the same click+title combination that was removed from the offline notice is
+  reintroduced here deliberately, now paired with real button semantics instead of being the only cue.
+- **Bottom Prestige panel removed.** The bottom `PrestigeCard` (Game view) used to have its own
+  "Prestige Now" button; that button was removed as redundant with the sticky PP display's
+  click-to-prestige behavior above, leaving the card purely informational (progress/award preview,
+  prestiged count, unspent PP, Auto-Prestige status). With no button and nothing else consuming that
+  screen space for a purpose the other Prestige surfaces didn't already cover, the informational-only
+  card itself was judged not worth its own footprint and removed entirely — `PrestigeCard`, the
+  `prestigeCardEverRevealed`/`prestigeCardRelevant` reveal-tracking state, and the now-unused
+  `GoldText` styled component (only ever used inside this panel) were all deleted together. Any
+  information a player might want (prestige count, unspent PP, production speed bonus, Auto-Prestige
+  status) remains visible via the sticky PP header display and the PP Upgrades page.
 
 ## Economy model
 
@@ -415,11 +425,35 @@ be driving at the time.
 ### Why autobuyer unlock is PP-funded only, with no first-tier bypass
 
 There used to be a separate Money-funded activation path with a first-tier special case (bypassing the
-activation cost for `tier01` only). That path no longer exists — `buyAutobuyerUnlock` is now the
-*only* way to get a tier's autobuyer running, funded entirely by Prestige Points, uniformly across
-every tier including the first. Unlocking now does both what "activation" and "automation upgrade"
-used to do separately: it makes the tier self-buy and self-upgrade its own tickspeed level, with no
-further purchase needed.
+activation cost for `tier01` only). That path no longer exists — for a long stretch, `buyAutobuyerUnlock`
+was the *only* way to get a tier's autobuyer running, funded entirely by Prestige Points, uniformly
+across every tier including the first. That PP-cost mechanism has since been superseded again — see
+"Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks" below —
+but the "uniform across every tier, no first-tier special case" principle it established still holds
+under the milestone system that replaced it.
+
+### Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks
+
+Both a tier's unit-buying autobuyer unlock (`buyAutobuyerUnlock`) and its own tier tickspeed autobuyer
+(`buyTierTickspeedAutobuyer`) used to be ordinary PP purchases, priced off `getAutobuyerUnlockCost`
+(1–10 PP-equivalent across the ten tiers) directly or via a multiplier on it. A maintainer request asked for these two specifically to become automatic instead: each tier's autobuyer now unlocks
+for free the moment `prestige.count` reaches that tier's own milestone
+(`getAutobuyerUnlockMilestone` — prestige 1 through 10, one tier per prestige), and its tier tickspeed
+autobuyer similarly at a later, more slowly-spaced milestone (`getTierTickspeedAutobuyerMilestone` —
+prestige 12 through 30, every 2 prestiges). `applyAutobuyerMilestones` is the pure function that
+performs the actual unlocking, called from `prestigeGame` (so the very prestige that crosses a
+milestone unlocks it immediately) and from `storage.js`'s `migrateState` on load (so an existing save
+that had already prestiged past a milestone before this feature existed receives it retroactively,
+without needing to prestige again). `getAutobuyerUnlockCost` itself was deliberately kept, unchanged,
+rather than deleted — `getSmartAutobuyerCost` still multiplies it as a pricing benchmark, and Smart
+remains a genuine PP purchase (the maintainer request only asked to make Unlock and the tier tickspeed
+autobuyer automatic, "all other upgrades still cost PP as before"). `getTierTickspeedAutobuyerCost`/
+`TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER`, by contrast, had no other caller once the tier tickspeed
+autobuyer itself stopped costing PP, so those were removed outright rather than kept as unused dead
+code. A new **Milestones** view (a third `MainPage` tab, alongside Game/Upgrades) was added specifically
+to track progress on both tracks in one place, since neither one costs anything to check in on and the
+Upgrades page's own "Tier Autobuyers" category only shows a locked tier once it's reachable in the
+current run — the Milestones view shows every tier's status for both tracks regardless.
 
 ### Why "Smart" autobuyers exist
 
