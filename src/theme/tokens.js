@@ -41,7 +41,9 @@ const palette = {
     textMuted: '#5c6675',
     textFaint: '#808a99',
     accent: '#3b5bdb',
-    good: '#12a150',
+    good: '#0a6b30', // darkened from #12a150 — that shade only cleared 3.37:1 against `surface`,
+    // below WCAG AA's 4.5:1 normal-text threshold (see tokens.contrast.test.js); this shade clears
+    // both `surface` and `surfaceSunken` with margin.
     warn: '#b7791f',
     info: '#1f7ac0',
     violet: '#7048c4',
