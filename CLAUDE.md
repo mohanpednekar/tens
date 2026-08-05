@@ -106,6 +106,14 @@ before merging any non-trivial change, or whenever asked to review a branch/PR; 
 economy surfaces it folds the `economy-change-review` skill's cross-check in as one of its required
 steps rather than replacing it.
 
+When filing a new `claude-task` issue for the backlog below, or splitting a large feature into a
+sequence of them, use the `file-task-issue` skill (`.claude/skills/file-task-issue/SKILL.md`): the
+full issue-template section-by-section guidance, size/priority labeling, the conflict-avoidance
+`Blocked by #N` sequencing heuristic, the `blocked` label's two distinct meanings, epic/sub-issue
+grouping, the narrow cases where an issue needs no PR, and the "specs go stale" lesson learned from
+issues like #45/#138 whose bodies described UI that had since been rebuilt out from under them. Also
+useful when reviewing/tightening an existing issue's spec before it's picked back up.
+
 ## Automation workflows
 
 Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working

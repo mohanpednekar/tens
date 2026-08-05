@@ -151,6 +151,13 @@ branch.
   cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
   code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
 
+## Issue-authoring tooling
+
+- `.claude/skills/file-task-issue/SKILL.md` — full `claude-task` issue-template guidance,
+  size/priority labeling, conflict-avoidance `Blocked by #N` sequencing, the `blocked` label's two
+  meanings, epic/sub-issue grouping, and when an issue needs no PR. Use when filing a new backlog
+  issue, splitting a feature into a sequence, or tightening an existing issue's spec.
+
 ## Automation design principles
 
 Three conventions guide this repo's automation design (see `CLAUDE.md` / `docs/AUTOMATION.md` for the
