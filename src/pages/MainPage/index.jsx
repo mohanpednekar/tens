@@ -6,7 +6,7 @@ import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedS
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
-import styled, { css, keyframes } from 'styled-components'
+import styled, { css, keyframes, useTheme } from 'styled-components'
 
 // Offline-progress notice auto-dismiss timing (UI chrome only — not a game/economy constant, so
 // it lives here rather than in layers.js).
@@ -95,10 +95,10 @@ const TierList = styled.div`
   gap: 0.3rem;
 `
 
-// One accent hue per tier (cycled by index), applied as a thin left-edge stripe on the row —
-// purely cosmetic scanability, kept off text/buttons so it never collides with the semantic
-// white/green/gold/darkgrey coloring used for affordability elsewhere in the row.
-const TIER_ACCENT_COLORS = ['#60a5fa', '#f472b6', '#a78bfa', '#fb923c', '#22d3ee', '#38bdf8', '#f87171', '#818cf8']
+// One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
+// applied as a thin left-edge stripe on the row — purely cosmetic scanability, kept off
+// text/buttons so it never collides with the semantic good/warn/violet/disabled coloring used
+// for affordability elsewhere in the row.
 
 // One-shot entrance for a tier row that unlocks during the current session (see
 // $animateReveal below) — never replays on ordinary re-renders since it's a mount-time
@@ -150,7 +150,7 @@ const TierLine = styled(StatCard)`
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
   &:hover {
-    border-color: #444;
+    border-color: ${props => props.theme.color.borderStrong};
     border-left-color: ${props => props.$accent};
   }
 
@@ -440,7 +440,7 @@ const TierDetailsContent = styled.div`
   font-size: 0.8em;
 
   ul {
-    color: #a3a3a3;
+    color: ${props => props.theme.color.textMuted};
     margin: 0.3rem 0 0;
     padding-left: 1.1rem;
   }
@@ -563,13 +563,17 @@ const TierNameLabel = styled.span`
 `
 
 const GreenText = styled.span`
-  color: #4ade80;
+  color: ${props => props.theme.color.good};
   font-size: 0.85em;
   ${gridCell}
 `
 
+// A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
+// — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
+// two grid cells read from theme.color.textMuted without migrating MutedText itself.
 const OwnedText = styled(MutedText)`
   grid-area: owned;
+  color: ${props => props.theme.color.textMuted};
   font-size: 0.85em;
   text-align: right;
   ${gridCell}
@@ -579,9 +583,9 @@ const OwnedText = styled(MutedText)`
   }
 `
 
-
 const ProductionText = styled(MutedText)`
   grid-area: production;
+  color: ${props => props.theme.color.textMuted};
   font-size: 0.85em;
   ${gridCell}
 
@@ -811,6 +815,7 @@ const useAutoCollapseDetails = () => {
 
 const MainPage = () => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
+  const theme = useTheme()
   const { prestige } = state
   // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
   // on-button progress treatment: how much of a given PP cost the current unspent balance
@@ -1551,7 +1556,7 @@ const MainPage = () => {
           const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = progressPercent(resources, tickspeedCost + 1)
-          const accent = TIER_ACCENT_COLORS[tierIndex % TIER_ACCENT_COLORS.length]
+          const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
           // Whether this tier's unit-buying autobuyer has ever been unlocked (see buyAutobuyerUnlock
@@ -1607,7 +1612,7 @@ const MainPage = () => {
                   )}
                   {isAutobuyerUnlocked && (
                     <PpUpgradeBadge
-                      $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                      $color={autobuyerEnabled ? theme.color.good : theme.color.warn}
                       $dimmed={!autobuyerEnabled}
                       aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
                       title={
@@ -1655,7 +1660,7 @@ const MainPage = () => {
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
                   aria-label={lastTierXpConsumeLabel}
-                  color={canConsumeLastTierXp ? '#a78bfa' : 'darkgrey'}
+                  color={canConsumeLastTierXp ? theme.color.violet : theme.color.disabled}
                   disabled={!canConsumeLastTierXp}
                   onClick={handleConsumeLastTierXp}
                   title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
@@ -1674,7 +1679,7 @@ const MainPage = () => {
               ) : (
                 <UpgradeButton
                   aria-label={tickspeedLabel}
-                  color={canUpgradeTickspeed ? '#4ade80' : 'darkgrey'}
+                  color={canUpgradeTickspeed ? theme.color.good : theme.color.disabled}
                   disabled={!canUpgradeTickspeed}
                   onClick={() => actions.buyTickspeedMultiplier(tier.id)}
                   title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
@@ -1693,7 +1698,7 @@ const MainPage = () => {
               )}
               <BuyButton
                 aria-label={buyLabel}
-                color={canAfford ? 'white' : 'darkgrey'}
+                color={canAfford ? theme.color.text : theme.color.disabled}
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
                 title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also doubles it`}
