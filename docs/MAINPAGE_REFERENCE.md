@@ -349,9 +349,16 @@ explicit `aria-label` on the button itself is required (accessible-name computat
 recurse into the nested node). Buy/Prestige/Reset carry a `title` tooltip; Prestige and Reset
 additionally wire `aria-describedby` to a description (the app's only irreversible actions).
 
-**Tier row visuals.** Each `TierLine` gets a thin `border-left` accent cycled from a fixed palette by
-`tierIndex % length` (cosmetic only, kept off text/button colors to avoid colliding with
-affordability semantics), and plays a one-shot CSS reveal animation when a tier unlocks *during the
+**Tier row visuals.** Each `TierLine` gets a thin `border-left` accent cycled from `theme.tierAccents`
+(the per-mode 8-hue set in `theme/tokens.js`, replacing the old hardcoded `TIER_ACCENT_COLORS` array)
+by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
+colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
+`disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `GreenText`, `TierDetailsContent`'s
+`ul`, `OwnedText`/`ProductionText` (each overriding the color `MutedText` — still hardcoded, #139
+scope — would otherwise pass down), the tier row's `PpUpgradeBadge` autobuyer-status `$color`, and the
+Buy/tickspeed/XP-consume buttons' `color` prop all migrated in the same pass; the PP Upgrades page's
+own instances of these same shared components are a separate surface and weren't touched), and plays
+a one-shot CSS reveal animation when a tier unlocks *during the
 current session* (tracked via a mount-time `Set` snapshot of already-unlocked tier ids, not live mount
 timing, since locked tiers render `null` and would otherwise "mount" on every load). Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (+ compact
