@@ -272,9 +272,11 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    autobuyer** are no longer PP purchases at all — both unlock automatically once `prestige.count`
    reaches their own milestone (`getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`, see
    `applyAutobuyerMilestones` in docs/ECONOMY_REFERENCE.md). While locked, each renders as a dimmed,
-   non-interactive `PpUpgradeBadge` reading `🔒 Prestige {milestone}` (`aria-label`/`title` spell out the
-   full "unlocks automatically at Prestige N — no PP cost" sentence) rather than a Buy button — there's
-   nothing to click. Once unlocked, the unit-buying autobuyer's slot shows a persistent icon-only
+   non-interactive `PpUpgradeBadge` reading `🔒 Prestige {milestone}` — deliberately terse, avoiding
+   restating what the badge already shows: `aria-label` adds only the tier name and milestone number
+   (needed for assistive tech, since the visible glyph alone doesn't name the tier), and `title` adds
+   only a pointer to the Milestones page, not a repeat of the milestone itself — rather than a Buy
+   button, since there's nothing to click. Once unlocked, the unit-buying autobuyer's slot shows a persistent icon-only
    `PpUpgradeBadge` (🤖, dimmed via `$dimmed` while paused — see "Unit autobuyer status" above for the
    icon-instead-of-text convention shared by every automation status badge in the app) plus a secondary
    `PauseToggleButton` (`aria-pressed`-driven, same convention as the tier tickspeed autobuyer's own
@@ -342,9 +344,12 @@ shape, just with every row read-only — rather than introducing a parallel set 
 components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
 `getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md):
 1. **Tier Autobuyer Unlocks** — a green `✅ Prestige {milestone}` badge once
-   `autobuyers[tier.id] != null`, otherwise a dimmed `🔒 Prestige {milestone}` badge (`aria-label`/`title`
-   spell out both the milestone and the player's current `prestige.count`) plus a `VisuallyHidden
-   role="progressbar"` (`aria-valuenow = min(prestige.count, milestone)`, `aria-valuemax = milestone`).
+   `autobuyers[tier.id] != null` (no `title` — the visible text already says everything there is to
+   say), otherwise a dimmed `🔒 Prestige {milestone}` badge whose `title` adds only the one piece of
+   information the badge itself doesn't show (`You're at Prestige {prestige.count}`, not a restatement
+   of the milestone) and whose `aria-label` spells out both the tier name and the milestone/current-count
+   pair for assistive tech, plus a `VisuallyHidden role="progressbar"` (`aria-valuenow = min(prestige.count,
+   milestone)`, `aria-valuemax = milestone`).
 2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
    `getTierTickspeedAutobuyerMilestone` instead.
 

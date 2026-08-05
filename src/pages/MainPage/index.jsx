@@ -1795,8 +1795,8 @@ const MainPage = () => {
                       <PpUpgradeBadge
                         $color="darkgrey"
                         $dimmed
-                        aria-label={`${tier.name}'s autobuyer unlocks automatically at Prestige ${autobuyerMilestone}`}
-                        title={`Unlocks automatically at Prestige ${autobuyerMilestone} — see the Milestones page`}
+                        aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${autobuyerMilestone}`}
+                        title="See the Milestones page for progress"
                       >
                         🔒 Prestige {autobuyerMilestone}
                       </PpUpgradeBadge>
@@ -1856,8 +1856,8 @@ const MainPage = () => {
                       <PpUpgradeBadge
                         $color="darkgrey"
                         $dimmed
-                        aria-label={`${tier.name}'s tickspeed autobuyer unlocks automatically at Prestige ${tierTickspeedAutobuyerMilestone}`}
-                        title={`Unlocks automatically at Prestige ${tierTickspeedAutobuyerMilestone} — see the Milestones page`}
+                        aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${tierTickspeedAutobuyerMilestone}`}
+                        title="See the Milestones page for progress"
                       >
                         🔒 Prestige {tierTickspeedAutobuyerMilestone}
                       </PpUpgradeBadge>
@@ -2158,7 +2158,6 @@ const MainPage = () => {
                     <PpUpgradeBadge
                       $color="#4ade80"
                       aria-label={`${tier.name}'s autobuyer unlocked at Prestige ${milestone}`}
-                      title={`Unlocked automatically at Prestige ${milestone}`}
                     >
                       ✅ Prestige {milestone}
                     </PpUpgradeBadge>
@@ -2168,7 +2167,7 @@ const MainPage = () => {
                         $color="darkgrey"
                         $dimmed
                         aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
-                        title={`Unlocks automatically once you've prestiged ${milestone} time${milestone === 1 ? '' : 's'} — you're at ${prestige.count} now`}
+                        title={`You're at Prestige ${prestige.count}`}
                       >
                         🔒 Prestige {milestone}
                       </PpUpgradeBadge>
@@ -2207,7 +2206,6 @@ const MainPage = () => {
                     <PpUpgradeBadge
                       $color="#4ade80"
                       aria-label={`${tier.name}'s tickspeed autobuyer unlocked at Prestige ${milestone}`}
-                      title={`Unlocked automatically at Prestige ${milestone}`}
                     >
                       ✅ Prestige {milestone}
                     </PpUpgradeBadge>
@@ -2217,7 +2215,7 @@ const MainPage = () => {
                         $color="darkgrey"
                         $dimmed
                         aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
-                        title={`Unlocks automatically once you've prestiged ${milestone} times — you're at ${prestige.count} now`}
+                        title={`You're at Prestige ${prestige.count}`}
                       >
                         🔒 Prestige {milestone}
                       </PpUpgradeBadge>
