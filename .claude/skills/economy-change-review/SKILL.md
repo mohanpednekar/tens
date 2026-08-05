@@ -5,8 +5,9 @@ description: Cross-checks a PR or working diff that touches TIER_DEFINITIONS or 
 
 This is a narrow, mechanical spec-vs-implementation cross-check for the repo's highest-stakes
 surface (`TIER_DEFINITIONS` and the economy constants in `src/game/layers.js`) — it does not
-replace general code review (see the `code-review` skill for that). Do not eyeball the diff and
-call it good; work through every step below and report an explicit pass/fail per check.
+replace general code review (see the `code-reviewer` agent, `.claude/agents/code-reviewer.md`, for
+that). Do not eyeball the diff and call it good; work through every step below and report an
+explicit pass/fail per check.
 
 ## 1. Scope check
 
