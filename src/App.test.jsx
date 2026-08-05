@@ -458,7 +458,6 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   await user.click(prestigeButton)
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
-  expect(screen.getByText(/prestiged 1 time/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /buy for 1 b\b/i })).toBeEnabled()
 })
 
@@ -487,7 +486,7 @@ test('the sticky PP display doubles as a Prestige button once Prestige is availa
 
   await user.click(screen.getByRole('button', { name: /^prestige points display$/i }))
 
-  expect(screen.getByText(/prestiged 2 times/i)).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^prestige available banner$/i)).not.toBeInTheDocument()
 })
 
 test('the sticky PP display is not a clickable button before Prestige is available', () => {
@@ -513,40 +512,6 @@ test('production and every other control freeze once money reaches a googol', ()
 
   expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
-})
-
-test('during the first run, the Prestige panel stays hidden until 8 of the last tier are bought', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    purchased: { tier10: 7 },
-  }))
-
-  render(<App />)
-
-  expect(screen.queryByLabelText(/^prestige panel$/i)).not.toBeInTheDocument()
-})
-
-test('during the first run, the Prestige panel appears once 8 of the last tier are bought', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    purchased: { tier10: 8 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
-})
-
-test('after the first prestige, the Prestige panel is shown regardless of last-tier purchases', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    purchased: { tier10: 0 },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^prestige panel$/i)).toBeInTheDocument()
 })
 
 test('the Speed Up panel stays hidden before the last tier unlocks', () => {
@@ -1200,10 +1165,8 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
-  // The compact sticky balance bar stays terse and omits the "locked" caveat entirely; the full
-  // wording only shows in the Prestige panel's expandable description.
+  // The compact sticky balance bar stays terse and omits the "locked" caveat entirely.
   expect(screen.getByLabelText(/^prestige points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
-  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/production speed bonus locked/i)
 
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
   const unlockButton = screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })
@@ -1294,30 +1257,6 @@ test('no PP Upgrades tab or PP-based controls appear before the player has ever 
 
   expect(screen.queryByLabelText(/^prestige points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /upgrades/i })).not.toBeInTheDocument()
-})
-
-test('the Prestige panel omits unspent-PP info and the PP Upgrades sentence before the first prestige', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    purchased: { tier10: 10 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/pp unspent/i)
-  expect(screen.getByLabelText(/^prestige panel$/i)).not.toHaveTextContent(/pp upgrades page/i)
-})
-
-test('the Prestige panel shows unspent-PP info and the PP Upgrades sentence after the first prestige', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-    prestige: { xp: 0, points: 5, count: 1, highestMilestone: 1 },
-  }))
-
-  render(<App />)
-
-  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/pp unspent/i)
-  expect(screen.getByLabelText(/^prestige panel$/i)).toHaveTextContent(/pp upgrades page/i)
 })
 
 test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is unlocked (not before), and spends 10x the unlock cost', async () => {

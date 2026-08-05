@@ -67,8 +67,8 @@ requires — not a hardcoded constant, so it can grow over the course of a run i
 forever. It starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (`layers.js`, `8`) and grows by
 `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (`1`) every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS` (`100`)
 levels the **last tier** (not any other tier, and not a global total) completes — the same
-"flagship" progress marker `getSpeedUpRequirement`/`isLastTierTickspeedXpUnlocked`/
-`prestigeCardEverRevealed` already key off. Because every earlier tier must already be unlocked (and
+"flagship" progress marker `getSpeedUpRequirement`/`isLastTierTickspeedXpUnlocked` already key off.
+Because every earlier tier must already be unlocked (and
 hence permanently latched via `everUnlockedTierIds`) by the time the last tier is reachable at all, a
 later block-size increase never retroactively changes an already-unlocked tier's own unlock
 threshold — it only affects whatever level a tier currently happens to be working toward. Both
@@ -571,23 +571,17 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
   `ResizeObserver` (e.g. jsdom in tests).
 
-The normal bottom `PrestigeCard` (Game view) only renders when not frozen and once
-`prestigeCardEverRevealed` (during the first run, gated on `purchased.tier10 >= getSpeedUpRequirement(0)`
-— a full level of the last tier; once the player has prestiged once, always shown when not frozen). It
-carries **no Prestige button of its own** — the PP header display (`PpHeaderCard`, see "Balances (top
-HUD)" above) already doubles as the Prestige button once `canPrestige`, so a second, separate button here
-would be redundant; this card is purely informational, collapsed to just its `<summary><h2>Prestige</h2>`
-heading (see "Description prose" above), expanding to the mechanic's description, the `+{award} PP ·
-{percent}%` award/progress preview as plain text (`award = max(1, getPrestigePointsAwarded(money))`,
-`percent = prestigeProgressPercent`, formerly the button's own `$progress` fill/label), the prestiged
-count, and — gated on `!isFirstRun` (see "Prestige info hidden until first prestige" below) — the
-unspent-PP/production-speed line and (once `allTiersFullyAutomated && isAutoPrestigeActive`) the
-Auto-Prestige status line (moved here from its own always-visible line, now icon-badged the same way as
-every other automation status — see "Auto-Prestige" below). Auto-Prestige's *control* lives on the PP
-Upgrades page, gated on `allTiersFullyAutomated` — UI-only, `buyAutoPrestige`/`tickGame` don't check it.
-Once active, its status line reads "Lv.{level} (every ~{interval}s)", `interval = Math.round(1 /
-getAutoPrestigeAttemptRate(level))`, prefixed with the same dimmable `✦` `PpUpgradeBadge` used everywhere
-else automation status is shown (see "PP Upgrades view" above).
+There used to also be a bottom `PrestigeCard` (Game view) mirroring the analogous informational
+`SpeedUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
+see "Balances (top HUD)" above, already doubles as the Prestige button once `canPrestige`), so it was
+purely informational: prestige progress/award preview, prestiged count, unspent PP, and Auto-Prestige
+status. It has been removed entirely as redundant with the `TopPrestigeBar`/`FullScreenOverlay`/
+PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
+go for it to lose. Auto-Prestige's status line (`"Lv.{level} (every ~{interval}s)"`, `interval =
+Math.round(1 / getAutoPrestigeAttemptRate(level))`, gated on `allTiersFullyAutomated &&
+isAutoPrestigeActive`, prefixed with the dimmable `✦` `PpUpgradeBadge`) still shows on the PP Upgrades
+page's Auto-Prestige row (see "PP Upgrades view" above) — Auto-Prestige's *control* lives there too,
+gated on `allTiersFullyAutomated` — UI-only, `buyAutoPrestige`/`tickGame` don't check it.
 
 ### Speed Up
 
@@ -627,8 +621,8 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered after `TierList` and
-before `PrestigeCard`. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). The button
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered as the last item
+after `TierList`. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
 larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
 player sees concretely what's still needed. `state.purchaseLevels[lastTier.id]` and
@@ -657,7 +651,8 @@ false, so `MainPage` keeps every PP-related display/control out of the page duri
   one" teaser gate. The only exceptions are real prerequisites: Auto-Prestige (1000 PP) stays behind
   `allTiersFullyAutomated` (a deliberate endgame gate, not a cost-ordering one), and per-tier
   Unlock/Smart/tier-tickspeed-autobuyer rows reveal per tier as each tier itself is reachable.
-- The bottom `PrestigeCard`'s unspent-PP/production-speed line only renders once `!isFirstRun`.
+- The sticky PP header display (`PpHeaderCard`, unspent PP + production-speed suffix once
+  `state.prestigeSpeedBonusUnlocked`) only renders once `!isFirstRun`.
 
 The one exception is the first-ever `FullScreenOverlay` (shown the moment Money first reaches GOOGOL),
 whose body text does explain what PP are — the introduction of the mechanic at exactly the moment it
@@ -670,8 +665,8 @@ The "↺ Reset" button (`resetGame`, wipes the save and starts a fresh game) is 
 `ResetButton` (`styled(Button)`, smaller) gates the actual `resetGame()` call behind a native
 `window.confirm(...)` prompt. Cancelling leaves state untouched. On acceptance, alongside `resetGame()`,
 the handler resets `MainPage`'s local view-state to `'game'` and clears the
-`speedUpEverRevealed`/`prestigeCardEverRevealed`/`globalTickspeedCardEverRevealed` flags (plain
-component state, not part of engine state).
+`speedUpEverRevealed`/`globalTickspeedCardEverRevealed` flags (plain component state, not part of
+engine state).
 
 ### Game state shape
 

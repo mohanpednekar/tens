@@ -168,10 +168,6 @@ const TierLine = styled(StatCard)`
   }
 `
 
-const PrestigeCard = styled(StatCard)`
-  border-color: #854d0e;
-`
-
 const SpeedUpCard = styled(StatCard)`
   border-color: #0e7490;
 `
@@ -224,8 +220,8 @@ const CenteredCard = styled(StatCard)`
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText/GoldText (still hardcoded, still used by TierList/SpeedUpCard/PrestigeCard/
-// GlobalTickspeedCard) rather than migrating those shared components here: they're each other
+// MutedText (still hardcoded, still used by TierList/SpeedUpCard/GlobalTickspeedCard) rather
+// than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
 // hardcoded #a3a3a3 fails contrast against the light theme's white surface) without reaching into
@@ -535,11 +531,6 @@ const VersionText = styled(MutedText).attrs({ as: 'span' })`
   margin-top: 0.15rem;
 `
 
-const GoldText = styled.b`
-  color: #fbbf24;
-  font-size: 1.1em;
-`
-
 // Name + compact autobuyer speed badge sharing the top line's first track. The badge shows only
 // the multiplier (⚙ ×1.1) — the autobuyer's level is deliberately not shown here, since a "Lv."
 // on this row would read as a duplicate of the Buy button's purchase level; the level lives in
@@ -846,7 +837,6 @@ const MainPage = () => {
       resetGame()
       setView('game')
       setSpeedUpEverRevealed(false)
-      setPrestigeCardEverRevealed(false)
       setGlobalTickspeedCardEverRevealed(false)
     }
   }
@@ -925,7 +915,6 @@ const MainPage = () => {
   const headerDetailsRef = useAutoCollapseDetails()
   const globalTickspeedDetailsRef = useAutoCollapseDetails()
   const speedUpDetailsRef = useAutoCollapseDetails()
-  const prestigeDetailsRef = useAutoCollapseDetails()
   const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
   // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
   // (not reset by handleResetClick, same as openTierDetailIds above) rather than a native
@@ -959,21 +948,8 @@ const MainPage = () => {
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPrestigeBar = isFrozen && !isFirstRun
-  // During the first run only, the normal Prestige card is only worth showing once the player has
-  // reached a full level (getSpeedUpRequirement(0), the first Speed Up's own level target) on the
-  // very last tier — once they've prestiged at least once, it's always relevant. Once *either*
-  // condition has ever been true, the card stays visible (in a disabled state once no longer
-  // immediately relevant, e.g. the moment after prestiging, or after a Speed Up wipes tier10's
-  // level back down during the first run) rather than disappearing again — see the
-  // prestigeCardEverRevealed effect below.
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
-  const prestigeCardRelevant = !isFirstRun || lastTierLevel >= getSpeedUpRequirement(0)
-  const [prestigeCardEverRevealed, setPrestigeCardEverRevealed] = useState(prestigeCardRelevant)
-  useEffect(() => {
-    if (prestigeCardRelevant) setPrestigeCardEverRevealed(true)
-  }, [prestigeCardRelevant])
-  const showBottomPrestigeCard = !isFrozen && prestigeCardEverRevealed
 
   // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
   // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
@@ -1071,7 +1047,7 @@ const MainPage = () => {
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
   const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID], globalTickspeedCost)
-  // Progressive disclosure, same pattern as speedUpEverRevealed/prestigeCardEverRevealed above:
+  // Progressive disclosure, same pattern as speedUpEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
   // moment a Prestige/Speed Up resets tier02's owned count back to 0.
@@ -1763,40 +1739,6 @@ const MainPage = () => {
             </MutedText>
           )}
         </SpeedUpCard>
-      )}
-
-      {showBottomPrestigeCard && (
-        <PrestigeCard aria-label="prestige panel">
-          <InfoDetails ref={prestigeDetailsRef}>
-            <summary><h2>Prestige</h2></summary>
-            <MutedText id="prestige-description">
-              Reach 1 Googol Bits to earn Prestige Points (more the further past Googol you get).
-              {!isFirstRun && ' Spend points on the PP Upgrades page to unlock autobuyers and other bonuses.'}
-              {' '}Resets your resources when reached — use the Prestige Points display up top to
-              Prestige once available, {prestigeProgressPercent}% there now.
-            </MutedText>
-            <div>
-              <GoldText>Prestiged {prestige.count} time{prestige.count === 1 ? '' : 's'}</GoldText>
-              {!isFirstRun && (
-                <MutedText>
-                  {formatAmount(prestige.points)} PP unspent
-                  {state.prestigeSpeedBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
-                  {!state.prestigeSpeedBonusUnlocked && ' · production speed bonus locked'}
-                </MutedText>
-              )}
-              {allTiersFullyAutomated && isAutoPrestigeActive && (
-                <MutedText title={
-                  autoPrestigeEnabled
-                    ? `Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`
-                    : 'Auto-Prestige is currently paused — it will not fire until resumed'
-                }>
-                  <PpUpgradeBadge $dimmed={!autoPrestigeEnabled} aria-label={autoPrestigeEnabled ? 'Auto-Prestige active' : 'Auto-Prestige paused'}>✦</PpUpgradeBadge>
-                  {' '}Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-                </MutedText>
-              )}
-            </div>
-          </InfoDetails>
-        </PrestigeCard>
       )}
 
       </>)}

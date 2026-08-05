@@ -235,11 +235,12 @@ The following records *why* specific MainPage/component behaviors were built the
   "Automate" button had a bypass for the first tier's Money-funded activation step; that step no
   longer exists (autobuyer unlock is PP-funded uniformly across all tiers now), so the special-casing
   was simply removed rather than ported forward.
-- **Speed Up / Prestige cards stay visible once revealed.** `SpeedUpCard` used to disappear again the
+- **Speed Up card stays visible once revealed.** `SpeedUpCard` used to disappear again the
   moment a successful Speed Up reset `owned` and re-locked the last tier. It no longer does — the
   `speedUpEverRevealed` flag replaced a live `lastTierUnlocked` check specifically to avoid the
   disappear/reappear churn every Speed Up cycle would otherwise cause, which was jarring in practice.
-  `PrestigeCard` got the identical treatment for the same reason.
+  The bottom `PrestigeCard` got the identical treatment for the same reason when it existed, before
+  being removed entirely — see "Bottom Prestige panel removed" below.
 - **`aria-describedby` only on Prestige and Reset.** These two are the app's only irreversible
   actions, and their most important fact (resources get wiped) previously lived only in a mouse-hover
   `title` — undiscoverable to keyboard/screen-reader users. Every other button's `title` genuinely just
@@ -285,13 +286,22 @@ The following records *why* specific MainPage/component behaviors were built the
   the tooltip being the sole explanation of an otherwise-invisible affordance.
 - **Sticky PP display doubles as a Prestige button.** Once Prestige is actually available
   (`canPrestige`), clicking the sticky "prestige points display" card triggers Prestige directly,
-  alongside the existing `TopPrestigeBar`/`FullScreenOverlay`/`PrestigeCard` buttons (none of which
-  were removed) — a convenience shortcut, since the PP balance is already visible at the top of the
-  page in exactly the state where Prestige becomes available. Unlike the offline notice above, this
-  card is properly marked interactive (`role="button"`, `tabIndex`, keyboard support) whenever it's
-  clickable, and reverts to a plain non-interactive display before `canPrestige` — so the same
-  click+title combination that was removed from the offline notice is reintroduced here deliberately,
-  now paired with real button semantics instead of being the only cue.
+  alongside the existing `TopPrestigeBar`/`FullScreenOverlay` buttons — a convenience shortcut, since
+  the PP balance is already visible at the top of the page in exactly the state where Prestige becomes
+  available. Unlike the offline notice above, this card is properly marked interactive (`role="button"`,
+  `tabIndex`, keyboard support) whenever it's clickable, and reverts to a plain non-interactive display
+  before `canPrestige` — so the same click+title combination that was removed from the offline notice is
+  reintroduced here deliberately, now paired with real button semantics instead of being the only cue.
+- **Bottom Prestige panel removed.** The bottom `PrestigeCard` (Game view) used to have its own
+  "Prestige Now" button; that button was removed as redundant with the sticky PP display's
+  click-to-prestige behavior above, leaving the card purely informational (progress/award preview,
+  prestiged count, unspent PP, Auto-Prestige status). With no button and nothing else consuming that
+  screen space for a purpose the other Prestige surfaces didn't already cover, the informational-only
+  card itself was judged not worth its own footprint and removed entirely — `PrestigeCard`, the
+  `prestigeCardEverRevealed`/`prestigeCardRelevant` reveal-tracking state, and the now-unused
+  `GoldText` styled component (only ever used inside this panel) were all deleted together. Any
+  information a player might want (prestige count, unspent PP, production speed bonus, Auto-Prestige
+  status) remains visible via the sticky PP header display and the PP Upgrades page.
 
 ## Economy model
 
