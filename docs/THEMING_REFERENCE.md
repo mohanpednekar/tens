@@ -46,3 +46,16 @@ components migrate onto these tokens one at a time in later sub-issues.
   `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
   `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
   light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
+- **`contrast.js`** is a standalone WCAG 2.x relative-luminance contrast-ratio utility
+  (`getContrastRatio(hexA, hexB)`, plus the `AA_NORMAL_TEXT`/`AA_LARGE_TEXT`/`AA_UI_COMPONENT`
+  threshold constants — 4.5/3/3), not test-only, so future token or component work can reuse it.
+  `tokens.contrast.test.js` uses it to audit AA compliance for the design tokens' plain (unblended)
+  text/UI-component color pairs in both themes — `text`/`textMuted`/`good`/`violet` against the
+  `page`/`surface`/`surfaceSunken` backgrounds they're actually rendered on (tier row + base body
+  text), and every `tierAccents` hue plus `warn` against `surface` at the looser 3:1 non-text-UI
+  threshold (the accent stripe is decorative; the `warn`-colored `PpUpgradeBadge` icon is redundant
+  with its own `$dimmed` opacity and `aria-label`). It deliberately skips `Button`'s progress-fill
+  states — those blend a token color at a tuned alpha over `surfaceSunken`, already validated by the
+  alpha choices next to `progressFill` in `src/components/Button/index.jsx`, not a plain token pair.
+  This audit is what caught light mode's original `good` (`#12a150`, 3.37:1 against `surface`) failing
+  AA — it's now `#0a6b30` (6.65:1 against `surface`, 5.87:1 against `surfaceSunken`).
