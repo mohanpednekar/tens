@@ -916,6 +916,8 @@ const MainPage = () => {
   const globalTickspeedDetailsRef = useAutoCollapseDetails()
   const speedUpDetailsRef = useAutoCollapseDetails()
   const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
+  const autobuyerMilestonesDetailsRef = useAutoCollapseDetails()
+  const tierTickspeedMilestonesDetailsRef = useAutoCollapseDetails()
   // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
   // (not reset by handleResetClick, same as openTierDetailIds above) rather than a native
   // <details>/<summary> disclosure, since the disclosure's content is suppressed entirely while
@@ -1794,7 +1796,7 @@ const MainPage = () => {
                         $color="darkgrey"
                         $dimmed
                         aria-label={`${tier.name}'s autobuyer unlocks automatically at Prestige ${autobuyerMilestone}`}
-                        title={`Unlocks automatically once you've prestiged ${autobuyerMilestone} time${autobuyerMilestone === 1 ? '' : 's'} — no PP cost, see the Milestones page`}
+                        title={`Unlocks automatically at Prestige ${autobuyerMilestone} — see the Milestones page`}
                       >
                         🔒 Prestige {autobuyerMilestone}
                       </PpUpgradeBadge>
@@ -1855,7 +1857,7 @@ const MainPage = () => {
                         $color="darkgrey"
                         $dimmed
                         aria-label={`${tier.name}'s tickspeed autobuyer unlocks automatically at Prestige ${tierTickspeedAutobuyerMilestone}`}
-                        title={`Unlocks automatically once you've prestiged ${tierTickspeedAutobuyerMilestone} times — no PP cost, see the Milestones page`}
+                        title={`Unlocks automatically at Prestige ${tierTickspeedAutobuyerMilestone} — see the Milestones page`}
                       >
                         🔒 Prestige {tierTickspeedAutobuyerMilestone}
                       </PpUpgradeBadge>
@@ -2139,11 +2141,10 @@ const MainPage = () => {
       {view === 'milestones' && !isFirstRun && (
         <UpgradesList aria-label="milestones page">
           <UpgradeCategory aria-label="tier autobuyer unlock milestones category">
-            <CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading>
-            <MutedText>
-              Each tier's unit-buying autobuyer unlocks on its own, for free, once you've prestiged
-              this many times — no PP needed.
-            </MutedText>
+            <InfoDetails ref={autobuyerMilestonesDetailsRef}>
+              <summary><CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading></summary>
+              <MutedText>Unlocks one tier per prestige.</MutedText>
+            </InfoDetails>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getAutobuyerUnlockMilestone(tier.id)
               const reached = (state.autobuyers[tier.id] ?? null) !== null
@@ -2186,12 +2187,13 @@ const MainPage = () => {
           </UpgradeCategory>
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
-            <MutedText>
-              Each tier's own tickspeed autobuyer unlocks later, starting at Prestige{' '}
-              {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)} and every{' '}
-              {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} prestiges after that — also free.
-            </MutedText>
+            <InfoDetails ref={tierTickspeedMilestonesDetailsRef}>
+              <summary><CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading></summary>
+              <MutedText>
+                Unlocks later — starting at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)},
+                every {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} prestiges after that.
+              </MutedText>
+            </InfoDetails>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
               const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false

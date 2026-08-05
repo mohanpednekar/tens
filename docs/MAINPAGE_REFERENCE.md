@@ -333,7 +333,7 @@ view instead (see "Global Tickspeed Multiplier card" above / "The global tickspe
 only its automation toggle (Tickspeed Autobuyer) is PP-funded and lives here.
 
 **Milestones view.** A third, read-only view (`view === 'milestones'`, gated on `!isFirstRun` the same
-way as the Upgrades view) tracking both free, prestige-count-milestone-triggered unlocks in full —
+way as the Upgrades view) tracking both prestige-count-milestone-triggered unlocks in full —
 independent of whether a given tier is currently reachable in this run (unlike the Upgrades view's
 "Tier Autobuyers" category, which only shows a tier once `isTierUnlocked`). Reuses the same
 `UpgradesList`/`UpgradeCategory`/`CategoryHeading`/`UpgradeRow`/`PpUpgradeBadge`/`TierNameLabel` styled
@@ -347,6 +347,16 @@ components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMi
    role="progressbar"` (`aria-valuenow = min(prestige.count, milestone)`, `aria-valuemax = milestone`).
 2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
    `getTierTickspeedAutobuyerMilestone` instead.
+
+Each category's heading doubles as an `InfoDetails`/`useAutoCollapseDetails` disclosure trigger (the
+same collapsed-by-default, auto-collapses-on-scroll convention every other card description in this
+file uses — see "Auto-collapsing expanded disclosures on scroll" below), with a single terse sentence
+as its body (e.g. "Unlocks one tier per prestige.") — deliberately short, since the row list right below
+it is where the actual per-tier detail already lives; the category description exists only to name the
+mechanic, not re-explain it. Text throughout this view (and the matching locked badges on the Upgrades
+view's "Tier Autobuyers" category) avoids calling the unlock "free"/"no PP cost" — since nothing on
+either milestone track was ever PP-funded to begin with, saying so would only invite the question "as
+opposed to what."
 
 Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
 is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
