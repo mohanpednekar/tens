@@ -4,6 +4,9 @@ import styled, { css, keyframes } from 'styled-components'
 // *intent* ("this is the primary action", "this is dangerous") rather than picking a raw hex —
 // see CLAUDE.md → "Theming"/"components/Button" for the full rationale. `prestige` resolves to
 // `warn`, the token whose own palette comment already documents it as "prestige gold / caution".
+// `plain` resolves to `text` — for a control whose enabled state should read as ordinary body
+// text rather than an accent color (e.g. the tier row's Buy button, whose visual weight comes
+// from its bold label/progress fill/pulse, not its text color).
 const VARIANT_TOKEN = {
   primary: 'accent',
   success: 'good',
@@ -13,14 +16,21 @@ const VARIANT_TOKEN = {
   neutral: 'textMuted',
   ghost: 'textMuted',
   danger: 'danger',
+  plain: 'text',
 }
 
 // `variant` (theme-driven) takes precedence over the older raw `color` prop, which stays
 // supported — and is the only option — for every call site that hasn't migrated to a variant
-// yet (see CLAUDE.md's Button entry: `color` is deprecated, not removed).
-const resolveColor = ({ variant, color, theme }) => {
+// yet (see CLAUDE.md's Button entry: `color` is deprecated, not removed). A `variant` paired with
+// `disabled` automatically resolves to `theme.color.disabled` instead of its normal token, so a
+// caller expressing an affordability-style toggle (enabled → semantic color, disabled → muted)
+// only needs to pass `variant` + `disabled` rather than also ternary-picking between the variant's
+// token and `theme.color.disabled` by hand. Raw `color` callers get no such override — they keep
+// full manual control of their disabled-state color, matching existing behavior.
+const resolveColor = ({ variant, color, theme, disabled }) => {
   const tokenKey = variant && VARIANT_TOKEN[variant]
-  return tokenKey ? theme.color[tokenKey] : color
+  if (!tokenKey) return color
+  return disabled ? theme.color.disabled : theme.color[tokenKey]
 }
 
 // Named CSS-keyword colors still reaching this component via the legacy `color` prop (e.g.

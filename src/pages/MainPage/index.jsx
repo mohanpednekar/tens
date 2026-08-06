@@ -1661,7 +1661,7 @@ const MainPage = () => {
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
                   aria-label={lastTierXpConsumeLabel}
-                  color={canConsumeLastTierXp ? theme.color.violet : theme.color.disabled}
+                  variant="smart"
                   disabled={!canConsumeLastTierXp}
                   onClick={handleConsumeLastTierXp}
                   title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
@@ -1680,7 +1680,7 @@ const MainPage = () => {
               ) : (
                 <UpgradeButton
                   aria-label={tickspeedLabel}
-                  color={canUpgradeTickspeed ? theme.color.good : theme.color.disabled}
+                  variant="success"
                   disabled={!canUpgradeTickspeed}
                   onClick={() => actions.buyTickspeedMultiplier(tier.id)}
                   title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
@@ -1699,7 +1699,7 @@ const MainPage = () => {
               )}
               <BuyButton
                 aria-label={buyLabel}
-                color={canAfford ? theme.color.text : theme.color.disabled}
+                variant="plain"
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
                 title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also doubles it`}

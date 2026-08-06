@@ -395,11 +395,20 @@ colliding with affordability semantics — those now resolve from `theme.color.g
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `GreenText`, `TierDetailsContent`'s
 `ul`, `OwnedText`/`ProductionText` (each overriding the color `MutedText` — still hardcoded, #139
 scope — would otherwise pass down), the tier row's `PpUpgradeBadge` autobuyer-status `$color`, and the
-Buy/tickspeed/XP-consume buttons' `color` prop all migrated in the same pass; the PP Upgrades page's
+Buy/tickspeed/XP-consume buttons all migrated in the same pass; the PP Upgrades page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
 current session* (tracked via a mount-time `Set` snapshot of already-unlocked tier ids, not live mount
-timing, since locked tiers render `null` and would otherwise "mount" on every load). Each row is a CSS
+timing, since locked tiers render `null` and would otherwise "mount" on every load).
+
+The Buy (`variant="plain"`), tickspeed-multiplier (`variant="success"`), and XP-consume
+(`variant="smart"`) buttons each pass `Button`'s semantic `variant` prop instead of a raw `color`
+ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.disabled` whenever
+`disabled` is true, so each of these three affordability-gated buttons only needs `variant` +
+`disabled`, not a hand-written `color={canX ? tokenA : theme.color.disabled}` (see
+`docs/COMPONENTS_REFERENCE.md`'s `Button/index.jsx` entry for the general mechanism).
+
+Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (+ compact
 `⚙ +N%`/`⚙ 2x` tickspeed badge — see "Percentages vs. multipliers" below for the threshold — and, once
 the tier's unit-buying autobuyer is unlocked, its icon-only status badge, both sharing this area with
