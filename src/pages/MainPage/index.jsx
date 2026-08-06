@@ -438,7 +438,7 @@ const TierNameTrigger = styled.div`
 // height there, same footprint as before this disclosure existed.
 const TierDetailsContent = styled.div`
   grid-area: details;
-  font-size: 0.8em;
+  font-size: ${props => props.theme.type.scale.xs.size};
 
   ul {
     color: ${props => props.theme.color.textMuted};
@@ -547,12 +547,13 @@ const TierName = styled.h3`
   align-items: baseline;
   column-gap: 0.4rem;
   display: flex;
-  font-size: 1em;
+  font-size: ${props => props.theme.type.scale.lg.size};
+  font-weight: 700;
   margin: 0;
   min-width: 0;
 
   @media (max-width: 40rem) {
-    font-size: 0.95em;
+    font-size: ${props => props.theme.type.scale.md.size};
   }
 `
 
@@ -562,8 +563,12 @@ const TierNameLabel = styled.span`
 
 const GreenText = styled.span`
   color: ${props => props.theme.color.good};
-  font-size: 0.85em;
+  font-size: ${props => props.theme.type.scale.sm.size};
   ${gridCell}
+
+  @media (max-width: 40rem) {
+    font-size: ${props => props.theme.type.scale.xs.size};
+  }
 `
 
 // A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
@@ -572,23 +577,23 @@ const GreenText = styled.span`
 const OwnedText = styled(MutedText)`
   grid-area: owned;
   color: ${props => props.theme.color.textMuted};
-  font-size: 0.85em;
+  font-size: ${props => props.theme.type.scale.sm.size};
   text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${props => props.theme.type.scale.xs.size};
   }
 `
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
   color: ${props => props.theme.color.textMuted};
-  font-size: 0.85em;
+  font-size: ${props => props.theme.type.scale.sm.size};
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${props => props.theme.type.scale.xs.size};
   }
 `
 
@@ -597,12 +602,13 @@ const ProductionText = styled(MutedText)`
 const BuyButton = styled(Button)`
   grid-area: buy;
   width: 100%;
-  font-size: 0.82em;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 700;
   padding: 0.4em 0.45em;
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${props => props.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
 `
@@ -638,12 +644,12 @@ const BuyButtonCostLabel = styled(ButtonLabel)`
 const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
-  font-size: 0.82em;
+  font-size: ${props => props.theme.type.scale.sm.size};
   padding: 0.4em 0.45em;
   ${gridCell}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${props => props.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
 `

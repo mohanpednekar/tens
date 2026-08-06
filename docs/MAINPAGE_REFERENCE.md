@@ -419,6 +419,17 @@ fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` spa
 tier's Details disclosure the instant the row scrolls fully out of the viewport — see "Auto-collapsing
 expanded disclosures on scroll" below.
 
+**Tier row type scale.** `TierName`, `GreenText`/`OwnedText`/`ProductionText`, `BuyButton`/
+`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
+(`theme/tokens.js`) rather than hand-tuned `em` values — `TierName` steps from `lg` (desktop) to `md`
+(below `40rem`), the muted production/owned/tickspeed-badge text steps from `sm` to `xs`, the two
+buttons from `sm` to `xs`, and the details disclosure body sits at `xs`. This gives the row two clear
+type steps (name, then everything else) instead of a single flat size, and `BuyButton` additionally
+sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
+already the rightmost, affordability-fill-colored control — reads as the visually heavier of the two,
+per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
+is unchanged; only these components' own `font-size`/`font-weight` moved.
+
 **Tier row details disclosure.** Unlike `SpeedUpCard`/`GlobalTickspeedCard`/the page
 `Header` (which each show a visible `<summary>` line of their own inside a native `InfoDetails`, see
 "Description prose" above), a tier row has **no separate visible trigger at all**: `TierName` itself,
