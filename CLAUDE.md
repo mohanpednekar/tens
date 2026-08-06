@@ -116,16 +116,14 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Automation workflows
 
-Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, working
-together to open, fix up, and merge PRs with no human in the loop until an approval is needed — except
-for a narrow, conservative class of low-risk bot-authored PRs that merge on green checks alone. All
-three authenticate git/GitHub operations with a `GH_AUTOMATION_PAT` repo secret instead of the default
-`GITHUB_TOKEN`, because commits/pushes/merges authored by the default token can't trigger other
-workflows. `GH_AUTOMATION_PAT` is deliberately narrowly-scoped (Contents/Pull requests/Issues
-read-write) — it currently lacks `Workflows: write`, so it can't push any commit touching
-`.github/workflows/**`; see issue #62/#69 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites for
-the up-to-date status of that gap and its workaround (landing such changes from an interactive
-session instead).
+Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, opening,
+fixing up, and merging PRs with no human in the loop — except a narrow, conservative class of low-risk
+bot-authored PRs that merge on green checks alone. All three authenticate via the `GH_AUTOMATION_PAT`
+repo secret rather than the default `GITHUB_TOKEN` (whose commits/pushes/merges can't trigger other
+workflows). That PAT is deliberately narrowly-scoped and currently lacks `Workflows: write`, so it
+can't push any commit touching `.github/workflows/**` — such changes need an interactive session
+instead (see issue #62/#69 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites for the up-to-date
+status).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
@@ -137,15 +135,14 @@ test coverage, dependency/security, code quality, doc sync, workflow self-improv
 `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR) or on green
 checks alone for our own automation's branches when the diff meets a conservative low-risk bar.
 
-**Budget discipline applies to every session, not just automation.** There's no fixed turn cap —
-before sizing a task, self-estimate how much of the current rolling 5-hour Claude usage window is
-likely still available and aim to keep that session's work at or under roughly **50%** of a full
-window's worth of effort (recalculated fresh each time, using elapsed turns/time as the practical
-signal once underway). This is a soft target, not a hard limit — a modest overshoot from estimation
-inaccuracy or unknown concurrent usage (another session, `autonomous-pr-followup.yml`) is expected and
-not a failure. If a task looks too large even after buffering, land the largest coherent,
-test-covered slice first (`Part of #N` instead of `Closes #N`, plus a comment on what remains) rather
-than risking a runaway session.
+**Budget discipline applies to every session, not just automation.** There's no fixed turn cap — self-
+estimate how much of the rolling 5-hour Claude usage window is likely still available and aim to keep
+that session's work at or under roughly **50%** of a full window, recalculated fresh each time. This is
+a soft target, not a hard limit (a modest overshoot from estimation inaccuracy or unknown concurrent
+usage is expected, not a failure). If a task looks too large even after buffering, land the largest
+coherent, test-covered slice first (`Part of #N` instead of `Closes #N`, plus a comment on what
+remains) rather than risking a runaway session — see `docs/AUTOMATION.md`'s "Budget discipline" for the
+overhead-reservation detail (~15-20% held back for test/commit/push/PR-open).
 
 For the full phase-by-phase logic (guard-step details, the `blocked`-label mechanics, the 5-PR
 ceiling, auto-merge's exact low-risk bar, the one-time manual prerequisites), see
@@ -185,6 +182,13 @@ separate follow-up tooling, not by every individual PR.
   hooks/
     session-start.sh          ← runs yarn install --frozen-lockfile + yarn test at interactive
                                session start, printing a pass/fail summary; always exits 0
+  agents/
+    code-reviewer.md          ← comprehensive read-only PR/diff review subagent (see "Pull requests" above)
+  skills/
+    economy-change-review/    ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
+    file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests" above)
+    simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
+                               (see "Economy model" below)
 docs/
   DESIGN_HISTORY.md            ← the "why" behind superseded formulas, incident write-ups, rejected
                                alternatives — check before changing a formula/workflow/mechanic a
@@ -221,6 +225,7 @@ src/
     fonts.js                 ← locally bundles the `font.display`/`font.body` faces (Space Grotesk /
                                Inter, via @fontsource) as side-effect CSS imports — no runtime CDN
                                fetch. Full reference: `docs/THEMING_REFERENCE.md`
+    contrast.js              ← standalone WCAG relative-luminance contrast-ratio utility (see "Testing" below)
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
@@ -297,6 +302,11 @@ shape, and the engine function/constants tables — lives in `docs/ECONOMY_REFER
 before touching `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/
 prestige/tickspeed constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to
 change a formula a past iteration may already have tried and rejected.
+
+For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
+affect a single run's length), use the `simulate-run-times` skill
+(`.claude/skills/simulate-run-times/SKILL.md`): it plays out full runs with the real engine functions
+rather than reasoning about the formulas by hand.
 
 ## Path aliases
 
@@ -400,7 +410,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (611, see "Testing" above) is unaffected by anything under `e2e/`.
+  (642, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
