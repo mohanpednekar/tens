@@ -515,6 +515,15 @@ describe('schema migration', () => {
     expect(loaded.resources.Ones).toBeUndefined()
   })
 
+  it('does not crash when resources is missing from the save entirely, falling back to fresh defaults', () => {
+    const oldSave = {
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
+  })
+
   it('prefers an explicit resources.base value over a legacy resources.Ones value when both are present', () => {
     const oldSave = {
       resources: { Ones: 5, base: 999 },

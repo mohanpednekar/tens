@@ -223,6 +223,15 @@ const withEverUnlockedTierIds = (state, tierId, unlocked = true) => ({
   everUnlockedTierIds: { ...state.everUnlockedTierIds, [tierId]: unlocked },
 })
 
+// Drops the given top-level keys from state entirely (rather than setting them to null/undefined)
+// — used to simulate a state object that predates a field's introduction, exercising this file's
+// many `?.`/`??` defensive fallbacks (see engine.js) that a value merely being falsy/0 doesn't.
+const omit = (state, ...keys) => {
+  const copy = { ...state }
+  keys.forEach(key => delete copy[key])
+  return copy
+}
+
 // TIER_DEFINITIONS[0] ('Bytes') both costs and produces the base currency (Bits) — the
 // entry-level generator. TIER_DEFINITIONS[1] ('Kilobytes') is the first
 // tier that needs unlocking (10 Bytes owned) and produces Bytes.
@@ -581,6 +590,10 @@ describe('getPurchaseBlockSize', () => {
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 500)
     expect(getPurchaseBlockSize(state)).toBe(8)
   })
+
+  it('falls back to the default when purchaseLevels is missing from state entirely', () => {
+    expect(getPurchaseBlockSize({})).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
+  })
 })
 
 // ─── getAutobuyerCost ────────────────────────────────────────────────────────
@@ -710,6 +723,11 @@ describe('applyAutobuyerMilestones', () => {
 
   it('returns the same state reference when nothing newly qualifies', () => {
     const state = withPrestigeCount(createInitialGameState(), 0)
+    expect(applyAutobuyerMilestones(state)).toBe(state)
+  })
+
+  it('treats a missing prestige field entirely as count 0 rather than crashing', () => {
+    const state = { autobuyers: {}, tierTickspeedAutobuyer: {} }
     expect(applyAutobuyerMilestones(state)).toBe(state)
   })
 })
@@ -1026,6 +1044,11 @@ describe('isTierUnlocked', () => {
     const state = withEverUnlockedTierIds(createInitialGameState(), TIER_DEFINITIONS[1].id, false)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
+
+  it('treats a missing owned entry as 0 for both the tier itself and its predecessor', () => {
+    const state = { owned: {} }
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
+  })
 })
 
 // ─── getMoneyExponent ──────────────────────────────────────────────────────────
@@ -1141,6 +1164,17 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     const state = withLastTierTickspeedXpUnlocked(createInitialGameState())
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
+
+  it('falls back to baseline (level 1, no global multiplier) when tickspeedLevels/globalTickspeedMultiplier are missing from state entirely', () => {
+    expect(getEffectiveTierTickSpeedSeconds({ owned: {} }, tensTier.id)).toBe(1)
+  })
+
+  it('falls back to 0 already-consumed XP for the last tier when lastTierXpConsumed is missing from state entirely', () => {
+    const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+    const baseTickSpeed = getTierBaseTickSpeedSeconds(lastTierId)
+    const state = { owned: { [lastTierId]: 1000 } }
+    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed)
+  })
 })
 
 // ─── getTierProductionProgressPercent ───────────────────────────────────────
@@ -1233,6 +1267,10 @@ describe('getTierProductionProgressPercent', () => {
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.85 } }
     expect(getTierProductionProgressPercent(state, tensTier.id, 0.75, 0.1)).toBe(85)
   })
+
+  it('falls back to 0 accumulated when tierProductionAccumulators is missing from state entirely', () => {
+    expect(getTierProductionProgressPercent({}, tensTier.id)).toBe(0)
+  })
 })
 
 // ─── getTierSpendableAmount ──────────────────────────────────────────────────
@@ -1243,6 +1281,26 @@ describe('getTierSpendableAmount', () => {
     TIER_DEFINITIONS.forEach(tier => {
       expect(getTierSpendableAmount(state, tier)).toBe(42)
     })
+  })
+
+  it('falls back to 0 when the cost resource is missing from state.resources entirely', () => {
+    const state = { resources: {} }
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(getTierSpendableAmount(state, tier)).toBe(0)
+    })
+  })
+})
+
+// ─── getTierPurchasedCount ───────────────────────────────────────────────────
+
+describe('getTierPurchasedCount', () => {
+  it('returns a tier\'s purchased count', () => {
+    const state = withPurchased(createInitialGameState(), tensTier.id, 5)
+    expect(getTierPurchasedCount(state, tensTier.id)).toBe(5)
+  })
+
+  it('falls back to 0 when purchased is missing from state entirely', () => {
+    expect(getTierPurchasedCount({}, tensTier.id)).toBe(0)
   })
 })
 
@@ -1400,6 +1458,32 @@ describe('buyTier', () => {
     const after = buyTier(tensTier.id)(state)
     expect(after.resources[MONEY_ID]).toBe(99) // per-unit cost is still 1, same as at the default blockSize 8
   })
+
+  it('falls back to defaults (level 1, 0 progress, 0 owned) when purchaseLevels/purchaseLevelProgress/owned entries are missing from state for this tier', () => {
+    const state = {
+      resources: { [MONEY_ID]: 1000 },
+      owned: {},
+      purchased: {},
+      everUnlockedTierIds: {},
+    }
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.purchaseLevels[tensTier.id]).toBe(1)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(1)
+  })
+
+  it('still latches a newly-reached tier\'s everUnlockedTierIds when that field is missing from state entirely', () => {
+    const state = {
+      resources: { [MONEY_ID]: 1000 },
+      owned: { [tensTier.id]: 7 },
+      purchased: {},
+      purchaseLevels: {},
+      purchaseLevelProgress: {},
+    }
+    const after = buyTier(tensTier.id)(state)
+    expect(after.owned[tensTier.id]).toBe(8)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+  })
 })
 
 // ─── buyTierQuantity ─────────────────────────────────────────────────────────
@@ -1460,6 +1544,18 @@ describe('buyTierQuantity', () => {
     const state = withMoney(createInitialGameState(), 1000)
     expect(buyTierQuantity(tensTier.id, 0)(state)).toBe(state)
     expect(buyTierQuantity(tensTier.id, -5)(state)).toBe(state)
+  })
+
+  it('falls back to 0 levelProgress when purchaseLevelProgress is missing from state entirely', () => {
+    const state = {
+      resources: { [MONEY_ID]: 1000 },
+      owned: {},
+      purchased: {},
+      everUnlockedTierIds: {},
+      purchaseLevels: {},
+    }
+    const after = buyTierQuantity(tensTier.id, 3)(state)
+    expect(after.owned[tensTier.id]).toBe(3)
   })
 })
 
@@ -1570,6 +1666,75 @@ describe('tickGame', () => {
     const state = withAutoPrestige(createInitialGameState())
     const after = tickGame(1)(state)
     expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+  })
+
+  it('falls back to 0 attempt budget when autoPrestigeAttemptBudget is missing from state entirely (frozen branch)', () => {
+    const state = omit(
+      withAutoPrestige(withOwned(withMoney(createInitialGameState(), GOOGOL), tensTier.id, 5)),
+      'autoPrestigeAttemptBudget'
+    )
+    const after = tickGame(1)(state)
+    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+  })
+
+  it('falls back to 0 attempt budget when autoPrestigeAttemptBudget is missing from state entirely (non-frozen accumulation)', () => {
+    const state = omit(withAutoPrestige(createInitialGameState()), 'autoPrestigeAttemptBudget')
+    const after = tickGame(1)(state)
+    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+  })
+
+  it('accumulates the Auto-Prestige attempt budget when autoPrestigeEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(withAutoPrestige(createInitialGameState()), 'autoPrestigeEnabled')
+    const after = tickGame(1)(state)
+    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+  })
+
+  it('lets an unlocked autobuyer buy when autobuyersEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(withMoney(withAutobuyer(createInitialGameState(), tensTier.id, 1), 1000), 'autobuyersEnabled')
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBeGreaterThan(0)
+  })
+
+  it('lets an active tier tickspeed autobuyer upgrade when tierTickspeedAutobuyerEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(
+      withResource(withTierTickspeedAutobuyer(unlockedLastTierState(), lastTier.id), lastTier.id, 11),
+      'tierTickspeedAutobuyerEnabled'
+    )
+    const after = tickGame(1)(state)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+  })
+
+  it('lets the global tickspeed autobuyer upgrade when autoGlobalTickspeedEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(
+      withMoney(withAutoGlobalTickspeed(withOwned(createInitialGameState(), thousandsTier.id, 1)), 100),
+      'autoGlobalTickspeedEnabled'
+    )
+    const after = tickGame(1)(state)
+    expect(after.globalTickspeedMultiplier).toBe(1)
+  })
+
+  it('lets the Auto-Prestige Autobuyer re-level Auto-Prestige when autoPrestigeAutobuyerEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(
+      withPrestigePoints(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), 2000),
+      'autoPrestigeAutobuyerEnabled'
+    )
+    const after = tickGame(1)(state)
+    expect(after.autoPrestige).toBe(2)
+  })
+
+  it('lets Auto Speed Up trigger automatically when autoSpeedUpEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      'autoSpeedUpEnabled'
+    )
+    const after = tickGame(1)(state)
+    expect(after.speedUpCount).toBe(1)
+  })
+
+  it('applies no Speed Up production bonus (falls back to 0) when speedUpCount is missing from state entirely', () => {
+    const state = omit(withOwned(createInitialGameState(), tensTier.id, 1), 'speedUpCount')
+    const after = tickGame(1)(state)
+    expect(after.resources[MONEY_ID]).toBeGreaterThan(state.resources[MONEY_ID])
   })
 
   it('scales production with elapsed time', () => {
@@ -2434,6 +2599,12 @@ describe('buyTickspeedMultiplier', () => {
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
   })
+
+  it('falls back to level 1 (baseline) when tickspeedLevels is missing from state entirely, upgrading to level 2', () => {
+    const state = omit(withResource(unlockedLastTierState(), lastTier.id, 11), 'tickspeedLevels')
+    const after = buyTickspeedMultiplier(lastTier.id)(state)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+  })
 })
 
 // ─── buySmartAutobuyer ────────────────────────────────────────────────────────
@@ -2573,6 +2744,10 @@ describe('isGlobalTickspeedMultiplierUnlocked', () => {
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 1)
     expect(isGlobalTickspeedMultiplierUnlocked(state)).toBe(true)
   })
+
+  it('falls back to false when owned/globalTickspeedMultiplier are missing from state entirely', () => {
+    expect(isGlobalTickspeedMultiplierUnlocked({ owned: {} })).toBe(false)
+  })
 })
 
 describe('buyGlobalTickspeedMultiplier', () => {
@@ -2627,6 +2802,11 @@ describe('buyGlobalTickspeedMultiplier', () => {
 
   it('refuses to spend once production is frozen at GOOGOL', () => {
     const state = withMoney(withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 1), GOOGOL)
+    expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
+  })
+
+  it('returns the same state when Money is missing from state.resources entirely (falls back to 0, insufficient)', () => {
+    const state = { resources: {}, owned: { [TIER_DEFINITIONS[1].id]: 1 }, globalTickspeedMultiplier: null }
     expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 })
@@ -2942,6 +3122,36 @@ describe('prestigeGame', () => {
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
   })
+
+  it('falls back to fresh-state defaults for every permanent automation flag when the incoming state predates them entirely (e.g. a state that never went through storage.js\'s schema-migration fallbacks)', () => {
+    const fresh = createInitialGameState()
+    const state = omit(
+      withMoney(fresh, GOOGOL),
+      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
+      'autoSpeedUp', 'autoSpeedUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
+    )
+    const after = prestigeGame(state)
+    // The first tier's autobuyer auto-unlocks at milestone 1 (this prestige's count reaches 1) —
+    // confirms the autobuyers fallback produced a real object (not undefined) applyAutobuyerMilestones
+    // could safely build on, with every other tier still correctly null (not undefined).
+    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.autobuyers[thousandsTier.id]).toBeNull()
+    expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
+    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
+    expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
+    expect(after.autoPrestige).toBe(fresh.autoPrestige)
+    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoPrestigeAutobuyer).toBe(fresh.autoPrestigeAutobuyer)
+    expect(after.autoPrestigeAutobuyerEnabled).toBe(fresh.autoPrestigeAutobuyerEnabled)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
+    expect(after.autoSpeedUp).toBe(fresh.autoSpeedUp)
+    expect(after.autoSpeedUpEnabled).toBe(fresh.autoSpeedUpEnabled)
+    expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
+    expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
+  })
 })
 
 // ─── speedUpGame ─────────────────────────────────────────────────────────────
@@ -3165,6 +3375,43 @@ describe('speedUpGame', () => {
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
+  })
+
+  it('falls back to fresh-state defaults for every permanent automation flag when the incoming state predates them entirely', () => {
+    const fresh = createInitialGameState()
+    const state = omit(
+      eligibleState(),
+      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
+      'autoSpeedUp', 'autoSpeedUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
+    )
+    const after = speedUpGame(state)
+    expect(after.autobuyers).toEqual(fresh.autobuyers)
+    expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
+    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
+    expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
+    expect(after.autoPrestige).toBe(fresh.autoPrestige)
+    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoPrestigeAutobuyer).toBe(fresh.autoPrestigeAutobuyer)
+    expect(after.autoPrestigeAutobuyerEnabled).toBe(fresh.autoPrestigeAutobuyerEnabled)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
+    expect(after.autoSpeedUp).toBe(fresh.autoSpeedUp)
+    expect(after.autoSpeedUpEnabled).toBe(fresh.autoSpeedUpEnabled)
+    expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
+    expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
+  })
+
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which never meets the (≥2) requirement', () => {
+    const state = omit(withMoney(createInitialGameState(), 1), 'purchaseLevels')
+    expect(speedUpGame(state)).toBe(state)
+  })
+
+  it('falls back to 0 when speedUpCount is missing from state entirely', () => {
+    const state = omit(eligibleState(), 'speedUpCount')
+    const after = speedUpGame(state)
+    expect(after.speedUpCount).toBe(1)
   })
 })
 
@@ -3402,6 +3649,10 @@ describe('isLastTierTickspeedXpUnlocked', () => {
     const droppedBack = withOwned(unlocked, lastTier.id, 3)
     expect(isLastTierTickspeedXpUnlocked(droppedBack)).toBe(false)
   })
+
+  it('is false when owned is missing from state entirely', () => {
+    expect(isLastTierTickspeedXpUnlocked({})).toBe(false)
+  })
 })
 
 // ─── getLastTierXpTickspeedMultiplier ───────────────────────────────────────
@@ -3577,5 +3828,14 @@ describe('consumeXpForLastTierTickspeed', () => {
       GOOGOL
     )
     expect(consumeXpForLastTierTickspeed(10)(state)).toBe(state)
+  })
+
+  it('falls back to 0 already-consumed XP when lastTierXpConsumed is missing from state entirely', () => {
+    const state = omit(
+      withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 50),
+      'lastTierXpConsumed'
+    )
+    const after = consumeXpForLastTierTickspeed(20)(state)
+    expect(after.lastTierXpConsumed).toBe(20)
   })
 })
