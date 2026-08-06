@@ -34,6 +34,16 @@ icon, standalone display with no browser chrome, offline-capable after a first v
   `apple-touch-icon` link, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
   (`black-translucent`), `apple-mobile-web-app-title`, plus a `theme-color` meta tag (browser-chrome
   coloring, independent of the manifest's own `theme_color`).
+- **Safe-area insets.** The viewport meta tag includes `viewport-fit=cover` — required for
+  `black-translucent` (content draws under the iOS status bar/home indicator on a home-screen
+  install) to pair with non-zero `env(safe-area-inset-*)` values; without `viewport-fit=cover` those
+  env vars always resolve to `0`. `MainPage/index.jsx`'s `RootDiv` (the page's own top/bottom
+  padding) and every `position: fixed`/`sticky` element (`OfflineNoticeOverlay`, `FullScreenOverlay`,
+  `TopPrestigeBar`, `StickyBalances`) pad/offset for the relevant insets so page content always
+  scrolls fully clear of the status bar and home indicator, and fixed/sticky chrome never renders
+  underneath either — see the "Fixed" entry in `CHANGELOG.md` for the bug this closes (a tier row's
+  Buy button could become unscrollable-to, not just visually clipped, once the tier list grew tall
+  enough on an iOS home-screen install).
 - **Save data is unaffected.** The service worker (`generateSW`'s precache) only caches build-time
   static assets (JS/CSS/HTML/icons) — it has no interaction with `localStorage`, which is what
   `src/game/storage.js`'s save/load already uses exclusively. No change was needed there.

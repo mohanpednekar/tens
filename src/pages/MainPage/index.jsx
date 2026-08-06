@@ -14,13 +14,17 @@ const OFFLINE_NOTICE_AUTO_DISMISS_MS = 10_000
 const OFFLINE_NOTICE_FADE_MS = 400
 const OFFLINE_NOTICE_PROGRESS_INTERVAL_MS = 100
 
+// index.html sets viewport-fit=cover so the installed-on-homescreen iOS app (black-translucent
+// status bar, see docs/PWA_REFERENCE.md) draws edge-to-edge; without this padding the bottom-most
+// tier row's Buy button ends up under the home-indicator safe area, where iOS won't let the page
+// scroll far enough for it to become reachable at all (not just visually clipped).
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: 1.25rem 0;
+  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom));
   font-variant-numeric: tabular-nums;
 `
 
@@ -63,7 +67,8 @@ const OfflineNoticeOverlay = styled.div`
   display: flex;
   justify-content: center;
   left: 0;
-  padding: 1.5rem 1rem;
+  padding: calc(1.5rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+    calc(1.5rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
   pointer-events: none;
   position: fixed;
   right: 0;
@@ -321,7 +326,7 @@ const StickyBalances = styled.div`
   flex-direction: ${props => (props.$compressed ? 'row' : 'column')};
   gap: ${props => (props.$compressed ? '0.5rem' : '0.6rem')};
   position: sticky;
-  top: ${props => (props.$belowBar ? `${props.$belowBarHeight}px` : '0')};
+  top: ${props => (props.$belowBar ? `${props.$belowBarHeight}px` : 'env(safe-area-inset-top)')};
   z-index: 100;
   /* Promotes this sticky element to its own compositor layer so Chromium repaints it via GPU
      compositing while scrolling instead of repainting from scratch each frame — without this, a
@@ -457,7 +462,8 @@ const FullScreenOverlay = styled.div`
   display: flex;
   justify-content: center;
   left: 0;
-  padding: 2rem 1rem;
+  padding: calc(2rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+    calc(2rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -500,7 +506,8 @@ const TopPrestigeBar = styled.div`
   gap: 0.75rem;
   justify-content: center;
   left: 0;
-  padding: 0.6rem 1rem;
+  padding: calc(0.6rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right)) 0.6rem
+    calc(1rem + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
