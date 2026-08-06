@@ -129,7 +129,8 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   would overflow that compact bar; the card itself and its toggle state stay unaffected — expanding
   again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
 - **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
-  the page's own tagline under the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
+  the Tier Autobuyers category's shared "How these controls work" panel, the page's own tagline under
+  the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
   click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
   `<h2>` for every card — as the clickable `<summary>`. The Prestige card's status lines (prestiged
   count · unspent PP · speed bonus) live inside the disclosure too — collapsed, the card is nothing
@@ -266,33 +267,40 @@ own pause toggle — see "PP Upgrades view" below); toggling it there updates th
 lean, unboxed flex row (no border/padding/background of its own — just a thin `border-top` divider
 between consecutive rows), rather than the older one-`StatCard`-per-row layout: a category of *N*
 purchases costs one card's worth of chrome, not *N*. Three categories, in order:
-1. **Tier Autobuyers** — per unlocked tier (`isTierUnlocked`, the usual owned-count gate — see
-   docs/ECONOMY_REFERENCE.md; there's no next-tier preview any more, since there's nothing left to
-   preview a cost for), up to three independent controls. **Autobuyer unlock** and the **tier tickspeed
-   autobuyer** are no longer PP purchases at all — both unlock automatically once `prestige.count`
-   reaches their own milestone (`getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`, see
+1. **Tier Autobuyers** — a single shared `InfoDetails` panel ("ℹ️ How these controls work", wired
+   through its own `useAutoCollapseDetails()` ref like every other `InfoDetails` on this page) sits
+   right under the `CategoryHeading`, in both the per-tier-list and `allTiersFullyAutomated` branches
+   below, and explains unlock timing, pause/resume, and what Smart does once for the whole category —
+   individual badges/buttons no longer carry their own explanatory `title` text (only `aria-label`,
+   for assistive tech) now that this is covered in one place. Below it, per unlocked tier
+   (`isTierUnlocked`, the usual owned-count gate — see docs/ECONOMY_REFERENCE.md; there's no
+   next-tier preview any more, since there's nothing left to preview a cost for), up to three
+   independent controls. **Autobuyer unlock** and the **tier tickspeed autobuyer** are no longer PP
+   purchases at all — both unlock automatically once `prestige.count` reaches their own milestone
+   (`getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`, see
    `applyAutobuyerMilestones` in docs/ECONOMY_REFERENCE.md). While locked, each renders as a dimmed,
    non-interactive `PpUpgradeBadge` reading `🔒 Prestige {milestone}` — deliberately terse, avoiding
    restating what the badge already shows: `aria-label` adds only the tier name and milestone number
-   (needed for assistive tech, since the visible glyph alone doesn't name the tier), and `title` adds
-   only a pointer to the Milestones page, not a repeat of the milestone itself — rather than a Buy
-   button, since there's nothing to click. Once unlocked, the unit-buying autobuyer's slot shows a persistent icon-only
-   `PpUpgradeBadge` (🤖, dimmed via `$dimmed` while paused — see "Unit autobuyer status" above for the
-   icon-instead-of-text convention shared by every automation status badge in the app) plus a secondary
-   `PauseToggleButton` (`aria-pressed`-driven, same convention as the tier tickspeed autobuyer's own
-   toggle below) for `autobuyersEnabled`/`setAutobuyerEnabled` — this is the only control for that state;
-   the matching badge on the tier's Game-view row (see "Unit autobuyer status" above) is read-only. Once
-   the tier tickspeed autobuyer unlocks, its badge (icon-only ⚙, dimmed while paused, same convention as
-   the unit-buying autobuyer's above) carries a secondary `PauseToggleButton` (`variant="ghost"`,
-   `aria-pressed`-driven, same convention as the Global Automation category's own toggles below); see
-   "Pause/resume for per-tier automations" below for the underlying
-   `tierTickspeedAutobuyerEnabled`/`setTierTickspeedAutobuyerEnabled`. **Smart** (🧠,
-   `actions.buySmartAutobuyer`, cost `getSmartAutobuyerCost` — still a genuine PP purchase) only appears
-   once the unit-buying autobuyer is unlocked, since it specifically optimizes unit-buying autobuyer
-   behavior; it shows as a button until bought, then a persistent plain "🧠 Smart" text badge (see below
-   for why it has no active/paused state to iconify) — no pause toggle of its own (see that section for
-   why). The row disappears only once Smart and the tier tickspeed autobuyer are *both* unlocked (which
-   implies the unit-buying autobuyer is unlocked too, since Smart requires it). Once every tier has both
+   (needed for assistive tech, since the visible glyph alone doesn't name the tier) — rather than a
+   Buy button, since there's nothing to click. Each row's controls now appear in the same order as
+   the tier's Game-view row's own badges (⚙ before 🤖 — see "Unit autobuyer status" above), so the two
+   views correlate directly: the **tier tickspeed autobuyer** cluster comes first (icon-only ⚙,
+   dimmed while paused, same convention as the unit-buying autobuyer's below) with a secondary
+   `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven, same convention as the Global
+   Automation category's own toggles below); see "Pause/resume for per-tier automations" below for
+   the underlying `tierTickspeedAutobuyerEnabled`/`setTierTickspeedAutobuyerEnabled`. Second, nested
+   together inside one shared `UpgradeRowControls` since Smart specifically modifies the unit-buying
+   autobuyer's behavior, are the **unit-buying autobuyer** (persistent icon-only `PpUpgradeBadge` 🤖,
+   dimmed via `$dimmed` while paused — see "Unit autobuyer status" above for the icon-instead-of-text
+   convention shared by every automation status badge in the app — plus a secondary
+   `PauseToggleButton`, `aria-pressed`-driven, for `autobuyersEnabled`/`setAutobuyerEnabled` — this is
+   the only control for that state; the matching badge on the tier's Game-view row is read-only) and
+   **Smart** (🧠, `actions.buySmartAutobuyer`, cost `getSmartAutobuyerCost` — still a genuine PP
+   purchase), which only appears once the unit-buying autobuyer is unlocked; it shows as a button
+   until bought, then a persistent plain "🧠 Smart" text badge (see below for why it has no
+   active/paused state to iconify) — no pause toggle of its own (see that section for why). The row
+   disappears only once Smart and the tier tickspeed autobuyer are *both* unlocked (which implies the
+   unit-buying autobuyer is unlocked too, since Smart requires it). Once every tier has both
    (`allTiersFullyAutomated`), the per-tier list inside this category is replaced by a single "full smart
    autobuyer notice". The full unlock/pending status for every tier on both milestone tracks is also
    tracked in one place on the dedicated **Milestones** view (see below), independent of whether a tier
@@ -468,8 +476,9 @@ goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedB
 
 **Auto-collapsing expanded disclosures on scroll.** Every expandable disclosure in `MainPage` — a tier
 row's Details (`TierDetailsContent`/`openTierDetailIds`) and every native `<details>`-based `InfoDetails`
-(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, and the PP Upgrades page's "full
-smart autobuyer" notice) — automatically collapses once it scrolls fully out of the viewport in either
+(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, and the PP Upgrades page's Tier Autobuyers
+category "How these controls work" panel and "full smart autobuyer" notice) — automatically collapses
+once it scrolls fully out of the viewport in either
 direction, so an expanded panel doesn't stay open (and out of context) as the player keeps scrolling.
 For the four-plus native `<details>` elements, a small `useAutoCollapseDetails()` hook (module-scoped,
 above `MainPage`) attaches an `IntersectionObserver` to a ref on the element and sets its `.open` property
