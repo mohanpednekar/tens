@@ -348,7 +348,7 @@ Error generating stack: `+e.message+`
   cursor: pointer;
 `,Da=P.div`
   grid-area: details;
-  font-size: 0.8em;
+  font-size: ${e=>e.theme.type.scale.xs.size};
 
   ul {
     color: ${e=>e.theme.color.textMuted};
@@ -422,47 +422,53 @@ Error generating stack: `+e.message+`
   align-items: baseline;
   column-gap: 0.4rem;
   display: flex;
-  font-size: 1em;
+  font-size: ${e=>e.theme.type.scale.lg.size};
+  font-weight: 700;
   margin: 0;
   min-width: 0;
 
   @media (max-width: 40rem) {
-    font-size: 0.95em;
+    font-size: ${e=>e.theme.type.scale.md.size};
   }
 `,Fa=P.span`
   flex-shrink: 0;
 `,Ia=P.span`
   color: ${e=>e.theme.color.good};
-  font-size: 0.85em;
+  font-size: ${e=>e.theme.type.scale.sm.size};
   ${H}
+
+  @media (max-width: 40rem) {
+    font-size: ${e=>e.theme.type.scale.xs.size};
+  }
 `,La=P(Ma)`
   grid-area: owned;
   color: ${e=>e.theme.color.textMuted};
-  font-size: 0.85em;
+  font-size: ${e=>e.theme.type.scale.sm.size};
   text-align: right;
   ${H}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${e=>e.theme.type.scale.xs.size};
   }
 `,Ra=P(Ma)`
   grid-area: production;
   color: ${e=>e.theme.color.textMuted};
-  font-size: 0.85em;
+  font-size: ${e=>e.theme.type.scale.sm.size};
   ${H}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${e=>e.theme.type.scale.xs.size};
   }
 `,za=P(ar)`
   grid-area: buy;
   width: 100%;
-  font-size: 0.82em;
+  font-size: ${e=>e.theme.type.scale.sm.size};
+  font-weight: 700;
   padding: 0.4em 0.45em;
   ${H}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${e=>e.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
 `,Ba=P(or)`
@@ -478,12 +484,12 @@ Error generating stack: `+e.message+`
 `,Ha=P(ar)`
   grid-area: upgrade;
   width: 100%;
-  font-size: 0.82em;
+  font-size: ${e=>e.theme.type.scale.sm.size};
   padding: 0.4em 0.45em;
   ${H}
 
   @media (max-width: 40rem) {
-    font-size: 0.78em;
+    font-size: ${e=>e.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
 `,Ua=P(ar)`
