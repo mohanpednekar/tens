@@ -705,9 +705,11 @@ const CategoryHeading = styled.h2`
 `
 
 // One row per tier/upgrade within a category — a simpler flex layout than the Game view's
-// TierLine grid, since each row holds at most one button (Unlock → Smart → the "Smart" badge, the
-// same single-control-at-a-time progression the Game view's tier rows used to show inline). No
-// border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
+// TierLine grid. In the Tier Autobuyers category, a row's badge order (tickspeed-autobuyer cluster,
+// then unit-autobuyer cluster) mirrors the Game view's own TierName badge order (⚙ before 🤖), and
+// Smart is nested inside the same UpgradeRowControls as the unit-autobuyer badge/toggle since it
+// specifically modifies that autobuyer's behavior, rather than trailing as an unrelated fourth item.
+// No border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
 // divider between consecutive rows so a whole category still reads as a distinct list.
 const UpgradeRow = styled.div`
   align-items: center;
@@ -923,6 +925,7 @@ const MainPage = () => {
   const globalTickspeedDetailsRef = useAutoCollapseDetails()
   const speedUpDetailsRef = useAutoCollapseDetails()
   const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
+  const tierAutobuyersInfoDetailsRef = useAutoCollapseDetails()
   const autobuyerMilestonesDetailsRef = useAutoCollapseDetails()
   const tierTickspeedMilestonesDetailsRef = useAutoCollapseDetails()
   // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
@@ -1763,6 +1766,17 @@ const MainPage = () => {
         <UpgradesList aria-label="PP upgrades page">
           <UpgradeCategory aria-label="tier autobuyers category">
             <CategoryHeading>Tier Autobuyers</CategoryHeading>
+            <InfoDetails ref={tierAutobuyersInfoDetailsRef}>
+              <summary>ℹ️ How these controls work</summary>
+              <MutedText>
+                Each tier's unit-buying autobuyer and its tickspeed autobuyer unlock automatically as
+                you prestige more — see the Milestones page for exactly when. Once unlocked, the ⏸/▶
+                button next to each pauses or resumes it without losing the unlock. Smart is a
+                one-time Prestige Point purchase that makes a tier's unit-buying autobuyer buy one at
+                a time until a full level is affordable, then in blocks after that — fixing an
+                early-game stall where a full level isn't affordable yet.
+              </MutedText>
+            </InfoDetails>
             {allTiersFullyAutomated ? (
               <div aria-label="full smart autobuyer notice">
                 <InfoDetails ref={fullSmartAutobuyerDetailsRef}>
@@ -1798,53 +1812,12 @@ const MainPage = () => {
                       <VisuallyHidden>{tier.name}</VisuallyHidden>
                       <span aria-hidden="true">{tier.symbol}</span>
                     </TierNameLabel>
-                    {isAutobuyerLocked && (
-                      <PpUpgradeBadge
-                        $color="darkgrey"
-                        $dimmed
-                        aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${autobuyerMilestone}`}
-                        title="See the Milestones page for progress"
-                      >
-                        🔒 Prestige {autobuyerMilestone}
-                      </PpUpgradeBadge>
-                    )}
-                    {!isAutobuyerLocked && (
-                      <UpgradeRowControls>
-                        <PpUpgradeBadge
-                          $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
-                          $dimmed={!autobuyerEnabled}
-                          aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
-                          title={
-                            autobuyerEnabled
-                              ? "This tier's autobuyer is buying units automatically"
-                              : "This tier's autobuyer is currently paused — it will not buy units until resumed"
-                          }
-                        >
-                          🤖
-                        </PpUpgradeBadge>
-                        <PauseToggleButton
-                          aria-pressed={autobuyerEnabled}
-                          aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                          onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
-                          title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
-                          type="button"
-                          variant="ghost"
-                        >
-                          {autobuyerEnabled ? '⏸' : '▶'}
-                        </PauseToggleButton>
-                      </UpgradeRowControls>
-                    )}
                     {isTierTickspeedAutobuyerActive ? (
                       <UpgradeRowControls>
                         <PpUpgradeBadge
                           $color={tierTickspeedAutobuyerEnabled ? '#4ade80' : '#facc15'}
                           $dimmed={!tierTickspeedAutobuyerEnabled}
                           aria-label={tierTickspeedAutobuyerEnabled ? `${tier.name}'s tickspeed autobuyer active` : `${tier.name}'s tickspeed autobuyer paused`}
-                          title={
-                            tierTickspeedAutobuyerEnabled
-                              ? "This tier's tickspeed multiplier now upgrades itself automatically whenever affordable"
-                              : "This tier's tickspeed autobuyer is currently paused — it will not upgrade until resumed"
-                          }
                         >
                           ⚙
                         </PpUpgradeBadge>
@@ -1852,7 +1825,6 @@ const MainPage = () => {
                           aria-pressed={tierTickspeedAutobuyerEnabled}
                           aria-label={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
                           onClick={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tierTickspeedAutobuyerEnabled)}
-                          title={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
                           type="button"
                           variant="ghost"
                         >
@@ -1864,39 +1836,68 @@ const MainPage = () => {
                         $color="darkgrey"
                         $dimmed
                         aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${tierTickspeedAutobuyerMilestone}`}
-                        title="See the Milestones page for progress"
                       >
                         🔒 Prestige {tierTickspeedAutobuyerMilestone}
                       </PpUpgradeBadge>
                     )}
-                    {!isAutobuyerLocked && (
-                      isSmart ? (
-                        <PpUpgradeBadge $color="#a78bfa" title={`This tier buys one at a time until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}`}>
-                          🧠 Smart
-                        </PpUpgradeBadge>
-                      ) : (
-                        <PpUpgradeButton
-                          aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                          color={canBuySmart ? '#a78bfa' : 'darkgrey'}
-                          disabled={!canBuySmart}
-                          onClick={() => actions.buySmartAutobuyer(tier.id)}
-                          title={`Spend Prestige Points so this tier buys one at a time until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize} — fixes an early-game stall where a full level isn't affordable yet`}
-                          type="button"
-                          $progress={ppProgressPercent(smartCost)}
-                          $progressColor="#a78bfa"
+                    <UpgradeRowControls>
+                      {isAutobuyerLocked && (
+                        <PpUpgradeBadge
+                          $color="darkgrey"
+                          $dimmed
+                          aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${autobuyerMilestone}`}
                         >
-                          <ButtonIcon>🧠 </ButtonIcon>
-                          <ButtonLabel>Smart for {formatAmount(smartCost)} PP</ButtonLabel>
-                          <VisuallyHidden
-                            role="progressbar"
-                            aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
-                            aria-valuenow={Math.min(prestige.points, smartCost)}
-                            aria-valuemin={0}
-                            aria-valuemax={smartCost}
-                          />
-                        </PpUpgradeButton>
-                      )
-                    )}
+                          🔒 Prestige {autobuyerMilestone}
+                        </PpUpgradeBadge>
+                      )}
+                      {!isAutobuyerLocked && (
+                        <UpgradeRowControls>
+                          <PpUpgradeBadge
+                            $color={autobuyerEnabled ? '#4ade80' : '#facc15'}
+                            $dimmed={!autobuyerEnabled}
+                            aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
+                          >
+                            🤖
+                          </PpUpgradeBadge>
+                          <PauseToggleButton
+                            aria-pressed={autobuyerEnabled}
+                            aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                            onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
+                            type="button"
+                            variant="ghost"
+                          >
+                            {autobuyerEnabled ? '⏸' : '▶'}
+                          </PauseToggleButton>
+                        </UpgradeRowControls>
+                      )}
+                      {!isAutobuyerLocked && (
+                        isSmart ? (
+                          <PpUpgradeBadge $color="#a78bfa">
+                            🧠 Smart
+                          </PpUpgradeBadge>
+                        ) : (
+                          <PpUpgradeButton
+                            aria-label={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                            color={canBuySmart ? '#a78bfa' : 'darkgrey'}
+                            disabled={!canBuySmart}
+                            onClick={() => actions.buySmartAutobuyer(tier.id)}
+                            type="button"
+                            $progress={ppProgressPercent(smartCost)}
+                            $progressColor="#a78bfa"
+                          >
+                            <ButtonIcon>🧠 </ButtonIcon>
+                            <ButtonLabel>Smart for {formatAmount(smartCost)} PP</ButtonLabel>
+                            <VisuallyHidden
+                              role="progressbar"
+                              aria-label={`${tier.name} smart autobuyer Prestige Point progress`}
+                              aria-valuenow={Math.min(prestige.points, smartCost)}
+                              aria-valuemin={0}
+                              aria-valuemax={smartCost}
+                            />
+                          </PpUpgradeButton>
+                        )
+                      )}
+                    </UpgradeRowControls>
                   </UpgradeRow>
                 )
               })
