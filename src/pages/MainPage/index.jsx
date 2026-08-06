@@ -1340,7 +1340,7 @@ const MainPage = () => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Global Tickspeed Multiplier: {isGlobalTickspeedActive
+                  Global Tickspeed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1408,7 +1408,7 @@ const MainPage = () => {
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails ref={globalTickspeedDetailsRef}>
-            <summary><h2>Global Tickspeed Multiplier</h2></summary>
+            <summary><h2>Global Tickspeed</h2></summary>
             <MutedText id="global-tickspeed-description">
               Spend Bits to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
@@ -1445,6 +1445,50 @@ const MainPage = () => {
         </GlobalTickspeedCard>
       )}
 
+      {speedUpEverRevealed && (
+        <SpeedUpCard aria-label="speed up panel">
+          <InfoDetails ref={speedUpDetailsRef}>
+            <summary><h2>Speed Up</h2></summary>
+            <MutedText id="speed-up-description">
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
+              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs one more level than the last.
+            </MutedText>
+          </InfoDetails>
+          <SpeedUpButton
+            aria-describedby="speed-up-description"
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canSpeedUp}
+            onClick={actions.speedUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+            type="button"
+            $progress={speedUpProgressPercent}
+            $progressColor="#22d3ee"
+            $pulse={canSpeedUp}
+          >
+            <ButtonIcon>⏩ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Speed Up progress"
+              aria-valuenow={speedUpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </SpeedUpButton>
+          {!isFirstRun && isAutoSpeedUpActive && (
+            <MutedText title={
+              autoSpeedUpEnabled
+                ? "Speed Up now triggers automatically the instant it's eligible"
+                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+            }>
+              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
+            </MutedText>
+          )}
+        </SpeedUpCard>
+      )}
+
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
@@ -1477,9 +1521,13 @@ const MainPage = () => {
           // it does NOT change how much lands per delivery, only how often one arrives. Whenever
           // the last tier's currently-owned count is >= the current block size (a full level, see
           // getPurchaseBlockSize), this Money-funded ladder is instead replaced by an XP-funded one (see
-          // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js and the
-          // last-tier-only controls below) — it reverts back to this Money-funded button if owned
-          // later drops below that (e.g. after a Prestige/Speed Up).
+          // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js) — it reverts
+          // back to this Money-funded button if owned later drops below that (e.g. after a
+          // Prestige/Speed Up). The XP itself is still spent automatically by the tier tickspeed
+          // autobuyer (see consumeXpForLastTierTickspeed's "Automation" note in
+          // docs/ECONOMY_REFERENCE.md) — there's no manual consume button any more; in its grid slot
+          // the last tier's row instead shows a quick-access Speed Up button (see below), since
+          // reaching a full last-tier level is also exactly when Speed Up tends to be close.
           const isLastTier = tier.id === lastTier.id
           const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
@@ -1488,29 +1536,10 @@ const MainPage = () => {
             ? getLastTierXpTickspeedMultiplier(lastTierXpConsumed)
             : getTickspeedProductionMultiplier(tickspeedLevel)
           const tickspeedBonusLabel = formatBonusOrMultiplier(tickspeedMultiplier)
-          // Consuming XP for the last tier's tickspeed always spends the player's entire current
-          // XP balance in one action (rather than a fixed minimum) — since every consumption,
-          // however small, resets every other tier's owned quantity (not their lifetime
-          // purchased/"level" count) plus the Money balance to 0, spending it all at once
-          // minimizes how often that side effect is paid for the same total investment.
+          // Still surfaced in the Details disclosure below even without a manual consume button,
+          // so the player can see how much XP is unspent while the autobuyer spends it for them.
           const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
           const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
-          const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-          const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
-          const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
-          // getLastTierXpTickspeedMultiplier compounds, so the marginal speedup this consumption
-          // contributes is a ratio (new multiplier ÷ old), not the spent amount itself — and
-          // because it's multiplicative, that ratio is independent of how much XP was already
-          // consumed (the prior multiplier cancels out), so it's exactly
-          // getLastTierXpTickspeedMultiplier(amount) regardless of lastTierXpConsumed so far.
-          const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
-          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${tier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
-          const handleConsumeLastTierXp = () => {
-            if (!canConsumeLastTierXp) return
-            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
-              actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
-            }
-          }
           // Production no longer depends on autobuyer purchase frequency at all — completing
           // every level (manual or automatic) doubles a tier's own production (see
           // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
@@ -1555,6 +1584,10 @@ const MainPage = () => {
           // ticks" sentence still lives in tickspeedLabel/title above for assistive tech and
           // anyone who expands the tooltip.
           const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
+          // Built as a single string (not JSX-interpolated inline) since ButtonContent's
+          // String(children) would otherwise stringify a multi-child array with a stray comma
+          // (e.g. "⏩ ×,2" instead of "⏩ ×2").
+          const speedUpRowVisibleLabel = `⏩ ×${formatRate(nextSpeedUpMultiplier)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
           const tickspeedProgressPercent = progressPercent(resources, tickspeedCost + 1)
           const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
@@ -1641,8 +1674,8 @@ const MainPage = () => {
                     {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
                     {isLastTierXpUnlocked && (
                       <li>
-                        Tickspeed funded by consumed XP — unspent XP: {formatAmount(lastTierXpBalance)}
-                        {' '}(next consumption needs at least {formatAmount(lastTierXpMinConsumption)})
+                        XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
+                        {' '}(next auto-consumption needs at least {formatAmount(lastTierXpMinConsumption)})
                       </li>
                     )}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
@@ -1660,19 +1693,20 @@ const MainPage = () => {
               </ProductionText>
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
-                  aria-label={lastTierXpConsumeLabel}
-                  variant="smart"
-                  disabled={!canConsumeLastTierXp}
-                  onClick={handleConsumeLastTierXp}
-                  title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
-                  $progress={lastTierXpProgressPercent}
-                  $pulse={canConsumeLastTierXp}
+                  aria-label={`${tier.name}'s row: Speed Up (requires level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+                  color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+                  disabled={!canSpeedUp}
+                  onClick={actions.speedUp}
+                  title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+                  $progress={speedUpProgressPercent}
+                  $progressColor="#22d3ee"
+                  $pulse={canSpeedUp}
                 >
-                  <ButtonContent>{lastTierXpConsumeVisibleLabel}</ButtonContent>
+                  <ButtonContent>{speedUpRowVisibleLabel}</ButtonContent>
                   <VisuallyHidden
                     role="progressbar"
-                    aria-label={`${tier.name} XP tickspeed progress`}
-                    aria-valuenow={lastTierXpProgressPercent}
+                    aria-label={`${tier.name} row Speed Up progress`}
+                    aria-valuenow={speedUpProgressPercent}
                     aria-valuemin={0}
                     aria-valuemax={100}
                   />
@@ -1721,50 +1755,6 @@ const MainPage = () => {
           )
         })}
       </TierList>
-
-      {speedUpEverRevealed && (
-        <SpeedUpCard aria-label="speed up panel">
-          <InfoDetails ref={speedUpDetailsRef}>
-            <summary><h2>Speed Up</h2></summary>
-            <MutedText id="speed-up-description">
-              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
-              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
-              doubles production speed. Each Speed Up needs one more level than the last.
-            </MutedText>
-          </InfoDetails>
-          <SpeedUpButton
-            aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
-            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
-            disabled={!canSpeedUp}
-            onClick={actions.speedUp}
-            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
-            type="button"
-            $progress={speedUpProgressPercent}
-            $progressColor="#22d3ee"
-            $pulse={canSpeedUp}
-          >
-            <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Speed Up progress"
-              aria-valuenow={speedUpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </SpeedUpButton>
-          {!isFirstRun && isAutoSpeedUpActive && (
-            <MutedText title={
-              autoSpeedUpEnabled
-                ? "Speed Up now triggers automatically the instant it's eligible"
-                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
-            }>
-              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
-            </MutedText>
-          )}
-        </SpeedUpCard>
-      )}
 
       </>)}
 
