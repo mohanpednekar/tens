@@ -134,22 +134,21 @@ link beside the page title; see CLAUDE.md's Architecture section for the split a
   side-by-side form (`showGlobalMultipliers && !balancesCompressed`), since a multi-line breakdown
   would overflow that compact bar; the card itself and its toggle state stay unaffected — expanding
   again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
-- **No description prose on this page.** The card headings that used to double as `InfoDetails`
-  click-to-expand `<summary>` triggers (`GlobalTickspeedCard`'s/`SpeedUpCard`'s/`OverclockCard`'s own
-  `<h2>`, the page `Header`'s `<h1>`, the Tier Autobuyers category's shared "How these controls
-  work" panel, the Milestones view's two category headings) are now plain, non-interactive headings
-  — there's nothing left to expand, since every mechanic's evergreen explanation moved to
-  `InfoPage` (see the file header note above). Any number that's genuinely *live game status* (not a
-  description of how the mechanic works) stayed here instead. `GlobalTickspeedCard` still shows
-  `Lv.N — +N% faster ticks on every tier.` as a permanently-visible `MutedText` line once
-  `isGlobalTickspeedActive` — it's short and central to the card's own purpose, so it stays inline.
-  `OverclockCard`'s current per-level rate and the Milestones view's Tier Tickspeed Autobuyers
-  start-Prestige/step pattern (see "Speed Up and Overclock cards"/"Milestones view" below) are each
-  more of a footnote than a headline figure, so instead of a second permanently-visible line
-  competing for space, they surface via a small `InfoBadge` (`ⓘ`, `cursor: help`) appended to the
-  card/category heading — a tap/hover-only overlay (native `title` tooltip, mirrored to `aria-label`
-  for assistive tech) rather than an always-visible line or a click-to-expand disclosure. None of
-  these is prose about *how* the mechanic works, only *what its current numbers are*.
+- **No description prose on this page.** Every mechanic's evergreen explanation (what used to live
+  inline as `InfoDetails` disclosure bodies) moved to `InfoPage` (see the file header note above).
+  Headings with nothing left to show (`SpeedUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
+  Autobuyers category's old shared "How these controls work" panel, the Milestones view's Tier
+  Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
+  there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` and the Milestones
+  view's Tier Tickspeed Autobuyers `CategoryHeading` still wrap a `Disclosure`
+  (`styled.details`/`<summary>`, collapsed by default, the heading itself the only trigger — no
+  separate visible "expand" affordance) — but only when there's a genuinely *live game status*
+  number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
+  `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
+  Milestones view's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Speed Up and
+  Overclock cards"/"Milestones view" below) — each collapsed until the player clicks that heading,
+  same as every other click-to-expand disclosure in this file (see "Tier row details disclosure"
+  below). None of these is prose about *how* the mechanic works, only *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
   `<h1>Tens</h1>`, beside the `ℹ️ Guide` link (a plain `GuideLink` button calling the `onOpenInfo`
@@ -203,19 +202,18 @@ deliberately doesn't join them, since it's the one control relevant before the l
 reachable. (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Tickspeed alone at top, Speed Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
-`engine.js` mechanics. The heading itself is
-plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
+`engine.js` mechanics. The heading text itself never changes
+(`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
 `Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
 during that earlier iteration and the `Global` prefix stopped earning its width against `SpeedUpCard`'s
 own two-word heading; no behavior change, and the shortened heading stuck even after the two cards
 split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
-purely the rendered heading text) — a plain `<h2>`, not an `InfoDetails` `<summary>` (see "No
-description prose on this page" above). The current level and its cumulative speed bonus (`Lv.N —
-+N% faster ticks on every tier.`) render **only** once `isGlobalTickspeedActive` — never on the
-heading or the button itself — so the card's shape stays the same before the multiplier is ever
-bought; unlike the old collapsed-`InfoDetails` version, this line is genuinely absent from the DOM
-(not merely visually collapsed) until then, since it no longer needs to stay reachable by
-`aria-describedby`. The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
+purely the rendered heading text), but it lives inside a `Disclosure`'s `<summary>` (see "No
+description prose on this page" above) — collapsed by default, clicking it is the only way to reveal
+the current level and cumulative speed bonus line (`Lv.N — +N% faster ticks on every tier.`), which
+renders **only** once `isGlobalTickspeedActive` in the first place — so the card's shape stays the
+same both before the multiplier is ever bought (the line doesn't exist at all) and after (the line
+exists but starts collapsed). The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
 called with `precise: true` through `formatBonusOrMultiplier` (see "Percentages vs. multipliers"
 below), not the plain whole-number `formatBonusPercent` — the global
 multiplier's regular 1%-per-level compounding (see `GLOBAL_TICKSPEED_PRODUCTION_STEP`/"The global
@@ -393,16 +391,17 @@ components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMi
 2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
    `getTierTickspeedAutobuyerMilestone` instead.
 
-Each category's heading is a plain, non-interactive `CategoryHeading`. The Tier Autobuyer Unlocks
-category's old one-sentence body ("Unlocks one tier per prestige.") carried no number the row list
-below it didn't already show, so it moved to `InfoPage`'s "Milestones" section outright (see the file
-header note above) with nothing left behind here. The Tier Tickspeed Autobuyers category's old body
-did carry a number worth keeping in-game — its start/step pattern — so it survives as an `InfoBadge`
-(see "No description prose on this page" above) appended to that `CategoryHeading`: hovering/tapping
-the `ⓘ` reveals `Starts at Prestige {N}, plus {step} per tier after that`, computed from the same
-`getTierTickspeedAutobuyerMilestone`/`TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` constants `InfoPage`'s
-fuller prose version also uses, rather than duplicated as a hardcoded string; the row list right
-below is still where the actual per-tier detail lives. Text throughout this view (and the
+The Tier Autobuyer Unlocks category's heading is a plain, non-interactive `CategoryHeading` — its
+old one-sentence body ("Unlocks one tier per prestige.") carried no number the row list below it
+didn't already show, so it moved to `InfoPage`'s "Milestones" section outright (see the file header
+note above) with nothing left behind here. The Tier Tickspeed Autobuyers category's old body did
+carry a number worth keeping in-game — its start/step pattern — so that `CategoryHeading` instead
+wraps a `Disclosure` (see "No description prose on this page" above): collapsed by default,
+clicking it reveals a `MutedText` line, `Starts at Prestige {N}, +{step} per tier after that.`,
+computed from the same `getTierTickspeedAutobuyerMilestone`/
+`TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` constants `InfoPage`'s fuller prose version also uses,
+rather than duplicated as a hardcoded string; the row list right below is still where the actual
+per-tier detail lives. Text throughout this view (and the
 matching locked badges on the Upgrades view's "Tier Autobuyers" category) avoids calling the unlock
 "free"/"no PP cost" — since nothing on either milestone track was ever PP-funded to begin with, saying
 so would only invite the question "as opposed to what."
@@ -452,9 +451,10 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
-`OverclockCard`'s `<h2>` also carries its own `InfoBadge` (see "No description prose on this page"
-above) once `overclockCount > 0`: hovering/tapping the `ⓘ` reveals `Tickspeed upgrade's per-level rate
-is now {currentStep}% (was 1%) from {N} activation(s)`. `{currentStep}` is
+`OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
+whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
+`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from {N}
+activation(s).`. `{currentStep}` is
 `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate *before* the next
 Overclock (as opposed to `OverclockButton`'s own label, which always shows the *next* rate — see
 above); this is the one Overclock-specific number not otherwise visible anywhere on the Game view.
@@ -527,9 +527,9 @@ already the rightmost, affordability-fill-colored control — reads as the visua
 per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
 is unchanged; only these components' own `font-size`/`font-weight` moved.
 
-**Tier row details disclosure.** This is the only expandable disclosure left on `MainPage` — every
-other card's `<h2>`/the page `<h1>` are now plain, non-interactive headings (see "No description
-prose on this page" above). A tier row has **no separate visible trigger at all**: `TierName` itself,
+**Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
+cards/categories use (see "No description prose on this page" above), a tier row has **no separate
+visible trigger at all**: `TierName` itself,
 wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
 `aria-controls`), is the trigger, sitting in its normal spot rather than a redundant "Details" label
 elsewhere in the row. This is a **plain React-controlled disclosure**, not native `<details>`/
@@ -583,23 +583,24 @@ goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedB
 (both still exist, now only as `formatBonusOrMultiplier`'s own below-100% branches).
 
 **Auto-collapsing expanded disclosures on scroll.** The tier row Details disclosure
-(`TierDetailsContent`/`openTierDetailIds`) — the only expandable disclosure left on `MainPage` (see
-"Tier row details disclosure" above) — automatically collapses once its row scrolls fully out of the
-viewport in either direction, so an expanded row doesn't stay open (and out of context) as the player
-keeps scrolling. Since tier rows mount/unmount as tiers unlock/lock across Prestige/Speed Up, a single
-shared `IntersectionObserver` (created once, not per row) watches every currently-rendered row, with
-each `TierLine` registered/unregistered via a stable per-tier ref callback (`registerTierRowRef`,
-cached in a `Map` keyed by tier id so the callback's identity doesn't change across re-renders — a
-fresh callback identity every render would make React re-invoke it with `null` then the element again
-on every 100ms tick, needlessly churning `observe`/`unobserve`); losing intersection removes that
-tier's id from `openTierDetailIds` the same way `toggleTierDetails` would. Uses the default
-`IntersectionObserver` threshold (`0`), so a row only collapses once it has zero overlap with the
-viewport — "scrolled beyond screen," not merely partially cut off — and is guarded for environments
-without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply stays open once
-expanded. `MainPage` used to also run a `useAutoCollapseDetails()` hook for the now-removed native
-`<details>`-based `InfoDetails` disclosures (the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`,
-`OverclockCard`, and the PP Upgrades page's two "How these controls work"/"full smart autobuyer"
-panels) — that hook was deleted along with them, since none of those elements are expandable anymore.
+(`TierDetailsContent`/`openTierDetailIds`) automatically collapses once its row scrolls fully out of
+the viewport in either direction, so an expanded row doesn't stay open (and out of context) as the
+player keeps scrolling. Since tier rows mount/unmount as tiers unlock/lock across Prestige/Speed Up,
+a single shared `IntersectionObserver` (created once, not per row) watches every currently-rendered
+row, with each `TierLine` registered/unregistered via a stable per-tier ref callback
+(`registerTierRowRef`, cached in a `Map` keyed by tier id so the callback's identity doesn't change
+across re-renders — a fresh callback identity every render would make React re-invoke it with `null`
+then the element again on every 100ms tick, needlessly churning `observe`/`unobserve`); losing
+intersection removes that tier's id from `openTierDetailIds` the same way `toggleTierDetails` would.
+Uses the default `IntersectionObserver` threshold (`0`), so a row only collapses once it has zero
+overlap with the viewport — "scrolled beyond screen," not merely partially cut off — and is guarded
+for environments without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply
+stays open once expanded. The native `<details>`-based `Disclosure` instances elsewhere on this page
+(`GlobalTickspeedCard`/`OverclockCard`/the Milestones view's Tier Tickspeed Autobuyers category — see
+"No description prose on this page" above) do **not** auto-collapse on scroll — there's no
+`useAutoCollapseDetails()`-style hook wired to them; each stays open until the player clicks its
+heading again, which is enough for a short one-line body that isn't competing with the rest of the
+page for scroll-driven attention the way the taller tier-row disclosure is.
 
 **Eliminating sticky-balances scroll flicker.** `StickyBalances`' compressed/expanded layouts differ
 enough (flex direction, padding, box-shadow, extra progress-bar/breakdown content) that flipping between

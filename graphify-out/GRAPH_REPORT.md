@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-08-07)
 
 ## Corpus Check
-- 64 files · ~136,474 words
+- 64 files · ~136,460 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ebbaa05d`
+- Built from commit: `29be6059`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -93,7 +93,7 @@ Nodes (75): cliValues, defaultPPValues, simulateRun(), allResourceIds(), applyOf
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.04
-Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, FullScreenCard, FullScreenOverlay (+48 more)
+Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, Disclosure, FullScreenCard (+48 more)
 
 ### Community 2 - "engine.js"
 Cohesion: 0.10
