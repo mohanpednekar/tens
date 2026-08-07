@@ -9,7 +9,9 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 ## Project
 
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
-of ten. Single page, no routing, no backend — state lives in React and is persisted to `localStorage`.
+of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
+app switches between two top-level pages, `MainPage` (the game itself) and `InfoPage` (all the static
+"how it works" prose), via a plain `useState` toggle in `App.jsx` — not a router (see "Architecture" below).
 
 ## Tech stack
 
@@ -219,8 +221,16 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
-    MainPage/index.jsx      ← single page; compact one-line-per-tier layout, data-driven from
-                               TIER_DEFINITIONS. Full field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
+    MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
+                               TIER_DEFINITIONS — no explanatory prose, just live game state/controls
+                               (see "Architecture" below). Full field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
+    InfoPage/index.jsx      ← the Guide page: static, evergreen explanations of every mechanic
+                               (Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones) that used
+                               to live inline on MainPage as click-to-expand disclosures. Reads no game
+                               state — the handful of numbers it shows (milestone/requirement
+                               thresholds) are derived from the same engine.js/layers.js constants the
+                               game itself uses, not hardcoded. Reachable via MainPage's "ℹ️ Guide"
+                               link; its own "← Back to game" button returns to MainPage
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -235,7 +245,11 @@ src/
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
                                imports `./fonts` as a side effect; `mode` defaults to dark and is the
                                seam #140 will drive from system pref + toggle
-  App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/><MainPage/> 
+  App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/> and switches between
+                               <MainPage/>/<InfoPage/> via a local `page` useState toggle (`'game'`/
+                               `'info'`) passed down as `onOpenInfo`/`onBack` callbacks — not a routing
+                               library, same "local toggle, not real routing" convention MainPage's own
+                               Game/Upgrades/Milestones view tabs already use
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -287,8 +301,18 @@ Strict three-layer separation:
    effectiveSeconds }` summary as `offlineProgress`; `dismissOfflineProgress` (and `resetGame`) clear
    it back to `null`. This happens once, before the tick timer starts.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
-   `state`. Renders each unlocked tier as a single compact grid row rather than separate cards. See
+   `state`. Renders each unlocked tier as a single compact grid row rather than separate cards. Kept
+   purely game — live controls, numbers, and status text only; it takes an `onOpenInfo` callback
+   (wired by `App.jsx`) for its one navigation link out to `InfoPage`, but reads no explanatory prose
+   about *how* a mechanic works, only *what its current state is* (e.g. the Tickspeed panel's "Lv.N —
+   +X% faster ticks" line is live status, not a description, so it stays here). See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
+4. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
+   (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
+   Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
+   state at all, only pure constants/formulas from `game/engine.js`/`game/layers.js`, so nothing here
+   can drift out of sync with a live run. `App.jsx` toggles between this and `MainPage` locally; there
+   is still no routing library or backend involved.
 
 ## Economy model
 
@@ -389,7 +413,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (696 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (697 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
@@ -414,7 +438,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (646, see "Testing" above) is unaffected by anything under `e2e/`.
+  (697, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
@@ -450,16 +474,21 @@ CLI (`graphifyy` on PyPI, requires Python 3.10+; install with `uv tool install g
 involved. It's a dev-tool aid for Claude Code sessions working in this repo, not a runtime dependency of
 the shipped app — nothing under `graphify-out/` is imported by `src/`.
 
-No graph has been built yet. The first session that needs one should run `/graphify .` (or headless:
-`graphify extract . --code-only`, AST-only, no API key needed) to generate it; per Graphify's own
-convention, `graphify-out/` should then be committed (`graphify-out/cost.json` is gitignored — local API
-cost tracking only) so every session starts from the same map.
+The graph has been built and `graphify-out/` is committed so every session starts from the same map;
+per Graphify's own convention, `graphify-out/cost.json` and the two machine-local staging files
+`.graphify_python`/`.graphify_root` are gitignored (see `.gitignore`) — every graphify subcommand
+regenerates the latter two on demand if missing. The initial build (`graphify extract . --code-only`)
+covered code only; a subsequent `graphify update .` picked up this repo's markdown docs too (structural
+parsing — headings/links — not LLM semantic extraction, so still 0 token cost either way), so the graph
+now spans both source and docs.
 
-Once `graphify-out/graph.json` exists:
+Now that `graphify-out/graph.json` exists:
 - For codebase questions, prefer `graphify query "<question>"` over grepping — it returns a scoped
   subgraph instead of raw file contents. Use `graphify path "<A>" "<B>"` for relationships and
   `graphify explain "<concept>"` for a focused concept.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) —
+  do this in the same session/commit as any non-trivial code change, so the committed graph doesn't
+  drift stale against `graph.json`'s own "Built from commit" pointer in `GRAPH_REPORT.md`.
 - `.claude/settings.json`'s `PreToolUse` hooks (`graphify hook-guard search`/`read`, on
   `Bash`/`Grep`/`Read`/`Glob`) nudge toward the graph before a raw file read; they no-op if the
   `graphify` CLI isn't on `PATH` or no graph exists yet, so a machine without it installed is unaffected.
