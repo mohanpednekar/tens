@@ -46,3 +46,7 @@ yarn-error.log*
 # OS artefacts
 .DS_Store
 Thumbs.db
+
+# graphify (see CLAUDE.md's "graphify" section) — graphify-out/ itself is meant to be committed
+# once generated, but local API-cost tracking isn't
+graphify-out/cost.json
