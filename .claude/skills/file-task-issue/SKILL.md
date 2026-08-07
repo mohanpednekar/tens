@@ -76,11 +76,11 @@ chain (#44→#46→#47→#48) and the changelog/semver chain (#50→#51→#52) f
 in both chains exists to serialize edits to the same files, not because the later issue is
 functionally impossible without the earlier one.
 
-This is one of three automation-design principles documented in `CLAUDE.md`/`docs/AUTOMATION.md` —
-**determinism-first** (prefer a plain script over a Claude invocation when no genuine judgment is
-needed) and **judgment-call transparency** (state reasoning explicitly when a spec gap forces a
-judgment call, rather than deciding silently) are the other two, and apply to how an issue's spec
-itself should be worded, not just to workflow implementation.
+This is one of three automation-design principles documented in `docs/DESIGN_HISTORY.md`'s
+"Automation design principles" section — **determinism-first** (prefer a plain script over a Claude
+invocation when no genuine judgment is needed) and **judgment-call transparency** (state reasoning
+explicitly when a spec gap forces a judgment call, rather than deciding silently) are the other two,
+and apply to how an issue's spec itself should be worded, not just to workflow implementation.
 
 ## 4. Epics and sub-issues
 
