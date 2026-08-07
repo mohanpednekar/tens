@@ -228,11 +228,18 @@ const OverclockButton = styled(Button)`
 // view (see its own render site above) rather than sharing this row — it's the one control
 // relevant from the very start of a run, before the last tier (and so Speed Up/Overclock) is even
 // reachable. Each card grows to share the row equally (flex: 1) with a low floor width (8rem)
-// chosen specifically so the pair still fits side by side on real phone-width viewports
-// (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to stacked there — RootDiv's own
-// `100vw - 2rem` content width plus this row's 0.6rem gap leaves just enough room at those widths
-// for two 8rem cards. Works unchanged if only one of the two is currently revealed (the lone card
-// just fills the row) or neither (the empty wrapper renders with zero height).
+// on wider viewports. Below 40rem (the same mobile breakpoint every other component in this file
+// uses), the row switches to a single column instead — Speed Up above Overclock, matching their
+// JSX order — rather than staying side by side down to phone width: on a narrow screen, two soft
+// resets sharing a cramped row read as harder to tell apart at a glance than a clear top-to-bottom
+// stack, even though the pair still technically fits side by side down to ~360px (an earlier
+// version optimized for exactly that fit; see docs/DESIGN_HISTORY.md for the reasoning that was
+// superseded here). `flex: 1 1 auto` in the column case lets each card's height come from its own
+// content instead of the row layout's 8rem basis (which would otherwise set every card's *height*
+// once the main axis rotates to vertical); `align-items: stretch`, flexbox's own default, is what
+// makes each stacked card fill the row's full width without an explicit `width: 100%`. Works
+// unchanged if only one of the two is currently revealed (the lone card just fills the row/column)
+// or neither (the empty wrapper renders with zero height).
 const SpeedCardsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -241,6 +248,14 @@ const SpeedCardsRow = styled.div`
   > * {
     flex: 1 1 8rem;
     min-width: 0;
+  }
+
+  @media (max-width: 40rem) {
+    flex-direction: column;
+
+    > * {
+      flex: 1 1 auto;
+    }
   }
 `
 

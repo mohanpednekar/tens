@@ -412,11 +412,14 @@ is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` o
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
 not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
 speed-related cards are split into a top card plus this separate bottom pair rather than one shared
-row). `SpeedCardsRow` uses the same layout mechanics the old top row did: each card shares the row
-equally (`flex: 1 1 8rem`), with a low floor width chosen so the pair still fits side by side on real
-phone-width viewports (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to stacked there.
-The row renders (empty, zero height) even before either card's own reveal flag is true, and works
-unchanged if only one of the two is currently revealed — the lone card just fills the row.
+row). Above the 40rem mobile breakpoint, `SpeedCardsRow` uses the same layout mechanics the old top
+row did: each card shares the row equally (`flex: 1 1 8rem`). Below 40rem it switches to a single
+column instead (`flex-direction: column`) — Speed Up above Overclock, matching their JSX/render
+order — rather than staying side by side down to phone width (an earlier version's floor width was
+tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
+`SpeedCardsRow`'s own comment for why that was superseded). The row renders (empty, zero height) even
+before either card's own reveal flag is true, and works unchanged if only one of the two is currently
+revealed — the lone card just fills the row/column.
 
 A `speedUpEverRevealed` boolean (seeded from, and latched permanently true the first time,
 `lastTierUnlocked`) drives `SpeedUpCard`'s render condition instead of a live check — once shown, it
