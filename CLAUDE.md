@@ -474,16 +474,21 @@ CLI (`graphifyy` on PyPI, requires Python 3.10+; install with `uv tool install g
 involved. It's a dev-tool aid for Claude Code sessions working in this repo, not a runtime dependency of
 the shipped app — nothing under `graphify-out/` is imported by `src/`.
 
-No graph has been built yet. The first session that needs one should run `/graphify .` (or headless:
-`graphify extract . --code-only`, AST-only, no API key needed) to generate it; per Graphify's own
-convention, `graphify-out/` should then be committed (`graphify-out/cost.json` is gitignored — local API
-cost tracking only) so every session starts from the same map.
+The graph has been built and `graphify-out/` is committed so every session starts from the same map;
+per Graphify's own convention, `graphify-out/cost.json` and the two machine-local staging files
+`.graphify_python`/`.graphify_root` are gitignored (see `.gitignore`) — every graphify subcommand
+regenerates the latter two on demand if missing. The initial build (`graphify extract . --code-only`)
+covered code only; a subsequent `graphify update .` picked up this repo's markdown docs too (structural
+parsing — headings/links — not LLM semantic extraction, so still 0 token cost either way), so the graph
+now spans both source and docs.
 
-Once `graphify-out/graph.json` exists:
+Now that `graphify-out/graph.json` exists:
 - For codebase questions, prefer `graphify query "<question>"` over grepping — it returns a scoped
   subgraph instead of raw file contents. Use `graphify path "<A>" "<B>"` for relationships and
   `graphify explain "<concept>"` for a focused concept.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) —
+  do this in the same session/commit as any non-trivial code change, so the committed graph doesn't
+  drift stale against `graph.json`'s own "Built from commit" pointer in `GRAPH_REPORT.md`.
 - `.claude/settings.json`'s `PreToolUse` hooks (`graphify hook-guard search`/`read`, on
   `Bash`/`Grep`/`Read`/`Glob`) nudge toward the graph before a raw file read; they no-op if the
   `graphify` CLI isn't on `PATH` or no graph exists yet, so a machine without it installed is unaffected.
