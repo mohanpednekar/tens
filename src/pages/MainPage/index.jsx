@@ -1358,7 +1358,7 @@ const MainPage = () => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Global Tickspeed: {isGlobalTickspeedActive
+                  Tickspeed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1427,7 +1427,7 @@ const MainPage = () => {
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails ref={globalTickspeedDetailsRef}>
-            <summary><h2>Global Tickspeed</h2></summary>
+            <summary><h2>Tickspeed</h2></summary>
             <MutedText id="global-tickspeed-description">
               Spend Bits to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of

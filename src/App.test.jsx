@@ -862,7 +862,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
   expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed' })).not.toHaveTextContent(/lv\.1|\+1%/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Tickspeed' })).not.toHaveTextContent(/lv\.1|\+1%/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
@@ -1621,7 +1621,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
   expect(breakdown).toHaveTextContent(/speed up: ×4 production speed from 2 activations/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
 
@@ -1644,7 +1644,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on ronnabytes\)/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
@@ -1661,5 +1661,5 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })

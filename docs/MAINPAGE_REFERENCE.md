@@ -117,7 +117,7 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
-  `!isFirstRun`), Speed Up, and Global Tickspeed — each gated on the same
+  `!isFirstRun`), Speed Up, and Tickspeed — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
@@ -194,8 +194,11 @@ no separate mobile-specific markup. The row renders (empty, zero height) even be
 reveal flag is true, and works unchanged if only one of the two is currently revealed — the lone card
 just fills the row. See "The global tickspeed multiplier" below for the underlying `engine.js`
 mechanics. The heading itself is
-plain (`Global Tickspeed`, no level/percent readout — shortened from the earlier `Global Tickspeed
-Multiplier` heading purely for length, no behavior change), inside the card's `InfoDetails`
+plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
+`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
+and the `Global` prefix stopped earning its width against `SpeedUpCard`'s own two-word heading; no
+behavior change either time — the `GlobalTickspeedCard` component/prop names are unaffected, this is
+purely the rendered heading text), inside the card's `InfoDetails`
 `<summary>`. The current level and its cumulative speed bonus (`Currently Lv.N — +N% faster ticks on
 every tier.`) show **only** inside the expanded description — never on the heading or the button — so
 the compact collapsed view never changes shape as the level climbs; the description stays in the DOM
