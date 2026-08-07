@@ -176,7 +176,7 @@ describe('constants', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 
-  it('OVERCLOCK_PRODUCTION_STEP is 0.001 (0.1% global tickspeed per activation)', () => {
+  it('OVERCLOCK_PRODUCTION_STEP is 0.001 (0.1 percentage points added to the global tickspeed multiplier\'s own per-level step, per activation)', () => {
     expect(OVERCLOCK_PRODUCTION_STEP).toBe(0.001)
   })
 
