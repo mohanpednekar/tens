@@ -97,7 +97,9 @@ const progressFill = ({ disabled, $progress, $secondaryProgress, $progressColor,
 // their contrast ratio no matter how light the text color is (measured: disabled-color text on a
 // disabled button already fell to ~3.2:1 at the previous opacity:0.6, below WCAG AA, even with no
 // progress fill involved).
-const Button = styled.button`
+const Button = styled.button.withConfig({
+  shouldForwardProp: prop => prop !== 'variant',
+})`
   position: relative;
   display: flex;
   align-items: center;
