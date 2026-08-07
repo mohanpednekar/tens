@@ -586,6 +586,40 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/3')
 })
 
+test('the speed up panel renders above the tier list, not below it', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+  }))
+
+  render(<App />)
+
+  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions.indexOf('speed up panel')).toBeLessThan(regions.indexOf('Bytes layer'))
+})
+
+test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 12345 },
+    owned: { tier09: 10, tier10: 25 },
+    purchaseLevels: { tier10: 2 },
+    prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
+  }))
+
+  render(<App />)
+
+  const ronnabytesLayer = screen.getByLabelText(/^ronnabytes layer$/i)
+  const rowXpButton = within(ronnabytesLayer).getByRole('button', {
+    name: /consume 37 xp for .* ronnabytes tickspeed/i,
+  })
+  expect(rowXpButton).toHaveTextContent('🧬')
+
+  // The top panel's own Speed Up button is a separate element doing something else entirely
+  // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
+  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires ronnabytes level 1/i })
+  expect(panelSpeedUpButton).not.toBe(rowXpButton)
+})
+
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
@@ -829,7 +863,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
   expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Global Tickspeed Multiplier' })).not.toHaveTextContent(/lv\.1|\+1%/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Tickspeed' })).not.toHaveTextContent(/lv\.1|\+1%/i)
   const panel = screen.getByLabelText(/^global tickspeed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
@@ -1588,7 +1622,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
   expect(breakdown).toHaveTextContent(/speed up: ×4 production speed from 2 activations/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
 
@@ -1611,7 +1645,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on ronnabytes\)/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
@@ -1628,5 +1662,5 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
-  expect(breakdown).toHaveTextContent(/global tickspeed multiplier: not yet active/i)
+  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })

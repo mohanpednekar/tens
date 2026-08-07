@@ -192,6 +192,24 @@ const GlobalTickspeedCard = styled(StatCard)`
   border-color: #1d4ed8;
 `
 
+// Lays GlobalTickspeedCard and SpeedUpCard side by side at the top of the Game view rather than
+// stacked — both are compact "one button" cards, so sharing a row reads as a paired "speed
+// controls" cluster instead of two full-width blocks. Each card grows to share the row equally
+// (flex: 1) but has a floor width (14rem) below which it wraps to its own line instead of being
+// squeezed unreadable — on narrow viewports this naturally stacks them exactly like before this
+// change. Works unchanged if only one of the two is currently revealed (the lone card just fills
+// the row) or neither (the empty wrapper renders with zero height).
+const TopSpeedCardsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  > * {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+`
+
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
 // once Prestige is available) makes the whole card double as the Prestige button, matching the
@@ -1340,7 +1358,7 @@ const MainPage = () => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Global Tickspeed Multiplier: {isGlobalTickspeedActive
+                  Tickspeed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1405,10 +1423,11 @@ const MainPage = () => {
 
       {view === 'game' && (<>
 
+      <TopSpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails ref={globalTickspeedDetailsRef}>
-            <summary><h2>Global Tickspeed Multiplier</h2></summary>
+            <summary><h2>Tickspeed</h2></summary>
             <MutedText id="global-tickspeed-description">
               Spend Bits to permanently speed up every tier's production ticks by another 1% at
               once — more frequent deliveries, not bigger ones. Each level costs another power of
@@ -1444,6 +1463,51 @@ const MainPage = () => {
           </Button>
         </GlobalTickspeedCard>
       )}
+
+      {speedUpEverRevealed && (
+        <SpeedUpCard aria-label="speed up panel">
+          <InfoDetails ref={speedUpDetailsRef}>
+            <summary><h2>Speed Up</h2></summary>
+            <MutedText id="speed-up-description">
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
+              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs one more level than the last.
+            </MutedText>
+          </InfoDetails>
+          <SpeedUpButton
+            aria-describedby="speed-up-description"
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canSpeedUp}
+            onClick={actions.speedUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+            type="button"
+            $progress={speedUpProgressPercent}
+            $progressColor="#22d3ee"
+            $pulse={canSpeedUp}
+          >
+            <ButtonIcon>⏩ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Speed Up progress"
+              aria-valuenow={speedUpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </SpeedUpButton>
+          {!isFirstRun && isAutoSpeedUpActive && (
+            <MutedText title={
+              autoSpeedUpEnabled
+                ? "Speed Up now triggers automatically the instant it's eligible"
+                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+            }>
+              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
+            </MutedText>
+          )}
+        </SpeedUpCard>
+      )}
+      </TopSpeedCardsRow>
 
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
@@ -1641,8 +1705,8 @@ const MainPage = () => {
                     {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
                     {isLastTierXpUnlocked && (
                       <li>
-                        Tickspeed funded by consumed XP — unspent XP: {formatAmount(lastTierXpBalance)}
-                        {' '}(next consumption needs at least {formatAmount(lastTierXpMinConsumption)})
+                        XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
+                        {' '}(next auto-consumption needs at least {formatAmount(lastTierXpMinConsumption)})
                       </li>
                     )}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
@@ -1721,50 +1785,6 @@ const MainPage = () => {
           )
         })}
       </TierList>
-
-      {speedUpEverRevealed && (
-        <SpeedUpCard aria-label="speed up panel">
-          <InfoDetails ref={speedUpDetailsRef}>
-            <summary><h2>Speed Up</h2></summary>
-            <MutedText id="speed-up-description">
-              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
-              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
-              doubles production speed. Each Speed Up needs one more level than the last.
-            </MutedText>
-          </InfoDetails>
-          <SpeedUpButton
-            aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
-            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
-            disabled={!canSpeedUp}
-            onClick={actions.speedUp}
-            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
-            type="button"
-            $progress={speedUpProgressPercent}
-            $progressColor="#22d3ee"
-            $pulse={canSpeedUp}
-          >
-            <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Speed Up progress"
-              aria-valuenow={speedUpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </SpeedUpButton>
-          {!isFirstRun && isAutoSpeedUpActive && (
-            <MutedText title={
-              autoSpeedUpEnabled
-                ? "Speed Up now triggers automatically the instant it's eligible"
-                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
-            }>
-              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
-            </MutedText>
-          )}
-        </SpeedUpCard>
-      )}
 
       </>)}
 

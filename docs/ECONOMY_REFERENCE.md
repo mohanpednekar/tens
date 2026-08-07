@@ -175,7 +175,7 @@ getPrestigeProductionMultiplier(points) × getPurchaseMilestoneMultiplier(purcha
 tickspeed, and **not** multiplied by either tickspeed multiplier — see "Multiplier outcomes are floored"
 above) — "how much lands each time the tier's (tickspeed-shrunk) period completes," not a per-second
 average. A tier's tickspeed level and the global tickspeed multiplier change how *often* this figure
-lands, never its value — the tier row's `⚙ +N%` badge and the Global Tickspeed Multiplier card are where
+lands, never its value — the tier row's `⚙ +N%` badge and the Global Tickspeed card are where
 that speed bonus is actually surfaced (see "Tickspeed multiplier"/docs/MAINPAGE_REFERENCE.md).
 `getTierProductionProgressPercent`/`getEffectiveTierTickSpeedSeconds` (and the former's
 `previousAccumulator`/`elapsedSeconds` "just delivered" detection) remain in `engine.js` with unit tests
@@ -520,7 +520,8 @@ is its one purpose.
   repurposes the last tier's bought `tierTickspeedAutobuyer` flag once `isLastTierTickspeedXpUnlocked`
   is true — instead of calling the now-inert `buyTickspeedMultiplier(lastTierId)`, it calls
   `consumeXpForLastTierTickspeed(state.prestige.xp)` each tick, spending the tier's entire current XP
-  balance the same way the manual "🧬 {XP} XP" button always does (see "MainPage" below). This means a
+  balance — this automation is now the *only* way this mechanic ever fires; see "MainPage" below for
+  why there's no manual trigger for it any more. This means a
   `tierTickspeedAutobuyer` flag bought *before* reaching XP-unlock — originally for its non-destructive
   Money-funded purpose — starts triggering automatic, periodic resets of every other tier's `owned`/
   `resources` and the Money balance the moment the last tier crosses the XP-unlock threshold; this
@@ -529,26 +530,20 @@ is its one purpose.
   exactly as it does for every other tier — this only changes behavior once the threshold is crossed,
   and reverts the moment owned drops back below a full level.
 - **MainPage**: while `isLastTierTickspeedXpUnlocked(state)`, the last tier's row swaps its normal
-  `⚙ {cost} {symbol}` Money-funded tickspeed button for an XP-consume button in the same grid slot,
-  showing `🧬 {current unspent XP} XP` — clicking it always spends the player's *entire* current XP
-  balance in one action (rather than a fixed/typed amount), since every consumption pays the same
-  "reset every other tier's owned quantity and Money" cost regardless of size, so spending it all at
-  once minimizes how often that cost is paid for the same total investment. The button's
-  `aria-label`/`title`/confirm-prompt text state the actual resulting `+N%` speedup this specific
-  consumption contributes — computed as `formatBonusPercent(getLastTierXpTickspeedMultiplier(amount))`,
-  not the raw XP amount spent — since the multiplier compounds, that ratio (new ÷ old) happens to be
-  independent of how much XP was already consumed (the prior multiplier cancels out of the ratio), so
-  it's exactly `getLastTierXpTickspeedMultiplier(amount)` regardless of `lastTierXpConsumed` so far.
-  Gated behind a
-  `window.confirm` prompt (unlike Speed Up/Prestige, which don't need one) since — unlike those two
-  beneficial resets — this one has a real, easy-to-miss downside (wiping out every other tier's
-  current generator count and the Money balance, though not their lifetime purchase level/cost
-  progress) alongside its
-  benefit. The row's existing `⚙ +N%` badge and Details disclosure both automatically reflect the
-  XP-funded multiplier while engaged (they read `tickspeedMultiplier`, which the row computes from
+  `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Speed Up** button
+  (`⏩ ×{next}`, `actions.speedUp`) in the same grid slot — not a manual XP-consume control any more (an
+  earlier version showed `🧬 {current unspent XP} XP` here, spending the player's entire current XP
+  balance on click; that manual trigger was removed in favor of surfacing Speed Up in this slot instead,
+  since reaching a full last-tier level is also exactly when Speed Up tends to become available). The
+  underlying mechanic still fires — but now *only* via the tier tickspeed autobuyer (see "Automation"
+  above), which spends the player's entire current XP balance each tick the same way the old manual
+  button used to on click. `actions.consumeXpForLastTierTickspeed` remains a valid hook action (still
+  callable, still fully engine-tested) — `MainPage` just no longer wires a button to it. The row's
+  existing `⚙ +N%` badge and Details disclosure both still automatically reflect the XP-funded
+  multiplier while engaged (they read `tickspeedMultiplier`, which the row computes from
   `getLastTierXpTickspeedMultiplier` instead of `getTickspeedProductionMultiplier` in this case); the
-  Details disclosure additionally lists the current unspent XP balance and the minimum needed for the
-  next consumption.
+  Details disclosure additionally lists the current unspent XP balance and the minimum the next
+  (automatic) consumption needs, under an "XP Tickspeed" line.
 
 #### Multiplier overflow safety
 
@@ -643,8 +638,12 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered as the last item
-after `TierList`. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). The button
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered near the top of
+the Game view, side by side with `GlobalTickspeedCard` (inside a shared `TopSpeedCardsRow` flex row,
+wrapping to stacked on narrow viewports) and above `TierList` — not as the last item after `TierList`,
+as it once was. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
+quick-access copy of the same button also appears inline in the last tier's own row once that tier is
+full — see "The last tier's XP-funded tickspeed" above. The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
 larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
 player sees concretely what's still needed. `state.purchaseLevels[lastTier.id]` and

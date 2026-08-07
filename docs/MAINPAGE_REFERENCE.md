@@ -117,7 +117,7 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
-  `!isFirstRun`), Speed Up, and the Global Tickspeed Multiplier — each gated on the same
+  `!isFirstRun`), Speed Up, and Tickspeed — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
@@ -181,12 +181,24 @@ balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`,
 Reset button are Game-view-only; every PP-spending control lives on the Upgrades view; the Milestones
 view is its own standalone read-only page (see "Milestones view" below).
 
-**Global Tickspeed Multiplier card (Game view).** Unlike every other automation upgrade, this one is
+**Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
 the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
-from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself. See
-"The global tickspeed multiplier" below for the underlying `engine.js` mechanics. The heading itself is
-plain (`Global Tickspeed Multiplier`, no level/percent readout), inside the card's `InfoDetails`
+from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself.
+`SpeedUpCard` (see below) renders alongside it, both above `TierList`, inside a shared `TopSpeedCardsRow`
+flex row — the two speed-related controls sit side by side at the top of the page (each sharing the
+row equally, `flex: 1 1 14rem`) rather than Speed Up being the last item after the tier list, as it
+once was. Below a combined width of roughly 28rem (two 14rem floors plus the row's own gap) they wrap
+to stacked, one per line, same as before this pairing existed — this is a pure `flex-wrap` reflow with
+no separate mobile-specific markup. The row renders (empty, zero height) even before either card's own
+reveal flag is true, and works unchanged if only one of the two is currently revealed — the lone card
+just fills the row. See "The global tickspeed multiplier" below for the underlying `engine.js`
+mechanics. The heading itself is
+plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
+`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
+and the `Global` prefix stopped earning its width against `SpeedUpCard`'s own two-word heading; no
+behavior change either time — the `GlobalTickspeedCard` component/prop names are unaffected, this is
+purely the rendered heading text), inside the card's `InfoDetails`
 `<summary>`. The current level and its cumulative speed bonus (`Currently Lv.N — +N% faster ticks on
 every tier.`) show **only** inside the expanded description — never on the heading or the button — so
 the compact collapsed view never changes shape as the level climbs; the description stays in the DOM
@@ -234,14 +246,21 @@ production-amount bonus.
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
 tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by an XP-consume button instead (`🧬 {current unspent XP} XP`,
-`actions.consumeXpForLastTierTickspeed`), gated behind a `window.confirm` prompt since every
-consumption resets every other tier's owned quantity and the Money balance to 0. The `⚙ +N%` badge
-and Details disclosure keep working unchanged for the last tier, just reading the XP-funded
+grid slot — by a quick-access **Speed Up** button instead (`⏩ ×{next}`, `actions.speedUp` — the same
+action `SpeedUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
+the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
+the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
+this slot used to show — reaching a full last-tier level is also exactly when Speed Up tends to be
+close, so this reuses the slot for the more actionable control. The underlying XP-funded tickspeed
+mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
+autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
+its current unspent-XP balance/next-consumption minimum still show in the row's Details disclosure (as
+an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The `⚙ +N%` badge
+and Details disclosure keep working unchanged for the last tier otherwise, still reading the XP-funded
 multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
 Prestige/Speed Up resets the last tier's owned count to 0 along with every other tier's, which reverts
-this slot back to the normal Money-funded button until the player buys back up to 10 — see "The last
-tier's XP-funded tickspeed" below for why.
+this slot back to the normal Money-funded button until the player buys back up to a full level — see
+"The last tier's XP-funded tickspeed" below for why.
 
 **Unit autobuyer status (Game view, per tier).** Once a tier's unit-buying autobuyer is unlocked (see
 `autobuyers`/`applyAutobuyerMilestones` — a free, prestige-count-milestone-triggered unlock, not a PP
@@ -316,7 +335,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    (`AUTO_PRESTIGE_AUTOBUYER_COST`, 500 PP) sits between Auto Speed Up's (100) and Auto-Prestige's own
    initial-activation cost (1000), which is why it's ordered directly before the Auto-Prestige row
    despite being a "meta-automation" of it. Each row's icon matches the icon of the feature it
-   automates (🌐 Global Tickspeed Multiplier card, ⏩ Speed Up card, ✦ Prestige card/button) — except the
+   automates (🌐 Global Tickspeed card, ⏩ Speed Up card, ✦ Prestige card/button) — except the
    Auto-Prestige Autobuyer, which automates a PP-funded track (Auto-Prestige's own leveling) rather
    than a Money-funded feature, so it gets its own distinct icon (🔁) instead of reusing ✦ — so every
    row stays visually distinct from each other and from the per-tier automation icons in category 1
@@ -338,8 +357,8 @@ prerequisite (Smart requiring that tier's autobuyer already unlocked — the tie
 no such prerequisite, only its own milestone) or a deliberate progression gate (Auto-Prestige's
 `allTiersFullyAutomated`, an intentional endgame gate, not a cost-ordering teaser).
 
-The Global Tickspeed Multiplier is *not* one of these PP rows — it's Money-funded and lives on the Game
-view instead (see "Global Tickspeed Multiplier card" above / "The global tickspeed multiplier" below);
+The global tickspeed multiplier is *not* one of these PP rows — it's Money-funded and lives on the Game
+view instead (see "Global Tickspeed card" above / "The global tickspeed multiplier" below);
 only its automation toggle (Tickspeed Autobuyer) is PP-funded and lives here.
 
 **Milestones view.** A third, read-only view (`view === 'milestones'`, gated on `!isFirstRun` the same
@@ -480,7 +499,7 @@ tickspeed started diverging again (see "Tier production tickspeed" above) — ev
 shows up indirectly via the `⚙ +N%`/`⚙ 2x` badge and the tickspeed button's own tooltip.
 
 **Percentages vs. multipliers.** Every bonus derived from a multiplier (the tier tickspeed badge, the
-last tier's XP-funded tickspeed, the Global Tickspeed Multiplier card/breakdown, the Prestige production
+last tier's XP-funded tickspeed, the Global Tickspeed card/breakdown, the Prestige production
 speed bonus in the HUD/money-balance breakdown) is rendered through a shared
 `formatBonusOrMultiplier(multiplier, { precise })` helper in `MainPage/index.jsx`: below +100% it reads
 as a percentage (`+21%`, or `+N.NN%` with `precise: true` for the global tickspeed multiplier's
