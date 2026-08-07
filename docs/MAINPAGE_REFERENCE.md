@@ -185,9 +185,14 @@ view is its own standalone read-only page (see "Milestones view" below).
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
 the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
 from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself.
-`SpeedUpCard` (see below) renders directly beneath it, also above `TierList` — the two speed-related
-controls sit together at the top of the page rather than Speed Up being the last item after the tier
-list, as it once was. See "The global tickspeed multiplier" below for the underlying `engine.js`
+`SpeedUpCard` (see below) renders alongside it, both above `TierList`, inside a shared `TopSpeedCardsRow`
+flex row — the two speed-related controls sit side by side at the top of the page (each sharing the
+row equally, `flex: 1 1 14rem`) rather than Speed Up being the last item after the tier list, as it
+once was. Below a combined width of roughly 28rem (two 14rem floors plus the row's own gap) they wrap
+to stacked, one per line, same as before this pairing existed — this is a pure `flex-wrap` reflow with
+no separate mobile-specific markup. The row renders (empty, zero height) even before either card's own
+reveal flag is true, and works unchanged if only one of the two is currently revealed — the lone card
+just fills the row. See "The global tickspeed multiplier" below for the underlying `engine.js`
 mechanics. The heading itself is
 plain (`Global Tickspeed`, no level/percent readout — shortened from the earlier `Global Tickspeed
 Multiplier` heading purely for length, no behavior change), inside the card's `InfoDetails`

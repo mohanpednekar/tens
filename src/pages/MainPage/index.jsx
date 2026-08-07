@@ -192,6 +192,24 @@ const GlobalTickspeedCard = styled(StatCard)`
   border-color: #1d4ed8;
 `
 
+// Lays GlobalTickspeedCard and SpeedUpCard side by side at the top of the Game view rather than
+// stacked — both are compact "one button" cards, so sharing a row reads as a paired "speed
+// controls" cluster instead of two full-width blocks. Each card grows to share the row equally
+// (flex: 1) but has a floor width (14rem) below which it wraps to its own line instead of being
+// squeezed unreadable — on narrow viewports this naturally stacks them exactly like before this
+// change. Works unchanged if only one of the two is currently revealed (the lone card just fills
+// the row) or neither (the empty wrapper renders with zero height).
+const TopSpeedCardsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  > * {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+`
+
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
 // once Prestige is available) makes the whole card double as the Prestige button, matching the
@@ -1405,6 +1423,7 @@ const MainPage = () => {
 
       {view === 'game' && (<>
 
+      <TopSpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails ref={globalTickspeedDetailsRef}>
@@ -1488,6 +1507,7 @@ const MainPage = () => {
           )}
         </SpeedUpCard>
       )}
+      </TopSpeedCardsRow>
 
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {

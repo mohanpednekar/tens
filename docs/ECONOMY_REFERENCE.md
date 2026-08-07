@@ -639,8 +639,9 @@ re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manu
 Speed Up is bought.
 
 `MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered near the top of
-the Game view, directly beneath `GlobalTickspeedCard` and above `TierList` — not as the last item after
-`TierList`, as it once was. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
+the Game view, side by side with `GlobalTickspeedCard` (inside a shared `TopSpeedCardsRow` flex row,
+wrapping to stacked on narrow viewports) and above `TierList` — not as the last item after `TierList`,
+as it once was. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
 quick-access copy of the same button also appears inline in the last tier's own row once that tier is
 full — see "The last tier's XP-funded tickspeed" above. The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
