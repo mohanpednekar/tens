@@ -141,14 +141,22 @@ link beside the page title; see CLAUDE.md's Architecture section for the split a
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
   there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` and the Milestones
   view's Tier Tickspeed Autobuyers `CategoryHeading` still wrap a `Disclosure`
-  (`styled.details`/`<summary>`, collapsed by default, the heading itself the only trigger — no
-  separate visible "expand" affordance) — but only when there's a genuinely *live game status*
-  number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
+  (`styled.details`/`<summary>`, collapsed by default, the heading itself the only way to *open*
+  it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
+  status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
   `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
   Milestones view's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Speed Up and
-  Overclock cards"/"Milestones view" below) — each collapsed until the player clicks that heading,
-  same as every other click-to-expand disclosure in this file (see "Tier row details disclosure"
-  below). None of these is prose about *how* the mechanic works, only *what its current numbers are*.
+  Overclock cards"/"Milestones view" below) — each collapsed until the player clicks that heading.
+  *Closing* it back is more permissive: clicking the heading again (native `<summary>` toggle) or
+  clicking the revealed status line itself both work, via a shared `collapseDisclosure` click
+  handler on the `Disclosure` element (`event.target.closest('summary')` short-circuits so the
+  native toggle isn't fought, otherwise force-sets `.open = false` directly — safe since none of
+  these `<details>` are React-controlled) — mirroring the tier row's own "click anywhere on the
+  tile also toggles its Details" convention (see "Tier row details disclosure" below), scoped to
+  collapsing only here since opening still requires the heading specifically. Each card's own
+  action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
+  never touches this handler at all. None of these is prose about *how* the mechanic works, only
+  *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
   `<h1>Tens</h1>`, beside the `ℹ️ Guide` link (a plain `GuideLink` button calling the `onOpenInfo`

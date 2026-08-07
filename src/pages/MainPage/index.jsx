@@ -596,9 +596,9 @@ const TierNameLabel = styled.span`
 // A native click-to-expand disclosure for a genuinely live number that would otherwise need its
 // own permanently-visible line (see GlobalTickspeedCard/OverclockCard/the Tier Tickspeed
 // Autobuyers milestone category below) — collapsed by default, the card/category's own heading
-// (wrapped in <summary>) is the only trigger, no separate visible "expand" affordance. Native
-// <details>/<summary> keeps this keyboard/screen-reader accessible with no JS state; the marker
-// (▸) is hidden deliberately, matching every other disclosure in this app.
+// (wrapped in <summary>) is the only way to open it, no separate visible "expand" affordance.
+// Native <details>/<summary> keeps this keyboard/screen-reader accessible with no JS state; the
+// marker (▸) is hidden deliberately, matching every other disclosure in this app.
 const Disclosure = styled.details`
   summary {
     cursor: pointer;
@@ -620,6 +620,18 @@ const Disclosure = styled.details`
     margin-top: 0.3rem;
   }
 `
+
+// Clicking <summary> already natively toggles a <details> element open/closed; clicking
+// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
+// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
+// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
+// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
+// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
+// passed by React).
+const collapseDisclosure = event => {
+  if (event.target.closest('summary')) return
+  event.currentTarget.open = false
+}
 
 // A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
 // — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
@@ -1466,7 +1478,7 @@ const MainPage = ({ onOpenInfo }) => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
-          <Disclosure>
+          <Disclosure onClick={collapseDisclosure}>
             <summary><h2>Tickspeed</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
@@ -1790,7 +1802,7 @@ const MainPage = ({ onOpenInfo }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <Disclosure>
+          <Disclosure onClick={collapseDisclosure}>
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
@@ -2237,7 +2249,7 @@ const MainPage = ({ onOpenInfo }) => {
           </UpgradeCategory>
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <Disclosure>
+            <Disclosure onClick={collapseDisclosure}>
               <summary><CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading></summary>
               <MutedText>
                 Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.

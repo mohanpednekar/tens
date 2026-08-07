@@ -1004,6 +1004,34 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
+test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 999 },
+    globalTickspeedMultiplier: 1,
+  }))
+
+  render(<App />)
+
+  const heading = screen.getByRole('heading', { level: 2, name: 'Tickspeed' })
+  const statusLine = screen.getByText(/lv\.1 —/i)
+  expect(statusLine).not.toBeVisible()
+
+  await user.click(heading)
+  expect(statusLine).toBeVisible()
+
+  // Clicking the revealed line itself (not the heading) also collapses it.
+  await user.click(statusLine)
+  expect(statusLine).not.toBeVisible()
+
+  await user.click(heading)
+  expect(statusLine).toBeVisible()
+  // Clicking the heading again (native <summary> toggle) still works too.
+  await user.click(heading)
+  expect(statusLine).not.toBeVisible()
+})
+
 test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 9 },
