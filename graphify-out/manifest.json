@@ -130,8 +130,8 @@
     "semantic_hash": "02b64754e87514bf5af34042a089981d"
   },
   "src/pages/MainPage/index.jsx": {
-    "mtime": 1786115641.348016,
-    "ast_hash": "8677212497dc6f4a73c68d30b1883b16",
+    "mtime": 1786115993.032008,
+    "ast_hash": "851049940c62d3e5ac00add35a2dbe52",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786115804.3880122,
-    "ast_hash": "72712654abf8ac4e6d3f103d6d3f4a62",
+    "mtime": 1786116116.072005,
+    "ast_hash": "ea57d90e2f98838d5e6ead5989bbb4af",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {

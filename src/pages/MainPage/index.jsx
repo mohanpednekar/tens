@@ -588,6 +588,19 @@ const GreenText = styled.span`
   }
 `
 
+// A tap/hover-only overlay for a genuinely live number that would otherwise need its own
+// permanently-visible line (see OverclockCard/the Tier Tickspeed Autobuyers milestone category
+// below) — the number itself only surfaces on demand via the native title tooltip, same
+// aria-label-plus-title dual channel every other icon-only badge in this file already uses
+// (PpUpgradeBadge's autobuyer status badges, TierNameLabel's tier-name tooltip), rather than an
+// always-visible MutedText line competing for space on an already-compact card/heading.
+const InfoBadge = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  cursor: help;
+  font-size: 0.8em;
+  margin-left: 0.35em;
+`
+
 // A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
 // — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
 // two grid cells read from theme.color.textMuted without migrating MutedText itself.
@@ -1783,12 +1796,17 @@ const MainPage = ({ onOpenInfo }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <h2>Overclock</h2>
-          {overclockCount > 0 && (
-            <MutedText>
-              Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {overclockCount} activation{overclockCount === 1 ? '' : 's'}.
-            </MutedText>
-          )}
+          <h2>
+            Overclock
+            {overclockCount > 0 && (
+              <InfoBadge
+                aria-label={`Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`}
+                title={`Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`}
+              >
+                ⓘ
+              </InfoBadge>
+            )}
+          </h2>
           <OverclockButton
             aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
@@ -2228,10 +2246,15 @@ const MainPage = ({ onOpenInfo }) => {
           </UpgradeCategory>
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
-            <MutedText>
-              Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.
-            </MutedText>
+            <CategoryHeading>
+              Tier Tickspeed Autobuyers
+              <InfoBadge
+                aria-label={`Starts at Prestige ${getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, plus ${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that`}
+                title={`Starts at Prestige ${getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, plus ${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that`}
+              >
+                ⓘ
+              </InfoBadge>
+            </CategoryHeading>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
               const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false
