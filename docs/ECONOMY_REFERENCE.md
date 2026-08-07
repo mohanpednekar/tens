@@ -638,10 +638,11 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered near the top of
-the Game view, side by side with `GlobalTickspeedCard` (inside a shared `TopSpeedCardsRow` flex row,
-wrapping to stacked on narrow viewports) and above `TierList` — not as the last item after `TierList`,
-as it once was. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered directly below
+`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, wrapping to
+stacked on narrow viewports) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
+view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
+card" in docs/MAINPAGE_REFERENCE.md). Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
 quick-access copy of the same button also appears inline in the last tier's own row once that tier is
 full — see "The last tier's XP-funded tickspeed" above. The button
 (`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
@@ -699,10 +700,10 @@ increments it, same as `speedUpGame` increments `speedUpCount`). There is no PP-
 automation (unlike Speed Up's `autoSpeedUp`) — Overclock is meant to be a deliberate, occasional player
 decision given how much it costs the run (wiping Speed Up's bonus along with everything else).
 
-`MainPage` surfaces this as an `OverclockCard` (orange accent; Game view only), a third card inside the
-same `TopSpeedCardsRow` flex row as `GlobalTickspeedCard`/`SpeedUpCard`, rendered after `SpeedUpCard` —
-wraps to its own line on narrow viewports once two cards already fill the row, rather than forcing all
-three onto one line. Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
+`MainPage` surfaces this as an `OverclockCard` (orange accent; Game view only), rendered directly below
+`TierList`, side by side with `SpeedUpCard` inside the shared `SpeedCardsRow` flex row (see "Speed Up"
+above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Game view.
+Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
 `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextBonus} · Lv.{level}/{requirement}`
 — e.g. `⚡ +0.2% · Lv.12/20`. Unlike Speed Up's own button, **this level/requirement pair is NOT given

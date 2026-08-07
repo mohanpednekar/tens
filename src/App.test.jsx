@@ -586,7 +586,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/3')
 })
 
-test('the speed up panel renders above the tier list, not below it', () => {
+test('the speed up and overclock panels render below the tier list, not above it', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
@@ -595,7 +595,8 @@ test('the speed up panel renders above the tier list, not below it', () => {
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('speed up panel')).toBeLessThan(regions.indexOf('Bytes layer'))
+  expect(regions.indexOf('speed up panel')).toBeGreaterThan(regions.indexOf('Bytes layer'))
+  expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Bytes layer'))
 })
 
 test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {

@@ -206,17 +206,18 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays GlobalTickspeedCard, SpeedUpCard, and OverclockCard side by side at the top of the Game
-// view rather than stacked — all three are compact "one button" cards, so sharing a row reads as
-// a single "speed controls" cluster instead of stacked full-width blocks. Each card grows to
-// share the row equally (flex: 1) with a low floor width (8rem) chosen specifically so at least
-// two cards still fit side by side on real phone-width viewports (~360-430px, e.g. an iPhone 14's
-// 393px) rather than wrapping to stacked there — RootDiv's own `100vw - 2rem` content width plus
-// this row's 0.6rem gap leaves just enough room at those widths for two 8rem cards; a third simply
-// wraps to its own line at that width, still paired with whichever of the other two also wrapped.
-// Works unchanged if fewer than three are currently revealed (the remaining card(s) just fill the
-// row) or none (the empty wrapper renders with zero height).
-const TopSpeedCardsRow = styled.div`
+// Lays SpeedUpCard and OverclockCard side by side, below the tier list — both are compact "one
+// button" soft-reset cards, so sharing a row reads as a single cluster instead of stacked
+// full-width blocks. GlobalTickspeedCard renders separately, alone at the very top of the Game
+// view (see its own render site above) rather than sharing this row — it's the one control
+// relevant from the very start of a run, before the last tier (and so Speed Up/Overclock) is even
+// reachable. Each card grows to share the row equally (flex: 1) with a low floor width (8rem)
+// chosen specifically so the pair still fits side by side on real phone-width viewports
+// (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to stacked there — RootDiv's own
+// `100vw - 2rem` content width plus this row's 0.6rem gap leaves just enough room at those widths
+// for two 8rem cards. Works unchanged if only one of the two is currently revealed (the lone card
+// just fills the row) or neither (the empty wrapper renders with zero height).
+const SpeedCardsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
@@ -1474,7 +1475,6 @@ const MainPage = () => {
 
       {view === 'game' && (<>
 
-      <TopSpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
           <InfoDetails ref={globalTickspeedDetailsRef}>
@@ -1514,88 +1514,6 @@ const MainPage = () => {
           </Button>
         </GlobalTickspeedCard>
       )}
-
-      {speedUpEverRevealed && (
-        <SpeedUpCard aria-label="speed up panel">
-          <InfoDetails ref={speedUpDetailsRef}>
-            <summary><h2>Speed Up</h2></summary>
-            <MutedText id="speed-up-description">
-              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
-              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
-              doubles production speed. Each Speed Up needs one more level than the last.
-            </MutedText>
-          </InfoDetails>
-          <SpeedUpButton
-            aria-describedby="speed-up-description"
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
-            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
-            disabled={!canSpeedUp}
-            onClick={actions.speedUp}
-            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
-            type="button"
-            $progress={speedUpProgressPercent}
-            $progressColor="#22d3ee"
-            $pulse={canSpeedUp}
-          >
-            <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Speed Up progress"
-              aria-valuenow={speedUpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </SpeedUpButton>
-          {!isFirstRun && isAutoSpeedUpActive && (
-            <MutedText title={
-              autoSpeedUpEnabled
-                ? "Speed Up now triggers automatically the instant it's eligible"
-                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
-            }>
-              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
-            </MutedText>
-          )}
-        </SpeedUpCard>
-      )}
-
-      {overclockEverRevealed && (
-        <OverclockCard aria-label="overclock panel">
-          <InfoDetails ref={overclockDetailsRef}>
-            <summary><h2>Overclock</h2></summary>
-            <MutedText id="overclock-description">
-              Reach level {overclockRequirement} on {lastTier.name} to trigger an Overclock:
-              resets your tiers and resources just like Speed Up (keeps unlocked autobuyers and
-              Prestige Points) but also wipes Speed Up's own stacking bonus back to zero — in
-              exchange, it permanently speeds up every tier's production ticks by another 0.1% at
-              once. Each Overclock needs 10 more levels than the last.
-            </MutedText>
-          </InfoDetails>
-          <OverclockButton
-            aria-describedby="overclock-description"
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
-            color={canOverclock ? '#fb923c' : 'darkgrey'}
-            disabled={!canOverclock}
-            onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
-            type="button"
-            $progress={overclockProgressPercent}
-            $progressColor="#fb923c"
-            $pulse={canOverclock}
-          >
-            <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>{formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="Overclock progress"
-              aria-valuenow={overclockProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </OverclockButton>
-        </OverclockCard>
-      )}
-      </TopSpeedCardsRow>
 
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
@@ -1873,6 +1791,89 @@ const MainPage = () => {
           )
         })}
       </TierList>
+
+      <SpeedCardsRow>
+      {speedUpEverRevealed && (
+        <SpeedUpCard aria-label="speed up panel">
+          <InfoDetails ref={speedUpDetailsRef}>
+            <summary><h2>Speed Up</h2></summary>
+            <MutedText id="speed-up-description">
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
+              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs one more level than the last.
+            </MutedText>
+          </InfoDetails>
+          <SpeedUpButton
+            aria-describedby="speed-up-description"
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canSpeedUp}
+            onClick={actions.speedUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+            type="button"
+            $progress={speedUpProgressPercent}
+            $progressColor="#22d3ee"
+            $pulse={canSpeedUp}
+          >
+            <ButtonIcon>⏩ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Speed Up progress"
+              aria-valuenow={speedUpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </SpeedUpButton>
+          {!isFirstRun && isAutoSpeedUpActive && (
+            <MutedText title={
+              autoSpeedUpEnabled
+                ? "Speed Up now triggers automatically the instant it's eligible"
+                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+            }>
+              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
+            </MutedText>
+          )}
+        </SpeedUpCard>
+      )}
+
+      {overclockEverRevealed && (
+        <OverclockCard aria-label="overclock panel">
+          <InfoDetails ref={overclockDetailsRef}>
+            <summary><h2>Overclock</h2></summary>
+            <MutedText id="overclock-description">
+              Reach level {overclockRequirement} on {lastTier.name} to trigger an Overclock:
+              resets your tiers and resources just like Speed Up (keeps unlocked autobuyers and
+              Prestige Points) but also wipes Speed Up's own stacking bonus back to zero — in
+              exchange, it permanently speeds up every tier's production ticks by another 0.1% at
+              once. Each Overclock needs 10 more levels than the last.
+            </MutedText>
+          </InfoDetails>
+          <OverclockButton
+            aria-describedby="overclock-description"
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
+            color={canOverclock ? '#fb923c' : 'darkgrey'}
+            disabled={!canOverclock}
+            onClick={actions.overclock}
+            title={`Resets tiers (and Speed Up's bonus) and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
+            type="button"
+            $progress={overclockProgressPercent}
+            $progressColor="#fb923c"
+            $pulse={canOverclock}
+          >
+            <ButtonIcon>⚡ </ButtonIcon>
+            <ButtonLabel>{formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Overclock progress"
+              aria-valuenow={overclockProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </OverclockButton>
+        </OverclockCard>
+      )}
+      </SpeedCardsRow>
 
       </>)}
 

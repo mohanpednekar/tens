@@ -183,26 +183,22 @@ balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`,
 Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
-Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
-the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
-from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself.
-`SpeedUpCard` and `OverclockCard` (see below) render alongside it, all three above `TierList`, inside a
-shared `TopSpeedCardsRow` flex row — the speed-related controls sit side by side at the top of the page
-(each sharing the row equally, `flex: 1 1 8rem`), deliberately kept low enough that at least two of the
-three still fit side by side on real phone-width viewports (~360-430px, e.g. an iPhone 14's 393px)
-rather than wrapping to stacked there — an earlier, higher 14rem floor wrapped on exactly those widths,
-which is what prompted lowering it. Only below roughly 300px of `RootDiv` content width
-(`100vw - 2rem`, so well under any real phone) do all three fall back to wrapping, one per line — a pure
-`flex-wrap` reflow with no separate mobile-specific markup; a third card simply wraps to its own line at
-normal phone widths once the first two already fill the row, still paired with whichever of the other
-two also wrapped. The row renders (empty, zero height) even before any card's own reveal flag
-is true, and works unchanged if fewer than three are currently revealed — the remaining card(s)
-just fill the row. See "The global tickspeed multiplier"/"Overclock" below for the underlying
+Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered
+alone at the very top of the Game view — above `TierList`/tier 1, before anything else — since it's
+relevant from the very start of a run, well before Speed Up, Overclock, or Prestige are, or even the
+tier list itself. `SpeedUpCard` and `OverclockCard` (see below) render together instead, in their own
+row *below* `TierList` — the two soft-reset controls, which share the same last-tier prerequisite,
+form their own cluster there rather than sharing this card's row at the top; `GlobalTickspeedCard`
+deliberately doesn't join them, since it's the one control relevant before the last tier is even
+reachable. (Earlier iterations tried grouping all three speed-related cards together at the top; this
+was reverted to the current split — Tickspeed alone at top, Speed Up/Overclock below the tier list —
+per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading itself is
 plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
 `Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
-and the `Global` prefix stopped earning its width against `SpeedUpCard`'s own two-word heading; no
-behavior change either time — the `GlobalTickspeedCard` component/prop names are unaffected, this is
+during that earlier iteration and the `Global` prefix stopped earning its width against `SpeedUpCard`'s
+own two-word heading; no behavior change, and the shortened heading stuck even after the two cards
+split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
 purely the rendered heading text), inside the card's `InfoDetails`
 `<summary>`. The current level and its cumulative speed bonus (`Currently Lv.N — +N% faster ticks on
 every tier.`) show **only** inside the expanded description — never on the heading or the button — so
@@ -398,31 +394,41 @@ opposed to what."
 Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
 is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
 
-**Speed Up card stays visible once revealed.** A `speedUpEverRevealed` boolean (seeded from,
-and latched permanently true the first time, `lastTierUnlocked`) drives `SpeedUpCard`'s render
-condition instead of a live check — once shown, it stays shown, with its button simply going disabled
-rather than the card vanishing. It resets only on a full Reset (`handleResetClick`), never on an
-ordinary Speed Up or Prestige. There is no equivalent card for Prestige — the bottom Prestige panel
-that used to mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purely
-informational and redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways
-to trigger Prestige (see "Prestige and the Googol freeze" below).
+**Speed Up and Overclock cards, below the tier list.** `SpeedUpCard` and `OverclockCard` render
+together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
+speed-related cards are split into a top card plus this separate bottom pair rather than one shared
+row). `SpeedCardsRow` uses the same layout mechanics the old top row did: each card shares the row
+equally (`flex: 1 1 8rem`), with a low floor width chosen so the pair still fits side by side on real
+phone-width viewports (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to stacked there.
+The row renders (empty, zero height) even before either card's own reveal flag is true, and works
+unchanged if only one of the two is currently revealed — the lone card just fills the row.
 
-**Overclock card (Game view).** A third card in `TopSpeedCardsRow`, rendered after `SpeedUpCard` —
-same orange-accented `StatCard` shape, gated on the same `lastTierUnlocked` condition as Speed Up
-(reusing the exact same `everRevealed`-flag pattern, its own `overclockEverRevealed` boolean, latched
-permanently true and reset only on a full Reset alongside `speedUpEverRevealed`) since both share the
-same last-tier prerequisite. `OverclockButton` (sized to match `SpeedUpButton`/the tier rows' own
-Buy/tickspeed buttons) reads `⚡ {nextBonus} · Lv.{level}/{requirement}` — e.g. `⚡ +0.2% · Lv.12/20` —
-`actions.overclock` on click. Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`,
-this level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
-`getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
-so the round numbers Overclock's own requirement ladder produces (10/20/30/…) show exactly as `engine.js`
-computes them, matching the same raw level number the last tier's own Details disclosure already shows,
-rather than introducing a second, differently-offset "level" reading for the same underlying value; see
-`getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in docs/ECONOMY_REFERENCE.md.
-There is no per-tier-row quick-access Overclock button the way Speed Up gets one on the last tier's own
-row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a deliberate, occasional
-decision reached via the top card, not a frequent one-tap action.
+A `speedUpEverRevealed` boolean (seeded from, and latched permanently true the first time,
+`lastTierUnlocked`) drives `SpeedUpCard`'s render condition instead of a live check — once shown, it
+stays shown, with its button simply going disabled rather than the card vanishing. It resets only on a
+full Reset (`handleResetClick`), never on an ordinary Speed Up or Prestige. There is no equivalent card
+for Prestige — the bottom Prestige panel that used to mirror this pattern (via a
+`prestigeCardEverRevealed` flag) was removed as purely informational and redundant with the
+`TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige (see "Prestige and
+the Googol freeze" below).
+
+`OverclockCard` — same orange-accented `StatCard` shape as `SpeedUpCard`'s cyan — is gated on the same
+`lastTierUnlocked` condition (reusing the exact same `everRevealed`-flag pattern, its own
+`overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
+`speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
+match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextBonus} · Lv.{level}/{requirement}`
+— e.g. `⚡ +0.2% · Lv.12/20` — `actions.overclock` on click. Unlike `SpeedUpButton`'s
+`Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this level/requirement pair is rendered from
+the *raw* `state.purchaseLevels[lastTier.id]`/`getOverclockRequirement(overclockCount)` values
+directly — no -1 "completed blocks" display offset — so the round numbers Overclock's own requirement
+ladder produces (10/20/30/…) show exactly as `engine.js` computes them, matching the same raw level
+number the last tier's own Details disclosure already shows, rather than introducing a second,
+differently-offset "level" reading for the same underlying value; see `getOverclockRequirement`'s own
+comment in `engine.js` and "Overclock" in docs/ECONOMY_REFERENCE.md. There is no per-tier-row
+quick-access Overclock button the way Speed Up gets one on the last tier's own row once full (see
+"Tickspeed multiplier" above) — Overclock is meant to be a deliberate, occasional decision reached via
+this card, not a frequent one-tap action.
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
