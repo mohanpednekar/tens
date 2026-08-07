@@ -2,7 +2,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getGlobalTickspeedRegularStep, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from 'game/layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
@@ -1784,6 +1784,11 @@ const MainPage = ({ onOpenInfo }) => {
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
           <h2>Overclock</h2>
+          {overclockCount > 0 && (
+            <MutedText>
+              Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {overclockCount} activation{overclockCount === 1 ? '' : 's'}.
+            </MutedText>
+          )}
           <OverclockButton
             aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
@@ -2224,6 +2229,9 @@ const MainPage = ({ onOpenInfo }) => {
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
             <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
+            <MutedText>
+              Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.
+            </MutedText>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
               const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false

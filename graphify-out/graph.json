@@ -11652,7 +11652,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1836",
+      "source_location": "L1841",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11736,7 +11736,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1837",
+      "source_location": "L1842",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -15701,6 +15701,18 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_infopage_index",
+      "target": "src_game_layers_tier_tickspeed_autobuyer_milestone_step",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_pages_mainpage_index",
       "target": "src_game_layers_tier_tickspeed_autobuyer_milestone_step",
       "confidence_score": 1.0
     },
@@ -20101,5 +20113,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c6f3baf9cef841d8591909182e2ae9e3d96e76a5"
+  "built_at_commit": "ab426cdf8d326f75367f274ef43a2eee95f76322"
 }

@@ -140,9 +140,12 @@ link beside the page title; see CLAUDE.md's Architecture section for the split a
   work" panel, the Milestones view's two category headings) are now plain, non-interactive headings
   — there's nothing left to expand, since every mechanic's evergreen explanation moved to
   `InfoPage` (see the file header note above). Any number that's genuinely *live game status* (not a
-  description of how the mechanic works) stayed here instead: `GlobalTickspeedCard` still shows a
-  `Lv.N — +N% faster ticks on every tier.` `MutedText` line once `isGlobalTickspeedActive`, since that's
-  this run's current value, not evergreen prose.
+  description of how the mechanic works) stayed here instead, as a terse `MutedText` line with the
+  narrative stripped out: `GlobalTickspeedCard` still shows `Lv.N — +N% faster ticks on every tier.`
+  once `isGlobalTickspeedActive`; `OverclockCard` shows its current per-level rate once
+  `overclockCount > 0` (see "Speed Up and Overclock cards" below); the Milestones view's Tier
+  Tickspeed Autobuyers category still shows its start-Prestige/step numbers (see "Milestones view"
+  below) — none of these is prose about *how* the mechanic works, only *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
   `<h1>Tens</h1>`, beside the `ℹ️ Guide` link (a plain `GuideLink` button calling the `onOpenInfo`
@@ -384,12 +387,16 @@ components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMi
 2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
    `getTierTickspeedAutobuyerMilestone` instead.
 
-Each category's heading is a plain, non-interactive `CategoryHeading` — the one-sentence explanation
-that used to live in a collapsed `InfoDetails` body underneath it (e.g. "Unlocks one tier per
-prestige.") moved to `InfoPage`'s own "Milestones" section (see the file header note above), computed
-there from the same `getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`/
-`TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` constants rather than duplicated as prose; the row list right
-below each heading is where the actual per-tier detail lives. Text throughout this view (and the
+Each category's heading is a plain, non-interactive `CategoryHeading`. The Tier Autobuyer Unlocks
+category's old one-sentence body ("Unlocks one tier per prestige.") carried no number the row list
+below it didn't already show, so it moved to `InfoPage`'s "Milestones" section outright (see the file
+header note above) with nothing left behind here. The Tier Tickspeed Autobuyers category's old body
+did carry a number worth keeping in-game — its start/step pattern — so a terse, description-free
+`MutedText` line survives directly under that heading: `Starts at Prestige {N}, +{step} per tier after
+that.`, computed from the same `getTierTickspeedAutobuyerMilestone`/
+`TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` constants `InfoPage`'s fuller prose version also uses,
+rather than duplicated as a hardcoded string; the row list right below is still where the actual
+per-tier detail lives. Text throughout this view (and the
 matching locked badges on the Upgrades view's "Tier Autobuyers" category) avoids calling the unlock
 "free"/"no PP cost" — since nothing on either milestone track was ever PP-funded to begin with, saying
 so would only invite the question "as opposed to what."
@@ -436,12 +443,18 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
-Overclock has no visible effect of its own to display separately from the Tickspeed card above it —
-raising the global tickspeed multiplier's own per-level step, rather than stacking a second multiplier
-alongside it, means the Tickspeed card's own `Lv.N — +N% faster ticks on every tier.` status line (see
-"Global Tickspeed card" above) already reflects Overclock's contribution once any levels are bought,
-with no separate "Overclock bonus" figure needed anywhere else in the UI besides the money-balance
-breakdown's own summary line (see below).
+`OverclockCard` also carries its own terse, description-free status line once `overclockCount > 0`:
+`Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from {N} activation(s).` —
+`{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
+*before* the next Overclock (as opposed to `OverclockButton`'s own label, which always shows the
+*next* rate — see above); this is the one Overclock-specific number not otherwise visible anywhere
+on the Game view. Beyond that one figure, Overclock has no visible effect of its own to display
+separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
+per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
+`Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
+reflects Overclock's cumulative contribution once any levels are bought, with no separate "Overclock
+bonus" figure needed anywhere else in the UI besides the money-balance breakdown's own summary line
+(see below).
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise

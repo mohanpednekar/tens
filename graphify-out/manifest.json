@@ -130,9 +130,9 @@
     "semantic_hash": "02b64754e87514bf5af34042a089981d"
   },
   "src/pages/MainPage/index.jsx": {
-    "mtime": 1786113606.5077298,
-    "ast_hash": "315e42a6ad340d277b9ab34bd4914a05",
-    "semantic_hash": "315e42a6ad340d277b9ab34bd4914a05"
+    "mtime": 1786115641.348016,
+    "ast_hash": "8677212497dc6f4a73c68d30b1883b16",
+    "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
     "mtime": 1785754688.0939777,
@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786114158.5557625,
-    "ast_hash": "93b26cbf4bf9108c17fabf56f3398748",
+    "mtime": 1786114200.319765,
+    "ast_hash": "adb8812178115964563a036f9884bb9a",
     "semantic_hash": ""
   },
   "README.md": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786113988.0397525,
-    "ast_hash": "aac73c39caca0c0dd6e8cd250d967209",
+    "mtime": 1786115804.3880122,
+    "ast_hash": "72712654abf8ac4e6d3f103d6d3f4a62",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {
