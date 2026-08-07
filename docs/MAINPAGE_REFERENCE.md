@@ -3,7 +3,12 @@
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
 reference for the compact tier-row grid, the sticky HUD balances, the Game/PP-Upgrades view
-toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
+toggle, and every disclosure/badge/accessibility convention `MainPage` follows. `MainPage` is
+deliberately purely game — live controls, numbers, and status text only. Every mechanic's
+evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
+now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
+link beside the page title; see CLAUDE.md's Architecture section for the split and
+`onOpenInfo`/`onBack` wiring.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -95,7 +100,7 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   economy calculation — paired with a `VisuallyHidden
   role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
   visible `GoogolProgressLabel` ("N% to Prestige") underneath.
-- **HUD-scoped muted/accent text.** `Header`'s tagline, the offline notice's body text, and the PP
+- **HUD-scoped muted/accent text.** The offline notice's body text and the PP
   header line's "N PP" figure render via `HudMutedText`/`HudGoldText` — a fork of the app-wide
   `MutedText` (still hardcoded `#a3a3a3`, still used by `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/
   `TopPrestigeBar`/`FullScreenCard`) — token-driven
@@ -129,22 +134,20 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   side-by-side form (`showGlobalMultipliers && !balancesCompressed`), since a multi-line breakdown
   would overflow that compact bar; the card itself and its toggle state stay unaffected — expanding
   again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
-- **Description prose** (Speed Up/Prestige cards' full explanations, the full-smart-autobuyer notice,
-  the Tier Autobuyers category's shared "How these controls work" panel, the page's own tagline under
-  the `Header`'s `<h1>`) lives inside an `InfoDetails` (`styled.details`)
-  click-to-expand disclosure, with the card's own heading — `<h1>Tens</h1>` for the page header,
-  `<h2>` for every card — as the clickable `<summary>`. The Prestige card's status lines (prestiged
-  count · unspent PP · speed bonus) live inside the disclosure too — collapsed, the card is nothing
-  but its heading and buttons. The disclosure marker is hidden via CSS. `InfoDetails`' `summary` is
-  styled `width: fit-content` so the click target hugs just the heading text rather than spanning the
-  full row; the page header additionally centers that fit-content `summary` with `margin: 0 auto`
-  since it sits in an otherwise `text-align: center` block (a block-level element ignores its
-  parent's `text-align`, which only centers inline content).
-- **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })` — rendered as a
-  `<span>` rather than `MutedText`'s default `<p>`, since `<summary>` only permits phrasing content)
-  shows the app's current version (`v{version}`, e.g. `v0.5.0`) directly beside the `<h1>Tens</h1>`
-  inside the same `<summary>` — always visible on load, unlike the tagline in `InfoDetails`' collapsed
-  body below it. Sourced from `package.json`'s `"version"` field via a build-time JSON import
+- **No description prose on this page.** The card headings that used to double as `InfoDetails`
+  click-to-expand `<summary>` triggers (`GlobalTickspeedCard`'s/`SpeedUpCard`'s/`OverclockCard`'s own
+  `<h2>`, the page `Header`'s `<h1>`, the Tier Autobuyers category's shared "How these controls
+  work" panel, the Milestones view's two category headings) are now plain, non-interactive headings
+  — there's nothing left to expand, since every mechanic's evergreen explanation moved to
+  `InfoPage` (see the file header note above). Any number that's genuinely *live game status* (not a
+  description of how the mechanic works) stayed here instead: `GlobalTickspeedCard` still shows a
+  `Lv.N — +N% faster ticks on every tier.` `MutedText` line once `isGlobalTickspeedActive`, since that's
+  this run's current value, not evergreen prose.
+- **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
+  current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
+  `<h1>Tens</h1>`, beside the `ℹ️ Guide` link (a plain `GuideLink` button calling the `onOpenInfo`
+  prop `App.jsx` passes down) — both always visible, no disclosure involved. Sourced from
+  `package.json`'s `"version"` field via a build-time JSON import
   (`import { version } from '../../../package.json'`) — the single source of truth; no separate
   constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
@@ -199,12 +202,13 @@ plain (`Tickspeed`, no level/percent readout — shortened first from `Global Ti
 during that earlier iteration and the `Global` prefix stopped earning its width against `SpeedUpCard`'s
 own two-word heading; no behavior change, and the shortened heading stuck even after the two cards
 split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
-purely the rendered heading text), inside the card's `InfoDetails`
-`<summary>`. The current level and its cumulative speed bonus (`Currently Lv.N — +N% faster ticks on
-every tier.`) show **only** inside the expanded description — never on the heading or the button — so
-the compact collapsed view never changes shape as the level climbs; the description stays in the DOM
-(and reachable by `aria-describedby`/text-content queries) even while the `<details>` itself is
-collapsed. The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
+purely the rendered heading text) — a plain `<h2>`, not an `InfoDetails` `<summary>` (see "No
+description prose on this page" above). The current level and its cumulative speed bonus (`Lv.N —
++N% faster ticks on every tier.`) render **only** once `isGlobalTickspeedActive` — never on the
+heading or the button itself — so the card's shape stays the same before the multiplier is ever
+bought; unlike the old collapsed-`InfoDetails` version, this line is genuinely absent from the DOM
+(not merely visually collapsed) until then, since it no longer needs to stay reachable by
+`aria-describedby`. The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
 not the whole-number `formatBonusPercent` used for the per-tier `⚙ +N%` badge — the global
 multiplier's regular 1%-per-level compounding (see `GLOBAL_TICKSPEED_PRODUCTION_STEP`/"The global
 tickspeed multiplier" below) lands on fractional values, so it shows up to 2 decimal places
@@ -287,12 +291,11 @@ own pause toggle — see "PP Upgrades view" below); toggling it there updates th
 lean, unboxed flex row (no border/padding/background of its own — just a thin `border-top` divider
 between consecutive rows), rather than the older one-`StatCard`-per-row layout: a category of *N*
 purchases costs one card's worth of chrome, not *N*. Three categories, in order:
-1. **Tier Autobuyers** — a single shared `InfoDetails` panel ("ℹ️ How these controls work", wired
-   through its own `useAutoCollapseDetails()` ref like every other `InfoDetails` on this page) sits
-   right under the `CategoryHeading`, in both the per-tier-list and `allTiersFullyAutomated` branches
-   below, and explains unlock timing, pause/resume, and what Smart does once for the whole category —
-   individual badges/buttons no longer carry their own explanatory `title` text (only `aria-label`,
-   for assistive tech) now that this is covered in one place. Below it, per unlocked tier
+1. **Tier Autobuyers** — the `CategoryHeading` is a plain heading now (the shared "ℹ️ How these
+   controls work" `InfoDetails` panel that used to explain unlock timing, pause/resume, and what
+   Smart does moved to `InfoPage`'s own "Tier Autobuyers" section — see the file header note above);
+   individual badges/buttons still carry no explanatory `title` text (only `aria-label`, for
+   assistive tech), since that explanation lives on the Guide page instead. Per unlocked tier
    (`isTierUnlocked`, the usual owned-count gate — see docs/ECONOMY_REFERENCE.md; there's no
    next-tier preview any more, since there's nothing left to preview a cost for), up to three
    independent controls. **Autobuyer unlock** and the **tier tickspeed autobuyer** are no longer PP
@@ -381,15 +384,15 @@ components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMi
 2. **Tier Tickspeed Autobuyers** — identical shape, keyed off `tierTickspeedAutobuyer[tier.id]`/
    `getTierTickspeedAutobuyerMilestone` instead.
 
-Each category's heading doubles as an `InfoDetails`/`useAutoCollapseDetails` disclosure trigger (the
-same collapsed-by-default, auto-collapses-on-scroll convention every other card description in this
-file uses — see "Auto-collapsing expanded disclosures on scroll" below), with a single terse sentence
-as its body (e.g. "Unlocks one tier per prestige.") — deliberately short, since the row list right below
-it is where the actual per-tier detail already lives; the category description exists only to name the
-mechanic, not re-explain it. Text throughout this view (and the matching locked badges on the Upgrades
-view's "Tier Autobuyers" category) avoids calling the unlock "free"/"no PP cost" — since nothing on
-either milestone track was ever PP-funded to begin with, saying so would only invite the question "as
-opposed to what."
+Each category's heading is a plain, non-interactive `CategoryHeading` — the one-sentence explanation
+that used to live in a collapsed `InfoDetails` body underneath it (e.g. "Unlocks one tier per
+prestige.") moved to `InfoPage`'s own "Milestones" section (see the file header note above), computed
+there from the same `getAutobuyerUnlockMilestone`/`getTierTickspeedAutobuyerMilestone`/
+`TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` constants rather than duplicated as prose; the row list right
+below each heading is where the actual per-tier detail lives. Text throughout this view (and the
+matching locked badges on the Upgrades view's "Tier Autobuyers" category) avoids calling the unlock
+"free"/"no PP cost" — since nothing on either milestone track was ever PP-funded to begin with, saying
+so would only invite the question "as opposed to what."
 
 Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
 is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
@@ -435,15 +438,19 @@ deliberate, occasional decision reached via this card, not a frequent one-tap ac
 
 Overclock has no visible effect of its own to display separately from the Tickspeed card above it —
 raising the global tickspeed multiplier's own per-level step, rather than stacking a second multiplier
-alongside it, means the Tickspeed card's own `Currently Lv.N — +N% faster ticks on every tier.`
-description (see "Global Tickspeed card" above) already reflects Overclock's contribution once any
-levels are bought, with no separate "Overclock bonus" figure needed anywhere else in the UI besides the
-money-balance breakdown's own summary line (see below).
+alongside it, means the Tickspeed card's own `Lv.N — +N% faster ticks on every tier.` status line (see
+"Global Tickspeed card" above) already reflects Overclock's contribution once any levels are bought,
+with no separate "Overclock bonus" figure needed anywhere else in the UI besides the money-balance
+breakdown's own summary line (see below).
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
-recurse into the nested node). Buy/Prestige/Reset carry a `title` tooltip; Prestige and Reset
-additionally wire `aria-describedby` to a description (the app's only irreversible actions).
+recurse into the nested node). Buy/Prestige/Reset carry a `title` tooltip; Reset additionally wires
+`aria-describedby` to a `VisuallyHidden` description (`reset-description` — the app's only
+irreversible action). The Tickspeed/Speed Up/Overclock buttons used to wire `aria-describedby` to their
+now-removed `InfoDetails` prose too; that's gone along with the prose itself (see "No description prose
+on this page" above) — each button's own `title`/`aria-label` already carries the mechanic's short
+explanation, so nothing about the accessible name/description regressed.
 
 **Tier row visuals.** Each `TierLine` gets a thin `border-left` accent cycled from `theme.tierAccents`
 (the per-mode 8-hue set in `theme/tokens.js`, replacing the old hardcoded `TIER_ACCENT_COLORS` array)
@@ -496,13 +503,13 @@ already the rightmost, affordability-fill-colored control — reads as the visua
 per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
 is unchanged; only these components' own `font-size`/`font-weight` moved.
 
-**Tier row details disclosure.** Unlike `SpeedUpCard`/`GlobalTickspeedCard`/the page
-`Header` (which each show a visible `<summary>` line of their own inside a native `InfoDetails`, see
-"Description prose" above), a tier row has **no separate visible trigger at all**: `TierName` itself,
+**Tier row details disclosure.** This is the only expandable disclosure left on `MainPage` — every
+other card's `<h2>`/the page `<h1>` are now plain, non-interactive headings (see "No description
+prose on this page" above). A tier row has **no separate visible trigger at all**: `TierName` itself,
 wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
 `aria-controls`), is the trigger, sitting in its normal spot rather than a redundant "Details" label
 elsewhere in the row. This is a **plain React-controlled disclosure**, not native `<details>`/
-`<summary>` — a `display: contents`-based version (matching every other `InfoDetails` disclosure) was
+`<summary>` — a `display: contents`-based version was
 tried first, but hit a real Chromium limitation: a `display: contents` ancestor breaks a promoted grid
 child's ability to span multiple `grid-template-areas` cells, so the details content collapsed to a
 single column's width instead of the full row (confirmed with a minimal repro, independent of whether
@@ -551,27 +558,24 @@ only the rendered text shifts at the +100% threshold. Every call site that used 
 goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedBonusPercent` directly
 (both still exist, now only as `formatBonusOrMultiplier`'s own below-100% branches).
 
-**Auto-collapsing expanded disclosures on scroll.** Every expandable disclosure in `MainPage` — a tier
-row's Details (`TierDetailsContent`/`openTierDetailIds`) and every native `<details>`-based `InfoDetails`
-(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, `OverclockCard`, and the PP Upgrades page's
-Tier Autobuyers category "How these controls work" panel and "full smart autobuyer" notice) — automatically collapses
-once it scrolls fully out of the viewport in either
-direction, so an expanded panel doesn't stay open (and out of context) as the player keeps scrolling.
-For the four-plus native `<details>` elements, a small `useAutoCollapseDetails()` hook (module-scoped,
-above `MainPage`) attaches an `IntersectionObserver` to a ref on the element and sets its `.open` property
-to `false` directly once `isIntersecting` goes false — safe because none of these `<details>` are
-React-controlled (no `open` prop is ever passed), so a direct DOM mutation isn't fought by a future
-re-render. For tier rows, which mount/unmount as tiers unlock/lock across Prestige/Speed Up, a single
-shared `IntersectionObserver` (created once, not per row) is used instead, with each currently-rendered
-`TierLine` registered/unregistered via a stable per-tier ref callback (`registerTierRowRef`, cached in a
-`Map` keyed by tier id so the callback's identity doesn't change across re-renders — a fresh callback
-identity every render would make React re-invoke it with `null` then the element again on every 100ms
-tick, needlessly churning `observe`/`unobserve`); losing intersection removes that tier's id from
-`openTierDetailIds` the same way `toggleTierDetails` would. Both mechanisms use the default
-`IntersectionObserver` threshold (`0`), so a disclosure only collapses once its owning element has zero
-overlap with the viewport — "scrolled beyond screen," not merely partially cut off — and both are
-guarded for environments without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply
-stays open once expanded, same as before this feature existed.
+**Auto-collapsing expanded disclosures on scroll.** The tier row Details disclosure
+(`TierDetailsContent`/`openTierDetailIds`) — the only expandable disclosure left on `MainPage` (see
+"Tier row details disclosure" above) — automatically collapses once its row scrolls fully out of the
+viewport in either direction, so an expanded row doesn't stay open (and out of context) as the player
+keeps scrolling. Since tier rows mount/unmount as tiers unlock/lock across Prestige/Speed Up, a single
+shared `IntersectionObserver` (created once, not per row) watches every currently-rendered row, with
+each `TierLine` registered/unregistered via a stable per-tier ref callback (`registerTierRowRef`,
+cached in a `Map` keyed by tier id so the callback's identity doesn't change across re-renders — a
+fresh callback identity every render would make React re-invoke it with `null` then the element again
+on every 100ms tick, needlessly churning `observe`/`unobserve`); losing intersection removes that
+tier's id from `openTierDetailIds` the same way `toggleTierDetails` would. Uses the default
+`IntersectionObserver` threshold (`0`), so a row only collapses once it has zero overlap with the
+viewport — "scrolled beyond screen," not merely partially cut off — and is guarded for environments
+without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply stays open once
+expanded. `MainPage` used to also run a `useAutoCollapseDetails()` hook for the now-removed native
+`<details>`-based `InfoDetails` disclosures (the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`,
+`OverclockCard`, and the PP Upgrades page's two "How these controls work"/"full smart autobuyer"
+panels) — that hook was deleted along with them, since none of those elements are expandable anymore.
 
 **Eliminating sticky-balances scroll flicker.** `StickyBalances`' compressed/expanded layouts differ
 enough (flex direction, padding, box-shadow, extra progress-bar/breakdown content) that flipping between

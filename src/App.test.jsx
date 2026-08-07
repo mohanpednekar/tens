@@ -28,6 +28,24 @@ test('renders the current app version beside the title', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
+test('the Guide link navigates to the Info page and Back to game returns, preserving game state', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+
+  await user.click(screen.getByText('ℹ️ Guide'))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^bytes layer$/i)).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  // Navigating away and back doesn't touch game state — the previous purchase is still there.
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+})
+
 test('buying Bytes deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
