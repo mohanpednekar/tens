@@ -598,25 +598,26 @@ test('the speed up panel renders above the tier list, not below it', () => {
   expect(regions.indexOf('speed up panel')).toBeLessThan(regions.indexOf('Bytes layer'))
 })
 
-test('once the last tier is full, its row shows a quick-access Speed Up button instead of the XP-consume control, distinct from the panel button', () => {
+test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 2 },
+    prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   }))
 
   render(<App />)
 
   const ronnabytesLayer = screen.getByLabelText(/^ronnabytes layer$/i)
-  const rowSpeedUpButton = within(ronnabytesLayer).getByRole('button', {
-    name: /ronnabytes's row: speed up \(requires level 1\)/i,
+  const rowXpButton = within(ronnabytesLayer).getByRole('button', {
+    name: /consume 37 xp for .* ronnabytes tickspeed/i,
   })
-  expect(rowSpeedUpButton).toBeEnabled()
-  expect(within(ronnabytesLayer).queryByText(/🧬/)).not.toBeInTheDocument()
+  expect(rowXpButton).toHaveTextContent('🧬')
 
-  // The panel's own Speed Up button still exists as a separate element with its own accessible name.
+  // The top panel's own Speed Up button is a separate element doing something else entirely
+  // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
   const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires ronnabytes level 1/i })
-  expect(panelSpeedUpButton).not.toBe(rowSpeedUpButton)
+  expect(panelSpeedUpButton).not.toBe(rowXpButton)
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
