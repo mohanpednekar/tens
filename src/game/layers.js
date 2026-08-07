@@ -179,6 +179,24 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
+// Per-activation global-tickspeed production step for Overclock (see engine.js's
+// getOverclockMultiplier/overclockGame) — a second, much steeper Speed-Up-style soft reset: every
+// activation permanently compounds another 0.1% into *every* tier's delivery frequency (applied
+// the same way GLOBAL_TICKSPEED_PRODUCTION_STEP is, dividing into
+// getEffectiveTierTickSpeedSeconds), on top of whatever the Money-funded global tickspeed
+// multiplier and Speed Up's own production multiplier are already contributing. Deliberately two
+// orders of magnitude smaller a step than GLOBAL_TICKSPEED_PRODUCTION_STEP (1%) — Overclock's
+// value is in how permanent and stackable it is (state.overclockCount is never reset by an
+// ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame), not in the size
+// of any single activation.
+export const OVERCLOCK_PRODUCTION_STEP = 0.001
+// How many more levels the last tier must reach before Overclock can activate again: a fixed
+// 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
+// steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
+// (see getSpeedUpRequirement) — reflecting that Overclock resets everything Speed Up does *and*
+// wipes Speed Up's own stacking bonus (state.speedUpCount) on top, so it needs to be substantially
+// more expensive to reach each time.
+export const OVERCLOCK_REQUIREMENT_STEP = 10
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up

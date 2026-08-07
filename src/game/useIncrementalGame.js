@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tickGame } from './engine'
+import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -67,6 +67,7 @@ export const useIncrementalGame = () => {
     buyPrestigeSpeedBonus: () => setState(buyPrestigeSpeedBonus),
     prestige: () => setState(prestigeGame),
     speedUp: () => setState(speedUpGame),
+    overclock: () => setState(overclockGame),
     buyAutoSpeedUp: () => setState(buyAutoSpeedUp),
     buyTickspeedAutobuyer: () => setState(buyTickspeedAutobuyer),
     consumeXpForLastTierTickspeed: amount => setState(consumeXpForLastTierTickspeed(amount)),
