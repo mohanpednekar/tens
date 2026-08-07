@@ -195,17 +195,19 @@ const GlobalTickspeedCard = styled(StatCard)`
 // Lays GlobalTickspeedCard and SpeedUpCard side by side at the top of the Game view rather than
 // stacked — both are compact "one button" cards, so sharing a row reads as a paired "speed
 // controls" cluster instead of two full-width blocks. Each card grows to share the row equally
-// (flex: 1) but has a floor width (14rem) below which it wraps to its own line instead of being
-// squeezed unreadable — on narrow viewports this naturally stacks them exactly like before this
-// change. Works unchanged if only one of the two is currently revealed (the lone card just fills
-// the row) or neither (the empty wrapper renders with zero height).
+// (flex: 1) with a low floor width (8rem) chosen specifically so the pair still fits side by side
+// on real phone-width viewports (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to
+// stacked there — RootDiv's own `100vw - 2rem` content width plus this row's 0.6rem gap leaves
+// just enough room at those widths for two 8rem cards; only narrower than roughly 300px of content
+// width does it fall back to wrapping. Works unchanged if only one of the two is currently revealed
+// (the lone card just fills the row) or neither (the empty wrapper renders with zero height).
 const TopSpeedCardsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
 
   > * {
-    flex: 1 1 14rem;
+    flex: 1 1 8rem;
     min-width: 0;
   }
 `
