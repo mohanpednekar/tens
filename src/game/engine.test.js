@@ -2122,6 +2122,24 @@ describe('tickGame', () => {
     expect(after.resources[thousandsTier.id]).toBe(30)
   })
 
+  it('does not auto-consume XP for the last tier while its tier tickspeed autobuyer is paused (tierTickspeedAutobuyerEnabled false), even once XP-unlocked', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    let state = createInitialGameState()
+    state = withLastTierTickspeedXpUnlocked(state)
+    state = withTierTickspeedAutobuyer(state, lastTier.id)
+    state = withTierTickspeedAutobuyerEnabled(state, lastTier.id, false)
+    state = withOwned(state, thousandsTier.id, 30)
+    state = withResource(state, thousandsTier.id, 30)
+    state = withMoney(state, 5)
+    state = withXP(state, 50)
+
+    const after = tickGame(1)(state)
+    expect(after.lastTierXpConsumed).toBe(0)
+    expect(after.prestige.xp).toBe(50)
+    expect(after.owned[thousandsTier.id]).toBe(30)
+    expect(after.resources[thousandsTier.id]).toBe(30)
+  })
+
   it('regression: before the last tier is XP-unlocked, its tier tickspeed autobuyer still drives the ordinary buyTickspeedMultiplier auto-upgrade, untouched by the XP-consumption branch', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     let state = createInitialGameState()
