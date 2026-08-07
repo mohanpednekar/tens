@@ -176,8 +176,11 @@ separate follow-up tooling, not by every individual PR.
 
 ```
 .claude/
+  CLAUDE.md                   ← nested memory file (Claude Code auto-loads it alongside the root one)
+                               pointing at the graphify skill below — tool-generated, see "graphify" below
   settings.json              ← registers the SessionStart hook below (see "Interactive session
-                               startup" above) — not read by the autonomous workflow, which invokes
+                               startup" above) and the graphify PreToolUse hooks (see "graphify" below)
+                               — neither is read by the autonomous workflow, which invokes
                                claude-code-action with its own inline `settings:`/`claude_args:`
   hooks/
     session-start.sh          ← runs yarn install --frozen-lockfile + yarn test at interactive
@@ -189,6 +192,7 @@ separate follow-up tooling, not by every individual PR.
     file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests" above)
     simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
                                (see "Economy model" below)
+    graphify/                 ← third-party skill (see "graphify" below), tool-generated — not hand-edited
 docs/
   DESIGN_HISTORY.md            ← the "why" behind superseded formulas, incident write-ups, rejected
                                alternatives — check before changing a formula/workflow/mechanic a
@@ -435,3 +439,30 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
 - `saveGameState`/`loadGameState`/`clearGameState`/`loadLastSaveTimestamp` wrap `localStorage` access in
   try/catch and fail silently (quota errors, private-browsing restrictions).
 - Timer effects (`useIncrementalGame`'s `setInterval`) are cleaned up on unmount.
+
+## graphify
+
+[Graphify](https://github.com/Graphify-Labs/graphify) is registered as a project-scoped Claude Code skill
+(`.claude/skills/graphify/SKILL.md`, installed via `graphify install --project --platform claude`) — a
+CLI (`graphifyy` on PyPI, requires Python 3.10+; install with `uv tool install graphifyy` or
+`pipx`/`pip install graphifyy`) that turns a codebase into a queryable knowledge graph (`graphify-out/`:
+`graph.json` + `graph.html` + `GRAPH_REPORT.md`), parsed locally via tree-sitter AST with no LLM
+involved. It's a dev-tool aid for Claude Code sessions working in this repo, not a runtime dependency of
+the shipped app — nothing under `graphify-out/` is imported by `src/`.
+
+No graph has been built yet. The first session that needs one should run `/graphify .` (or headless:
+`graphify extract . --code-only`, AST-only, no API key needed) to generate it; per Graphify's own
+convention, `graphify-out/` should then be committed (`graphify-out/cost.json` is gitignored — local API
+cost tracking only) so every session starts from the same map.
+
+Once `graphify-out/graph.json` exists:
+- For codebase questions, prefer `graphify query "<question>"` over grepping — it returns a scoped
+  subgraph instead of raw file contents. Use `graphify path "<A>" "<B>"` for relationships and
+  `graphify explain "<concept>"` for a focused concept.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- `.claude/settings.json`'s `PreToolUse` hooks (`graphify hook-guard search`/`read`, on
+  `Bash`/`Grep`/`Read`/`Glob`) nudge toward the graph before a raw file read; they no-op if the
+  `graphify` CLI isn't on `PATH` or no graph exists yet, so a machine without it installed is unaffected.
+
+See `.claude/skills/graphify/SKILL.md` for the full command reference (query/path/explain, `--wiki`/
+`--obsidian`/`--graphml` export, `graphify hook install` for auto-rebuild on commit, etc.).
