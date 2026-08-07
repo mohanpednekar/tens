@@ -303,8 +303,12 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   expect(progressBar).toHaveAttribute('aria-valuemax', '8')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
   // 4 of 8 already done — 4 remain in the block; per-unit cost 8/8=1, so 4 units cost $4 total.
-  expect(screen.getByRole('button', { name: /buy ×4 for 4 b \(level 1, 4 of 8 purchased\)/i })).toBeInTheDocument()
+  const buyButton = screen.getByRole('button', { name: /buy ×4 for 4 b \(level 1, 4 of 8 purchased\)/i })
+  expect(buyButton).toBeInTheDocument()
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
+  // Regression check for the Button component's `variant` prop: it's consumed internally to
+  // resolve a theme color and must never leak onto the rendered DOM node as a raw attribute.
+  expect(buyButton).not.toHaveAttribute('variant')
 })
 
 test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {

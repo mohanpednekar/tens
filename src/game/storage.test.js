@@ -486,6 +486,17 @@ describe('schema migration', () => {
     expect(loaded.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
+  it('prefers an explicit current-schema tickspeedLevels value over a legacy level recovered from autobuyers, when a save somehow has both', () => {
+    const rawSave = {
+      ...createInitialGameState(),
+      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 3 },
+      tickspeedLevels: { ...createInitialGameState().tickspeedLevels, [tensTier.id]: 5 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
+    const loaded = loadGameState()
+    expect(loaded.tickspeedLevels[tensTier.id]).toBe(5)
+  })
+
   it('preserves a saved Auto-Prestige level', () => {
     const state = { ...createInitialGameState(), autoPrestige: 3 }
     saveGameState(state)
