@@ -216,7 +216,8 @@ heading or the button itself — so the card's shape stays the same before the m
 bought; unlike the old collapsed-`InfoDetails` version, this line is genuinely absent from the DOM
 (not merely visually collapsed) until then, since it no longer needs to stay reachable by
 `aria-describedby`. The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
-not the whole-number `formatBonusPercent` used for the per-tier `⚙ +N%` badge — the global
+called with `precise: true` through `formatBonusOrMultiplier` (see "Percentages vs. multipliers"
+below), not the plain whole-number `formatBonusPercent` — the global
 multiplier's regular 1%-per-level compounding (see `GLOBAL_TICKSPEED_PRODUCTION_STEP`/"The global
 tickspeed multiplier" below) lands on fractional values, so it shows up to 2 decimal places
 (trimming a trailing `.00`/trailing zero, same style as `formatRate`) while the cumulative bonus is
@@ -246,14 +247,16 @@ tier's own delivery frequency by another 10% (`getTickspeedProductionMultiplier`
 tier's effective period rather than multiplied into its production credit — see "Tier production
 tickspeed" below); it changes **neither** the amount delivered per batch **nor** autobuyer
 purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {symbol}` — a single ⚙
-icon (matching the badge below and the tier tickspeed autobuyer's icon-only status badge on the PP
-Upgrades page) identifies the button as the tickspeed control; no separate icon marks the marginal
-effect, since it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10%
-step) and implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster
-ticks" sentence for assistive tech. A compact badge beside the tier name (gated on tickspeed
-multiplier > 1) shows `⚙ +N%`/`⚙ 2x` (see "Percentages vs. multipliers" above) — the cumulative speed
-bonus (faster deliveries, and genuinely level-dependent unlike the button's fixed marginal step), not a
-production-amount bonus.
+icon (matching the tier tickspeed autobuyer's own icon-only status badge on the PP Upgrades page)
+identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
+it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
+implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
+sentence for assistive tech; the button's `title` is the only place on this page the cumulative
+speed bonus (as opposed to the fixed marginal step) is shown at all — an earlier version also
+carried a compact `⚙ +N%`/`⚙ 2x` badge beside the tier name, removed as one automation icon too
+many for a row already carrying the tier's autobuyer state (see "Unit autobuyer status" below); the
+cumulative figure is still in the row's own Details disclosure (see "Tier row details disclosure"
+below).
 
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
@@ -267,30 +270,27 @@ close, so this reuses the slot for the more actionable control. The underlying X
 mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
 autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
 its current unspent-XP balance/next-consumption minimum still show in the row's Details disclosure (as
-an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The `⚙ +N%` badge
-and Details disclosure keep working unchanged for the last tier otherwise, still reading the XP-funded
+an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The Details
+disclosure keeps working unchanged for the last tier otherwise, still reading the XP-funded
 multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
 Prestige/Speed Up resets the last tier's owned count to 0 along with every other tier's, which reverts
 this slot back to the normal Money-funded button until the player buys back up to a full level — see
 "The last tier's XP-funded tickspeed" below for why.
 
-**Unit autobuyer status (Game view, per tier).** Once a tier's unit-buying autobuyer is unlocked (see
-`autobuyers`/`applyAutobuyerMilestones` — a free, prestige-count-milestone-triggered unlock, not a PP
-purchase), its row shows an always-visible, read-only `PpUpgradeBadge` sharing
-the `name` grid area with `TierName` (no separate grid row for it — see "Tier row visuals" below for why
-that row was removed) — a single 🤖 glyph, not the word "Active"/"Paused": active renders at full
-opacity, paused at a dimmed `$dimmed` opacity (both still colored green/amber via the existing `$color`
-convention), so status reads from a subtle icon variation rather than written text (this same
-icon-instead-of-text convention applies to every other automation status badge in the app — the tier
-tickspeed/global tickspeed/Auto Speed Up/Auto-Prestige Autobuyer badges on the PP Upgrades page, and the
-Auto-Prestige/Auto Speed Up status lines — see their own sections below). The full "active"/"paused"
-sentence lives in the badge's `aria-label`/`title` for assistive tech and hover, scoped by tier name
-(`` `${tier.name}'s autobuyer active` ``) to stay unambiguous across tiers. Before this existed, an
-unlocked unit autobuyer had no visible indicator at all once the Unlock button disappeared; this is that
-indicator. It carries no pause/resume control of its own — the Game view is meant to stay uncluttered,
-so the actual `PauseToggleButton` for this same `autobuyersEnabled`/`setAutobuyerEnabled` state lives on
-the PP Upgrades page instead (in the Tier Autobuyers category, alongside the tier tickspeed autobuyer's
-own pause toggle — see "PP Upgrades view" below); toggling it there updates this badge immediately.
+**No per-tier automation icon on the Game view row.** A tier row's `name` grid area (shared by
+`TierName`) holds only the tier's symbol now — no tickspeed-bonus badge (see "Tickspeed multiplier"
+above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
+`PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
+via the same icon-instead-of-text convention every other automation status badge in the app still
+uses — the tier tickspeed/global tickspeed/Auto Speed Up/Auto-Prestige Autobuyer badges on the PP
+Upgrades page, and the Auto-Prestige/Auto Speed Up status lines — see their own sections below) once
+a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
+prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Game view
+row down to just the tier name plus live production/owned figures and the two action buttons —
+autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
+directly toggleable) on the PP Upgrades page's Tier Autobuyers category, via the same
+`PpUpgradeBadge`/`PauseToggleButton`/`autobuyersEnabled`/`setAutobuyerEnabled` state (see "PP
+Upgrades view" below).
 
 **PP Upgrades view.** A `UpgradesList` groups every purchase into a small number of labeled
 **categories** rather than one flat list — each category is a single `UpgradeCategory`
@@ -312,9 +312,11 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    non-interactive `PpUpgradeBadge` reading `🔒 Prestige {milestone}` — deliberately terse, avoiding
    restating what the badge already shows: `aria-label` adds only the tier name and milestone number
    (needed for assistive tech, since the visible glyph alone doesn't name the tier) — rather than a
-   Buy button, since there's nothing to click. Each row's controls now appear in the same order as
-   the tier's Game-view row's own badges (⚙ before 🤖 — see "Unit autobuyer status" above), so the two
-   views correlate directly: the **tier tickspeed autobuyer** cluster comes first (icon-only ⚙,
+   Buy button, since there's nothing to click. Each row's controls are ordered tickspeed-autobuyer
+   cluster before unit-buying-autobuyer cluster (an ordering that used to mirror the Game-view row's
+   own now-removed ⚙-before-🤖 badge order — see "No per-tier automation icon on the Game view row"
+   above — kept unchanged here since it's still a sensible reading order on its own): the
+   **tier tickspeed autobuyer** cluster comes first (icon-only ⚙,
    dimmed while paused, same convention as the unit-buying autobuyer's below) with a secondary
    `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven, same convention as the Global
    Automation category's own toggles below); see "Pause/resume for per-tier automations" below for
@@ -477,9 +479,9 @@ explanation, so nothing about the accessible name/description regressed.
 (the per-mode 8-hue set in `theme/tokens.js`, replacing the old hardcoded `TIER_ACCENT_COLORS` array)
 by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
 colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
-`disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `GreenText`, `TierDetailsContent`'s
+`disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
 `ul`, `OwnedText`/`ProductionText` (each overriding the color `MutedText` — still hardcoded, #139
-scope — would otherwise pass down), the tier row's `PpUpgradeBadge` autobuyer-status `$color`, and the
+scope — would otherwise pass down), and the
 Buy/tickspeed/XP-consume buttons all migrated in the same pass; the PP Upgrades page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
@@ -494,15 +496,16 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 `docs/COMPONENTS_REFERENCE.md`'s `Button/index.jsx` entry for the general mechanism).
 
 Each row is a CSS
-Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (+ compact
-`⚙ +N%`/`⚙ 2x` tickspeed badge — see "Percentages vs. multipliers" below for the threshold — and, once
-the tier's unit-buying autobuyer is unlocked, its icon-only status badge, both sharing this area with
-`TierName`), then the production figure and the owned count — in that order, production first — on the
+Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (just
+`TierName`'s tier symbol now — see "No per-tier automation icon on the Game view row" above for the
+two badges that used to also share this area), then the production figure and the owned count — in
+that order, production first — on the
 top line, then the tickspeed multiplier button and Buy (each spanning two of four equal-width tracks) on
 the middle line, then a third `details`-area line spanning all four tracks. There is no separate
-`autobuyer` grid row/line — an earlier version gave the autobuyer status badge its own row, but folding
-it into the icon-only badge described in "Unit autobuyer status" above freed that vertical space, since
-a single glyph needs no row of its own. `ProductionText` sits in the wider (1.3fr) track and `OwnedText`
+`autobuyer` grid row/line — an earlier version gave the autobuyer status badge its own row, then later
+folded it into the icon-only badge sharing the `name` area (freeing that vertical space, since a
+single glyph needs no row of its own) before removing the badge from this view entirely.
+`ProductionText` sits in the wider (1.3fr) track and `OwnedText`
 in the narrower (0.7fr) one, matching their typical content length, with `text-align: right` on
 whichever one is currently rightmost (`OwnedText`) so it hugs the row's edge. Below `40rem`, only
 fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`)
@@ -513,10 +516,10 @@ fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` spa
 tier's Details disclosure the instant the row scrolls fully out of the viewport — see "Auto-collapsing
 expanded disclosures on scroll" below.
 
-**Tier row type scale.** `TierName`, `GreenText`/`OwnedText`/`ProductionText`, `BuyButton`/
+**Tier row type scale.** `TierName`, `OwnedText`/`ProductionText`, `BuyButton`/
 `UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
 (`theme/tokens.js`) rather than hand-tuned `em` values — `TierName` steps from `lg` (desktop) to `md`
-(below `40rem`), the muted production/owned/tickspeed-badge text steps from `sm` to `xs`, the two
+(below `40rem`), the muted production/owned text steps from `sm` to `xs`, the two
 buttons from `sm` to `xs`, and the details disclosure body sits at `xs`. This gives the row two clear
 type steps (name, then everything else) instead of a single flat size, and `BuyButton` additionally
 sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
@@ -559,13 +562,13 @@ named inline), the purchase milestone multiplier and the lifetime purchase count
 (`getPurchaseMilestoneMultiplier`), the Speed Up multiplier (only shown once `speedUpCount > 0`), for
 the last tier once `isLastTierTickspeedXpUnlocked` an extra line with its current unspent XP balance
 and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "The last tier's
-XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This is the only place in
-`MainPage` that surfaces a tier's base/effective tickspeed numbers directly — added once per-tier base
-tickspeed started diverging again (see "Tier production tickspeed" above) — everywhere else it only
-shows up indirectly via the `⚙ +N%`/`⚙ 2x` badge and the tickspeed button's own tooltip.
+XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
+tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
+base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the
+cumulative bonus at a glance is gone (see "No per-tier automation icon on the Game view row" above).
 
-**Percentages vs. multipliers.** Every bonus derived from a multiplier (the tier tickspeed badge, the
-last tier's XP-funded tickspeed, the Global Tickspeed card/breakdown, the Prestige production
+**Percentages vs. multipliers.** Every bonus derived from a multiplier (the last tier's XP-funded
+tickspeed, the Global Tickspeed card/breakdown, the Prestige production
 speed bonus in the HUD/money-balance breakdown) is rendered through a shared
 `formatBonusOrMultiplier(multiplier, { precise })` helper in `MainPage/index.jsx`: below +100% it reads
 as a percentage (`+21%`, or `+N.NN%` with `precise: true` for the global tickspeed multiplier's

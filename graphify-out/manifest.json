@@ -65,9 +65,9 @@
     "semantic_hash": "37e49de75409363c3f74da75cf3bcb36"
   },
   "src/App.test.jsx": {
-    "mtime": 1786113737.0917375,
-    "ast_hash": "a0e3c46479edfd68864aa1ad1035698d",
-    "semantic_hash": "a0e3c46479edfd68864aa1ad1035698d"
+    "mtime": 1786116790.3719897,
+    "ast_hash": "6e63e879807766cae2f28512414f4e56",
+    "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
     "mtime": 1786113105.2837,
@@ -130,8 +130,8 @@
     "semantic_hash": "02b64754e87514bf5af34042a089981d"
   },
   "src/pages/MainPage/index.jsx": {
-    "mtime": 1786116214.2080028,
-    "ast_hash": "b24304fa05b2c49f34cb88de72958c23",
+    "mtime": 1786116459.7519972,
+    "ast_hash": "73582383ef48ff16021b34cd33d8e324",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1786116314.5200005,
-    "ast_hash": "56c2b402e1afd3d8908adf64fb4cf9eb",
+    "mtime": 1786117001.9959848,
+    "ast_hash": "11f5221358583e8964e970138548a3aa",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786116300.3280008,
-    "ast_hash": "3786719f786f10f48e42253195aa6817",
+    "mtime": 1786116980.2479854,
+    "ast_hash": "8a09e005238033bd2e2d8c791229d7e8",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {

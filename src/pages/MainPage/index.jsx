@@ -570,11 +570,11 @@ const VersionText = styled(MutedText).attrs({ as: 'span' })`
   margin-top: 0.15rem;
 `
 
-// Name + compact autobuyer speed badge sharing the top line's first track. The badge shows only
-// the multiplier (⚙ ×1.1) — the autobuyer's level is deliberately not shown here, since a "Lv."
-// on this row would read as a duplicate of the Buy button's purchase level; the level lives in
-// the badge's (and Upgrade button's) title tooltip instead. The name never shrinks
-// (flex-shrink: 0); the badge ellipsizes first if the track runs out.
+// Occupies the top line's first track. Used to also share this line with a compact tickspeed
+// bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
+// name plus live production/owned figures and the two action buttons; the tickspeed bonus is
+// still visible in the row's own Details disclosure below, and autobuyer status still shows on
+// the PP Upgrades page.
 const TierName = styled.h3`
   align-items: baseline;
   column-gap: 0.4rem;
@@ -591,16 +591,6 @@ const TierName = styled.h3`
 
 const TierNameLabel = styled.span`
   flex-shrink: 0;
-`
-
-const GreenText = styled.span`
-  color: ${props => props.theme.color.good};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  ${gridCell}
-
-  @media (max-width: 40rem) {
-    font-size: ${props => props.theme.type.scale.xs.size};
-  }
 `
 
 // A tap/hover-only overlay for a genuinely live number that would otherwise need its own
@@ -1610,11 +1600,6 @@ const MainPage = ({ onOpenInfo }) => {
           const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
-          // Whether this tier's unit-buying autobuyer has ever been unlocked (see
-          // applyAutobuyerMilestones in engine.js) — the new on/paused indicator below only shows
-          // once that's true, same gate the PP Upgrades page's own per-tier controls use.
-          const isAutobuyerUnlocked = (state.autobuyers[tier.id] ?? null) !== null
-          const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
 
           return (
             <TierLine
@@ -1652,29 +1637,6 @@ const MainPage = ({ onOpenInfo }) => {
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
-                  {tickspeedMultiplier > 1 && (
-                    <GreenText title={
-                      isLastTierXpUnlocked
-                        ? `${formatAmount(lastTierXpConsumed)} XP consumed — ${tickspeedBonusLabel} faster ticks`
-                        : `Tickspeed multiplier level ${tickspeedLevel} — ${tickspeedBonusLabel} faster ticks`
-                    }>
-                      ⚙ {tickspeedBonusLabel}
-                    </GreenText>
-                  )}
-                  {isAutobuyerUnlocked && (
-                    <PpUpgradeBadge
-                      $color={autobuyerEnabled ? theme.color.good : theme.color.warn}
-                      $dimmed={!autobuyerEnabled}
-                      aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
-                      title={
-                        autobuyerEnabled
-                          ? "This tier's autobuyer is buying units automatically"
-                          : "This tier's autobuyer is currently paused — it will not buy units until resumed"
-                      }
-                    >
-                      🤖
-                    </PpUpgradeBadge>
-                  )}
                 </TierName>
               </TierNameTrigger>
               {isDetailsOpen && (

@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-08-07)
 
 ## Corpus Check
-- 64 files · ~136,520 words
+- 64 files · ~136,474 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 639 nodes · 1125 edges · 48 communities (35 shown, 13 thin omitted)
+- 638 nodes · 1124 edges · 48 communities (35 shown, 13 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.75)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `449ca525`
+- Built from commit: `ebbaa05d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -48,7 +48,7 @@
 - graphify reference: incremental update and cluster-only
 - simulate-run-times/SKILL.md
 - pull_request_template.md
-- useIncrementalGame.js
+- formatBonusOrMultiplier
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - Copilot Instructions
@@ -71,15 +71,15 @@
 10. `getPurchaseBlockSize()` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `simulateRun()` --calls--> `buyTierQuantity()`  [EXTRACTED]
-  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
-- `simulateRun()` --calls--> `tickGame()`  [EXTRACTED]
-  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `buyPrestigeSpeedBonus()`  [EXTRACTED]
+  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
+- `simulateRun()` --calls--> `buyTierQuantity()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `createInitialGameState()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `getSpeedUpRequirement()`  [EXTRACTED]
+  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
+- `simulateRun()` --calls--> `isProductionFrozen()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 
 ## Import Cycles
@@ -89,19 +89,19 @@
 
 ### Community 0 - "engine.test.js"
 Cohesion: 0.06
-Nodes (53): allResourceIds(), buyTickspeedMultiplier(), buyTier(), buyTierQuantity(), checkMilestones(), clampNonNegative(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones() (+45 more)
+Nodes (75): cliValues, defaultPPValues, simulateRun(), allResourceIds(), applyOfflineProgress(), buyAutoPrestige(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp() (+67 more)
 
 ### Community 1 - "MainPage/index.jsx"
-Cohesion: 0.03
-Nodes (57): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, FullScreenCard, FullScreenOverlay (+49 more)
+Cohesion: 0.04
+Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, FullScreenCard, FullScreenOverlay (+48 more)
 
 ### Community 2 - "engine.js"
 Cohesion: 0.10
 Nodes (43): currencyNumberFormatter, formatAmount(), formatCurrency(), formatScientific(), plainNumberFormatter, scientificNumberFormatter, AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS (+35 more)
 
 ### Community 3 - "InfoPage/index.jsx"
-Cohesion: 0.20
-Nodes (12): Button, ButtonContent(), StatCard, applyAutobuyerMilestones(), getAutobuyerUnlockMilestone(), getOverclockRequirement(), getTierTickspeedAutobuyerMilestone(), Header (+4 more)
+Cohesion: 0.14
+Nodes (19): StatCard, applyAutobuyerMilestones(), getAutobuyerUnlockMilestone(), getOverclockRequirement(), getTierTickspeedAutobuyerMilestone(), DEFAULT_PURCHASE_BLOCK_SIZE, clearGameState(), LEGACY_REMOVED_TIER_IDS (+11 more)
 
 ### Community 4 - "tokens.js"
 Cohesion: 0.09
@@ -120,8 +120,8 @@ Cohesion: 0.05
 Nodes (43): Architecture / MainPage UI decisions, Auto-merge (`pr-auto-merge.yml`) — why the low-risk path is safe even if heuristics mis-fire, Automation design principles, Automation workflows, Design history & rationale, Distribution, Documentation, Economy model (+35 more)
 
 ### Community 8 - "Button/index.jsx"
-Cohesion: 0.20
-Nodes (10): ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB, progressFill(), pulse (+2 more)
+Cohesion: 0.16
+Nodes (12): Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB (+4 more)
 
 ### Community 9 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -199,12 +199,12 @@ Nodes (3): Usage, What it does, When editing the simulation
 Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
-### Community 39 - "useIncrementalGame.js"
-Cohesion: 0.13
-Nodes (35): cliValues, defaultPPValues, simulateRun(), applyOfflineProgress(), buyAutoPrestige(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyGlobalTickspeedMultiplier() (+27 more)
+### Community 39 - "formatBonusOrMultiplier"
+Cohesion: 0.50
+Nodes (4): formatBonusOrMultiplier(), formatBonusPercent(), formatGlobalTickspeedBonusPercent(), formatRate()
 
 ## Knowledge Gaps
-- **320 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+315 more)
+- **319 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+314 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -216,12 +216,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 10 inferred relationships involving `useIncrementalGame()` (e.g. with `buyAutoPrestige()` and `buyAutoPrestigeAutobuyer()`) actually correct?**
   _`useIncrementalGame()` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `defaultPPValues`, `cliValues` to the rest of the system?**
-  _320 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _319 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `engine.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05593803786574871 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05504587155963303 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03508771929824561 - nodes in this community are weakly interconnected._
 - **Should `engine.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09855072463768116 - nodes in this community are weakly interconnected._
-- **Should `tokens.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
+- **Should `InfoPage/index.jsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.1422924901185771 - nodes in this community are weakly interconnected._
