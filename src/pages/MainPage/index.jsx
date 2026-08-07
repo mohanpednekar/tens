@@ -1,7 +1,7 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { version } from '../../../package.json'
@@ -192,15 +192,30 @@ const GlobalTickspeedCard = styled(StatCard)`
   border-color: #1d4ed8;
 `
 
-// Lays GlobalTickspeedCard and SpeedUpCard side by side at the top of the Game view rather than
-// stacked — both are compact "one button" cards, so sharing a row reads as a paired "speed
-// controls" cluster instead of two full-width blocks. Each card grows to share the row equally
-// (flex: 1) with a low floor width (8rem) chosen specifically so the pair still fits side by side
-// on real phone-width viewports (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to
-// stacked there — RootDiv's own `100vw - 2rem` content width plus this row's 0.6rem gap leaves
-// just enough room at those widths for two 8rem cards; only narrower than roughly 300px of content
-// width does it fall back to wrapping. Works unchanged if only one of the two is currently revealed
-// (the lone card just fills the row) or neither (the empty wrapper renders with zero height).
+const OverclockCard = styled(StatCard)`
+  border-color: #c2410c;
+`
+
+// Matches SpeedUpButton's own font-size override, same rationale (stays visually consistent with
+// the tier list's Buy/tickspeed buttons rather than the larger standalone-card default).
+const OverclockButton = styled(Button)`
+  font-size: 0.82em;
+
+  @media (max-width: 40rem) {
+    font-size: 0.78em;
+  }
+`
+
+// Lays GlobalTickspeedCard, SpeedUpCard, and OverclockCard side by side at the top of the Game
+// view rather than stacked — all three are compact "one button" cards, so sharing a row reads as
+// a single "speed controls" cluster instead of stacked full-width blocks. Each card grows to
+// share the row equally (flex: 1) with a low floor width (8rem) chosen specifically so at least
+// two cards still fit side by side on real phone-width viewports (~360-430px, e.g. an iPhone 14's
+// 393px) rather than wrapping to stacked there — RootDiv's own `100vw - 2rem` content width plus
+// this row's 0.6rem gap leaves just enough room at those widths for two 8rem cards; a third simply
+// wraps to its own line at that width, still paired with whichever of the other two also wrapped.
+// Works unchanged if fewer than three are currently revealed (the remaining card(s) just fill the
+// row) or none (the empty wrapper renders with zero height).
 const TopSpeedCardsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -872,6 +887,7 @@ const MainPage = () => {
       resetGame()
       setView('game')
       setSpeedUpEverRevealed(false)
+      setOverclockEverRevealed(false)
       setGlobalTickspeedCardEverRevealed(false)
     }
   }
@@ -950,6 +966,7 @@ const MainPage = () => {
   const headerDetailsRef = useAutoCollapseDetails()
   const globalTickspeedDetailsRef = useAutoCollapseDetails()
   const speedUpDetailsRef = useAutoCollapseDetails()
+  const overclockDetailsRef = useAutoCollapseDetails()
   const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
   const tierAutobuyersInfoDetailsRef = useAutoCollapseDetails()
   const autobuyerMilestonesDetailsRef = useAutoCollapseDetails()
@@ -1017,6 +1034,31 @@ const MainPage = () => {
   const speedUpRequirementDisplay = speedUpRequirement - 1
   const speedUpProgressPercent = progressPercent(lastTierLevelDisplay, speedUpRequirementDisplay)
   const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
+
+  // Overclock: a second, rarer soft-reset than Speed Up, requiring the same last tier but a much
+  // higher (and non-shrinking-relative-to-itself) level bar — 10 for the first activation, 20 for
+  // the second, 30 for the third, … (see getOverclockRequirement/overclockGame in engine.js).
+  // Unlike Speed Up, activating it also wipes Speed Up's own stacking bonus back to zero (its
+  // speedUpCount resets to 0) in exchange for a smaller but permanent 0.1%-per-activation boost to
+  // every tier's tickspeed — the same "faster ticks, not bigger production" effect the (Money-
+  // funded) global tickspeed multiplier has, stacking multiplicatively with it. Gated on the same
+  // lastTierUnlocked flag and progressive-disclosure pattern as Speed Up above.
+  const [overclockEverRevealed, setOverclockEverRevealed] = useState(lastTierUnlocked)
+  useEffect(() => {
+    if (lastTierUnlocked) setOverclockEverRevealed(true)
+  }, [lastTierUnlocked])
+  const overclockCount = state.overclockCount ?? 0
+  const overclockMultiplier = getOverclockMultiplier(overclockCount)
+  const nextOverclockMultiplier = getOverclockMultiplier(overclockCount + 1)
+  const overclockRequirement = getOverclockRequirement(overclockCount)
+  // Unlike speedUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
+  // offset — see getOverclockRequirement's own comment in engine.js: it's expressed as a raw level
+  // target so the number shown here matches the same raw purchaseLevels number the last tier's own
+  // Details disclosure already shows, rather than introducing a second, differently-offset "level"
+  // reading for the same underlying value.
+  const overclockProgressPercent = progressPercent(lastTierLevel, overclockRequirement)
+  const canOverclock = !isFrozen && lastTierLevel >= overclockRequirement
+
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
   // allTiersFullyAutomated the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
@@ -1365,6 +1407,13 @@ const MainPage = () => {
                     : 'not yet active'}
                 </li>
               )}
+              {overclockEverRevealed && (
+                <li>
+                  Overclock: {overclockCount > 0
+                    ? `${formatBonusOrMultiplier(overclockMultiplier, { precise: true })} faster ticks on every tier from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`
+                    : `not yet activated (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
+                </li>
+              )}
             </GlobalMultipliersList>
           )}
         </CenteredCard>
@@ -1508,6 +1557,43 @@ const MainPage = () => {
             </MutedText>
           )}
         </SpeedUpCard>
+      )}
+
+      {overclockEverRevealed && (
+        <OverclockCard aria-label="overclock panel">
+          <InfoDetails ref={overclockDetailsRef}>
+            <summary><h2>Overclock</h2></summary>
+            <MutedText id="overclock-description">
+              Reach level {overclockRequirement} on {lastTier.name} to trigger an Overclock:
+              resets your tiers and resources just like Speed Up (keeps unlocked autobuyers and
+              Prestige Points) but also wipes Speed Up's own stacking bonus back to zero — in
+              exchange, it permanently speeds up every tier's production ticks by another 0.1% at
+              once. Each Overclock needs 10 more levels than the last.
+            </MutedText>
+          </InfoDetails>
+          <OverclockButton
+            aria-describedby="overclock-description"
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
+            color={canOverclock ? '#fb923c' : 'darkgrey'}
+            disabled={!canOverclock}
+            onClick={actions.overclock}
+            title={`Resets tiers (and Speed Up's bonus) and speeds up every tier's ticks to ${formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}`}
+            type="button"
+            $progress={overclockProgressPercent}
+            $progressColor="#fb923c"
+            $pulse={canOverclock}
+          >
+            <ButtonIcon>⚡ </ButtonIcon>
+            <ButtonLabel>{formatBonusOrMultiplier(nextOverclockMultiplier, { precise: true })}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Overclock progress"
+              aria-valuenow={overclockProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </OverclockButton>
+        </OverclockCard>
       )}
       </TopSpeedCardsRow>
 

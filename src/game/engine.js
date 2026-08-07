@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -198,6 +198,16 @@ export const createInitialGameState = () => ({
   // prestigeSpeedBonusUnlocked/autoSpeedUp), the Speed Up multiplier itself doesn't survive a real
   // Prestige and has to be rebuilt from scratch each Prestige cycle.
   speedUpCount: 0,
+  // RUN-SCOPED count of how many times Overclock has been triggered (see overclockGame) — a
+  // second, steeper Speed-Up-style soft reset (last tier level must reach a 10-level-per-activation
+  // ladder, see getOverclockRequirement) that drives getOverclockMultiplier's own unconditional
+  // global-tickspeed multiplier, permanently compounding OVERCLOCK_PRODUCTION_STEP (0.1%) into
+  // every tier's delivery frequency per activation. Unlike speedUpCount just above, this is NOT
+  // reset by an ordinary Speed Up (speedUpGame explicitly carries it through unchanged) — only by a
+  // real Prestige (same reasoning as speedUpCount: an unbounded permanent compounding bonus across
+  // every future Prestige forever would trivialize the Prestige cost curve) or by Overclock's own
+  // activation resetting *speedUpCount* (never itself — see overclockGame).
+  overclockCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make Speed Up trigger automatically (see buyAutoSpeedUp/tickGame) the instant it's eligible —
   // no manual click needed. Never reset by prestige or by Speed Up itself, like
@@ -607,6 +617,27 @@ export const getSpeedUpMultiplier = speedUpCount =>
 export const getSpeedUpRequirement = speedUpCount =>
   clampNonNegative(speedUpCount) + 2
 
+// The unconditional GLOBAL tickspeed multiplier from Overclock activations (see overclockGame):
+// compounds OVERCLOCK_PRODUCTION_STEP (0.1%) per activation — (1 + OVERCLOCK_PRODUCTION_STEP) **
+// overclockCount, the same multiplicative form every other tickspeed multiplier in this economy
+// uses (see getTickspeedProductionMultiplier/getGlobalTickspeedProductionMultiplier). Divided into
+// getEffectiveTierTickSpeedSeconds alongside those two, so — like them — it speeds up *how often*
+// every tier delivers a batch, not the amount delivered. Needs no unlock purchase, same as
+// getSpeedUpMultiplier — it applies automatically as soon as overclockCount > 0.
+export const getOverclockMultiplier = overclockCount =>
+  (1 + OVERCLOCK_PRODUCTION_STEP) ** clampNonNegative(overclockCount)
+
+// The last tier's LEVEL the *next* Overclock requires: a fixed OVERCLOCK_REQUIREMENT_STEP-level
+// (10) jump per activation — level 10 for the first activation (overclockCount 0), level 20 for
+// the second, level 30 for the third, and so on ((overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP)
+// — unlike getSpeedUpRequirement's +1-per-cycle ladder, this step size never shrinks relative to
+// the requirement itself. Expressed as a level target against state.purchaseLevels[lastTierId]
+// directly (no "completed blocks" display offset the way Speed Up's own requirement gets — see
+// docs/MAINPAGE_REFERENCE.md), so the number shown to the player matches the same raw level number
+// the last tier's own Details disclosure already shows.
+export const getOverclockRequirement = overclockCount =>
+  (clampNonNegative(overclockCount) + 1) * OVERCLOCK_REQUIREMENT_STEP
+
 // PP cost to activate/upgrade Auto-Prestige from currentLevel to currentLevel+1 (null/not yet
 // bought treated as currentLevel 0) — doubles each level: 100 PP to activate (level 0→1), 200 for
 // the next, 400 after that, … (AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel).
@@ -678,18 +709,20 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
-// A tier's actual production period after both tickspeed multipliers shrink it (see "Tier
-// production tickspeed" in CLAUDE.md) — the per-tier tickspeed level and the global tickspeed
-// multiplier both speed up how *often* a tier delivers a batch, not how much lands each time (see
-// "Tickspeed multiplier"/"The global tickspeed multiplier" below), so both divide the tier's own
-// getTierBaseTickSpeedSeconds instead of multiplying its production. Always >= 1 in practice
-// (both multipliers are always >= 1), so this only ever shrinks (never grows) the base period.
+// A tier's actual production period after all three tickspeed multipliers shrink it (see "Tier
+// production tickspeed" in CLAUDE.md) — the per-tier tickspeed level, the global tickspeed
+// multiplier, and Overclock's own multiplier all speed up how *often* a tier delivers a batch, not
+// how much lands each time (see "Tickspeed multiplier"/"The global tickspeed multiplier"/
+// "Overclock" below), so all three divide the tier's own getTierBaseTickSpeedSeconds instead of
+// multiplying its production. Always >= 1 in practice (every multiplier here is always >= 1), so
+// this only ever shrinks (never grows) the base period.
 export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   const tickspeedMultiplier = tierId === getLastTierId() && isLastTierTickspeedXpUnlocked(state)
     ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0)
     : getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null)
-  const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  const overclockMultiplier = getOverclockMultiplier(state.overclockCount ?? 0)
+  const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier * overclockMultiplier)
   // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
   // overflow this division to a non-finite/zero period.
   return Number.isFinite(period) && period > 0 ? period : MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS
@@ -1302,6 +1335,11 @@ export const prestigeGame = state => {
     // compounding across them). autoSpeedUp (the automation toggle) is unaffected by this — it
     // still carries over permanently above, so a player who already bought Auto Speed Up doesn't
     // need to re-buy it; it simply starts re-accumulating speedUpCount from 0 on the next cycle.
+    // overclockCount is likewise NOT carried over — same reasoning as speedUpCount above, just one
+    // reset tier higher: unlike an ordinary Speed Up (which speedUpGame explicitly carries
+    // overclockCount through unchanged — see there), a real Prestige is bigger than Overclock too,
+    // so its own permanent bonus also has to be rebuilt from scratch each Prestige cycle rather
+    // than compounding forever across every future Prestige.
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
     // with prestige.xp below, since it's funded by spending XP, a run-scoped currency now.
     // everUnlockedTierIds is deliberately NOT carried over here either — unlike every permanent
@@ -1385,6 +1423,62 @@ export const speedUpGame = state => {
     // change what a full Prestige/Speed Up reset does.
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
+    // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Speed Up
+    // is a smaller reset than Overclock and must not touch its permanent bonus either way; only
+    // overclockGame itself increments it, and only prestigeGame/overclockGame's own reset of
+    // speedUpCount ever wipe anything Overclock-related.
+    overclockCount: state.overclockCount ?? initial.overclockCount,
+  }
+}
+
+// A second, steeper soft-reset than Speed Up (see speedUpGame above), gated behind a much higher,
+// non-shrinking-relative-to-itself ladder: the last tier's LEVEL must reach
+// getOverclockRequirement(overclockCount) — level 10 for the first activation, 20 for the second,
+// 30 for the third, and so on. Resets everything speedUpGame does (every per-run field back to a
+// fresh game, permanent automation toggles/flags carried over unchanged) — but where speedUpGame
+// increments speedUpCount, overclockGame resets it to 0 (initial.speedUpCount) instead, wiping
+// Speed Up's own stacking 2^speedUpCount production multiplier along with the rest of the reset,
+// and increments overclockCount (permanently compounding another OVERCLOCK_PRODUCTION_STEP into
+// every tier's delivery frequency — see getOverclockMultiplier) instead of leaving it untouched.
+// `autoSpeedUp` (the automation toggle deciding whether Speed Up fires automatically) is
+// unaffected by wiping speedUpCount — it's still carried over permanently below, so it simply
+// starts re-accumulating speedUpCount from 0 on the next cycle, same as after a real Prestige.
+// A no-op (returns the same state) while frozen or before the last tier has reached that cycle's
+// requirement — same guards as speedUpGame.
+export const overclockGame = state => {
+  if (isProductionFrozen(state)) return state
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
+  if (lastTierLevel < getOverclockRequirement(state.overclockCount ?? 0)) return state
+
+  const initial = createInitialGameState()
+  return {
+    ...initial,
+    autobuyers: state.autobuyers ?? initial.autobuyers,
+    // Same permanence as speedUpGame/prestigeGame give these two "enabled" flags — see there.
+    autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
+    smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
+    tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
+    tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
+    autoPrestige: state.autoPrestige ?? initial.autoPrestige,
+    // Same permanence as speedUpGame/prestigeGame give these four "enabled" flags above — see there.
+    autoPrestigeEnabled: state.autoPrestigeEnabled ?? initial.autoPrestigeEnabled,
+    autoPrestigeAutobuyer: state.autoPrestigeAutobuyer ?? initial.autoPrestigeAutobuyer,
+    autoPrestigeAutobuyerEnabled: state.autoPrestigeAutobuyerEnabled ?? initial.autoPrestigeAutobuyerEnabled,
+    prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoSpeedUpEnabled: state.autoSpeedUpEnabled ?? initial.autoSpeedUpEnabled,
+    autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
+    // lastTierXpConsumed/everUnlockedTierIds are NOT carried over — same reasoning as speedUpGame,
+    // see there.
+    prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
+    // speedUpCount is deliberately NOT carried over (unlike speedUpGame's own self-increment) —
+    // resets to 0 (initial.speedUpCount), wiping Speed Up's own stacking bonus. This is Overclock's
+    // defining trade: a steeper reset, in exchange for a permanent, much smaller, but
+    // never-touched-by-an-ordinary-Speed-Up global tickspeed bonus instead.
+    speedUpCount: initial.speedUpCount,
+    overclockCount: (state.overclockCount ?? 0) + 1,
   }
 }
 

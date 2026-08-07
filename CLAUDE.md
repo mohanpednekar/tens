@@ -301,8 +301,8 @@ freezes the economy except for Prestige.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
-tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Reset, the complete game state
-shape, and the engine function/constants tables — lives in `docs/ECONOMY_REFERENCE.md`. Read it
+tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the complete
+game state shape, and the engine function/constants tables — lives in `docs/ECONOMY_REFERENCE.md`. Read it
 before touching `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/
 prestige/tickspeed constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to
 change a formula a past iteration may already have tried and rejected.
@@ -389,7 +389,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (646 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (691 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left

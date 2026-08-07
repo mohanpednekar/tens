@@ -694,6 +694,120 @@ test('no Auto Speed Up control appears during the first run, even with the last 
   expect(screen.queryByText(/auto speed up active/i)).not.toBeInTheDocument()
 })
 
+test('the Overclock panel stays hidden before the last tier unlocks', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^overclock panel$/i)).not.toBeInTheDocument()
+})
+
+test('the Overclock panel appears once the last tier unlocks, with the button disabled below the required level', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 9 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeDisabled()
+})
+
+test('the Overclock button is enabled once the last tier reaches the required level', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 10 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeEnabled()
+})
+
+test('the second Overclock requires 10 more levels than the first, not the same level 10', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 15 },
+    overclockCount: 1,
+  }))
+
+  render(<App />)
+
+  const button = screen.getByRole('button', { name: /overclock \(requires ronnabytes level 20/i })
+  expect(button).toBeDisabled()
+  expect(screen.queryByRole('button', { name: /overclock \(requires ronnabytes level 10\b/i })).not.toBeInTheDocument()
+})
+
+test('the Overclock button shows the next tickspeed bonus and requirement progress on itself, using the raw (non-offset) tier level', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 12 },
+    overclockCount: 1,
+  }))
+
+  render(<App />)
+
+  // Second activation requires the last tier to reach raw level 20 (Lv.12/20, not Lv.11/19 —
+  // Overclock's requirement is deliberately not given Speed Up's -1 "completed blocks" display
+  // offset, see getOverclockRequirement in engine.js) and would raise the permanent tickspeed
+  // bonus to +0.2% — both shown on the button itself, no separate status text line.
+  expect(screen.getByRole('button', {
+    name: /overclock \(requires ronnabytes level 20\) — resets speed up's bonus and speeds up every tier's ticks to \+0\.2%/i,
+  })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ +0.2% · Lv.12/20')
+})
+
+test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 12345 },
+    owned: { tier09: 10, tier10: 25 },
+    purchaseLevels: { tier10: 10 },
+    speedUpCount: 5,
+  }))
+
+  render(<App />)
+
+  // speedUpCount 5 → next activation would raise the multiplier to ×64 (getSpeedUpMultiplier(6)).
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×64')
+
+  const overclockButton = screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })
+  expect(overclockButton).toBeEnabled()
+
+  await user.click(overclockButton)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
+  // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
+  // panels were already revealed once, they stay visible (in a disabled state) rather than
+  // disappearing again. Overclock's own next cycle now requires level 20 (overclockCount
+  // incremented to 1 — see getOverclockRequirement), and Speed Up's own stacking bonus is wiped
+  // back to ×2 (speedUpCount reset to 0, so the *next* activation would only reach ×2 again).
+  expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 20/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×2')
+})
+
+test('the Overclock button is disabled once production freezes at a googol', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 1e100 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+  }))
+
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeDisabled()
+})
+
 test('the PP Upgrades page groups purchases into labeled categories', async () => {
   const user = userEvent.setup()
 

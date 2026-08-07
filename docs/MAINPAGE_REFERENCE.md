@@ -117,11 +117,12 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
-  `!isFirstRun`), Speed Up, and Tickspeed — each gated on the same
+  `!isFirstRun`), Speed Up, Tickspeed, and Overclock — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)") or a "not yet unlocked/activated/active" status line when revealed but not yet bought. The
+  (Lv.1)", "+0.2% faster ticks on every tier from 2 activations") or a "not yet unlocked/activated/active"
+  status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
@@ -177,25 +178,27 @@ Autobuyers" below), this only checks tier Smart purchases plus the global automa
 the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
 since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
 tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and the
-Reset button are Game-view-only; every PP-spending control lives on the Upgrades view; the Milestones
-view is its own standalone read-only page (see "Milestones view" below).
+balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`,
+`OverclockCard`, and the Reset button are Game-view-only; every PP-spending control lives on the
+Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
 the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
 from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself.
-`SpeedUpCard` (see below) renders alongside it, both above `TierList`, inside a shared `TopSpeedCardsRow`
-flex row — the two speed-related controls sit side by side at the top of the page (each sharing the
-row equally, `flex: 1 1 8rem`), deliberately kept low enough that the pair still fits side by side on
-real phone-width viewports (~360-430px, e.g. an iPhone 14's 393px) rather than wrapping to stacked
-there — an earlier, higher 14rem floor wrapped on exactly those widths, which is what prompted lowering
-it. Only below roughly 300px of `RootDiv` content width (`100vw - 2rem`, so well under any real phone)
-do they fall back to wrapping, one per line — a pure `flex-wrap` reflow with no separate
-mobile-specific markup. The row renders (empty, zero height) even before either card's own reveal flag
-is true, and works unchanged if only one of the two is currently revealed — the lone card
-just fills the row. See "The global tickspeed multiplier" below for the underlying `engine.js`
-mechanics. The heading itself is
+`SpeedUpCard` and `OverclockCard` (see below) render alongside it, all three above `TierList`, inside a
+shared `TopSpeedCardsRow` flex row — the speed-related controls sit side by side at the top of the page
+(each sharing the row equally, `flex: 1 1 8rem`), deliberately kept low enough that at least two of the
+three still fit side by side on real phone-width viewports (~360-430px, e.g. an iPhone 14's 393px)
+rather than wrapping to stacked there — an earlier, higher 14rem floor wrapped on exactly those widths,
+which is what prompted lowering it. Only below roughly 300px of `RootDiv` content width
+(`100vw - 2rem`, so well under any real phone) do all three fall back to wrapping, one per line — a pure
+`flex-wrap` reflow with no separate mobile-specific markup; a third card simply wraps to its own line at
+normal phone widths once the first two already fill the row, still paired with whichever of the other
+two also wrapped. The row renders (empty, zero height) even before any card's own reveal flag
+is true, and works unchanged if fewer than three are currently revealed — the remaining card(s)
+just fill the row. See "The global tickspeed multiplier"/"Overclock" below for the underlying
+`engine.js` mechanics. The heading itself is
 plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
 `Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
 and the `Global` prefix stopped earning its width against `SpeedUpCard`'s own two-word heading; no
@@ -404,6 +407,23 @@ that used to mirror this pattern (via a `prestigeCardEverRevealed` flag) was rem
 informational and redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways
 to trigger Prestige (see "Prestige and the Googol freeze" below).
 
+**Overclock card (Game view).** A third card in `TopSpeedCardsRow`, rendered after `SpeedUpCard` —
+same orange-accented `StatCard` shape, gated on the same `lastTierUnlocked` condition as Speed Up
+(reusing the exact same `everRevealed`-flag pattern, its own `overclockEverRevealed` boolean, latched
+permanently true and reset only on a full Reset alongside `speedUpEverRevealed`) since both share the
+same last-tier prerequisite. `OverclockButton` (sized to match `SpeedUpButton`/the tier rows' own
+Buy/tickspeed buttons) reads `⚡ {nextBonus} · Lv.{level}/{requirement}` — e.g. `⚡ +0.2% · Lv.12/20` —
+`actions.overclock` on click. Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`,
+this level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
+`getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
+so the round numbers Overclock's own requirement ladder produces (10/20/30/…) show exactly as `engine.js`
+computes them, matching the same raw level number the last tier's own Details disclosure already shows,
+rather than introducing a second, differently-offset "level" reading for the same underlying value; see
+`getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in docs/ECONOMY_REFERENCE.md.
+There is no per-tier-row quick-access Overclock button the way Speed Up gets one on the last tier's own
+row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a deliberate, occasional
+decision reached via the top card, not a frequent one-tap action.
+
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
 recurse into the nested node). Buy/Prestige/Reset carry a `title` tooltip; Prestige and Reset
@@ -517,8 +537,8 @@ goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedB
 
 **Auto-collapsing expanded disclosures on scroll.** Every expandable disclosure in `MainPage` — a tier
 row's Details (`TierDetailsContent`/`openTierDetailIds`) and every native `<details>`-based `InfoDetails`
-(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, and the PP Upgrades page's Tier Autobuyers
-category "How these controls work" panel and "full smart autobuyer" notice) — automatically collapses
+(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, `OverclockCard`, and the PP Upgrades page's
+Tier Autobuyers category "How these controls work" panel and "full smart autobuyer" notice) — automatically collapses
 once it scrolls fully out of the viewport in either
 direction, so an expanded panel doesn't stay open (and out of context) as the player keeps scrolling.
 For the four-plus native `<details>` elements, a small `useAutoCollapseDetails()` hook (module-scoped,
