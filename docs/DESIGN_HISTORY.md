@@ -241,22 +241,6 @@ The following records *why* specific MainPage/component behaviors were built the
   disappear/reappear churn every Speed Up cycle would otherwise cause, which was jarring in practice.
   The bottom `PrestigeCard` got the identical treatment for the same reason when it existed, before
   being removed entirely — see "Bottom Prestige panel removed" below.
-- **`SpeedUpCard` itself later removed; XpTickspeedCard deliberately does *not* repeat its
-  `everRevealed` pattern.** A later iteration moved Speed Up's own top-of-page card out entirely,
-  leaving Speed Up with only its inline quick-access trigger in the last tier's own row (see "The last
-  tier's XP-funded tickspeed" in docs/ECONOMY_REFERENCE.md) — the row slot it vacated was given back
-  to the last tier's own manual XP-consume control, promoted to a new top-level `XpTickspeedCard`
-  (paired with `GlobalTickspeedCard`) instead of staying buried in the tier row where it had briefly
-  lived after an even earlier iteration replaced it with Speed Up there (see
-  docs/MAINPAGE_REFERENCE.md's "Whenever the last tier's currently-owned count is…" for the full
-  swap history). Unlike `GlobalTickspeedCard` — and unlike `SpeedUpCard`'s own now-removed
-  `everRevealed` pattern above — `XpTickspeedCard` was deliberately given a **live** `isLastTierTickspeedXpUnlocked(state)`
-  check instead of a latch: the explicit ask driving this swap was that the card reproduce "the exact
-  functionality" the original inline XP-consume button had, and that button's defining trait was
-  disappearing the instant the last tier dropped below a full level — an `everRevealed` latch would
-  have quietly changed that contract (staying visible, just disabled) the same way it deliberately
-  does for `GlobalTickspeedCard`/the old `SpeedUpCard`. The disappear/reappear churn those two cards
-  were built to avoid was accepted here as the more faithful behavior instead.
 - **`aria-describedby` only on Prestige and Reset.** These two are the app's only irreversible
   actions, and their most important fact (resources get wiped) previously lived only in a mouse-hover
   `title` — undiscoverable to keyboard/screen-reader users. Every other button's `title` genuinely just

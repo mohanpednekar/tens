@@ -531,30 +531,19 @@ is its one purpose.
   and reverts the moment owned drops back below a full level.
 - **MainPage**: while `isLastTierTickspeedXpUnlocked(state)`, the last tier's row swaps its normal
   `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Speed Up** button
-  (`⏩ ×{next}`, `actions.speedUp`) in the same grid slot — not a manual XP-consume control (an earlier
-  version of this button showed `🧬 {current unspent XP} XP` here instead, spending the player's entire
-  current XP balance on click). The manual XP-consume trigger now lives at the top of the page instead,
-  as its own `XpTickspeedCard` (paired with `GlobalTickspeedCard` — see docs/MAINPAGE_REFERENCE.md's
-  "Global Tickspeed card" section) — reaching a full last-tier level is also exactly when Speed Up tends
-  to become available, so the tier row's own grid slot is reserved for that quick-access trigger while
-  the tier's own XP-tickspeed control moves somewhere with room for its own heading/description, rather
-  than the two competing for the same compact row slot. `XpTickspeedCard` shows `🧬 {current unspent XP}
-  XP` and calls `actions.consumeXpForLastTierTickspeed(lastTierXpBalance)` behind the same
-  `window.confirm` guard the row's old inline button used, gated on the same live
-  `isLastTierTickspeedXpUnlocked(state)` check (not an `everRevealed` latch like its sibling top cards —
-  see docs/MAINPAGE_REFERENCE.md's "Speed Up has no top-level card, and XpTickspeedCard uses a live
-  check" section for why matching the control's original exact show/hide behavior mattered more here
-  than latched-card consistency). The underlying mechanic also still fires unattended via the tier
-  tickspeed autobuyer (see "Automation" above), which spends the player's entire current XP balance
-  each tick the same way `XpTickspeedCard`'s own button does on click. The tier row's
+  (`⏩ ×{next}`, `actions.speedUp`) in the same grid slot — not a manual XP-consume control any more (an
+  earlier version showed `🧬 {current unspent XP} XP` here, spending the player's entire current XP
+  balance on click; that manual trigger was removed in favor of surfacing Speed Up in this slot instead,
+  since reaching a full last-tier level is also exactly when Speed Up tends to become available). The
+  underlying mechanic still fires — but now *only* via the tier tickspeed autobuyer (see "Automation"
+  above), which spends the player's entire current XP balance each tick the same way the old manual
+  button used to on click. `actions.consumeXpForLastTierTickspeed` remains a valid hook action (still
+  callable, still fully engine-tested) — `MainPage` just no longer wires a button to it. The row's
   existing `⚙ +N%` badge and Details disclosure both still automatically reflect the XP-funded
   multiplier while engaged (they read `tickspeedMultiplier`, which the row computes from
   `getLastTierXpTickspeedMultiplier` instead of `getTickspeedProductionMultiplier` in this case); the
   Details disclosure additionally lists the current unspent XP balance and the minimum the next
-  consumption needs, under an "XP Tickspeed" line. Once bought, Auto Speed Up's active/paused status
-  shows as a small `⏩` badge in this same row's `TierName` badge cluster (see
-  docs/MAINPAGE_REFERENCE.md) rather than beside a top-level Speed Up button, since Speed Up no longer
-  has one.
+  (automatic) consumption needs, under an "XP Tickspeed" line.
 
 #### Multiplier overflow safety
 
@@ -600,8 +589,7 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   `ResizeObserver` (e.g. jsdom in tests).
 
 There used to also be a bottom `PrestigeCard` (Game view) mirroring the analogous informational
-Speed Up card an earlier version of the "Speed Up" section below had (see there for why that card no
-longer exists either) — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
+`SpeedUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
 see "Balances (top HUD)" above, already doubles as the Prestige button once `canPrestige`), so it was
 purely informational: prestige progress/award preview, prestiged count, unspent PP, and Auto-Prestige
 status. It has been removed entirely as redundant with the `TopPrestigeBar`/`FullScreenOverlay`/
@@ -650,33 +638,29 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this control solely inline in the **last tier's own row**, once that tier is full
-(`isLastTierTickspeedXpUnlocked(state)` — see "The last tier's XP-funded tickspeed" above), replacing
-that row's normal `⚙` tickspeed-multiplier button in the same grid slot — not as its own top-of-page
-card, unlike `GlobalTickspeedCard`/`XpTickspeedCard`, which do sit side by side above `TierList` (see
-docs/MAINPAGE_REFERENCE.md's "Global Tickspeed card" section). An earlier version of this pairing did
-give Speed Up its own top-level card there (mirroring `GlobalTickspeedCard`'s `everRevealed`-latched
-pattern) before the XP-funded tickspeed control took over that row slot instead — see
-docs/MAINPAGE_REFERENCE.md's "Speed Up has no top-level card" section for that history. The button
-(reusing the shared `UpgradeButton` styled component the row's other controls use, sized to match the
-row's own Buy/tickspeed buttons) shows the compact `⏩ ×{next}` — not a percentage, and no `Lv.`
-progress readout in the visible text (unlike the earlier top-card version) — the full "requires level
-N" requirement and resulting multiplier are still spelled out in the button's `aria-label`/`title` for
-assistive tech, and its own `$progress` fill (`speedUpProgressPercent`, computed from the same
-1-indexed-then-displayed `lastTierLevelDisplay`/`speedUpRequirementDisplay` values described below)
-conveys "how close" visually, the same convention every other row button uses. `state.purchaseLevels[lastTier.id]` and
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered near the top of
+the Game view, side by side with `GlobalTickspeedCard` (inside a shared `TopSpeedCardsRow` flex row,
+wrapping to stacked on narrow viewports) and above `TierList` — not as the last item after `TierList`,
+as it once was. Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
+quick-access copy of the same button also appears inline in the last tier's own row once that tier is
+full — see "The last tier's XP-funded tickspeed" above. The button
+(`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
+larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
+player sees concretely what's still needed. `state.purchaseLevels[lastTier.id]` and
 `getSpeedUpRequirement(speedUpCount)` are both internally 1-indexed so that "level 1" means "no
 completed block yet" (see "The (configurable) purchase block size and tier levels" above); displayed
 raw, that reads as an off-by-one to the player, so `MainPage` subtracts 1 from both
-(`lastTierLevelDisplay`/`speedUpRequirementDisplay`) before use — the `aria-label`'s requirement
-sentence ("requires level N") counts completed blocks directly: level 1 once the last tier finishes
-its first block (8 purchases at the default block size), level 2 after two, and the first Speed Up
-requires reaching (displayed) level 1. The underlying `purchaseLevels`/`getSpeedUpRequirement` values
-driving eligibility (`canSpeedUp`) are unchanged — only the two numbers referenced in the label are
-shifted. Enabled once the requirement is met and disabled while frozen — no `window.confirm` guard,
-since this is beneficial not destructive. Once `!isFirstRun` and `autoSpeedUp` bought, a small `⏩`
-`PpUpgradeBadge` (dimmed while `autoSpeedUpEnabled` is false) shows in this same row's `TierName`
-badge cluster, gated on `isLastTier` (the purchase button itself lives on the PP Upgrades page).
+(`lastTierLevelDisplay`/`speedUpRequirementDisplay`) before rendering — the visible "Lv." and the
+requirement sentence/`aria-label` ("Reach level N…"/"requires … level N") instead count completed
+blocks directly: Lv.1 once the last tier finishes its first block (8 purchases at the default block
+size), Lv.2 after two, and the first Speed Up requires reaching (displayed) level 1. The underlying
+`purchaseLevels`/`getSpeedUpRequirement` values driving eligibility (`canSpeedUp`) are unchanged — only
+the two numbers rendered to the player are shifted. The on-button `$progress` fill (`speedUpProgressPercent`)
+is computed from these same displayed values, not the raw ones, so it reads 0% before any block is
+completed rather than already partway filled. Enabled once the requirement is met and disabled
+while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
+and `autoSpeedUp` bought, a static "⏩ Auto Speed Up active" note shows (the purchase button itself
+lives on the PP Upgrades page).
 
 ### Prestige info is hidden until first prestige
 

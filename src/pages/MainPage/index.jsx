@@ -173,17 +173,14 @@ const TierLine = styled(StatCard)`
   }
 `
 
-// Speed Up's own reset-and-double-production trigger now lives solely inline in the last tier's
-// row (see the tier-row UpgradeButton below) — this card was Speed Up's own top-of-page home in an
-// earlier version of this pairing; it's now XpTickspeedCard's instead (below).
-const XpTickspeedCard = styled(StatCard)`
-  border-color: #7c3aed;
+const SpeedUpCard = styled(StatCard)`
+  border-color: #0e7490;
 `
 
 // Matches the tier rows' own Buy/tickspeed button font size (see BuyButton/UpgradeButton) rather
 // than the larger default Button size every other standalone card button uses — keeps this
 // button visually consistent with the tier list just above it.
-const XpTickspeedButton = styled(Button)`
+const SpeedUpButton = styled(Button)`
   font-size: 0.82em;
 
   @media (max-width: 40rem) {
@@ -195,7 +192,7 @@ const GlobalTickspeedCard = styled(StatCard)`
   border-color: #1d4ed8;
 `
 
-// Lays GlobalTickspeedCard and XpTickspeedCard side by side at the top of the Game view rather than
+// Lays GlobalTickspeedCard and SpeedUpCard side by side at the top of the Game view rather than
 // stacked — both are compact "one button" cards, so sharing a row reads as a paired "speed
 // controls" cluster instead of two full-width blocks. Each card grows to share the row equally
 // (flex: 1) but has a floor width (14rem) below which it wraps to its own line instead of being
@@ -246,7 +243,7 @@ const CenteredCard = styled(StatCard)`
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText (still hardcoded, still used by TierList/XpTickspeedCard/GlobalTickspeedCard) rather
+// MutedText (still hardcoded, still used by TierList/SpeedUpCard/GlobalTickspeedCard) rather
 // than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
@@ -950,7 +947,7 @@ const MainPage = () => {
   // rows above, so a plain per-instance hook call is simpler than a shared-observer registry.
   const headerDetailsRef = useAutoCollapseDetails()
   const globalTickspeedDetailsRef = useAutoCollapseDetails()
-  const xpTickspeedDetailsRef = useAutoCollapseDetails()
+  const speedUpDetailsRef = useAutoCollapseDetails()
   const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
   const tierAutobuyersInfoDetailsRef = useAutoCollapseDetails()
   const autobuyerMilestonesDetailsRef = useAutoCollapseDetails()
@@ -1027,35 +1024,6 @@ const MainPage = () => {
   // Whether Auto Speed Up currently acts, independent of whether it's been bought (see
   // setAutoSpeedUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
   const autoSpeedUpEnabled = state.autoSpeedUpEnabled ?? true
-
-  // The last tier's XP-funded tickspeed (see "The last tier's XP-funded tickspeed" in
-  // docs/ECONOMY_REFERENCE.md): once the last tier reaches a full purchase level, its own
-  // Money-funded tickspeed ladder is replaced by an XP-funded one. Surfaced as its own top-of-page
-  // card (XpTickspeedCard, paired with GlobalTickspeedCard) rather than Speed Up, which now lives
-  // solely as the inline quick-access button in the last tier's own row (below) — the two controls
-  // swapped positions from an earlier version of this pairing. A live check, not an "everRevealed"
-  // latch like GlobalTickspeedCard/the old SpeedUpCard: matches the exact show/hide behavior the
-  // original inline XP-consume button always had, appearing the moment the last tier is full and
-  // disappearing the moment it drops back below a full level (e.g. after Speed Up/Prestige).
-  const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)
-  const lastTierXpConsumed = state.lastTierXpConsumed ?? 0
-  const lastTierXpBalance = Math.floor(prestige.xp ?? 0)
-  const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
-  const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
-  // getLastTierXpTickspeedMultiplier compounds, so the marginal speedup a consumption contributes
-  // is a ratio (new multiplier ÷ old), not the spent amount itself — and because it's
-  // multiplicative, that ratio is independent of how much XP was already consumed (the prior
-  // multiplier cancels out), so it's exactly getLastTierXpTickspeedMultiplier(amount) regardless of
-  // lastTierXpConsumed so far.
-  const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
-  const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
-  const handleConsumeLastTierXp = () => {
-    if (!canConsumeLastTierXp) return
-    if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
-      actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
-    }
-  }
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -1496,38 +1464,48 @@ const MainPage = () => {
         </GlobalTickspeedCard>
       )}
 
-      {isLastTierXpUnlocked && (
-        <XpTickspeedCard aria-label="xp tickspeed panel">
-          <InfoDetails ref={xpTickspeedDetailsRef}>
-            <summary><h2>XP Tickspeed</h2></summary>
-            <MutedText id="xp-tickspeed-description">
-              Spend unspent XP to permanently speed up {lastTier.name}'s own production ticks — a
-              compounding +1% faster per XP spent. Each consumption resets every other tier's owned
-              quantity and Bits back to 0. Available while {lastTier.name} holds a full level.
+      {speedUpEverRevealed && (
+        <SpeedUpCard aria-label="speed up panel">
+          <InfoDetails ref={speedUpDetailsRef}>
+            <summary><h2>Speed Up</h2></summary>
+            <MutedText id="speed-up-description">
+              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
+              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
+              doubles production speed. Each Speed Up needs one more level than the last.
             </MutedText>
           </InfoDetails>
-          <XpTickspeedButton
-            aria-describedby="xp-tickspeed-description"
-            aria-label={lastTierXpConsumeLabel}
-            variant="smart"
-            disabled={!canConsumeLastTierXp}
-            onClick={handleConsumeLastTierXp}
-            title={`Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
+          <SpeedUpButton
+            aria-describedby="speed-up-description"
+            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
+            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canSpeedUp}
+            onClick={actions.speedUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
             type="button"
-            $progress={lastTierXpProgressPercent}
-            $pulse={canConsumeLastTierXp}
+            $progress={speedUpProgressPercent}
+            $progressColor="#22d3ee"
+            $pulse={canSpeedUp}
           >
-            <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+            <ButtonIcon>⏩ </ButtonIcon>
+            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="XP tickspeed progress"
-              aria-valuenow={lastTierXpProgressPercent}
+              aria-label="Speed Up progress"
+              aria-valuenow={speedUpProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
             />
-          </XpTickspeedButton>
-        </XpTickspeedCard>
+          </SpeedUpButton>
+          {!isFirstRun && isAutoSpeedUpActive && (
+            <MutedText title={
+              autoSpeedUpEnabled
+                ? "Speed Up now triggers automatically the instant it's eligible"
+                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+            }>
+              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
+            </MutedText>
+          )}
+        </SpeedUpCard>
       )}
       </TopSpeedCardsRow>
 
@@ -1698,19 +1676,6 @@ const MainPage = () => {
                       }
                     >
                       🤖
-                    </PpUpgradeBadge>
-                  )}
-                  {isLastTier && !isFirstRun && isAutoSpeedUpActive && (
-                    <PpUpgradeBadge
-                      $dimmed={!autoSpeedUpEnabled}
-                      aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}
-                      title={
-                        autoSpeedUpEnabled
-                          ? "Speed Up now triggers automatically the instant it's eligible"
-                          : 'Auto Speed Up is currently paused — it will not trigger until resumed'
-                      }
-                    >
-                      ⏩
                     </PpUpgradeBadge>
                   )}
                 </TierName>
