@@ -97,7 +97,7 @@ toggle, and every disclosure/badge/accessibility convention `MainPage` follows.
   visible `GoogolProgressLabel` ("N% to Prestige") underneath.
 - **HUD-scoped muted/accent text.** `Header`'s tagline, the offline notice's body text, and the PP
   header line's "N PP" figure render via `HudMutedText`/`HudGoldText` — a fork of the app-wide
-  `MutedText` (still hardcoded `#a3a3a3`, still used by `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/
+  `MutedText` (still hardcoded `#a3a3a3`, still used by `TierList`/`XpTickspeedCard`/`GlobalTickspeedCard`/
   `TopPrestigeBar`/`FullScreenCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
   migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
@@ -177,26 +177,31 @@ Autobuyers" below), this only checks tier Smart purchases plus the global automa
 the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
 since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
 tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and the
-Reset button are Game-view-only; every PP-spending control lives on the Upgrades view; the Milestones
-view is its own standalone read-only page (see "Milestones view" below).
+balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `XpTickspeedCard`, and
+the Reset button are Game-view-only; every PP-spending control lives on the Upgrades view; the
+Milestones view is its own standalone read-only page (see "Milestones view" below). Speed Up itself has
+no top-level card any more — its only trigger lives inline in the last tier's own row (see "The last
+tier's XP-funded tickspeed" below).
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered at
 the very top of the Game view — above `TierList`/tier 1, before anything else — since it's relevant
-from the very start of a run, well before Speed Up or Prestige are, or even the tier list itself.
-`SpeedUpCard` (see below) renders alongside it, both above `TierList`, inside a shared `TopSpeedCardsRow`
+from the very start of a run, well before the last tier's XP Tickspeed card or Prestige are, or even
+the tier list itself. `XpTickspeedCard` (see "The last tier's XP-funded tickspeed" below) renders
+alongside it, both above `TierList`, inside a shared `TopSpeedCardsRow`
 flex row — the two speed-related controls sit side by side at the top of the page (each sharing the
-row equally, `flex: 1 1 14rem`) rather than Speed Up being the last item after the tier list, as it
-once was. Below a combined width of roughly 28rem (two 14rem floors plus the row's own gap) they wrap
-to stacked, one per line, same as before this pairing existed — this is a pure `flex-wrap` reflow with
-no separate mobile-specific markup. The row renders (empty, zero height) even before either card's own
-reveal flag is true, and works unchanged if only one of the two is currently revealed — the lone card
-just fills the row. See "The global tickspeed multiplier" below for the underlying `engine.js`
+row equally, `flex: 1 1 14rem`). Below a combined width of roughly 28rem (two 14rem floors plus the
+row's own gap) they wrap to stacked, one per line — a pure `flex-wrap` reflow with no separate
+mobile-specific markup. The row renders (empty, zero height) even before either card's own reveal
+condition is true, and works unchanged if only one of the two is currently showing — the lone card
+just fills the row; unlike `GlobalTickspeedCard`, `XpTickspeedCard` has no `everRevealed` latch (see
+below), so this row's second slot can wink in and out of existence as the last tier's owned count
+crosses the full-level threshold, not just grow empty once and stay filled. See "The global tickspeed
+multiplier" below for the underlying `engine.js`
 mechanics. The heading itself is
 plain (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
-`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
-and the `Global` prefix stopped earning its width against `SpeedUpCard`'s own two-word heading; no
+`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with a second
+two-word-headed card and the `Global` prefix stopped earning its width; no
 behavior change either time — the `GlobalTickspeedCard` component/prop names are unaffected, this is
 purely the rendered heading text), inside the card's `InfoDetails`
 `<summary>`. The current level and its cumulative speed bonus (`Currently Lv.N — +N% faster ticks on
@@ -214,10 +219,9 @@ every other multiplier badge in the app once the numbers get large. The button c
 `🌐 Upgrade for {cost}` after — its `aria-label` alone still spells out the current cumulative bonus
 (same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
-`isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
-`SpeedUpCard` — once tier02 has ever been owned (or the multiplier is already active),
-the card stays visible rather than disappearing if tier02's owned count is later reset by a
-Prestige/Speed Up; Reset clears the flag alongside `speedUpEverRevealed`. It
+`isGlobalTickspeedMultiplierUnlocked(state)`) — once tier02 has ever been owned (or the multiplier is
+already active), the card stays visible rather than disappearing if tier02's owned count is later
+reset by a Prestige/Speed Up; Reset clears the flag. It
 needs no `!isFirstRun` gate — unlike the PP Upgrades page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
 `buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
@@ -246,21 +250,28 @@ production-amount bonus.
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
 tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Speed Up** button instead (`⏩ ×{next}`, `actions.speedUp` — the same
-action `SpeedUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
-the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
-the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
-this slot used to show — reaching a full last-tier level is also exactly when Speed Up tends to be
-close, so this reuses the slot for the more actionable control. The underlying XP-funded tickspeed
-mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
-autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
-its current unspent-XP balance/next-consumption minimum still show in the row's Details disclosure (as
-an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The `⚙ +N%` badge
-and Details disclosure keep working unchanged for the last tier otherwise, still reading the XP-funded
-multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
-Prestige/Speed Up resets the last tier's owned count to 0 along with every other tier's, which reverts
-this slot back to the normal Money-funded button until the player buys back up to a full level — see
-"The last tier's XP-funded tickspeed" below for why.
+grid slot — by a quick-access **Speed Up** button instead (`⏩ ×{next}`, `actions.speedUp`, with a
+distinct `${tier.name}'s row: …` aria-label prefix so it doesn't collide with `XpTickspeedCard`'s own
+button under `getByRole('button', { name })` in tests) — reaching a full last-tier level is also
+exactly when Speed Up tends to become available, so this reuses the slot for that quick-access
+trigger rather than the tier's own (now top-level) XP-consume control. This is a live check, not a
+one-time unlock, and independent of `XpTickspeedCard`'s own visibility below: a Prestige/Speed Up
+resets the last tier's owned count to 0 along with every other tier's (and, for a real Prestige,
+relocks the tier entirely — see docs/ECONOMY_REFERENCE.md's "Prestige and the Googol freeze"), which
+reverts this slot back to the normal Money-funded button until the player buys back up to a full
+level — see "The last tier's XP-funded tickspeed" below for why. Once bought, `autoSpeedUp`'s
+active/paused status shows as a small `⏩` `PpUpgradeBadge` in this row's own `TierName` badge
+cluster (alongside the `⚙ +N%` tickspeed badge and the unit-autobuyer's `🤖` badge — see "Unit
+autobuyer status" below), gated on `isLastTier && !isFirstRun && isAutoSpeedUpActive` — the same
+status this badge showed on the earlier top-level Speed Up card, just relocated since Speed Up no
+longer has one.
+
+The manual XP-consume trigger for this same tickspeed ladder (`🧬 {current unspent XP} XP`,
+`actions.consumeXpForLastTierTickspeed`) lives at the top of the page instead, as its own
+`XpTickspeedCard` — see "The last tier's XP-funded tickspeed" below. The `⚙ +N%` badge and Details
+disclosure keep working unchanged for the last tier regardless of which control is currently in this
+grid slot, still reading the XP-funded multiplier instead of the Money-funded one whenever
+`isLastTierTickspeedXpUnlocked` holds.
 
 **Unit autobuyer status (Game view, per tier).** Once a tier's unit-buying autobuyer is unlocked (see
 `autobuyers`/`applyAutobuyerMilestones` — a free, prestige-count-milestone-triggered unlock, not a PP
@@ -335,7 +346,8 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    (`AUTO_PRESTIGE_AUTOBUYER_COST`, 500 PP) sits between Auto Speed Up's (100) and Auto-Prestige's own
    initial-activation cost (1000), which is why it's ordered directly before the Auto-Prestige row
    despite being a "meta-automation" of it. Each row's icon matches the icon of the feature it
-   automates (🌐 Global Tickspeed card, ⏩ Speed Up card, ✦ Prestige card/button) — except the
+   automates (🌐 Global Tickspeed card, ⏩ the last tier row's inline Speed Up button, ✦ Prestige
+   card/button) — except the
    Auto-Prestige Autobuyer, which automates a PP-funded track (Auto-Prestige's own leveling) rather
    than a Money-funded feature, so it gets its own distinct icon (🔁) instead of reusing ✦ — so every
    row stays visually distinct from each other and from the per-tier automation icons in category 1
@@ -393,14 +405,24 @@ opposed to what."
 Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
 is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
 
-**Speed Up card stays visible once revealed.** A `speedUpEverRevealed` boolean (seeded from,
-and latched permanently true the first time, `lastTierUnlocked`) drives `SpeedUpCard`'s render
-condition instead of a live check — once shown, it stays shown, with its button simply going disabled
-rather than the card vanishing. It resets only on a full Reset (`handleResetClick`), never on an
-ordinary Speed Up or Prestige. There is no equivalent card for Prestige — the bottom Prestige panel
-that used to mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purely
-informational and redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways
-to trigger Prestige (see "Prestige and the Googol freeze" below).
+**Speed Up has no top-level card, and XpTickspeedCard uses a live check, not an everRevealed latch.**
+An earlier version of this pairing gave Speed Up its own top-of-page card (mirroring
+`GlobalTickspeedCard`'s `everRevealed`-latched, "stays shown once revealed" pattern); Speed Up's
+manual trigger has since moved to living solely inline in the last tier's own row (see "The last
+tier's XP-funded tickspeed" above), so that card — and its `speedUpEverRevealed`-driven
+render/disabled-once-shown behavior — no longer exists. `speedUpEverRevealed` itself is still around
+(seeded from/latched to `lastTierUnlocked`, same as before), just narrowed to gating the one place
+that still needs "has Speed Up ever been reachable" as a persistent flag: the "Speed Up: …" line in
+the money balance's click-to-expand global-multipliers breakdown (see "Money balance click-to-expand
+global multipliers" above), so that line doesn't disappear again once shown even if the last tier's
+own owned count later drops. `XpTickspeedCard`, the card that took over this row slot from Speed Up,
+deliberately does **not** get an equivalent `everRevealed` latch of its own — see "The last tier's
+XP-funded tickspeed" above for why a live check matches this card's "exact functionality" requirement
+more closely than the latched pattern its sibling cards use. There is no equivalent card for
+Prestige either — the bottom Prestige panel that used to mirror this pattern (via a
+`prestigeCardEverRevealed` flag) was removed as purely informational and redundant with the
+`TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige (see "Prestige and
+the Googol freeze" below).
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
@@ -458,7 +480,7 @@ already the rightmost, affordability-fill-colored control — reads as the visua
 per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
 is unchanged; only these components' own `font-size`/`font-weight` moved.
 
-**Tier row details disclosure.** Unlike `SpeedUpCard`/`GlobalTickspeedCard`/the page
+**Tier row details disclosure.** Unlike `XpTickspeedCard`/`GlobalTickspeedCard`/the page
 `Header` (which each show a visible `<summary>` line of their own inside a native `InfoDetails`, see
 "Description prose" above), a tier row has **no separate visible trigger at all**: `TierName` itself,
 wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
@@ -515,7 +537,7 @@ goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedB
 
 **Auto-collapsing expanded disclosures on scroll.** Every expandable disclosure in `MainPage` — a tier
 row's Details (`TierDetailsContent`/`openTierDetailIds`) and every native `<details>`-based `InfoDetails`
-(the page `Header`, `GlobalTickspeedCard`, `SpeedUpCard`, and the PP Upgrades page's Tier Autobuyers
+(the page `Header`, `GlobalTickspeedCard`, `XpTickspeedCard`, and the PP Upgrades page's Tier Autobuyers
 category "How these controls work" panel and "full smart autobuyer" notice) — automatically collapses
 once it scrolls fully out of the viewport in either
 direction, so an expanded panel doesn't stay open (and out of context) as the player keeps scrolling.
