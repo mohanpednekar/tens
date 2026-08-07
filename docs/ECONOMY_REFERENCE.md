@@ -429,23 +429,27 @@ prestiged.
   100 Money for the next level, 1000 after that, and so on — spent from the same base-currency balance
   as buying tiers themselves (`resources[MONEY_ID]`), with no "leave 1 behind" reserve, since Money isn't
   itself an "owned" generator count (same as `buyTier`).
-- `getGlobalTickspeedProductionMultiplier(level)`: let `milestoneLevels =
-  countGlobalTickspeedMilestones(level)` and `regularLevels = level - milestoneLevels`; returns
-  `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP) ** regularLevels * (1 + GLOBAL_TICKSPEED_MILESTONE_STEP)
-  ** milestoneLevels` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`, `GLOBAL_TICKSPEED_MILESTONE_STEP =
-  0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1). `countGlobalTickspeedMilestones`
-  (a module-private helper in `engine.js`) counts how many of the levels up to `level` are milestone
-  levels: spacing starts at 10 (levels 10, 20, …, 100 — 10 milestones by level 100), then widens to
-  100 once past level 100 (200, 300, …, 1000 — 9 more milestones by level 1000), then to 1000 past
-  level 1000, and so on — each range contributes one milestone per multiple of its spacing, and the
-  boundary level itself (100, 1000, …) is only ever counted once, as the last milestone of the
-  *narrower* spacing, not again as the first of the wider one. Every level compounds *something* —
-  a regular level compounds the 1% step, a milestone level compounds the 10% step instead — so
-  unlike a purely milestone-gated design, the bonus keeps growing (fractionally) between milestones
-  too, and a milestone is a *bigger* compounding step at that level rather than an isolated bonus.
-  Divided directly into `getEffectiveTierTickSpeedSeconds` for every tier alongside that tier's own
-  tickspeed multiplier (see "Tier production tickspeed" above) — not multiplied into the production
-  credit itself.
+- `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)`: let `milestoneLevels =
+  countGlobalTickspeedMilestones(level)`, `regularLevels = level - milestoneLevels`, and
+  `regularStep = getGlobalTickspeedRegularStep(overclockCount) = GLOBAL_TICKSPEED_PRODUCTION_STEP +
+  overclockCount * OVERCLOCK_PRODUCTION_STEP`; returns `(1 + regularStep) ** regularLevels * (1 +
+  GLOBAL_TICKSPEED_MILESTONE_STEP) ** milestoneLevels` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`,
+  `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus,
+  ×1, regardless of `overclockCount`). `overclockCount` (see "Overclock" below) permanently raises
+  `regularStep` above its 1% baseline — 1.1% after the first Overclock activation, 1.2% after the
+  second, and so on — but never touches the milestone step, which stays fixed at 10%.
+  `countGlobalTickspeedMilestones` (a module-private helper in `engine.js`) counts how many of the
+  levels up to `level` are milestone levels: spacing starts at 10 (levels 10, 20, …, 100 — 10
+  milestones by level 100), then widens to 100 once past level 100 (200, 300, …, 1000 — 9 more
+  milestones by level 1000), then to 1000 past level 1000, and so on — each range contributes one
+  milestone per multiple of its spacing, and the boundary level itself (100, 1000, …) is only ever
+  counted once, as the last milestone of the *narrower* spacing, not again as the first of the wider
+  one. Every level compounds *something* — a regular level compounds `regularStep`, a milestone
+  level compounds the 10% step instead — so unlike a purely milestone-gated design, the bonus keeps
+  growing (fractionally) between milestones too, and a milestone is a *bigger* compounding step at
+  that level rather than an isolated bonus. Divided directly into `getEffectiveTierTickSpeedSeconds`
+  for every tier alongside that tier's own tickspeed multiplier (see "Tier production tickspeed"
+  above) — not multiplied into the production credit itself.
 - `buyGlobalTickspeedMultiplier(state)` spends Money to raise the level by 1 — a no-op if
   `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough
   Money. `state.globalTickspeedMultiplier` (the level) **resets to `null` (not-yet-bought) on both a
@@ -681,14 +685,27 @@ multiplier back to its 1x baseline, not just refusing to grow it further) instea
 and it increments `overclockCount` by 1 instead of leaving it untouched. Refuses while `isProductionFrozen`,
 same as `speedUpGame`.
 
-The reward is a permanent, unconditional (no PP unlock needed) multiplier on every tier's *tickspeed* —
-how often a tier delivers a batch, not how much — rather than Speed Up's production-amount multiplier:
-`getOverclockMultiplier(overclockCount) = (1 + OVERCLOCK_PRODUCTION_STEP) ** overclockCount`
-(`OVERCLOCK_PRODUCTION_STEP = 0.001`, i.e. +0.1% faster ticks per activation, compounding). This is a
-third factor inside `getEffectiveTierTickSpeedSeconds`, alongside the per-tier/XP-funded multiplier and
-the (Money-funded) global tickspeed multiplier — the tier's base tickspeed is divided by all three
-multiplied together, so Overclock's bonus stacks multiplicatively with the others rather than replacing
-either.
+The reward is **not** a separate multiplier stacked alongside the (Money-funded) global tickspeed
+multiplier — it permanently raises that multiplier's own per-level growth rate instead.
+`getGlobalTickspeedRegularStep(overclockCount) = GLOBAL_TICKSPEED_PRODUCTION_STEP +
+overclockCount * OVERCLOCK_PRODUCTION_STEP` (`OVERCLOCK_PRODUCTION_STEP = 0.001`) computes the
+percentage every future REGULAR level of the global tickspeed multiplier compounds at: the baseline 1%
+with no activations, 1.1% after the first, 1.2% after the second, and so on — each activation adds
+another 0.1 percentage points directly onto the step, not a separate ×1.001 factor. This step feeds into
+`getGlobalTickspeedProductionMultiplier(level, overclockCount)`, which now takes `overclockCount` as a
+second parameter (defaulting to 0, so any caller that hasn't been updated to pass it still gets the
+pre-Overclock baseline rather than throwing — but every real call site in this codebase passes it
+explicitly): `(1 + getGlobalTickspeedRegularStep(overclockCount)) ** regularLevels * (1 +
+GLOBAL_TICKSPEED_MILESTONE_STEP) ** milestoneLevels` — only the REGULAR-level step is affected; a
+milestone level's own 10% step (`GLOBAL_TICKSPEED_MILESTONE_STEP`) is deliberately unchanged by
+Overclock. Because the boosted step is folded directly into the *existing* global tickspeed multiplier,
+`getEffectiveTierTickSpeedSeconds` needs no separate third factor for Overclock — it still divides by
+just the per-tier/XP-funded multiplier and the global tickspeed multiplier, and the latter's own value
+already reflects whatever Overclock has done to it. A direct consequence: Overclock has **no effect at
+all** while the global tickspeed multiplier is still at level 0/not yet bought — there's no level for the
+boosted step to compound over — and any level already bought before an Overclock activation
+retroactively compounds at the new, higher rate from then on, exactly like every other level (the
+boosted rate isn't scoped to "levels bought after this point").
 
 `overclockCount` itself sits one rung above `speedUpCount` in the reset hierarchy (Prestige > Overclock >
 Speed Up): it's run-scoped like `speedUpCount`, but **survives an ordinary Speed Up** (`speedUpGame`
@@ -705,14 +722,16 @@ decision given how much it costs the run (wiping Speed Up's bonus along with eve
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Game view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
-`SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextBonus} · Lv.{level}/{requirement}`
-— e.g. `⚡ +0.2% · Lv.12/20`. Unlike Speed Up's own button, **this level/requirement pair is NOT given
-the -1 "completed blocks" display offset** — `getOverclockRequirement`'s round numbers (10/20/30/…) are
-shown exactly as `state.purchaseLevels[lastTier.id]` and the requirement itself already read, matching
-the same raw level number the last tier's own Details disclosure shows, rather than introducing a second,
-differently-offset "level" reading for the same underlying value. Enabled once the requirement is met and
-disabled while frozen — no `window.confirm` guard, same rationale as Speed Up (beneficial, not
-destructive).
+`SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
+— e.g. `⚡ 1.2%/lvl · Lv.12/20` — where `{nextStep}` is `getGlobalTickspeedRegularStep(overclockCount + 1)`
+formatted as a percentage (reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting by
+passing it `1 + step` as if it were a multiplier, since that function already computes `(multiplier - 1)
+* 100`). Unlike Speed Up's own button, **this level/requirement pair is NOT given the -1 "completed
+blocks" display offset** — `getOverclockRequirement`'s round numbers (10/20/30/…) are shown exactly as
+`state.purchaseLevels[lastTier.id]` and the requirement itself already read, matching the same raw level
+number the last tier's own Details disclosure shows, rather than introducing a second, differently-offset
+"level" reading for the same underlying value. Enabled once the requirement is met and disabled while
+frozen — no `window.confirm` guard, same rationale as Speed Up (beneficial, not destructive).
 
 ### Prestige info is hidden until first prestige
 
@@ -870,10 +889,12 @@ engine state).
                                                           // "Speed Up" below
   overclockCount: 0,                                     // RUN-SCOPED (but Speed-Up-surviving) count of
                                                           // Overclock activations (see overclockGame/
-                                                          // getOverclockMultiplier below) — drives an
-                                                          // unconditional, stacking GLOBAL tickspeed multiplier
-                                                          // ((1+OVERCLOCK_PRODUCTION_STEP)^overclockCount) AND
-                                                          // how many last-tier purchases the next activation
+                                                          // getGlobalTickspeedRegularStep below) — permanently
+                                                          // raises the per-level step the global tickspeed
+                                                          // multiplier's own REGULAR levels compound at
+                                                          // (GLOBAL_TICKSPEED_PRODUCTION_STEP +
+                                                          // overclockCount*OVERCLOCK_PRODUCTION_STEP) AND how
+                                                          // many last-tier purchases the next activation
                                                           // requires (getOverclockRequirement). Never reset by
                                                           // Speed Up (speedUpGame explicitly carries it over
                                                           // unchanged, unlike speedUpCount) — only by a real
@@ -1016,7 +1037,7 @@ purchases were manual or automatic.
 | `getPurchaseMilestoneMultiplier` | `level → number` | `levelsCompleted = level - 1`, `megaBlocks = floor(levelsCompleted/10)`, `regularBlocks = levelsCompleted - megaBlocks`; returns `PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks` (`2`, `10`) — doubles a tier's own passive production at every completed level, the same boundary where `getTierCost`'s cost-epoch exponent steps up, **except** every 10th such level contributes a 10x factor instead of the regular 2x for that one level, compounding into the rest (e.g. level 81 → `2^9 * 10^1` = 5120, not `2^10` = 1024) — this "every 10th level" mega cadence is independent of the (now variable) block size and stays a fixed 10 regardless of level size. Takes the tier's current LEVEL directly, not a lifetime purchased count. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getSpeedUpMultiplier` | `speedUpCount → number` | `SPEED_UP_MULTIPLIER_BASE ** speedUpCount` (2^speedUpCount) — the unconditional, stacking production-speed multiplier from Speed Up activations; no unlock purchase needed, unlike `getPrestigeProductionMultiplier` |
 | `getSpeedUpRequirement` | `speedUpCount → number` | `speedUpCount + 2` — the last tier's LEVEL the *next* Speed Up needs: level 2 for the first activation, level 3 for the second, level 4 for the third, … Expressed as a level target rather than a lifetime-purchased-count threshold since how many purchases a level boundary corresponds to now depends on the current (possibly grown) block size, while the level number itself doesn't |
-| `getOverclockMultiplier` | `overclockCount → number` | `(1 + OVERCLOCK_PRODUCTION_STEP) ** overclockCount` (`OVERCLOCK_PRODUCTION_STEP = 0.001`) — the unconditional, stacking GLOBAL tickspeed multiplier from Overclock activations (a third factor inside `getEffectiveTierTickSpeedSeconds`, alongside the per-tier/XP-funded and Money-funded global multipliers); no unlock purchase needed |
+| `getGlobalTickspeedRegularStep` | `overclockCount → number` | `GLOBAL_TICKSPEED_PRODUCTION_STEP + overclockCount * OVERCLOCK_PRODUCTION_STEP` — the per-level percentage every future REGULAR level of the global tickspeed multiplier compounds at, after folding in Overclock's permanent boost: 1% (0.01) with no activations, 1.1% after the first, 1.2% after the second, and so on. Feeds directly into `getGlobalTickspeedProductionMultiplier` below; a milestone level's own step is unaffected |
 | `getOverclockRequirement` | `overclockCount → number` | `(overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP` (`OVERCLOCK_REQUIREMENT_STEP = 10`) — the last tier's LEVEL the *next* Overclock needs: level 10 for the first activation, level 20 for the second, level 30 for the third, … Unlike `getSpeedUpRequirement`'s `+2`/`+1`-per-cycle ladder (a step that shrinks relative to the requirement itself as it grows), this fixed +10 step never shrinks relative to itself |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
 | `getTickspeedMultiplierCost` | `(tierId, targetLevel) → number` | `getTickspeedMultiplierBaseCost(tierIndex) ** (targetLevel - 1)` — the resource cost, in that tier's own resource, to reach `targetLevel`: level 1 costs `base^0 = 1` (the free baseline, never actually charged), level 2 costs exactly the tier's base cost (`base^1`), level 3 costs `base^2`, and so on. Money-funded only — unrelated to `getAutobuyerUnlockCost` (below) |
@@ -1028,7 +1049,7 @@ purchases were manual or automatic.
 | `getAutoPrestigeCost` | `currentLevel → number` | `AUTO_PRESTIGE_COST * AUTO_PRESTIGE_COST_MULTIPLIER^currentLevel` — 1000 PP to activate (level 0→1), doubling each level after (2000, 4000, …) |
 | `getAutoPrestigeAttemptRate` | `autoPrestigeLevel → number` | `1.1 ** (level - 1) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS` (`null` treated as level 1 defensively); the per-tick Auto-Prestige attempt-budget increment; level 1 fires roughly every 1000 seconds, each level after that 10% sooner, compounding |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
-| `getGlobalTickspeedProductionMultiplier` | `level → number` | `milestoneLevels = countGlobalTickspeedMilestones(level)`, `regularLevels = level - milestoneLevels`; returns `1.01 ** regularLevels * 1.10 ** milestoneLevels` (`GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01`, `GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1) — every level compounds, a regular level at 1%, a milestone level at 10% instead. `countGlobalTickspeedMilestones` (module-private) counts milestones with spacing 10 up to level 100 (10 milestones), spacing 100 from 100 to 1000 (9 more), spacing 1000 from 1000 to 10000 (9 more), and so on |
+| `getGlobalTickspeedProductionMultiplier` | `(level, overclockCount = 0) → number` | `milestoneLevels = countGlobalTickspeedMilestones(level)`, `regularLevels = level - milestoneLevels`, `regularStep = getGlobalTickspeedRegularStep(overclockCount)`; returns `(1 + regularStep) ** regularLevels * 1.10 ** milestoneLevels` (`GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10`; `null`/never-bought treated as level 0, i.e. no bonus, ×1, regardless of `overclockCount`) — every level compounds, a regular level at `regularStep` (1% by default, permanently raised by Overclock), a milestone level at the fixed 10% instead. `overclockCount` defaults to 0 so pre-Overclock call sites don't need updating, but every real call site in this codebase passes it explicitly. `countGlobalTickspeedMilestones` (module-private) counts milestones with spacing 10 up to level 100 (10 milestones), spacing 100 from 100 to 1000 (9 more), spacing 1000 from 1000 to 10000 (9 more), and so on |
 | `getPrestigePointsAwarded` | `money → number` | `floor(log10(money) / log10(GOOGOL))` — the log, base GOOGOL, of the money balance; always ≥ 1 (prestiging requires the exponent ≥ 100 already); only increases once a further full 100 orders of magnitude are reached (exponent 200 → 2, 300 → 3, …) |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
 | `prestigeGame` | `state → state` | Requires Money ≥ `GOOGOL`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), `speedUpCount` back to 0 (run-scoped — unlike every other flag/level listed next, the stacking Speed Up multiplier does NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), keeps autobuyer *unlock* flags and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoSpeedUp` is the automation *toggle* only — it carries over even though the `speedUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
@@ -1038,7 +1059,7 @@ purchases were manual or automatic.
 | `latchEverUnlockedTiers` | `state → state` | Not exported — sets `everUnlockedTierIds[tierId] = true` for any tier whose live `isTierUnlocked` condition is met but not yet flagged; returns the same state reference if nothing newly qualifies. Called from `buyTier` and `tickGame`'s production step, the only two places `owned` can increase |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
-| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier) × getOverclockMultiplier(overclockCount))` — a tier's actual production period once all three tickspeed multipliers have shrunk it; always `<=` the base value, since all three multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle within a single run before the next Prestige/Speed Up resets `lastTierXpConsumed` — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
+| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier, overclockCount))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Overclock has no separate third factor here — its effect is already folded into the global tickspeed multiplier itself via that function's own `overclockCount` parameter (see "Overclock" below). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle within a single run before the next Prestige/Speed Up resets `lastTierXpConsumed` — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
 | `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= getPurchaseBlockSize(state)` — a live check against the last tier's current owned count (not a stored/latched flag), matching the same threshold `isTierUnlocked` uses; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below that threshold (e.g. a Prestige/Speed Up reset), then back on again once bought back up to it |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
@@ -1088,7 +1109,7 @@ purchases were manual or automatic.
 - `AUTO_PRESTIGE_COST_MULTIPLIER = 2` — Auto-Prestige's cost doubles with each level purchased
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
 - `SPEED_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Speed Up (see `getSpeedUpMultiplier`/`speedUpGame`, "Speed Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
-- `OVERCLOCK_PRODUCTION_STEP = 0.001` — per-activation GLOBAL tickspeed multiplier step for Overclock (see `getOverclockMultiplier`/`overclockGame`, "Overclock" above) — 0.1% compounding per activation, two orders of magnitude smaller than `GLOBAL_TICKSPEED_PRODUCTION_STEP`'s 1% (Overclock has no per-level Money cost gating it, unlike the global tickspeed multiplier); unconditional, no PP unlock needed
+- `OVERCLOCK_PRODUCTION_STEP = 0.001` — per-activation boost to the global tickspeed multiplier's own per-level step for Overclock (see `getGlobalTickspeedRegularStep`/`overclockGame`, "Overclock" above) — 0.1 percentage points added directly onto `GLOBAL_TICKSPEED_PRODUCTION_STEP` per activation (1% → 1.1% → 1.2% → …), two orders of magnitude smaller than `GLOBAL_TICKSPEED_PRODUCTION_STEP`'s 1% itself (Overclock has no per-level Money cost gating it, unlike the global tickspeed multiplier); unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 10` — the fixed per-activation level jump for Overclock's own requirement ladder (see `getOverclockRequirement`) — level 10 for the first activation, 20 for the second, 30 for the third, … a fixed step that never shrinks relative to itself, unlike `getSpeedUpRequirement`'s `+1`-per-cycle ladder
 - `AUTO_SPEED_UP_COST = 100` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Speed Up
 - `TICKSPEED_AUTOBUYER_COST = 20` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate

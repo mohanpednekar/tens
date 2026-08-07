@@ -745,7 +745,7 @@ test('the second Overclock requires 10 more levels than the first, not the same 
   expect(screen.queryByRole('button', { name: /overclock \(requires ronnabytes level 10\b/i })).not.toBeInTheDocument()
 })
 
-test('the Overclock button shows the next tickspeed bonus and requirement progress on itself, using the raw (non-offset) tier level', () => {
+test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
@@ -757,12 +757,13 @@ test('the Overclock button shows the next tickspeed bonus and requirement progre
 
   // Second activation requires the last tier to reach raw level 20 (Lv.12/20, not Lv.11/19 —
   // Overclock's requirement is deliberately not given Speed Up's -1 "completed blocks" display
-  // offset, see getOverclockRequirement in engine.js) and would raise the permanent tickspeed
-  // bonus to +0.2% — both shown on the button itself, no separate status text line.
+  // offset, see getOverclockRequirement in engine.js) and would raise the Tickspeed upgrade's own
+  // per-level rate to 1.2% (from the current 1.1%, one activation in) — both shown on the button
+  // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires ronnabytes level 20\) — resets speed up's bonus and speeds up every tier's ticks to \+0\.2%/i,
+    name: /overclock \(requires ronnabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 1\.2%/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ +0.2% · Lv.12/20')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.2%/lvl · Lv.12/20')
 })
 
 test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {

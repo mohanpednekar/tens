@@ -179,16 +179,21 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
-// Per-activation global-tickspeed production step for Overclock (see engine.js's
-// getOverclockMultiplier/overclockGame) — a second, much steeper Speed-Up-style soft reset: every
-// activation permanently compounds another 0.1% into *every* tier's delivery frequency (applied
-// the same way GLOBAL_TICKSPEED_PRODUCTION_STEP is, dividing into
-// getEffectiveTierTickSpeedSeconds), on top of whatever the Money-funded global tickspeed
-// multiplier and Speed Up's own production multiplier are already contributing. Deliberately two
-// orders of magnitude smaller a step than GLOBAL_TICKSPEED_PRODUCTION_STEP (1%) — Overclock's
-// value is in how permanent and stackable it is (state.overclockCount is never reset by an
-// ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame), not in the size
-// of any single activation.
+// Per-activation boost to the (Money-funded) global tickspeed multiplier's own per-level step —
+// see engine.js's getGlobalTickspeedRegularStep/getGlobalTickspeedProductionMultiplier/
+// overclockGame — a second, much steeper Speed-Up-style soft reset. Each Overclock activation adds
+// another OVERCLOCK_PRODUCTION_STEP (0.1 percentage points) directly onto
+// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), permanently raising the rate every *future* regular level
+// of the global tickspeed multiplier compounds at — 1% per level with no activations, 1.1% after
+// the first, 1.2% after the second, and so on (a milestone level's own 10% step,
+// GLOBAL_TICKSPEED_MILESTONE_STEP, is unaffected). This is deliberately NOT a separate multiplier
+// stacked on top the way Speed Up's own production multiplier is — it reshapes the existing global
+// tickspeed track's own growth curve instead, so a level already bought before an Overclock
+// activation retroactively compounds at the new, higher rate from then on, same as every other
+// level. Deliberately two orders of magnitude smaller a step than GLOBAL_TICKSPEED_PRODUCTION_STEP
+// itself — Overclock's value is in how permanent and stackable it is (state.overclockCount is
+// never reset by an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame),
+// not in the size of any single activation.
 export const OVERCLOCK_PRODUCTION_STEP = 0.001
 // How many more levels the last tier must reach before Overclock can activate again: a fixed
 // 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
