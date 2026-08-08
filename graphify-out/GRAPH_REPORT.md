@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-08-07)
 
 ## Corpus Check
-- 64 files · ~136,474 words
+- 64 files · ~136,774 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 638 nodes · 1124 edges · 48 communities (35 shown, 13 thin omitted)
+- 639 nodes · 1125 edges · 48 communities (35 shown, 13 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.75)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ebbaa05d`
+- Built from commit: `fa1c834c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -92,8 +92,8 @@ Cohesion: 0.06
 Nodes (75): cliValues, defaultPPValues, simulateRun(), allResourceIds(), applyOfflineProgress(), buyAutoPrestige(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp() (+67 more)
 
 ### Community 1 - "MainPage/index.jsx"
-Cohesion: 0.04
-Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, FullScreenCard, FullScreenOverlay (+48 more)
+Cohesion: 0.03
+Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, Disclosure, FullScreenCard (+48 more)
 
 ### Community 2 - "engine.js"
 Cohesion: 0.10
@@ -220,7 +220,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `engine.test.js` be split into smaller, more focused modules?**
   _Cohesion score 0.05504587155963303 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.03508771929824561 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
 - **Should `engine.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09855072463768116 - nodes in this community are weakly interconnected._
 - **Should `InfoPage/index.jsx` be split into smaller, more focused modules?**
