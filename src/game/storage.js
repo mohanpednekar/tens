@@ -120,7 +120,7 @@ const migrateState = saved => {
     ...savedWithoutRemovedFields,
     resources: { ...fresh.resources, ...migrateTierKeys(migratedResourcesRaw) },
     owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
-    purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
+    purchased: { ...fresh.purchased, ...migratedPurchased },
     purchaseLevels: { ...fresh.purchaseLevels, ...derivedPurchaseLevels, ...savedPurchaseLevels },
     purchaseLevelProgress: { ...fresh.purchaseLevelProgress, ...derivedPurchaseLevelProgress, ...savedPurchaseLevelProgress },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
