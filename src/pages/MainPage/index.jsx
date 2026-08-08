@@ -593,18 +593,45 @@ const TierNameLabel = styled.span`
   flex-shrink: 0;
 `
 
-// A tap/hover-only overlay for a genuinely live number that would otherwise need its own
-// permanently-visible line (see OverclockCard/the Tier Tickspeed Autobuyers milestone category
-// below) — the number itself only surfaces on demand via the native title tooltip, same
-// aria-label-plus-title dual channel every other icon-only badge in this file already uses
-// (PpUpgradeBadge's autobuyer status badges, TierNameLabel's tier-name tooltip), rather than an
-// always-visible MutedText line competing for space on an already-compact card/heading.
-const InfoBadge = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  cursor: help;
-  font-size: 0.8em;
-  margin-left: 0.35em;
+// A native click-to-expand disclosure for a genuinely live number that would otherwise need its
+// own permanently-visible line (see GlobalTickspeedCard/OverclockCard/the Tier Tickspeed
+// Autobuyers milestone category below) — collapsed by default, the card/category's own heading
+// (wrapped in <summary>) is the only way to open it, no separate visible "expand" affordance.
+// Native <details>/<summary> keeps this keyboard/screen-reader accessible with no JS state; the
+// marker (▸) is hidden deliberately, matching every other disclosure in this app.
+const Disclosure = styled.details`
+  summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    width: fit-content;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary h2 {
+    display: inline;
+    margin: 0;
+  }
+
+  p {
+    margin-top: 0.3rem;
+  }
 `
+
+// Clicking <summary> already natively toggles a <details> element open/closed; clicking
+// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
+// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
+// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
+// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
+// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
+// passed by React).
+const collapseDisclosure = event => {
+  if (event.target.closest('summary')) return
+  event.currentTarget.open = false
+}
 
 // A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
 // — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
@@ -1451,12 +1478,14 @@ const MainPage = ({ onOpenInfo }) => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
-          <h2>Tickspeed</h2>
-          {isGlobalTickspeedActive && (
-            <MutedText>
-              Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
-            </MutedText>
-          )}
+          <Disclosure onClick={collapseDisclosure}>
+            <summary><h2>Tickspeed</h2></summary>
+            {isGlobalTickspeedActive && (
+              <MutedText>
+                Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
+              </MutedText>
+            )}
+          </Disclosure>
           <Button
             aria-label={
               isGlobalTickspeedActive
@@ -1773,17 +1802,14 @@ const MainPage = ({ onOpenInfo }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <h2>
-            Overclock
+          <Disclosure onClick={collapseDisclosure}>
+            <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
-              <InfoBadge
-                aria-label={`Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`}
-                title={`Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`}
-              >
-                ⓘ
-              </InfoBadge>
+              <MutedText>
+                Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {overclockCount} activation{overclockCount === 1 ? '' : 's'}.
+              </MutedText>
             )}
-          </h2>
+          </Disclosure>
           <OverclockButton
             aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
@@ -2223,15 +2249,12 @@ const MainPage = ({ onOpenInfo }) => {
           </UpgradeCategory>
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <CategoryHeading>
-              Tier Tickspeed Autobuyers
-              <InfoBadge
-                aria-label={`Starts at Prestige ${getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, plus ${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that`}
-                title={`Starts at Prestige ${getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, plus ${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that`}
-              >
-                ⓘ
-              </InfoBadge>
-            </CategoryHeading>
+            <Disclosure onClick={collapseDisclosure}>
+              <summary><CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading></summary>
+              <MutedText>
+                Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.
+              </MutedText>
+            </Disclosure>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
               const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false
