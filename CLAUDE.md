@@ -284,7 +284,8 @@ Strict three-layer separation:
 1. **`engine.js`** — all game logic is pure functions of `(args) => state => newState`, with no React
    and no side effects. Every mutation returns a new state object; invalid actions (can't afford, tier
    locked) return the *same* state reference unchanged, which callers use as a no-op signal (see
-   `tickGame`'s autobuyer loop, which breaks as soon as `buyTier` returns the same object back).
+   `tickGame`'s autobuyer loop, which breaks as soon as `buyTierQuantity` returns the same object
+   back — `buyTier` itself is only invoked one level down, inside `buyTierQuantity`'s own loop).
 2. **`useIncrementalGame.js`** — the only place holding React state. Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame, offlineProgress,
    dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
