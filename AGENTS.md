@@ -7,8 +7,10 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 ## Project
 
-**Tens** — a React incremental game. Every mechanic uses powers of ten. Single page; no routing; no
-backend — state lives in React and persists to `localStorage`.
+**Tens** — a React incremental game. Every mechanic uses powers of ten. Two top-level pages,
+`MainPage` (the game) and `InfoPage` (static "how it works" prose), toggled via a plain `useState`
+in `App.jsx` — not a routing library; no backend — state lives in React and persists to
+`localStorage`.
 
 ## Tech stack
 
@@ -59,7 +61,8 @@ src/
   components/
     Button/, Money/, StatCard/  ← shared styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
-    MainPage/index.jsx     ← single page; renders all tiers data-driven from TIER_DEFINITIONS
+    MainPage/index.jsx     ← the game; renders all tiers data-driven from TIER_DEFINITIONS
+    InfoPage/index.jsx     ← static mechanic explanations; reads no game state
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
   App.jsx                  ← root component
   index.jsx                ← ReactDOM.createRoot entry
@@ -71,7 +74,8 @@ vite.config.js             ← path aliases (below) + dev/test server config + V
 **All game logic is pure** (`src/game/engine.js`) — functions of `(args) => state => newState`, no
 React, no side effects. `useIncrementalGame.js` is the only place holding React state (tick timer,
 localStorage persistence). `MainPage/index.jsx` is a pure renderer driven entirely by
-`TIER_DEFINITIONS` and hook state.
+`TIER_DEFINITIONS` and hook state; `InfoPage/index.jsx` is a separate static page (evergreen
+mechanic explanations only, reads no game state) that `App.jsx` swaps to via a local toggle.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Bytes`–`Ronnabytes`, a byte-scale theme).
 Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and produces the

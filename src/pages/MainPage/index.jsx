@@ -1,7 +1,7 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getGlobalTickspeedRegularStep, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { version } from '../../../package.json'
@@ -48,13 +48,29 @@ const Header = styled.header`
     font-weight: 700;
     letter-spacing: 0.02em;
   }
+`
 
-  /* InfoDetails' summary is a fit-content block (so its click target hugs the text rather than
-     spanning the row) — center that block itself, since text-align only centers inline content,
-     not a block-level child, and the fit-content width is what makes auto margins work here. */
-  details summary {
-    margin: 0 auto;
-  }
+// The app version + a link to the Guide page (InfoPage — all the static "how it works" prose
+// that used to live inline here as click-to-expand disclosures, see CLAUDE.md's Architecture
+// section) sit directly beneath the title, always visible — no InfoDetails/summary wrapper
+// needed anymore, since there's no longer any collapsed body to reveal.
+const HeaderMeta = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+`
+
+const GuideLink = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.color.textMuted};
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0;
+  text-decoration: underline;
 `
 
 // Centers the offline notice as a fixed overlay in the middle of the screen, above the page
@@ -190,6 +206,57 @@ const SpeedUpButton = styled(Button)`
 
 const GlobalTickspeedCard = styled(StatCard)`
   border-color: #1d4ed8;
+`
+
+const OverclockCard = styled(StatCard)`
+  border-color: #c2410c;
+`
+
+// Matches SpeedUpButton's own font-size override, same rationale (stays visually consistent with
+// the tier list's Buy/tickspeed buttons rather than the larger standalone-card default).
+const OverclockButton = styled(Button)`
+  font-size: 0.82em;
+
+  @media (max-width: 40rem) {
+    font-size: 0.78em;
+  }
+`
+
+// Lays SpeedUpCard and OverclockCard side by side, below the tier list — both are compact "one
+// button" soft-reset cards, so sharing a row reads as a single cluster instead of stacked
+// full-width blocks. GlobalTickspeedCard renders separately, alone at the very top of the Game
+// view (see its own render site above) rather than sharing this row — it's the one control
+// relevant from the very start of a run, before the last tier (and so Speed Up/Overclock) is even
+// reachable. Each card grows to share the row equally (flex: 1) with a low floor width (8rem)
+// on wider viewports. Below 40rem (the same mobile breakpoint every other component in this file
+// uses), the row switches to a single column instead — Speed Up above Overclock, matching their
+// JSX order — rather than staying side by side down to phone width: on a narrow screen, two soft
+// resets sharing a cramped row read as harder to tell apart at a glance than a clear top-to-bottom
+// stack, even though the pair still technically fits side by side down to ~360px (an earlier
+// version optimized for exactly that fit; see docs/DESIGN_HISTORY.md for the reasoning that was
+// superseded here). `flex: 1 1 auto` in the column case lets each card's height come from its own
+// content instead of the row layout's 8rem basis (which would otherwise set every card's *height*
+// once the main axis rotates to vertical); `align-items: stretch`, flexbox's own default, is what
+// makes each stacked card fill the row's full width without an explicit `width: 100%`. Works
+// unchanged if only one of the two is currently revealed (the lone card just fills the row/column)
+// or neither (the empty wrapper renders with zero height).
+const SpeedCardsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  > * {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 40rem) {
+    flex-direction: column;
+
+    > * {
+      flex: 1 1 auto;
+    }
+  }
 `
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
@@ -380,47 +447,13 @@ const BalancesSentinel = styled.div`
   margin-top: calc(-0.85rem - 1px);
 `
 
-// A native click-to-expand disclosure replacing always-visible description prose — the summary
-// line (a card's own heading, or a one-line notice) stays minimal, and clicking it reveals the
-// full explanation. Native <details>/<summary> keeps this keyboard/screen-reader accessible with
-// no JS state; the collapsed content stays in the DOM, so aria-describedby references into it
-// (and textContent-based tests) still resolve either way. The disclosure marker (▸) is hidden
-// deliberately: no inherent visual clue that the heading expands — players discover it by
-// clicking (screen readers still announce the summary as collapsed/expanded regardless).
-const InfoDetails = styled.details`
-  summary {
-    cursor: pointer;
-    list-style: none;
-    user-select: none;
-    width: fit-content;
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  summary:hover {
-    color: #d4d4d4;
-  }
-
-  summary h1,
-  summary h2 {
-    display: inline;
-    margin: 0;
-  }
-
-  p {
-    margin-top: 0.4rem;
-  }
-`
-
 // Per-tier click-to-expand disclosure surfacing numbers that don't fit the row's compact layout —
 // most notably each tier's own base/effective tickspeed, now that base tickspeed diverges per
 // tier again (see "Tier production tickspeed" in CLAUDE.md). No separate visible "Details" label:
 // TierName itself is the trigger. This is a plain React-controlled disclosure (openTierDetailIds,
-// see MainPage), not native <details>/<summary> — a display:contents-based version (matching the
-// pattern every other InfoDetails disclosure in this file uses) was tried first, but hit a real
-// Chromium limitation where a display:contents ancestor breaks a promoted grid child's ability to
+// see MainPage), not native <details>/<summary> — a display:contents-based version was tried
+// first, but hit a real Chromium limitation where a display:contents ancestor breaks a promoted
+// grid child's ability to
 // span multiple grid-template-areas cells, collapsing TierDetailsContent below to a single
 // column's width instead of the full row (confirmed with a minimal repro, independent of whether
 // the span was expressed via a named area or explicit grid-column line numbers). TierNameTrigger
@@ -528,21 +561,20 @@ const MutedText = styled.p`
   margin: 0;
 `
 
-// The app version, always visible beside the page title (no interaction/expansion needed) —
-// unlike the tagline in InfoDetails' collapsed body below it. Reuses MutedText's muted-text
-// convention rather than a one-off color, rendered `as` a span since `<summary>` only allows
-// phrasing content, not MutedText's default block-level `<p>`.
+// The app version, always visible beside the page title. Reuses MutedText's muted-text
+// convention rather than a one-off color, rendered `as` a span rather than MutedText's default
+// block-level `<p>` so it sits inline with the title inside HeaderMeta.
 const VersionText = styled(MutedText).attrs({ as: 'span' })`
   display: block;
   font-size: 0.7rem;
   margin-top: 0.15rem;
 `
 
-// Name + compact autobuyer speed badge sharing the top line's first track. The badge shows only
-// the multiplier (⚙ ×1.1) — the autobuyer's level is deliberately not shown here, since a "Lv."
-// on this row would read as a duplicate of the Buy button's purchase level; the level lives in
-// the badge's (and Upgrade button's) title tooltip instead. The name never shrinks
-// (flex-shrink: 0); the badge ellipsizes first if the track runs out.
+// Occupies the top line's first track. Used to also share this line with a compact tickspeed
+// bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
+// name plus live production/owned figures and the two action buttons; the tickspeed bonus is
+// still visible in the row's own Details disclosure below, and autobuyer status still shows on
+// the PP Upgrades page.
 const TierName = styled.h3`
   align-items: baseline;
   column-gap: 0.4rem;
@@ -561,15 +593,45 @@ const TierNameLabel = styled.span`
   flex-shrink: 0;
 `
 
-const GreenText = styled.span`
-  color: ${props => props.theme.color.good};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  ${gridCell}
+// A native click-to-expand disclosure for a genuinely live number that would otherwise need its
+// own permanently-visible line (see GlobalTickspeedCard/OverclockCard/the Tier Tickspeed
+// Autobuyers milestone category below) — collapsed by default, the card/category's own heading
+// (wrapped in <summary>) is the only way to open it, no separate visible "expand" affordance.
+// Native <details>/<summary> keeps this keyboard/screen-reader accessible with no JS state; the
+// marker (▸) is hidden deliberately, matching every other disclosure in this app.
+const Disclosure = styled.details`
+  summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    width: fit-content;
+  }
 
-  @media (max-width: 40rem) {
-    font-size: ${props => props.theme.type.scale.xs.size};
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary h2 {
+    display: inline;
+    margin: 0;
+  }
+
+  p {
+    margin-top: 0.3rem;
   }
 `
+
+// Clicking <summary> already natively toggles a <details> element open/closed; clicking
+// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
+// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
+// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
+// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
+// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
+// passed by React).
+const collapseDisclosure = event => {
+  if (event.target.closest('summary')) return
+  event.currentTarget.open = false
+}
 
 // A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
 // — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
@@ -798,28 +860,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-// Auto-collapses a native <details> disclosure once it scrolls fully out of the viewport (either
-// direction) — every InfoDetails instance in this file is uncontrolled (no `open` prop passed by
-// React), so setting the DOM node's `.open` property directly here is safe and won't be fought by
-// a re-render. isIntersecting only flips false once the element has zero overlap with the
-// viewport (the default threshold: 0), i.e. "scrolled beyond screen" rather than merely partially
-// cut off. Returns a ref to attach to the <details> element; a no-op in environments without
-// IntersectionObserver (e.g. jsdom in tests), where a disclosure simply stays open once expanded.
-const useAutoCollapseDetails = () => {
-  const detailsRef = useRef(null)
-  useEffect(() => {
-    const details = detailsRef.current
-    if (!details || typeof IntersectionObserver === 'undefined') return undefined
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting && details.open) details.open = false
-    })
-    observer.observe(details)
-    return () => observer.disconnect()
-  }, [])
-  return detailsRef
-}
-
-const MainPage = () => {
+const MainPage = ({ onOpenInfo }) => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
   const theme = useTheme()
   const { prestige } = state
@@ -852,6 +893,7 @@ const MainPage = () => {
       resetGame()
       setView('game')
       setSpeedUpEverRevealed(false)
+      setOverclockEverRevealed(false)
       setGlobalTickspeedCardEverRevealed(false)
     }
   }
@@ -880,9 +922,8 @@ const MainPage = () => {
     else next.add(tierId)
     return next
   })
-  // Auto-collapses a tier's Details disclosure once its row scrolls fully out of the viewport, the
-  // React-controlled-disclosure equivalent of useAutoCollapseDetails above (native <details> can't
-  // be used here — see TierDetailsContent's own comment for why). A single shared
+  // Auto-collapses a tier's Details disclosure once its row scrolls fully out of the viewport
+  // (native <details> can't be used here — see TierDetailsContent's own comment for why). A single shared
   // IntersectionObserver watches every currently-rendered tier row (registered/unregistered via a
   // stable per-tier ref callback, cached in tierRowRefCallbacksRef so its identity doesn't change
   // across re-renders — a fresh callback identity every render would make React re-invoke it with
@@ -924,16 +965,6 @@ const MainPage = () => {
     }
     return tierRowRefCallbacksRef.current.get(tierId)
   }
-  // Native <details> disclosures (see useAutoCollapseDetails above) get the same treatment, one
-  // ref per fixed card — there's no list/remount churn to worry about for these, unlike the tier
-  // rows above, so a plain per-instance hook call is simpler than a shared-observer registry.
-  const headerDetailsRef = useAutoCollapseDetails()
-  const globalTickspeedDetailsRef = useAutoCollapseDetails()
-  const speedUpDetailsRef = useAutoCollapseDetails()
-  const fullSmartAutobuyerDetailsRef = useAutoCollapseDetails()
-  const tierAutobuyersInfoDetailsRef = useAutoCollapseDetails()
-  const autobuyerMilestonesDetailsRef = useAutoCollapseDetails()
-  const tierTickspeedMilestonesDetailsRef = useAutoCollapseDetails()
   // Whether the Money balance card's global-multipliers breakdown is expanded — a plain UI toggle
   // (not reset by handleResetClick, same as openTierDetailIds above) rather than a native
   // <details>/<summary> disclosure, since the disclosure's content is suppressed entirely while
@@ -997,6 +1028,36 @@ const MainPage = () => {
   const speedUpRequirementDisplay = speedUpRequirement - 1
   const speedUpProgressPercent = progressPercent(lastTierLevelDisplay, speedUpRequirementDisplay)
   const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
+
+  // Overclock: a second, rarer soft-reset than Speed Up, requiring the same last tier but a much
+  // higher (and non-shrinking-relative-to-itself) level bar — 10 for the first activation, 20 for
+  // the second, 30 for the third, … (see getOverclockRequirement/overclockGame in engine.js).
+  // Unlike Speed Up, activating it also wipes Speed Up's own stacking bonus back to zero (its
+  // speedUpCount resets to 0) in exchange for permanently raising the rate every future REGULAR
+  // level of the (Money-funded) global Tickspeed upgrade compounds at, by another 0.1 percentage
+  // points per activation (1% → 1.1% → 1.2% → …) — not a separate multiplier stacked on top, see
+  // getGlobalTickspeedRegularStep in engine.js. Gated on the same lastTierUnlocked flag and
+  // progressive-disclosure pattern as Speed Up above.
+  const [overclockEverRevealed, setOverclockEverRevealed] = useState(lastTierUnlocked)
+  useEffect(() => {
+    if (lastTierUnlocked) setOverclockEverRevealed(true)
+  }, [lastTierUnlocked])
+  const overclockCount = state.overclockCount ?? 0
+  // The current/next per-level step the global Tickspeed upgrade's own REGULAR levels compound at,
+  // expressed as a "multiplier" (1 + step) purely so formatGlobalTickspeedBonusPercent's existing
+  // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
+  // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
+  const currentGlobalTickspeedStepDisplay = 1 + getGlobalTickspeedRegularStep(overclockCount)
+  const nextGlobalTickspeedStepDisplay = 1 + getGlobalTickspeedRegularStep(overclockCount + 1)
+  const overclockRequirement = getOverclockRequirement(overclockCount)
+  // Unlike speedUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
+  // offset — see getOverclockRequirement's own comment in engine.js: it's expressed as a raw level
+  // target so the number shown here matches the same raw purchaseLevels number the last tier's own
+  // Details disclosure already shows, rather than introducing a second, differently-offset "level"
+  // reading for the same underlying value.
+  const overclockProgressPercent = progressPercent(lastTierLevel, overclockRequirement)
+  const canOverclock = !isFrozen && lastTierLevel >= overclockRequirement
+
   // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
   // allTiersFullyAutomated the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
@@ -1049,8 +1110,9 @@ const MainPage = () => {
   const autoPrestigeAutobuyerEnabled = state.autoPrestigeAutobuyerEnabled ?? true
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
-  // Auto-Prestige's null/level pattern — each level speeds up *every* tier's delivery frequency by
-  // another 1% at once, not the amount delivered (see
+  // Auto-Prestige's null/level pattern — each REGULAR level speeds up *every* tier's delivery
+  // frequency by another getGlobalTickspeedRegularStep(overclockCount) at once (1% by default,
+  // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike
   // every other automation upgrade on this page, it's Money-funded (not PP) and lives on the Game
   // view instead of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js:
@@ -1059,9 +1121,11 @@ const MainPage = () => {
   // own cost/production resource is Money itself). The level itself resets to not-yet-bought on
   // both Prestige and Speed Up (see prestigeGame/speedUpGame in engine.js), same as tier02's
   // owned count, so re-unlocking always requires owning tier02 again after either reset.
+  // overclockCount, by contrast, is NOT reset by Speed Up — its boost to the per-level step
+  // survives across a re-unlock within the same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
@@ -1243,13 +1307,13 @@ const MainPage = () => {
       )}
 
       <Header>
-        <InfoDetails ref={headerDetailsRef}>
-          <summary>
-            <h1>Tens</h1>
-            <VersionText>v{version}</VersionText>
-          </summary>
-          <HudMutedText>Build by powers of ten. Prestige for Prestige Points.</HudMutedText>
-        </InfoDetails>
+        <h1>Tens</h1>
+        <HeaderMeta>
+          <VersionText>v{version}</VersionText>
+          <GuideLink onClick={onOpenInfo} title="How this game works" type="button">
+            ℹ️ Guide
+          </GuideLink>
+        </HeaderMeta>
       </Header>
 
       {offlineProgress && (
@@ -1340,9 +1404,16 @@ const MainPage = () => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Global Tickspeed Multiplier: {isGlobalTickspeedActive
+                  Tickspeed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
+                </li>
+              )}
+              {overclockEverRevealed && (
+                <li>
+                  Overclock: {overclockCount > 0
+                    ? `Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${overclockCount} activation${overclockCount === 1 ? '' : 's'}`
+                    : `not yet activated (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
                 </li>
               )}
             </GlobalMultipliersList>
@@ -1407,17 +1478,15 @@ const MainPage = () => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global tickspeed panel">
-          <InfoDetails ref={globalTickspeedDetailsRef}>
-            <summary><h2>Global Tickspeed Multiplier</h2></summary>
-            <MutedText id="global-tickspeed-description">
-              Spend Bits to permanently speed up every tier's production ticks by another 1% at
-              once — more frequent deliveries, not bigger ones. Each level costs another power of
-              ten. Unlocks once you own {TIER_DEFINITIONS[1].name}.
-              {isGlobalTickspeedActive && ` Currently Lv.${globalTickspeedLevel} — ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.`}
-            </MutedText>
-          </InfoDetails>
+          <Disclosure onClick={collapseDisclosure}>
+            <summary><h2>Tickspeed</h2></summary>
+            {isGlobalTickspeedActive && (
+              <MutedText>
+                Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
+              </MutedText>
+            )}
+          </Disclosure>
           <Button
-            aria-describedby="global-tickspeed-description"
             aria-label={
               isGlobalTickspeedActive
                 ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
@@ -1560,11 +1629,6 @@ const MainPage = () => {
           const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
-          // Whether this tier's unit-buying autobuyer has ever been unlocked (see
-          // applyAutobuyerMilestones in engine.js) — the new on/paused indicator below only shows
-          // once that's true, same gate the PP Upgrades page's own per-tier controls use.
-          const isAutobuyerUnlocked = (state.autobuyers[tier.id] ?? null) !== null
-          const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
 
           return (
             <TierLine
@@ -1602,29 +1666,6 @@ const MainPage = () => {
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
-                  {tickspeedMultiplier > 1 && (
-                    <GreenText title={
-                      isLastTierXpUnlocked
-                        ? `${formatAmount(lastTierXpConsumed)} XP consumed — ${tickspeedBonusLabel} faster ticks`
-                        : `Tickspeed multiplier level ${tickspeedLevel} — ${tickspeedBonusLabel} faster ticks`
-                    }>
-                      ⚙ {tickspeedBonusLabel}
-                    </GreenText>
-                  )}
-                  {isAutobuyerUnlocked && (
-                    <PpUpgradeBadge
-                      $color={autobuyerEnabled ? theme.color.good : theme.color.warn}
-                      $dimmed={!autobuyerEnabled}
-                      aria-label={autobuyerEnabled ? `${tier.name}'s autobuyer active` : `${tier.name}'s autobuyer paused`}
-                      title={
-                        autobuyerEnabled
-                          ? "This tier's autobuyer is buying units automatically"
-                          : "This tier's autobuyer is currently paused — it will not buy units until resumed"
-                      }
-                    >
-                      🤖
-                    </PpUpgradeBadge>
-                  )}
                 </TierName>
               </TierNameTrigger>
               {isDetailsOpen && (
@@ -1641,8 +1682,8 @@ const MainPage = () => {
                     {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
                     {isLastTierXpUnlocked && (
                       <li>
-                        Tickspeed funded by consumed XP — unspent XP: {formatAmount(lastTierXpBalance)}
-                        {' '}(next consumption needs at least {formatAmount(lastTierXpMinConsumption)})
+                        XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
+                        {' '}(next auto-consumption needs at least {formatAmount(lastTierXpMinConsumption)})
                       </li>
                     )}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
@@ -1722,18 +1763,11 @@ const MainPage = () => {
         })}
       </TierList>
 
+      <SpeedCardsRow>
       {speedUpEverRevealed && (
         <SpeedUpCard aria-label="speed up panel">
-          <InfoDetails ref={speedUpDetailsRef}>
-            <summary><h2>Speed Up</h2></summary>
-            <MutedText id="speed-up-description">
-              Reach level {speedUpRequirementDisplay} on {lastTier.name} to trigger a Speed Up: resets your
-              tiers and resources (keeps unlocked autobuyers and Prestige Points) and permanently
-              doubles production speed. Each Speed Up needs one more level than the last.
-            </MutedText>
-          </InfoDetails>
+          <h2>Speed Up</h2>
           <SpeedUpButton
-            aria-describedby="speed-up-description"
             aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
             color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canSpeedUp}
@@ -1766,32 +1800,50 @@ const MainPage = () => {
         </SpeedUpCard>
       )}
 
+      {overclockEverRevealed && (
+        <OverclockCard aria-label="overclock panel">
+          <Disclosure onClick={collapseDisclosure}>
+            <summary><h2>Overclock</h2></summary>
+            {overclockCount > 0 && (
+              <MutedText>
+                Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {overclockCount} activation{overclockCount === 1 ? '' : 's'}.
+              </MutedText>
+            )}
+          </Disclosure>
+          <OverclockButton
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            color={canOverclock ? '#fb923c' : 'darkgrey'}
+            disabled={!canOverclock}
+            onClick={actions.overclock}
+            title={`Resets tiers (and Speed Up's bonus) and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            type="button"
+            $progress={overclockProgressPercent}
+            $progressColor="#fb923c"
+            $pulse={canOverclock}
+          >
+            <ButtonIcon>⚡ </ButtonIcon>
+            <ButtonLabel>{formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%/lvl{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Overclock progress"
+              aria-valuenow={overclockProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </OverclockButton>
+        </OverclockCard>
+      )}
+      </SpeedCardsRow>
+
       </>)}
 
       {view === 'upgrades' && !isFirstRun && (
         <UpgradesList aria-label="PP upgrades page">
           <UpgradeCategory aria-label="tier autobuyers category">
             <CategoryHeading>Tier Autobuyers</CategoryHeading>
-            <InfoDetails ref={tierAutobuyersInfoDetailsRef}>
-              <summary>ℹ️ How these controls work</summary>
-              <MutedText>
-                Each tier's unit-buying autobuyer and its tickspeed autobuyer unlock automatically as
-                you prestige more — see the Milestones page for exactly when. Once unlocked, the ⏸/▶
-                button next to each pauses or resumes it without losing the unlock. Smart is a
-                one-time Prestige Point purchase that makes a tier's unit-buying autobuyer buy one at
-                a time until a full level is affordable, then in blocks after that — fixing an
-                early-game stall where a full level isn't affordable yet.
-              </MutedText>
-            </InfoDetails>
             {allTiersFullyAutomated ? (
               <div aria-label="full smart autobuyer notice">
-                <InfoDetails ref={fullSmartAutobuyerDetailsRef}>
-                  <summary>🧠 Every tier is fully smart</summary>
-                  <MutedText>
-                    Every tier's autobuyer is fully unlocked, smart, and tickspeed-automated — since
-                    there's nothing left to buy, this list won't be shown per tier anymore.
-                  </MutedText>
-                </InfoDetails>
+                <MutedText>🧠 Every tier is fully smart — nothing left to automate here.</MutedText>
               </div>
             ) : (
               TIER_DEFINITIONS.map(tier => {
@@ -2155,10 +2207,7 @@ const MainPage = () => {
       {view === 'milestones' && !isFirstRun && (
         <UpgradesList aria-label="milestones page">
           <UpgradeCategory aria-label="tier autobuyer unlock milestones category">
-            <InfoDetails ref={autobuyerMilestonesDetailsRef}>
-              <summary><CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading></summary>
-              <MutedText>Unlocks one tier per prestige.</MutedText>
-            </InfoDetails>
+            <CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getAutobuyerUnlockMilestone(tier.id)
               const reached = (state.autobuyers[tier.id] ?? null) !== null
@@ -2200,13 +2249,12 @@ const MainPage = () => {
           </UpgradeCategory>
 
           <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <InfoDetails ref={tierTickspeedMilestonesDetailsRef}>
+            <Disclosure onClick={collapseDisclosure}>
               <summary><CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading></summary>
               <MutedText>
-                Unlocks later — starting at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)},
-                every {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} prestiges after that.
+                Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.
               </MutedText>
-            </InfoDetails>
+            </Disclosure>
             {TIER_DEFINITIONS.map(tier => {
               const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
               const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false

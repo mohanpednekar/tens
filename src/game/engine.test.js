@@ -31,10 +31,12 @@ import {
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
+  getGlobalTickspeedRegularStep,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
+  getOverclockRequirement,
   getPrestigePointsAwarded,
   getPrestigeProductionMultiplier,
   getPrestigeProgressPercent,
@@ -58,6 +60,7 @@ import {
   isLastTierTickspeedXpUnlocked,
   isProductionFrozen,
   isTierUnlocked,
+  overclockGame,
   prestigeGame,
   speedUpGame,
   tickGame,
@@ -164,6 +167,11 @@ const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
 const withSpeedUpCount = (state, count) => ({
   ...state,
   speedUpCount: count,
+})
+
+const withOverclockCount = (state, count) => ({
+  ...state,
+  overclockCount: count,
 })
 
 const withAutoSpeedUp = (state, active = true) => ({
@@ -808,6 +816,43 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(1999)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 19)
     expect(getGlobalTickspeedProductionMultiplier(2000)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 20)
   })
+
+  it('defaults to no Overclock boost (the pre-Overclock 1% regular step) when overclockCount is omitted', () => {
+    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
+  })
+
+  it('raises the REGULAR step (not the milestone step) once overclockCount > 0', () => {
+    // Overclock raises the regular per-level step from 1% to 1.1% (overclockCount 1), but the
+    // level-10 milestone step stays at the fixed 10% — Overclock only touches regular levels.
+    expect(getGlobalTickspeedProductionMultiplier(9, 1)).toBeCloseTo(1.011 ** 9)
+    expect(getGlobalTickspeedProductionMultiplier(10, 1)).toBeCloseTo(1.011 ** 9 * 1.10)
+  })
+
+  it('stacks a further 0.1 percentage points onto the regular step per additional Overclock activation', () => {
+    expect(getGlobalTickspeedProductionMultiplier(9, 2)).toBeCloseTo(1.012 ** 9)
+    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo(1.015 ** 9)
+  })
+
+  it('is still 1 (no bonus) at level 0 regardless of overclockCount', () => {
+    expect(getGlobalTickspeedProductionMultiplier(0, 5)).toBe(1)
+    expect(getGlobalTickspeedProductionMultiplier(null, 5)).toBe(1)
+  })
+})
+
+describe('getGlobalTickspeedRegularStep', () => {
+  it('is the baseline 1% (0.01) with no Overclock activations', () => {
+    expect(getGlobalTickspeedRegularStep(0)).toBe(0.01)
+  })
+
+  it('adds 0.1 percentage points (0.001) per Overclock activation', () => {
+    expect(getGlobalTickspeedRegularStep(1)).toBeCloseTo(0.011)
+    expect(getGlobalTickspeedRegularStep(2)).toBeCloseTo(0.012)
+    expect(getGlobalTickspeedRegularStep(10)).toBeCloseTo(0.02)
+  })
+
+  it('treats a negative count as 0', () => {
+    expect(getGlobalTickspeedRegularStep(-1)).toBe(0.01)
+  })
 })
 
 // ─── getPrestigeProductionMultiplier ─────────────────────────────────────────
@@ -974,6 +1019,22 @@ describe('getSpeedUpRequirement', () => {
 
   it('treats a negative count as 0', () => {
     expect(getSpeedUpRequirement(-1)).toBe(2)
+  })
+})
+
+describe('getOverclockRequirement', () => {
+  it('is level 10 for the first activation (overclockCount 0)', () => {
+    expect(getOverclockRequirement(0)).toBe(10)
+  })
+
+  it('increases by a fixed 10 levels per prior activation, not shrinking relative to itself like getSpeedUpRequirement', () => {
+    expect(getOverclockRequirement(1)).toBe(20)
+    expect(getOverclockRequirement(2)).toBe(30)
+    expect(getOverclockRequirement(3)).toBe(40)
+  })
+
+  it('treats a negative count as 0', () => {
+    expect(getOverclockRequirement(-1)).toBe(10)
   })
 })
 
@@ -1174,6 +1235,37 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     const baseTickSpeed = getTierBaseTickSpeedSeconds(lastTierId)
     const state = { owned: { [lastTierId]: 1000 } }
     expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed)
+  })
+
+  it('raises the effective tickspeed once a global tickspeed level is already bought, via Overclock\'s boosted per-level step', () => {
+    // 5 Overclock activations raise the regular step from 1% to 1.5% (5 * OVERCLOCK_PRODUCTION_STEP).
+    const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.015 ** 9))
+  })
+
+  it('has no effect at all while the global tickspeed multiplier is still at level 0/not yet bought', () => {
+    // Overclock only raises the per-level step of an existing global tickspeed level — with 0
+    // levels bought, there's nothing for that boosted step to compound, so the effective tickspeed
+    // is unaffected regardless of overclockCount.
+    const state = withOverclockCount(createInitialGameState(), 5)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
+  })
+
+  it('stacks the boosted global tickspeed step multiplicatively with the per-tier tickspeed multiplier', () => {
+    const state = withOverclockCount(
+      withGlobalTickspeedMultiplier(
+        withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
+        9
+      ),
+      5
+    )
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id))
+      .toBeCloseTo(1 / (1.1 * 1.015 ** 9))
+  })
+
+  it('falls back to 0 Overclock activations (the baseline 1% step) when overclockCount is missing from state entirely', () => {
+    const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockCount')
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9))
   })
 })
 
@@ -2995,6 +3087,14 @@ describe('prestigeGame', () => {
     expect(after.speedUpCount).toBe(0)
   })
 
+  it('resets the Overclock count to 0 across prestige, same as Speed Up', () => {
+    const state = withOverclockCount(
+      withMoney(createInitialGameState(), GOOGOL), 3
+    )
+    const after = prestigeGame(state)
+    expect(after.overclockCount).toBe(0)
+  })
+
   it('keeps the Auto Speed Up flag permanently across prestige', () => {
     const state = withAutoSpeedUp(
       withMoney(createInitialGameState(), GOOGOL)
@@ -3438,6 +3538,241 @@ describe('speedUpGame', () => {
     const state = omit(eligibleState(), 'speedUpCount')
     const after = speedUpGame(state)
     expect(after.speedUpCount).toBe(1)
+  })
+
+  it('keeps overclockCount permanently across an ordinary Speed Up', () => {
+    const state = withOverclockCount(eligibleState(), 4)
+    const after = speedUpGame(state)
+    expect(after.overclockCount).toBe(4)
+  })
+})
+
+// ─── overclockGame ───────────────────────────────────────────────────────────
+
+describe('overclockGame', () => {
+  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  // getOverclockRequirement(0) = 10
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 10)
+
+  it('does nothing when the last tier is below the required level', () => {
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 9)
+    expect(overclockGame(state)).toBe(state)
+  })
+
+  it('does nothing while production is frozen at GOOGOL', () => {
+    const state = withMoney(eligibleState(), GOOGOL)
+    expect(overclockGame(state)).toBe(state)
+  })
+
+  it('increments overclockCount by 1', () => {
+    const after = overclockGame(eligibleState())
+    expect(after.overclockCount).toBe(1)
+  })
+
+  it('requires 10 more levels on each subsequent activation, not the +1 ladder Speed Up uses', () => {
+    // After 1 prior activation, the requirement is level 20, not level 11.
+    const stillLevel10 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 10), 1
+    )
+    expect(overclockGame(stillLevel10)).toBe(stillLevel10)
+
+    const level20 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 20), 1
+    )
+    const after = overclockGame(level20)
+    expect(after.overclockCount).toBe(2)
+  })
+
+  it('resets speedUpCount to 0, wiping Speed Up\'s own stacking bonus', () => {
+    const state = withSpeedUpCount(eligibleState(), 5)
+    const after = overclockGame(state)
+    expect(after.speedUpCount).toBe(0)
+  })
+
+  it('resets money to the starting amount', () => {
+    const state = withMoney(eligibleState(), 99999)
+    const after = overclockGame(state)
+    expect(after.resources[MONEY_ID]).toBe(1)
+  })
+
+  it('resets all owned and purchased counts to 0, along with every tier\'s purchaseLevels/purchaseLevelProgress', () => {
+    const state = withPurchaseLevelProgress(
+      withOwned(eligibleState(), tensTier.id, 50),
+      tensTier.id, 3
+    )
+    const after = overclockGame(state)
+    TIER_DEFINITIONS.forEach(tier => {
+      expect(after.owned[tier.id]).toBe(0)
+      expect(after.purchased[tier.id]).toBe(0)
+      expect(after.purchaseLevels[tier.id]).toBe(1)
+      expect(after.purchaseLevelProgress[tier.id]).toBe(0)
+    })
+    expect(getPurchaseBlockSize(after)).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
+  })
+
+  it('keeps an unlocked tier\'s autobuyer flag active across Overclock', () => {
+    const state = withAutobuyer(eligibleState(), tensTier.id, 1)
+    const after = overclockGame(state)
+    expect(after.autobuyers[tensTier.id]).not.toBeNull()
+  })
+
+  it('resets a tier\'s tickspeed level back to the baseline (1) on Overclock', () => {
+    const state = withTickspeedLevel(eligibleState(), tensTier.id, 3)
+    const after = overclockGame(state)
+    expect(after.tickspeedLevels[tensTier.id]).toBe(1)
+  })
+
+  it('keeps the smart autobuyer flag permanently', () => {
+    const state = withSmartAutobuyer(eligibleState(), tensTier.id)
+    const after = overclockGame(state)
+    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('keeps the tier tickspeed autobuyer flag permanently', () => {
+    const state = withTierTickspeedAutobuyer(eligibleState(), tensTier.id)
+    const after = overclockGame(state)
+    expect(after.tierTickspeedAutobuyer[tensTier.id]).toBe(true)
+  })
+
+  it('keeps the Auto-Prestige level permanently', () => {
+    const state = withAutoPrestige(eligibleState(), 3)
+    const after = overclockGame(state)
+    expect(after.autoPrestige).toBe(3)
+  })
+
+  it('resets the global tickspeed multiplier level back to not-yet-bought (null)', () => {
+    const state = withGlobalTickspeedMultiplier(eligibleState(), 3)
+    const after = overclockGame(state)
+    expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('keeps the Tickspeed Autobuyer (automation toggle) permanently even though the level itself resets', () => {
+    const state = withAutoGlobalTickspeed(withGlobalTickspeedMultiplier(eligibleState(), 3))
+    const after = overclockGame(state)
+    expect(after.autoGlobalTickspeed).toBe(true)
+    expect(after.globalTickspeedMultiplier).toBeNull()
+  })
+
+  it('keeps the prestige speed bonus unlock permanently', () => {
+    const state = withPrestigeSpeedBonusUnlocked(eligibleState())
+    const after = overclockGame(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+  })
+
+  it('keeps the Auto Speed Up flag permanently', () => {
+    const state = withAutoSpeedUp(eligibleState())
+    const after = overclockGame(state)
+    expect(after.autoSpeedUp).toBe(true)
+  })
+
+  it('keeps the Auto-Prestige Autobuyer flag permanently', () => {
+    const state = withAutoPrestigeAutobuyer(withAutoPrestige(eligibleState(), 1))
+    const after = overclockGame(state)
+    expect(after.autoPrestigeAutobuyer).toBe(true)
+  })
+
+  it('keeps a paused (disabled) global automation permanently paused, same as the parent unlock flag', () => {
+    const state = withAutoPrestigeAutobuyerEnabled(
+      withAutoPrestigeEnabled(
+        withAutoGlobalTickspeedEnabled(
+          withAutoSpeedUpEnabled(
+            withAutoPrestigeAutobuyer(
+              withAutoPrestige(
+                withAutoGlobalTickspeed(withAutoSpeedUp(eligibleState())),
+                1
+              )
+            ),
+            false
+          ),
+          false
+        ),
+        false
+      ),
+      false
+    )
+    const after = overclockGame(state)
+    expect(after.autoSpeedUpEnabled).toBe(false)
+    expect(after.autoGlobalTickspeedEnabled).toBe(false)
+    expect(after.autoPrestigeEnabled).toBe(false)
+    expect(after.autoPrestigeAutobuyerEnabled).toBe(false)
+  })
+
+  it('leaves Prestige Points and count untouched, but resets XP to 0', () => {
+    const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
+    const after = overclockGame(state)
+    expect(after.prestige.points).toBe(42)
+    expect(after.prestige.count).toBe(0)
+    expect(after.prestige.xp).toBe(0)
+  })
+
+  it('resets the highestMilestone watermark to the fresh initial value', () => {
+    const state = {
+      ...eligibleState(),
+      prestige: { ...eligibleState().prestige, highestMilestone: 30 },
+    }
+    const after = overclockGame(state)
+    expect(after.prestige.highestMilestone).toBe(createInitialGameState().prestige.highestMilestone)
+  })
+
+  it('resets the last tier\'s owned count (disengaging its live XP tickspeed check) and resets lastTierXpConsumed to 0 across Overclock', () => {
+    const state = withLastTierXpConsumed(
+      withLastTierTickspeedXpUnlocked(eligibleState()),
+      42
+    )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
+    const after = overclockGame(state)
+    expect(after.owned[lastTier.id]).toBe(0)
+    expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
+    expect(after.lastTierXpConsumed).toBe(0)
+  })
+
+  it('resets everUnlockedTierIds on Overclock, same as owned/purchased, so a tier relocks like it always has', () => {
+    const state = withEverUnlockedTierIds(
+      withOwned(eligibleState(), thousandsTier.id, 50),
+      thousandsTier.id,
+      true
+    )
+    const after = overclockGame(state)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
+  })
+
+  it('falls back to fresh-state defaults for every permanent automation flag when the incoming state predates them entirely', () => {
+    const fresh = createInitialGameState()
+    const state = omit(
+      eligibleState(),
+      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
+      'autoSpeedUp', 'autoSpeedUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
+    )
+    const after = overclockGame(state)
+    expect(after.autobuyers).toEqual(fresh.autobuyers)
+    expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
+    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
+    expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
+    expect(after.autoPrestige).toBe(fresh.autoPrestige)
+    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoPrestigeAutobuyer).toBe(fresh.autoPrestigeAutobuyer)
+    expect(after.autoPrestigeAutobuyerEnabled).toBe(fresh.autoPrestigeAutobuyerEnabled)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
+    expect(after.autoSpeedUp).toBe(fresh.autoSpeedUp)
+    expect(after.autoSpeedUpEnabled).toBe(fresh.autoSpeedUpEnabled)
+    expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
+    expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
+  })
+
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which never meets the (≥10) requirement', () => {
+    const state = omit(withMoney(createInitialGameState(), 1), 'purchaseLevels')
+    expect(overclockGame(state)).toBe(state)
+  })
+
+  it('falls back to 0 when overclockCount is missing from state entirely', () => {
+    const state = omit(eligibleState(), 'overclockCount')
+    const after = overclockGame(state)
+    expect(after.overclockCount).toBe(1)
   })
 })
 

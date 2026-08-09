@@ -7,6 +7,8 @@ import {
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
+  OVERCLOCK_PRODUCTION_STEP,
+  OVERCLOCK_REQUIREMENT_STEP,
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   RESOURCE_SYMBOL,
@@ -172,5 +174,13 @@ describe('constants', () => {
 
   it('SPEED_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
+  })
+
+  it('OVERCLOCK_PRODUCTION_STEP is 0.001 (0.1 percentage points added to the global tickspeed multiplier\'s own per-level step, per activation)', () => {
+    expect(OVERCLOCK_PRODUCTION_STEP).toBe(0.001)
+  })
+
+  it('OVERCLOCK_REQUIREMENT_STEP is 10 (a fixed 10-level jump per activation)', () => {
+    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(10)
   })
 })
