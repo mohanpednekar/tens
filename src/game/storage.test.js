@@ -558,24 +558,40 @@ describe('schema migration', () => {
     expect(loaded.resources[MONEY_ID]).toBe(999)
   })
 
-  it('remaps legacy name-based tier ids to the new tier0N ids', () => {
+  it('remaps legacy name-based tier ids to the new tier0N ids, shifted down one slot (Tens was old Bytes/tier01, now dropped; Thousands was old Kilobytes/tier02, now tier01)', () => {
     const oldSave = {
-      resources: { Ones: 10, Tens: 3, Thousands: 1 },
-      owned: { Tens: 3, Thousands: 1 },
-      purchased: { Tens: 6, Thousands: 1 },
-      autobuyers: { Tens: 2, Thousands: null },
+      resources: { Ones: 10, Tens: 3, Thousands: 1, Millions: 2 },
+      owned: { Tens: 3, Thousands: 1, Millions: 2 },
+      purchased: { Tens: 6, Thousands: 1, Millions: 2 },
+      autobuyers: { Tens: 2, Thousands: null, Millions: 1 },
       prestige: { xp: 0, level: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.resources.tier01).toBe(3)
-    expect(loaded.resources.tier02).toBe(1)
-    expect(loaded.owned.tier01).toBe(3)
-    expect(loaded.owned.tier02).toBe(1)
-    expect(loaded.purchased.tier01).toBe(6)
-    expect(loaded.purchased.tier02).toBe(1)
-    expect(loaded.autobuyers.tier01).toBe(2)
-    expect(loaded.autobuyers.tier02).toBeNull()
+    // Tens (old tier01/Bytes) has no successor — dropped, not carried to new tier01.
+    expect(loaded.resources.tier01).toBe(1) // from Thousands (old tier02/Kilobytes), not Tens' 3
+    expect(loaded.resources.tier02).toBe(2) // from Millions (old tier03/Megabytes)
+    expect(loaded.owned.tier01).toBe(1)
+    expect(loaded.owned.tier02).toBe(2)
+    expect(loaded.purchased.tier01).toBe(1)
+    expect(loaded.purchased.tier02).toBe(2)
+    expect(loaded.autobuyers.tier01).toBeNull() // from Thousands
+    expect(loaded.autobuyers.tier02).toBe(1) // from Millions
+  })
+
+  it('shifts already-current-scheme tierNN keys down one slot too (old tier02/Kilobytes data becomes new tier01, old tier10/Ronnabytes data has no new home and is dropped)', () => {
+    const oldSave = {
+      resources: { base: 10, tier01: 999, tier02: 5, tier10: 7 },
+      owned: { tier01: 999, tier02: 5, tier10: 7 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    // Old tier01 (Bytes) data (999) is dropped, not misread as new tier01 (Kilobytes).
+    expect(loaded.owned.tier01).toBe(5) // from old tier02 (Kilobytes)
+    // Old tier10 (Ronnabytes) has no new tier11 to move to — dropped, new tier10 (Quettabytes)
+    // starts fresh at 0, not misread as 7.
+    expect(loaded.owned.tier10).toBe(0)
   })
 
   it('drops data under removed legacy tier ids (Nonillions/Decillions) without error', () => {
@@ -605,6 +621,28 @@ describe('schema migration', () => {
     const loaded = loadGameState()
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
+
+  it('backfills intro.completed to true for a save from before the Byte Foundry intro existed (no intro field at all)', () => {
+    const oldSave = {
+      resources: { base: 5000 },
+      owned: { [tensTier.id]: 3 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.intro.completed).toBe(true)
+  })
+
+  it('preserves a save\'s own in-progress intro state rather than backfilling it', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, productionMultiplier: 2, completed: false },
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    expect(loaded.intro).toEqual(state.intro)
+  })
+
 })
 
 describe('clearGameState', () => {

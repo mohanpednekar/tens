@@ -305,6 +305,50 @@ The following records *why* specific MainPage/component behaviors were built the
 
 ## Economy model
 
+### Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry intro
+
+Bytes (`tier01`, cost 1 Bit, self-producing) was the game's entire bootstrap: a fresh save started
+with `MONEY_STARTING_AMOUNT` (1 Bit), affordable Bytes at cost 1, and everything else cascaded from
+there. Requested as a deliberate redesign: rather than starting the player directly inside the
+Money-driven tier economy, a separate tap-to-earn pre-game screen (the "Byte Foundry") now stands in
+front of it — tap for bits, combine 8 into a Byte generator, grow capacity/production through two
+escalating tracks, then convert (manually or via a one-time 8000-bit auto-invest) into the main game's
+starting Kilobytes. This intentionally slows down and re-frames the opening of a run as its own small
+game rather than an instant drop into the tier list, and reuses Kilobytes (previously `tier02`) as the
+new bootstrap tier instead — every other tier shifted down one slot to fill the vacated position, and a
+new Quettabytes tier was appended at the top to keep the ladder at 10 tiers.
+
+This is a genuine, permanent removal, not a rename: Bytes' `id`/`name`/`symbol` don't exist anywhere in
+`TIER_DEFINITIONS` any more. A save from before this shipped has its per-tier data shifted down to
+match (old `tier02`'s Kilobytes data → new `tier01`, …, old `tier01`'s Bytes data has nowhere to go and
+is dropped) — see `storage.js`'s `shiftOldTierIds`/`isPreByteFoundrySave`. That gate specifically
+matters for correctness: `migrateState` runs on *every* load, not just once, so the shift itself is
+gated on the same one-time `saved.intro === undefined` signal used to backfill `intro.completed` for a
+pre-existing save — without that gate, a save already on the *current* (post-shift) scheme would have
+no way to signal "don't shift me again," and would silently lose its real `tier01` data on its next
+load. Reusing the `intro` field's own existence as that marker (rather than inventing a separate schema
+version field) works because both changes shipped in the same feature and are permanently coupled — a
+save either predates both or postdates both.
+
+### Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number
+
+Once Bytes stopped being a tier and the main game's base currency stayed denominated in Bits, framing
+the Prestige/freeze trigger as "1 Googol Bytes" (matching the Byte Foundry's own Bytes-flavored
+framing) meant the actual Bits-denominated threshold needed to be 8x `GOOGOL`, not `GOOGOL` itself — a
+Byte is `BITS_PER_BYTE` (8) Bits. Rather than picking a round replacement number (e.g. just bumping
+`GOOGOL` itself to `8e100`, or introducing an unrelated new round threshold), the actual trigger became
+`PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE`, keeping `GOOGOL` itself unchanged at its clean `1e100`.
+This was a deliberate split: `GOOGOL`'s own exponent (100) is what the log-scale formulas
+(`getPrestigePointsAwarded`, `getMoneyExponent`, `getPrestigeProgressPercent`) key off, and an 8x
+constant factor shifts that exponent by less than 1 (`log10(8) ≈ 0.903`) — negligible at `GOOGOL`'s
+scale, and not worth threading a second exponent through every one of those formulas for no visible
+difference in their output. Only the actual live freeze/Prestige *trigger* (`isProductionFrozen`/
+`prestigeGame`'s own guard) reads `PRESTIGE_THRESHOLD`; everything exponent-based still reads `GOOGOL`.
+The progress bar (`getPrestigeProgressPercent`) is a known, accepted minor consequence of this split: it
+reads 100% once Money's exponent reaches 100, which happens slightly before the real threshold
+(exponent ≈100.9) is actually crossed — an intentionally accepted cosmetic imprecision rather than
+complicating the percent formula for a sub-1%-of-a-magnitude difference.
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently

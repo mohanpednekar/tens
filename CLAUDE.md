@@ -10,8 +10,10 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
-app switches between two top-level pages, `MainPage` (the game itself) and `InfoPage` (all the static
-"how it works" prose), via a plain `useState` toggle in `App.jsx` — not a router (see "Architecture" below).
+app switches between three top-level pages, `ByteFoundryPage` (the tap-to-earn pre-game bootstrap, shown
+until its one-time transition into the main game), `MainPage` (the game itself), and `InfoPage` (all the
+static "how it works" prose), via a plain `useState` toggle in `App.jsx` — not a router (see "Architecture"
+below).
 
 ## Tech stack
 
@@ -221,9 +223,17 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
+    ByteFoundryPage/index.jsx ← the pre-game "Byte Foundry" tap screen, shown until its one-time
+                               auto-invest transition into the main game (see "Economy model" below and
+                               `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section). Receives the full
+                               `game` object (`{ state, actions, ... }` from `useIncrementalGame`) as a
+                               prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
-                               (see "Architecture" below). Full field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
+                               (see "Architecture" below). Takes `{ game, onOpenInfo }` props — `game` is
+                               the full `useIncrementalGame()` object, lifted up into App.jsx (see below)
+                               so ByteFoundryPage and MainPage can share one save/tick loop. Full
+                               field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page: static, evergreen explanations of every mechanic
                                (Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones) that used
                                to live inline on MainPage as click-to-expand disclosures. Reads no game
@@ -245,11 +255,17 @@ src/
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
                                imports `./fonts` as a side effect; `mode` defaults to dark and is the
                                seam #140 will drive from system pref + toggle
-  App.jsx                   ← root component; wraps <ThemeProvider><GlobalStyle/> and switches between
-                               <MainPage/>/<InfoPage/> via a local `page` useState toggle (`'game'`/
-                               `'info'`) passed down as `onOpenInfo`/`onBack` callbacks — not a routing
-                               library, same "local toggle, not real routing" convention MainPage's own
-                               Game/Upgrades/Milestones view tabs already use
+  App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
+                               from MainPage so ByteFoundryPage can share the same save/tick loop) and
+                               wraps <ThemeProvider><GlobalStyle/>, switching between
+                               <ByteFoundryPage/>/<MainPage/>/<InfoPage/> via a local `page` useState
+                               toggle (`'intro'`/`'game'`/`'info'`) — not a routing library, same "local
+                               toggle, not real routing" convention MainPage's own Game/Upgrades/Milestones
+                               view tabs already use. Initial `page` is computed once at mount from
+                               `game.state.intro.completed`; an effect auto-transitions `'intro'` → `'game'`
+                               the instant that flag flips true mid-session (the Byte Foundry's one-time
+                               auto-invest — see "Economy model" below), and there is deliberately no path
+                               back to `'intro'` once left
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -286,9 +302,10 @@ Strict three-layer separation:
    locked) return the *same* state reference unchanged, which callers use as a no-op signal (see
    `tickGame`'s autobuyer loop, which breaks as soon as `buyTierQuantity` returns the same object
    back — `buyTier` itself is only invoked one level down, inside `buyTierQuantity`'s own loop).
-2. **`useIncrementalGame.js`** — the only place holding React state. Owns the `setInterval` tick timer
-   and the localStorage persistence effect, and exposes `{ state, actions, resetGame, offlineProgress,
-   dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (not in
+   MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
+   tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
+   offlineProgress, dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown
@@ -302,35 +319,57 @@ Strict three-layer separation:
    effectiveSeconds }` summary as `offlineProgress`; `dismissOfflineProgress` (and `resetGame`) clear
    it back to `null`. This happens once, before the tick timer starts.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
-   `state`. Renders each unlocked tier as a single compact grid row rather than separate cards. Kept
-   purely game — live controls, numbers, and status text only; it takes an `onOpenInfo` callback
-   (wired by `App.jsx`) for its one navigation link out to `InfoPage`, but reads no explanatory prose
-   about *how* a mechanic works, only *what its current state is* (e.g. the Tickspeed panel's "Lv.N —
-   +X% faster ticks" line is live status, not a description, so it stays here). See
-   docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
-4. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
+   `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
+   each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
+   controls, numbers, and status text only; it takes an `onOpenInfo` callback (wired by `App.jsx`) for
+   its one navigation link out to `InfoPage`, but reads no explanatory prose about *how* a mechanic
+   works, only *what its current state is* (e.g. the Tickspeed panel's "Lv.N — +X% faster ticks" line
+   is live status, not a description, so it stays here). See docs/MAINPAGE_REFERENCE.md for the full
+   field-by-field layout.
+4. **`ByteFoundryPage/index.jsx`** — the pre-game tap screen (see "Economy model" below), also a pure
+   renderer taking `game` as a prop. Runs entirely before the main game is reachable at all — it's the
+   only way a fresh save ever earns its first Kilobytes, replacing the old, since-removed self-producing
+   Bytes tier as the game's actual bootstrap.
+5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
    state at all, only pure constants/formulas from `game/engine.js`/`game/layers.js`, so nothing here
-   can drift out of sync with a live run. `App.jsx` toggles between this and `MainPage` locally; there
+   can drift out of sync with a live run. `App.jsx` toggles between the three pages locally; there
    is still no routing library or backend involved.
 
 ## Economy model
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
-display names `Bytes` through `Ronnabytes` (a byte-scale/computing theme). Every tier is bought
+display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). Every tier is bought
 directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces
 the tier immediately below it, cascading production down to the base currency; `tier01` is the special
-case where cost and production resource are both the base currency. Reaching Money ≥ `GOOGOL` (1e100)
-freezes the economy except for Prestige.
+case where cost and production resource are both the base currency. Reaching Money ≥ `PRESTIGE_THRESHOLD`
+(`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
+the economy except for Prestige. `GOOGOL` (1e100) itself is still exported and used as-is by the
+exponent-based formulas (`getPrestigePointsAwarded`/`getMoneyExponent`/`getPrestigeProgressPercent`) —
+only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` value; see
+`docs/DESIGN_HISTORY.md` for why.
+
+Bytes are no longer a purchasable tier — they were pulled out of `TIER_DEFINITIONS` entirely in favor of
+the **Byte Foundry**, a separate pre-game tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above)
+that every fresh save must complete before the main game (`tier01` = Kilobytes onward) is reachable at
+all. The player taps to accumulate bits (capped at a capacity, starting at 8), combines their first 8 into
+a permanent Byte generator (which then produces bits passively), and grows two independent tracks each
+time the balance fills: sacrificing the full balance for 10x capacity, or spending the current capacity's
+worth of bits (without requiring fullness, and without draining beyond that cost) to double the Byte's
+production rate. Once capacity reaches 1000, bits can be manually converted (1000 bits → 1 Kilobyte) or,
+once the balance reaches 8000, the whole balance auto-converts into 8 Kilobytes exactly once — the
+one-time transition into the main game. Full state shape, engine functions, and constants: see the "Byte
+Foundry" section of `docs/ECONOMY_REFERENCE.md`.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
-tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the complete
-game state shape, and the engine function/constants tables — lives in `docs/ECONOMY_REFERENCE.md`. Read it
-before touching `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/
-prestige/tickspeed constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to
-change a formula a past iteration may already have tried and rejected.
+tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the Byte
+Foundry pre-game screen, the complete game state shape, and the engine function/constants tables —
+lives in `docs/ECONOMY_REFERENCE.md`. Read it before touching `src/game/engine.js`,
+`src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed constant or formula — and
+check `docs/DESIGN_HISTORY.md` first if you're about to change a formula a past iteration may already
+have tried and rejected.
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
@@ -414,12 +453,16 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (706 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (724 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
-  `Bytes`/`Kilobytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`) left
-  behind by prior renames (see `docs/DESIGN_HISTORY.md`). A legacy save's `resources.Ones` balance is
-  migrated to `resources.base` on load (see `storage.js`'s `migrateState`). `src/theme/contrast.js` (a
+  `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
+  purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy
+  save's `resources.Ones` balance is migrated to `resources.base` on load, and a save from before the tier
+  ladder shifted has its per-tier data shifted down one slot (old `tier02`/Kilobytes → new `tier01`, …,
+  old `tier01`/Bytes dropped entirely) — gated on the same one-time `intro === undefined` signal that
+  also backfills `intro.completed: true` for such a save (see `storage.js`'s `migrateState`/
+  `shiftOldTierIds`). `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
@@ -439,18 +482,20 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (698, see "Testing" above) is unaffected by anything under `e2e/`.
+  (724, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
   object only needs the fields a given test cares about; `storage.js`'s `migrateState` fills in the rest
-  from `createInitialGameState()` on load.
-- Current specs: `e2e/golden-path.e2e.js` (fresh state, buying Bytes via the real Buy button, Owned count
-  and money balance updating including across a real production tick), `e2e/autobuyer-reload.e2e.js` (a
-  save with a tier's autobuyer already unlocked survives a real reload without being silently relocked —
-  a regression class guarded by `migrateState`'s legacy-boolean-vs-numeric handling), and
-  `e2e/prestige.e2e.js` (seeding Money ≥ `GOOGOL`, prestiging from the first-time `FullScreenOverlay`, and
-  confirming resources reset and Prestige Points are awarded).
+  from `createInitialGameState()` on load — including `intro: { completed: true }`, needed by every spec
+  that seeds state to land directly on MainPage rather than the Byte Foundry intro screen.
+- Current specs: `e2e/golden-path.e2e.js` (fresh state with the intro pre-completed, buying Kilobytes via
+  the real Buy button, Owned count and money balance updating including across a real production tick),
+  `e2e/autobuyer-reload.e2e.js` (a save with a tier's autobuyer already unlocked survives a real reload
+  without being silently relocked — a regression class guarded by `migrateState`'s
+  legacy-boolean-vs-numeric handling), and `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
+  prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
+  are awarded).
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
   the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
   to `autonomous-maintenance.yml` (see docs/AUTOMATION.md) — a human needs to do that wiring

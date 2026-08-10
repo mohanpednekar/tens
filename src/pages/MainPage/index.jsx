@@ -2,8 +2,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getGlobalTickspeedRegularStep, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, GOOGOL, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
-import { useIncrementalGame } from 'game/useIncrementalGame'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -484,7 +483,7 @@ const TierDetailsContent = styled.div`
   }
 `
 
-// Mandatory full-screen takeover shown only the very first time Money reaches GOOGOL (before the
+// Mandatory full-screen takeover shown only the very first time Money reaches PRESTIGE_THRESHOLD (before the
 // player has ever prestiged) — covers the whole viewport so the frozen, disabled page underneath
 // is never visible/reachable; there's deliberately no close/dismiss control (see PrestigeButton
 // below, the only thing left clickable while frozen).
@@ -527,7 +526,7 @@ const FullScreenCard = styled.div`
   }
 `
 
-// From the 2nd prestige onward, reaching GOOGOL again shows a compact banner pinned to the top
+// From the 2nd prestige onward, reaching PRESTIGE_THRESHOLD again shows a compact banner pinned to the top
 // of the viewport instead of the full-screen takeover — the player already knows what Prestige
 // does, so a persistent-but-unobtrusive reminder is enough.
 const TopPrestigeBar = styled.div`
@@ -860,15 +859,15 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ onOpenInfo }) => {
-  const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = useIncrementalGame()
+const MainPage = ({ game, onOpenInfo }) => {
+  const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
   const theme = useTheme()
   const { prestige } = state
   // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
   // on-button progress treatment: how much of a given PP cost the current unspent balance
   // already covers.
   const ppProgressPercent = cost => progressPercent(prestige.points, cost)
-  const canPrestige = state.resources[MONEY_ID] >= GOOGOL
+  const canPrestige = state.resources[MONEY_ID] >= PRESTIGE_THRESHOLD
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
   const prestigeBonus = state.prestigeSpeedBonusUnlocked
@@ -880,7 +879,7 @@ const MainPage = ({ onOpenInfo }) => {
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
-  const prestigeLabel = 'Prestige (requires 1 Googol Bits)'
+  const prestigeLabel = 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Which top-level view is showing — a local toggle, not real routing (see ViewNav above). Reset
   // back to 'game' on a full Reset, alongside the reveal flags below.
@@ -984,7 +983,7 @@ const MainPage = ({ onOpenInfo }) => {
     state.smartAutobuyer?.[tier.id] && state.tierTickspeedAutobuyer?.[tier.id]
   )
 
-  // All production and purchasing freezes the instant Money reaches GOOGOL (see
+  // All production and purchasing freezes the instant Money reaches PRESTIGE_THRESHOLD (see
   // isProductionFrozen in engine.js) — Prestige is the only remaining action. The first time
   // this ever happens (before the player has prestiged even once) it's a mandatory full-screen
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
@@ -1002,7 +1001,7 @@ const MainPage = ({ onOpenInfo }) => {
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
 
   // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
-  // GOOGOL (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
+  // PRESTIGE_THRESHOLD (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
   // (getSpeedUpRequirement(speedUpCount): level 2 for the first activation, level 3 for the
   // second, level 4 for the third, …), it resets tiers/resources but permanently doubles
   // production speed, stacking with every prior activation. Gated on the last tier having ever
@@ -1086,7 +1085,7 @@ const MainPage = ({ onOpenInfo }) => {
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
   // Lv./Upgrade pattern — once activated (level 1), it fires roughly every
-  // AUTO_PRESTIGE_BASE_INTERVAL_SECONDS once Money is at/above GOOGOL; each further level speeds
+  // AUTO_PRESTIGE_BASE_INTERVAL_SECONDS once Money is at/above PRESTIGE_THRESHOLD; each further level speeds
   // that up by 10% at double the previous level's cost (see getAutoPrestigeAttemptRate/
   // getAutoPrestigeCost).
   const autoPrestigeLevel = state.autoPrestige ?? null
@@ -1256,7 +1255,7 @@ const MainPage = ({ onOpenInfo }) => {
         <FullScreenCard>
           <h2>✦ Prestige Available!</h2>
           <MutedText>
-            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bits. All
+            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
           </MutedText>
           <ul>
@@ -1289,7 +1288,7 @@ const MainPage = ({ onOpenInfo }) => {
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
-            <MutedText>1 Googol Bits reached — production has stopped.</MutedText>
+            <MutedText>1 Googol Bytes reached — production has stopped.</MutedText>
             <Button
               aria-label={prestigeAriaLabel}
               color="#fbbf24"
@@ -1378,7 +1377,7 @@ const MainPage = ({ onOpenInfo }) => {
               </GoogolProgressTrack>
               <VisuallyHidden
                 role="progressbar"
-                aria-label="progress toward 1 Googol Bits, when Prestige becomes available"
+                aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
                 aria-valuenow={prestigeProgressPercent}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -1442,17 +1441,22 @@ const MainPage = ({ onOpenInfo }) => {
         )}
       </StickyBalances>
 
-      {!isFirstRun && (
-        <ViewNav role="tablist" aria-label="page view">
-          <ViewTabButton
-            aria-selected={view === 'game'}
-            color={view === 'game' ? 'white' : 'darkgrey'}
-            onClick={() => setView('game')}
-            role="tab"
-            type="button"
-          >
-            Game
-          </ViewTabButton>
+      {/* Game and Milestones are always reachable (MainPage itself is only ever rendered once the
+          Byte Foundry intro is complete) — Chapters (see the Milestones view below) needs to be
+          visible before a first Prestige so "Go Googol" can actually be seen locked, not
+          permanently pre-checked. Upgrades stays gated on !isFirstRun: PP upgrades genuinely don't
+          exist before a first Prestige. */}
+      <ViewNav role="tablist" aria-label="page view">
+        <ViewTabButton
+          aria-selected={view === 'game'}
+          color={view === 'game' ? 'white' : 'darkgrey'}
+          onClick={() => setView('game')}
+          role="tab"
+          type="button"
+        >
+          Game
+        </ViewTabButton>
+        {!isFirstRun && (
           <ViewTabButton
             aria-selected={view === 'upgrades'}
             color={view === 'upgrades' ? 'white' : 'darkgrey'}
@@ -1462,17 +1466,17 @@ const MainPage = ({ onOpenInfo }) => {
           >
             Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
           </ViewTabButton>
-          <ViewTabButton
-            aria-selected={view === 'milestones'}
-            color={view === 'milestones' ? 'white' : 'darkgrey'}
-            onClick={() => setView('milestones')}
-            role="tab"
-            type="button"
-          >
-            Milestones
-          </ViewTabButton>
-        </ViewNav>
-      )}
+        )}
+        <ViewTabButton
+          aria-selected={view === 'milestones'}
+          color={view === 'milestones' ? 'white' : 'darkgrey'}
+          onClick={() => setView('milestones')}
+          role="tab"
+          type="button"
+        >
+          Milestones
+        </ViewTabButton>
+      </ViewNav>
 
       {view === 'game' && (<>
 
@@ -2125,7 +2129,7 @@ const MainPage = ({ onOpenInfo }) => {
                 <TierNameLabel>
                   Auto-Prestige
                   {isAutoPrestigeActive && (
-                    <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol`}>
+                    <MutedText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol Bytes`}>
                       <PpUpgradeBadge $dimmed={!autoPrestigeEnabled} aria-label={autoPrestigeEnabled ? 'Auto-Prestige active' : 'Auto-Prestige paused'}>✦</PpUpgradeBadge>
                       {' '}Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
                     </MutedText>
@@ -2141,7 +2145,7 @@ const MainPage = ({ onOpenInfo }) => {
                     color={canBuyAutoPrestige ? '#38bdf8' : 'darkgrey'}
                     disabled={!canBuyAutoPrestige}
                     onClick={actions.buyAutoPrestige}
-                    title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol — each level makes it fire 10% sooner, at double the cost"
+                    title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes — each level makes it fire 10% sooner, at double the cost"
                     type="button"
                     $progress={ppProgressPercent(autoPrestigeCost)}
                     $progressColor="#38bdf8"
@@ -2204,8 +2208,32 @@ const MainPage = ({ onOpenInfo }) => {
         </UpgradesList>
       )}
 
-      {view === 'milestones' && !isFirstRun && (
+      {view === 'milestones' && (
         <UpgradesList aria-label="milestones page">
+          <UpgradeCategory aria-label="chapters category">
+            <CategoryHeading>Chapters</CategoryHeading>
+            {[
+              { label: 'The first KiloByte', reached: !!state.intro?.completed },
+              { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
+              { label: 'Coming soon…', reached: false },
+            ].map(chapter => (
+              <UpgradeRow key={chapter.label} aria-label={`${chapter.label} chapter`}>
+                <span>{chapter.label}</span>
+                <PpUpgradeBadge
+                  $color={chapter.reached ? '#4ade80' : 'darkgrey'}
+                  $dimmed={!chapter.reached}
+                  aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
+                >
+                  {chapter.reached ? '✅' : '🔒'} {chapter.label}
+                </PpUpgradeBadge>
+              </UpgradeRow>
+            ))}
+          </UpgradeCategory>
+
+          {/* Tier Autobuyer Unlocks/Tier Tickspeed Autobuyers stay gated on !isFirstRun — unlike
+              Chapters above, both are keyed entirely off Prestige count, which is a meaningless
+              concept before a first Prestige (see the isFirstRun comment near its declaration). */}
+          {!isFirstRun && (<>
           <UpgradeCategory aria-label="tier autobuyer unlock milestones category">
             <CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading>
             {TIER_DEFINITIONS.map(tier => {
@@ -2294,6 +2322,7 @@ const MainPage = ({ onOpenInfo }) => {
               )
             })}
           </UpgradeCategory>
+          </>)}
         </UpgradesList>
       )}
 
@@ -2304,7 +2333,7 @@ const MainPage = ({ onOpenInfo }) => {
         disabled={isFrozen}
         type="button"
         onClick={handleResetClick}
-        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Bits' : 'Erases all progress and starts over (asks for confirmation)'}
+        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Bytes' : 'Erases all progress and starts over (asks for confirmation)'}
       >
         <ButtonContent>↺ Reset</ButtonContent>
         <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>

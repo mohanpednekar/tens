@@ -8,7 +8,37 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
 link beside the page title; see CLAUDE.md's Architecture section for the split and
-`onOpenInfo`/`onBack` wiring.
+`onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered once the Byte Foundry pre-game
+intro is complete (`state.intro.completed`, see "Byte Foundry page" below and
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — `App.jsx` renders `ByteFoundryPage` instead
+until then.
+
+**Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The pre-game tap screen — a separate,
+much simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }`
+from `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
+view-tab system of its own. Sections, top to bottom: a title/one-line explainer; a `StatCard`
+(`aria-label="byte foundry balance"`) showing `{bits} / {capacity}` plus a hidden
+`role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once `intro.byteCreated`, a
+passive-production status line; a large tap button (`aria-label="tap to generate a bit"`, disabled
+once `bits >= capacity`) calling `actions.tapIntroBit`; a "Combine into a Byte" button
+(`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`) shown only while
+`!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated
+milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`,
+disabled unless `bits === capacity`, calling `actions.pickIntroCapacityMilestone`) and "Invest for
+Double Production" (`aria-label="invest bits for double production"`, disabled unless `bits >=
+capacity`, calling `actions.pickIntroProductionMilestone`) — rendered as ordinary, independent
+buttons with no coupling between their enabled states, matching the engine-level correction that
+these two offers are not mutually exclusive (see docs/ECONOMY_REFERENCE.md's "Byte Foundry"); a
+"Convert to a Kilobyte" button (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling
+`actions.convertIntroBitsToKilobytes`) shown while `isIntroConversionUnlocked(state) && bits >=
+INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next phase indicator" (`aria-label="next phase
+indicator"`) shown once `isIntroConversionUnlocked(state)`. Numbers are formatted in **Bytes**
+(`bits ÷ BITS_PER_BYTE`, always a clean whole number) once `byteCreated` is true, and in raw bits
+before that (`formatBitBalance` helper, local to this file) — a display-only convention, internal
+state always stores raw bit counts. The 8000-bit auto-invest transition itself needs no button or
+handler here at all — it fires from `tickIntroAutoInvest` inside the shared tick loop (see
+`useIncrementalGame`), and `App.jsx`'s own effect follows `intro.completed` into `'game'`
+automatically the instant it flips.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -71,7 +101,7 @@ link beside the page title; see CLAUDE.md's Architecture section for the split a
   speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
-  actually available (`canPrestige`, i.e. Money `>= GOOGOL`), the PP display card itself doubles as a
+  actually available (`canPrestige`, i.e. Money `>= PRESTIGE_THRESHOLD`), the PP display card itself doubles as a
   Prestige button — the whole card gets `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown`
   handler, `onClick={actions.prestige}`, and a `title` ("Awards Prestige Points and resets your
   resources", the same wording used on every other Prestige button), driven by a `$actionable` prop on
@@ -184,8 +214,13 @@ link beside the page title; see CLAUDE.md's Architecture section for the split a
 
 **Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
 by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
-toggle is just which JSX block renders. A `ViewNav` tab trio (`role="tablist"`) only appears once
-`!isFirstRun`. The Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
+toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
+rendered (`MainPage` is only ever reached once the Byte Foundry intro is complete, see "Byte Foundry
+page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
+genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
+first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
+"Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
+Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
 of the tab bar to save space, since every purchase on that page already costs Prestige Points, so
 spelling that out on the tab itself is redundant); "PP Upgrades" remains the term used throughout this
 doc/the codebase's own comments for the view/page as a concept. That tab shows a `NavDot`
@@ -380,15 +415,44 @@ The global tickspeed multiplier is *not* one of these PP rows — it's Money-fun
 view instead (see "Global Tickspeed card" above / "The global tickspeed multiplier" below);
 only its automation toggle (Tickspeed Autobuyer) is PP-funded and lives here.
 
-**Milestones view.** A third, read-only view (`view === 'milestones'`, gated on `!isFirstRun` the same
-way as the Upgrades view) tracking both prestige-count-milestone-triggered unlocks in full —
-independent of whether a given tier is currently reachable in this run (unlike the Upgrades view's
-"Tier Autobuyers" category, which only shows a tier once `isTierUnlocked`). Reuses the same
+**Milestones view.** A third, read-only view (`view === 'milestones'`) tracking both
+prestige-count-milestone-triggered unlocks in full — independent of whether a given tier is currently
+reachable in this run (unlike the Upgrades view's "Tier Autobuyers" category, which only shows a tier
+once `isTierUnlocked`). Reuses the same
 `UpgradesList`/`UpgradeCategory`/`CategoryHeading`/`UpgradeRow`/`PpUpgradeBadge`/`TierNameLabel` styled
 components the Upgrades view itself uses — structurally this is the same "categorized list of rows"
 shape, just with every row read-only — rather than introducing a parallel set of near-identical styled
-components. Two categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
-`getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md):
+components.
+
+**Chapters category** (`aria-label="chapters category"`) is the first category on this view, and —
+unlike the two tier-milestone categories below it — **always renders**, with no `!isFirstRun` gate at
+all. This was a deliberate fix, not an oversight: the Milestones tab itself used to be entirely hidden
+until `!isFirstRun`, which meant a Chapters list living there would only ever become visible *after*
+the very milestone ("Go Googol," a first Prestige) it was meant to track — permanently pre-checked, not
+a real tracker. Lifting the whole `ViewNav` tab bar's Game/Milestones tabs out of that gate (see "Game
+view vs. PP Upgrades view vs. Milestones view" above) fixes this for "Go Googol" specifically: it can
+now genuinely be seen 🔒 before a first Prestige. Three static rows, no `role="progressbar"` on any of
+them (booleans, not counts — nothing to show numeric progress toward):
+1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.completed`
+   is true. Because `MainPage` (and this tab) is only reachable *after* `intro.completed` in the first
+   place, this row will always show ✅ the instant a player can see it at all — Chapter 1's completion is
+   a precondition for reaching this page, not something observable in-progress here. Fixing that too
+   would mean also surfacing a Chapters indicator on `ByteFoundryPage` itself (see below); that's an
+   acknowledged, deliberate scope boundary, not an oversight.
+2. **"Go Googol"** (`aria-label="Go Googol chapter"`) — ✅ once `state.prestige.count > 0`. The row this
+   whole visibility fix was for — genuinely observable as 🔒 now.
+3. **"Coming soon…"** (`aria-label="Coming soon… chapter"`) — permanently 🔒, no unlock condition, a
+   placeholder for future chapters.
+
+Each row shows a `PpUpgradeBadge` with `✅`/`🔒` plus the label; the `aria-label` on the badge itself
+spells out `"{label} chapter complete"`/`"{label} chapter not yet complete"` for assistive tech. Zero
+new `engine.js` logic backs this category — it reads `state.intro.completed` and the existing
+`state.prestige.count` only.
+
+Below Chapters, two more categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
+`getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md) — these two (unlike Chapters) **do**
+stay gated on `!isFirstRun`, since both are keyed entirely off Prestige count, a meaningless concept
+before a first Prestige:
 1. **Tier Autobuyer Unlocks** — a green `✅ Prestige {milestone}` badge once
    `autobuyers[tier.id] != null` (no `title` — the visible text already says everything there is to
    say), otherwise a dimmed `🔒 Prestige {milestone}` badge whose `title` adds only the one piece of

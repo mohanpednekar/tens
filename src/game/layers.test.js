@@ -4,6 +4,7 @@ import {
   AUTO_PRESTIGE_COST,
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
+  BITS_PER_BYTE,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
@@ -11,6 +12,7 @@ import {
   OVERCLOCK_REQUIREMENT_STEP,
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  PRESTIGE_THRESHOLD,
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
   SPEED_UP_MULTIPLIER_BASE,
@@ -60,16 +62,25 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('baseTickSpeedSeconds increases by 1s per tier, from 1s to 10s', () => {
+  it('baseTickSpeedSeconds increases by 1s per tier, from 2s to 11s', () => {
     TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(tier.baseTickSpeedSeconds).toBe(index + 1)
+      expect(tier.baseTickSpeedSeconds).toBe(index + 2)
     })
   })
 
-  it('first tier is Bytes and both costs and produces the base currency (Bits)', () => {
+  it('first tier is Kilobytes and both costs and produces the base currency (Bits)', () => {
     expect(TIER_DEFINITIONS[0].id).toBe('tier01')
+    expect(TIER_DEFINITIONS[0].name).toBe('Kilobytes')
     expect(TIER_DEFINITIONS[0].costResourceId).toBe(MONEY_ID)
     expect(TIER_DEFINITIONS[0].producesResourceId).toBe(MONEY_ID)
+  })
+
+  it('last tier is Quettabytes', () => {
+    expect(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name).toBe('Quettabytes')
+  })
+
+  it('no tier is named Bytes — Bytes are produced by the Byte Foundry intro, not a purchasable tier', () => {
+    expect(TIER_DEFINITIONS.some(tier => tier.name === 'Bytes')).toBe(false)
   })
 
   it('every tier is bought with the base currency (Bits)', () => {
@@ -108,13 +119,13 @@ describe('RESOURCE_SYMBOL', () => {
 })
 
 describe('getTierBaseTickSpeedSeconds', () => {
-  it('is 1 second for the first tier', () => {
-    expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
+  it('is 2 seconds for the first tier', () => {
+    expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(2)
   })
 
-  it('matches each tier\'s own defined baseTickSpeedSeconds (1s through 10s)', () => {
+  it('matches each tier\'s own defined baseTickSpeedSeconds (2s through 11s)', () => {
     TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 2)
     })
   })
 
@@ -130,6 +141,15 @@ describe('constants', () => {
 
   it('GOOGOL is 10^100', () => {
     expect(GOOGOL).toBe(1e100)
+  })
+
+  it('BITS_PER_BYTE is 8', () => {
+    expect(BITS_PER_BYTE).toBe(8)
+  })
+
+  it('PRESTIGE_THRESHOLD is GOOGOL * BITS_PER_BYTE (1 Googol Bytes, in Bits)', () => {
+    expect(PRESTIGE_THRESHOLD).toBe(GOOGOL * BITS_PER_BYTE)
+    expect(PRESTIGE_THRESHOLD).toBe(8e100)
   })
 
   it('TICK_RATE_MS is a positive number', () => {

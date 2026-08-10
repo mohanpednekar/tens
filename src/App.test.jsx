@@ -2,7 +2,15 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, TICK_RATE_MS } from 'game/layers'
+import {
+  AUTO_PRESTIGE_AUTOBUYER_COST,
+  INTRO_AUTO_INVEST_THRESHOLD,
+  INTRO_BYTE_COMBINE_COST,
+  INTRO_CONVERSION_UNLOCK_CAPACITY,
+  INTRO_STARTING_CAPACITY,
+  PRESTIGE_THRESHOLD,
+  TICK_RATE_MS,
+} from 'game/layers'
 import App from './App'
 
 beforeEach(() => {
@@ -13,16 +21,28 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('renders the game title and the Bytes tier', () => {
+// Every test exercising MainPage (the vast majority of this file) needs the Byte Foundry intro
+// already completed, or <App /> lands on ByteFoundryPage instead (see App.jsx's page routing —
+// `intro.completed` is the only thing that decides which page a fresh/seeded save opens on).
+// `migrateState` backfills the rest of the `intro` shape from `createInitialGameState()`'s own
+// defaults regardless (see storage.js), so `{ completed: true }` alone is always sufficient here —
+// no need to spell out bits/capacity/etc. by hand. Pass `overrides.intro` to seed a specific
+// (incomplete) intro state instead, e.g. for ByteFoundryPage's own tests below.
+const seedMainGameState = (overrides = {}) =>
+  localStorage.setItem('tens_game_state', JSON.stringify({ intro: { completed: true }, ...overrides }))
+
+test('renders the game title and the Kilobytes tier', () => {
+  seedMainGameState()
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /tens/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes layer$/i)).toBeInTheDocument()
-  // Money=1 (MONEY_STARTING_AMOUNT), per-unit cost 8/8=1 — only 1 unit is affordable.
-  expect(screen.getByRole('button', { name: /buy for 1 b\b/i })).toBeEnabled()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
+  // Money=1 (MONEY_STARTING_AMOUNT) — Kilobytes' per-unit cost is 1,000, so nothing is affordable yet.
+  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
 })
 
 test('renders the current app version beside the title', () => {
+  seedMainGameState()
   render(<App />)
 
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
@@ -31,35 +51,39 @@ test('renders the current app version beside the title', () => {
 test('the Guide link navigates to the Info page and Back to game returns, preserving game state', async () => {
   const user = userEvent.setup()
 
+  // Kilobytes now costs 1,000/unit (baseCost) — seed enough Money for exactly 1 unit.
+  seedMainGameState({ resources: { Ones: 1000 } })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByText('ℹ️ Guide'))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
-  expect(screen.queryByLabelText(/^bytes layer$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
   // Navigating away and back doesn't touch game state — the previous purchase is still there.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 })
 
-test('buying Bytes deducts cost and increases owned count', async () => {
+test('buying Kilobytes deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
+  // Money=1,000, per-unit cost 1,000 — manual Buy grabs as many as affordable, which is just 1 unit.
+  seedMainGameState({ resources: { Ones: 1000 } })
   render(<App />)
 
-  // Money=1, per-unit cost 8/8=1 — manual Buy grabs as many as affordable, which is just 1 unit.
-  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   // Money=0 left; still at level 1 (1 of 8 purchased), unaffordable — button disabled.
-  expect(screen.getByRole('button', { name: /buy for 1 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /buy for 1,000 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
 })
 
 test('the Reset button is always rendered, not gated behind a dev-only build check', () => {
+  seedMainGameState()
   render(<App />)
 
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -69,27 +93,32 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
+  seedMainGameState({ resources: { Ones: 1000 } })
   render(<App />)
 
-  // Buy Bytes to dirty the state — money=1, per-unit cost 8/8=1, so a single click buys 1 unit.
-  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   // Reset
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
-  expect(screen.getByRole('button', { name: /buy for 1 b\b/i })).toBeEnabled()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
+  // Money is back to MONEY_STARTING_AMOUNT (1) — nowhere near Kilobytes' 1,000 cost, so the Buy
+  // button is disabled again, same starting-state shape a truly fresh save would show.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
+  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
 })
 
 test('reset clears localStorage once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
+  seedMainGameState({ resources: { Ones: 1000 } })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
 
   // After reset the save-effect fires with fresh state, so money should be back to 1
   await user.click(screen.getByRole('button', { name: /reset game/i }))
@@ -104,51 +133,51 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(false)
 
+  seedMainGameState({ resources: { Ones: 1000 } })
   render(<App />)
 
-  // Buy Bytes to dirty the state — money=1, per-unit cost 8/8=1, so a single click buys 1 unit.
-  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
+  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Kilobytes tier appears and is purchasable once 10 Bytes are owned', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 8000 },
+test('Megabytes tier appears and is purchasable once 10 Kilobytes are owned', () => {
+  seedMainGameState({
+    resources: { Ones: 8_000_000 },
     owned: { tier01: 10 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
-  // Kilobytes (baseCost 8000) level 1, blockSize 8: per-unit cost 8000/8=1000, full block $8,000
-  // (level total is unchanged from before this cost-model change — only the per-unit split is new).
-  expect(screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i })).toBeEnabled()
+  expect(screen.getByLabelText(/^megabytes layer$/i)).toBeInTheDocument()
+  // Megabytes' baseCost is 1E6 — level 1, blockSize 8: per-unit cost 1,000,000, full block
+  // 8,000,000 — both at/above the 1,000,000 exponential-notation threshold, so they render as "1e6"/"8e6".
+  expect(screen.getByRole('button', { name: /buy ×8 for 8e6 b\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 8000 },
+  seedMainGameState({
+    resources: { Ones: 8_000_000 },
     owned: { tier01: 10 },
-  }))
-
+  })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy ×8 for 8e6 b\b/i }))
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8/i)
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 10/i)
+  expect(screen.getByLabelText(/^megabytes layer$/i)).toHaveTextContent(/owned: 8/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 10/i)
 })
 
 test('money balance is shown once at the top in full currency format, centered, with no per-second yield', () => {
+  seedMainGameState()
   render(<App />)
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
@@ -157,31 +186,29 @@ test('money balance is shown once at the top in full currency format, centered, 
 })
 
 test('a money-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+5 b')
-  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent('/sec')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 b')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('/sec')
 })
 
 test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 5 },
     tickspeedLevels: { tier01: 3 },
-  }))
-
+  })
   render(<App />)
 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
   // still reads +5 b, not +6 b.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+5 b')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 b')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
@@ -191,18 +218,17 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
   const user = userEvent.setup()
 
-  // The last tier (Ronnabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
+  // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
   // a testable 10 of its own resource — matching engine.test.js's convention for this ladder.
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10, tier10: 11 },
     owned: { tier09: 10, tier10: 1 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
-  }))
-
+  })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 RB/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
@@ -211,57 +237,55 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
 })
 
 test('reaching 8 lifetime purchases of a tier doubles its displayed production amount', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 8 },
-  }))
-
+  })
   render(<App />)
 
   // Crossing the 8-purchase milestone doubles production: owned(5) × 1 b/tick × 2 = 10 b per tick.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+10 b')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+10 b')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 },
-  }))
-
+  })
   render(<App />)
 
   // The displayed amount is the raw per-tick credit (owned(4) × 1, no bonus/milestone) delivered
   // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
-  // not shown as an averaged "/sec" rate.
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+4 B')
+  // not shown as an averaged "/sec" rate. Megabytes PRODUCES Kilobytes (producesResourceId:
+  // 'tier01'), so the amount reads in Kilobytes' own symbol (KB), not Megabytes' own (MB).
+  expect(screen.getByLabelText(/^megabytes layer$/i)).toHaveTextContent('+4 KB')
 })
 
 test('a tier row has no separate "Details" label — clicking its name reveals base/effective tickspeed', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
-    owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 2s)
-  }))
-
+    owned: { tier01: 10, tier02: 4 }, // unlocks Megabytes (base tickspeed 3s)
+  })
   render(<App />)
 
-  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  expect(within(kilobytesLayer).queryByText(/^details$/i)).not.toBeInTheDocument()
+  const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
+  expect(within(megabytesLayer).queryByText(/^details$/i)).not.toBeInTheDocument()
 
   // The tier's own name (wrapping TierNameTrigger, exposed as a named button) is the
   // disclosure's trigger now, not a separate label — its content isn't in the DOM at all until
   // expanded.
-  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
+  const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
-  expect(within(kilobytesLayer).queryByText(/base tickspeed/i)).not.toBeInTheDocument()
+  expect(within(megabytesLayer).queryByText(/base tickspeed/i)).not.toBeInTheDocument()
 
   await user.click(trigger)
 
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
-  expect(kilobytesLayer).toHaveTextContent(/base tickspeed: delivers every 2s/i)
-  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
+  expect(megabytesLayer).toHaveTextContent(/base tickspeed: delivers every 3s/i)
+  expect(megabytesLayer).toHaveTextContent(/effective tickspeed: every 3s/i)
 })
 
 test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost to the global multiplier, not a hidden separate factor', async () => {
@@ -293,40 +317,40 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
 test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 },
-  }))
-
+  })
   render(<App />)
 
-  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
+  const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
+  const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
   // Click the row's own container, not the name trigger and not a button.
-  await user.click(kilobytesLayer)
+  await user.click(megabytesLayer)
 
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
 
   // Clicking the tile again collapses it back.
-  await user.click(kilobytesLayer)
+  await user.click(megabytesLayer)
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1000 },
+  // Enough Money to make the Buy button genuinely clickable (Megabytes costs 1,000,000/unit) —
+  // an actually-disabled button would swallow the click entirely, making this assertion trivial.
+  seedMainGameState({
+    resources: { Ones: 2_000_000 },
     owned: { tier01: 10, tier02: 4 },
-  }))
-
+  })
   render(<App />)
 
-  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
-  const trigger = within(kilobytesLayer).getByRole('button', { name: /kilobytes/i })
-  const buyButton = within(kilobytesLayer).getByRole('button', { name: /^buy/i })
+  const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
+  const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
+  const buyButton = within(megabytesLayer).getByRole('button', { name: /^buy/i })
 
   await user.click(buyButton)
 
@@ -334,19 +358,18 @@ test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its deta
 })
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
+  seedMainGameState({
+    resources: { Ones: 10_000 },
     purchased: { tier01: 4 },
-  }))
-
+  })
   render(<App />)
 
-  const progressBar = screen.getByRole('progressbar', { name: /bytes cost-block progress/i })
+  const progressBar = screen.getByRole('progressbar', { name: /kilobytes cost-block progress/i })
   expect(progressBar).toHaveAttribute('aria-valuenow', '4')
   expect(progressBar).toHaveAttribute('aria-valuemax', '8')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
-  // 4 of 8 already done — 4 remain in the block; per-unit cost 8/8=1, so 4 units cost $4 total.
-  const buyButton = screen.getByRole('button', { name: /buy ×4 for 4 b \(level 1, 4 of 8 purchased\)/i })
+  // 4 of 8 already done — 4 remain in the block; per-unit cost is 1,000, so 4 units cost $4,000 total.
+  const buyButton = screen.getByRole('button', { name: /buy ×4 for 4,000 b \(level 1, 4 of 8 purchased\)/i })
   expect(buyButton).toBeInTheDocument()
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
   // Regression check for the Button component's `variant` prop: it's consumed internally to
@@ -357,68 +380,68 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
 test('manual Buy clicks buy as many units as are currently affordable, not just 1', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 100 },
-  }))
-
+  seedMainGameState({
+    resources: { Ones: 100_000 },
+  })
   render(<App />)
 
-  // Per-unit cost 8/8=1: $100 affords far more than the 8-unit block, so the full block (capped
-  // there, not by funds) is what's bought — $8 total.
-  const buyButton = screen.getByRole('button', { name: /buy ×8 for 8 b\b/i })
+  // Per-unit cost 1,000: $100,000 affords far more than the 8-unit block, so the full block
+  // (capped there, not by funds) is what's bought — $8,000 total.
+  const buyButton = screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('92 b')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('92,000 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 3 }, // affords 3 at $1/unit (8/8), not the full block of 8
-  }))
-
+  seedMainGameState({
+    resources: { Ones: 3000 }, // affords 3 at $1,000/unit, not the full block of 8
+  })
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×3 for 3 b\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for 3,000 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
 
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 3\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 3\b/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
 test('each tier name is rendered as a heading for screen-reader navigation', () => {
+  seedMainGameState()
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 3, name: /^bytes$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 3, name: /^kilobytes$/i })).toBeInTheDocument()
 })
 
 test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
-  }))
-  // 100 real seconds ago → 10 simulated seconds at 10% speed → 5 Bytes × 10s = +50 money
+  })
+  // 100 real seconds ago → 10 simulated seconds at 10% speed → Kilobytes delivers every 2s, so 5
+  // deliveries land in that window → 5 Kilobytes × 5 deliveries = +25 money
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('50 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('25 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
 test('dismissing the offline progress notice hides it', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
-  }))
+  })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
@@ -431,10 +454,10 @@ test('dismissing the offline progress notice hides it', async () => {
 
 test('the offline progress notice shows a countdown on its Dismiss button and fades/auto-dismisses after 10 seconds', () => {
   vi.useFakeTimers()
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
-  }))
+  })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   const { unmount } = render(<App />)
@@ -462,10 +485,10 @@ test('the offline progress notice shows a countdown on its Dismiss button and fa
 
 test('clicking Dismiss removes the offline progress notice immediately, without waiting for the fade', () => {
   vi.useFakeTimers()
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
-  }))
+  })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   const { unmount } = render(<App />)
@@ -480,10 +503,9 @@ test('clicking Dismiss removes the offline progress notice immediately, without 
 })
 
 test('shows no offline progress notice when there is no recorded last-save timestamp', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
@@ -492,10 +514,9 @@ test('shows no offline progress notice when there is no recorded last-save times
 test('the first time money reaches a googol, a mandatory full-screen prompt offers Prestige', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
-  }))
-
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
+  })
   render(<App />)
 
   expect(screen.getByRole('dialog', { name: /prestige required/i })).toBeInTheDocument()
@@ -505,15 +526,16 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   await user.click(prestigeButton)
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /buy for 1 b\b/i })).toBeEnabled()
+  // Resources reset (back to MONEY_STARTING_AMOUNT, well below Kilobytes' 1,000 cost) — the Buy
+  // button is back in the DOM, just not affordable yet, unlike the frozen state that preceded it.
+  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
 })
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
@@ -524,11 +546,10 @@ test('from the 2nd prestige onward, reaching a googol shows a top banner instead
 test('the sticky PP display doubles as a Prestige button once Prestige is available', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-  }))
-
+  })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /^prestige points display$/i }))
@@ -537,11 +558,10 @@ test('the sticky PP display doubles as a Prestige button once Prestige is availa
 })
 
 test('the sticky PP display is not a clickable button before Prestige is available', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 5, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toBeInTheDocument()
@@ -549,12 +569,11 @@ test('the sticky PP display is not a clickable button before Prestige is availab
 })
 
 test('production and every other control freeze once money reaches a googol', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier01: 5 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
@@ -562,120 +581,112 @@ test('production and every other control freeze once money reaches a googol', ()
 })
 
 test('the Speed Up panel stays hidden before the last tier unlocks', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^speed up panel$/i)).not.toBeInTheDocument()
 })
 
 test('the Speed Up panel appears once the last tier unlocks, with the button disabled below the required level', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeDisabled()
 })
 
 test('the Speed Up button is enabled once the last tier reaches the required level', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 2 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeEnabled()
 })
 
 test('the second Speed Up requires one more level than the first, not the same level 1', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 2 },
     speedUpCount: 1,
-  }))
-
+  })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })
+  const button = screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /speed up \(requires ronnabytes level 1\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /speed up \(requires quettabytes level 1\b/i })).not.toBeInTheDocument()
 })
 
 test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 2 },
     speedUpCount: 2,
-  }))
-
+  })
   render(<App />)
 
   // Third activation requires the last tier to reach level 3 (Lv.1/3) and would raise the
   // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires ronnabytes level 3\) — doubles production speed to ×8/i,
+    name: /speed up \(requires quettabytes level 3\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/3')
 })
 
 test('the speed up and overclock panels render below the tier list, not above it', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-  }))
-
+  })
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('speed up panel')).toBeGreaterThan(regions.indexOf('Bytes layer'))
-  expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Bytes layer'))
+  expect(regions.indexOf('speed up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
 test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 2 },
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
-  }))
-
+  })
   render(<App />)
 
-  const ronnabytesLayer = screen.getByLabelText(/^ronnabytes layer$/i)
-  const rowXpButton = within(ronnabytesLayer).getByRole('button', {
-    name: /consume 37 xp for .* ronnabytes tickspeed/i,
+  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
+  const rowXpButton = within(quettabytesLayer).getByRole('button', {
+    name: /consume 37 xp for .* quettabytes tickspeed/i,
   })
   expect(rowXpButton).toHaveTextContent('🧬')
 
   // The top panel's own Speed Up button is a separate element doing something else entirely
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires ronnabytes level 1/i })
+  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires quettabytes level 1/i })
   expect(panelSpeedUpButton).not.toBe(rowXpButton)
 })
 
 test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 2 },
-  }))
-
+  })
   render(<App />)
 
-  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })
+  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })
   expect(speedUpButton).toBeEnabled()
 
   await user.click(speedUpButton)
@@ -686,26 +697,25 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   // disappearing again until the player climbs back up to it. The next cycle now requires level 2
   // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })).toBeDisabled()
 })
 
 test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 2 },
     globalTickspeedMultiplier: 2,
-  }))
-
+  })
   render(<App />)
 
   // The cumulative level/bonus only shows in the expanded description, not the button itself —
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i }))
+  await user.click(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i }))
 
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -714,24 +724,22 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
 })
 
 test('the Speed Up button is disabled once production freezes at a googol', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 2 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeDisabled()
 })
 
 test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
@@ -739,63 +747,58 @@ test('no Auto Speed Up control appears during the first run, even with the last 
 })
 
 test('the Overclock panel stays hidden before the last tier unlocks', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^overclock panel$/i)).not.toBeInTheDocument()
 })
 
 test('the Overclock panel appears once the last tier unlocks, with the button disabled below the required level', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 9 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
 })
 
 test('the Overclock button is enabled once the last tier reaches the required level', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 10 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeEnabled()
 })
 
 test('the second Overclock requires 10 more levels than the first, not the same level 10', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 15 },
     overclockCount: 1,
-  }))
-
+  })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /overclock \(requires ronnabytes level 20/i })
+  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 20/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /overclock \(requires ronnabytes level 10\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 10\b/i })).not.toBeInTheDocument()
 })
 
 test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 12 },
     overclockCount: 1,
-  }))
-
+  })
   render(<App />)
 
   // Second activation requires the last tier to reach raw level 20 (Lv.12/20, not Lv.11/19 —
@@ -804,7 +807,7 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   // per-level rate to 1.2% (from the current 1.1%, one activation in) — both shown on the button
   // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires ronnabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 1\.2%/i,
+    name: /overclock \(requires quettabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 1\.2%/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.2%/lvl · Lv.12/20')
 })
@@ -813,12 +816,12 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   // The disclosure's live-state line stays in the DOM (queryable via toHaveTextContent) even
   // while collapsed by default — same convention every other live-state disclosure on this page
   // follows — so no expand click is needed here.
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 12 },
     overclockCount: 1,
-  }))
+  })
 
   render(<App />)
 
@@ -827,11 +830,11 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
 })
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first activation', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 5 },
-  }))
+  })
 
   render(<App />)
 
@@ -842,19 +845,18 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
 test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 10 },
     speedUpCount: 5,
-  }))
-
+  })
   render(<App />)
 
   // speedUpCount 5 → next activation would raise the multiplier to ×64 (getSpeedUpMultiplier(6)).
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×64')
 
-  const overclockButton = screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })
+  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })
   expect(overclockButton).toBeEnabled()
 
   await user.click(overclockButton)
@@ -866,31 +868,29 @@ test('clicking Overclock once eligible resets resources, wipes the Speed Up bonu
   // incremented to 1 — see getOverclockRequirement), and Speed Up's own stacking bonus is wiped
   // back to ×2 (speedUpCount reset to 0, so the *next* activation would only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 20/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 20/i })).toBeDisabled()
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×2')
 })
 
 test('the Overclock button is disabled once production freezes at a googol', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 1e100 },
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-  }))
-
+  })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires ronnabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
 })
 
 test('the PP Upgrades page groups purchases into labeled categories', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -904,12 +904,11 @@ test('the PP Upgrades page groups purchases into labeled categories', async () =
 })
 
 test('the Production Bonuses category disappears once the speed bonus is bought (nothing left to show)', async () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestigeSpeedBonusUnlocked: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -919,12 +918,11 @@ test('the Production Bonuses category disappears once the speed bonus is bought 
 test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 100 PP to enable it', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -939,26 +937,24 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
 })
 
 test('the global tickspeed panel renders above the tier list, not below it', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1 },
-  }))
-
+  })
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Bytes layer'))
+  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
 test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -975,13 +971,12 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
 test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up has been bought', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     autoSpeedUp: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -992,20 +987,19 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
 test('pausing Auto Speed Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
   vi.useFakeTimers()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10 },
     purchaseLevels: { tier10: 2 },
     autoSpeedUp: true,
     autoSpeedUpEnabled: false,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   const { unmount } = render(<App />)
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   // Still eligible (purchaseLevels.tier10 untouched) since Auto Speed Up starts paused.
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 1/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
@@ -1016,17 +1010,16 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
 
   // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 2.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /speed up \(requires ronnabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
 })
 
 test('no Global Tickspeed Multiplier panel appears before the second tier has ever been owned', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^global tickspeed panel$/i)).not.toBeInTheDocument()
@@ -1035,11 +1028,10 @@ test('no Global Tickspeed Multiplier panel appears before the second tier has ev
 test('an Enable Global Tickspeed Multiplier button appears once the second tier is owned (even during the first run), and spends 10 Money to activate level 1', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1 },
-  }))
-
+  })
   render(<App />)
 
   const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })
@@ -1063,11 +1055,10 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
 test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 999 },
     globalTickspeedMultiplier: 1,
-  }))
-
+  })
   render(<App />)
 
   const heading = screen.getByRole('heading', { level: 2, name: 'Tickspeed' })
@@ -1089,22 +1080,20 @@ test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is cl
 })
 
 test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 9 },
     owned: { tier02: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })).toBeDisabled()
 })
 
 test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 999 },
     globalTickspeedMultiplier: 2,
-  }))
-
+  })
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 1,000 b/i })
@@ -1119,11 +1108,10 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
 })
 
 test('the global tickspeed bonus jumps at the first 10-level milestone, compounding the 10% milestone step on top of the regular 1% levels before it', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 10,
-  }))
-
+  })
   render(<App />)
 
   // 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%:
@@ -1132,11 +1120,10 @@ test('the global tickspeed bonus jumps at the first 10-level milestone, compound
 })
 
 test('the global tickspeed bonus still shows fractional percent precision one level before a milestone pushes it past 100%', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 39,
-  }))
-
+  })
   render(<App />)
 
   // Level 39 (no milestone yet — next one is at 40) is still under 100%, so it shows 2 decimals.
@@ -1144,11 +1131,10 @@ test('the global tickspeed bonus still shows fractional percent precision one le
 })
 
 test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses +100% at a milestone', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 1e15 },
     globalTickspeedMultiplier: 40,
-  }))
-
+  })
   render(<App />)
 
   // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses +100%
@@ -1204,18 +1190,17 @@ test.each([
     buttonName: /unlock prestige point production speed bonus for 10000 prestige points/i,
   },
   {
-    name: "Bytes's Smart",
+    name: "Kilobytes's Smart",
     seed: { autobuyers: { tier01: 1 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
-    buttonName: /make bytes's autobuyer smart .* for 10 prestige points/i,
+    buttonName: /make kilobytes's autobuyer smart .* for 10 prestige points/i,
   },
 ])('the $name button stays disabled without enough Prestige Points', async ({ seed, buttonName }) => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...seed,
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1251,20 +1236,19 @@ test.each([
     resumeName: /resume auto-prestige autobuyer automation/i,
   },
   {
-    name: "Bytes's tickspeed autobuyer",
+    name: "Kilobytes's tickspeed autobuyer",
     seed: { autobuyers: { tier01: 1 }, tierTickspeedAutobuyer: { tier01: true } },
-    pauseName: /pause bytes's tickspeed autobuyer/i,
-    resumeName: /resume bytes's tickspeed autobuyer/i,
+    pauseName: /pause kilobytes's tickspeed autobuyer/i,
+    resumeName: /resume kilobytes's tickspeed autobuyer/i,
   },
 ])('a pause toggle appears beside the $name badge once bought, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
     ...seed,
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1288,11 +1272,10 @@ test.each([
 test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1303,12 +1286,11 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
 test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 1000 PP to activate level 1', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1325,12 +1307,11 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
 test('no pause toggle appears for Auto-Prestige before it has ever been activated', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1340,13 +1321,12 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
 test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     autoPrestige: 1,
     prestige: { xp: 0, points: 1999, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1357,12 +1337,11 @@ test('the Auto-Prestige Upgrade button costs double the previous level, and stay
 test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been activated', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1372,13 +1351,12 @@ test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been 
 test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, and spends ${AUTO_PRESTIGE_AUTOBUYER_COST} PP to unlock it`, async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     autoPrestige: 1,
     prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1392,12 +1370,11 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
 })
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestigeSpeedBonusUnlocked: true,
     prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('50 PP')
@@ -1407,11 +1384,10 @@ test('prestige points and the production speed bonus are shown once the bonus is
 test('the production speed bonus reads as locked, and an unlock button is offered on the PP Upgrades page, before it has been bought', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10,500 PP')
@@ -1434,17 +1410,16 @@ test('the production speed bonus reads as locked, and an unlock button is offere
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   // tier01's autobuyer unlocked automatically at Prestige 1 (count 1 here) — Smart costs 10 PP,
   // and 50 PP fully covers it (valuenow caps at the cost).
-  const smartProgress = screen.getByRole('progressbar', { name: /bytes smart autobuyer prestige point progress/i })
+  const smartProgress = screen.getByRole('progressbar', { name: /kilobytes smart autobuyer prestige point progress/i })
   expect(smartProgress).toHaveAttribute('aria-valuenow', '10')
   expect(smartProgress).toHaveAttribute('aria-valuemax', '10')
 
@@ -1457,80 +1432,81 @@ test('PP-spending buttons report how much of their cost the current balance cove
 test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer milestone has not been reached yet', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     // tier01's autobuyer unlocks automatically at Prestige 1, so it's already unlocked the moment
     // the PP Upgrades page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
     // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
     // count 1, so it's the one that stays locked here.
-    owned: { tier01: 10 }, // unlocks Kilobytes
+    owned: { tier01: 10 }, // unlocks Megabytes
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
   // Smart isn't purchasable yet — it requires the autobuyer already be unlocked, regardless of PP held.
-  expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make megabytes's autobuyer smart/i })).not.toBeInTheDocument()
 })
 
 test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached, revealing Smart in its place', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier01: 10 },
-    prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets kilobytes' milestone (2)
-  }))
-
+    prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^kilobytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
-  // Kilobytes' Smart cost is 20 PP (SMART_AUTOBUYER_COST_MULTIPLIER × its 2 PP-equivalent benchmark).
-  expect(screen.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeEnabled()
+  expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer active")).toBeInTheDocument()
+  // Megabytes' Smart cost is 20 PP (SMART_AUTOBUYER_COST_MULTIPLIER × its 2 PP-equivalent benchmark).
+  expect(screen.getByRole('button', { name: /make megabytes's autobuyer smart/i })).toBeEnabled()
   // Confirms no PP was spent to reach this state — the milestone unlock is free.
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('20 PP')
 })
 
-test('no PP Upgrades tab or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+test('no PP Upgrades tab or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP — but Game/Milestones stay reachable', () => {
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 5, count: 0, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^prestige points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /upgrades/i })).not.toBeInTheDocument()
+  // Unlike Upgrades, Game and Milestones are always reachable — MainPage itself is only ever
+  // rendered once the Byte Foundry intro is complete, and Chapters (inside Milestones) needs to be
+  // visible before a first Prestige so "Go Googol" can be seen locked, not permanently pre-checked.
+  expect(screen.getByRole('tab', { name: /^game$/i })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /milestones/i })).toBeInTheDocument()
 })
 
 test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is unlocked (not before), and spends 10x the unlock cost', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  const smartButton = screen.getByRole('button', { name: /make bytes's autobuyer smart .* for 10 prestige points/i })
+  const smartButton = screen.getByRole('button', { name: /make kilobytes's autobuyer smart .* for 10 prestige points/i })
   expect(smartButton).toBeEnabled()
   // The Unlock control is already gone — the autobuyer is unlocked, Smart has taken its place.
-  expect(screen.queryByRole('button', { name: /unlock bytes's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock kilobytes's autobuyer/i })).not.toBeInTheDocument()
 
   await user.click(smartButton)
 
   // Smart is bought, but the row stays — the tier tickspeed autobuyer purchase is independent
   // and still pending, so there's still something left to buy for this tier.
-  expect(screen.queryByRole('button', { name: /make bytes's autobuyer smart/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toHaveTextContent(/smart/i)
+  expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes pp upgrades$/i)).toHaveTextContent(/smart/i)
   expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1538,52 +1514,49 @@ test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is
 test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) prestige milestone is reached, independent of the unit-buying autobuyer', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // one short of Bytes's tickspeed milestone (12)
-  }))
-
+    prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText(/^bytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
   // Smart is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 10 PP held).
-  expect(screen.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeEnabled()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
-    prestige: { xp: 0, points: 10, count: 12, highestMilestone: 1 }, // meets Bytes's tickspeed milestone (12)
-  }))
-
+    prestige: { xp: 0, points: 10, count: 12, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (12)
+  })
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^bytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Bytes's tickspeed autobuyer active")).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer active")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
 
 test('a tier\'s row disappears only once both Smart and its tier tickspeed autobuyer are bought', async () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     smartAutobuyer: { tier01: true },
     tierTickspeedAutobuyer: { tier01: true },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^bytes pp upgrades$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
 test('a tier\'s row on the PP Upgrades page does not appear before that tier itself is reachable, regardless of prestige count', async () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     // tier02 isn't unlocked yet: tier01 is owned below the 8-unit unlock threshold.
     owned: { tier01: 3 },
@@ -1591,87 +1564,90 @@ test('a tier\'s row on the PP Upgrades page does not appear before that tier its
     // shouldn't matter, since the row itself is gated on the tier being reachable this run, not on
     // milestones already met.
     prestige: { xp: 0, points: 100, count: 30, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByLabelText(/^kilobytes pp upgrades$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^megabytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
 test('the PP Upgrades tab NavDot lights up when a tier\'s Smart purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.getByLabelText(/^pp upgrade available$/i)).toBeInTheDocument()
 })
 
 test('the PP Upgrades tab NavDot stays dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     // tier01's autobuyer is already unlocked (milestone 1, met by count 1) but there's no PP to
     // spend on anything — not Smart, not any of the global automations — so nothing here is
     // "affordable" despite later tiers' autobuyer/tickspeed-autobuyer rows still showing locked.
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
 })
 
 test('the PP Upgrades tab NavDot goes dark once a tier is fully done and nothing else is affordable', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     smartAutobuyer: { tier01: true },
     tierTickspeedAutobuyer: { tier01: true },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
 })
 
-test('the Milestones tab is hidden before the first prestige, and shown after', () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
-  }))
+test('the Milestones tab is reachable both before and after the first prestige (unlike Upgrades)', async () => {
+  const user = userEvent.setup()
 
+  seedMainGameState({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
+  })
   render(<App />)
 
-  expect(screen.queryByRole('tab', { name: /milestones/i })).not.toBeInTheDocument()
+  // Reachable pre-prestige — the fix that lets Chapters' "Go Googol" row actually be observed
+  // locked, rather than the Milestones view being unreachable until after it's already true.
+  expect(screen.getByRole('tab', { name: /milestones/i })).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /upgrades/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('tab', { name: /milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('the Milestones page lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone, reflecting what\'s already unlocked', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     prestige: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /milestones/i }))
 
   expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 
-  // Prestige count 3 meets Bytes/Kilobytes/Megabytes' autobuyer-unlock milestones (1/2/3) but not
-  // Gigabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
-  expect(screen.getByLabelText(/^bytes's autobuyer unlocked at prestige 1$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocked at prestige 2$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocked at prestige 3$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^gigabytes's autobuyer unlocks at prestige 4, currently at prestige 3$/i)).toBeInTheDocument()
+  // Prestige count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
+  // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
+  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocked at prestige 1$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocked at prestige 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^gigabytes's autobuyer unlocked at prestige 3$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at prestige 4, currently at prestige 3$/i)).toBeInTheDocument()
 
   // None of the tier tickspeed autobuyer milestones (12+) are anywhere close yet.
-  expect(screen.getByLabelText(/^bytes's tickspeed autobuyer unlocks at prestige 12, currently at prestige 3$/i)).toBeInTheDocument()
-  const tickspeedProgress = screen.getByRole('progressbar', { name: /^bytes tickspeed autobuyer milestone progress$/i })
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12, currently at prestige 3$/i)).toBeInTheDocument()
+  const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '12')
 })
@@ -1679,57 +1655,54 @@ test('the Milestones page lists every tier\'s autobuyer/tier-tickspeed-autobuyer
 test('an autobuyer active/paused badge appears on the PP Upgrades page once its autobuyer is unlocked, toggled by its own pause button', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
-  const pauseButton = screen.getByRole('button', { name: /pause bytes's autobuyer/i })
+  expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
+  const pauseButton = screen.getByRole('button', { name: /pause kilobytes's autobuyer/i })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
 
   await user.click(pauseButton)
-  expect(screen.getByLabelText("Bytes's autobuyer paused")).toBeInTheDocument()
-  const resumeButton = screen.getByRole('button', { name: /resume bytes's autobuyer/i })
+  expect(screen.getByLabelText("Kilobytes's autobuyer paused")).toBeInTheDocument()
+  const resumeButton = screen.getByRole('button', { name: /resume kilobytes's autobuyer/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
   await user.click(resumeButton)
-  expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
 })
 
 test('no autobuyer pause button appears on the PP Upgrades page before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
-  // Kilobytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
+  // Megabytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
   // enough to leave isFirstRun and reach the Upgrades tab, but not enough to unlock it, unlike
-  // Bytes (milestone 1) which would already be unlocked at this same count.
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  // Kilobytes (milestone 1) which would already be unlocked at this same count.
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByRole('button', { name: /pause kilobytes's autobuyer/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /pause megabytes's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
 })
 
 test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buying automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10000 },
     autobuyers: { tier01: 1 },
     autobuyersEnabled: { tier01: false },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1739,14 +1712,14 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
   // enough time has passed yet".
   act(() => { vi.advanceTimersByTime(1000) })
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
 
   fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
-  fireEvent.click(screen.getByRole('button', { name: /resume bytes's autobuyer/i }))
+  fireEvent.click(screen.getByRole('button', { name: /resume kilobytes's autobuyer/i }))
   act(() => { vi.advanceTimersByTime(1000) })
 
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
-  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
 
   unmount()
   vi.useRealTimers()
@@ -1755,27 +1728,26 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
 test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it from upgrading automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
-  // tier09 (Yottabytes, tierIndex 8) has a much cheaper tickspeed multiplier base cost (100) than
+  // tier09 (Ronnabytes, tierIndex 8) has a much cheaper tickspeed multiplier base cost (100) than
   // an earlier tier, keeping the seeded resource amount small; owned > 0 already satisfies
   // isTierUnlocked for this tier directly, with no dependency on any other tier's state.
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10, tier09: 101 },
     owned: { tier09: 101 },
     tierTickspeedAutobuyer: { tier09: true },
     tierTickspeedAutobuyerEnabled: { tier09: false },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
-  expect(screen.getByRole('button', { name: /resume yottabytes's tickspeed autobuyer/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /resume ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: /resume yottabytes's tickspeed autobuyer/i }))
+  fireEvent.click(screen.getByRole('button', { name: /resume ronnabytes's tickspeed autobuyer/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  expect(screen.getByRole('button', { name: /pause yottabytes's tickspeed autobuyer/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /pause ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
@@ -1786,12 +1758,11 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
 test('once every tier is smart and tickspeed-automated, a single notice replaces every per-tier row', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
@@ -1802,34 +1773,32 @@ test('once every tier is smart and tickspeed-automated, a single notice replaces
 })
 
 test('a tier fully Smart but not yet tickspeed-automated does not trigger the "every tier" notice', async () => {
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
     autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
     smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
     // tierTickspeedAutobuyer deliberately left unbought for every tier.
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await userEvent.setup().click(screen.getByRole('tab', { name: /upgrades/i }))
 
   expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes pp upgrades$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes pp upgrades$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1, tier10: 10 },
     prestigeSpeedBonusUnlocked: true,
     speedUpCount: 2,
     globalTickspeedMultiplier: 1,
     prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
 
   const moneyDisplay = screen.getByRole('button', { name: /^money display$/i })
@@ -1853,29 +1822,27 @@ test('clicking the money balance expands a breakdown of every global production 
 test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated status for each global multiplier before it becomes active', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1, tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on ronnabytes\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on quettabytes\)/i)
   expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1, tier10: 10 },
-  }))
-
+  })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
@@ -1888,11 +1855,11 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
 test('the money balance breakdown\'s Overclock line reports the boosted per-level Tickspeed rate once active, not a standalone bonus percentage', async () => {
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
+  seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier02: 1, tier10: 10 },
     overclockCount: 2,
-  }))
+  })
 
   render(<App />)
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
@@ -1901,4 +1868,210 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
   expect(breakdown).toHaveTextContent(
     /overclock: tickspeed upgrade's per-level rate is now 1\.2% \(was 1%\) from 2 activations/i
   )
+})
+
+// --- ByteFoundryPage (the pre-game intro) ---
+// A completely empty localStorage (cleared in beforeEach) loads createInitialGameState()'s own
+// fresh defaults directly (no migration involved at all — computeInitialGame only calls
+// migrateState when loadGameState() finds something saved) — intro.completed is false there, so
+// <App /> lands on ByteFoundryPage. Seeding tens_game_state with an explicit (incomplete) `intro`
+// object below reproduces later Byte Foundry states without tapping/combining/investing by hand.
+const seedIntroState = (introOverrides = {}, otherOverrides = {}) =>
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    intro: {
+      bits: 0,
+      productionAccumulator: 0,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: false,
+      productionMultiplier: 1,
+      completed: false,
+      ...introOverrides,
+    },
+    ...otherOverrides,
+  }))
+
+test('tapping increments the bit balance and stops once capacity is reached', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
+
+  for (let i = 0; i < INTRO_STARTING_CAPACITY; i++) {
+    await user.click(tapButton)
+  }
+
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
+  expect(tapButton).toBeDisabled()
+
+  // A disabled button swallows the click entirely — the balance stays capped, not overshooting.
+  await user.click(tapButton)
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
+})
+
+test('combining 8 bits into a Byte resets the balance and starts passive production', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({ bits: INTRO_BYTE_COMBINE_COST })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_BYTE_COMBINE_COST))
+  const combineButton = screen.getByRole('button', { name: /combine 8 bits into a Byte/i })
+
+  await user.click(combineButton)
+
+  // The combine action is one-time — its own button is gone once byteCreated flips true.
+  expect(screen.queryByRole('button', { name: /combine 8 bits into a Byte/i })).not.toBeInTheDocument()
+  // Consumes the full cost (8), leaving the balance at 0, and reveals the passive-production status line.
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+})
+
+test('the milestone offers stay disabled while the bit balance is below capacity', () => {
+  seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
+})
+
+// The single most important behavioral regression to cover per the milestone-offer asymmetry
+// correction (see docs/DESIGN_HISTORY.md): "Invest for Double Production" is an ordinary
+// cost-gated purchase (requires bits >= capacity), NOT coupled to — and not blocked by having just
+// clicked — "Sacrifice for 10x Capacity", which alone requires a full balance and drains it to 0.
+test('Invest for Double Production does not require or trigger the Sacrifice milestone\'s own full-drain condition', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+  const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
+  expect(sacrificeButton).toBeEnabled()
+  expect(investButton).toBeEnabled()
+
+  await user.click(investButton)
+
+  // Capacity is untouched by Invest — the balance bar's own max stays at the starting capacity,
+  // proving Sacrifice's 10x-capacity effect was never triggered as a side effect.
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
+  // Invest still deducted its own cost (bits == capacity), so the balance is no longer full —
+  // Sacrifice (which requires bits === capacity) is correctly disabled now, not because Invest
+  // "used up" some shared state, but simply because the balance is no longer full.
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(sacrificeButton).toBeDisabled()
+  // The production rate doubled (1 × 2 = 2 bits/sec), confirming Invest's own effect landed.
+  expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
+})
+
+test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * 10))
+  // productionMultiplier is untouched by Sacrifice — still the base 1x rate.
+  expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+})
+
+test('the manual convert button and the next-phase indicator appear once capacity reaches the conversion-unlock threshold', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({
+    bits: INTRO_CONVERSION_UNLOCK_CAPACITY,
+    capacity: INTRO_CONVERSION_UNLOCK_CAPACITY,
+    byteCreated: true,
+  })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^next phase indicator$/i)).toBeInTheDocument()
+  const convertButton = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
+  expect(convertButton).toBeInTheDocument()
+
+  await user.click(convertButton)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  // Grants 1 free Kilobyte unit in the main game's save data, from the separate intro bit pool —
+  // still on ByteFoundryPage (intro isn't complete yet), so this is only observable via the save.
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(1)
+  expect(saved.intro.completed).toBe(false)
+})
+
+test('the convert button and next-phase indicator stay hidden below the conversion-unlock capacity', () => {
+  seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
+  render(<App />)
+
+  expect(screen.queryByLabelText(/^next phase indicator$/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
+})
+
+test('the intro auto-transitions into the main game once the bit balance crosses the auto-invest threshold', () => {
+  vi.useFakeTimers()
+
+  // One tick (0.1s) at a 10x production multiplier (10 bits/sec) credits exactly 1 bit — enough
+  // to cross from one below the threshold to the threshold itself.
+  seedIntroState({
+    bits: INTRO_AUTO_INVEST_THRESHOLD - 1,
+    capacity: INTRO_AUTO_INVEST_THRESHOLD,
+    byteCreated: true,
+    productionMultiplier: 10,
+  })
+  const { unmount } = render(<App />)
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // Transitioned to MainPage — the Byte Foundry heading is gone, replaced by the game itself, with
+  // the auto-invest-granted Kilobytes already owned.
+  expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+
+  unmount()
+  vi.useRealTimers()
+})
+
+// --- Chapters (inside the Milestones view) ---
+// Every chapter row is a plain boolean read of state.intro.completed / state.prestige.count — see
+// CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is
+// reachable at all (MainPage only ever renders once intro.completed is true), so it isn't varied
+// here — the meaningful coverage is "Go Googol" tracking prestige.count, and that Chapters itself
+// is reachable before a first Prestige at all (see the "reachable both before and after" test above).
+test.each([
+  { prestigeCount: 0, reached: false },
+  { prestigeCount: 1, reached: true },
+  { prestigeCount: 5, reached: true },
+])('the "Go Googol" chapter reads $reached when prestige.count is $prestigeCount', async ({ prestigeCount, reached }) => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { Ones: 10 },
+    prestige: { xp: 0, points: 0, count: prestigeCount, highestMilestone: 1 },
+  })
+  render(<App />)
+  await user.click(screen.getByRole('tab', { name: /milestones/i }))
+
+  expect(screen.getByLabelText(/^chapters category$/i)).toBeInTheDocument()
+  const firstKilobyteRow = screen.getByLabelText(/^the first kilobyte chapter$/i)
+  expect(firstKilobyteRow).toHaveTextContent('✅')
+
+  const goGoogolRow = screen.getByLabelText(/^go googol chapter$/i)
+  expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
+
+  const comingSoonRow = screen.getByLabelText(/^coming soon… chapter$/i)
+  expect(comingSoonRow).toHaveTextContent('🔒')
 })
