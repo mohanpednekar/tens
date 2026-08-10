@@ -132,9 +132,12 @@ status).
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
 `autonomous-maintenance.yml`, which runs every 5 hours and does exactly one unit of work per run,
-picked in three phases — Phase 0 (CI/CD failures) always outranks Phase A (task backlog, ordered
-`priority:high` → normal/FIFO → `priority:low`), which always outranks Phase B (a maintenance menu:
-test coverage, dependency/security, code quality, doc sync, workflow self-improvement, gap analysis).
+picked in three phases — Phase 0 (CI/CD failures, plus any unaddressed critical/high-severity
+Dependabot security alert, severity-sorted the same way Phase A sorts priority labels) always
+outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low`), which
+always outranks Phase B (a maintenance menu: test coverage, dependency/security — including any
+medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
+workflow self-improvement, gap analysis).
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` PRs.
 `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR) or on green
 checks alone for our own automation's branches when the diff meets a conservative low-risk bar.
