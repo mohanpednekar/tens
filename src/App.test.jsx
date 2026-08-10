@@ -264,6 +264,32 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
 })
 
+test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost to the global multiplier, not a hidden separate factor', async () => {
+  // Regression test for a real bug: an earlier version applied Overclock as its own third
+  // multiplier inside getEffectiveTierTickSpeedSeconds, but this breakdown line's "global ×N"
+  // parenthetical only ever showed two factors — silently disagreeing with the actual computed
+  // effective tickspeed once overclockCount > 0. Overclock's effect is now folded directly into
+  // the global tickspeed multiplier itself, so both figures below must agree by construction.
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 2s)
+    globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
+    overclockCount: 1, // boosts the regular step from 1% to 1.1% per level
+  }))
+
+  render(<App />)
+
+  const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
+  await user.click(within(kilobytesLayer).getByRole('button', { name: /kilobytes/i }))
+
+  // 1.011^9 ≈ 1.10349 — the global figure must reflect the BOOSTED step (1.1%), not the
+  // pre-Overclock baseline (1.01^9 ≈ 1.0937, which would round to the same "×1.1" display by
+  // coincidence at 2 tiers, but the effective period below only matches the boosted value).
+  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 1\.81s \(tier ×1, global ×1\.1\)/i)
+})
+
 test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
   const user = userEvent.setup()
 
@@ -781,6 +807,36 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
     name: /overclock \(requires ronnabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 1\.2%/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.2%/lvl · Lv.12/20')
+})
+
+test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once activated', () => {
+  // The disclosure's live-state line stays in the DOM (queryable via toHaveTextContent) even
+  // while collapsed by default — same convention every other live-state disclosure on this page
+  // follows — so no expand click is needed here.
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 12 },
+    overclockCount: 1,
+  }))
+
+  render(<App />)
+
+  const panel = screen.getByLabelText(/^overclock panel$/i)
+  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 1\.1% \(was 1%\) from 1 activation\./i)
+})
+
+test('the Overclock card\'s disclosure shows no per-level rate line before the first activation', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 5 },
+  }))
+
+  render(<App />)
+
+  const panel = screen.getByLabelText(/^overclock panel$/i)
+  expect(panel).not.toHaveTextContent(/per-level rate/i)
 })
 
 test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
@@ -1827,4 +1883,22 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
   expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
+})
+
+test('the money balance breakdown\'s Overclock line reports the boosted per-level Tickspeed rate once active, not a standalone bonus percentage', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier02: 1, tier10: 10 },
+    overclockCount: 2,
+  }))
+
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^money display$/i }))
+
+  const breakdown = screen.getByLabelText(/^global production multipliers$/i)
+  expect(breakdown).toHaveTextContent(
+    /overclock: tickspeed upgrade's per-level rate is now 1\.2% \(was 1%\) from 2 activations/i
+  )
 })
