@@ -77,7 +77,14 @@ const ActionsRow = styled.div`
 const formatBitBalance = (bits, byteCreated) =>
   byteCreated ? `${formatAmount(Math.floor(bits / BITS_PER_BYTE))} B` : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
-const ByteFoundryPage = ({ game }) => {
+// `onBack` is only passed once intro.completed is true — this page is otherwise a mandatory gate
+// with no way out (see App.jsx). When it's set, the player got here voluntarily (via MainPage's
+// "⚙️ Byte Foundry" link) to review a completed run's stats — every action button is hidden rather
+// than shown-but-disabled, since intro.completed makes every one of them a guaranteed engine no-op
+// (see tapIntroBit/combineIntroByte/pickIntroCapacityMilestone/pickIntroProductionMilestone/
+// convertIntroBitsToKilobytes in engine.js) — nothing left to do here until the next Prestige
+// resets intro and makes this screen the mandatory gate again.
+const ByteFoundryPage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
 
@@ -91,7 +98,9 @@ const ByteFoundryPage = ({ game }) => {
     <RootDiv>
       <Title>⚙️ Byte Foundry</Title>
       <StatusText>
-        Tap to generate bits. Combine 8 bits into a Byte to start producing more automatically.
+        {intro.completed
+          ? 'This run’s Byte Foundry is complete — it resets and reappears after your next Prestige.'
+          : 'Tap to generate bits. Combine 8 bits into a Byte to start producing more automatically.'}
       </StatusText>
 
       <StatCard aria-label="byte foundry balance">
@@ -105,74 +114,82 @@ const ByteFoundryPage = ({ game }) => {
           aria-valuemin={0}
           aria-valuemax={intro.capacity}
         />
-        {intro.byteCreated && (
+        {intro.byteCreated && !intro.completed && (
           <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
         )}
       </StatCard>
 
-      <TapArea
-        aria-label="tap to generate a bit"
-        disabled={isFull}
-        onClick={actions.tapIntroBit}
-        type="button"
-      >
-        👆 Tap
-      </TapArea>
+      {!intro.completed && (<>
+        <TapArea
+          aria-label="tap to generate a bit"
+          disabled={isFull}
+          onClick={actions.tapIntroBit}
+          type="button"
+        >
+          👆 Tap
+        </TapArea>
 
-      <ActionsRow>
-        {canCombine && (
-          <Button
-            aria-label="combine 8 bits into a Byte"
-            onClick={actions.combineIntroByte}
-            type="button"
-            variant="primary"
-          >
-            <ButtonContent>🔗 Combine into a Byte</ButtonContent>
-          </Button>
+        <ActionsRow>
+          {canCombine && (
+            <Button
+              aria-label="combine 8 bits into a Byte"
+              onClick={actions.combineIntroByte}
+              type="button"
+              variant="primary"
+            >
+              <ButtonContent>🔗 Combine into a Byte</ButtonContent>
+            </Button>
+          )}
+
+          {intro.byteCreated && (<>
+            <Button
+              aria-label="sacrifice all bits for 10x capacity"
+              disabled={!isFull}
+              onClick={actions.pickIntroCapacityMilestone}
+              title="Empties your bit balance in exchange for 10x capacity"
+              type="button"
+              variant={isFull ? 'prestige' : 'neutral'}
+            >
+              <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
+            </Button>
+
+            <Button
+              aria-label="invest bits for double production"
+              disabled={!isFull}
+              onClick={actions.pickIntroProductionMilestone}
+              title="Spends your current capacity's worth of bits to double your Byte's production rate"
+              type="button"
+              variant={isFull ? 'info' : 'neutral'}
+            >
+              <ButtonContent>⚡ Invest for Double Production</ButtonContent>
+            </Button>
+          </>)}
+
+          {canConvert && (
+            <Button
+              aria-label="convert 1000 bits into 1 Kilobyte"
+              onClick={actions.convertIntroBitsToKilobytes}
+              title="Spends 1000 bits to grant 1 Kilobyte in the main game"
+              type="button"
+              variant="success"
+            >
+              <ButtonContent>💾 Convert to a Kilobyte</ButtonContent>
+            </Button>
+          )}
+        </ActionsRow>
+
+        {revealed && (
+          <StatusText aria-label="next phase indicator">
+            ✨ The main game is close — once you fill this capacity, everything auto-invests into
+            Kilobytes.
+          </StatusText>
         )}
+      </>)}
 
-        {intro.byteCreated && (<>
-          <Button
-            aria-label="sacrifice all bits for 10x capacity"
-            disabled={!isFull}
-            onClick={actions.pickIntroCapacityMilestone}
-            title="Empties your bit balance in exchange for 10x capacity"
-            type="button"
-            variant={isFull ? 'prestige' : 'neutral'}
-          >
-            <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
-          </Button>
-
-          <Button
-            aria-label="invest bits for double production"
-            disabled={!isFull}
-            onClick={actions.pickIntroProductionMilestone}
-            title="Spends your current capacity's worth of bits to double your Byte's production rate"
-            type="button"
-            variant={isFull ? 'info' : 'neutral'}
-          >
-            <ButtonContent>⚡ Invest for Double Production</ButtonContent>
-          </Button>
-        </>)}
-
-        {canConvert && (
-          <Button
-            aria-label="convert 1000 bits into 1 Kilobyte"
-            onClick={actions.convertIntroBitsToKilobytes}
-            title="Spends 1000 bits to grant 1 Kilobyte in the main game"
-            type="button"
-            variant="success"
-          >
-            <ButtonContent>💾 Convert to a Kilobyte</ButtonContent>
-          </Button>
-        )}
-      </ActionsRow>
-
-      {revealed && (
-        <StatusText aria-label="next phase indicator">
-          ✨ The main game is close — once you fill this capacity, everything auto-invests into
-          Kilobytes.
-        </StatusText>
+      {onBack && (
+        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
+          <ButtonContent>← Back to game</ButtonContent>
+        </Button>
       )}
     </RootDiv>
   )

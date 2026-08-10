@@ -104,11 +104,13 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
-  // Money is back to MONEY_STARTING_AMOUNT (1) — nowhere near Kilobytes' 1,000 cost, so the Buy
-  // button is disabled again, same starting-state shape a truly fresh save would show.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
+  // A full Reset produces createInitialGameState()'s fresh intro.completed: false, and the app's
+  // bidirectional page sync (see App.jsx) follows it back to the Byte Foundry, same as a real
+  // Prestige — a Reset is at least as much "a new run" as a Prestige is.
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(0)
+  expect(saved.resources.base).toBe(1)
 })
 
 test('reset clears localStorage once the confirm dialog is accepted', async () => {
@@ -526,9 +528,10 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   await user.click(prestigeButton)
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
-  // Resources reset (back to MONEY_STARTING_AMOUNT, well below Kilobytes' 1,000 cost) — the Buy
-  // button is back in the DOM, just not affordable yet, unlike the frozen state that preceded it.
-  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
+  // A real Prestige now resets the Byte Foundry intro too (see engine.js's prestigeGame), so the
+  // app navigates back there instead of straight to MainPage — see the dedicated Byte-Foundry/
+  // Prestige interaction tests further down for the full reset assertions.
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 })
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
@@ -2040,6 +2043,164 @@ test('the intro auto-transitions into the main game once the bit balance crosses
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+
+  unmount()
+  vi.useRealTimers()
+})
+
+// --- The Byte Foundry resets and reappears after every real Prestige ---
+// A real Prestige now sends the player back through the intro every cycle (see engine.js's
+// prestigeGame and App.jsx's bidirectional page-sync effect) — it's no longer a one-time-ever gate.
+// Speed Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
+
+test('a real Prestige from MainPage navigates back to the Byte Foundry with a freshly reset intro', async () => {
+  const user = userEvent.setup()
+
+  // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
+  // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+    intro: { completed: true, bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4 },
+  })
+  render(<App />)
+
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+
+  expect(screen.queryByRole('heading', { level: 1, name: /^tens$/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.completed).toBe(false)
+  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+  expect(saved.intro.byteCreated).toBe(false)
+})
+
+test('completing the Byte Foundry again after a Prestige navigates forward into MainPage with newly re-granted Kilobytes', () => {
+  vi.useFakeTimers()
+
+  // Simulates "just prestiged, now replaying the intro" — prestige.count already at 1, resources/
+  // owned already at their fresh post-Prestige defaults, intro reset and one tick away from its
+  // own auto-invest threshold again.
+  seedIntroState(
+    { bits: INTRO_AUTO_INVEST_THRESHOLD - 1, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, productionMultiplier: 10 },
+    { prestige: { xp: 0, points: 1, count: 1, highestMilestone: 100 } }
+  )
+  const { unmount } = render(<App />)
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('a Prestige firing while on the Guide page defers navigation to the Byte Foundry until the player backs out', () => {
+  vi.useFakeTimers()
+
+  // autoPrestigeAttemptBudget seeded at 1 (the fire threshold) so the very next tick's elapsed
+  // time pushes it over, firing Auto-Prestige immediately without needing to simulate 1000s of
+  // gameplay — same "budget already at threshold" trick as the existing auto-invest test above.
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+    autoPrestige: 1,
+    autoPrestigeAttemptBudget: 1,
+  })
+  const { unmount } = render(<App />)
+
+  fireEvent.click(screen.getByText('ℹ️ Guide'))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+
+  // Auto-Prestige fires in the background and resets intro.completed to false, but the Guide page
+  // stays exactly where it was — App.jsx's sync effect is a no-op while page === 'info'.
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.completed).toBe(false)
+
+  // Backing out lands on the Byte Foundry, not MainPage, the instant intro.completed is false.
+  fireEvent.click(screen.getByRole('button', { name: /back to game/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
+// --- The Byte Foundry persists as a voluntarily-revisitable screen ---
+// Once intro.completed is true, the Byte Foundry no longer disappears — MainPage's own
+// "⚙️ Byte Foundry" link reopens it as a read-only review of the current cycle's stats (every
+// action button is a guaranteed engine no-op once intro.completed, see ByteFoundryPage.jsx), with
+// its own "← Back to game" exit. Before intro.completed, it's still the same mandatory gate as
+// always — no Back button, no way to reach MainPage/InfoPage around it.
+
+test('MainPage\'s Byte Foundry link navigates to a read-only review of the completed run, with a Back to game exit', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    intro: {
+      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      productionMultiplier: 4,
+    },
+  })
+  render(<App />)
+
+  await user.click(screen.getByText('⚙️ Byte Foundry'))
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByText(/this run.s byte foundry is complete/i)).toBeInTheDocument()
+  // The frozen stats are still shown, in Bytes (capacity 8000 bits = 1000 Bytes).
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
+  // No interactive controls left — every action is a guaranteed no-op once intro.completed.
+  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 10x capacity/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /invest bits for double production/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+})
+
+test('the mandatory Byte Foundry gate (before intro.completed) has no Back to game exit', () => {
+  render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
+})
+
+test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns it into the live, interactive gate in place', () => {
+  vi.useFakeTimers()
+
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+    autoPrestige: 1,
+    autoPrestigeAttemptBudget: 1,
+    intro: {
+      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      productionMultiplier: 4,
+    },
+  })
+  const { unmount } = render(<App />)
+
+  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // Still on the same screen — no navigation jump — but now it's the fresh, interactive gate.
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()

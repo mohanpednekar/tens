@@ -15,17 +15,19 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
-test('prestiging from the first-time overlay resets resources and awards Prestige Points', async ({ page }) => {
+test('prestiging from the first-time overlay resets resources, awards Prestige Points, and sends the player back through the Byte Foundry', async ({ page }) => {
   const overlay = page.getByRole('dialog', { name: /prestige required/i })
   await expect(overlay).toBeVisible()
 
   await overlay.getByRole('button', { name: /prestige now/i }).click()
 
   await expect(overlay).not.toBeVisible()
-  await expect(page.getByLabel('money display')).toContainText('$10')
+  // A real Prestige now resets the Byte Foundry intro too (see engine.js's prestigeGame), so the
+  // app navigates back there instead of straight to MainPage — money/owned-tier assertions for the
+  // main game itself are already covered by golden-path.e2e.js.
+  await expect(page.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeVisible()
 
-  const ppDisplay = page.getByLabel('prestige points display')
-  await expect(ppDisplay).toBeVisible()
-  await expect(ppDisplay).toContainText(/\d+ PP/)
-  await expect(ppDisplay).not.toContainText('0 PP')
+  const saved = await page.evaluate(() => JSON.parse(window.localStorage.getItem('tens_game_state')))
+  expect(saved.intro.completed).toBe(false)
+  expect(saved.prestige.points).toBeGreaterThan(0)
 })

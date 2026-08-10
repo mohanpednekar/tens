@@ -14,7 +14,10 @@ instead of the default `GITHUB_TOKEN`, because commits/pushes/merges authored by
 can't trigger other workflows (see `docs/DESIGN_HISTORY.md` for why this matters concretely).
 `autonomous-maintenance.yml`/`autonomous-pr-followup.yml` additionally need `id-token: write` (OIDC
 token for `claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs `issues: write` (so
-its guard step's `gh issue list --label claude-task` doesn't silently return empty).
+its guard step's `gh issue list --label claude-task` doesn't silently return empty) and
+`security-events: read` (so its guard step's default-`GITHUB_TOKEN` call to the Dependabot alerts
+REST API, used by Phase 0(c)/Phase B item 2 below, doesn't come back empty or 403 — GitHub enables
+Dependabot alerts by default for public repos, so no separate manual step is needed for this one).
 
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited. The real constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based).
@@ -120,16 +123,29 @@ gap-analysis item keeps proposing new work — but the actual backstop is extern
 separate infrastructure re-kicks the workflow via `workflow_dispatch` if it's gone quiet longer than
 expected. See `docs/DESIGN_HISTORY.md` for detail.
 
-**Phase 0 — CI/CD failures (top priority).** The guard step checks whether the latest completed
-`ci.yml` run on `main` failed, and separately lists any open PR (excluding `claude/auto-*` and fork
-PRs) with a failing check. Either condition outranks Phase A/B and is the one case allowed to bypass
-the 5-PR ceiling below. If `main` is broken, Claude reads the failing run's logs, fixes the regression
-on a branch named `claude/heal-main-<short-slug>`, confirms `yarn test`/`yarn build` are green, and
-opens a PR (this branch prefix is already recognized by `pr-auto-merge.yml`'s low-risk path).
-Otherwise, for a stale Dependabot PR confirmed behind `main` (failing only because its branch predates
-a source change, not the dependency bump), Claude comments `@dependabot rebase` — checking existing
-comments first, and never pushing its own commits to a `dependabot/*` branch. Any other failure without
-an obviously safe fix is left for a human. If neither condition applies, falls through to Phase A.
+**Phase 0 — CI/CD failures and unaddressed critical/high Dependabot alerts (top priority).** The
+guard step checks whether the latest completed `ci.yml` run on `main` failed, and separately lists
+any open PR (excluding `claude/auto-*` and fork PRs) with a failing check. Either condition outranks
+Phase A/B and is the one case allowed to bypass the 5-PR ceiling below. If `main` is broken, Claude
+reads the failing run's logs, fixes the regression on a branch named `claude/heal-main-<short-slug>`,
+confirms `yarn test`/`yarn build` are green, and opens a PR (this branch prefix is already recognized
+by `pr-auto-merge.yml`'s low-risk path). Otherwise, for a stale Dependabot PR confirmed behind `main`
+(failing only because its branch predates a source change, not the dependency bump), Claude comments
+`@dependabot rebase` — checking existing comments first, and never pushing its own commits to a
+`dependabot/*` branch. Any other failure without an obviously safe fix is left for a human.
+
+Otherwise — 0(c) — the guard step also fetches every open Dependabot *security alert* (not just PRs)
+via the REST API, sorted severity-first (critical → high → medium → low), the same way Phase A sorts
+`priority:high`/normal/`priority:low` task issues. A critical or high severity alert with no matching
+open Dependabot PR already in flight (cross-checked by package name) outranks the Phase A backlog:
+Claude reads the alert's vulnerable/patched version range and, if the fix is a safe patch/minor bump,
+applies it directly (branch `claude/auto-dep-alert-<number>-<short-slug>`, PR body noting `Addresses
+Dependabot alert #<number>` — merging removes the vulnerable version, which is what actually closes
+the alert; Claude never calls the API to dismiss one directly). A fix needing a major/breaking bump,
+or a package it can't safely resolve with confidence, gets a `claude-task` issue filed instead
+(labeled `claude-task`, `priority:high`, `security`) so it jumps to the front of Phase A rather than
+being attempted half-way. Medium/low severity alerts are left for Phase B item 2 below rather than
+elevated here. If none of (a)/(b)/(c) apply, falls through to Phase A.
 
 **Phase A — task backlog next.** Claude walks the open `claude-task` backlog in order —
 `priority:high` first, then normal (unlabeled) issues by lowest issue number, then `priority:low`
@@ -156,12 +172,14 @@ PR — the comments (and any new `blocked` labels) left along the way are still 
 
 **Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security
-maintenance (`yarn audit` + safe patch/minor bumps), (3) code quality / simplification, (4) CLAUDE.md
-documentation sync, (5) workflow self-improvement (scoped to `autonomous-maintenance.yml` only — may
-not weaken the duplicate-PR guard, the budget cap, the never-self-merge rule, the always-open-a-PR
-requirement, or Phase A's priority), (6) gap analysis — survey the repo for a gap not already covered
-by an open issue/PR and file exactly one well-specified `claude-task` issue proposing a solution (never
-opens a PR itself; new proposals get both `claude-task` and `gap-analysis` labels).
+maintenance (`yarn audit` + safe patch/minor bumps, plus the medium/low-severity Dependabot alerts
+Phase 0(c) leaves for this item — critical/high alerts are Phase 0(c)'s job, not this one's), (3) code
+quality / simplification, (4) CLAUDE.md documentation sync, (5) workflow self-improvement (scoped to
+`autonomous-maintenance.yml` only — may not weaken the duplicate-PR guard, the budget cap, the
+never-self-merge rule, the always-open-a-PR requirement, or Phase A's priority), (6) gap analysis —
+survey the repo for a gap not already covered by an open issue/PR and file exactly one well-specified
+`claude-task` issue proposing a solution (never opens a PR itself; new proposals get both
+`claude-task` and `gap-analysis` labels).
 
 Adding new tiers to `TIER_DEFINITIONS` (and economy changes generally) is banned during Phase B, and
 allowed in Phase A only when the task issue's "Explicit authorizations" section explicitly permits that
