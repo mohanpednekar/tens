@@ -2620,6 +2620,14 @@ describe('formatOfflineDuration', () => {
     expect(formatOfflineDuration(3725)).toBe('1h 2m')
   })
 
+  it('formats an exact hour with 0 minutes rather than dropping to the minutes-only branch', () => {
+    expect(formatOfflineDuration(3600)).toBe('1h 0m')
+  })
+
+  it('formats an exact minute with 0 seconds rather than dropping to the seconds-only branch', () => {
+    expect(formatOfflineDuration(60)).toBe('1m 0s')
+  })
+
   it('clamps negative input to 0s', () => {
     expect(formatOfflineDuration(-10)).toBe('0s')
   })

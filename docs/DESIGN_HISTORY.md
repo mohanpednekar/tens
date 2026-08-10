@@ -919,6 +919,39 @@ grows past its default (see above) — level totals now grow (proportionally to 
 whereas the division model would have shrunk the per-unit price instead while leaving the total
 roughly flat.
 
+### Overclock: from a standalone multiplier to a Tickspeed-upgrade step boost
+
+Overclock's first implementation (merged, then corrected one PR later — see engine.js's
+`getGlobalTickspeedProductionMultiplier`/`getGlobalTickspeedRegularStep`) applied its 0.1%-per-activation
+bonus as its own independently-compounding multiplier — `getOverclockMultiplier(overclockCount) =
+(1.001)^overclockCount` — stacked as a third factor alongside the per-tier and (Money-funded) global
+tickspeed multipliers inside `getEffectiveTierTickSpeedSeconds`. That version was reviewed, tested, and
+shipped exactly as originally requested ("improves global tickspeed multiplier by 0.1%"), but the
+maintainer's own request turned out to have a more specific intended mechanic than either the initial
+prose or the follow-up clarifying questions surfaced: "it takes the global tickspeed upgrade from 1% to
+1.1% in the first upgrade... which effectively means tickspeed multiplier becomes 1.011 from 1.01 after
+first upgrade then 1.012 and so on." That's not a separate multiplier at all — it's a permanent boost to
+the *existing* global tickspeed multiplier's own per-level growth rate, applied only to REGULAR levels
+(the milestone step stays fixed at 10%).
+
+The fix folded `overclockCount` directly into `getGlobalTickspeedProductionMultiplier` as a second
+parameter, via a new `getGlobalTickspeedRegularStep(overclockCount) =
+GLOBAL_TICKSPEED_PRODUCTION_STEP + overclockCount * OVERCLOCK_PRODUCTION_STEP`, and removed the
+standalone `getOverclockMultiplier`/third-factor entirely — `getEffectiveTierTickSpeedSeconds` went back
+to dividing by just two multipliers, with Overclock's contribution already baked into the global one. A
+non-obvious behavioral consequence worth remembering if this is ever revisited: because the boost lives
+inside the *existing* global tickspeed multiplier rather than a separate factor, Overclock now has zero
+effect while the global tickspeed multiplier itself is still at level 0/not yet bought — there's no
+level for the boosted step to compound over — and any level already bought before an Overclock
+activation retroactively compounds at the new, higher rate from then on (not just future purchases).
+This also incidentally fixed a real display bug in the first version: a tier row's "Effective tickspeed"
+Details breakdown text only ever showed two of the three active multipliers, silently disagreeing with
+the actual (three-multiplier) computation once `overclockCount > 0` — folding Overclock into the
+existing global-multiplier factor removed the hidden third factor the display text had no branch for,
+rather than requiring a separate display fix. **Don't reintroduce a standalone Overclock multiplier** —
+if a future request sounds like "Overclock should add its own bonus," re-confirm against this file
+first, since that reading was already tried, shipped, and specifically walked back.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

@@ -173,7 +173,8 @@ const migrateState = saved => {
     ...savedWithoutRemovedFields,
     resources: { ...fresh.resources, ...shiftOldTierIds(migratedResourcesRaw, isPreByteFoundrySave) },
     owned:     { ...fresh.owned,     ...shiftOldTierIds(saved.owned, isPreByteFoundrySave) },
-    purchased: { ...fresh.purchased, ...shiftOldTierIds(saved.purchased ?? saved.owned ?? {}, isPreByteFoundrySave) },
+    // Reuses the migratedPurchased computed above instead of recomputing shiftOldTierIds again.
+    purchased: { ...fresh.purchased, ...migratedPurchased },
     purchaseLevels: { ...fresh.purchaseLevels, ...derivedPurchaseLevels, ...savedPurchaseLevels },
     purchaseLevelProgress: { ...fresh.purchaseLevelProgress, ...derivedPurchaseLevelProgress, ...savedPurchaseLevelProgress },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
