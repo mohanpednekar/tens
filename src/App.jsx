@@ -18,12 +18,18 @@ function App() {
   // computeInitialGame pattern — a returning player never sees the intro again.
   const [page, setPage] = useState(() => (game.state.intro.completed ? 'game' : 'intro'))
 
-  // Follows the Byte Foundry's one-time auto-invest transition (intro.completed flipping true
-  // mid-session, see engine.js's tickIntroAutoInvest) into 'game' automatically — no manual
-  // "continue" click, and no going back to 'intro' afterward (intro.completed is never reset by
-  // prestigeGame/speedUpGame/overclockGame, only by a full Reset).
+  // Keeps page synced to intro.completed whenever page is 'intro' or 'game' — bidirectional, so it
+  // both follows the Byte Foundry's auto-invest transition (intro.completed flipping true, see
+  // engine.js's tickIntroAutoInvest) forward into 'game', and follows a real Prestige (which now
+  // resets intro.completed back to false every cycle, see engine.js's prestigeGame) backward into
+  // 'intro'. 'info' is deliberately excluded from this sync: Auto-Prestige can fire in the
+  // background while the player is reading the static Guide page, and force-navigating them off it
+  // would be worse UX than deferring — the moment they click back to 'game' via onBack, this same
+  // effect immediately corrects the page on the very next render if intro.completed is false.
   useEffect(() => {
-    if (game.state.intro.completed && page === 'intro') setPage('game')
+    if (page !== 'intro' && page !== 'game') return
+    const target = game.state.intro.completed ? 'game' : 'intro'
+    if (page !== target) setPage(target)
   }, [game.state.intro.completed, page])
 
   return (

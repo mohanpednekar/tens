@@ -262,10 +262,14 @@ src/
                                toggle (`'intro'`/`'game'`/`'info'`) — not a routing library, same "local
                                toggle, not real routing" convention MainPage's own Game/Upgrades/Milestones
                                view tabs already use. Initial `page` is computed once at mount from
-                               `game.state.intro.completed`; an effect auto-transitions `'intro'` → `'game'`
-                               the instant that flag flips true mid-session (the Byte Foundry's one-time
-                               auto-invest — see "Economy model" below), and there is deliberately no path
-                               back to `'intro'` once left
+                               `game.state.intro.completed`; an effect keeps `page` synced to that flag
+                               bidirectionally whenever `page` is `'intro'` or `'game'` — forward on the
+                               Byte Foundry's auto-invest completing, and backward on every real Prestige
+                               (`prestigeGame` now resets `intro` to fresh defaults every cycle — see
+                               "Economy model" below) or a full Reset. `'info'` is deliberately excluded
+                               from this sync, so a Prestige/Reset firing while the Guide page is open
+                               doesn't yank the player off it — the sync catches up the moment they
+                               click back to `'game'`
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -453,7 +457,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (724 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (731 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

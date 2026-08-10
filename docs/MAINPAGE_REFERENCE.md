@@ -37,8 +37,10 @@ indicator"`) shown once `isIntroConversionUnlocked(state)`. Numbers are formatte
 before that (`formatBitBalance` helper, local to this file) — a display-only convention, internal
 state always stores raw bit counts. The 8000-bit auto-invest transition itself needs no button or
 handler here at all — it fires from `tickIntroAutoInvest` inside the shared tick loop (see
-`useIncrementalGame`), and `App.jsx`'s own effect follows `intro.completed` into `'game'`
-automatically the instant it flips.
+`useIncrementalGame`), and `App.jsx`'s own bidirectional sync effect follows `intro.completed` into
+`'game'` automatically the instant it flips. This page reappears every time a real Prestige resets
+`intro` back to fresh defaults (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a
+one-time-ever gate, it sets the pace for every run.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
