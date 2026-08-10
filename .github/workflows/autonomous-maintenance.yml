@@ -14,6 +14,7 @@ permissions:
   pull-requests: write
   issues: write
   id-token: write
+  security-events: read
 
 jobs:
   maintenance:
@@ -132,6 +133,41 @@ jobs:
             echo "TASK_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Phase 0(c) check: open Dependabot security alerts, severity-sorted (critical,
+          # high, medium, low) the same way Phase A sorts priority:high/normal/priority:low
+          # task issues, so a real vulnerability can jump the queue by how bad it is rather
+          # than by open-date. Needs the security-events: read permission above; GitHub
+          # enables Dependabot alerts by default for public repos, so no extra one-time setup
+          # is needed here (unlike the GH_AUTOMATION_PAT prerequisites in docs/AUTOMATION.md).
+          # Falls back to empty on any API error (e.g. alerts disabled) rather than failing
+          # the run — Phase 0(c) below treats an empty list the same as "no open alerts".
+          dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts" \
+            --paginate -f state=open --jq '
+              def sevrank: if .security_advisory.severity == "critical" then 0
+                           elif .security_advisory.severity == "high" then 1
+                           elif .security_advisory.severity == "medium" then 2
+                           else 3 end;
+              sort_by(sevrank)[]
+              | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
+            ' 2>/dev/null || true)
+          {
+            echo "dependabot_alerts<<DEPALERT_EOF"
+            echo "$dependabot_alerts"
+            echo "DEPALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Open Dependabot dependency-update PRs (separate from the claude/auto-* list
+          # above), so the prompt can tell whether an alert above already has a fix in
+          # flight before deciding to act on it directly.
+          dependabot_prs=$(gh pr list --state open --limit 100 --json number,headRefName,title \
+            --jq '[.[] | select(.headRefName | startswith("dependabot/"))]
+                  | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
+          {
+            echo "dependabot_prs<<DEPPR_EOF"
+            echo "$dependabot_prs"
+            echo "DEPPR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
           # Separately surface already-open gap-analysis proposals, so the Phase B gap
           # analysis task can skip re-proposing something already in the backlog above.
           open_gap_issues=$(gh issue list --label gap-analysis --state open --limit 100 \
@@ -174,7 +210,7 @@ jobs:
           # the only way to see WHY an unattended run ended without producing anything.
           show_full_output: true
           claude_args: |
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*)"
           settings: |
             {
               "permissions": {
@@ -225,6 +261,16 @@ jobs:
             Open PRs with a failing check (excludes claude/auto-* branches, which
             autonomous-pr-followup.yml already owns, and fork PRs):
             ${{ steps.guard.outputs.failing_prs || '(none)' }}
+
+            Currently-open Dependabot security alerts, most severe first (critical, then high,
+            then medium, then low):
+            ${{ steps.guard.outputs.dependabot_alerts || '(none)' }}
+
+            Currently-open Dependabot dependency-update PRs (branch: title) — cross-check these
+            against the alerts above before deciding an alert needs a fix of your own; a fix
+            already in flight there means Phase 0(b) above (or pr-auto-merge.yml, once its
+            checks pass) already has it covered:
+            ${{ steps.guard.outputs.dependabot_prs || '(none)' }}
 
             This is a side project — time is not a constraint (one task every 5 hours is fine), but
             your self-estimated usage-window budget per run is (see above). Before you start
@@ -282,8 +328,42 @@ jobs:
               - For any other non-`claude/auto-*` PR, only act if you can identify a genuine,
                 small, confidently-correct fix; otherwise leave it for a human rather than guessing.
               - After handling one PR this way, end the run — do not also attempt Phase A or B.
-            - (c) If neither (a) nor (b) applies (main is green and the failing-PR list is empty),
-              fall through to Phase A.
+            - (c) Otherwise, if "Currently-open Dependabot security alerts" above has any
+              critical or high severity entry, handle the single most severe one (critical
+              before high; lowest alert number breaks a tie) — a real, disclosed vulnerability
+              outranks the feature/maintenance backlog the same way a broken main outranks
+              everything else:
+              - First check whether "Currently-open Dependabot dependency-update PRs" already
+                has an entry for the same package (match by package name against the PR title
+                or branch). If so, a fix is already in flight — Phase 0(b) above (if it's
+                failing) or pr-auto-merge.yml (once its checks pass) already has it covered, so
+                skip straight to whichever of (a)/(b) actually applies instead of duplicating
+                that work here.
+              - Otherwise, read the alert's full detail with
+                `gh api repos/${{ github.repository }}/dependabot/alerts/<number>` for the
+                vulnerable/patched version range. If the patched version is a safe patch or
+                minor bump of a direct dependency, apply it (`yarn upgrade
+                <package>@<patched-version>`, respecting yarn.lock / Yarn Classic v1), confirm
+                `yarn test` and `yarn build` are green, and open a PR on branch
+                `claude/auto-dep-alert-<number>-<short-slug>` whose body notes
+                `Addresses Dependabot alert #<number>`. Merging removes the vulnerable version,
+                which is what actually closes the alert — never call the Dependabot alerts API
+                to dismiss it directly; a forced dismissal without a real fix would just hide a
+                live vulnerability.
+              - If the fix needs a major/breaking bump, or the affected package isn't something
+                you can safely resolve with confidence this run, do not attempt it half-way:
+                file a `claude-task` issue instead (`gh issue create`) describing the alert
+                (package, severity, summary, URL) so it enters the ordinary Phase A backlog at
+                the front of the queue. Ensure both labels exist first (idempotent):
+                `gh label create priority:high --color b60205 --description "Jumps the Phase A
+                backlog queue" --force` and `gh label create security --color d93f0b
+                --description "Tracks a Dependabot security alert" --force`; apply
+                `claude-task`, `priority:high`, and `security` to the new issue.
+              - Either way (direct fix or issue filed), end the run — do not also attempt Phase
+                A or B.
+            - (d) If none of (a), (b), or (c) apply (main is green, the failing-PR list is
+              empty, and there is no unaddressed critical/high Dependabot alert), fall through
+              to Phase A.
 
             PHASE A — task backlog next. If the backlog above is non-empty, walk it in order and
             implement the first candidate that turns out to actually be implementable — do not
@@ -383,9 +463,12 @@ jobs:
 
             1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
                src/game/layers.js, or src/game/storage.js and add tests for them.
-            2. Dependency & security maintenance — run `yarn audit`, and if there are safe patch or
-               minor version bumps available, apply them via `yarn install` (respecting yarn.lock,
-               Yarn Classic v1 format) and confirm nothing breaks.
+            2. Dependency & security maintenance — run `yarn audit`, and check the medium/low
+               severity entries in "Currently-open Dependabot security alerts" above (critical/high
+               entries are Phase 0(c)'s responsibility, not this menu item, and won't still be
+               listed there once handled). If there are safe patch or minor version bumps
+               available for either source, apply them via `yarn install`/`yarn upgrade`
+               (respecting yarn.lock, Yarn Classic v1 format) and confirm nothing breaks.
             3. Code quality / simplification — look for dead code, duplicated logic, or drift from
                CLAUDE.md's documented three-layer architecture (engine.js / useIncrementalGame.js /
                MainPage) and fix it.
@@ -435,6 +518,9 @@ jobs:
             - Never push your own commits to a `dependabot/*` branch — Dependabot owns that
               branch's content; the only allowed interaction is the `@dependabot rebase` comment
               described in Phase 0(b).
+            - Never call the Dependabot alerts API to dismiss an alert directly — an alert closes
+              automatically once the vulnerable version is gone from a merged fix; only Phase
+              0(c)'s actual dependency bump (or a human) may resolve one.
             - If a change touches anything CLAUDE.md documents (function signatures, constants,
               state shape, economy/game-rule behavior, file layout, or test counts), update
               CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
@@ -446,15 +532,17 @@ jobs:
             without creating a branch or PR — do not force a change just to have something to show.
 
             If you do make a code change: create a branch named `claude/heal-main-<short-slug>` for a
-            Phase 0(a) fix, `claude/auto-task-<number>-<short-slug>` for a Phase A task, or
+            Phase 0(a) fix, `claude/auto-dep-alert-<number>-<short-slug>` for a Phase 0(c) direct
+            fix, `claude/auto-task-<number>-<short-slug>` for a Phase A task, or
             `claude/auto-<short-task-slug>` for a Phase B menu task, commit, push it, and open a pull
             request against main using `gh pr create`. Structure the PR body to match
             .github/pull_request_template.md (Summary / Test plan / Documentation sections), filling
             in the checkboxes truthfully based on what you actually ran — and for a Phase A task,
             include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per the
-            budget guidance above). The two exceptions are Phase 0(b)'s Dependabot rebase request
-            (a comment, not a branch or PR) and Phase B item 6 (gap analysis), whose output is a filed
-            issue, not a branch or PR.
+            budget guidance above). The three exceptions are Phase 0(b)'s Dependabot rebase request
+            (a comment, not a branch or PR), Phase 0(c)'s issue-filing path when a critical/high
+            alert needs more than a safe direct bump, and Phase B item 6 (gap analysis) — all three
+            produce a filed issue or comment, not a branch or PR.
 
       - name: Classify Claude step failure
         # Companion to the continue-on-error above: keep every real failure red, but treat
