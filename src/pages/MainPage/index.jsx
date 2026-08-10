@@ -859,7 +859,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ game, onOpenInfo }) => {
+const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
   const theme = useTheme()
   const { prestige } = state
@@ -1309,6 +1309,9 @@ const MainPage = ({ game, onOpenInfo }) => {
         <h1>Tens</h1>
         <HeaderMeta>
           <VersionText>v{version}</VersionText>
+          <GuideLink onClick={onOpenFoundry} title="Review this run's Byte Foundry" type="button">
+            ⚙️ Byte Foundry
+          </GuideLink>
           <GuideLink onClick={onOpenInfo} title="How this game works" type="button">
             ℹ️ Guide
           </GuideLink>

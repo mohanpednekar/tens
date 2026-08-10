@@ -2134,6 +2134,78 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   vi.useRealTimers()
 })
 
+// --- The Byte Foundry persists as a voluntarily-revisitable screen ---
+// Once intro.completed is true, the Byte Foundry no longer disappears — MainPage's own
+// "⚙️ Byte Foundry" link reopens it as a read-only review of the current cycle's stats (every
+// action button is a guaranteed engine no-op once intro.completed, see ByteFoundryPage.jsx), with
+// its own "← Back to game" exit. Before intro.completed, it's still the same mandatory gate as
+// always — no Back button, no way to reach MainPage/InfoPage around it.
+
+test('MainPage\'s Byte Foundry link navigates to a read-only review of the completed run, with a Back to game exit', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    intro: {
+      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      productionMultiplier: 4,
+    },
+  })
+  render(<App />)
+
+  await user.click(screen.getByText('⚙️ Byte Foundry'))
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByText(/this run.s byte foundry is complete/i)).toBeInTheDocument()
+  // The frozen stats are still shown, in Bytes (capacity 8000 bits = 1000 Bytes).
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
+  // No interactive controls left — every action is a guaranteed no-op once intro.completed.
+  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 10x capacity/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /invest bits for double production/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+})
+
+test('the mandatory Byte Foundry gate (before intro.completed) has no Back to game exit', () => {
+  render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
+})
+
+test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns it into the live, interactive gate in place', () => {
+  vi.useFakeTimers()
+
+  seedMainGameState({
+    resources: { Ones: PRESTIGE_THRESHOLD },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
+    autoPrestige: 1,
+    autoPrestigeAttemptBudget: 1,
+    intro: {
+      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      productionMultiplier: 4,
+    },
+  })
+  const { unmount } = render(<App />)
+
+  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // Still on the same screen — no navigation jump — but now it's the fresh, interactive gate.
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
 // --- Chapters (inside the Milestones view) ---
 // Every chapter row is a plain boolean read of state.intro.completed / state.prestige.count — see
 // CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is

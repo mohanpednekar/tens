@@ -8,39 +8,55 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
 link beside the page title; see CLAUDE.md's Architecture section for the split and
-`onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered once the Byte Foundry pre-game
-intro is complete (`state.intro.completed`, see "Byte Foundry page" below and
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — `App.jsx` renders `ByteFoundryPage` instead
-until then.
+`onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered while the Byte Foundry gate isn't
+active — i.e. `state.intro.completed` is true and the player hasn't voluntarily navigated to
+`ByteFoundryPage` via its own "⚙️ Byte Foundry" link (`onOpenFoundry` prop) — see "Byte Foundry
+page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
 
-**Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The pre-game tap screen — a separate,
-much simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }`
-from `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
-view-tab system of its own. Sections, top to bottom: a title/one-line explainer; a `StatCard`
-(`aria-label="byte foundry balance"`) showing `{bits} / {capacity}` plus a hidden
-`role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once `intro.byteCreated`, a
-passive-production status line; a large tap button (`aria-label="tap to generate a bit"`, disabled
-once `bits >= capacity`) calling `actions.tapIntroBit`; a "Combine into a Byte" button
-(`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`) shown only while
-`!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated
-milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`,
-disabled unless `bits === capacity`, calling `actions.pickIntroCapacityMilestone`) and "Invest for
-Double Production" (`aria-label="invest bits for double production"`, disabled unless `bits >=
-capacity`, calling `actions.pickIntroProductionMilestone`) — rendered as ordinary, independent
-buttons with no coupling between their enabled states, matching the engine-level correction that
-these two offers are not mutually exclusive (see docs/ECONOMY_REFERENCE.md's "Byte Foundry"); a
-"Convert to a Kilobyte" button (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling
-`actions.convertIntroBitsToKilobytes`) shown while `isIntroConversionUnlocked(state) && bits >=
-INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next phase indicator" (`aria-label="next phase
-indicator"`) shown once `isIntroConversionUnlocked(state)`. Numbers are formatted in **Bytes**
-(`bits ÷ BITS_PER_BYTE`, always a clean whole number) once `byteCreated` is true, and in raw bits
-before that (`formatBitBalance` helper, local to this file) — a display-only convention, internal
-state always stores raw bit counts. The 8000-bit auto-invest transition itself needs no button or
-handler here at all — it fires from `tickIntroAutoInvest` inside the shared tick loop (see
-`useIncrementalGame`), and `App.jsx`'s own bidirectional sync effect follows `intro.completed` into
-`'game'` automatically the instant it flips. This page reappears every time a real Prestige resets
-`intro` back to fresh defaults (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a
-one-time-ever gate, it sets the pace for every run.
+**Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The tap screen — a separate, much
+simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
+`useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
+view-tab system of its own. It serves two roles, switched on `state.intro.completed`:
+
+- **Mandatory gate** (`intro.completed === false`, no `onBack` prop passed): the full interactive
+  screen. Sections, top to bottom: a title/one-line explainer; a `StatCard`
+  (`aria-label="byte foundry balance"`) showing `{bits} / {capacity}` plus a hidden
+  `role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once `intro.byteCreated`, a
+  passive-production status line; a large tap button (`aria-label="tap to generate a bit"`,
+  disabled once `bits >= capacity`) calling `actions.tapIntroBit`; a "Combine into a Byte" button
+  (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`) shown only while
+  `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two
+  independently-gated milestone buttons — "Sacrifice for 10x Capacity"
+  (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless `bits === capacity`, calling
+  `actions.pickIntroCapacityMilestone`) and "Invest for Double Production"
+  (`aria-label="invest bits for double production"`, disabled unless `bits >= capacity`, calling
+  `actions.pickIntroProductionMilestone`) — rendered as ordinary, independent buttons with no
+  coupling between their enabled states, matching the engine-level correction that these two
+  offers are not mutually exclusive (see docs/ECONOMY_REFERENCE.md's "Byte Foundry"); a "Convert
+  to a Kilobyte" button (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling
+  `actions.convertIntroBitsToKilobytes`) shown while `isIntroConversionUnlocked(state) && bits >=
+  INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next phase indicator"
+  (`aria-label="next phase indicator"`) shown once `isIntroConversionUnlocked(state)`. The
+  8000-bit auto-invest transition itself needs no button or handler here at all — it fires from
+  `tickIntroAutoInvest` inside the shared tick loop (see `useIncrementalGame`), and `App.jsx`'s own
+  `showingFoundry` render check reveals whatever page the player was last on (typically `'game'`)
+  the instant `intro.completed` flips true.
+- **Voluntary review** (`intro.completed === true`, reached via MainPage's "⚙️ Byte Foundry" link,
+  `onBack` prop passed): every action button above is hidden — each is a guaranteed engine no-op
+  once `intro.completed` (see the functions' own `if (state.intro.completed) return state` guards
+  in `engine.js`) — replaced by a completion message and a "← Back to game" button
+  (`aria-label="Back to game"`, same convention as `InfoPage`'s own back button, calling `onBack`).
+  The balance `StatCard` still renders, showing this cycle's frozen final stats (bits/capacity/
+  production multiplier as they stood when `intro.completed` was set); the passive-production line
+  and "next phase indicator" are hidden since neither applies anymore.
+
+Numbers are formatted in **Bytes** (`bits ÷ BITS_PER_BYTE`, always a clean whole number) once
+`byteCreated` is true, and in raw bits before that (`formatBitBalance` helper, local to this file)
+— a display-only convention, internal state always stores raw bit counts. This page reappears
+every time a real Prestige resets `intro` back to fresh defaults (see `prestigeGame` in
+docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — and,
+once completed, persists as a screen the player can return to at any time rather than disappearing
+for the rest of the cycle.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -191,11 +207,11 @@ one-time-ever gate, it sets the pace for every run.
   *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
-  `<h1>Tens</h1>`, beside the `ℹ️ Guide` link (a plain `GuideLink` button calling the `onOpenInfo`
-  prop `App.jsx` passes down) — both always visible, no disclosure involved. Sourced from
-  `package.json`'s `"version"` field via a build-time JSON import
-  (`import { version } from '../../../package.json'`) — the single source of truth; no separate
-  constant duplicates it.
+  `<h1>Tens</h1>`, beside the "⚙️ Byte Foundry" link (a plain `GuideLink`-styled button calling the
+  `onOpenFoundry` prop) and the `ℹ️ Guide` link (calling `onOpenInfo`) — all three always visible,
+  no disclosure involved. Sourced from `package.json`'s `"version"` field via a build-time JSON
+  import (`import { version } from '../../../package.json'`) — the single source of truth; no
+  separate constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an

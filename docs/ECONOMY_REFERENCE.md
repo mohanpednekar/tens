@@ -146,13 +146,22 @@ nothing here touches the main game's economy directly.
    same stage), `tickIntroAutoInvest` (also called from `tickGame`, mirroring the existing autobuyer
    "wait until the whole batch is affordable, then fire once" convention) fires **exactly once**:
    grants `INTRO_AUTO_INVEST_KILOBYTES_GRANTED` (8) free Kilobyte units, deducts the full 8000 bits,
-   and sets `intro.completed = true` — the per-cycle transition into the main game (`App.jsx`
-   navigates from `'intro'` to `'game'` the instant this flips, see CLAUDE.md's Architecture
-   section). `intro` is reset back to fresh defaults (`completed: false` included) by every real
-   `prestigeGame` call, so a real Prestige sends the player back through the intro every cycle — it
-   sets the pace for every run, not just the very first one. `speedUpGame`/`overclockGame` are
-   intra-cycle soft resets, not new cycles, and still carry `intro` through completely untouched. A
-   full Reset also restarts the intro (via `createInitialGameState()`'s fresh `intro.completed: false`).
+   and sets `intro.completed = true` — the per-cycle transition into the main game (`App.jsx`'s
+   `showingFoundry` render check stops overriding the player's current page the instant this flips,
+   see CLAUDE.md's Architecture section). `intro` is reset back to fresh defaults (`completed:
+   false` included) by every real `prestigeGame` call, so a real Prestige sends the player back
+   through the intro every cycle — it sets the pace for every run, not just the very first one.
+   `speedUpGame`/`overclockGame` are intra-cycle soft resets, not new cycles, and still carry
+   `intro` through completely untouched. A full Reset also restarts the intro (via
+   `createInitialGameState()`'s fresh `intro.completed: false`).
+8. `ByteFoundryPage` doesn't disappear once `intro.completed` is true — it becomes a permanent,
+   voluntarily-revisitable screen instead, reachable at any time via MainPage's own "⚙️ Byte
+   Foundry" link (`onOpenFoundry`). Every action function above already guards on
+   `state.intro.completed` and no-ops once it's true, so a voluntary visit is inherently read-only
+   at the engine level; the component itself hides every action button in that state and shows a
+   "← Back to game" exit instead (see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for
+   the render-level detail). No new engine state or functions back this — it's a pure
+   routing/rendering change (`App.jsx`, `MainPage`, `ByteFoundryPage`).
 
 Both `convertIntroBitsToKilobytes` and `tickIntroAutoInvest` grant free tier units via an internal
 `grantTierUnits(tierId, quantity)` helper (not exported) — it mirrors `buyTier`'s
