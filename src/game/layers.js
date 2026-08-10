@@ -3,36 +3,40 @@
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' intentionally has costResourceId === producesResourceId: it is the
-// entry-level money generator, bought with Bits to produce more Bits.
+// entry-level money generator, bought with Bits to produce more Bits. Bytes themselves are no
+// longer a purchasable tier here — they're produced entirely within the Byte Foundry pre-game
+// screen (see the "Byte Foundry" constants section and `intro` state below), which hands the
+// player their first Kilobytes directly once its own bit economy crosses a threshold, replacing
+// the old cheap self-producing tier01 as the game's actual bootstrap. See docs/DESIGN_HISTORY.md
+// for why Bytes was pulled out of this ladder.
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
-// (matching the global 100ms/10Hz tick rate — see TICK_RATE_MS below) up through tier10=10s — since
-// a slower cadence divides that tier's real throughput (see getTierBaseTickSpeedSeconds below) by
-// up to 10x for the last tier, on top of the already-steep cost curve (see getTierCost/
-// getCostEpochExponent in engine.js). This exact 1s-10s ladder was tried once before the tickspeed-multiplier
-// system existed and reverted to a uniform 1s because nothing could offset the slowdown; now that
-// both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier) tickspeed multipliers
-// exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are meant to be sped back
-// up by investing in those rather than being structurally unable to keep pace — see
-// docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
+// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=2s
+// up through tier10=11s — since a slower cadence divides that tier's real throughput (see
+// getTierBaseTickSpeedSeconds below) by up to 11x for the last tier, on top of the already-steep
+// cost curve (see getTierCost/getCostEpochExponent in engine.js). This ladder was tried once before
+// the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could offset
+// the slowdown; now that both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier)
+// tickspeed multipliers exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are
+// meant to be sped back up by investing in those rather than being structurally unable to keep pace
+// — see docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Bytes',      symbol: 'B',  baseCost: 1,    costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1 },
-  { id: 'tier02', name: 'Kilobytes',  symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2 },
-  { id: 'tier03', name: 'Megabytes',  symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3 },
-  { id: 'tier04', name: 'Gigabytes',  symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4 },
-  { id: 'tier05', name: 'Terabytes',  symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5 },
-  { id: 'tier06', name: 'Petabytes',  symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6 },
-  { id: 'tier07', name: 'Exabytes',   symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7 },
-  { id: 'tier08', name: 'Zettabytes', symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8 },
-  { id: 'tier09', name: 'Yottabytes', symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9 },
-  { id: 'tier10', name: 'Ronnabytes', symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
+  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 2  },
+  { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 3  },
+  { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 4  },
+  { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 5  },
+  { id: 'tier05', name: 'Petabytes',   symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 6  },
+  { id: 'tier06', name: 'Exabytes',    symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 7  },
+  { id: 'tier07', name: 'Zettabytes',  symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 8  },
+  { id: 'tier08', name: 'Yottabytes',  symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 9  },
+  { id: 'tier09', name: 'Ronnabytes',  symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 10 },
+  { id: 'tier10', name: 'Quettabytes', symbol: 'QB', baseCost: 1E30, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 11 },
 ]
 
 
-// Falls back to 'b' (lowercase — a bit, distinct from tier01's uppercase 'B' byte symbol) for
-// MONEY_ID/an unrecognized resource id.
+// Falls back to 'b' (lowercase — a bit) for MONEY_ID/an unrecognized resource id. No tier owns a
+// bare 'B' (Byte) symbol any more — Bytes live only in the Byte Foundry intro, not this list.
 export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || 'b'
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
@@ -50,12 +54,63 @@ export const getTierBaseTickSpeedSeconds = tierId =>
 export const MONEY_ID = 'base'
 export const MONEY_STARTING_AMOUNT = 1
 export const GOOGOL = 1e100
+// A Byte is 8 bits — the Byte Foundry intro's own currency-conversion rate (see the "Byte Foundry"
+// constants below and convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js).
+export const BITS_PER_BYTE = 8
+// Money (Bits) balance required to Prestige — "1 Googol Bytes," expressed in Bits since
+// resources[MONEY_ID] is Bits-denominated, not Bytes (Bytes aren't even a purchasable tier any
+// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/prestigeGame
+// actually gate on. GOOGOL itself stays unchanged/exported — the exponent-based formulas
+// (getPrestigePointsAwarded/getMoneyExponent/getPrestigeProgressPercent in engine.js) deliberately
+// keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
+// constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
+export const PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
 // and every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets) is explicitly
 // scaled by elapsedSeconds so real-world cadence stays identical to a slower tick rate; only the
 // update granularity (and animation smoothness) increases.
 export const TICK_RATE_MS = 100
+
+// --- Byte Foundry (pre-game intro) --- see docs/ECONOMY_REFERENCE.md's "Byte Foundry" section and
+// createInitialGameState's `intro` field in engine.js. Its bit balance/capacity/production
+// multiplier are a currency pool entirely separate from Money (resources.base) until the
+// manual/auto conversions into owned Kilobytes described below.
+// Starting/current cap on the intro's bit balance — both tapping and passive production stop
+// crediting bits once the balance reaches this (see tapIntroBit/tickIntroProduction in engine.js).
+export const INTRO_STARTING_CAPACITY = 8
+// "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
+// 8000 → … (see pickIntroCapacityMilestone in engine.js).
+export const INTRO_CAPACITY_MULTIPLIER = 10
+// "Invest for Double Production" multiplies the production-rate multiplier by this each time it's
+// taken: 1x → 2x → 4x → … (see pickIntroProductionMilestone in engine.js).
+export const INTRO_PRODUCTION_MULTIPLIER_STEP = 2
+// The one persistent Byte generator's base passive-production rate, in bits/sec, before
+// productionMultiplier is applied (see tickIntroProduction in engine.js).
+export const INTRO_BYTE_BASE_RATE = 1
+// One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
+// combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
+// bits tapping alone can hold before the Byte exists to start producing more.
+export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
+// Manual conversion rate: this many intro bits become 1 Kilobyte unit in the main game (see
+// convertIntroBitsToKilobytes in engine.js) — matches Kilobytes' own real baseCost (1E3 Bits) in
+// TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
+// underlying "cost of a Kilobyte" even though they're tracked as separate balances.
+export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
+// Once the intro bit balance reaches this (== the capacity stage reached after 3 Sacrifice picks:
+// 8 → 80 → 800 → 8000), the full balance auto-converts into Kilobytes exactly once, transitioning
+// the player into the main game (see tickIntroAutoInvest in engine.js and the page-routing logic
+// in App.jsx).
+export const INTRO_AUTO_INVEST_THRESHOLD = 8000
+// How many Kilobyte units the one-time auto-invest above grants — INTRO_AUTO_INVEST_THRESHOLD
+// converted at the INTRO_BITS_PER_KILOBYTE_CONVERSION rate.
+export const INTRO_AUTO_INVEST_KILOBYTES_GRANTED = INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION
+// Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
+// the intro page can start showing a "next phase" reveal indicator (see
+// isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
+// bits at once (capacity must reach 8000 before balance can reach 1000, given the 8/80/800/8000…
+// ladder above).
+export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 10% of normal speed — a courtesy for short absences, not a way to make the

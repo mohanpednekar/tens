@@ -31,10 +31,51 @@ const migrateTierKeys = map =>
       .map(([k, v]) => [LEGACY_TIER_ID_MAP[k] ?? k, v])
   )
 
+// The tier ladder shifted, not just shrank: old tier01 (Bytes) was pulled out of TIER_DEFINITIONS
+// entirely in favor of the Byte Foundry intro (see layers.js/engine.js), and every tier from old
+// tier02 (Kilobytes) through old tier10 (Ronnabytes) shifted DOWN one slot to fill new
+// tier01-tier09 — new tier10 (Quettabytes) is brand new, with no old-save data to inherit. So an
+// old save's per-tier data under the literal key 'tierNN' can't just pass through unchanged (old
+// tier02's Kilobytes data would otherwise collide with — and be mistaken for — new tier02's own
+// Megabytes data, since both share that key): old tierNN's data must move to new tier(NN-1) for
+// every NN from 02 through 10, and old tier01's data has nowhere to go (dropped). Composed with
+// migrateTierKeys so both migration hops (legacy name → tier0N, then this shift) happen in one
+// pass; every per-tier map merge in migrateState below uses this instead of migrateTierKeys
+// directly. Keys outside the tierNN pattern (e.g. MONEY_ID's 'base') pass through unchanged.
+const shiftTierIdDown = id => {
+  const match = /^tier(\d\d)$/.exec(id)
+  if (!match) return id
+  const oldIndex = Number(match[1])
+  return oldIndex === 1 ? null : `tier${String(oldIndex - 1).padStart(2, '0')}`
+}
+// The shift itself must NOT be idempotent-unsafe: migrateState runs on every load, and a save
+// already on the current (post-shift) tier scheme has no marker distinguishing its 'tier01' (real
+// Kilobytes) from an old save's 'tier01' (Bytes, meant to be dropped) — reapplying the shift to an
+// already-current save would silently drop its real tier01 data on every subsequent load. Gated on
+// `shouldShift` (see migrateState's isPreByteFoundrySave below), which reuses the same one-time
+// `saved.intro === undefined` signal that already distinguishes "this save predates the Byte
+// Foundry feature entirely" (and therefore predates this exact tier-ladder shift, since both
+// landed together) from "this save is already on the current schema." legacy name-based
+// remapping (migrateTierKeys) still always runs regardless — those old names have no ambiguity
+// problem, since a current-schema save could never contain them.
+const shiftOldTierIds = (map, shouldShift) => {
+  const remapped = migrateTierKeys(map)
+  if (!shouldShift) return remapped
+  return Object.fromEntries(
+    Object.entries(remapped)
+      .map(([k, v]) => [shiftTierIdDown(k), v])
+      .filter(([k]) => k !== null)
+  )
+}
+
 // Merge a saved state with a fresh one so new fields are always present
 // and old save files remain playable after schema changes.
 const migrateState = saved => {
   const fresh = createInitialGameState()
+  // Computed once, reused by every shiftOldTierIds call below (see its own comment) — true only
+  // for a save that predates the `intro` field entirely, i.e. one made before the Byte Foundry
+  // feature (and the tier-ladder shift that shipped alongside it) existed at all.
+  const isPreByteFoundrySave = saved.intro === undefined
   // lastTierTickspeedXpUnlocked was a stored latch flag, since removed in favor of a live
   // owned[lastTierId] >= 10 check (see engine.js's isLastTierTickspeedXpUnlocked) — strip it from
   // an old save rather than carrying it forward forever as unread dead data.
@@ -50,7 +91,7 @@ const migrateState = saved => {
   // buyAutobuyerUnlock) already has whatever level its autobuyer reached under the old
   // Money-funded activation/Upgrade or PP-funded automation — that level carries forward
   // unchanged; an already-unlocked tier is never punished or relocked by this schema change.
-  const rawAutobuyers = migrateTierKeys(saved.autobuyers)
+  const rawAutobuyers = shiftOldTierIds(saved.autobuyers, isPreByteFoundrySave)
   const migratedAutobuyers = Object.fromEntries(
     Object.entries(rawAutobuyers).map(([k, v]) => [k, v === true ? 1 : v === false ? null : v])
   )
@@ -98,9 +139,9 @@ const migrateState = saved => {
   // have applied to a save from before block size became variable) — a one-time interpretation of
   // old data on load, not an ongoing engine mechanism (the running game never derives a tier's
   // level from its purchased count via division any more).
-  const migratedPurchased = migrateTierKeys(saved.purchased ?? saved.owned ?? {})
-  const savedPurchaseLevels = migrateTierKeys(saved.purchaseLevels)
-  const savedPurchaseLevelProgress = migrateTierKeys(saved.purchaseLevelProgress)
+  const migratedPurchased = shiftOldTierIds(saved.purchased ?? saved.owned ?? {}, isPreByteFoundrySave)
+  const savedPurchaseLevels = shiftOldTierIds(saved.purchaseLevels, isPreByteFoundrySave)
+  const savedPurchaseLevelProgress = shiftOldTierIds(saved.purchaseLevelProgress, isPreByteFoundrySave)
   const derivedPurchaseLevels = {}
   const derivedPurchaseLevelProgress = {}
   Object.keys(fresh.purchaseLevels).forEach(tierId => {
@@ -110,6 +151,18 @@ const migrateState = saved => {
     derivedPurchaseLevels[tierId] = level
     derivedPurchaseLevelProgress[tierId] = legacyPurchased - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
   })
+  // A save from before the Byte Foundry intro existed has no `intro` field at all — such a player
+  // already has real main-game progress (owned tiers, PP, etc.), so backfill completed: true and
+  // send them straight to MainPage rather than making them play the intro from scratch; every
+  // other intro field is irrelevant once completed is true but kept whole via fresh's defaults
+  // regardless. A save that already has its own `intro` (this feature already existed for it)
+  // merges normally, untouched by this case. A truly fresh browser (loadGameState returns null,
+  // this function never runs at all) still gets createInitialGameState's real
+  // intro.completed: false default and sees the intro.
+  const migratedIntro = isPreByteFoundrySave
+    ? { ...fresh.intro, completed: true }
+    : { ...fresh.intro, ...saved.intro }
+
   // applyAutobuyerMilestones (see engine.js) retroactively unlocks any tier autobuyer/tier-
   // tickspeed-autobuyer a save's prestige.count already qualifies for under the new
   // milestone-based unlock — a player who prestiged several times before this feature existed
@@ -118,9 +171,9 @@ const migrateState = saved => {
   return applyAutobuyerMilestones({
     ...fresh,
     ...savedWithoutRemovedFields,
-    resources: { ...fresh.resources, ...migrateTierKeys(migratedResourcesRaw) },
-    owned:     { ...fresh.owned,     ...migrateTierKeys(saved.owned) },
-    purchased: { ...fresh.purchased, ...migrateTierKeys(saved.purchased ?? saved.owned ?? {}) },
+    resources: { ...fresh.resources, ...shiftOldTierIds(migratedResourcesRaw, isPreByteFoundrySave) },
+    owned:     { ...fresh.owned,     ...shiftOldTierIds(saved.owned, isPreByteFoundrySave) },
+    purchased: { ...fresh.purchased, ...shiftOldTierIds(saved.purchased ?? saved.owned ?? {}, isPreByteFoundrySave) },
     purchaseLevels: { ...fresh.purchaseLevels, ...derivedPurchaseLevels, ...savedPurchaseLevels },
     purchaseLevelProgress: { ...fresh.purchaseLevelProgress, ...derivedPurchaseLevelProgress, ...savedPurchaseLevelProgress },
     autobuyers: { ...fresh.autobuyers, ...migratedAutobuyers },
@@ -128,16 +181,17 @@ const migrateState = saved => {
     // tierTickspeedAutobuyerEnabled key at all, so merging fresh's all-true defaults underneath
     // backfills every tier to true, matching every already-permanent automation the player had
     // running before this pause/resume feature existed.
-    autobuyersEnabled: { ...fresh.autobuyersEnabled, ...migrateTierKeys(saved.autobuyersEnabled) },
-    tickspeedLevels: { ...fresh.tickspeedLevels, ...legacyTickspeedLevels, ...migrateTierKeys(saved.tickspeedLevels) },
-    autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...migrateTierKeys(saved.autobuyerAttemptBudgets) },
-    tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...migrateTierKeys(saved.tierProductionAccumulators) },
-    smartAutobuyer: { ...fresh.smartAutobuyer, ...migrateTierKeys(saved.smartAutobuyer) },
-    tierTickspeedAutobuyer: { ...fresh.tierTickspeedAutobuyer, ...migrateTierKeys(saved.tierTickspeedAutobuyer) },
-    tierTickspeedAutobuyerEnabled: { ...fresh.tierTickspeedAutobuyerEnabled, ...migrateTierKeys(saved.tierTickspeedAutobuyerEnabled) },
-    everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...migrateTierKeys(saved.everUnlockedTierIds) },
+    autobuyersEnabled: { ...fresh.autobuyersEnabled, ...shiftOldTierIds(saved.autobuyersEnabled, isPreByteFoundrySave) },
+    tickspeedLevels: { ...fresh.tickspeedLevels, ...legacyTickspeedLevels, ...shiftOldTierIds(saved.tickspeedLevels, isPreByteFoundrySave) },
+    autobuyerAttemptBudgets: { ...fresh.autobuyerAttemptBudgets, ...shiftOldTierIds(saved.autobuyerAttemptBudgets, isPreByteFoundrySave) },
+    tierProductionAccumulators: { ...fresh.tierProductionAccumulators, ...shiftOldTierIds(saved.tierProductionAccumulators, isPreByteFoundrySave) },
+    smartAutobuyer: { ...fresh.smartAutobuyer, ...shiftOldTierIds(saved.smartAutobuyer, isPreByteFoundrySave) },
+    tierTickspeedAutobuyer: { ...fresh.tierTickspeedAutobuyer, ...shiftOldTierIds(saved.tierTickspeedAutobuyer, isPreByteFoundrySave) },
+    tierTickspeedAutobuyerEnabled: { ...fresh.tierTickspeedAutobuyerEnabled, ...shiftOldTierIds(saved.tierTickspeedAutobuyerEnabled, isPreByteFoundrySave) },
+    everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...shiftOldTierIds(saved.everUnlockedTierIds, isPreByteFoundrySave) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
+    intro: migratedIntro,
   })
 }
 

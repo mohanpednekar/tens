@@ -5,7 +5,11 @@ import { test, expect } from '@playwright/test'
 // legacy boolean vs. numeric autobuyer values). Seeds a save with tier01's autobuyer already
 // unlocked and confirms that state survives a real browser reload/load cycle.
 const seededState = {
-  resources: { Ones: 100000 },
+  // intro.completed: true marks this as a current-schema save (not a pre-Byte-Foundry one) so
+  // storage.js's migrateState does NOT apply its one-time tier-id shift to the tier01 data below
+  // — see storage.js's shiftOldTierIds/isPreByteFoundrySave.
+  intro: { completed: true },
+  resources: { base: 100000 },
   owned: { tier01: 50 },
   purchased: { tier01: 50 },
   autobuyers: { tier01: 1 },
@@ -23,13 +27,13 @@ test.beforeEach(async ({ page }) => {
 
 test('an already-unlocked tier autobuyer stays unlocked after a reload', async ({ page }) => {
   // Owned/purchased ("level") counts round-tripped through the save/load cycle correctly.
-  const bytesLayer = page.getByLabel(/^bytes layer$/i)
-  await expect(bytesLayer).toContainText(/owned: 50\b/i)
+  const kilobytesLayer = page.getByLabel(/^kilobytes layer$/i)
+  await expect(kilobytesLayer).toContainText(/owned: 50\b/i)
   await expect(page.getByRole('button', { name: /level 50\)/i })).toBeVisible()
 
   await page.getByRole('tab', { name: /upgrades/i }).click()
 
-  const upgradeRow = page.locator('[aria-label="Bytes PP upgrades"]')
+  const upgradeRow = page.locator('[aria-label="Kilobytes PP upgrades"]')
   await expect(upgradeRow).toBeVisible()
 
   // The autobuyer was already unlocked in the seeded save — it must not show the Unlock
@@ -40,5 +44,5 @@ test('an already-unlocked tier autobuyer stays unlocked after a reload', async (
   await expect(
     upgradeRow.getByRole('button', { name: /tickspeed multiplier upgrade itself automatically/i })
   ).toBeVisible()
-  await expect(upgradeRow.getByRole('button', { name: /make bytes's autobuyer smart/i })).toBeVisible()
+  await expect(upgradeRow.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeVisible()
 })

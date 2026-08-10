@@ -4,7 +4,13 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => {
     window.localStorage.clear()
-    window.localStorage.setItem('tens_game_state', JSON.stringify({ resources: { Ones: 1e100 } }))
+    // 8e100 (PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE — "1 Googol Bytes," in Bits) is the real
+    // freeze/Prestige trigger now, not the bare 1e100 GOOGOL value. intro.completed: true lands
+    // this seed directly on MainPage rather than the Byte Foundry intro screen.
+    window.localStorage.setItem('tens_game_state', JSON.stringify({
+      intro: { completed: true },
+      resources: { base: 8e100 },
+    }))
   })
   await page.reload()
 })

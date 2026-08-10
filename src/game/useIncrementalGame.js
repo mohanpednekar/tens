@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, consumeXpForLastTierTickspeed, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tickGame } from './engine'
+import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -77,6 +77,11 @@ export const useIncrementalGame = () => {
     setAutoPrestigeAutobuyerEnabled: enabled => setState(setAutoPrestigeAutobuyerEnabled(enabled)),
     setAutobuyerEnabled: (tierId, enabled) => setState(setAutobuyerEnabled(tierId, enabled)),
     setTierTickspeedAutobuyerEnabled: (tierId, enabled) => setState(setTierTickspeedAutobuyerEnabled(tierId, enabled)),
+    tapIntroBit: () => setState(tapIntroBit),
+    combineIntroByte: () => setState(combineIntroByte),
+    pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),
+    pickIntroProductionMilestone: () => setState(pickIntroProductionMilestone),
+    convertIntroBitsToKilobytes: () => setState(convertIntroBitsToKilobytes),
   }), [])
 
   const resetGame = useCallback(() => {

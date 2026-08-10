@@ -2,16 +2,22 @@ import { test, expect } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
-  await page.evaluate(() => window.localStorage.clear())
+  await page.evaluate(() => {
+    window.localStorage.clear()
+    // Bytes are no longer a purchasable tier — they're earned via the separate Byte Foundry
+    // pre-game tap screen (see CLAUDE.md's Economy model section). Seed intro.completed so this
+    // spec lands directly on MainPage, same as every other seeded e2e spec.
+    window.localStorage.setItem('tens_game_state', JSON.stringify({ intro: { completed: true } }))
+  })
   await page.reload()
 })
 
-test('buying Bytes increases Owned and grows the money balance over time', async ({ page }) => {
+test('buying Kilobytes increases Owned and grows the money balance over time', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: /tens/i })).toBeVisible()
 
-  const bytesLayer = page.getByLabel(/^bytes layer$/i)
-  await expect(bytesLayer).toBeVisible()
-  await expect(bytesLayer).toContainText(/owned: 0\b/i)
+  const kilobytesLayer = page.getByLabel(/^kilobytes layer$/i)
+  await expect(kilobytesLayer).toBeVisible()
+  await expect(kilobytesLayer).toContainText(/owned: 0\b/i)
 
   const buyButton = page.getByRole('button', { name: /^buy for \$10\b/i })
   await expect(buyButton).toBeEnabled()

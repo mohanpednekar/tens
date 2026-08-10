@@ -88,7 +88,7 @@ const InfoPage = ({ onBack }) => {
         <p>
           Every tier is bought directly with Bits, the base currency, and once owned, produces the
           tier immediately below it — production cascades all the way down to Bits. Reaching
-          1 Googol (10^100) Bits freezes production except for Prestige.
+          1 Googol Bytes (8×10^100 Bits) freezes production except for Prestige.
         </p>
       </Section>
 

@@ -25,14 +25,19 @@ The base resource is Money ($, resource id `Ones`). The player starts with $10.
 
 ### Production layers
 
-There are 10 tiers, from Bytes up to Ronnabytes (a byte-scale/computing theme). **Every tier is bought
-directly with Money** and, once owned, produces the tier immediately below it (which cascades down to
-Money). The first tier, Bytes, both costs and produces Money — it's the entry-level generator.
+Before the main game, a separate **Byte Foundry** pre-game screen has you tap to earn bits, combine
+your first 8 into a Byte generator, and grow capacity/production until you can convert into the main
+game's starting Kilobytes — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section for the full
+mechanic.
+
+There are 10 tiers, from Kilobytes up to Quettabytes (a byte-scale/computing theme). **Every tier is
+bought directly with Money** and, once owned, produces the tier immediately below it (which cascades
+down to Money). The first tier, Kilobytes, both costs and produces Money — it's the entry-level
+generator.
 
 | Tier | Symbol | Base cost | Produces |
 |------|--------|-----------|----------|
-| Bytes | B | $1e1 | Money |
-| Kilobytes | KB | $1e3 | Bytes |
+| Kilobytes | KB | $1e3 | Money |
 | Megabytes | MB | $1e6 | Kilobytes |
 | Gigabytes | GB | $1e9 | Megabytes |
 | Terabytes | TB | $1e12 | Gigabytes |
@@ -41,6 +46,7 @@ Money). The first tier, Bytes, both costs and produces Money — it's the entry-
 | Zettabytes | ZB | $1e21 | Exabytes |
 | Yottabytes | YB | $1e24 | Zettabytes |
 | Ronnabytes | RB | $1e27 | Yottabytes |
+| Quettabytes | QB | $1e30 | Ronnabytes |
 
 Costs scale in Fibonacci-driven jumps every block of 10 purchases (see `getTierCost` in `engine.js`).
 
