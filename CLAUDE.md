@@ -226,17 +226,24 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
-    ByteFoundryPage/index.jsx ← the pre-game "Byte Foundry" tap screen, shown until its one-time
-                               auto-invest transition into the main game (see "Economy model" below and
-                               `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section). Receives the full
-                               `game` object (`{ state, actions, ... }` from `useIncrementalGame`) as a
-                               prop, same as MainPage
+    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen — a mandatory gate before each
+                               Prestige cycle's auto-invest transition into the main game (see "Economy
+                               model" below and `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section),
+                               and, once that cycle's `intro.completed` is true, a permanent screen the
+                               player can voluntarily revisit at any time via MainPage's own "⚙️ Byte
+                               Foundry" link. Takes an `onBack` prop (only passed once `intro.completed`
+                               — the mandatory gate itself has no way out); when set, every action
+                               button is hidden in favor of a read-only stats review and a "← Back to
+                               game" exit, since every action is a guaranteed engine no-op once
+                               `intro.completed`. Receives the full `game` object (`{ state, actions,
+                               ... }` from `useIncrementalGame`) as a prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
-                               (see "Architecture" below). Takes `{ game, onOpenInfo }` props — `game` is
-                               the full `useIncrementalGame()` object, lifted up into App.jsx (see below)
-                               so ByteFoundryPage and MainPage can share one save/tick loop. Full
-                               field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
+                               (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
+                               props — `game` is the full `useIncrementalGame()` object, lifted up into
+                               App.jsx (see below) so ByteFoundryPage and MainPage can share one
+                               save/tick loop. Full field-by-field reference:
+                               `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page: static, evergreen explanations of every mechanic
                                (Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones) that used
                                to live inline on MainPage as click-to-expand disclosures. Reads no game
@@ -262,13 +269,21 @@ src/
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
                                <ByteFoundryPage/>/<MainPage/>/<InfoPage/> via a local `page` useState
-                               toggle (`'intro'`/`'game'`/`'info'`) — not a routing library, same "local
-                               toggle, not real routing" convention MainPage's own Game/Upgrades/Milestones
-                               view tabs already use. Initial `page` is computed once at mount from
-                               `game.state.intro.completed`; an effect auto-transitions `'intro'` → `'game'`
-                               the instant that flag flips true mid-session (the Byte Foundry's one-time
-                               auto-invest — see "Economy model" below), and there is deliberately no path
-                               back to `'intro'` once left
+                               (`'game'`/`'info'`/`'foundry'`, default `'game'`) — not a routing library,
+                               same "local toggle, not real routing" convention MainPage's own
+                               Game/Upgrades/Milestones view tabs already use. Which screen actually
+                               renders is a derived `showingFoundry = page !== 'info' && (!intro.completed
+                               || page === 'foundry')` check, not `page` directly: ByteFoundryPage is both
+                               a *mandatory gate* (whenever `intro.completed` is false — no fresh
+                               Kilobytes without tapping through it, see "Economy model" below) and, once
+                               completed, a *permanent, voluntarily-revisitable screen* reachable at any
+                               time via MainPage's own "⚙️ Byte Foundry" link (`page = 'foundry'`) to
+                               review the current cycle's stats — it no longer disappears once passed.
+                               `'info'` is excluded from the gate override, so a Prestige/Reset firing
+                               while the Guide page is open doesn't yank the player off it — the gate
+                               picks back up the instant they click back to `'game'`. Since `page` is
+                               independent of `intro.completed`, no syncing effect is needed at all: the
+                               gate resolving just reveals whatever `page` already was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -329,10 +344,13 @@ Strict three-layer separation:
    works, only *what its current state is* (e.g. the Tickspeed panel's "Lv.N — +X% faster ticks" line
    is live status, not a description, so it stays here). See docs/MAINPAGE_REFERENCE.md for the full
    field-by-field layout.
-4. **`ByteFoundryPage/index.jsx`** — the pre-game tap screen (see "Economy model" below), also a pure
-   renderer taking `game` as a prop. Runs entirely before the main game is reachable at all — it's the
-   only way a fresh save ever earns its first Kilobytes, replacing the old, since-removed self-producing
-   Bytes tier as the game's actual bootstrap.
+4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
+   taking `game` (and an optional `onBack`) as props. It's the only way any Prestige cycle ever earns
+   its first Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
+   bootstrap — a mandatory gate whenever `intro.completed` is false, with no way out. Once that cycle's
+   `intro.completed` flips true, it stops being a gate and becomes a permanent screen the player can
+   voluntarily reopen at any time (MainPage's "⚙️ Byte Foundry" link), shown read-only with a
+   `onBack`-driven exit back to MainPage.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
@@ -456,7 +474,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (724 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (734 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

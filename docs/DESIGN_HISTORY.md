@@ -330,6 +330,31 @@ load. Reusing the `intro` field's own existence as that marker (rather than inve
 version field) works because both changes shipped in the same feature and are permanently coupled — a
 save either predates both or postdates both.
 
+### The Byte Foundry becomes a per-Prestige-cycle mechanic, not a one-time gate
+
+The entry above describes the Byte Foundry as shipped: a permanent, one-time bootstrap gating a
+fresh save's very first Kilobytes, with `intro.completed` carried through unchanged by
+`prestigeGame`/`speedUpGame`/`overclockGame` — only a full Reset restarted it. That was true at the
+time, but a player who'd already played through it once (and reported being unable to see it again
+on a returning-save load — working as designed, per the pre-existing-save migration described
+above) pointed out that the Byte Foundry "sets the pace for every run," not just the very first one.
+
+Requested as a follow-up redesign: `prestigeGame` now resets `intro` back to
+`createInitialGameState()`'s fresh defaults (`completed: false` included) in the same atomic reset as
+`resources`/`owned`, so a real Prestige sends the player back through the Byte Foundry before every
+new cycle — tap out a fresh Byte generator, regrow capacity/production, convert back into the run's
+starting Kilobytes, same as the very first time. `App.jsx`'s page-routing effect became bidirectional
+to match (previously it only ever moved `'intro'` → `'game'`, never back), with one deliberate
+exception: it stays a no-op while the player is on the static Guide page (`'info'`), so a background
+Auto-Prestige firing while they're reading it doesn't yank them off it — the sync catches up the
+moment they click back to `'game'`.
+
+`speedUpGame`/`overclockGame` were deliberately left unchanged — they're intra-cycle soft resets, not
+new cycles, so they still carry `intro` through completely untouched, same as before. The load-time
+migration backfill (`isPreByteFoundrySave`/`storage.js`'s `intro.completed: true` for a save that
+predates the `intro` field entirely) is also unaffected — it remains a one-time, load-time decision
+for saves this old, orthogonal to what a real Prestige now does going forward for every save.
+
 ### Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number
 
 Once Bytes stopped being a tier and the main game's base currency stayed denominated in Bits, framing

@@ -269,9 +269,9 @@ export const createInitialGameState = () => ({
   // conversions into owned Kilobytes (see convertIntroBitsToKilobytes/tickIntroAutoInvest below).
   // Field naming ('intro') is deliberately decoupled from the page's own themed name ("Byte
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
-  // completed is permanent and one-shot — carried through unchanged by prestigeGame/speedUpGame/
-  // overclockGame (see there) so a real Prestige never sends the player back through the intro;
-  // only a full Reset (which calls this function directly, with nothing carried over) restarts it.
+  // completed is reset back to false by every real prestigeGame call (a fresh Byte Foundry
+  // playthrough gates the start of every new Prestige cycle) — speedUpGame/overclockGame are
+  // intra-cycle soft resets, not new cycles, and still carry intro through unchanged (see there).
   intro: {
     bits: 0,                   // always an integer — the tappable/producible balance
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators
@@ -1488,10 +1488,11 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
-    // The Byte Foundry intro is a one-time, pre-game gate, not a per-run mechanic — carried over
-    // permanently, same as every other "already unlocked, never re-locked by a soft reset" field
-    // below, so a real Prestige never sends a returning player back through it.
-    intro: state.intro ?? initial.intro,
+    // The Byte Foundry intro now resets on every real Prestige, in the same atomic reset as
+    // resources/owned above — a fresh run always starts by tapping out a new Byte generator.
+    // speedUpGame/overclockGame (below) are intra-cycle soft resets, not new cycles, and still
+    // carry intro through untouched.
+    intro: initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused
     // preference should survive a Prestige exactly like the autobuyer unlock itself does (see
@@ -1582,7 +1583,8 @@ export const speedUpGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Same permanence as prestigeGame gives this — see there.
+    // Unlike prestigeGame (which now resets intro every cycle — see there), this is an
+    // intra-cycle soft reset and still carries intro through untouched.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as prestigeGame gives these two "enabled" flags — see there.
@@ -1642,7 +1644,8 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Same permanence as speedUpGame/prestigeGame give this — see there.
+    // Unlike prestigeGame (which now resets intro every cycle — see there), this is an
+    // intra-cycle soft reset and still carries intro through untouched, same as speedUpGame.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as speedUpGame/prestigeGame give these two "enabled" flags — see there.

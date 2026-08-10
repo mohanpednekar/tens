@@ -231,6 +231,11 @@ const withEverUnlockedTierIds = (state, tierId, unlocked = true) => ({
   everUnlockedTierIds: { ...state.everUnlockedTierIds, [tierId]: unlocked },
 })
 
+const withIntro = (state, overrides) => ({
+  ...state,
+  intro: { ...state.intro, ...overrides },
+})
+
 // Drops the given top-level keys from state entirely (rather than setting them to null/undefined)
 // — used to simulate a state object that predates a field's introduction, exercising this file's
 // many `?.`/`??` defensive fallbacks (see engine.js) that a value merely being falsy/0 doesn't.
@@ -3284,6 +3289,30 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
+
+  it('resets the Byte Foundry intro back to fresh defaults across prestige, sending the player back through it', () => {
+    const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
+      bits: 500,
+      capacity: 8000,
+      byteCreated: true,
+      productionMultiplier: 4,
+      productionAccumulator: 2.5,
+      completed: true,
+    })
+    const after = prestigeGame(state)
+    expect(after.intro).toEqual(createInitialGameState().intro)
+    expect(after.intro.completed).toBe(false)
+  })
+
+  it('resets resources/owned and the intro together in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
+    const state = withIntro(
+      withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 8),
+      { capacity: 8000, byteCreated: true, completed: true }
+    )
+    const after = prestigeGame(state)
+    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.intro).toEqual(createInitialGameState().intro)
+  })
 })
 
 // ─── speedUpGame ─────────────────────────────────────────────────────────────
@@ -3551,6 +3580,16 @@ describe('speedUpGame', () => {
     const after = speedUpGame(state)
     expect(after.overclockCount).toBe(4)
   })
+
+  it('keeps the Byte Foundry intro state permanently untouched across speed up, unlike prestige', () => {
+    const seededIntro = {
+      bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4,
+      productionAccumulator: 2.5, completed: true,
+    }
+    const state = withIntro(eligibleState(), seededIntro)
+    const after = speedUpGame(state)
+    expect(after.intro).toEqual(seededIntro)
+  })
 })
 
 // ─── overclockGame ───────────────────────────────────────────────────────────
@@ -3779,6 +3818,16 @@ describe('overclockGame', () => {
     const state = omit(eligibleState(), 'overclockCount')
     const after = overclockGame(state)
     expect(after.overclockCount).toBe(1)
+  })
+
+  it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
+    const seededIntro = {
+      bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4,
+      productionAccumulator: 2.5, completed: true,
+    }
+    const state = withIntro(eligibleState(), seededIntro)
+    const after = overclockGame(state)
+    expect(after.intro).toEqual(seededIntro)
   })
 })
 
