@@ -526,6 +526,19 @@ describe('schema migration', () => {
     expect(loaded.resources.Ones).toBeUndefined()
   })
 
+  it('forwards a legacy resources.Ones balance of exactly 0 (not just a truthy amount)', () => {
+    // The migration guard is `migratedResourcesRaw.base === undefined && legacyOnes !== undefined`
+    // — an explicit undefined check, not a truthy check — so a legacy balance of exactly 0 must
+    // still forward to resources.base rather than falling through to the fresh default.
+    const oldSave = {
+      resources: { Ones: 0 },
+      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(0)
+  })
+
   it('does not crash when resources is missing from the save entirely, falling back to fresh defaults', () => {
     const oldSave = {
       prestige: { xp: 0, level: 0, highestMilestone: 1 },
@@ -605,6 +618,19 @@ describe('clearGameState', () => {
     saveGameState(createInitialGameState())
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new Error('quota exceeded')
+    })
+    expect(() => clearGameState()).not.toThrow()
+  })
+
+  it('fails silently even when only the second of its two removeItem calls throws', () => {
+    // clearGameState removes the game-state key, then the last-save-timestamp key — confirm a
+    // failure specifically on the second removal is caught too, not just a failure on the first
+    // (same convention as saveGameState's own "second setItem call throws" test above).
+    saveGameState(createInitialGameState())
+    let callCount = 0
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      callCount += 1
+      if (callCount === 2) throw new Error('quota exceeded')
     })
     expect(() => clearGameState()).not.toThrow()
   })

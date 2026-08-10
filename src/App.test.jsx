@@ -28,6 +28,24 @@ test('renders the current app version beside the title', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
+test('the Guide link navigates to the Info page and Back to game returns, preserving game state', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /buy for 1 b\b/i }))
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+
+  await user.click(screen.getByText('ℹ️ Guide'))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^bytes layer$/i)).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  // Navigating away and back doesn't touch game state — the previous purchase is still there.
+  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
+})
+
 test('buying Bytes deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
@@ -164,11 +182,10 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
   // still reads +5 b, not +6 b.
   expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('+5 b')
-  // The badge shows the cumulative speed bonus as "+N%" (not the old "×N" purchase-speed
-  // figure) — no "Lv." (that wording belongs to the Buy button's purchase level); the
-  // tickspeed level itself lives in the title tooltip.
-  expect(screen.getByLabelText(/^bytes layer$/i)).toHaveTextContent('⚙ +21%')
-  expect(screen.getByTitle(/tickspeed multiplier level 3 — \+21% faster ticks/i)).toBeInTheDocument()
+  // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
+  // automation icon and percentage badge are removed from the tier row" below) — it's still
+  // available in the tickspeed button's own title tooltip and the row's Details disclosure.
+  expect(screen.getByTitle(/tickspeed multiplier level 3 \(\+21% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
@@ -190,7 +207,7 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
 
   await user.click(upgradeButton)
 
-  expect(screen.getByTitle(/tickspeed multiplier level 2 — \+10% faster ticks/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('reaching 8 lifetime purchases of a tier doubles its displayed production amount', () => {
@@ -792,10 +809,10 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.2%/lvl · Lv.12/20')
 })
 
-test('the Overclock card\'s description states the current and next per-level Tickspeed rate', () => {
-  // The InfoDetails description stays in the DOM (queryable via toHaveTextContent) even while
-  // the native <details> is collapsed — same convention every other card description in this
-  // app follows — so no expand click is needed here.
+test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once activated', () => {
+  // The disclosure's live-state line stays in the DOM (queryable via toHaveTextContent) even
+  // while collapsed by default — same convention every other live-state disclosure on this page
+  // follows — so no expand click is needed here.
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
@@ -806,7 +823,20 @@ test('the Overclock card\'s description states the current and next per-level Ti
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/currently 1\.1% per level, next overclock raises it to 1\.2%/i)
+  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 1\.1% \(was 1%\) from 1 activation\./i)
+})
+
+test('the Overclock card\'s disclosure shows no per-level rate line before the first activation', () => {
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier10: 5 },
+  }))
+
+  render(<App />)
+
+  const panel = screen.getByLabelText(/^overclock panel$/i)
+  expect(panel).not.toHaveTextContent(/per-level rate/i)
 })
 
 test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
@@ -1028,6 +1058,34 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
+})
+
+test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+  const user = userEvent.setup()
+
+  localStorage.setItem('tens_game_state', JSON.stringify({
+    resources: { Ones: 999 },
+    globalTickspeedMultiplier: 1,
+  }))
+
+  render(<App />)
+
+  const heading = screen.getByRole('heading', { level: 2, name: 'Tickspeed' })
+  const statusLine = screen.getByText(/lv\.1 —/i)
+  expect(statusLine).not.toBeVisible()
+
+  await user.click(heading)
+  expect(statusLine).toBeVisible()
+
+  // Clicking the revealed line itself (not the heading) also collapses it.
+  await user.click(statusLine)
+  expect(statusLine).not.toBeVisible()
+
+  await user.click(heading)
+  expect(statusLine).toBeVisible()
+  // Clicking the heading again (native <summary> toggle) still works too.
+  await user.click(heading)
+  expect(statusLine).not.toBeVisible()
 })
 
 test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
@@ -1618,7 +1676,7 @@ test('the Milestones page lists every tier\'s autobuyer/tier-tickspeed-autobuyer
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '12')
 })
 
-test('an autobuyer on/paused indicator appears on the tier row once its autobuyer is unlocked, toggled from the PP Upgrades page', async () => {
+test('an autobuyer active/paused badge appears on the PP Upgrades page once its autobuyer is unlocked, toggled by its own pause button', async () => {
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
@@ -1628,35 +1686,38 @@ test('an autobuyer on/paused indicator appears on the tier row once its autobuye
   }))
 
   render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
-
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
   const pauseButton = screen.getByRole('button', { name: /pause bytes's autobuyer/i })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
 
   await user.click(pauseButton)
+  expect(screen.getByLabelText("Bytes's autobuyer paused")).toBeInTheDocument()
   const resumeButton = screen.getByRole('button', { name: /resume bytes's autobuyer/i })
   expect(resumeButton).toHaveAttribute('aria-pressed', 'false')
 
-  await user.click(screen.getByRole('tab', { name: /game/i }))
-  expect(screen.getByLabelText("Bytes's autobuyer paused")).toBeInTheDocument()
-
-  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
-  await user.click(screen.getByRole('button', { name: /resume bytes's autobuyer/i }))
-  await user.click(screen.getByRole('tab', { name: /game/i }))
+  await user.click(resumeButton)
   expect(screen.getByLabelText("Bytes's autobuyer active")).toBeInTheDocument()
 })
 
-test('no autobuyer on/paused indicator appears on a tier row before its autobuyer is unlocked', () => {
+test('no autobuyer pause button appears on the PP Upgrades page before its autobuyer is unlocked', async () => {
+  const user = userEvent.setup()
+
+  // Kilobytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
+  // enough to leave isFirstRun and reach the Upgrades tab, but not enough to unlock it, unlike
+  // Bytes (milestone 1) which would already be unlocked at this same count.
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
+    owned: { tier02: 1 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   }))
 
   render(<App />)
+  await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  expect(screen.queryByRole('button', { name: /pause bytes's autobuyer/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^bytes layer$/i)).not.toHaveTextContent(/paused/i)
+  expect(screen.queryByRole('button', { name: /pause kilobytes's autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
 })
 
 test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buying automatically; resuming resumes it', () => {
@@ -1716,7 +1777,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
 
   expect(screen.getByRole('button', { name: /pause yottabytes's tickspeed autobuyer/i })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
-  expect(screen.getByLabelText(/^yottabytes layer$/i)).toHaveTextContent(/⚙ \+10%/)
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()

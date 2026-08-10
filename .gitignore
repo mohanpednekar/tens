@@ -48,5 +48,11 @@ yarn-error.log*
 Thumbs.db
 
 # graphify (see CLAUDE.md's "graphify" section) — graphify-out/ itself is meant to be committed
-# once generated, but local API-cost tracking isn't
+# once generated, but local API-cost tracking isn't, and neither are these two machine-local
+# staging files (an absolute path to this session's Python interpreter and scan root) — every
+# graphify subcommand regenerates them on demand if missing (see the skill's own "Interpreter
+# guard for subcommands"), and committing them would ship a stale/wrong absolute path to a
+# clone on a different machine
 graphify-out/cost.json
+graphify-out/.graphify_python
+graphify-out/.graphify_root
