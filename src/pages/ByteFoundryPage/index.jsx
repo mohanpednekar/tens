@@ -129,9 +129,15 @@ const MEMORY_UNIT_SCALE = 1000
 
 // The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
 // larger of the two) so a balance never shows in a coarser unit than its own capacity — e.g. never
-// "512 B / 1 KB".
-const getMemoryUnit = capacityBits => {
-  if (capacityBits < BITS_PER_BYTE) return null // too small to denominate — render as raw bits
+// "512 B / 1 KB". `byteCreated` gates whether there's anything to denominate in yet at all: before
+// the Byte generator exists, capacity is always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte —
+// capacity can only grow via Sacrifice, itself only reachable once byteCreated), so a
+// capacity-magnitude check alone can never catch this phase (capacity is never below a whole
+// Byte). Without this gate, tapping through that very first 0-8 bit range would render as
+// fractional Bytes ("0.125 B", "0.25 B", …) — technically a unit, but a less readable one than the
+// raw bit count for a range this small; raw bits are the more "appropriate unit" here.
+const getMemoryUnit = (capacityBits, byteCreated) => {
+  if (!byteCreated) return null // nothing to denominate in yet — render as raw bits
   let divisor = BITS_PER_BYTE
   let unitIndex = 0
   while (capacityBits / divisor >= MEMORY_UNIT_SCALE && unitIndex < MEMORY_UNIT_SYMBOLS.length - 1) {
@@ -145,8 +151,8 @@ const formatMemoryAmount = (bits, unit) =>
   unit ? `${formatAmount(bits / unit.divisor)} ${unit.symbol}` : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
 // Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
-const formatMemoryBalance = (bits, capacityBits) => {
-  const unit = getMemoryUnit(capacityBits)
+const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
+  const unit = getMemoryUnit(capacityBits, byteCreated)
   return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
 }
 
@@ -234,7 +240,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       <TilesRow>
         <FillableStatCard aria-label="byte foundry balance" $progress={fullProgress}>
           <MemoryLabel>Memory</MemoryLabel>
-          <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity)}</BalanceText>
+          <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
             role="progressbar"
             aria-label="byte foundry bit balance"

@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1786431751.5001812,
-    "ast_hash": "a49f7b041d41c3d57b45e3a2c29a86b5",
+    "mtime": 1786434208.8733597,
+    "ast_hash": "e16f37755ea2f66bfe4724cecf135596",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
@@ -85,13 +85,13 @@
     "semantic_hash": "ac3dd0faabd148bbc7e29d97f4540faf"
   },
   "src/game/engine.js": {
-    "mtime": 1786431865.9933727,
-    "ast_hash": "14a4b2437ce5dbe728359fa1990a5a02",
+    "mtime": 1786433959.201361,
+    "ast_hash": "a6e1424a30c43af867445b407bbb43cf",
     "semantic_hash": ""
   },
   "src/game/engine.test.js": {
-    "mtime": 1786432090.4113433,
-    "ast_hash": "9ab607192b063dc01d5a483847421b58",
+    "mtime": 1786434185.4333596,
+    "ast_hash": "cedbfc1d04701e11f643a25e97d809de",
     "semantic_hash": ""
   },
   "src/game/layers.js": {
@@ -315,13 +315,13 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1786428015.341733,
-    "ast_hash": "e5cb351be182d5f7a6ade13d7002ae57",
+    "mtime": 1786434057.2693605,
+    "ast_hash": "edb3eee43b5f1d8399e39074300f61a4",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786432301.2773702,
-    "ast_hash": "39b6d8d50939a0427bca187b005839ca",
+    "mtime": 1786434265.7407854,
+    "ast_hash": "7c8b78a1ffa70fe2717b3d2936ccb56e",
     "semantic_hash": ""
   },
   "README.md": {
@@ -345,13 +345,13 @@
     "semantic_hash": ""
   },
   "docs/ECONOMY_REFERENCE.md": {
-    "mtime": 1786432248.0813706,
-    "ast_hash": "dd6c950c2ce1fa7bd59d6f597aa4ccba",
+    "mtime": 1786434126.4366853,
+    "ast_hash": "935e0a135d1fc4c1852f429e370bcc36",
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786432376.35337,
-    "ast_hash": "0c4195f2c4d47ac040bd61a669ed376f",
+    "mtime": 1786434126.4376376,
+    "ast_hash": "26e20e3ff35cea3a95959bdbf08b21f1",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1786431959.5773723,
-    "ast_hash": "53d8a9723c006a2da4d8b94e934a21bc",
+    "mtime": 1786434101.0413601,
+    "ast_hash": "dfdd56007930ef4117612a2c64775752",
     "semantic_hash": ""
   }
 }

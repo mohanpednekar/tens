@@ -878,9 +878,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // equivalent copy) lets React's setState bail out of re-rendering while frozen, same as any
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
-  // even while otherwise frozen.
+  // even while otherwise frozen. Storage's own auto-redeem still runs through every branch here
+  // (via tickStorageAutoRedeem, itself a same-reference no-op when nothing qualifies) — like
+  // redeemStorageBank/convertIntroBitsToKilobytes, it pays from a separate currency pool and
+  // deliberately bypasses this freeze entirely, so a player who's crossed the Prestige threshold
+  // but hasn't manually prestiged yet doesn't have to wait for that click to redeem a bank.
   if (isProductionFrozen(stateAfterIntro)) {
-    if (!autoPrestigeActive) return stateAfterIntro
+    if (!autoPrestigeActive) return tickStorageAutoRedeem(stateAfterIntro)
     const nextBudget = (stateAfterIntro.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
@@ -888,8 +892,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
     // prestigeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return prestigeGame(stateAfterIntro)
-    return { ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget }
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorageAutoRedeem(prestigeGame(stateAfterIntro))
+    return tickStorageAutoRedeem({ ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget })
   }
 
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus) —
@@ -1454,11 +1458,17 @@ export const buildStorageBank = state => {
   }
 }
 
-// A bank becomes redeemable the instant its own face value matches tier01's CURRENT per-unit
-// level cost — not merely "at or below" it, an exact match, since a bank was always built for one
-// specific future level (see getNextStorageBankSize/buildStorageBank above).
+// A bank becomes redeemable once tier01's CURRENT per-unit level cost reaches (or has passed) its
+// own face value — not a one-tick-only exact match. tier01's own autobuyer can complete more than
+// one level in a single tick (a banked attempt budget catching up after a broke/paused stretch —
+// see tickGame's autobuyer loop), which can jump the level straight past the one a bank was built
+// for without ever equaling it exactly; an exact-match check would then strand that bank
+// permanently unredeemable, breaking the "never lost" guarantee. `<=` is safe here because
+// getFirstTierCost only ever grows with level within a cycle (it only drops back on a
+// Prestige/Speed Up/Overclock reset, at which point a bank correctly goes back to waiting for the
+// price to climb back up to it, still held, not lost).
 export const isStorageBankRedeemable = (state, capacityBits) =>
-  capacityBits === getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+  capacityBits <= getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
 
 // Redeems one held bank of `capacityBits`, granting 1 free tier01 unit via grantTierUnits — same
 // "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely"
@@ -1482,14 +1492,22 @@ export const redeemStorageBank = capacityBits => state => {
 }
 
 // Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled below) —
-// a no-op unless enabled, and unless a held bank's size currently matches tier01's cost exactly.
-// Called from tickGame after every other automation this tick (including a possible Speed Up), so
-// it always reacts to tier01's truly final level for the tick, not a stale mid-tick one.
+// a no-op unless enabled, or unless no held bank is currently redeemable (see
+// isStorageBankRedeemable). Redeems only the smallest eligible size per call — redeeming can
+// itself grant a tier01 unit and advance its level/cost (via grantTierUnits), so redeeming more
+// than one size correctly needs the cost recomputed in between; rather than looping that here,
+// this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
+// eligible banks over the next several ticks — imperceptibly fast in practice. Called from every
+// branch of tickGame, frozen or not (see there), so it always reacts to tier01's truly final level
+// for the tick, not a stale mid-tick one.
 export const tickStorageAutoRedeem = state => {
   if (!state.intro?.storageAutoRedeemEnabled) return state
-  const currentCost = getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
-  if (!(state.intro.storageBanks?.[currentCost] > 0)) return state
-  return redeemStorageBank(currentCost)(state)
+  const redeemableSize = Object.keys(state.intro.storageBanks ?? {})
+    .map(Number)
+    .filter(size => (state.intro.storageBanks[size] ?? 0) > 0 && isStorageBankRedeemable(state, size))
+    .sort((a, b) => a - b)[0]
+  if (redeemableSize === undefined) return state
+  return redeemStorageBank(redeemableSize)(state)
 }
 
 // Toggles whether tickStorageAutoRedeem currently acts — a plain, unconditional preference, not a

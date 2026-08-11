@@ -2,9 +2,9 @@
   "0": "engine.test.js",
   "1": "MainPage/index.jsx",
   "2": "engine.js",
-  "3": "InfoPage/index.jsx",
+  "3": "useIncrementalGame.js",
   "4": "tokens.js",
-  "5": "package.json",
+  "5": "InfoPage/index.jsx",
   "6": "devDependencies",
   "7": "Economy model",
   "8": "ByteFoundryPage/index.jsx",
@@ -38,7 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
-  "39": "MainPage",
+  "39": "formatBonusOrMultiplier",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -48,6 +48,6 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "formatAmount",
-  "50": "getSmartAutobuyerCost"
+  "49": "formatCurrency",
+  "50": "dependencies"
 }

@@ -2179,6 +2179,17 @@ test('the intro auto-transitions into the main game once the bit balance crosses
   vi.useRealTimers()
 })
 
+test('Memory still renders raw bits (not a fractional Byte) before the Byte generator exists', () => {
+  // Before byteCreated, capacity is always exactly INTRO_STARTING_CAPACITY (8 bits/1 Byte) — with
+  // nothing yet to meaningfully denominate in, this should read "5 bits / 8 bits", not "0.625 B / 1 B".
+  seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: false })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('5 bits / 8 bits')
+  expect(balanceBar.closest('section')).not.toHaveTextContent(/\bB\b/)
+})
+
 test('Memory renders bits/capacity scaled into the same appropriate unit (KB), not raw bits, once capacity grows past the Byte range', () => {
   // capacity 8000 bits = 1000 Bytes = 1 KB; bits 4000 = 500 Bytes = 0.5 KB — both share the unit
   // picked off capacity (getMemoryUnit), never a mismatched pairing like "500 B / 1 KB".

@@ -27,8 +27,10 @@ applies `components/Button`'s own `progressFill` gradient directly to the card v
 prop, so both tiles fill toward their own capacity the same visual way every button on this page
 already does. The first, `aria-label="byte foundry balance"` (`$progress` = `bits / capacity`), has
 a "Memory" label above `{bits} / {capacity}` — both numbers scaled into the same unit, picked off
-`capacity` (raw bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step, reusing `TIER_DEFINITIONS`'
-own tier symbols — see "Numbers are formatted" below) — plus a hidden `role="progressbar"`
+`capacity` (raw bits before the Byte generator exists, since before that capacity is always
+exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then B/KB/MB/…/QB by 1000 each
+step once it does, reusing `TIER_DEFINITIONS`' own tier symbols — see "Numbers are formatted"
+below) — plus a hidden `role="progressbar"`
 (`aria-label="byte foundry bit balance"`), and, once `intro.byteCreated`, a second tracker line
 (`aria-label="byte foundry 8000-bit tracker"`) showing `bits % INTRO_AUTO_INVEST_THRESHOLD` in raw
 bits — a rolling view of progress within the current 8000-bit block — followed by a
@@ -68,8 +70,9 @@ Buy/Upgrade button convention below. Alongside them, a "Build Storage Bank" butt
 `getNextStorageBankSize(state)` — tier01's (Kilobytes') own NEXT level's per-unit cost, one level
 ahead of wherever it currently is; disabled below that cost. One button per held bank denomination
 follows (`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`),
-enabled only once `isStorageBankRedeemable(state, size)` — its size exactly matches tier01's
-*current* per-unit level cost — each labeled with its held count (`×N`). Once any bank is held, a
+enabled only once `isStorageBankRedeemable(state, size)` — its size is at or below tier01's
+*current* per-unit level cost (not a one-tick-only exact match — see docs/ECONOMY_REFERENCE.md's
+"Byte Foundry" section) — each labeled with its held count (`×N`). Once any bank is held, a
 final pause/resume-style toggle (`aria-label="pause storage auto-redeem"`/`"resume storage
 auto-redeem"`, calling `actions.setStorageAutoRedeemEnabled`) flips `intro.storageAutoRedeemEnabled`
 — unlike every other automation toggle on this page, no prerequisite purchase gates it. A "Transfer
@@ -89,10 +92,12 @@ A "← Back to game" button (`aria-label="Back to game"`, same convention as `In
 button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
 post-`mainGameUnlocked` — the mandatory gate has no way out.
 
-Numbers are formatted via `formatMemoryBalance`/`formatMemorySize` (local helpers in this file): raw
+Numbers are formatted via `formatMemoryBalance` (Memory/Cache — local helper in this file): raw
 bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
 `TIER_DEFINITIONS`' own tier symbols) — a display-only convention, internal state always stores raw
-bit counts. This page's gate reappears every time a real Prestige resets Memory
+bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
+"Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
+matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`), the main-game-unlock gate (`mainGameUnlocked`), and this cycle's
 transfer budget (`bitsTransferredThisCycle`) back to fresh (see `prestigeGame` in
 docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — but the

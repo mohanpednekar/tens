@@ -790,10 +790,20 @@ describe('buildStorageBank', () => {
 })
 
 describe('isStorageBankRedeemable', () => {
-  it('is true only when capacityBits exactly matches tier01\'s current per-unit level cost', () => {
-    const state = createInitialGameState() // tier01 level 1, per-unit cost 1000
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(true)
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 2))).toBe(false)
+  it('is true when capacityBits is at or below tier01\'s current per-unit level cost, false above it', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 2))).toBe(true) // exact match
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(true) // below — still redeemable
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 3))).toBe(false) // above — not yet
+  })
+
+  it('stays redeemable even when tier01\'s level jumps straight past the level a bank was sized for', () => {
+    // Regression: an autobuyer burst can complete more than one level in a single tick (see
+    // tickGame's autobuyer loop), skipping level 2 (the bank's own target) entirely on the way to
+    // level 5 — an exact-match check would strand the bank forever; `<=` must not.
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
+    expect(isStorageBankRedeemable(state, size)).toBe(true)
   })
 })
 
@@ -820,10 +830,22 @@ describe('redeemStorageBank', () => {
     expect(redeemStorageBank(getTierCost(tensTier, 1))(state)).toBe(state)
   })
 
-  it('is a no-op if a held bank does not match tier01\'s current level cost', () => {
-    const size = getTierCost(tensTier, 2) // not tier01's level-1 cost
+  it('is a no-op if a held bank exceeds tier01\'s current level cost', () => {
+    const size = getTierCost(tensTier, 2) // above tier01's level-1 cost
     const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } })
     expect(redeemStorageBank(size)(state)).toBe(state)
+  })
+
+  it('redeems a bank sized for a level tier01 skipped straight past in one burst', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }),
+      tensTier.id,
+      5
+    )
+    const after = redeemStorageBank(size)(state)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.owned[tensTier.id]).toBe(1)
   })
 
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
@@ -852,10 +874,27 @@ describe('tickStorageAutoRedeem', () => {
     expect(after.intro.storageBanks[size]).toBeUndefined()
   })
 
-  it('is a no-op when no held bank matches the current cost', () => {
+  it('is a no-op when no held bank is at or below the current cost', () => {
     const size = getTierCost(tensTier, 2)
     const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
     expect(tickStorageAutoRedeem(state)).toBe(state)
+  })
+
+  it('redeems only the smallest eligible bank when multiple sizes are held', () => {
+    const level1Size = getTierCost(tensTier, 1)
+    const level2Size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), {
+        storageBanks: { [level1Size]: 1, [level2Size]: 1 },
+        storageAutoRedeemEnabled: true,
+      }),
+      tensTier.id,
+      2
+    )
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
+    expect(after.intro.storageBanks[level2Size]).toBe(1)
   })
 })
 
@@ -878,6 +917,53 @@ describe('tickGame Storage auto-redeem integration', () => {
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
     expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  // Regression: tickStorageAutoRedeem used to only run after tickGame's normal (non-frozen) path,
+  // so it was silently unreachable once isProductionFrozen — unlike redeemStorageBank itself,
+  // which deliberately bypasses the freeze (see redeemStorageBank's own tests above).
+  it('auto-redeems a matching bank even while production is frozen, with no Auto-Prestige bought', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
+      PRESTIGE_THRESHOLD
+    )
+    expect(isProductionFrozen(state)).toBe(true)
+
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  it('auto-redeems a matching bank even while frozen with Auto-Prestige accumulating (attempt budget not yet full)', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withPrestigePoints(withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }), 0),
+      PRESTIGE_THRESHOLD
+    )
+    const frozenState = { ...state, autoPrestige: 1 }
+    expect(isProductionFrozen(frozenState)).toBe(true)
+
+    const after = tickGame(0.001)(frozenState) // tiny elapsed time — attempt budget stays well below 1
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD) // still frozen — no Prestige fired yet
+  })
+
+  it('auto-redeems against the fresh post-Prestige tier01 level when Auto-Prestige fires the same tick', () => {
+    const level1Size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageBanks: { [level1Size]: 1 }, storageAutoRedeemEnabled: true }),
+      PRESTIGE_THRESHOLD
+    )
+    const frozenState = { ...state, autoPrestige: 1, autoPrestigeAttemptBudget: 1 } // budget already full
+    expect(isProductionFrozen(frozenState)).toBe(true)
+
+    const after = tickGame(1)(frozenState)
+    expect(after.resources[MONEY_ID]).toBeLessThan(PRESTIGE_THRESHOLD) // Prestige fired, resources reset
+    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized bank is still redeemable.
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
   })
 })
 
