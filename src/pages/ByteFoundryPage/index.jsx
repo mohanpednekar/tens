@@ -43,6 +43,7 @@ const SectionLabel = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
+  text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 `
@@ -107,9 +108,13 @@ const TilesRow = styled.div`
 
 // Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
 // its capacity the same visual way every actionable control on this page already does, rather
-// than introducing a second, differently-styled meter convention.
+// than introducing a second, differently-styled meter convention. `align-items: center` (StatCard's
+// own default is `stretch`) centers RateBlocksRow horizontally — its own `max-width` keeps it
+// narrower than the tile, so without this it would sit flush against the left edge instead of
+// centered under the balance text above it.
 const FillableStatCard = styled(StatCard)`
   flex: 1 1 160px;
+  align-items: center;
   ${progressFill}
 `
 
@@ -186,6 +191,7 @@ const StorageSection = styled(StatCard)`
 const StorageChipsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: ${props => props.theme.space.xs};
   width: 100%;
 `
