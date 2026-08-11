@@ -84,7 +84,7 @@ import {
   tickIntroProduction,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -785,14 +785,34 @@ describe('tickIntroAutoInvest', () => {
 // ─── Byte Foundry Storage (bank blocks) ───────────────────────────────────────
 
 describe('getStorageBankSize', () => {
-  it('targets tier01\'s CURRENT level cost', () => {
-    const state = createInitialGameState() // tier01 at level 1
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 1))
+  it('starts at 1000 bits (1 KB) on a fresh cycle', () => {
+    const state = createInitialGameState()
+    expect(getStorageBankSize(state)).toBe(1000)
   })
 
-  it('advances as tier01 levels up', () => {
-    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2)
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
+  it('is independent of tier01\'s own level cost — it does not advance just because tier01 levels up', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
+    expect(getStorageBankSize(state)).toBe(1000)
+  })
+
+  it('advances to the next size (×10) once STORAGE_BANK_LADDER_CAP banks have ever been built at the current size', () => {
+    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP } })
+    expect(getStorageBankSize(state)).toBe(10000)
+  })
+
+  it('does not regress after banks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
+      storageBanks: { 1000: 3 }, // some already redeemed, some still held — either way, below the cap
+    })
+    expect(getStorageBankSize(state)).toBe(10000)
+  })
+
+  it('can advance multiple steps at once if a much larger size was somehow already maxed out', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
+    })
+    expect(getStorageBankSize(state)).toBe(100000)
   })
 })
 
@@ -803,31 +823,42 @@ describe('getStorageBankCost', () => {
 })
 
 describe('buildStorageBank', () => {
-  it('spends the build cost from Memory and adds one bank of the current-level size', () => {
-    const size = getTierCost(tensTier, 1)
-    const cost = getStorageBankCost(size)
+  it('spends the build cost from Memory and adds one bank of the current offered size', () => {
+    const cost = getStorageBankCost(1000)
     const state = withIntro(createInitialGameState(), { bits: cost })
 
     const after = buildStorageBank(state)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.storageBanks[size]).toBe(1)
+    expect(after.intro.storageBanks[1000]).toBe(1)
+    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(1)
   })
 
-  it('accumulates count when building the same size again', () => {
-    const size = getTierCost(tensTier, 1)
-    const cost = getStorageBankCost(size)
+  it('accumulates both storageBanks (held) and storageBanksBuiltTotal (cumulative) when building the same size again', () => {
+    const cost = getStorageBankCost(1000)
     const state = withIntro(createInitialGameState(), { bits: cost * 2 })
 
     const after = buildStorageBank(buildStorageBank(state))
-    expect(after.intro.storageBanks[size]).toBe(2)
+    expect(after.intro.storageBanks[1000]).toBe(2)
+    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
     expect(after.intro.bits).toBe(0)
   })
 
   it('is a no-op below the build cost', () => {
-    const size = getTierCost(tensTier, 1)
-    const cost = getStorageBankCost(size)
+    const cost = getStorageBankCost(1000)
     const state = withIntro(createInitialGameState(), { bits: cost - 1 })
     expect(buildStorageBank(state)).toBe(state)
+  })
+
+  it('starts building the next size up once the current one reaches STORAGE_BANK_LADDER_CAP built', () => {
+    const almostMaxed = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
+      bits: getStorageBankCost(1000) + getStorageBankCost(10000),
+    })
+    const afterLast1KB = buildStorageBank(almostMaxed)
+    expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
+
+    const afterNext = buildStorageBank(afterLast1KB)
+    expect(afterNext.intro.storageBanksBuiltTotal[10000]).toBe(1)
   })
 })
 
@@ -901,15 +932,32 @@ describe('redeemStorageBank', () => {
 })
 
 describe('tickStorageAutoRedeem', () => {
-  it('is a no-op when storageAutoRedeemEnabled is false', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: false })
+  it('auto-redeems a 1 KB bank even when storageAutoRedeemEnabled is false — the smallest size is exempt from the toggle', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 }, storageAutoRedeemEnabled: false })
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[1000]).toBeUndefined()
+    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
+  })
+
+  it('is a no-op for a size above 1 KB when storageAutoRedeemEnabled is false', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: false }),
+      tensTier.id,
+      2
+    )
     expect(tickStorageAutoRedeem(state)).toBe(state)
   })
 
-  it('redeems a matching bank automatically once enabled', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
+  it('redeems a matching bank above 1 KB automatically once enabled', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
+      tensTier.id,
+      2
+    )
 
     const after = tickStorageAutoRedeem(state)
     expect(after.owned[tensTier.id]).toBe(1)
@@ -937,6 +985,17 @@ describe('tickStorageAutoRedeem', () => {
     const after = tickStorageAutoRedeem(state)
     expect(after.intro.storageBanks[level1Size]).toBeUndefined()
     expect(after.intro.storageBanks[level2Size]).toBe(1)
+  })
+
+  it('auto-redeems a given size at most once per cycle, leaving a further eligible bank of that size for a manual redeem', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 2 }, storageAutoRedeemEnabled: true })
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.intro.storageBanks[1000]).toBe(1)
+    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
+
+    const secondTick = tickStorageAutoRedeem(after)
+    expect(secondTick).toBe(after) // no-op — 1000 already auto-redeemed this cycle
   })
 })
 
@@ -1010,16 +1069,31 @@ describe('tickGame Storage auto-redeem integration', () => {
 })
 
 describe('prestigeGame keeps Storage permanent', () => {
-  it('carries storageBanks/storageAutoRedeemEnabled through a real Prestige unchanged, like the Byte generator itself', () => {
+  it('carries storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled through a real Prestige unchanged, like the Byte generator itself', () => {
     const size = getTierCost(tensTier, 1)
     const state = withMoney(
-      withIntro(createInitialGameState(), { storageBanks: { [size]: 3 }, storageAutoRedeemEnabled: true }),
+      withIntro(createInitialGameState(), {
+        storageBanks: { [size]: 3 },
+        storageBanksBuiltTotal: { [size]: 5 },
+        storageAutoRedeemEnabled: true,
+      }),
       PRESTIGE_THRESHOLD
     )
 
     const after = prestigeGame(state)
     expect(after.intro.storageBanks[size]).toBe(3)
+    expect(after.intro.storageBanksBuiltTotal[size]).toBe(5)
     expect(after.intro.storageAutoRedeemEnabled).toBe(true)
+  })
+
+  it('resets storageAutoRedeemedSizes fresh every real Prestige, unlike the permanent Storage fields above', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageAutoRedeemedSizes: { 1000: true } }),
+      PRESTIGE_THRESHOLD
+    )
+
+    const after = prestigeGame(state)
+    expect(after.intro.storageAutoRedeemedSizes).toEqual({})
   })
 })
 
@@ -4269,7 +4343,8 @@ describe('speedUpGame', () => {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
       mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
-      storageBanks: { 1000: 2 }, storageAutoRedeemEnabled: true,
+      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
+      storageAutoRedeemedSizes: { 1000: true },
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = speedUpGame(state)
@@ -4510,7 +4585,8 @@ describe('overclockGame', () => {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
       mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
-      storageBanks: { 1000: 2 }, storageAutoRedeemEnabled: true,
+      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
+      storageAutoRedeemedSizes: { 1000: true },
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = overclockGame(state)

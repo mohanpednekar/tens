@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -313,12 +313,23 @@ export const createInitialGameState = () => ({
     // Overclock exactly like the Byte generator itself. Empty object, not per-denomination zeros,
     // since the set of denominations ever built is open-ended.
     storageBanks: {},
+    // PERMANENT — { [capacityBits]: cumulative count } of every bank ever built at that size,
+    // including ones since redeemed — unlike storageBanks above, redeemStorageBank never
+    // decrements this. Drives getStorageBankSize's one-way ladder advance past
+    // STORAGE_BANK_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
+    storageBanksBuiltTotal: {},
     // PERMANENT — whether tickGame auto-redeems a matching Storage bank every tick (see
     // tickStorageAutoRedeem) instead of requiring a manual click. A plain preference, not a
     // purchase — defaults off, same "off until the player opts in" posture as autobuyersEnabled's
     // *true* default is emphatically not (this one starts false, since auto-redeeming is a new
     // capability the player must discover and choose, not a pre-existing automation being paused).
+    // Doesn't gate the smallest (1 KB) denomination at all — see tickStorageAutoRedeem.
     storageAutoRedeemEnabled: false,
+    // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
+    // Storage field above. { [capacityBits]: true } once tickStorageAutoRedeem has auto-redeemed
+    // that size this cycle, capping auto-redeem at one bank per size per cycle — further eligible
+    // banks of an already-auto-redeemed size need a manual click for the rest of the cycle.
+    storageAutoRedeemedSizes: {},
   },
 })
 
@@ -1428,26 +1439,36 @@ export const tickIntroAutoInvest = state => {
 }
 
 // --- Byte Foundry Storage (bank blocks) --- see the "Byte Foundry Storage" comment in layers.js
-// and intro.storageBanks/storageAutoRedeemEnabled in createInitialGameState above. A bank is a
-// discrete, already-paid-for block of bits sized to tier01's (Kilobytes') own current per-unit
-// level cost — since tier01's own level cost only ever grows within a cycle (see
-// isStorageBankRedeemable below), a bank built at today's price stays redeemable for the rest of
-// the cycle even after tier01 levels up further; a player can bank ahead of a burst of manual/
-// autobuyer purchases and redeem the queued banks any time afterward, or redeem right away.
+// and intro.storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes
+// in createInitialGameState above. A bank is a discrete, already-paid-for block of bits, sized by
+// its own independent build ladder (see getStorageBankSize below) rather than tier01's price
+// directly — since tier01's own per-unit level cost only ever grows within a cycle (see
+// isStorageBankRedeemable below), a bank built at any size stays redeemable for the rest of the
+// cycle the moment tier01's price reaches it, even after tier01 levels up further; a player can
+// bank ahead of a burst of manual/autobuyer purchases and redeem the queued banks any time
+// afterward, or redeem right away if the size already matches tier01's current price.
 
 // tier01's own per-unit cost at a given level is always an exact power of ten (baseCost = 1E3,
 // and getTierCost's epoch exponent is always a positive integer), so every size a bank is ever
 // built or redeemed at reads as a round KB/MB/GB/… value — never an arbitrary number.
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
-// The size (in bits) buildStorageBank currently builds: tier01's CURRENT per-unit level cost —
-// starts at 1000 (1KB), the same price a level-1 tier01 purchase already costs, and tracks
-// whatever level tier01 is actually at as it grows. A bank built at this size is immediately
-// redeemable (see redeemStorageBank), since it already matches the current price; the ladder still
-// only ever offers one buildable size at a time, just anchored to "now" rather than "one level
-// ahead" — see docs/DESIGN_HISTORY.md for why this replaced the earlier next-level version.
-export const getStorageBankSize = state =>
-  getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+// The size (in bits) buildStorageBank currently builds: an independent ladder starting at
+// INTRO_BITS_PER_KILOBYTE_CONVERSION (1000 bits, "1 KB") and multiplying by 10 every time
+// STORAGE_BANK_LADDER_CAP banks have ever been built at the current size — read from
+// storageBanksBuiltTotal, a cumulative counter redeeming never decrements, so the ladder only ever
+// advances (see the "Byte Foundry Storage" comment in layers.js for why this is deliberately
+// decoupled from tier01's own current level cost, unlike an earlier version of this feature —
+// docs/DESIGN_HISTORY.md). A freshly offered size isn't necessarily redeemable yet — see
+// isStorageBankRedeemable below for the separate, tier01-price-driven gate on that.
+export const getStorageBankSize = state => {
+  const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
+  let size = INTRO_BITS_PER_KILOBYTE_CONVERSION
+  while ((builtTotal[size] ?? 0) >= STORAGE_BANK_LADDER_CAP) {
+    size *= 10
+  }
+  return size
+}
 
 // A bank's build cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own face value in bits.
 export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER
@@ -1455,8 +1476,9 @@ export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_C
 // Builds one Storage bank sized to getStorageBankSize(state), spending
 // getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
 // "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
-// touches resources.base). No-op below cost. Building the same size more than once (e.g. while
-// tier01 hasn't leveled up since the last build) simply accumulates count.
+// touches resources.base). No-op below cost. Building the same size more than once (before the
+// ladder advances to the next size) simply accumulates count — both in storageBanks (held, what
+// redeemStorageBank spends) and storageBanksBuiltTotal (cumulative, what advances the ladder).
 export const buildStorageBank = state => {
   const size = getStorageBankSize(state)
   const cost = getStorageBankCost(size)
@@ -1470,6 +1492,10 @@ export const buildStorageBank = state => {
       storageBanks: {
         ...state.intro.storageBanks,
         [size]: (state.intro.storageBanks?.[size] ?? 0) + 1,
+      },
+      storageBanksBuiltTotal: {
+        ...state.intro.storageBanksBuiltTotal,
+        [size]: (state.intro.storageBanksBuiltTotal?.[size] ?? 0) + 1,
       },
     },
   }
@@ -1508,23 +1534,38 @@ export const redeemStorageBank = capacityBits => state => {
   })
 }
 
-// Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled below) —
-// a no-op unless enabled, or unless no held bank is currently redeemable (see
-// isStorageBankRedeemable). Redeems only the smallest eligible size per call — redeeming can
-// itself grant a tier01 unit and advance its level/cost (via grantTierUnits), so redeeming more
-// than one size correctly needs the cost recomputed in between; rather than looping that here,
-// this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
-// eligible banks over the next several ticks — imperceptibly fast in practice. Called from every
-// branch of tickGame, frozen or not (see there), so it always reacts to tier01's truly final level
-// for the tick, not a stale mid-tick one.
+// Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled and
+// intro.storageAutoRedeemedSizes below) — a no-op unless there's an eligible size. The smallest
+// denomination (INTRO_BITS_PER_KILOBYTE_CONVERSION, "1 KB") always attempts auto-redeem regardless
+// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still needs the
+// toggle enabled. Either way, a given size auto-redeems at most ONCE per real Prestige cycle (see
+// storageAutoRedeemedSizes, which resets fresh every real Prestige — prestigeGame) — further
+// eligible banks of an already-auto-redeemed size need a manual click for the rest of the cycle.
+// Redeems only the smallest eligible size per call — redeeming can itself grant a tier01 unit and
+// advance its level/cost (via grantTierUnits), so redeeming more than one size correctly needs the
+// cost recomputed in between; rather than looping that here, this piggybacks on tickGame's own
+// ~10Hz cadence (see TICK_RATE_MS) to work through multiple eligible banks over the next several
+// ticks — imperceptibly fast in practice. Called from every branch of tickGame, frozen or not (see
+// there), so it always reacts to tier01's truly final level for the tick, not a stale mid-tick one.
 export const tickStorageAutoRedeem = state => {
-  if (!state.intro?.storageAutoRedeemEnabled) return state
-  const redeemableSize = Object.keys(state.intro.storageBanks ?? {})
+  const alreadyRedeemedThisCycle = state.intro?.storageAutoRedeemedSizes ?? {}
+  const eligibleSize = Object.keys(state.intro.storageBanks ?? {})
     .map(Number)
-    .filter(size => (state.intro.storageBanks[size] ?? 0) > 0 && isStorageBankRedeemable(state, size))
+    .filter(size => (state.intro.storageBanks[size] ?? 0) > 0)
+    .filter(size => !alreadyRedeemedThisCycle[size])
+    .filter(size => size === INTRO_BITS_PER_KILOBYTE_CONVERSION || state.intro.storageAutoRedeemEnabled)
+    .filter(size => isStorageBankRedeemable(state, size))
     .sort((a, b) => a - b)[0]
-  if (redeemableSize === undefined) return state
-  return redeemStorageBank(redeemableSize)(state)
+  if (eligibleSize === undefined) return state
+
+  const redeemed = redeemStorageBank(eligibleSize)(state)
+  return {
+    ...redeemed,
+    intro: {
+      ...redeemed.intro,
+      storageAutoRedeemedSizes: { ...redeemed.intro.storageAutoRedeemedSizes, [eligibleSize]: true },
+    },
+  }
 }
 
 // Toggles whether tickStorageAutoRedeem currently acts — a plain, unconditional preference, not a
@@ -1775,9 +1816,13 @@ export const prestigeGame = state => {
       productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
       productionMilestoneTier: state.intro?.productionMilestoneTier ?? initial.intro.productionMilestoneTier,
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
-      // Storage banks and the auto-redeem preference are just as permanent as the Byte generator
-      // itself above — "never lost," not part of this cycle's Memory reset.
+      // Storage banks, the cumulative build ladder, and the auto-redeem preference are just as
+      // permanent as the Byte generator itself above — "never lost," not part of this cycle's
+      // Memory reset. storageAutoRedeemedSizes is deliberately NOT carried over here — it falls
+      // through to initial.intro's fresh {} default below, since "once per run" resets every real
+      // Prestige (see tickStorageAutoRedeem).
       storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
+      storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
       storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,

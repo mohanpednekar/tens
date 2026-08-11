@@ -1,8 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -178,21 +178,66 @@ const StorageSection = styled(StatCard)`
   align-items: stretch;
 `
 
-const StorageChipsRow = styled.div`
+// One row per bank size ever reached (ascending — smallest first), each a fixed
+// STORAGE_BANK_LADDER_CAP-long strip of squares read together as one progress bar: already-
+// redeemed (consumed, leftmost), currently held (clickable once redeemable), then not-yet-built
+// placeholders (rightmost) — "filled" (built) squares always sit left of "empty" ones within a
+// row, and a row only appears once its size has ever been built (or is the size currently
+// offered), so rows themselves read top-to-bottom smallest-to-largest too.
+const StorageSizeRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: ${props => props.theme.space.xs};
   width: 100%;
 `
 
-// A compact, wrapping chip per held bank denomination — same Button component (and its `variant`
-// success/neutral semantics) as the rest of the page, just shrunk from a full-width block down to
-// an inline chip via `flex: 0 0 auto` and tighter padding.
-const StorageChip = styled(Button)`
+const StorageSizeLabel = styled.p`
+  margin: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.textMuted};
+`
+
+const StorageBankSquaresRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  max-width: 260px;
+`
+
+// A single discrete, all-or-nothing bank — never partially filled, matching the mechanic itself.
+// $consumed (already redeemed — solid muted fill, permanently disabled) takes priority over $held
+// (built and awaiting redeem — accent border, filled green once $redeemable, a duller raised fill
+// otherwise, clickable only when both $held and $redeemable) over the plain empty/not-yet-built
+// placeholder (outline only, disabled).
+const StorageBankSquare = styled.button`
   flex: 0 0 auto;
-  width: auto;
-  padding: ${props => props.theme.space.xs} ${props => props.theme.space.sm};
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.5px solid ${props => (props.$held ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  background: ${props =>
+    props.$consumed
+      ? props.theme.color.surfaceSunken
+      : props.$held
+        ? (props.$redeemable ? props.theme.color.good : props.theme.color.surfaceRaised)
+        : 'transparent'};
+  cursor: ${props => (props.$held && props.$redeemable ? 'pointer' : 'default')};
+  transition: filter 0.15s ease, transform 0.05s ease;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.2);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.9);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
 `
 
 // Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
@@ -300,17 +345,39 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const investProgress = clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
-  // Storage: bank blocks sized to tier01's (Kilobytes') own current per-unit level cost — build
-  // now (10x the size, from Memory); already redeemable at that same price, and stays redeemable
-  // even after tier01 levels up further, since its level cost only ever grows within a cycle.
+  // Storage: an independent build ladder (1 KB, then 10 KB, … — see getStorageBankSize) offers one
+  // buildable size at a time, STORAGE_BANK_LADDER_CAP banks per size before advancing; a built
+  // bank's own redeemability is separately gated on tier01's (Kilobytes') current per-unit level
+  // cost catching up to it (isStorageBankRedeemable below).
   const storageBankSize = getStorageBankSize(state)
   const storageBankCost = getStorageBankCost(storageBankSize)
   const canBuildStorageBank = intro.bits >= storageBankCost
   const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
+  const storageBankRedeemableNow = isStorageBankRedeemable(state, storageBankSize)
+  const storageBanksBuiltTotal = intro.storageBanksBuiltTotal ?? {}
+  // Every size ever built, any size still held (a save/seed could hold banks without a matching
+  // storageBanksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's currently
+  // offered (even at 0 built, so its row/goal is visible before the first one is banked) —
+  // ascending, so rows read smallest-to-largest.
+  const storageSizesToShow = [
+    ...new Set([
+      ...Object.keys(storageBanksBuiltTotal).map(Number),
+      ...Object.keys(intro.storageBanks ?? {}).map(Number),
+      storageBankSize,
+    ]),
+  ]
+    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0 || size === storageBankSize)
+    .sort((a, b) => a - b)
   const heldStorageBankSizes = Object.keys(intro.storageBanks ?? {})
     .map(Number)
     .filter(size => intro.storageBanks[size] > 0)
     .sort((a, b) => a - b)
+
+  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units
+  // come from the main game's Buy button/autobuyer or from redeemStorageBank here, since both
+  // paths update purchaseLevelProgress via the same bookkeeping (see grantTierUnits/buyTier).
+  const purchaseBlockSize = getPurchaseBlockSize(state)
+  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
 
   return (
     <RootDiv>
@@ -438,7 +505,11 @@ const ByteFoundryPage = ({ game, onBack }) => {
             aria-label="build storage bank"
             disabled={!canBuildStorageBank}
             onClick={actions.buildStorageBank}
-            title={`Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block at Kilobytes' current level cost, redeemable right away`}
+            title={
+              storageBankRedeemableNow
+                ? `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block, redeemable right away`
+                : `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block, redeemable once Kilobytes' level cost reaches it`
+            }
             type="button"
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
@@ -453,37 +524,59 @@ const ByteFoundryPage = ({ game, onBack }) => {
             />
           </Button>
 
-          {heldStorageBankSizes.length > 0 && (
-            <StorageChipsRow role="group" aria-label="byte foundry storage banks">
-              {heldStorageBankSizes.map(size => {
-                const count = intro.storageBanks[size]
-                const redeemable = isStorageBankRedeemable(state, size)
-                return (
-                  <StorageChip
-                    key={size}
-                    aria-label={`redeem ${formatStorageSize(size)} storage bank`}
-                    disabled={!redeemable}
-                    onClick={() => actions.redeemStorageBank(size)}
-                    title={
-                      redeemable
-                        ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
-                        : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`
-                    }
-                    type="button"
-                    variant={redeemable ? 'success' : 'neutral'}
-                  >
-                    {`${formatStorageSize(size)} ×${count}`}
-                  </StorageChip>
-                )
-              })}
-            </StorageChipsRow>
-          )}
+          {storageSizesToShow.map(size => {
+            const held = intro.storageBanks?.[size] ?? 0
+            // Falls back to `held` itself for a state whose storageBanksBuiltTotal doesn't (yet)
+            // account for every held bank — e.g. a migrated pre-ladder save — so a held bank is
+            // never rendered as if it didn't exist.
+            const builtTotal = Math.min(Math.max(storageBanksBuiltTotal[size] ?? 0, held), STORAGE_BANK_LADDER_CAP)
+            const consumedCount = Math.max(0, builtTotal - held)
+            const redeemable = isStorageBankRedeemable(state, size)
+            return (
+              <StorageSizeRow key={size}>
+                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${builtTotal}/${STORAGE_BANK_LADDER_CAP})`}</StorageSizeLabel>
+                <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
+                  {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
+                    const isConsumed = index < consumedCount
+                    const isHeld = !isConsumed && index < consumedCount + held
+                    return (
+                      <StorageBankSquare
+                        key={index}
+                        aria-label={
+                          isConsumed
+                            ? `redeemed ${formatStorageSize(size)} bank`
+                            : isHeld
+                              ? `redeem ${formatStorageSize(size)} storage bank`
+                              : `not yet built ${formatStorageSize(size)} bank`
+                        }
+                        disabled={!isHeld || !redeemable}
+                        onClick={isHeld && redeemable ? () => actions.redeemStorageBank(size) : undefined}
+                        title={
+                          isConsumed
+                            ? 'Already redeemed'
+                            : isHeld
+                              ? (redeemable
+                                ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
+                                : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                              : 'Not yet built'
+                        }
+                        type="button"
+                        $consumed={isConsumed}
+                        $held={isHeld}
+                        $redeemable={redeemable}
+                      />
+                    )
+                  })}
+                </StorageBankSquaresRow>
+              </StorageSizeRow>
+            )
+          })}
 
           {heldStorageBankSizes.length > 0 && (
             <Button
               aria-label={intro.storageAutoRedeemEnabled ? 'pause storage auto-redeem' : 'resume storage auto-redeem'}
               onClick={() => actions.setStorageAutoRedeemEnabled(!intro.storageAutoRedeemEnabled)}
-              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed"
+              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed (1 KB banks always auto-redeem once per cycle regardless of this toggle)"
               type="button"
               variant="neutral"
             >
@@ -492,6 +585,19 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </ButtonContent>
             </Button>
           )}
+
+          <SectionLabel>{`Kilobytes' current block (${tier01PurchaseProgress}/${purchaseBlockSize})`}</SectionLabel>
+          <RateBlocksRow
+            role="progressbar"
+            aria-label="kilobytes purchase block progress"
+            aria-valuenow={tier01PurchaseProgress}
+            aria-valuemin={0}
+            aria-valuemax={purchaseBlockSize}
+          >
+            {Array.from({ length: purchaseBlockSize }, (_, index) => (
+              <RateBlock key={index} $filled={index < tier01PurchaseProgress} />
+            ))}
+          </RateBlocksRow>
         </StorageSection>
       )}
 

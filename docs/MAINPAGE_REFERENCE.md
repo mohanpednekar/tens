@@ -72,19 +72,37 @@ Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSectio
 so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
 Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label/cost always tracks `getStorageBankSize(state)` — tier01's (Kilobytes') own
-CURRENT per-unit level cost (starting at 1000 bits, "1 KB"), not a level ahead, so a freshly built
-bank is immediately redeemable; disabled below that cost.
-If any bank is held, a compact wrapping `StorageChipsRow` (`role="group"`, `aria-label="byte foundry
-storage banks"`) follows: one small chip per held denomination (`StorageChip`, a `styled(Button)`
-shrunk to `flex: 0 0 auto` with tighter padding instead of a full-width block), labeled `<size>
-×<count>` (`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`),
-enabled and highlighted (`variant="success"`) only once `isStorageBankRedeemable(state, size)` — its
-size is at or below tier01's *current* per-unit level cost (not a one-tick-only exact match — see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the chip row, a final pause/resume-style
-toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
-`actions.setStorageAutoRedeemEnabled`) flips `intro.storageAutoRedeemEnabled` — unlike every other
-automation toggle on this page, no prerequisite purchase gates it.
+whose visible label/cost always tracks `getStorageBankSize(state)` — an independent ladder starting
+at 1000 bits ("1 KB") and multiplying by 10 every `STORAGE_BANK_LADDER_CAP` (10) banks ever built at
+the current size, decoupled from tier01's (Kilobytes') own price; disabled below that cost.
+
+For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
+visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
+`StorageSizeLabel` (`"<size> banks (<built>/<STORAGE_BANK_LADDER_CAP>)"`) above a
+`StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
+`STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
+bar, filling left-to-right: **consumed** (already redeemed — leftmost, solid muted fill,
+`aria-label="redeemed <size> bank"`, permanently disabled) — **held** (built and awaiting redeem —
+accent border, `aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
+clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
+duller fill) — **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built
+<size> bank"`, always disabled). `isStorageBankRedeemable`'s own gate is unchanged from before this
+ladder existed: at or below tier01's *current* per-unit level cost, not a one-tick-only exact match
+(see docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the size rows, a final pause/resume-
+style toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
+`actions.setStorageAutoRedeemEnabled`, shown only once any size is held) flips
+`intro.storageAutoRedeemEnabled` — unlike every other automation toggle on this page, no prerequisite
+purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all
+(see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row).
+
+The section closes with a live, non-hidden progress row for tier01's own current purchase-block
+progress: a `SectionLabel` ("Kilobytes' current block (N/blockSize)") above the same `RateBlocksRow`/
+`RateBlock` pair the production-rate display above already uses, sized to
+`getPurchaseBlockSize(state)` blocks (`role="progressbar"`, `aria-label="kilobytes purchase block
+progress"`) and filled up to `state.purchaseLevelProgress[TIER_DEFINITIONS[0].id]` — advancing
+identically whether a unit came from the main game's Buy button/autobuyer or from redeeming a
+Storage bank right here, since both update `purchaseLevelProgress` via the same bookkeeping
+(`grantTierUnits`/`buyTier`).
 
 Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
@@ -133,7 +151,8 @@ transfer budget (`bitsTransferredThisCycle`) back to fresh (see `prestigeGame` i
 docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — but the
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
-`storageAutoRedeemEnabled`) are both permanent and carry over, so the gate is a fast pit-stop after
+`storageBanksBuiltTotal`/`storageAutoRedeemEnabled` — but NOT `storageAutoRedeemedSizes`, which
+resets every real Prestige) are both permanent and carry over, so the gate is a fast pit-stop after
 the first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
 return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
 stays just as interactive there as on the gate itself.

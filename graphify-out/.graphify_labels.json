@@ -48,6 +48,7 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "formatCurrency",
-  "50": "dependencies"
+  "49": "Button/index.jsx",
+  "50": "dependencies",
+  "51": "OfflineProgressNotice/index.jsx"
 }
