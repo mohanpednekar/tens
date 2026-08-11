@@ -127,9 +127,16 @@ const RateBlock = styled.span`
   background: ${props => (props.$filled ? props.theme.color.good : props.theme.color.surfaceSunken)};
 `
 
+// `flex-wrap: nowrap` is deliberate — with `wrap`, once `blockCount` blocks (each `flex: 1 1
+// 2.5rem`, growable) no longer fit on one line at a narrow (mobile) width, the leftover blocks
+// spill onto a second row where they grow to fill ITS leftover space instead, ending up far wider
+// than the blocks on the row above — a visibly broken, misaligned grid. `nowrap` keeps every
+// block on one row and lets `flex-shrink` (already implied by `flex: 1 1 2.5rem`) narrow them
+// together instead, so the row always reads as one evenly-sized strip regardless of viewport
+// width or how large `blockCount` has grown.
 const TransferBlocksRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: ${props => props.theme.space.xs};
   width: 100%;
 `
@@ -144,6 +151,7 @@ const TransferBlocksRow = styled.div`
 // surfaceSunken once $consumed) applies instead.
 const TransferBlock = styled.button`
   flex: 1 1 2.5rem;
+  min-width: 0;
   aspect-ratio: 1;
   border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   border-radius: ${props => props.theme.radius.sm};
@@ -514,7 +522,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Storage Bank (${formatAmount(storageBankCost)} bits)`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatAmount(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -581,7 +589,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
               variant="neutral"
             >
               <ButtonContent>
-                {intro.storageAutoRedeemEnabled ? '⏸ Pause Storage Auto-Redeem' : '▶ Resume Storage Auto-Redeem'}
+                {intro.storageAutoRedeemEnabled ? '⏸ Pause Auto-Redeem' : '▶ Resume Auto-Redeem'}
               </ButtonContent>
             </Button>
           )}

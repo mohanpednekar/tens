@@ -430,6 +430,31 @@ The following records *why* specific MainPage/component behaviors were built the
   already update identically regardless of whether a unit came from the main game's Buy button or
   from `redeemStorageBank` here — the "irrespective of main game or Byte Foundry" requirement was
   already true of the underlying state; the row just needed to be rendered, not hidden.
+- **The transfer-block row's mobile wrap bug is fixed; the Storage build/auto-redeem button labels
+  are shortened.** Two follow-up reports after the redesign above shipped: (1) "the bottom blocks
+  are incorrect and one of them are incorrectly aligned" — reproduced at a 320px viewport:
+  `TransferBlocksRow`'s `flex-wrap: wrap` let `blockCount` growable (`flex: 1 1 2.5rem`) blocks spill
+  onto a second row once they no longer fit on one line, where the leftover blocks then grow to fill
+  *that* row's leftover space instead — visibly much wider than the blocks above, reading as a
+  broken, misaligned grid. This predates the ladder redesign (the row's own styling wasn't touched by
+  it), but showed up now because Storage's build/auto-redeem controls sit directly above it and drew
+  attention downward. Fixed by switching to `flex-wrap: nowrap` (plus `min-width: 0` on the block
+  itself, so `flex-shrink` can actually narrow it below its content size) — the row now always stays
+  a single, evenly-sized strip, shrinking together at narrow widths and growing together at wide ones,
+  instead of ever wrapping unevenly. (2) "Storage bank costs 10x its capacity. The current costs are
+  incorrect." — investigated rather than assumed: `getStorageBankCost`/`getStorageBankSize` were
+  already exactly 10x at every ladder size, confirmed by scripted engine-level and UI-level checks
+  through several ladder transitions. The actual defect was `ButtonLabel`'s standard, deliberate
+  `white-space: nowrap; text-overflow: ellipsis` truncation (see `components/Button`) clipping the
+  unusually long "Build ⟨size⟩ Storage Bank (⟨cost⟩ bits)" label at narrow widths — worst case at the
+  "10 KB" ladder step, where the cost (100,000, the largest value `formatAmount` ever renders in
+  plain comma-grouped digits before switching to scientific notation at the 1,000,000 threshold)
+  pushed the whole label past the button's available width, truncating the visible cost and reading
+  as if it were wrong or missing rather than merely cut off. Rather than loosening `ButtonLabel`'s
+  truncation for every button in the app, the fix stayed scoped to this one label: dropped the
+  redundant "Storage" (already the section's own heading) and " bits" suffix (context-implied) from
+  both this button and the auto-redeem toggle's "Storage Auto-Redeem" label, confirmed to fit at
+  320px through the same worst-case cost value.
 - **The "bits this cycle" tracker is removed entirely; the Memory tile's Bytes-unit balance now
   floors instead of rounds.** Two follow-up requests on the tracker/formatting added in the round
   above:
