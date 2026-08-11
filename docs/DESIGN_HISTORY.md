@@ -388,6 +388,48 @@ The following records *why* specific MainPage/component behaviors were built the
      info versus incidental text. A new `TrackerText = styled(StatusText)` (full-strength
      `theme.color.text`, `font-weight: 600`) is used for this one line only, giving it enough contrast
      to actually stand out against its neighbors.
+- **Storage's buildable size becomes an independent build-up-to-10-then-advance ladder, decoupled
+  from tier01's price; auto-redeem gets a per-size once-per-run cap (except the smallest
+  denomination, which always fires); the held-bank chips become a squares grid; a new visible
+  purchase-block-progress row is added.** A follow-up redesign request specified: "Offer 1KB storage
+  banks for 10KB each until user has 10 of them. Then offer 10KB storage banks for 100KB each until
+  user has 10 of them. And so on." — a materially different rule from the entry above's
+  `getStorageBankSize`, which tracks tier01's CURRENT level cost directly with no cap on how many can
+  ever be built at that size. Rather than guess, three genuinely ambiguous points were confirmed
+  directly before implementing (each had a plausible reading that would have produced very different
+  code): (1) whether the ladder should be an independent progression gated purely on a cumulative
+  built-count cap, or should keep tracking tier01's live cost with just a build cap layered on top —
+  confirmed **independent**, so `getStorageBankSize` no longer reads tier01's level at all; (2)
+  whether "grey out blocks already purchased, irrespective of main game or Byte Foundry" described
+  the pre-existing Memory→Kilobyte transfer-block row (already both of those things) or asked for a
+  *new* visual — confirmed **new**: a live, non-hidden squares row for tier01's own current
+  purchase-block progress, added to the Storage section; (3) whether "1KB storage banks are always
+  auto consumed... only one auto consumption per run for each size" meant capping auto-redeem at once
+  per size per run (needing new state to track it) or just making 1KB mandatory-on with everything
+  else unlimited as before — confirmed **capped at once per size per run**, for every size, with 1KB
+  additionally exempt from the enable/disable toggle entirely (it always attempts its once-per-run
+  redeem regardless).
+
+  Implementation: `intro.storageBanksBuiltTotal` (new, permanent, cumulative — `redeemStorageBank`
+  never decrements it, only `buildStorageBank` increments it) drives `getStorageBankSize`'s ladder —
+  starting at `INTRO_BITS_PER_KILOBYTE_CONVERSION` and multiplying by 10 every
+  `STORAGE_BANK_LADDER_CAP` (10) banks ever built at the current size. This is a genuine decoupling,
+  not just a rename: a player can now build ahead of or fall behind tier01's actual price, with
+  `isStorageBankRedeemable` (unchanged) as the sole remaining gate on whether a built bank is
+  spendable. `intro.storageAutoRedeemedSizes` (new — resets to `{}` every real Prestige, unlike every
+  other Storage field, which are all permanent) tracks which sizes have already auto-redeemed this
+  cycle; `tickStorageAutoRedeem` now requires a size to be both un-redeemed-this-cycle AND (exactly
+  `INTRO_BITS_PER_KILOBYTE_CONVERSION` OR `storageAutoRedeemEnabled`) before acting. On the UI side,
+  the flat `StorageChipsRow`/`StorageChip` text-chip list (previous entry) was replaced with one
+  `StorageSizeRow` per size ever built (or currently offered) — a fixed `STORAGE_BANK_LADDER_CAP`-
+  long strip of `StorageBankSquare`s per row, reusing the same three-state (consumed/held/upcoming)
+  visual language the transfer-block row already established, so "filled smallest to largest" reads
+  the same way across both mechanics rather than introducing a second convention. The new
+  purchase-block-progress row reuses the existing `RateBlocksRow`/`RateBlock` pair directly (no new
+  styled components needed) since `state.purchaseLevelProgress[tier01.id]`/`getPurchaseBlockSize`
+  already update identically regardless of whether a unit came from the main game's Buy button or
+  from `redeemStorageBank` here — the "irrespective of main game or Byte Foundry" requirement was
+  already true of the underlying state; the row just needed to be rendered, not hidden.
 - **The "bits this cycle" tracker is removed entirely; the Memory tile's Bytes-unit balance now
   floors instead of rounds.** Two follow-up requests on the tracker/formatting added in the round
   above:

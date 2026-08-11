@@ -2336,18 +2336,24 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 
 
 // --- Byte Foundry Storage (bank blocks) ---
-// tier01 (Kilobytes) starts at level 1 (per-unit cost 1000 bits/Bits, "1 KB") — buildStorageBank
-// now targets that CURRENT level cost (not a level ahead), so a freshly built bank already matches
-// tier01's current price and is immediately redeemable. Its build cost is 10x that (10,000).
+// The buildable size is an independent ladder starting at 1000 bits ("1 KB") that only advances to
+// the next size (×10) once STORAGE_BANK_LADDER_CAP banks have ever been built at the current one —
+// decoupled from tier01's own level cost (see getStorageBankSize in engine.js). A built bank's
+// redeemability is separately gated on tier01's (Kilobytes') CURRENT per-unit level cost catching
+// up to that bank's size. Every test here uses fake timers (never advanced, unless a test is
+// specifically exercising a tick boundary) rather than real userEvent delays — with byteCreated
+// true and Memory's own passive production live, a real tick landing between a click and its
+// assertions would non-deterministically shift Memory's balance and could trip the Byte Foundry's
+// own bulk transfer-budget auto-convert.
 describe('Byte Foundry Storage', () => {
   const tier01 = TIER_DEFINITIONS[0]
-  const currentBankSize = getTierCost(tier01, 1)
+  const currentBankSize = 1000 // the ladder's starting size
   const currentBankCost = currentBankSize * STORAGE_BUILD_COST_MULTIPLIER
   // A larger, not-yet-reached size — used to exercise the "held bank becomes redeemable once
   // tier01's level catches up to it" path independent of what the Build button currently offers.
   const futureBankSize = getTierCost(tier01, 2)
 
-  test('Build Storage Bank is disabled below its cost and enabled once affordable, targeting tier01\'s current level cost', () => {
+  test('Build Storage Bank is disabled below its cost and enabled once affordable, starting at 1 KB', () => {
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
@@ -2356,24 +2362,40 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).toBeDisabled()
   })
 
-  test('building a bank spends the build cost from Memory and adds an already-redeemable bank', async () => {
-    const user = userEvent.setup()
+  test('building a bank spends the build cost from Memory and adds an already-redeemable bank', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /build storage bank/i }))
+    fireEvent.click(screen.getByRole('button', { name: /build storage bank/i }))
 
     const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
     expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
 
-    // The bank is sized to tier01's own current level cost, so it's redeemable right away.
+    // The bank is sized to tier01's own current level cost, so it's redeemable right away — no
+    // tick has fired yet (fake timers, never advanced), so it's still held, not auto-redeemed.
     const redeemButton = screen.getByRole('button', { name: /redeem 1 kb storage bank/i })
-    expect(redeemButton).toHaveTextContent('×1')
     expect(redeemButton).toBeEnabled()
   })
 
-  test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', async () => {
-    const user = userEvent.setup()
+  test('a 1 KB bank auto-redeems on the very next tick even with the auto-redeem toggle off', () => {
+    vi.useFakeTimers()
+
+    seedIntroState({ bits: 0, capacity: currentBankSize, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
+    const { unmount } = render(<App />)
+    expect(screen.getByRole('button', { name: /redeem 1 kb storage bank/i })).toBeEnabled()
+
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    expect(screen.queryByRole('button', { name: /redeem 1 kb storage bank/i })).not.toBeInTheDocument()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.owned.tier01).toBe(1)
+    expect(saved.intro.storageAutoRedeemedSizes['1000']).toBe(true)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', () => {
     // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable.
     seedIntroState(
       { bits: 0, capacity: futureBankSize, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
@@ -2393,7 +2415,7 @@ describe('Byte Foundry Storage', () => {
     const redeemButton = screen.getByRole('button', { name: /redeem 10 kb storage bank/i })
     expect(redeemButton).toBeEnabled()
 
-    await user.click(redeemButton)
+    fireEvent.click(redeemButton)
 
     // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — redeeming doesn't
     // touch it, unlike convertIntroBitsToKilobytes) — assert against saved state directly, same
@@ -2402,9 +2424,14 @@ describe('Byte Foundry Storage', () => {
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)
     expect(saved.intro.storageBanks[futureBankSize]).toBeUndefined()
+
+    // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
+    // visible here as the (non-hidden) block-progress row, not just the hidden MainPage one.
+    const progressBar = screen.getByRole('progressbar', { name: /kilobytes purchase block progress/i })
+    expect(progressBar).toHaveAttribute('aria-valuenow', '1')
   })
 
-  test('the auto-redeem toggle appears once a bank is held and pauses/resumes automatic redeeming', () => {
+  test('the auto-redeem toggle appears once a bank above 1 KB is held and pauses/resumes automatic redeeming', () => {
     vi.useFakeTimers()
 
     seedIntroState(

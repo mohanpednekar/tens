@@ -132,11 +132,11 @@ export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/redeemStorageBank/
-// tickStorageAutoRedeem in engine.js and intro.storageBanks/storageAutoRedeemEnabled in
-// createInitialGameState. A bank is a discrete, pre-paid block of bits (sized to a future
-// tier01/Kilobytes per-unit level cost — always a round power of ten, see getTierCost) that the
-// player can build now and redeem later for a free tier01 unit, once tier01's own level actually
-// reaches that cost. Distinct from — and not counted against — the intro's ordinary
+// tickStorageAutoRedeem/getStorageBankSize in engine.js and intro.storageBanks/
+// storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes in
+// createInitialGameState. A bank is a discrete, pre-paid block of bits that the player can build
+// now and redeem later for a free tier01 unit, once tier01's own current per-unit level cost
+// actually reaches that size. Distinct from — and not counted against — the intro's ordinary
 // bitsTransferredThisCycle transfer budget (see INTRO_AUTO_INVEST_THRESHOLD above): a bank is
 // already fully paid for at build time, so redeeming it isn't a further transfer out of Memory.
 // Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
@@ -145,6 +145,15 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // same "10x" relationship intended by the feature's own description (a 1 KiloBits/1000-bit bank
 // costs 10,000 bits to build, a 10,000-bit bank costs 100,000, and so on).
 export const STORAGE_BUILD_COST_MULTIPLIER = 10
+// The buildable size ladder: offers 1000-bit ("1 KB") banks until STORAGE_BANK_LADDER_CAP of them
+// have ever been built, then 10,000-bit ("10 KB") banks until another STORAGE_BANK_LADDER_CAP,
+// and so on by ×10 each step (see getStorageBankSize in engine.js) — an independent progression,
+// deliberately decoupled from tier01's own current level cost (unlike an earlier version of this
+// feature, see docs/DESIGN_HISTORY.md): a player can build ahead of or fall behind tier01's actual
+// price, with isStorageBankRedeemable the only gate on whether a built bank is spendable yet. The
+// ladder only ever advances — it's driven by intro.storageBanksBuiltTotal, a cumulative count that
+// redeeming a bank (intro.storageBanks) never decrements.
+export const STORAGE_BANK_LADDER_CAP = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
