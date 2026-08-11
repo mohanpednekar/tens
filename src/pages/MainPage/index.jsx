@@ -1,17 +1,12 @@
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
+import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getGlobalTickspeedRegularStep, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getGlobalTickspeedRegularStep, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, getTierBaseTickSpeedSeconds, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
-
-// Offline-progress notice auto-dismiss timing (UI chrome only — not a game/economy constant, so
-// it lives here rather than in layers.js).
-const OFFLINE_NOTICE_AUTO_DISMISS_MS = 10_000
-const OFFLINE_NOTICE_FADE_MS = 400
-const OFFLINE_NOTICE_PROGRESS_INTERVAL_MS = 100
 
 // index.html sets viewport-fit=cover so the installed-on-homescreen iOS app (black-translucent
 // status bar, see docs/PWA_REFERENCE.md) draws edge-to-edge; without this padding the bottom-most
@@ -70,43 +65,6 @@ const GuideLink = styled.button`
   font-size: 0.75rem;
   padding: 0;
   text-decoration: underline;
-`
-
-// Centers the offline notice as a fixed overlay in the middle of the screen, above the page
-// content, rather than an inline card pushed into the normal document flow. `pointer-events: none`
-// on the overlay (re-enabled on the card itself, below) keeps the rest of the page clickable
-// through the overlay's own padding/whitespace.
-const OfflineNoticeOverlay = styled.div`
-  align-items: center;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  left: 0;
-  padding: calc(1.5rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
-    calc(1.5rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
-  pointer-events: none;
-  position: fixed;
-  right: 0;
-  top: 0;
-  z-index: 900;
-`
-
-// Fades out (rather than disappearing abruptly) once the auto-dismiss countdown reaches zero —
-// see the offline-notice timing state in MainPage. $fading drives the opacity transition, not a
-// remount, so the fade is visible before the notice is actually removed from the DOM by
-// dismissOfflineProgress.
-const OfflineNoticeCard = styled(StatCard)`
-  align-items: center;
-  max-width: 26rem;
-  opacity: ${props => (props.$fading ? 0 : 1)};
-  pointer-events: auto;
-  text-align: center;
-  transition: opacity ${OFFLINE_NOTICE_FADE_MS}ms ease;
-  width: 100%;
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
 `
 
 const TierList = styled.div`
@@ -1210,45 +1168,6 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
     return () => observer.disconnect()
   }, [showTopPrestigeBar])
 
-  // Offline-progress notice: auto-dismisses after OFFLINE_NOTICE_AUTO_DISMISS_MS. offlineProgress
-  // is a one-shot value fixed at mount (see useIncrementalGame — it only ever transitions
-  // non-null → null via dismissOfflineProgress, never null → non-null after mount), so a lazy
-  // initializer capturing its start/end timestamps at mount time is enough; no effect is needed to
-  // (re)initialize it later, and the timing itself never changes afterward.
-  const [offlineNoticeTiming] = useState(() => {
-    if (!offlineProgress) return null
-    const now = Date.now()
-    return { start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS }
-  })
-  const [offlineNoticeFading, setOfflineNoticeFading] = useState(false)
-  const [offlineNoticeRemainingPercent, setOfflineNoticeRemainingPercent] = useState(100)
-  useEffect(() => {
-    // Guarded on offlineProgress (not just offlineNoticeTiming) so this effect re-runs — and its
-    // interval cleanup fires — the instant the notice is dismissed (manually or via the fade
-    // below), rather than leaving a 100ms interval running forever in the background.
-    if (!offlineProgress || !offlineNoticeTiming || offlineNoticeFading) return undefined
-    const { start, end } = offlineNoticeTiming
-    const total = end - start
-    const tick = () => {
-      const remaining = end - Date.now()
-      if (remaining <= 0) {
-        setOfflineNoticeRemainingPercent(0)
-        setOfflineNoticeFading(true)
-        return
-      }
-      setOfflineNoticeRemainingPercent(Math.round((remaining / total) * 100))
-    }
-    tick()
-    const interval = setInterval(tick, OFFLINE_NOTICE_PROGRESS_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [offlineProgress, offlineNoticeTiming, offlineNoticeFading])
-  useEffect(() => {
-    if (!offlineNoticeFading) return undefined
-    const timeout = setTimeout(dismissOfflineProgress, OFFLINE_NOTICE_FADE_MS)
-    return () => clearTimeout(timeout)
-  }, [offlineNoticeFading, dismissOfflineProgress])
-  const handleOfflineNoticeDismissClick = () => dismissOfflineProgress()
-
   if (showFullScreenPrompt) {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
@@ -1318,37 +1237,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
         </HeaderMeta>
       </Header>
 
-      {offlineProgress && (
-        <OfflineNoticeOverlay>
-          <OfflineNoticeCard
-            aria-label="offline progress notice"
-            $fading={offlineNoticeFading}
-          >
-            <HudMutedText>
-              Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
-              {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 10% speed.
-            </HudMutedText>
-            <Button
-              aria-label="Dismiss offline progress notice"
-              variant="neutral"
-              onClick={handleOfflineNoticeDismissClick}
-              title="Dismiss this notice"
-              type="button"
-              $progress={offlineNoticeRemainingPercent}
-              $progressColor="#525252"
-            >
-              Dismiss
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="Time until this notice auto-dismisses"
-                aria-valuenow={offlineNoticeRemainingPercent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </Button>
-          </OfflineNoticeCard>
-        </OfflineNoticeOverlay>
-      )}
+      <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
 
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
       <StickyBalances
@@ -1445,7 +1334,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
       </StickyBalances>
 
       {/* Game and Milestones are always reachable (MainPage itself is only ever rendered once the
-          Byte Foundry intro is complete) — Chapters (see the Milestones view below) needs to be
+          Byte Foundry's main-game gate is unlocked) — Chapters (see the Milestones view below) needs to be
           visible before a first Prestige so "Go Googol" can actually be seen locked, not
           permanently pre-checked. Upgrades stays gated on !isFirstRun: PP upgrades genuinely don't
           exist before a first Prestige. */}
@@ -2216,7 +2105,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
           <UpgradeCategory aria-label="chapters category">
             <CategoryHeading>Chapters</CategoryHeading>
             {[
-              { label: 'The first KiloByte', reached: !!state.intro?.completed },
+              { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
               { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
               { label: 'Coming soon…', reached: false },
             ].map(chapter => (

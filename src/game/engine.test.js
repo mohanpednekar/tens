@@ -10,10 +10,17 @@ import {
   buySmartAutobuyer,
   buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
+  buildStorageBank,
   buyTier,
   buyTierQuantity,
+  combineIntroByte,
   consumeXpForLastTierTickspeed,
+  convertIntroBitsToKilobytes,
   createInitialGameState,
+  getIntroProductionRate,
+  isIntroConversionUnlocked,
+  pickIntroCapacityMilestone,
+  pickIntroProductionMilestone,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
@@ -32,6 +39,9 @@ import {
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getGlobalTickspeedRegularStep,
+  getIntroProductionMilestoneCost,
+  getIntroProductionMilestoneMaxClaims,
+  getIntroTransferBudget,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
@@ -43,6 +53,8 @@ import {
   getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
+  getStorageBankCost,
+  getStorageBankSize,
   getTierTickspeedAutobuyerMilestone,
   getSpeedUpMultiplier,
   getSpeedUpRequirement,
@@ -59,13 +71,20 @@ import {
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isProductionFrozen,
+  isStorageBankRedeemable,
   isTierUnlocked,
   overclockGame,
   prestigeGame,
+  redeemStorageBank,
+  setStorageAutoRedeemEnabled,
   speedUpGame,
+  tapIntroBit,
   tickGame,
+  tickIntroAutoInvest,
+  tickIntroProduction,
+  tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -373,6 +392,708 @@ describe('createInitialGameState', () => {
         expect(state.resources[tier.producesResourceId]).toBe(0)
       }
     })
+  })
+})
+
+// ─── Byte Foundry intro ────────────────────────────────────────────────────────
+
+describe('getIntroProductionRate', () => {
+  it('is 1 bit/sec at the starting tickSpeedSeconds/productionMultiplier', () => {
+    const { intro } = createInitialGameState()
+    expect(getIntroProductionRate(intro)).toBe(1)
+  })
+
+  it('scales inversely with tickSpeedSeconds', () => {
+    expect(getIntroProductionRate({ productionMultiplier: 1, tickSpeedSeconds: 0.5 })).toBe(2)
+    expect(getIntroProductionRate({ productionMultiplier: 1, tickSpeedSeconds: 0.125 })).toBe(8)
+  })
+
+  it('scales directly with productionMultiplier once tickSpeedSeconds is floored', () => {
+    expect(getIntroProductionRate({ productionMultiplier: 2, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS })).toBe(2 / INTRO_MIN_TICK_SPEED_SECONDS)
+    expect(getIntroProductionRate({ productionMultiplier: 4, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS })).toBe(4 / INTRO_MIN_TICK_SPEED_SECONDS)
+  })
+})
+
+describe('tapIntroBit', () => {
+  it('credits the current production rate (getIntroProductionRate), not a flat 1, once the rate has grown', () => {
+    const state = withIntro(createInitialGameState(), { tickSpeedSeconds: 0.25, productionMultiplier: 1, capacity: 1000 })
+    const after = tapIntroBit(state)
+    expect(after.intro.bits).toBe(4)
+  })
+
+  it('still credits exactly 1 bit at the starting rate (unchanged bootstrap behavior)', () => {
+    const state = createInitialGameState()
+    const after = tapIntroBit(state)
+    expect(after.intro.bits).toBe(1)
+  })
+
+  it('caps at capacity rather than overshooting', () => {
+    const state = withIntro(createInitialGameState(), { bits: 7, capacity: 8, productionMultiplier: 1, tickSpeedSeconds: 0.1 })
+    const after = tapIntroBit(state)
+    expect(after.intro.bits).toBe(8)
+  })
+
+  it('is a no-op once already full', () => {
+    const state = withIntro(createInitialGameState(), { bits: 8, capacity: 8 })
+    expect(tapIntroBit(state)).toBe(state)
+  })
+
+  it('keeps working after mainGameUnlocked — nothing about tapping ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: 0, capacity: 8 })
+    const after = tapIntroBit(state)
+    expect(after.intro.bits).toBe(1)
+  })
+})
+
+describe('combineIntroByte', () => {
+  it('consumes INTRO_BYTE_COMBINE_COST bits and sets byteCreated', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST })
+    const after = combineIntroByte(state)
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('is a no-op below the combine cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST - 1 })
+    expect(combineIntroByte(state)).toBe(state)
+  })
+
+  it('is a no-op once already created', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, byteCreated: true })
+    expect(combineIntroByte(state)).toBe(state)
+  })
+})
+
+describe('pickIntroCapacityMilestone', () => {
+  it('requires a full balance, drains it, and multiplies capacity by INTRO_CAPACITY_MULTIPLIER', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+  })
+
+  it('is a no-op below a full balance', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1, capacity: INTRO_STARTING_CAPACITY })
+    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  })
+
+  it('keeps working after mainGameUnlocked — nothing about Sacrifice ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY })
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+  })
+
+  it('does not touch tickSpeedSeconds/productionMultiplier', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 0.25, productionMultiplier: 2,
+    })
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.tickSpeedSeconds).toBe(0.25)
+    expect(after.intro.productionMultiplier).toBe(2)
+  })
+})
+
+describe('getIntroProductionMilestoneCost', () => {
+  it('is INTRO_STARTING_CAPACITY at tier 0, growing by INTRO_CAPACITY_MULTIPLIER per tier', () => {
+    expect(getIntroProductionMilestoneCost(0)).toBe(INTRO_STARTING_CAPACITY)
+    expect(getIntroProductionMilestoneCost(1)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(getIntroProductionMilestoneCost(2)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 2)
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 3)
+  })
+})
+
+describe('getIntroProductionMilestoneMaxClaims', () => {
+  it('grants 2 claims for the three tiers below INTRO_AUTO_INVEST_THRESHOLD (1/10/100 Bytes)', () => {
+    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
+  })
+
+  it('grants only 1 claim from the tier reaching INTRO_AUTO_INVEST_THRESHOLD (1000 Bytes) on', () => {
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+    expect(getIntroProductionMilestoneMaxClaims(3)).toBe(1)
+    expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
+    expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
+  })
+})
+
+describe('pickIntroProductionMilestone', () => {
+  it('halves tickSpeedSeconds (speeds up delivery) while that stays at/above INTRO_MIN_TICK_SPEED_SECONDS', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.tickSpeedSeconds).toBe(1 / INTRO_PRODUCTION_MULTIPLIER_STEP)
+    expect(after.intro.productionMultiplier).toBe(1)
+  })
+
+  it('spends exactly this tier\'s cost, independent of the (much larger) current capacity', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: 8000, tickSpeedSeconds: 1 })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('does not require a full Memory balance — only enough bits to cover this tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: 8000, tickSpeedSeconds: 1 })
+    expect(state.intro.bits).toBeLessThan(state.intro.capacity)
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro).not.toBe(state.intro)
+  })
+
+  it('switches to multiplying productionMultiplier once halving tickSpeedSeconds would breach the floor', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 1,
+    })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.tickSpeedSeconds).toBe(INTRO_MIN_TICK_SPEED_SECONDS)
+    expect(after.intro.productionMultiplier).toBe(INTRO_PRODUCTION_MULTIPLIER_STEP)
+  })
+
+  it('doubles the effective bits/sec rate either way', () => {
+    const speedingUp = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const afterSpeedUp = pickIntroProductionMilestone(speedingUp)
+    expect(getIntroProductionRate(afterSpeedUp.intro)).toBe(getIntroProductionRate(speedingUp.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
+
+    const scalingAmount = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 2 })
+    const afterScaleUp = pickIntroProductionMilestone(scalingAmount)
+    expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
+  })
+
+  it('grants a second claim at the same tier 0 cost before advancing', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const afterFirst = pickIntroProductionMilestone(state)
+    expect(afterFirst.intro.productionMilestoneTier).toBe(0)
+    expect(afterFirst.intro.productionMilestoneTierClaims).toBe(1)
+
+    const refilled = withIntro(afterFirst, { bits: INTRO_STARTING_CAPACITY })
+    const afterSecond = pickIntroProductionMilestone(refilled)
+    expect(afterSecond.intro.productionMilestoneTier).toBe(1)
+    expect(afterSecond.intro.productionMilestoneTierClaims).toBe(0)
+  })
+
+  it('advances tier only after both claims at a 2-claim tier are used, then is claimable again at the new (10x) cost', () => {
+    const twiceClaimed = withIntro(createInitialGameState(), {
+      bits: 0, tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1, productionMilestoneTierClaims: 0,
+    })
+    const refilled = withIntro(twiceClaimed, { bits: getIntroProductionMilestoneCost(1) })
+    const after = pickIntroProductionMilestone(refilled)
+    expect(after.intro.productionMilestoneTier).toBe(1)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('grants only a single claim per tier once past INTRO_AUTO_INVEST_THRESHOLD (tier 4+)', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getIntroProductionMilestoneCost(4), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 4, productionMilestoneTierClaims: 0,
+    })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.productionMilestoneTier).toBe(5)
+    expect(after.intro.productionMilestoneTierClaims).toBe(0)
+  })
+
+  it('is a no-op below this tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1 })
+    expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('is a no-op once every claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 2,
+    })
+    expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('keeps working after mainGameUnlocked — nothing about Invest ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro).not.toBe(state.intro)
+  })
+})
+
+describe('isIntroConversionUnlocked', () => {
+  it('is false below INTRO_CONVERSION_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: 800 })
+    expect(isIntroConversionUnlocked(state)).toBe(false)
+  })
+
+  it('is true once capacity reaches INTRO_CONVERSION_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: 1000 })
+    expect(isIntroConversionUnlocked(state)).toBe(true)
+  })
+})
+
+describe('getIntroTransferBudget', () => {
+  it('is INTRO_AUTO_INVEST_THRESHOLD (DEFAULT_PURCHASE_BLOCK_SIZE Kilobyte units) at a fresh cycle\'s default block size', () => {
+    expect(getIntroTransferBudget(createInitialGameState())).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  })
+
+  it('grows with the Kilobyte tier\'s own current purchase block size, not a fixed constant', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
+    expect(getPurchaseBlockSize(state)).toBe(9)
+    expect(getIntroTransferBudget(state)).toBe(9 * INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+})
+
+describe('convertIntroBitsToKilobytes', () => {
+  const firstTierId = TIER_DEFINITIONS[0].id
+
+  it('spends INTRO_BITS_PER_KILOBYTE_CONVERSION bits and grants 1 free unit of the first tier', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.bits).toBe(0)
+    expect(after.owned[firstTierId]).toBe(1)
+  })
+
+  it('is a no-op below the conversion cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION - 1, capacity: 1000 })
+    expect(convertIntroBitsToKilobytes(state)).toBe(state)
+  })
+
+  it('flips mainGameUnlocked and grows bitsTransferredThisCycle on a successful convert', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+
+  it('keeps working after mainGameUnlocked, as long as budget remains', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 2000, bitsTransferredThisCycle: INTRO_BITS_PER_KILOBYTE_CONVERSION,
+    })
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION * 2)
+    expect(after.owned[firstTierId]).toBe(1)
+  })
+
+  it('is a no-op once this cycle\'s shared transfer budget is exhausted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    expect(convertIntroBitsToKilobytes(state)).toBe(state)
+  })
+
+  it('is a no-op if the remaining budget can\'t cover a full 1000-bit transfer', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD - 500,
+    })
+    expect(convertIntroBitsToKilobytes(state)).toBe(state)
+  })
+
+  it('respects the dynamic (block-size-grown) budget rather than the old fixed 8000', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), lastTier.id, 101), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    // Block size grew to 9 (see getPurchaseBlockSize), so the transfer budget is now 9000 bits —
+    // another 1000-bit transfer is still allowed even though bitsTransferredThisCycle already
+    // equals the OLD fixed 8000 constant this replaced.
+    expect(getPurchaseBlockSize(state)).toBe(9)
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD + INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+})
+
+describe('tickIntroProduction', () => {
+  it('is a no-op before byteCreated', () => {
+    const state = createInitialGameState()
+    expect(tickIntroProduction(1)(state)).toBe(state)
+  })
+
+  it('keeps producing after mainGameUnlocked — nothing about passive production ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, tickSpeedSeconds: 1, productionMultiplier: 1, capacity: 100 })
+    const after = tickIntroProduction(1)(state)
+    expect(after.intro.bits).toBe(1)
+  })
+
+  it('delivers nothing before a full tickSpeedSeconds period has accumulated, banking the partial progress', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1, capacity: 100 })
+    const after = tickIntroProduction(0.4)(state)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.productionAccumulator).toBeCloseTo(0.4)
+  })
+
+  it('delivers exactly one batch once a full period elapses, banking the remainder', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 3, capacity: 100 })
+    const after = tickIntroProduction(1.4)(state)
+    expect(after.intro.bits).toBe(3)
+    expect(after.intro.productionAccumulator).toBeCloseTo(0.4)
+  })
+
+  it('delivers multiple batches in one call when several periods elapse at once', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, tickSpeedSeconds: 0.5, productionMultiplier: 2, capacity: 1000 })
+    const after = tickIntroProduction(2)(state)
+    // 2s / 0.5s per period = 4 periods, 2 bits each.
+    expect(after.intro.bits).toBe(8)
+  })
+
+  it('caps delivered bits at capacity rather than overshooting', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 5, capacity: 8, tickSpeedSeconds: 1, productionMultiplier: 10 })
+    const after = tickIntroProduction(1)(state)
+    expect(after.intro.bits).toBe(8)
+  })
+})
+
+describe('tickIntroAutoInvest', () => {
+  const firstTierId = TIER_DEFINITIONS[0].id
+
+  it('is a no-op below INTRO_AUTO_INVEST_THRESHOLD', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD - 1 })
+    expect(tickIntroAutoInvest(state)).toBe(state)
+  })
+
+  it('grants 8 units, spends the full threshold, and flips mainGameUnlocked, on a fresh cycle', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true })
+    const after = tickIntroAutoInvest(state)
+    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  })
+
+  it('keeps working after mainGameUnlocked, transferring only the remaining budget once some has already been manually converted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 80000, byteCreated: true, bitsTransferredThisCycle: 3000,
+    })
+    const after = tickIntroAutoInvest(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+    expect(after.intro.bits).toBe(INTRO_AUTO_INVEST_THRESHOLD - 5000)
+    expect(after.owned[firstTierId]).toBe(5000 / INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+
+  it('is a no-op once this cycle\'s shared transfer budget is fully exhausted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    expect(tickIntroAutoInvest(state)).toBe(state)
+  })
+
+  it('triggers at the dynamic (block-size-grown) threshold, not the old fixed 8000', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const grown = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
+    expect(getPurchaseBlockSize(grown)).toBe(9)
+
+    // Bits at exactly the OLD fixed threshold (8000) isn't enough yet — the grown budget is 9000.
+    const notYetFull = withIntro(grown, { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 10000, byteCreated: true })
+    expect(tickIntroAutoInvest(notYetFull)).toBe(notYetFull)
+
+    const full = withIntro(notYetFull, { bits: 9000 })
+    const after = tickIntroAutoInvest(full)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(9000)
+  })
+})
+
+// ─── Byte Foundry Storage (bank blocks) ───────────────────────────────────────
+
+describe('getStorageBankSize', () => {
+  it('starts at 1000 bits (1 KB) on a fresh cycle', () => {
+    const state = createInitialGameState()
+    expect(getStorageBankSize(state)).toBe(1000)
+  })
+
+  it('is independent of tier01\'s own level cost — it does not advance just because tier01 levels up', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
+    expect(getStorageBankSize(state)).toBe(1000)
+  })
+
+  it('advances to the next size (×10) once STORAGE_BANK_LADDER_CAP banks have ever been built at the current size', () => {
+    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP } })
+    expect(getStorageBankSize(state)).toBe(10000)
+  })
+
+  it('does not regress after banks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
+      storageBanks: { 1000: 3 }, // some already redeemed, some still held — either way, below the cap
+    })
+    expect(getStorageBankSize(state)).toBe(10000)
+  })
+
+  it('can advance multiple steps at once if a much larger size was somehow already maxed out', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
+    })
+    expect(getStorageBankSize(state)).toBe(100000)
+  })
+})
+
+describe('getStorageBankCost', () => {
+  it('is STORAGE_BUILD_COST_MULTIPLIER times the bank\'s own size', () => {
+    expect(getStorageBankCost(1000)).toBe(1000 * STORAGE_BUILD_COST_MULTIPLIER)
+  })
+})
+
+describe('buildStorageBank', () => {
+  it('spends the build cost from Memory and adds one bank of the current offered size', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), { bits: cost })
+
+    const after = buildStorageBank(state)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.storageBanks[1000]).toBe(1)
+    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(1)
+  })
+
+  it('accumulates both storageBanks (held) and storageBanksBuiltTotal (cumulative) when building the same size again', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), { bits: cost * 2 })
+
+    const after = buildStorageBank(buildStorageBank(state))
+    expect(after.intro.storageBanks[1000]).toBe(2)
+    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('is a no-op below the build cost', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), { bits: cost - 1 })
+    expect(buildStorageBank(state)).toBe(state)
+  })
+
+  it('starts building the next size up once the current one reaches STORAGE_BANK_LADDER_CAP built', () => {
+    const almostMaxed = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
+      bits: getStorageBankCost(1000) + getStorageBankCost(10000),
+    })
+    const afterLast1KB = buildStorageBank(almostMaxed)
+    expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
+
+    const afterNext = buildStorageBank(afterLast1KB)
+    expect(afterNext.intro.storageBanksBuiltTotal[10000]).toBe(1)
+  })
+})
+
+describe('isStorageBankRedeemable', () => {
+  it('is true when capacityBits is at or below tier01\'s current per-unit level cost, false above it', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 2))).toBe(true) // exact match
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(true) // below — still redeemable
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 3))).toBe(false) // above — not yet
+  })
+
+  it('stays redeemable even when tier01\'s level jumps straight past the level a bank was sized for', () => {
+    // Regression: an autobuyer burst can complete more than one level in a single tick (see
+    // tickGame's autobuyer loop), skipping level 2 (the bank's own target) entirely on the way to
+    // level 5 — an exact-match check would strand the bank forever; `<=` must not.
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
+    expect(isStorageBankRedeemable(state, size)).toBe(true)
+  })
+})
+
+describe('redeemStorageBank', () => {
+  it('consumes one matching bank and grants 1 free tier01 unit', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 2 } })
+
+    const after = redeemStorageBank(size)(state)
+    expect(after.intro.storageBanks[size]).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('removes the denomination key entirely once its count reaches 0, rather than leaving a 0 entry', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } })
+
+    const after = redeemStorageBank(size)(state)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  it('is a no-op if no bank of that size is held', () => {
+    const state = createInitialGameState()
+    expect(redeemStorageBank(getTierCost(tensTier, 1))(state)).toBe(state)
+  })
+
+  it('is a no-op if a held bank exceeds tier01\'s current level cost', () => {
+    const size = getTierCost(tensTier, 2) // above tier01's level-1 cost
+    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } })
+    expect(redeemStorageBank(size)(state)).toBe(state)
+  })
+
+  it('redeems a bank sized for a level tier01 skipped straight past in one burst', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }),
+      tensTier.id,
+      5
+    )
+    const after = redeemStorageBank(size)(state)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }), PRESTIGE_THRESHOLD)
+    expect(isProductionFrozen(state)).toBe(true)
+
+    const after = redeemStorageBank(size)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+})
+
+describe('tickStorageAutoRedeem', () => {
+  it('auto-redeems a 1 KB bank even when storageAutoRedeemEnabled is false — the smallest size is exempt from the toggle', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 }, storageAutoRedeemEnabled: false })
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[1000]).toBeUndefined()
+    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
+  })
+
+  it('is a no-op for a size above 1 KB when storageAutoRedeemEnabled is false', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: false }),
+      tensTier.id,
+      2
+    )
+    expect(tickStorageAutoRedeem(state)).toBe(state)
+  })
+
+  it('redeems a matching bank above 1 KB automatically once enabled', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
+      tensTier.id,
+      2
+    )
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  it('is a no-op when no held bank is at or below the current cost', () => {
+    const size = getTierCost(tensTier, 2)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
+    expect(tickStorageAutoRedeem(state)).toBe(state)
+  })
+
+  it('redeems only the smallest eligible bank when multiple sizes are held', () => {
+    const level1Size = getTierCost(tensTier, 1)
+    const level2Size = getTierCost(tensTier, 2)
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), {
+        storageBanks: { [level1Size]: 1, [level2Size]: 1 },
+        storageAutoRedeemEnabled: true,
+      }),
+      tensTier.id,
+      2
+    )
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
+    expect(after.intro.storageBanks[level2Size]).toBe(1)
+  })
+
+  it('auto-redeems a given size at most once per cycle, leaving a further eligible bank of that size for a manual redeem', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 2 }, storageAutoRedeemEnabled: true })
+
+    const after = tickStorageAutoRedeem(state)
+    expect(after.intro.storageBanks[1000]).toBe(1)
+    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
+
+    const secondTick = tickStorageAutoRedeem(after)
+    expect(secondTick).toBe(after) // no-op — 1000 already auto-redeemed this cycle
+  })
+})
+
+describe('setStorageAutoRedeemEnabled', () => {
+  it('toggles intro.storageAutoRedeemEnabled unconditionally — no prerequisite purchase, unlike setAutoSpeedUpEnabled', () => {
+    const state = createInitialGameState()
+    expect(state.intro.storageAutoRedeemEnabled).toBe(false)
+
+    const enabled = setStorageAutoRedeemEnabled(true)(state)
+    expect(enabled.intro.storageAutoRedeemEnabled).toBe(true)
+    expect(setStorageAutoRedeemEnabled(false)(enabled).intro.storageAutoRedeemEnabled).toBe(false)
+  })
+})
+
+describe('tickGame Storage auto-redeem integration', () => {
+  it('auto-redeems a matching bank as part of a regular tick', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
+
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  // Regression: tickStorageAutoRedeem used to only run after tickGame's normal (non-frozen) path,
+  // so it was silently unreachable once isProductionFrozen — unlike redeemStorageBank itself,
+  // which deliberately bypasses the freeze (see redeemStorageBank's own tests above).
+  it('auto-redeems a matching bank even while production is frozen, with no Auto-Prestige bought', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
+      PRESTIGE_THRESHOLD
+    )
+    expect(isProductionFrozen(state)).toBe(true)
+
+    const after = tickGame(1)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+  })
+
+  it('auto-redeems a matching bank even while frozen with Auto-Prestige accumulating (attempt budget not yet full)', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withPrestigePoints(withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }), 0),
+      PRESTIGE_THRESHOLD
+    )
+    const frozenState = { ...state, autoPrestige: 1 }
+    expect(isProductionFrozen(frozenState)).toBe(true)
+
+    const after = tickGame(0.001)(frozenState) // tiny elapsed time — attempt budget stays well below 1
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD) // still frozen — no Prestige fired yet
+  })
+
+  it('auto-redeems against the fresh post-Prestige tier01 level when Auto-Prestige fires the same tick', () => {
+    const level1Size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageBanks: { [level1Size]: 1 }, storageAutoRedeemEnabled: true }),
+      PRESTIGE_THRESHOLD
+    )
+    const frozenState = { ...state, autoPrestige: 1, autoPrestigeAttemptBudget: 1 } // budget already full
+    expect(isProductionFrozen(frozenState)).toBe(true)
+
+    const after = tickGame(1)(frozenState)
+    expect(after.resources[MONEY_ID]).toBeLessThan(PRESTIGE_THRESHOLD) // Prestige fired, resources reset
+    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized bank is still redeemable.
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
+  })
+})
+
+describe('prestigeGame keeps Storage permanent', () => {
+  it('carries storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled through a real Prestige unchanged, like the Byte generator itself', () => {
+    const size = getTierCost(tensTier, 1)
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        storageBanks: { [size]: 3 },
+        storageBanksBuiltTotal: { [size]: 5 },
+        storageAutoRedeemEnabled: true,
+      }),
+      PRESTIGE_THRESHOLD
+    )
+
+    const after = prestigeGame(state)
+    expect(after.intro.storageBanks[size]).toBe(3)
+    expect(after.intro.storageBanksBuiltTotal[size]).toBe(5)
+    expect(after.intro.storageAutoRedeemEnabled).toBe(true)
+  })
+
+  it('resets storageAutoRedeemedSizes fresh every real Prestige, unlike the permanent Storage fields above', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), { storageAutoRedeemedSizes: { 1000: true } }),
+      PRESTIGE_THRESHOLD
+    )
+
+    const after = prestigeGame(state)
+    expect(after.intro.storageAutoRedeemedSizes).toEqual({})
   })
 })
 
@@ -1082,19 +1803,19 @@ describe('isTierUnlocked', () => {
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
 
-  it('keeps tier 1 locked when tier 0 is owned < PURCHASE_BLOCK_SIZE (8)', () => {
-    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 7)
+  it('keeps tier 1 locked when tier 0 has only fully purchased one level (level 2)', () => {
+    const state = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
 
-  it('unlocks tier 1 when tier 0 is owned ≥ PURCHASE_BLOCK_SIZE (8)', () => {
-    const state = withOwned(createInitialGameState(), TIER_DEFINITIONS[0].id, 8)
+  it('unlocks tier 1 when tier 0 has fully purchased two levels (level 3)', () => {
+    const state = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3)
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
-  it('unlocks tier 2 only after tier 1 is owned ≥ PURCHASE_BLOCK_SIZE (8)', () => {
-    const lockedState = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 7)
-    const unlockedState = withOwned(createInitialGameState(), TIER_DEFINITIONS[1].id, 8)
+  it('unlocks tier 2 only after tier 1 has fully purchased two levels (level 3)', () => {
+    const lockedState = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[1].id, 2)
+    const unlockedState = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[1].id, 3)
     expect(isTierUnlocked(lockedState)(TIER_DEFINITIONS[2])).toBe(false)
     expect(isTierUnlocked(unlockedState)(TIER_DEFINITIONS[2])).toBe(true)
   })
@@ -1457,7 +2178,7 @@ describe('buyTier', () => {
   it('an unlocked higher tier is purchasable directly with the base currency', () => {
     const cost = getTierCost(thousandsTier, 1, 8)
     const state = withMoney(
-      withOwned(createInitialGameState(), tensTier.id, 10),
+      withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
       cost
     )
     const after = buyTier(thousandsTier.id)(state)
@@ -1534,15 +2255,20 @@ describe('buyTier', () => {
   })
 
   it('permanently latches everUnlockedTierIds for a tier the instant it becomes newly buyable', () => {
-    // Buying the 8th Bytes (tensTier) unlocks Kilobytes (thousandsTier) — confirm the permanent
-    // flag is set the same instant, not just the live owned >= current-block-size condition.
+    // Completing tensTier's 2nd level (owned 15 → 16, purchaseLevels 2 → 3) unlocks thousandsTier —
+    // confirm the permanent flag is set the same instant, not just the live two-full-levels condition.
     const state = withMoney(
-      withOwned(createInitialGameState(), tensTier.id, 7),
-      getTierCost(tensTier, 1, 8)
+      withPurchaseLevelProgress(
+        withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 15), tensTier.id, 2),
+        tensTier.id,
+        7
+      ),
+      getTierCost(tensTier, 2, 8)
     )
     expect(state.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(8)
+    expect(after.owned[tensTier.id]).toBe(16)
+    expect(after.purchaseLevels[tensTier.id]).toBe(3)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
   })
 
@@ -1579,14 +2305,15 @@ describe('buyTier', () => {
 
   it('still latches a newly-reached tier\'s everUnlockedTierIds when that field is missing from state entirely', () => {
     const state = {
-      resources: { [MONEY_ID]: 1000 },
-      owned: { [tensTier.id]: 7 },
+      resources: { [MONEY_ID]: getTierCost(tensTier, 2) },
+      owned: { [tensTier.id]: 15 },
       purchased: {},
-      purchaseLevels: {},
-      purchaseLevelProgress: {},
+      purchaseLevels: { [tensTier.id]: 2 },
+      purchaseLevelProgress: { [tensTier.id]: 7 },
     }
     const after = buyTier(tensTier.id)(state)
-    expect(after.owned[tensTier.id]).toBe(8)
+    expect(after.owned[tensTier.id]).toBe(16)
+    expect(after.purchaseLevels[tensTier.id]).toBe(3)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
   })
 })
@@ -2123,7 +2850,10 @@ describe('tickGame', () => {
     // Kilobyte purchase ($1,000 per unit).
     const state = withAutobuyer(
       withAutobuyer(
-        withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 1_000_000),
+        withMoney(
+          withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
+          1_000_000
+        ),
         tensTier.id
       ),
       thousandsTier.id
@@ -3290,28 +4020,55 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry intro back to fresh defaults across prestige, sending the player back through it', () => {
+  it('resets the Byte Foundry\'s Memory/gate/transfer budget across prestige, but keeps the generator and its upgrades permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,
       byteCreated: true,
+      tickSpeedSeconds: 0.125,
       productionMultiplier: 4,
+      productionMilestoneTier: 3,
+      productionMilestoneTierClaims: 1,
       productionAccumulator: 2.5,
-      completed: true,
+      mainGameUnlocked: true,
+      bitsTransferredThisCycle: 8000,
     })
     const after = prestigeGame(state)
-    expect(after.intro).toEqual(createInitialGameState().intro)
-    expect(after.intro.completed).toBe(false)
+    // Memory + the gate + the transfer budget reset to fresh.
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.productionAccumulator).toBe(0)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.bitsTransferredThisCycle).toBe(0)
+    // The generator and every upgrade to it are permanent — carried over unchanged.
+    expect(after.intro.capacity).toBe(8000)
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.tickSpeedSeconds).toBe(0.125)
+    expect(after.intro.productionMultiplier).toBe(4)
+    expect(after.intro.productionMilestoneTier).toBe(3)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
   })
 
-  it('resets resources/owned and the intro together in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
+  it('resets resources/owned together with the intro\'s Memory in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
     const state = withIntro(
       withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 8),
-      { capacity: 8000, byteCreated: true, completed: true }
+      { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true, bitsTransferredThisCycle: 4000 }
     )
     const after = prestigeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.intro).toEqual(createInitialGameState().intro)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.bitsTransferredThisCycle).toBe(0)
+    // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
+    // no stale/wiped generator progress either.
+    expect(after.intro.capacity).toBe(8000)
+    expect(after.intro.byteCreated).toBe(true)
+  })
+
+  it('falls back to fresh generator defaults when the incoming state predates the Byte Foundry intro field entirely', () => {
+    const fresh = createInitialGameState()
+    const state = omit(withMoney(fresh, PRESTIGE_THRESHOLD), 'intro')
+    const after = prestigeGame(state)
+    expect(after.intro).toEqual(fresh.intro)
   })
 })
 
@@ -3583,8 +4340,11 @@ describe('speedUpGame', () => {
 
   it('keeps the Byte Foundry intro state permanently untouched across speed up, unlike prestige', () => {
     const seededIntro = {
-      bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4,
-      productionAccumulator: 2.5, completed: true,
+      bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
+      productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
+      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
+      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
+      storageAutoRedeemedSizes: { 1000: true },
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = speedUpGame(state)
@@ -3822,8 +4582,11 @@ describe('overclockGame', () => {
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
     const seededIntro = {
-      bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4,
-      productionAccumulator: 2.5, completed: true,
+      bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
+      productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
+      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
+      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
+      storageAutoRedeemedSizes: { 1000: true },
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = overclockGame(state)

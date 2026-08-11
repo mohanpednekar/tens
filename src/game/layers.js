@@ -82,11 +82,30 @@ export const INTRO_STARTING_CAPACITY = 8
 // "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
 // 8000 → … (see pickIntroCapacityMilestone in engine.js).
 export const INTRO_CAPACITY_MULTIPLIER = 10
-// "Invest for Double Production" multiplies the production-rate multiplier by this each time it's
-// taken: 1x → 2x → 4x → … (see pickIntroProductionMilestone in engine.js).
+// The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
+// per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
+// continuous rate). "Invest for Double Production" halves this (see
+// INTRO_MIN_TICK_SPEED_SECONDS/pickIntroProductionMilestone in engine.js) each time it's taken,
+// until the tick loop's own real-time resolution can't usefully go any faster.
+export const INTRO_STARTING_TICK_SPEED_SECONDS = 1
+// Floor for the Byte generator's tickSpeedSeconds — halving the period below the live tick loop's
+// own granularity (TICK_RATE_MS, i.e. 10 ticks/sec) wouldn't actually deliver bits any faster, only
+// make tickIntroProduction's per-call math finer-grained for no observable effect. Once
+// "Invest for Double Production" would halve tickSpeedSeconds below this, it multiplies
+// productionMultiplier instead — the same "speed up delivery, then scale the batch" split
+// TIER_DEFINITIONS' own tickspeed-vs-production-multiplier distinction already uses (see
+// getEffectiveTierTickSpeedSeconds in engine.js) — so growth never stalls once the tick loop's
+// own resolution limit is reached. See pickIntroProductionMilestone in engine.js.
+export const INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000
+// "Invest for Double Production" multiplies by this each time it's taken — either dividing
+// tickSpeedSeconds (speeding up delivery) or multiplying productionMultiplier (growing the batch
+// size), whichever INTRO_MIN_TICK_SPEED_SECONDS above currently allows (see
+// pickIntroProductionMilestone in engine.js). Net effect is the same either way: bits/sec doubles.
 export const INTRO_PRODUCTION_MULTIPLIER_STEP = 2
-// The one persistent Byte generator's base passive-production rate, in bits/sec, before
-// productionMultiplier is applied (see tickIntroProduction in engine.js).
+// The Byte generator's base batch size, in bits, delivered once every tickSpeedSeconds — before
+// productionMultiplier is applied (see tickIntroProduction/getIntroProductionRate in engine.js).
+// At the starting tickSpeedSeconds (1s) and productionMultiplier (1x) this is exactly 1 bit/sec,
+// matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
@@ -97,20 +116,44 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// Once the intro bit balance reaches this (== the capacity stage reached after 3 Sacrifice picks:
-// 8 → 80 → 800 → 8000), the full balance auto-converts into Kilobytes exactly once, transitioning
-// the player into the main game (see tickIntroAutoInvest in engine.js and the page-routing logic
-// in App.jsx).
+// The per-cycle bit-to-Kilobyte transfer budget/auto-convert trigger point is no longer this fixed
+// value — it's dynamic (see getIntroTransferBudget in engine.js, tied to the Kilobyte tier's own
+// current purchase block size). This constant's only remaining role is the cost cutoff for
+// getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly below 1000 Bytes'
+// worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since 8000 bits (1000
+// Bytes) is still a meaningful, independent boundary for that unrelated mechanic, coincidentally
+// matching the transfer budget's own historical default (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
 export const INTRO_AUTO_INVEST_THRESHOLD = 8000
-// How many Kilobyte units the one-time auto-invest above grants — INTRO_AUTO_INVEST_THRESHOLD
-// converted at the INTRO_BITS_PER_KILOBYTE_CONVERSION rate.
-export const INTRO_AUTO_INVEST_KILOBYTES_GRANTED = INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
 // bits at once (capacity must reach 8000 before balance can reach 1000, given the 8/80/800/8000…
 // ladder above).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
+
+// --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/redeemStorageBank/
+// tickStorageAutoRedeem/getStorageBankSize in engine.js and intro.storageBanks/
+// storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes in
+// createInitialGameState. A bank is a discrete, pre-paid block of bits that the player can build
+// now and redeem later for a free tier01 unit, once tier01's own current per-unit level cost
+// actually reaches that size. Distinct from — and not counted against — the intro's ordinary
+// bitsTransferredThisCycle transfer budget (see INTRO_AUTO_INVEST_THRESHOLD above): a bank is
+// already fully paid for at build time, so redeeming it isn't a further transfer out of Memory.
+// Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
+// "never lost," only ever spent by an explicit redeem (manual or auto-configured).
+// A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bits to build — the
+// same "10x" relationship intended by the feature's own description (a 1 KiloBits/1000-bit bank
+// costs 10,000 bits to build, a 10,000-bit bank costs 100,000, and so on).
+export const STORAGE_BUILD_COST_MULTIPLIER = 10
+// The buildable size ladder: offers 1000-bit ("1 KB") banks until STORAGE_BANK_LADDER_CAP of them
+// have ever been built, then 10,000-bit ("10 KB") banks until another STORAGE_BANK_LADDER_CAP,
+// and so on by ×10 each step (see getStorageBankSize in engine.js) — an independent progression,
+// deliberately decoupled from tier01's own current level cost (unlike an earlier version of this
+// feature, see docs/DESIGN_HISTORY.md): a player can build ahead of or fall behind tier01's actual
+// price, with isStorageBankRedeemable the only gate on whether a built bank is spendable yet. The
+// ladder only ever advances — it's driven by intro.storageBanksBuiltTotal, a cumulative count that
+// redeeming a bank (intro.storageBanks) never decrements.
+export const STORAGE_BANK_LADDER_CAP = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 10% of normal speed — a courtesy for short absences, not a way to make the

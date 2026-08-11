@@ -349,6 +349,151 @@ The following records *why* specific MainPage/component behaviors were built the
   `GoldText` styled component (only ever used inside this panel) were all deleted together. Any
   information a player might want (prestige count, unspent PP, production speed bonus, Auto-Prestige
   status) remains visible via the sticky PP header display and the PP Upgrades page.
+- **Offline notice extracted into `components/OfflineProgressNotice` so ByteFoundryPage can show it
+  too.** A request to "enable offline progress for the Byte Foundry" turned out, on investigation, to
+  already be satisfied at the engine level: `applyOfflineProgress` replays `tickGame` once per
+  simulated second, and `tickGame` unconditionally runs `tickIntroProduction`/`tickIntroAutoInvest`
+  first, every tick, regardless of `intro.mainGameUnlocked` — the Byte generator's passive production
+  and its auto-transfer-into-Kilobytes convenience both already caught up correctly while the game was
+  closed, with no code change needed there. The actual gap was that the "Welcome back! ... simulated N
+  of progress at 10% speed" notice itself only ever rendered inside `MainPage` — `App.jsx` already
+  passed the full `game` object (including `offlineProgress`/`dismissOfflineProgress`) to
+  `ByteFoundryPage` too, but that page never read those two fields, so a player who returned after
+  being away and landed on (or was still gated to) the Byte Foundry screen got no acknowledgment that
+  time had passed, even though their Memory/generator genuinely had progressed. Rather than
+  duplicating the notice's state/effects/styling into `ByteFoundryPage`, the whole thing (timing
+  constants, the countdown/fade/auto-dismiss state and effects, and the JSX) was extracted verbatim
+  out of `MainPage` into a new shared `components/OfflineProgressNotice`, taking
+  `{ offlineProgress, dismissOfflineProgress }` as props — the same two fields `useIncrementalGame()`
+  already returns — and both pages now render it identically near their own top (`MainPage` after its
+  `Header`, `ByteFoundryPage` after its `Title`). `HudMutedText` (used elsewhere in `MainPage` beyond
+  just this notice) was deliberately left in place rather than moved; the extracted component defines
+  its own equivalent `NoticeText` instead, so the move doesn't couple `ByteFoundryPage` to a
+  MainPage-only styled component.
+- **Cache tile removed; transfer blocks become persistent instead of shrinking; Tap loses its
+  progress fill; Storage gets its own labeled section.** Four related `ByteFoundryPage` requests in
+  one round, all pure UI (no `engine.js`/`layers.js` change needed for any of them):
+  1. The Cache 1KB tile (added alongside the Memory/Storage redesign in the previous entry) was
+     removed — once the transfer-block row itself always renders every block for the whole cycle
+     (see point 2), the active block's own partial fill already shows the same "progress toward the
+     next convertible 1000-bit chunk" the Cache tile existed to surface, making the second tile
+     redundant.
+  2. Transfer blocks used to be rendered via `Array.from({ length: blocksRemaining })` — only the
+     not-yet-transferred ones, so a click simply removed that block from the array and the row
+     visibly shrank. The player wanted spent blocks to stay in place, greyed out, so the full history
+     of a cycle's transfers stays visible rather than disappearing. The fix renders
+     `Array.from({ length: blockCount })` (the fixed total, `getIntroTransferBudget(state) /
+     INTRO_BITS_PER_KILOBYTE_CONVERSION`) always, deriving each block's consumed/active/upcoming state
+     from comparing its index to `blocksTransferred` — no block is ever removed from the array, only
+     re-styled. The consumed look intentionally bypasses `progressFill` entirely (only the active
+     block ever gets a `$progress` prop) in favor of a plain solid `background:
+     theme.color.surfaceSunken` behind a new `$consumed` prop — tried first via `progressFill`'s own
+     disabled-alpha dimming (`$progress={100}`), but that blends to a barely-there tint at the
+     existing low disabled alpha, not the clearly "done, filled-in" look actually wanted; a direct
+     solid fill reads unambiguously as spent, and the row overall — solid/partial/empty segments left
+     to right — was requested to read as "one long progress bar," which the direct-fill approach
+     achieves more legibly than a faint gradient would have.
+  3. The Tap button's own `$progress` fill/hidden progressbar were removed — Memory's own tile
+     already shows the identical bits/capacity fill, so the tap button's copy was pure duplication.
+     Removing `${progressFill}` from `TapArea` incidentally also removed the button's own background
+     (progressFill's gradient always painted over `theme.color.surfaceSunken` as its base — the one
+     place that base color was coming from), leaving default browser button styling (a stark white
+     button) until caught by a Playwright screenshot check and fixed with an explicit `background:
+     theme.color.surfaceSunken` rule on `TapArea` — worth remembering if `progressFill` is ever
+     removed from another component that relied on it for more than just the fill itself.
+  4. Storage's "Build Storage Bank" button and one full-width "Redeem ⟨size⟩ Bank (×N)" button per
+     held denomination used to sit flat in the same `ActionsRow` list as Sacrifice/Invest, growing by
+     one more full-width button every time a new bank size was built. Storage now gets its own
+     labeled `StorageSection` (a `styled(StatCard)`, matching the page's existing tile/section visual
+     language), and the one-button-per-size list became a compact, wrapping row of small chips
+     (`StorageChip = styled(Button)`, same `aria-label`/`variant` semantics as before, just shrunk to
+     `flex: 0 0 auto` with tighter padding and a shorter `<size> ×<count>` label) — scales far better
+     than a growing button stack as more denominations accumulate over a long run.
+- **Storage's buildable size drops from "one level ahead" to tier01's current level; the Memory
+  tile's transfer-block tracker gets a stronger-contrast style.** Two follow-up reports on the round
+  above:
+  1. "I don't see a way to build 1KB Storage bank" — correct: `getNextStorageBankSize` (the previous
+     entry) always targeted tier01's NEXT level cost (10,000 bits at a fresh save, since tier01
+     starts at level 1), specifically so a freshly built bank was never immediately redeemable. Asked
+     directly whether Storage should expose every ladder size at once (1KB/10KB/100KB/… simultaneously
+     buildable) or just start the single buildable size lower, the answer was the latter: renamed to
+     `getStorageBankSize` and changed to target tier01's CURRENT level cost
+     (`getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)`, no `+ 1`) — starts at 1000 bits
+     ("1 KB") on a fresh save, and still only ever offers one buildable size at a time, advancing as
+     tier01 levels up, same as before. The natural consequence — a freshly built bank now matches
+     tier01's price exactly, so `isStorageBankRedeemable`'s existing `<=` check makes it redeemable
+     immediately rather than only after a future level-up — was kept rather than special-cased around,
+     since `getFirstTierCost` only ever grows within a cycle (documented in the entry above): a bank
+     built at today's price never becomes *un*redeemable later, so "immediately redeemable" isn't a
+     bug, it's what "current level" implies. This still leaves a genuine use for banking rather than
+     just buying directly: queuing several banks ahead of an autobuyer catch-up burst (or a run of
+     manual buys) at today's price, then redeeming them whenever convenient, rather than the price
+     climbing between each individual purchase.
+  2. The Memory tile's "X / Y bits this cycle" transfer-budget tracker was reported as rendering but
+     easy to miss — it shared `StatusText`'s plain muted color/regular weight with the
+     passive-production readout right below it, so nothing set it apart as live, meaningful progress
+     info versus incidental text. A new `TrackerText = styled(StatusText)` (full-strength
+     `theme.color.text`, `font-weight: 600`) is used for this one line only, giving it enough contrast
+     to actually stand out against its neighbors.
+- **Storage's buildable size becomes an independent build-up-to-10-then-advance ladder, decoupled
+  from tier01's price; auto-redeem gets a per-size once-per-run cap (except the smallest
+  denomination, which always fires); the held-bank chips become a squares grid; a new visible
+  purchase-block-progress row is added.** A follow-up redesign request specified: "Offer 1KB storage
+  banks for 10KB each until user has 10 of them. Then offer 10KB storage banks for 100KB each until
+  user has 10 of them. And so on." — a materially different rule from the entry above's
+  `getStorageBankSize`, which tracks tier01's CURRENT level cost directly with no cap on how many can
+  ever be built at that size. Rather than guess, three genuinely ambiguous points were confirmed
+  directly before implementing (each had a plausible reading that would have produced very different
+  code): (1) whether the ladder should be an independent progression gated purely on a cumulative
+  built-count cap, or should keep tracking tier01's live cost with just a build cap layered on top —
+  confirmed **independent**, so `getStorageBankSize` no longer reads tier01's level at all; (2)
+  whether "grey out blocks already purchased, irrespective of main game or Byte Foundry" described
+  the pre-existing Memory→Kilobyte transfer-block row (already both of those things) or asked for a
+  *new* visual — confirmed **new**: a live, non-hidden squares row for tier01's own current
+  purchase-block progress, added to the Storage section; (3) whether "1KB storage banks are always
+  auto consumed... only one auto consumption per run for each size" meant capping auto-redeem at once
+  per size per run (needing new state to track it) or just making 1KB mandatory-on with everything
+  else unlimited as before — confirmed **capped at once per size per run**, for every size, with 1KB
+  additionally exempt from the enable/disable toggle entirely (it always attempts its once-per-run
+  redeem regardless).
+
+  Implementation: `intro.storageBanksBuiltTotal` (new, permanent, cumulative — `redeemStorageBank`
+  never decrements it, only `buildStorageBank` increments it) drives `getStorageBankSize`'s ladder —
+  starting at `INTRO_BITS_PER_KILOBYTE_CONVERSION` and multiplying by 10 every
+  `STORAGE_BANK_LADDER_CAP` (10) banks ever built at the current size. This is a genuine decoupling,
+  not just a rename: a player can now build ahead of or fall behind tier01's actual price, with
+  `isStorageBankRedeemable` (unchanged) as the sole remaining gate on whether a built bank is
+  spendable. `intro.storageAutoRedeemedSizes` (new — resets to `{}` every real Prestige, unlike every
+  other Storage field, which are all permanent) tracks which sizes have already auto-redeemed this
+  cycle; `tickStorageAutoRedeem` now requires a size to be both un-redeemed-this-cycle AND (exactly
+  `INTRO_BITS_PER_KILOBYTE_CONVERSION` OR `storageAutoRedeemEnabled`) before acting. On the UI side,
+  the flat `StorageChipsRow`/`StorageChip` text-chip list (previous entry) was replaced with one
+  `StorageSizeRow` per size ever built (or currently offered) — a fixed `STORAGE_BANK_LADDER_CAP`-
+  long strip of `StorageBankSquare`s per row, reusing the same three-state (consumed/held/upcoming)
+  visual language the transfer-block row already established, so "filled smallest to largest" reads
+  the same way across both mechanics rather than introducing a second convention. The new
+  purchase-block-progress row reuses the existing `RateBlocksRow`/`RateBlock` pair directly (no new
+  styled components needed) since `state.purchaseLevelProgress[tier01.id]`/`getPurchaseBlockSize`
+  already update identically regardless of whether a unit came from the main game's Buy button or
+  from `redeemStorageBank` here — the "irrespective of main game or Byte Foundry" requirement was
+  already true of the underlying state; the row just needed to be rendered, not hidden.
+- **The "bits this cycle" tracker is removed entirely; the Memory tile's Bytes-unit balance now
+  floors instead of rounds.** Two follow-up requests on the tracker/formatting added in the round
+  above:
+  1. The `TrackerText` line just added (previous entry) was asked to be removed outright rather than
+     restyled further — the player didn't find the raw-bits "X / Y bits this cycle" figure useful
+     once it had enough contrast to actually read. Nothing else consumed `intro.bits % transferBudget`,
+     so this was a pure deletion (JSX block, the now-unused `TrackerText` styled component, and its
+     explanatory comment) with no state/logic follow-on.
+  2. The Bytes-unit conversion (`formatMemoryAmount`'s `bits / unit.divisor` branch) went through
+     `formatAmount`, which rounds to the nearest of up to 3 decimal places (Intl's default) — so a
+     balance could read as, e.g., "1 KB / 1 KB" one tick before it actually reached 1000 bits. This is
+     the exact overstatement problem `formatCurrency` (`engine.js`) already solved for the money
+     display ("floors rather than rounds so a displayed amount never overstates the actual spendable
+     balance") — the same fix (floor, not round) was applied here via a small local
+     `floorToDecimals(value, decimals)` helper, floored at the same 3 decimal places `formatAmount`
+     already shows rather than to a whole unit, since existing fractional display (e.g. "0.5 KB") was
+     still wanted — only the rounding *direction* needed to change, not the precision.
 
 ## Economy model
 
@@ -402,6 +547,47 @@ migration backfill (`isPreByteFoundrySave`/`storage.js`'s `intro.completed: true
 predates the `intro` field entirely) is also unaffected — it remains a one-time, load-time decision
 for saves this old, orthogonal to what a real Prestige now does going forward for every save.
 
+### The Byte generator becomes permanent — only "Memory" and the gate reset each Prestige
+
+The entry above made the Byte Foundry reset back to `createInitialGameState()`'s fresh defaults on
+every real Prestige, generator included — a full replay each cycle: re-tap to 8, re-combine into a
+Byte, regrow capacity and production rate from scratch. That was the explicit request at the time,
+but immediately playing it out revealed it read as needless busywork once a player already had a
+maxed-out generator from previous cycles — rebuilding the exact same capacity/rate ladder by hand
+every single Prestige, with no way to skip ahead.
+
+Corrected: `prestigeGame` now resets only two things inside `intro` — `bits`/`productionAccumulator`
+("Memory," the tappable/producible balance) and `completed` (the gate) — back to fresh. Every other
+field (`capacity`, `byteCreated`, `tickSpeedSeconds`, `productionMultiplier`,
+`productionMilestoneClaimedAtCapacity`) is now carried over from `state` unchanged, exactly like an
+unlocked autobuyer. The mandatory gate itself is unaffected by this change and still reopens every
+real Prestige (confirmed explicitly, rather than assumed, before implementing) — only what's already
+built *inside* it when it reopens changes. In practice this means the very first cycle plays out the
+full bootstrap loop, and every cycle after that is a fast pit-stop: Memory refills using whatever
+capacity/rate was already earned, typically crossing the 8000-bit auto-invest threshold in a handful
+of ticks rather than a full replay. `speedUpGame`/`overclockGame` needed no change — they already
+carried the whole `intro` object through untouched, Memory included, and that stays correct.
+
+This also prompted a related fix to the underlying production model, requested in the same round: a
+manual tap had always credited a flat `+1` bit regardless of the Byte's actual rate, and passive
+production ran on an implicit continuous bits/sec rate rather than an explicit tickspeed — unlike
+every tier in the main game, which has a real `baseTickSpeedSeconds` and delivers production in
+discrete periodic batches (see "Tier production tickspeed" in `docs/ECONOMY_REFERENCE.md`). Both
+were brought in line: `intro.tickSpeedSeconds` (starting at 1 second, mirroring a tier's own base
+period) plus a new `getIntroProductionRate(intro)` helper now drive both a tap (which credits "one
+second's worth" at the current rate, not a flat 1) and `tickIntroProduction` (which delivers one
+discrete batch every `tickSpeedSeconds`, exactly like `tickGame`'s own per-tier production). "Invest
+for Double Production" doubles this rate by first halving `tickSpeedSeconds` — the same
+tickspeed-vs-production split tiers already use — until that would breach
+`INTRO_MIN_TICK_SPEED_SECONDS` (the live tick loop's own real-time resolution, `TICK_RATE_MS`), at
+which point it switches to multiplying `productionMultiplier` (the batch size) instead, so growth
+never stalls once the tick loop's own granularity limit is reached. A related balance concern
+surfaced in the same round — "Invest for Double Production" could previously be picked over and over
+at the same capacity tier by simply refilling Memory and re-clicking, with no cap — addressed by a
+new `productionMilestoneClaimedAtCapacity` field gating it to once per capacity tier reached (a fresh
+Sacrifice, which always grows `capacity` to a strictly higher value, re-opens it for exactly one more
+claim).
+
 ### Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number
 
 Once Bytes stopped being a tier and the main game's base currency stayed denominated in Bits, framing
@@ -420,6 +606,109 @@ The progress bar (`getPrestigeProgressPercent`) is a known, accepted minor conse
 reads 100% once Money's exponent reaches 100, which happens slightly before the real threshold
 (exponent ≈100.9) is actually crossed — an intentionally accepted cosmetic imprecision rather than
 complicating the percent formula for a sub-1%-of-a-magnitude difference.
+
+### Main-game access decouples from the "everything freezes" flag, and Invest gets its own cost ladder
+
+The two entries above left the Byte Foundry with a single `intro.completed` flag doing three jobs at
+once: gating `App.jsx`'s routing into MainPage, freezing every intro action function to a permanent
+no-op, and driving `ByteFoundryPage`'s own read-only "voluntary revisit" view. A further round of
+player feedback asked for three related changes that this combined flag couldn't cleanly express:
+(1) main-game access should no longer wait for a full 8000-bit balance — the first manual 1000-bit
+conversion should unlock it immediately; (2) further conversions should keep working after that,
+shared across a running per-cycle budget capped at the same 8000 bits, whether done manually or via
+the existing auto-convert convenience; (3) Tap/Sacrifice/Invest should never freeze at all, matching
+the "Byte foundry never resets, it keeps running" philosophy the previous entry already established
+for the generator itself.
+
+Resolved by splitting the one flag into two, and removing the freeze concept entirely:
+`intro.mainGameUnlocked` (Memory-scoped, resets every real Prestige) now drives routing alone, set
+true the instant any bits are ever converted into Kilobytes this cycle — manual
+`convertIntroBitsToKilobytes` click or the `tickIntroAutoInvest` auto-convenience, whichever fires
+first. A new `intro.bitsTransferredThisCycle` counter (also Memory-scoped) tracks the running total
+converted this cycle, shared by both conversion paths and capped at `INTRO_AUTO_INVEST_THRESHOLD`
+(reusing the existing 8000 constant as the shared budget rather than adding a new one) — once
+exhausted, neither path fires again until the next Prestige reopens a fresh budget.
+`intro.completed` itself was removed outright: nothing needs a full-freeze flag once Tap/Sacrifice/
+Invest are permanently live and Convert is governed by the budget instead. `ByteFoundryPage`'s old
+"read-only voluntary review" rendering branch was removed for the same reason — the page now renders
+identically whether reached via the mandatory gate or the voluntary "⚙️ Byte Foundry" nav link;
+`onBack`'s only remaining effect is whether the "← Back to game" button shows.
+
+The same round also corrected a misreading of "Invest for Double Production"'s intended cost model.
+The previous entry's `productionMilestoneClaimedAtCapacity` field tied Invest's cost directly to the
+current `capacity` (always requiring a full balance to claim, since cost == capacity and Memory is
+hard-capped at capacity). The actual ask was for Invest to run on its **own independent cost ladder**
+— explicitly "nothing to do with capacity" — sharing only the same "×10 per step" shape (1 Byte, 10
+Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, …) the capacity ladder happens to use, tracked by a new,
+separate, permanent `productionMilestoneTier` (0-based index) plus `productionMilestoneTierClaims`.
+`getIntroProductionMilestoneCost(tier) = INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier`
+computes each tier's cost independent of `capacity` entirely, so a claim only ever needs `bits >=
+cost` — frequently satisfiable well before Memory is full, once Sacrifice has grown capacity ahead of
+this ladder, which is what "do not require full capacity" actually meant. Each of the four tiers up
+to `INTRO_AUTO_INVEST_THRESHOLD` (1/10/100/1000 Bytes) now grants **two** claims instead of one
+(`getIntroProductionMilestoneMaxClaims`), advancing to the next tier — with a fresh claim count —
+only once both are used; every tier after that keeps the original one-claim-per-tier behavior. The
+old `productionMilestoneClaimedAtCapacity` marker has no equivalent under the new model (it tracked a
+capacity value, not a tier index) — a save carrying it simply falls back to a fresh tier 0 on load,
+an accepted one-time reset of Invest progress for a feature that was still unreleased and being
+actively tuned at the time.
+
+Finally, the balance card gained a second, always-visible tracker (`bits % INTRO_AUTO_INVEST_THRESHOLD`,
+in raw bits) shown alongside the existing Bytes-denominated balance once `byteCreated` — a rolling
+view of progress within the current 8000-bit block, independent of the transfer-budget mechanics
+above (confirmed via the request's own worked example, `9000 % 8000 = 1000`, which the primary
+Bytes figure — `9000 ÷ 8 = 1125`, not the `1128`/`128` figures in the original request — doesn't
+otherwise convey).
+
+### The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way
+
+The entry above capped the Byte Foundry's per-cycle bit-to-Kilobyte transfer budget at a fixed
+`INTRO_AUTO_INVEST_THRESHOLD` (8000 bits). A follow-up request offered two designs for surfacing
+that budget as a row of clickable "transfer blocks" instead of a single repeatable button: a fixed 8
+blocks of 1000 bits each, or blocks sized to the Kilobyte tier's own current purchase block size
+(`getPurchaseBlockSize`, the same live, possibly-growing value the main game's own Buy button
+already reads) and explicitly "usable at any point in the whole game" — offered as a deliberately
+tentative alternative ("usually not worth it, but just possible"). The tentative option was chosen
+over the simpler default.
+
+Implemented as `getIntroTransferBudget(state) = getPurchaseBlockSize(state) *
+INTRO_BITS_PER_KILOBYTE_CONVERSION`, replacing the fixed constant everywhere it previously gated the
+budget (`getIntroRemainingTransferBudget`, `tickIntroAutoInvest`'s bulk-transfer trigger/amount).
+Since `getPurchaseBlockSize` starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (8) and only grows later in a
+run (once the last tier's own level count crosses `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`),
+this is numerically identical to the old fixed 8000 at a fresh cycle — no regression at the common
+case, just no longer hardcoded. `INTRO_AUTO_INVEST_THRESHOLD` itself wasn't removed — it still names
+the unrelated 2-claims-per-Invest-tier cutoff (`getIntroProductionMilestoneMaxClaims`), which was
+never part of this change and happens to share the same 8000 value by coincidence, not by shared
+meaning anymore. `ByteFoundryPage`'s single "Transfer 1 KiloBits" button was replaced by a
+`TransferBlocksRow` of `blockCount - blocksTransferred` blocks (one per remaining
+`INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit transfer), with only the leftmost ever clickable/interactive
+— confirmed block semantics: a block's fill is simply a visual read of the existing `bits`-vs-1000
+progress (no new state needed), so any Memory surplus left over after a click carries straight into
+the newly-active next block, letting a large-enough balance be clicked through several blocks in a
+row. The existing `tickIntroAutoInvest` auto-convenience became the "once every remaining block is
+simultaneously available at once — e.g. a big offline-progress jump — auto-transfer them all in
+bulk and empty the row" edge case the request also asked for, needing no new logic beyond swapping
+in the dynamic budget it already used.
+
+The same round asked for Invest's cost to display in Bytes rather than bits (always exact —
+`getIntroProductionMilestoneCost` only ever returns multiples of `BITS_PER_BYTE`) and reported a "UI
+bug on Invest for double production with quotes shown as commas." Investigating that bug (rather
+than guessing at a fix) traced it to `components/Button/index.jsx`'s `ButtonContent`, not to
+anything in `ByteFoundryPage` itself: `ButtonContent` did `String(children)`, which works for a
+caller passing one plain string, but the Invest button's label mixes literal text with an embedded
+`{formatAmount(cost)}` expression — JSX hands such mixed content to `children` as an **array** of
+text/expression segments, not one string, and `String()` on an array invokes
+`Array.prototype.toString()`, which joins with a bare comma. The rendered label read literally as
+`"Invest for Double Production (,1, B)"` — a real, reproducible bug (confirmed via a failing
+`getByText` assertion whose DOM dump showed the stray commas), not a rendering-artifact false alarm.
+Fixed at the root — `Array.isArray(children) ? children.join('') : String(children)` — rather than
+only patching the one call site, since `docs/COMPONENTS_REFERENCE.md` had actually documented the
+old, narrower contract ("`ButtonContent` only accepts a single string child; callers with multiple
+JSX expressions should use `ButtonIcon`/`ButtonLabel` directly instead") — the Invest button's own
+call site had unknowingly violated that documented constraint. Given the fix makes `ButtonContent`
+robust to exactly this pattern, the doc was updated to describe the new, more permissive contract
+instead of re-asserting the old footgun.
 
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
@@ -1023,6 +1312,18 @@ existing global-multiplier factor removed the hidden third factor the display te
 rather than requiring a separate display fix. **Don't reintroduce a standalone Overclock multiplier** —
 if a future request sounds like "Overclock should add its own bonus," re-confirm against this file
 first, since that reading was already tried, shipped, and specifically walked back.
+
+### The 1000-Byte Invest tier drops from two claims to one
+
+An earlier entry ("The same round also corrected a misreading of 'Invest for Double Production'…",
+above) gave the four Invest cost-ladder tiers up to and including `INTRO_AUTO_INVEST_THRESHOLD`
+(1/10/100/1000 Bytes) two claims each, via `getIntroProductionMilestoneMaxClaims(tier) =>
+getIntroProductionMilestoneCost(tier) <= INTRO_AUTO_INVEST_THRESHOLD ? 2 : 1`. A follow-up request
+("Single claim at 1000B. Not two claims.") narrowed that: only the three tiers strictly *below*
+`INTRO_AUTO_INVEST_THRESHOLD` (1/10/100 Bytes) still get two claims — the 1000-Byte tier itself now
+gets one, same as every tier after it. The fix is a one-character boundary change (`<=` → `<`) in
+`getIntroProductionMilestoneMaxClaims`; nothing else about the independent cost-ladder model from the
+entry above changed.
 
 ## Distribution
 
