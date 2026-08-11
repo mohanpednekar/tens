@@ -51,7 +51,7 @@ Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte Foundry") — rendered 
 buttons with no coupling between their enabled states; each pairs with its own hidden
 `role="progressbar"` (`aria-label="byte foundry sacrifice progress"`/`"byte foundry invest
 progress"`, the latter's max set to the Invest cost, not `capacity`), matching `MainPage`'s own
-Buy/Upgrade button convention below. A "Convert to a Kilobyte" button (`aria-label="convert 1000
+Buy/Upgrade button convention below. A "Transfer 1 KiloBits" button (`aria-label="convert 1000
 bits into 1 Kilobyte"`, calling `actions.convertIntroBitsToKilobytes`, `$progress`/hidden
 progressbar toward `INTRO_BITS_PER_KILOBYTE_CONVERSION`) shown whenever `isIntroConversionUnlocked(state)`,
 visible but disabled unless `bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION` **and** this cycle's

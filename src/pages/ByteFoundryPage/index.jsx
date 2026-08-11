@@ -284,7 +284,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             variant={canConvert ? 'success' : 'neutral'}
             $progress={convertProgress}
           >
-            <ButtonContent>💾 Convert to a Kilobyte</ButtonContent>
+            <ButtonContent>💾 Transfer 1 KiloBits</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry convert progress"
