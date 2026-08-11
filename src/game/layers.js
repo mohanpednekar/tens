@@ -82,11 +82,30 @@ export const INTRO_STARTING_CAPACITY = 8
 // "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
 // 8000 → … (see pickIntroCapacityMilestone in engine.js).
 export const INTRO_CAPACITY_MULTIPLIER = 10
-// "Invest for Double Production" multiplies the production-rate multiplier by this each time it's
-// taken: 1x → 2x → 4x → … (see pickIntroProductionMilestone in engine.js).
+// The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
+// per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
+// continuous rate). "Invest for Double Production" halves this (see
+// INTRO_MIN_TICK_SPEED_SECONDS/pickIntroProductionMilestone in engine.js) each time it's taken,
+// until the tick loop's own real-time resolution can't usefully go any faster.
+export const INTRO_STARTING_TICK_SPEED_SECONDS = 1
+// Floor for the Byte generator's tickSpeedSeconds — halving the period below the live tick loop's
+// own granularity (TICK_RATE_MS, i.e. 10 ticks/sec) wouldn't actually deliver bits any faster, only
+// make tickIntroProduction's per-call math finer-grained for no observable effect. Once
+// "Invest for Double Production" would halve tickSpeedSeconds below this, it multiplies
+// productionMultiplier instead — the same "speed up delivery, then scale the batch" split
+// TIER_DEFINITIONS' own tickspeed-vs-production-multiplier distinction already uses (see
+// getEffectiveTierTickSpeedSeconds in engine.js) — so growth never stalls once the tick loop's
+// own resolution limit is reached. See pickIntroProductionMilestone in engine.js.
+export const INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000
+// "Invest for Double Production" multiplies by this each time it's taken — either dividing
+// tickSpeedSeconds (speeding up delivery) or multiplying productionMultiplier (growing the batch
+// size), whichever INTRO_MIN_TICK_SPEED_SECONDS above currently allows (see
+// pickIntroProductionMilestone in engine.js). Net effect is the same either way: bits/sec doubles.
 export const INTRO_PRODUCTION_MULTIPLIER_STEP = 2
-// The one persistent Byte generator's base passive-production rate, in bits/sec, before
-// productionMultiplier is applied (see tickIntroProduction in engine.js).
+// The Byte generator's base batch size, in bits, delivered once every tickSpeedSeconds — before
+// productionMultiplier is applied (see tickIntroProduction/getIntroProductionRate in engine.js).
+// At the starting tickSpeedSeconds (1s) and productionMultiplier (1x) this is exactly 1 bit/sec,
+// matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
