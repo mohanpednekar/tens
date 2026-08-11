@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -308,6 +308,17 @@ export const createInitialGameState = () => ({
     // getIntroTransferBudget(state) (dynamic — see there); both conversion paths refuse once the
     // remaining budget can't cover another INTRO_BITS_PER_KILOBYTE_CONVERSION-sized transfer.
     bitsTransferredThisCycle: 0,
+    // PERMANENT — { [capacityBits]: count } of built-but-not-yet-redeemed Storage banks (see
+    // buildStorageBank/redeemStorageBank below) — "never lost," survives Prestige/Speed Up/
+    // Overclock exactly like the Byte generator itself. Empty object, not per-denomination zeros,
+    // since the set of denominations ever built is open-ended.
+    storageBanks: {},
+    // PERMANENT — whether tickGame auto-redeems a matching Storage bank every tick (see
+    // tickStorageAutoRedeem) instead of requiring a manual click. A plain preference, not a
+    // purchase — defaults off, same "off until the player opts in" posture as autobuyersEnabled's
+    // *true* default is emphatically not (this one starts false, since auto-redeeming is a new
+    // capability the player must discover and choose, not a pre-existing automation being paused).
+    storageAutoRedeemEnabled: false,
   },
 })
 
@@ -581,9 +592,10 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0
 
 // Whether the last tier's Money-funded tickspeed multiplier is currently replaced by the
 // XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — a live
-// check against the last tier's current owned count, matching the same getPurchaseBlockSize(state)
-// threshold every other tier's own unlock condition uses (see isTierUnlocked). Deliberately live,
-// not a permanent latch: a Prestige/Speed Up resets the last tier's owned count back to 0 along
+// check against the last tier's current owned count reaching one full level's worth
+// (getPurchaseBlockSize(state)) — a lighter-weight threshold than isTierUnlocked's own two-level
+// requirement for the tier below it, since this gates an XP bonus rather than revealing a new
+// tier. Deliberately live, not a permanent latch: a Prestige/Speed Up resets the last tier's owned count back to 0 along
 // with every other tier's (and also resets lastTierXpConsumed/prestige.xp to 0 — see prestigeGame/
 // speedUpGame), and this mechanic should revert to the Money-funded multiplier along with it
 // rather than staying engaged on a tier the player no longer actually has a full level of —
@@ -710,36 +722,43 @@ export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
 // itself enforces on tickGame/buyTier/buyAutobuyer below.
 export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
 
-// First tier is always unlocked; each subsequent tier unlocks when you own ≥getPurchaseBlockSize(state)
-// of the tier below (a full level's worth, using whatever the block size currently is). Already-owned
-// tiers stay unlocked so older saves remain playable after rule changes; a tier that has ever
-// satisfied this live condition also stays unlocked forever via the permanent everUnlockedTierIds
-// flag (see latchEverUnlockedTiers), even if `owned` is later reset by something narrower than a
-// full Prestige/Speed Up (see consumeXpForLastTierTickspeed).
+// The previous tier's LEVEL that "two fully purchased levels" corresponds to: completing level 1
+// advances purchaseLevels from 1 to 2, and completing level 2 advances it from 2 to 3 — so a tier
+// below at level >= 3 has fully purchased two levels. Expressed as a level target (like
+// getSpeedUpRequirement/getOverclockRequirement) rather than an owned-count threshold, so it stays
+// exact even in the rare case the (state-global) purchase block size grows between the previous
+// tier's level 1 and level 2 completions.
+const TIER_UNLOCK_PREV_LEVEL_REQUIREMENT = 3
+
+// First tier is always unlocked; each subsequent tier unlocks once the tier below has fully
+// purchased two levels (reached purchaseLevels >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT — see above).
+// Already-owned tiers stay unlocked so older saves remain playable after rule changes; a tier that
+// has ever satisfied this live condition also stays unlocked forever via the permanent
+// everUnlockedTierIds flag (see latchEverUnlockedTiers), even if `owned`/`purchaseLevels` is later
+// reset by something narrower than a full Prestige/Speed Up (see consumeXpForLastTierTickspeed).
 export const isTierUnlocked = state => tier => {
   const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
   if (tierIndex === 0) return true
   if (state.everUnlockedTierIds?.[tier.id]) return true
   if ((state.owned[tier.id] ?? 0) > 0) return true
   const prevTier = TIER_DEFINITIONS[tierIndex - 1]
-  return (state.owned[prevTier.id] ?? 0) >= getPurchaseBlockSize(state)
+  return (state.purchaseLevels?.[prevTier.id] ?? 1) >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
 }
 
 // Latches everUnlockedTierIds permanently true for any tier whose isTierUnlocked live condition
-// (own owned > 0, or the previous tier's owned >= getPurchaseBlockSize(state)) is currently
-// satisfied but not yet flagged — called from buyTier and tickGame right after `owned` changes, so
-// the flag catches up the same tick/purchase a tier first becomes reachable. Returns the same
-// state reference if nothing newly qualifies (the common case), matching every other engine
-// function's no-op convention.
+// (own owned > 0, or the previous tier having fully purchased two levels) is currently satisfied
+// but not yet flagged — called from buyTier and tickGame right after `owned`/`purchaseLevels`
+// changes, so the flag catches up the same tick/purchase a tier first becomes reachable. Returns
+// the same state reference if nothing newly qualifies (the common case), matching every other
+// engine function's no-op convention.
 const latchEverUnlockedTiers = state => {
   const previous = state.everUnlockedTierIds ?? {}
   let changed = false
   const next = { ...previous }
-  const blockSize = getPurchaseBlockSize(state)
   TIER_DEFINITIONS.forEach((tier, index) => {
     if (index === 0 || next[tier.id]) return
     const prevTier = TIER_DEFINITIONS[index - 1]
-    if ((state.owned[tier.id] ?? 0) > 0 || (state.owned[prevTier.id] ?? 0) >= blockSize) {
+    if ((state.owned[tier.id] ?? 0) > 0 || (state.purchaseLevels?.[prevTier.id] ?? 1) >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT) {
       next[tier.id] = true
       changed = true
     }
@@ -859,9 +878,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // equivalent copy) lets React's setState bail out of re-rendering while frozen, same as any
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
-  // even while otherwise frozen.
+  // even while otherwise frozen. Storage's own auto-redeem still runs through every branch here
+  // (via tickStorageAutoRedeem, itself a same-reference no-op when nothing qualifies) — like
+  // redeemStorageBank/convertIntroBitsToKilobytes, it pays from a separate currency pool and
+  // deliberately bypasses this freeze entirely, so a player who's crossed the Prestige threshold
+  // but hasn't manually prestiged yet doesn't have to wait for that click to redeem a bank.
   if (isProductionFrozen(stateAfterIntro)) {
-    if (!autoPrestigeActive) return stateAfterIntro
+    if (!autoPrestigeActive) return tickStorageAutoRedeem(stateAfterIntro)
     const nextBudget = (stateAfterIntro.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
@@ -869,8 +892,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
     // prestigeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return prestigeGame(stateAfterIntro)
-    return { ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget }
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorageAutoRedeem(prestigeGame(stateAfterIntro))
+    return tickStorageAutoRedeem({ ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget })
   }
 
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus) —
@@ -1035,9 +1058,14 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // rate-accumulating budget — Speed Up has no cadence to throttle, unlike Auto-Prestige. Gated on
   // autoSpeedUpEnabled (see setAutoSpeedUpEnabled) — paused behaves exactly as if autoSpeedUp were
   // still false, for automation purposes only; the manual Speed Up button is unaffected.
-  return stateAfterAutoPrestigeAutobuyer.autoSpeedUp && (stateAfterAutoPrestigeAutobuyer.autoSpeedUpEnabled ?? true)
+  const stateAfterSpeedUp = stateAfterAutoPrestigeAutobuyer.autoSpeedUp && (stateAfterAutoPrestigeAutobuyer.autoSpeedUpEnabled ?? true)
     ? speedUpGame(stateAfterAutoPrestigeAutobuyer)
     : stateAfterAutoPrestigeAutobuyer
+
+  // Runs last, against this tick's final tier01 level (post autobuyer/Speed Up), so a Storage bank
+  // sized for a level tier01 only just reached THIS tick can redeem the same tick — see
+  // tickStorageAutoRedeem/redeemStorageBank below.
+  return tickStorageAutoRedeem(stateAfterSpeedUp)
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
@@ -1399,6 +1427,108 @@ export const tickIntroAutoInvest = state => {
   })
 }
 
+// --- Byte Foundry Storage (bank blocks) --- see the "Byte Foundry Storage" comment in layers.js
+// and intro.storageBanks/storageAutoRedeemEnabled in createInitialGameState above. A bank is a
+// discrete, already-paid-for block of bits sized to a future tier01 (Kilobytes) per-unit level
+// cost — built now, redeemed later once tier01's own level actually reaches that cost.
+
+// tier01's own per-unit cost at a given level is always an exact power of ten (baseCost = 1E3,
+// and getTierCost's epoch exponent is always a positive integer), so every size a bank is ever
+// built or redeemed at reads as a round KB/MB/GB/… value — never an arbitrary number.
+const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
+
+// The size (in bits) buildStorageBank currently builds: tier01's NEXT level's per-unit cost — one
+// level ahead of whatever tier01 is currently at — so a freshly built bank is never immediately
+// redeemable (see redeemStorageBank), only once tier01 actually reaches that level.
+export const getNextStorageBankSize = state =>
+  getFirstTierCost((state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1) + 1)
+
+// A bank's build cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own face value in bits.
+export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER
+
+// Builds one Storage bank sized to getNextStorageBankSize(state), spending
+// getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
+// "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
+// touches resources.base). No-op below cost. Building the same size more than once (e.g. while
+// waiting for tier01 to actually reach the level it was built for) simply accumulates count.
+export const buildStorageBank = state => {
+  const size = getNextStorageBankSize(state)
+  const cost = getStorageBankCost(size)
+  if (state.intro.bits < cost) return state
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      bits: state.intro.bits - cost,
+      storageBanks: {
+        ...state.intro.storageBanks,
+        [size]: (state.intro.storageBanks?.[size] ?? 0) + 1,
+      },
+    },
+  }
+}
+
+// A bank becomes redeemable once tier01's CURRENT per-unit level cost reaches (or has passed) its
+// own face value — not a one-tick-only exact match. tier01's own autobuyer can complete more than
+// one level in a single tick (a banked attempt budget catching up after a broke/paused stretch —
+// see tickGame's autobuyer loop), which can jump the level straight past the one a bank was built
+// for without ever equaling it exactly; an exact-match check would then strand that bank
+// permanently unredeemable, breaking the "never lost" guarantee. `<=` is safe here because
+// getFirstTierCost only ever grows with level within a cycle (it only drops back on a
+// Prestige/Speed Up/Overclock reset, at which point a bank correctly goes back to waiting for the
+// price to climb back up to it, still held, not lost).
+export const isStorageBankRedeemable = (state, capacityBits) =>
+  capacityBits <= getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+
+// Redeems one held bank of `capacityBits`, granting 1 free tier01 unit via grantTierUnits — same
+// "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely"
+// rationale as convertIntroBitsToKilobytes, and deliberately NOT drawn from/counted against the
+// ordinary bitsTransferredThisCycle budget: a bank was already fully paid for (10x over) at build
+// time, so redeeming it isn't a further transfer out of Memory. No-op if no bank of that size is
+// held, or if it isn't currently redeemable (see isStorageBankRedeemable).
+export const redeemStorageBank = capacityBits => state => {
+  const held = state.intro.storageBanks?.[capacityBits] ?? 0
+  if (held <= 0) return state
+  if (!isStorageBankRedeemable(state, capacityBits)) return state
+
+  const { [capacityBits]: _removed, ...remainingBanks } = state.intro.storageBanks
+  const nextBanks = held > 1 ? { ...state.intro.storageBanks, [capacityBits]: held - 1 } : remainingBanks
+
+  const firstTierId = TIER_DEFINITIONS[0].id
+  return grantTierUnits(firstTierId, 1)({
+    ...state,
+    intro: { ...state.intro, storageBanks: nextBanks },
+  })
+}
+
+// Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled below) —
+// a no-op unless enabled, or unless no held bank is currently redeemable (see
+// isStorageBankRedeemable). Redeems only the smallest eligible size per call — redeeming can
+// itself grant a tier01 unit and advance its level/cost (via grantTierUnits), so redeeming more
+// than one size correctly needs the cost recomputed in between; rather than looping that here,
+// this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
+// eligible banks over the next several ticks — imperceptibly fast in practice. Called from every
+// branch of tickGame, frozen or not (see there), so it always reacts to tier01's truly final level
+// for the tick, not a stale mid-tick one.
+export const tickStorageAutoRedeem = state => {
+  if (!state.intro?.storageAutoRedeemEnabled) return state
+  const redeemableSize = Object.keys(state.intro.storageBanks ?? {})
+    .map(Number)
+    .filter(size => (state.intro.storageBanks[size] ?? 0) > 0 && isStorageBankRedeemable(state, size))
+    .sort((a, b) => a - b)[0]
+  if (redeemableSize === undefined) return state
+  return redeemStorageBank(redeemableSize)(state)
+}
+
+// Toggles whether tickStorageAutoRedeem currently acts — a plain, unconditional preference, not a
+// purchase (unlike setAutoSpeedUpEnabled/setAutoGlobalTickspeedEnabled below, there's no
+// prerequisite "bought" flag to gate this on; Storage itself has no unlock step).
+export const setStorageAutoRedeemEnabled = enabled => state => ({
+  ...state,
+  intro: { ...state.intro, storageAutoRedeemEnabled: !!enabled },
+})
+
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
 // a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
 // should always be possible), and independently permanent from the autobuyer's own unlock (never
@@ -1639,6 +1769,10 @@ export const prestigeGame = state => {
       productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
       productionMilestoneTier: state.intro?.productionMilestoneTier ?? initial.intro.productionMilestoneTier,
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
+      // Storage banks and the auto-redeem preference are just as permanent as the Byte generator
+      // itself above — "never lost," not part of this cycle's Memory reset.
+      storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
+      storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused

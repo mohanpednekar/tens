@@ -26,24 +26,38 @@ non-null `offlineProgress` — the Byte generator's passive production and auto-
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a title/one-line
 status explainer (three variants — pre-unlock instructions, post-unlock with remaining transfer
-budget, or budget-exhausted, see below); a `StatCard`
-(`aria-label="byte foundry balance"`) with a "Memory" label above `{bits} / {capacity}` plus a
-hidden `role="progressbar"` (`aria-label="byte foundry bit balance"`), and, once `intro.byteCreated`,
-a second tracker line (`aria-label="byte foundry transfer-block tracker"`) showing
+budget, or budget-exhausted, see below); a `TilesRow` (flex row, wraps on narrow viewports) holding
+two `FillableStatCard`s — a `styled(StatCard)` wrapper that applies `components/Button`'s own
+`progressFill` gradient directly to the card via its `$progress` prop, so both tiles fill toward
+their own capacity the same visual way every button on this page already does. The first,
+`aria-label="byte foundry balance"` (`$progress` = `bits / capacity`), has a "Memory" label above
+`{bits} / {capacity}` — both numbers scaled into the same unit, picked off `capacity` (raw bits
+before the Byte generator exists, since before that capacity is always exactly 8 bits/1 Byte with
+nothing meaningful to denominate in yet, then B/KB/MB/…/QB by 1000 each step once it does, reusing
+`TIER_DEFINITIONS`' own tier symbols — see "Numbers are formatted" below) — plus a hidden
+`role="progressbar"` (`aria-label="byte foundry bit balance"`), and, once `intro.byteCreated`, a
+second tracker line (`aria-label="byte foundry transfer-block tracker"`) showing
 `bits % getIntroTransferBudget(state)` in raw bits — a rolling view of progress within the current
-transfer-budget block (dynamic, not a fixed 8000 — see below), alongside the primary
-Bytes-denominated balance — followed by a passive-production readout: below `BITS_PER_BYTE` (8)
-bits/sec, a "+N bits/sec" line paired with a visible 8-block segmented `role="progressbar"`
-(`aria-label="byte foundry production rate"`, one block per whole bit/sec, filled left to right)
-showing rate progress toward 1 Byte/sec; at/above that, the block bar is replaced by a single "+N
-Byte(s)/sec" line instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A large tap button
-(`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling `actions.tapIntroBit`
-— shrinks to half-width (`$compact`, `width: 50%`, same `5 / 3` aspect ratio as full size) once
-`byteCreated`, since passive production is the primary loop by then and tapping becomes a
-secondary/backup action, while remaining exactly as clickable; carries its own `$progress` fill
-(bits/capacity) and a paired hidden `role="progressbar"` (`aria-label="byte foundry tap progress"`),
-reusing `components/Button`'s exported `progressFill` helper directly since it isn't itself a
-`Button`. A "Combine into a Byte" button (`aria-label="combine 8 bits into a Byte"`, calling
+transfer-budget block (dynamic, not a fixed 8000 — see below) — followed by a passive-production
+readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line paired with a visible 8-block
+segmented `role="progressbar"` (`aria-label="byte foundry production rate"`, one block per whole
+bit/sec, filled left to right) showing rate progress toward 1 Byte/sec; at/above that, the block bar
+is replaced by a single "+N Byte(s)/sec" line instead (`getIntroProductionRate(intro) /
+BITS_PER_BYTE`). The second tile, `aria-label="byte foundry cache"` (`$progress` =
+`(bits % INTRO_BITS_PER_KILOBYTE_CONVERSION) / INTRO_BITS_PER_KILOBYTE_CONVERSION`), shown only once
+`isIntroConversionUnlocked(state)`, has a "Cache 1KB" label above
+`{bits % INTRO_BITS_PER_KILOBYTE_CONVERSION} / 1000 bits` plus its own hidden `role="progressbar"`
+(`aria-label="byte foundry cache progress"`) — Memory's small, fast-cycling counterpart: progress
+toward the next convertible 1000-bit chunk, wrapping back to 0 every time that chunk is spent,
+distinct from Memory's own whole-balance-vs-capacity progress.
+
+A large tap button (`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling
+`actions.tapIntroBit` — shrinks to half-width (`$compact`, `width: 50%`, same `5 / 3` aspect ratio as
+full size) once `byteCreated`, since passive production is the primary loop by then and tapping
+becomes a secondary/backup action, while remaining exactly as clickable; carries its own `$progress`
+fill (bits/capacity) and a paired hidden `role="progressbar"` (`aria-label="byte foundry tap
+progress"`), reusing `components/Button`'s exported `progressFill` helper directly since it isn't
+itself a `Button`. A "Combine into a Byte" button (`aria-label="combine 8 bits into a Byte"`, calling
 `actions.combineIntroByte`, `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while
 `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated
 milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x
@@ -57,7 +71,19 @@ button is frequently enabled well before Memory is full — see docs/ECONOMY_REF
 Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
 each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
-`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
+`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Alongside them, a "Build
+Storage Bank" button (`aria-label="build storage bank"`, calling `actions.buildStorageBank`,
+`$progress` toward `getStorageBankCost(getNextStorageBankSize(state))`) whose visible label/cost
+always tracks `getNextStorageBankSize(state)` — tier01's (Kilobytes') own NEXT level's per-unit cost,
+one level ahead of wherever it currently is; disabled below that cost. One button per held bank
+denomination follows (`aria-label="redeem <size> storage bank"`, calling
+`actions.redeemStorageBank(size)`), enabled only once `isStorageBankRedeemable(state, size)` — its
+size is at or below tier01's *current* per-unit level cost (not a one-tick-only exact match — see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — each labeled with its held count (`×N`). Once
+any bank is held, a final pause/resume-style toggle (`aria-label="pause storage
+auto-redeem"`/`"resume storage auto-redeem"`, calling `actions.setStorageAutoRedeemEnabled`) flips
+`intro.storageAutoRedeemEnabled` — unlike every other automation toggle on this page, no prerequisite
+purchase gates it.
 
 Below the action buttons, once `isIntroConversionUnlocked(state)` and at least one transfer remains
 this cycle, a **transfer-block row** (`role="group"`, `aria-label="byte foundry kilobyte transfer
@@ -87,17 +113,21 @@ A "← Back to game" button (`aria-label="Back to game"`, same convention as `In
 button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
 post-`mainGameUnlocked` — the mandatory gate has no way out.
 
-Numbers are formatted in **Bytes** (`bits ÷ BITS_PER_BYTE`, always a clean whole number) once
-`byteCreated` is true, and in raw bits before that (`formatBitBalance` helper, local to this file)
-— a display-only convention, internal state always stores raw bit counts. This page's gate reappears
-every time a real Prestige resets Memory (`bits`/`productionAccumulator`), the main-game-unlock gate
-(`mainGameUnlocked`), and this cycle's transfer budget (`bitsTransferredThisCycle`) back to fresh
-(see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace
-for every run — but the Byte generator itself (byteCreated/capacity/tickSpeedSeconds/
-productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is permanent and carries
-over, so the gate is a fast pit-stop after the first cycle, not a full replay. Once unlocked, the
-page also persists as a screen the player can return to at any time (via `onOpenFoundry`) rather than
-disappearing for the rest of the cycle — and stays just as interactive there as on the gate itself.
+Numbers are formatted via `formatMemoryBalance` (Memory/Cache — local helper in this file): raw
+bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
+`TIER_DEFINITIONS`' own tier symbols) — a display-only convention, internal state always stores raw
+bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
+"Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
+matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
+(`bits`/`productionAccumulator`), the main-game-unlock gate (`mainGameUnlocked`), and this cycle's
+transfer budget (`bitsTransferredThisCycle`) back to fresh (see `prestigeGame` in
+docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — but the
+Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
+productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
+`storageAutoRedeemEnabled`) are both permanent and carry over, so the gate is a fast pit-stop after
+the first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
+return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
+stays just as interactive there as on the gate itself.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -404,7 +434,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    Smart does moved to `InfoPage`'s own "Tier Autobuyers" section — see the file header note above);
    individual badges/buttons still carry no explanatory `title` text (only `aria-label`, for
    assistive tech), since that explanation lives on the Guide page instead. Per unlocked tier
-   (`isTierUnlocked`, the usual owned-count gate — see docs/ECONOMY_REFERENCE.md; there's no
+   (`isTierUnlocked`, the usual gate — see docs/ECONOMY_REFERENCE.md; there's no
    next-tier preview any more, since there's nothing left to preview a cost for), up to three
    independent controls. **Autobuyer unlock** and the **tier tickspeed autobuyer** are no longer PP
    purchases at all — both unlock automatically once `prestige.count` reaches their own milestone

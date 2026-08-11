@@ -1,8 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, isIntroConversionUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST } from 'game/layers'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getNextStorageBankSize, getStorageBankCost, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -84,6 +84,23 @@ const ActionsRow = styled.div`
   width: 100%;
 `
 
+// Memory and Cache sit side by side rather than stacked — wraps to a single column on narrow
+// viewports since RootDiv itself caps at 480px.
+const TilesRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+`
+
+// Reuses Button's own progressFill gradient (see components/Button) so Memory/Cache fill toward
+// their capacity the same visual way every actionable control on this page already does, rather
+// than introducing a second, differently-styled meter convention.
+const FillableStatCard = styled(StatCard)`
+  flex: 1 1 160px;
+  ${progressFill}
+`
+
 // Segmented, 8-block visual for the production rate while it's still below 1 Byte/sec (8
 // bits/sec) — one block per whole bit/sec, filled left to right. A real (visible, not hidden)
 // role="progressbar", since the blocks themselves are the primary at-a-glance info here, unlike
@@ -138,12 +155,61 @@ const TransferBlock = styled.button`
   }
 `
 
-// Numbers read in Bytes once the Byte generator exists — every capacity value in the ladder
-// (8, 80, 800, 8000, …) is evenly divisible by BITS_PER_BYTE, so this always yields clean whole
-// numbers. Before the Byte exists there's nothing to denominate in yet, so raw bits read better
-// during that initial tap-to-8 bootstrap. See CLAUDE.md's Byte Foundry section.
-const formatBitBalance = (bits, byteCreated) =>
-  byteCreated ? `${formatAmount(Math.floor(bits / BITS_PER_BYTE))} B` : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+// Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
+// TIER_DEFINITIONS' own KB..QB symbols (see layers.js) since Memory is byte-scale themed
+// identically to the main game's tiers. Every capacity value in the Sacrifice ladder (8, 80, 800,
+// 8000, …) is evenly divisible by BITS_PER_BYTE, so scaling from bits never loses precision at the
+// Byte boundary.
+const MEMORY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
+const MEMORY_UNIT_SCALE = 1000
+
+// The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
+// larger of the two) so a balance never shows in a coarser unit than its own capacity — e.g. never
+// "512 B / 1 KB". `byteCreated` gates whether there's anything to denominate in yet at all: before
+// the Byte generator exists, capacity is always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte —
+// capacity can only grow via Sacrifice, itself only reachable once byteCreated), so a
+// capacity-magnitude check alone can never catch this phase (capacity is never below a whole
+// Byte). Without this gate, tapping through that very first 0-8 bit range would render as
+// fractional Bytes ("0.125 B", "0.25 B", …) — technically a unit, but a less readable one than the
+// raw bit count for a range this small; raw bits are the more "appropriate unit" here.
+const getMemoryUnit = (capacityBits, byteCreated) => {
+  if (!byteCreated) return null // nothing to denominate in yet — render as raw bits
+  let divisor = BITS_PER_BYTE
+  let unitIndex = 0
+  while (capacityBits / divisor >= MEMORY_UNIT_SCALE && unitIndex < MEMORY_UNIT_SYMBOLS.length - 1) {
+    divisor *= MEMORY_UNIT_SCALE
+    unitIndex += 1
+  }
+  return { symbol: MEMORY_UNIT_SYMBOLS[unitIndex], divisor }
+}
+
+const formatMemoryAmount = (bits, unit) =>
+  unit ? `${formatAmount(bits / unit.divisor)} ${unit.symbol}` : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+
+// Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
+const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
+  const unit = getMemoryUnit(capacityBits, byteCreated)
+  return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
+}
+
+// Storage bank sizes are tier01's own per-unit level costs (see getNextStorageBankSize in
+// engine.js) — a completely separate scale from Memory's Byte-based one above: 1000 bits is
+// "1 KB" here, matching INTRO_BITS_PER_KILOBYTE_CONVERSION and the Convert button's own
+// "KiloBits" naming (1000 bits, not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
+// symbols for the same "byte-scale themed" reason Memory's own ladder does. Every bank size is
+// already an exact power of ten by construction (getTierCost), so this always lands on a clean,
+// whole-number label.
+const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
+const formatStorageSize = bits => {
+  if (bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+  let value = bits / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  let unitIndex = 0
+  while (value >= MEMORY_UNIT_SCALE && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
+    value /= MEMORY_UNIT_SCALE
+    unitIndex += 1
+  }
+  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+}
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
@@ -186,6 +252,24 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const investProgress = clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
+  // Cache is Memory's small rolling counterpart: the current progress toward the next convertible
+  // 1000-bit (1 KiloBits) chunk, wrapping back to 0 every time that chunk is spent — unlike Memory
+  // (fullProgress above), which tracks the whole balance against its much larger capacity. Only
+  // meaningful once conversion itself is revealed (see `revealed` above).
+  const cacheBits = intro.bits % INTRO_BITS_PER_KILOBYTE_CONVERSION
+  const cacheProgress = clampPercent((cacheBits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
+
+  // Storage: bank blocks sized to tier01's (Kilobytes') own future per-unit level costs — build
+  // now (10x the size, from Memory), redeem later once tier01's level actually reaches that cost.
+  const nextStorageBankSize = getNextStorageBankSize(state)
+  const storageBankCost = getStorageBankCost(nextStorageBankSize)
+  const canBuildStorageBank = intro.bits >= storageBankCost
+  const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
+  const heldStorageBankSizes = Object.keys(intro.storageBanks ?? {})
+    .map(Number)
+    .filter(size => intro.storageBanks[size] > 0)
+    .sort((a, b) => a - b)
+
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
@@ -198,40 +282,56 @@ const ByteFoundryPage = ({ game, onBack }) => {
             : 'Transfer budget is fully spent — resets next Prestige.'}
       </StatusText>
 
-      <StatCard aria-label="byte foundry balance">
-        <SectionLabel>Memory</SectionLabel>
-        <BalanceText>
-          {formatBitBalance(intro.bits, intro.byteCreated)} / {formatBitBalance(intro.capacity, intro.byteCreated)}
-        </BalanceText>
-        <VisuallyHidden
-          role="progressbar"
-          aria-label="byte foundry bit balance"
-          aria-valuenow={intro.bits}
-          aria-valuemin={0}
-          aria-valuemax={intro.capacity}
-        />
-        {intro.byteCreated && (
-          <StatusText aria-label="byte foundry transfer-block tracker">
-            {formatAmount(intro.bits % transferBudget)} / {formatAmount(transferBudget)} bits this cycle
-          </StatusText>
-        )}
-        {intro.byteCreated && (
-          productionRate < BITS_PER_BYTE ? (
-            <>
-              <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
-              <RateBlocksRow role="progressbar" aria-label="byte foundry production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
-                {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
-                  <RateBlock key={index} $filled={index < productionRate} />
-                ))}
-              </RateBlocksRow>
-            </>
-          ) : (
-            <StatusText>
-              +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
+      <TilesRow>
+        <FillableStatCard aria-label="byte foundry balance" $progress={fullProgress}>
+          <SectionLabel>Memory</SectionLabel>
+          <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
+          <VisuallyHidden
+            role="progressbar"
+            aria-label="byte foundry bit balance"
+            aria-valuenow={intro.bits}
+            aria-valuemin={0}
+            aria-valuemax={intro.capacity}
+          />
+          {intro.byteCreated && (
+            <StatusText aria-label="byte foundry transfer-block tracker">
+              {formatAmount(intro.bits % transferBudget)} / {formatAmount(transferBudget)} bits this cycle
             </StatusText>
-          )
+          )}
+          {intro.byteCreated && (
+            productionRate < BITS_PER_BYTE ? (
+              <>
+                <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
+                <RateBlocksRow role="progressbar" aria-label="byte foundry production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
+                  {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
+                    <RateBlock key={index} $filled={index < productionRate} />
+                  ))}
+                </RateBlocksRow>
+              </>
+            ) : (
+              <StatusText>
+                +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
+              </StatusText>
+            )
+          )}
+        </FillableStatCard>
+
+        {revealed && (
+          <FillableStatCard aria-label="byte foundry cache" $progress={cacheProgress}>
+            <SectionLabel>Cache 1KB</SectionLabel>
+            <BalanceText>
+              {formatAmount(cacheBits)} / {formatAmount(INTRO_BITS_PER_KILOBYTE_CONVERSION)} bits
+            </BalanceText>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry cache progress"
+              aria-valuenow={cacheBits}
+              aria-valuemin={0}
+              aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
+            />
+          </FillableStatCard>
         )}
-      </StatCard>
+      </TilesRow>
 
       <TapArea
         aria-label="tap to generate a bit"
@@ -313,6 +413,61 @@ const ByteFoundryPage = ({ game, onBack }) => {
               aria-valuemax={investCost}
             />
           </Button>
+
+          <Button
+            aria-label="build storage bank"
+            disabled={!canBuildStorageBank}
+            onClick={actions.buildStorageBank}
+            title={`Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(nextStorageBankSize)} block, redeemable once Kilobytes' level cost reaches ${formatStorageSize(nextStorageBankSize)}`}
+            type="button"
+            variant={canBuildStorageBank ? 'info' : 'neutral'}
+            $progress={storageBuildProgress}
+          >
+            <ButtonContent>{`🏦 Build ${formatStorageSize(nextStorageBankSize)} Storage Bank (${formatAmount(storageBankCost)} bits)`}</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry storage build progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={storageBankCost}
+            />
+          </Button>
+
+          {heldStorageBankSizes.map(size => {
+            const count = intro.storageBanks[size]
+            const redeemable = isStorageBankRedeemable(state, size)
+            return (
+              <Button
+                key={size}
+                aria-label={`redeem ${formatStorageSize(size)} storage bank`}
+                disabled={!redeemable}
+                onClick={() => actions.redeemStorageBank(size)}
+                title={
+                  redeemable
+                    ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
+                    : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`
+                }
+                type="button"
+                variant={redeemable ? 'success' : 'neutral'}
+              >
+                <ButtonContent>{`📤 Redeem ${formatStorageSize(size)} Bank (×${count})`}</ButtonContent>
+              </Button>
+            )
+          })}
+
+          {heldStorageBankSizes.length > 0 && (
+            <Button
+              aria-label={intro.storageAutoRedeemEnabled ? 'pause storage auto-redeem' : 'resume storage auto-redeem'}
+              onClick={() => actions.setStorageAutoRedeemEnabled(!intro.storageAutoRedeemEnabled)}
+              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed"
+              type="button"
+              variant="neutral"
+            >
+              <ButtonContent>
+                {intro.storageAutoRedeemEnabled ? '⏸ Pause Storage Auto-Redeem' : '▶ Resume Storage Auto-Redeem'}
+              </ButtonContent>
+            </Button>
+          )}
         </>)}
 
       </ActionsRow>
