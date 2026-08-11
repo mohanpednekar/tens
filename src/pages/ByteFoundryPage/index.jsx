@@ -192,10 +192,10 @@ const ByteFoundryPage = ({ game, onBack }) => {
       <Title>⚙️ Byte Foundry</Title>
       <StatusText>
         {!intro.mainGameUnlocked
-          ? 'Tap to generate bits into your Memory. Combine 8 bits into a Byte to start producing more automatically.'
+          ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
           : remainingTransferBudget > 0
-            ? `Main game unlocked! Your Byte generator keeps running here — transfer more 1000-bit blocks into Kilobytes any time, up to ${formatAmount(remainingTransferBudget)} bits left this cycle.`
-            : 'This cycle’s transfer budget is fully spent. Your Byte generator and its upgrades keep running — a fresh budget opens after your next Prestige.'}
+            ? `Main game unlocked — ${formatAmount(remainingTransferBudget)} bits left to transfer this cycle.`
+            : 'Transfer budget is fully spent — resets next Prestige.'}
       </StatusText>
 
       <StatCard aria-label="byte foundry balance">
@@ -212,7 +212,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
         />
         {intro.byteCreated && (
           <StatusText aria-label="byte foundry transfer-block tracker">
-            {formatAmount(intro.bits % transferBudget)} bit{(intro.bits % transferBudget) === 1 ? '' : 's'} of this cycle's {formatAmount(transferBudget)}
+            {formatAmount(intro.bits % transferBudget)} / {formatAmount(transferBudget)} bits this cycle
           </StatusText>
         )}
         {intro.byteCreated && (
@@ -276,7 +276,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             aria-label="sacrifice all bits for 10x capacity"
             disabled={!isFull}
             onClick={actions.pickIntroCapacityMilestone}
-            title="Empties your Memory in exchange for 10x capacity"
+            title="Empty Memory for 10x capacity"
             type="button"
             variant={isFull ? 'prestige' : 'neutral'}
             $progress={fullProgress}
@@ -297,8 +297,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
             onClick={actions.pickIntroProductionMilestone}
             title={
               investClaimsUsedUp
-                ? `Already claimed ${investMaxClaims} of ${investMaxClaims} at this cost tier`
-                : `Costs ${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1} of ${investMaxClaims} at this cost tier`
+                ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
+                : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
             }
             type="button"
             variant={canInvest ? 'info' : 'neutral'}
@@ -318,7 +318,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       </ActionsRow>
 
       {revealed && blocksRemaining > 0 && (<>
-        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} block{blocksRemaining === 1 ? '' : 's'} left)</SectionLabel>
+        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
           {Array.from({ length: blocksRemaining }, (_, index) => {
             const isActive = index === 0
@@ -332,8 +332,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   !isActive
                     ? 'Transfer the block to your left first'
                     : remainingTransferBudget < INTRO_BITS_PER_KILOBYTE_CONVERSION
-                      ? 'This cycle’s transfer budget is already spent — resets on your next Prestige'
-                      : 'Spends 1000 bits from your Memory to grant 1 Kilobyte in the main game'
+                      ? 'Transfer budget spent — resets next Prestige'
+                      : '1000 bits → 1 Kilobyte'
                 }
                 type="button"
                 $active={isActive}

@@ -119,10 +119,10 @@ export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
 // The per-cycle bit-to-Kilobyte transfer budget/auto-convert trigger point is no longer this fixed
 // value — it's dynamic (see getIntroTransferBudget in engine.js, tied to the Kilobyte tier's own
 // current purchase block size). This constant's only remaining role is the cost cutoff for
-// getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier through 1000 Bytes' worth,
-// 1 claim per tier after) — kept as a named constant since 8000 bits (1000 Bytes) is still a
-// meaningful, independent boundary for that unrelated mechanic, coincidentally matching the
-// transfer budget's own historical default (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
+// getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly below 1000 Bytes'
+// worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since 8000 bits (1000
+// Bytes) is still a meaningful, independent boundary for that unrelated mechanic, coincidentally
+// matching the transfer budget's own historical default (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
 export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see

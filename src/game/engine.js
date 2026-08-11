@@ -1238,11 +1238,11 @@ export const pickIntroCapacityMilestone = state => {
 export const getIntroProductionMilestoneCost = tier =>
   INTRO_STARTING_CAPACITY * (INTRO_CAPACITY_MULTIPLIER ** clampNonNegative(tier))
 
-// How many claims a given productionMilestoneTier grants: 2 for the four tiers reachable before
-// Kilobyte transfers unlock (1/10/100/1000 Bytes — cost <= INTRO_AUTO_INVEST_THRESHOLD), 1 for
-// every tier after that.
+// How many claims a given productionMilestoneTier grants: 2 for the three tiers below where
+// Kilobyte transfers unlock (1/10/100 Bytes — cost < INTRO_AUTO_INVEST_THRESHOLD), 1 for every
+// tier from 1000 Bytes on (cost >= INTRO_AUTO_INVEST_THRESHOLD).
 export const getIntroProductionMilestoneMaxClaims = tier =>
-  getIntroProductionMilestoneCost(tier) <= INTRO_AUTO_INVEST_THRESHOLD ? 2 : 1
+  getIntroProductionMilestoneCost(tier) < INTRO_AUTO_INVEST_THRESHOLD ? 2 : 1
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at

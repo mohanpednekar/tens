@@ -61,7 +61,7 @@ progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest 
 
 Below the action buttons, once `isIntroConversionUnlocked(state)` and at least one transfer remains
 this cycle, a **transfer-block row** (`role="group"`, `aria-label="byte foundry kilobyte transfer
-blocks"`), preceded by a small `SectionLabel` ("Transfer to Kilobytes (N blocks left)"): one square
+blocks"`), preceded by a small `SectionLabel` ("Transfer to Kilobytes (N left)"): one square
 block per remaining `INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit transfer this cycle
 (`blocksRemaining = getIntroTransferBudget(state) / INTRO_BITS_PER_KILOBYTE_CONVERSION -
 floor(bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)`, dynamic — see

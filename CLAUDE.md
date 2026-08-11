@@ -391,8 +391,8 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **two claims per tier** for the first four tiers (1/10/100/1000 Bytes), one claim per
-tier from there on, each spending only that tier's own cost (not a full balance — a claim frequently
+current capacity) — **two claims per tier** for the first three tiers (1/10/100 Bytes), one claim per
+tier from 1000 Bytes on, each spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap

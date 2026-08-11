@@ -496,15 +496,15 @@ describe('getIntroProductionMilestoneCost', () => {
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('grants 2 claims for the four tiers up to and including INTRO_AUTO_INVEST_THRESHOLD (1/10/100/1000 Bytes)', () => {
+  it('grants 2 claims for the three tiers below INTRO_AUTO_INVEST_THRESHOLD (1/10/100 Bytes)', () => {
     expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
-    expect(getIntroProductionMilestoneMaxClaims(3)).toBe(2)
-    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_AUTO_INVEST_THRESHOLD)
   })
 
-  it('grants only 1 claim from the next tier on', () => {
+  it('grants only 1 claim from the tier reaching INTRO_AUTO_INVEST_THRESHOLD (1000 Bytes) on', () => {
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+    expect(getIntroProductionMilestoneMaxClaims(3)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
   })

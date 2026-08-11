@@ -158,8 +158,8 @@ per-cycle transfer budget described in step 7.
    `cost / BITS_PER_BYTE`, on the button itself). Because the cost is independent of `capacity`, a
    claim only ever requires `bits >= cost` — **not** a full balance — which is frequently true well
    before Memory is full, once Sacrifice has grown capacity ahead of this ladder. Each tier grants
-   `getIntroProductionMilestoneMaxClaims(t)` claims (2 for the four tiers whose cost is `<=
-   INTRO_AUTO_INVEST_THRESHOLD` — 1/10/100/1000 Bytes — 1 for every tier after that), tracked by
+   `getIntroProductionMilestoneMaxClaims(t)` claims (2 for the three tiers whose cost is `<
+   INTRO_AUTO_INVEST_THRESHOLD` — 1/10/100 Bytes — 1 for every tier from 1000 Bytes on), tracked by
    `productionMilestoneTierClaims`; a successful claim deducts exactly that tier's cost from `bits`
    and either stays at the same tier (incrementing `productionMilestoneTierClaims`) or, once the
    tier's claim limit is reached, advances to `productionMilestoneTier + 1` with a fresh claim count
@@ -1356,6 +1356,6 @@ purchases were manual or automatic.
 - `INTRO_BYTE_BASE_RATE = 1` — the Byte generator's base batch size, in bits, delivered once every `tickSpeedSeconds`, before `productionMultiplier`
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator
 - `INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000` — manual conversion rate: this many intro bits become 1 Kilobyte unit in the main game — matches Kilobytes' own real `baseCost` (1E3 Bits) in `TIER_DEFINITIONS`
-- `INTRO_AUTO_INVEST_THRESHOLD = 8000` — no longer the transfer-budget/auto-trigger threshold (that's dynamic now — see `getIntroTransferBudget` in `engine.js`, tied to `getPurchaseBlockSize`). Its only remaining role is the cost cutoff for `getIntroProductionMilestoneMaxClaims` (2 claims per Invest tier through 1000 Bytes' worth, 1 claim per tier after) — kept as a named constant since 8000 bits is still a meaningful, independent boundary for that unrelated mechanic, coincidentally matching the transfer budget's own historical default (`DEFAULT_PURCHASE_BLOCK_SIZE` × 1000)
+- `INTRO_AUTO_INVEST_THRESHOLD = 8000` — no longer the transfer-budget/auto-trigger threshold (that's dynamic now — see `getIntroTransferBudget` in `engine.js`, tied to `getPurchaseBlockSize`). Its only remaining role is the cost cutoff for `getIntroProductionMilestoneMaxClaims` (2 claims per Invest tier strictly below 1000 Bytes' worth — 1/10/100 Bytes — 1 claim per tier from 1000 Bytes on) — kept as a named constant since 8000 bits is still a meaningful, independent boundary for that unrelated mechanic, coincidentally matching the transfer budget's own historical default (`DEFAULT_PURCHASE_BLOCK_SIZE` × 1000)
 - `INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) — capacity threshold at which the manual convert action becomes available
 

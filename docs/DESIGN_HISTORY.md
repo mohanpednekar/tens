@@ -1142,6 +1142,18 @@ rather than requiring a separate display fix. **Don't reintroduce a standalone O
 if a future request sounds like "Overclock should add its own bonus," re-confirm against this file
 first, since that reading was already tried, shipped, and specifically walked back.
 
+### The 1000-Byte Invest tier drops from two claims to one
+
+An earlier entry ("The same round also corrected a misreading of 'Invest for Double Production'…",
+above) gave the four Invest cost-ladder tiers up to and including `INTRO_AUTO_INVEST_THRESHOLD`
+(1/10/100/1000 Bytes) two claims each, via `getIntroProductionMilestoneMaxClaims(tier) =>
+getIntroProductionMilestoneCost(tier) <= INTRO_AUTO_INVEST_THRESHOLD ? 2 : 1`. A follow-up request
+("Single claim at 1000B. Not two claims.") narrowed that: only the three tiers strictly *below*
+`INTRO_AUTO_INVEST_THRESHOLD` (1/10/100 Bytes) still get two claims — the 1000-Byte tier itself now
+gets one, same as every tier after it. The fix is a one-character boundary change (`<=` → `<`) in
+`getIntroProductionMilestoneMaxClaims`; nothing else about the independent cost-ladder model from the
+entry above changed.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
