@@ -2,16 +2,20 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
+import { getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   INTRO_AUTO_INVEST_THRESHOLD,
+  INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
   INTRO_STARTING_TICK_SPEED_SECONDS,
   PRESTIGE_THRESHOLD,
+  STORAGE_BUILD_COST_MULTIPLIER,
   TICK_RATE_MS,
+  TIER_DEFINITIONS,
 } from 'game/layers'
 import App from './App'
 
@@ -153,17 +157,20 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Megabytes tier appears and is purchasable once 10 Kilobytes are owned', () => {
+test('Megabytes tier appears and is purchasable once Kilobytes has fully purchased two levels (16 owned)', () => {
   seedMainGameState({
     resources: { Ones: 8_000_000 },
-    owned: { tier01: 10 },
+    owned: { tier01: 16 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^megabytes layer$/i)).toBeInTheDocument()
+  const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
+  expect(megabytesLayer).toBeInTheDocument()
   // Megabytes' baseCost is 1E6 — level 1, blockSize 8: per-unit cost 1,000,000, full block
   // 8,000,000 — both at/above the 1,000,000 exponential-notation threshold, so they render as "1e6"/"8e6".
-  expect(screen.getByRole('button', { name: /buy ×8 for 8e6 b\b/i })).toBeEnabled()
+  // Scoped to the Megabytes row: Kilobytes' own level-3 buy button happens to render the same
+  // "8e6" text (its per-unit cost coincidentally matches Megabytes' level-1 cost at this balance).
+  expect(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
@@ -171,14 +178,15 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
 
   seedMainGameState({
     resources: { Ones: 8_000_000 },
-    owned: { tier01: 10 },
+    owned: { tier01: 16 },
   })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy ×8 for 8e6 b\b/i }))
+  const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
+  await user.click(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i }))
 
-  expect(screen.getByLabelText(/^megabytes layer$/i)).toHaveTextContent(/owned: 8/i)
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 10/i)
+  expect(megabytesLayer).toHaveTextContent(/owned: 8/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 16/i)
 })
 
 test('money balance is shown once at the top in full currency format, centered, with no per-second yield', () => {
@@ -599,7 +607,7 @@ test('the Speed Up panel appears once the last tier unlocks, with the button dis
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 1 },
+    purchaseLevels: { tier09: 3, tier10: 1 },
   })
   render(<App />)
 
@@ -611,7 +619,7 @@ test('the Speed Up button is enabled once the last tier reaches the required lev
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
   })
   render(<App />)
 
@@ -622,7 +630,7 @@ test('the second Speed Up requires one more level than the first, not the same l
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     speedUpCount: 1,
   })
   render(<App />)
@@ -636,7 +644,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     speedUpCount: 2,
   })
   render(<App />)
@@ -653,6 +661,7 @@ test('the speed up and overclock panels render below the tier list, not above it
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
+    purchaseLevels: { tier09: 3 },
   })
   render(<App />)
 
@@ -665,7 +674,7 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
@@ -688,7 +697,7 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
   })
   render(<App />)
 
@@ -712,7 +721,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -733,7 +742,7 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
   render(<App />)
@@ -765,7 +774,7 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 9 },
+    purchaseLevels: { tier09: 3, tier10: 9 },
   })
   render(<App />)
 
@@ -777,7 +786,7 @@ test('the Overclock button is enabled once the last tier reaches the required le
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 10 },
+    purchaseLevels: { tier09: 3, tier10: 10 },
   })
   render(<App />)
 
@@ -788,7 +797,7 @@ test('the second Overclock requires 10 more levels than the first, not the same 
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 15 },
+    purchaseLevels: { tier09: 3, tier10: 15 },
     overclockCount: 1,
   })
   render(<App />)
@@ -802,7 +811,7 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 12 },
+    purchaseLevels: { tier09: 3, tier10: 12 },
     overclockCount: 1,
   })
   render(<App />)
@@ -825,7 +834,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 12 },
+    purchaseLevels: { tier09: 3, tier10: 12 },
     overclockCount: 1,
   })
 
@@ -839,7 +848,7 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 5 },
+    purchaseLevels: { tier09: 3, tier10: 5 },
   })
 
   render(<App />)
@@ -882,7 +891,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 10 },
+    purchaseLevels: { tier09: 3, tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
   render(<App />)
@@ -996,7 +1005,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     autoSpeedUp: true,
     autoSpeedUpEnabled: false,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
@@ -1444,7 +1453,7 @@ test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer 
     // the PP Upgrades page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
     // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
     // count 1, so it's the one that stays locked here.
-    owned: { tier01: 10 }, // unlocks Megabytes
+    owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1460,7 +1469,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
 
   seedMainGameState({
     resources: { Ones: 10 },
-    owned: { tier01: 10 },
+    owned: { tier01: 16 },
     prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
@@ -2168,6 +2177,115 @@ test('the intro auto-transitions into the main game once the bit balance crosses
 
   unmount()
   vi.useRealTimers()
+})
+
+test('Memory renders bits/capacity scaled into the same appropriate unit (KB), not raw bits, once capacity grows past the Byte range', () => {
+  // capacity 8000 bits = 1000 Bytes = 1 KB; bits 4000 = 500 Bytes = 0.5 KB — both share the unit
+  // picked off capacity (getMemoryUnit), never a mismatched pairing like "500 B / 1 KB".
+  seedIntroState({ bits: 4000, capacity: 8000, byteCreated: true })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('0.5 KB / 1 KB')
+})
+
+test('the Cache 1KB tile stays hidden before conversion unlocks, and appears once capacity reaches the unlock threshold', () => {
+  seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+  expect(screen.queryByRole('progressbar', { name: /byte foundry cache progress/i })).not.toBeInTheDocument()
+})
+
+test('the Cache 1KB tile shows progress toward the next convertible 1000-bit chunk, wrapping on each spend', () => {
+  // capacity 8000 (>= the conversion-unlock threshold) reveals Cache; bits 1320 = 1 full 1000-bit
+  // chunk already spent/converted plus 320 bits toward the next one.
+  seedIntroState({ bits: 1320, capacity: 8000, byteCreated: true })
+  render(<App />)
+
+  const cacheBar = screen.getByRole('progressbar', { name: /byte foundry cache progress/i })
+  expect(cacheBar).toHaveAttribute('aria-valuenow', '320')
+  expect(cacheBar).toHaveAttribute('aria-valuemax', String(INTRO_BITS_PER_KILOBYTE_CONVERSION))
+  expect(cacheBar.closest('section')).toHaveTextContent('320 / 1,000 bits')
+})
+
+// --- Byte Foundry Storage (bank blocks) ---
+// tier01 (Kilobytes) starts at level 1 (per-unit cost 1000 bits/Bits) — the NEXT level's cost
+// (level 2, 10,000) is what buildStorageBank currently targets; its build cost is 10x that (100,000).
+describe('Byte Foundry Storage', () => {
+  const tier01 = TIER_DEFINITIONS[0]
+  const nextBankSize = getTierCost(tier01, 2)
+  const nextBankCost = nextBankSize * STORAGE_BUILD_COST_MULTIPLIER
+
+  test('Build Storage Bank is disabled below its cost and enabled once affordable, targeting tier01\'s next level cost', () => {
+    seedIntroState({ bits: nextBankCost - 1, capacity: nextBankCost, byteCreated: true })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /build storage bank/i })
+    expect(buildButton).toHaveTextContent('10 KB')
+    expect(buildButton).toBeDisabled()
+  })
+
+  test('building a bank spends the build cost from Memory and adds a redeemable-once-matching bank', async () => {
+    const user = userEvent.setup()
+    seedIntroState({ bits: nextBankCost, capacity: nextBankCost, byteCreated: true })
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /build storage bank/i }))
+
+    const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+    expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+
+    // tier01 is still at level 1 (cost 1000), not level 2 (10,000) — the bank isn't redeemable yet.
+    const redeemButton = screen.getByRole('button', { name: /redeem 10 kb storage bank/i })
+    expect(redeemButton).toHaveTextContent('×1')
+    expect(redeemButton).toBeDisabled()
+  })
+
+  test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', async () => {
+    const user = userEvent.setup()
+    // tier01 already at level 2 (its current per-unit cost is 10,000 — matching the held bank).
+    seedIntroState(
+      { bits: 0, capacity: nextBankCost, byteCreated: true, storageBanks: { [nextBankSize]: 1 } },
+      { purchaseLevels: { [tier01.id]: 2 } }
+    )
+    render(<App />)
+
+    const redeemButton = screen.getByRole('button', { name: /redeem 10 kb storage bank/i })
+    expect(redeemButton).toBeEnabled()
+
+    await user.click(redeemButton)
+
+    // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — redeeming doesn't
+    // touch it, unlike convertIntroBitsToKilobytes) — assert against saved state directly, same
+    // convention as "the manual convert button appears..." above.
+    expect(screen.queryByRole('button', { name: /redeem 10 kb storage bank/i })).not.toBeInTheDocument()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.owned.tier01).toBe(1)
+    expect(saved.intro.storageBanks[nextBankSize]).toBeUndefined()
+  })
+
+  test('the auto-redeem toggle appears once a bank is held and pauses/resumes automatic redeeming', () => {
+    vi.useFakeTimers()
+
+    seedIntroState(
+      { bits: 0, capacity: nextBankCost, byteCreated: true, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, storageBanks: { [nextBankSize]: 1 } },
+      { purchaseLevels: { [tier01.id]: 2 } }
+    )
+    const { unmount } = render(<App />)
+
+    const resumeButton = screen.getByRole('button', { name: /resume storage auto-redeem/i })
+    fireEvent.click(resumeButton)
+    expect(screen.getByRole('button', { name: /pause storage auto-redeem/i })).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    // Auto-redeemed without a manual click on the bank button itself.
+    expect(screen.queryByRole('button', { name: /redeem 10 kb storage bank/i })).not.toBeInTheDocument()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.owned.tier01).toBe(1)
+
+    unmount()
+    vi.useRealTimers()
+  })
 })
 
 // --- The Byte Foundry resets and reappears after every real Prestige ---

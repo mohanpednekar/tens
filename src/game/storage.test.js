@@ -641,6 +641,7 @@ describe('schema migration', () => {
         bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false, bitsTransferredThisCycle: 0,
+        storageBanks: { 1000: 1 }, storageAutoRedeemEnabled: true,
       },
     }
     saveGameState(state)

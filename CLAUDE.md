@@ -401,15 +401,33 @@ conversions keep working after that, sharing one running **per-cycle transfer bu
 (`intro.bitsTransferredThisCycle`, capped at `INTRO_AUTO_INVEST_THRESHOLD`, 8000 bits total) — once that
 cap is hit, by any combination of manual/auto conversions, no more transfers happen until the next
 Prestige reopens a fresh budget. Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/
-Invest all stay live indefinitely, every cycle, regardless of how much of the transfer budget remains.
-The balance card also always shows a second tracker (`intro.bits % INTRO_AUTO_INVEST_THRESHOLD`, in bits)
-alongside the primary Bytes-denominated balance, for a rolling view of progress within the current
-8000-bit block once past `byteCreated`. **The generator itself (capacity/whether it exists/its
-tickspeed/its rate/its independent Invest cost-ladder progress) is permanent, carried over by every real
-Prestige** — only Memory (the current bit balance), the main-game-unlock gate, and the transfer budget
-reset each cycle, so returning cycles are a fast pit-stop, not a full replay; Speed Up/Overclock leave the
-whole thing untouched either way, same as any other intra-cycle soft reset. Full state shape, engine
-functions, and constants: see the "Byte Foundry" section of `docs/ECONOMY_REFERENCE.md`.
+Invest/Storage all stay live indefinitely, every cycle, regardless of how much of the transfer budget
+remains. The page renders two side-by-side, button-style filling tiles: **Memory** (the balance itself,
+`bits / capacity`, both scaled into the largest appropriate unit — raw bits below 1 Byte, then
+B/KB/MB/…/QB by 1000 each step, reusing `TIER_DEFINITIONS`' own tier symbols) and **Cache 1KB** (once
+`isIntroConversionUnlocked`), a small rolling counterpart showing `bits % INTRO_BITS_PER_KILOBYTE_CONVERSION`
+out of 1000 bits — progress toward the next convertible chunk, wrapping to 0 every time it's spent.
+Memory also always shows a second tracker (`intro.bits % INTRO_AUTO_INVEST_THRESHOLD`, in bits) once
+past `byteCreated`, for a rolling view of progress within the current 8000-bit transfer block.
+
+**Storage** lets the player bank a block of bits now, to redeem later once `tier01` (Kilobytes) actually
+reaches the level cost that block was sized for — every block a bank is ever built or redeemed at is a
+round KB/MB/GB/… value, since it's always pegged to tier01's own (always-a-power-of-ten) per-unit level
+cost. Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value in bits
+from Memory; a held bank becomes redeemable (clickable) the instant its size *exactly* matches tier01's
+*current* per-unit level cost — an exact match, not merely at-or-below it, since a bank was always built
+one level ahead. Redeeming grants 1 free Kilobyte unit, either by a manual click or automatically if the
+player has enabled Storage's own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain
+preference, no PP or prerequisite purchase involved). Storage banks are **never lost** — nothing here
+ever expires or spends implicitly, only an explicit redeem (manual or auto) ever consumes one.
+
+**The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
+cost-ladder progress) and Storage (every banked block, and the auto-redeem preference) are permanent,
+carried over by every real Prestige** — only Memory (the current bit balance), the main-game-unlock
+gate, and the transfer budget reset each cycle, so returning cycles are a fast pit-stop, not a full
+replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
+soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
+`docs/ECONOMY_REFERENCE.md`.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -502,7 +520,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (791 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (816 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -533,7 +551,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (724, see "Testing" above) is unaffected by anything under `e2e/`.
+  (816, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

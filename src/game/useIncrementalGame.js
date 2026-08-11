@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
+import { applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -82,6 +82,9 @@ export const useIncrementalGame = () => {
     pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),
     pickIntroProductionMilestone: () => setState(pickIntroProductionMilestone),
     convertIntroBitsToKilobytes: () => setState(convertIntroBitsToKilobytes),
+    buildStorageBank: () => setState(buildStorageBank),
+    redeemStorageBank: capacityBits => setState(redeemStorageBank(capacityBits)),
+    setStorageAutoRedeemEnabled: enabled => setState(setStorageAutoRedeemEnabled(enabled)),
   }), [])
 
   const resetGame = useCallback(() => {

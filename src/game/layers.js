@@ -131,6 +131,21 @@ export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 // ladder above).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
+// --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/redeemStorageBank/
+// tickStorageAutoRedeem in engine.js and intro.storageBanks/storageAutoRedeemEnabled in
+// createInitialGameState. A bank is a discrete, pre-paid block of bits (sized to a future
+// tier01/Kilobytes per-unit level cost — always a round power of ten, see getTierCost) that the
+// player can build now and redeem later for a free tier01 unit, once tier01's own level actually
+// reaches that cost. Distinct from — and not counted against — the intro's ordinary
+// bitsTransferredThisCycle transfer budget (see INTRO_AUTO_INVEST_THRESHOLD above): a bank is
+// already fully paid for at build time, so redeeming it isn't a further transfer out of Memory.
+// Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
+// "never lost," only ever spent by an explicit redeem (manual or auto-configured).
+// A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bits to build — the
+// same "10x" relationship intended by the feature's own description (a 1 KiloBits/1000-bit bank
+// costs 10,000 bits to build, a 10,000-bit bank costs 100,000, and so on).
+export const STORAGE_BUILD_COST_MULTIPLIER = 10
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
 // autobuyer loop outrun active play.
