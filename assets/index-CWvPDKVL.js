@@ -131,23 +131,20 @@ Error generating stack: `+e.message+`
   margin: 0;
   color: ${e=>e.theme.color.textMuted};
   text-align: center;
-`,Oa=F(Da)`
-  color: ${e=>e.theme.color.text};
-  font-weight: 600;
-`,ka=F.p`
+`,Oa=F.p`
   margin: 0;
   font-size: ${e=>e.theme.type.scale.xs.size};
   color: ${e=>e.theme.color.textMuted};
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-`,Aa=F.p`
+`,ka=F.p`
   margin: 0;
   font-family: ${e=>e.theme.font.display};
   font-size: ${e=>e.theme.type.scale.lg.size};
   font-weight: 700;
   text-align: center;
-`,ja=F.button`
+`,Aa=F.button`
   position: relative;
   width: ${e=>e.$compact?`50%`:`100%`};
   aspect-ratio: 5 / 3;
@@ -172,36 +169,36 @@ Error generating stack: `+e.message+`
   &:disabled {
     cursor: not-allowed;
   }
-`,Ma=F.div`
+`,ja=F.div`
   display: flex;
   flex-direction: column;
   gap: ${e=>e.theme.space.sm};
   width: 100%;
-`,Na=F.div`
+`,Ma=F.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${e=>e.theme.space.sm};
   width: 100%;
-`,Pa=F(lr)`
+`,Na=F(lr)`
   flex: 1 1 160px;
   align-items: center;
   ${ir}
-`,Fa=F.div`
+`,Pa=F.div`
   display: flex;
   gap: 3px;
   width: 100%;
   max-width: 220px;
-`,Ia=F.span`
+`,Fa=F.span`
   flex: 1;
   height: 0.55rem;
   border-radius: 2px;
   background: ${e=>e.$filled?e.theme.color.good:e.theme.color.surfaceSunken};
-`,La=F.div`
+`,Ia=F.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${e=>e.theme.space.xs};
   width: 100%;
-`,Ra=F.button`
+`,La=F.button`
   flex: 1 1 2.5rem;
   aspect-ratio: 1;
   border: 1.5px solid ${e=>e.$active?e.theme.color.accent:e.theme.color.surfaceSunken};
@@ -223,23 +220,23 @@ Error generating stack: `+e.message+`
   &:disabled {
     cursor: not-allowed;
   }
-`,za=F(lr)`
+`,Ra=F(lr)`
   display: flex;
   flex-direction: column;
   gap: ${e=>e.theme.space.sm};
   width: 100%;
   align-items: stretch;
-`,Ba=F.div`
+`,za=F.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: ${e=>e.theme.space.xs};
   width: 100%;
-`,Va=F(ar)`
+`,Ba=F(ar)`
   flex: 0 0 auto;
   width: auto;
   padding: ${e=>e.theme.space.xs} ${e=>e.theme.space.sm};
-`,Ha=[`B`,...R.map(e=>e.symbol)],Ua=1e3,Wa=(e,t)=>{if(!t)return null;let n=8,r=0;for(;e/n>=Ua&&r<Ha.length-1;)n*=Ua,r+=1;return{symbol:Ha[r],divisor:n}},Ga=(e,t)=>t?`${B(e/t.divisor)} ${t.symbol}`:`${B(e)} bit${e===1?``:`s`}`,Ka=(e,t,n)=>{let r=Wa(t,n);return`${Ga(e,r)} / ${Ga(t,r)}`},qa=R.map(e=>e.symbol),Ja=e=>{if(e<1e3)return`${B(e)} bit${e===1?``:`s`}`;let t=e/gr,n=0;for(;t>=Ua&&n<qa.length-1;)t/=Ua,n+=1;return`${B(t)} ${qa[n]}`},Ya=e=>Math.min(100,Math.max(0,e)),Xa=({game:e,onBack:t})=>{let{actions:n,dismissOfflineProgress:r,offlineProgress:i,state:a}=e,{intro:o}=a,s=o.bits>=o.capacity,c=!o.byteCreated&&o.bits>=8,l=Vi(a),u=Pi(o),d=Ri(o.productionMilestoneTier),f=d/8,p=zi(o.productionMilestoneTier),m=o.productionMilestoneTierClaims>=p,h=o.bits>=d&&!m,g=Hi(a),_=g/gr,v=Math.floor(o.bitsTransferredThisCycle/gr),y=Math.max(0,_-v),b=Math.max(0,g-o.bitsTransferredThisCycle),x=o.bits>=1e3&&b>=1e3,S=Ya(o.bits/8*100),C=Ya(o.bits/o.capacity*100),w=Ya(o.bits/d*100),ee=Ya(o.bits/gr*100),te=Ji(a),ne=Yi(te),T=o.bits>=ne,re=Ya(o.bits/ne*100),ie=Object.keys(o.storageBanks??{}).map(Number).filter(e=>o.storageBanks[e]>0).sort((e,t)=>e-t);return(0,I.jsxs)(Ta,{children:[(0,I.jsx)(wa,{offlineProgress:i,dismissOfflineProgress:r}),(0,I.jsx)(Ea,{children:`⚙️ Byte Foundry`}),(0,I.jsx)(Da,{children:o.mainGameUnlocked?b>0?`Main game unlocked — ${B(b)} bits left to transfer this cycle.`:`Transfer budget is fully spent — resets next Prestige.`:`Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.`}),(0,I.jsx)(Na,{children:(0,I.jsxs)(Pa,{"aria-label":`byte foundry balance`,$progress:C,children:[(0,I.jsx)(ka,{children:`Memory`}),(0,I.jsx)(Aa,{children:Ka(o.bits,o.capacity,o.byteCreated)}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry bit balance`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity}),o.byteCreated&&(0,I.jsxs)(Oa,{"aria-label":`byte foundry transfer-block tracker`,children:[B(o.bits%g),` / `,B(g),` bits this cycle`]}),o.byteCreated&&(u<8?(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(Da,{children:[`+`,B(u),` bit`,u===1?``:`s`,`/sec`]}),(0,I.jsx)(Fa,{role:`progressbar`,"aria-label":`byte foundry production rate`,"aria-valuenow":u,"aria-valuemin":0,"aria-valuemax":8,children:Array.from({length:8},(e,t)=>(0,I.jsx)(Ia,{$filled:t<u},t))})]}):(0,I.jsxs)(Da,{children:[`+`,B(u/8),` Byte`,u/8==1?``:`s`,`/sec`]}))]})}),(0,I.jsx)(ja,{"aria-label":`tap to generate a bit`,disabled:s,onClick:n.tapIntroBit,type:`button`,$compact:o.byteCreated,children:`👆 Tap`}),(0,I.jsxs)(Ma,{children:[c&&(0,I.jsxs)(ar,{"aria-label":`combine 8 bits into a Byte`,onClick:n.combineIntroByte,type:`button`,variant:`primary`,$progress:S,children:[(0,I.jsx)(cr,{children:`🔗 Combine into a Byte`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry combine progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":8})]}),o.byteCreated&&(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(ar,{"aria-label":`sacrifice all bits for 10x capacity`,disabled:!s,onClick:n.pickIntroCapacityMilestone,title:`Empty Memory for 10x capacity`,type:`button`,variant:s?`prestige`:`neutral`,$progress:C,children:[(0,I.jsx)(cr,{children:`💥 Sacrifice for 10x Capacity`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry sacrifice progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity})]}),(0,I.jsxs)(ar,{"aria-label":`invest bits for double production`,disabled:!h,onClick:n.pickIntroProductionMilestone,title:m?`Already claimed ${p}/${p} at this tier`:`${B(f)} B — claim ${o.productionMilestoneTierClaims+1}/${p}`,type:`button`,variant:h?`info`:`neutral`,$progress:w,children:[(0,I.jsxs)(cr,{children:[`⚡ Invest for Double Production (`,B(f),` B)`]}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry invest progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":d})]})]})]}),o.byteCreated&&(0,I.jsxs)(za,{"aria-label":`byte foundry storage`,children:[(0,I.jsx)(ka,{children:`Storage`}),(0,I.jsxs)(ar,{"aria-label":`build storage bank`,disabled:!T,onClick:n.buildStorageBank,title:`Costs ${B(ne)} bits (10x the block's own size) — banks a ${Ja(te)} block at Kilobytes' current level cost, redeemable right away`,type:`button`,variant:T?`info`:`neutral`,$progress:re,children:[(0,I.jsx)(cr,{children:`🏦 Build ${Ja(te)} Storage Bank (${B(ne)} bits)`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry storage build progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":ne})]}),ie.length>0&&(0,I.jsx)(Ba,{role:`group`,"aria-label":`byte foundry storage banks`,children:ie.map(e=>{let t=o.storageBanks[e],r=Zi(a,e);return(0,I.jsx)(Va,{"aria-label":`redeem ${Ja(e)} storage bank`,disabled:!r,onClick:()=>n.redeemStorageBank(e),title:r?`Redeems 1 ${Ja(e)} bank for 1 free Kilobyte`:`Redeemable once Kilobytes' level cost reaches ${Ja(e)}`,type:`button`,variant:r?`success`:`neutral`,children:`${Ja(e)} ×${t}`},e)})}),ie.length>0&&(0,I.jsx)(ar,{"aria-label":o.storageAutoRedeemEnabled?`pause storage auto-redeem`:`resume storage auto-redeem`,onClick:()=>n.setStorageAutoRedeemEnabled(!o.storageAutoRedeemEnabled),title:`Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed`,type:`button`,variant:`neutral`,children:(0,I.jsx)(cr,{children:o.storageAutoRedeemEnabled?`⏸ Pause Storage Auto-Redeem`:`▶ Resume Storage Auto-Redeem`})})]}),l&&(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(ka,{children:[`Transfer to Kilobytes (`,y,` left)`]}),(0,I.jsx)(La,{role:`group`,"aria-label":`byte foundry kilobyte transfer blocks`,children:Array.from({length:_},(e,t)=>{let r=t<v,i=t===v;return(0,I.jsx)(Ra,{"aria-label":r?`transferred block ${t+1}`:i?`convert 1000 bits into 1 Kilobyte`:`locked transfer block ${t+1}`,disabled:r||!i||!x,onClick:i?n.convertIntroBitsToKilobytes:void 0,title:r?`Already transferred`:i?x?`1000 bits → 1 Kilobyte`:`Fill Memory to 1000 bits first`:`Transfer the block to your left first`,type:`button`,$active:i,$consumed:r,$progress:i?ee:void 0,children:i&&(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry convert progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":1e3})},t)})})]}),t&&(0,I.jsx)(ar,{"aria-label":`Back to game`,onClick:t,title:`Back to game`,type:`button`,variant:`neutral`,children:(0,I.jsx)(cr,{children:`← Back to game`})})]})},Za=`0.5.0`,Qa=F.main`
+`,Va=[`B`,...R.map(e=>e.symbol)],Ha=1e3,Ua=(e,t)=>{if(!t)return null;let n=8,r=0;for(;e/n>=Ha&&r<Va.length-1;)n*=Ha,r+=1;return{symbol:Va[r],divisor:n}},Wa=(e,t)=>Math.floor(e*10**t)/10**t,Ga=(e,t)=>t?`${B(Wa(e/t.divisor,3))} ${t.symbol}`:`${B(e)} bit${e===1?``:`s`}`,Ka=(e,t,n)=>{let r=Ua(t,n);return`${Ga(e,r)} / ${Ga(t,r)}`},qa=R.map(e=>e.symbol),Ja=e=>{if(e<1e3)return`${B(e)} bit${e===1?``:`s`}`;let t=e/gr,n=0;for(;t>=Ha&&n<qa.length-1;)t/=Ha,n+=1;return`${B(t)} ${qa[n]}`},Ya=e=>Math.min(100,Math.max(0,e)),Xa=({game:e,onBack:t})=>{let{actions:n,dismissOfflineProgress:r,offlineProgress:i,state:a}=e,{intro:o}=a,s=o.bits>=o.capacity,c=!o.byteCreated&&o.bits>=8,l=Vi(a),u=Pi(o),d=Ri(o.productionMilestoneTier),f=d/8,p=zi(o.productionMilestoneTier),m=o.productionMilestoneTierClaims>=p,h=o.bits>=d&&!m,g=Hi(a),_=g/gr,v=Math.floor(o.bitsTransferredThisCycle/gr),y=Math.max(0,_-v),b=Math.max(0,g-o.bitsTransferredThisCycle),x=o.bits>=1e3&&b>=1e3,S=Ya(o.bits/8*100),C=Ya(o.bits/o.capacity*100),w=Ya(o.bits/d*100),ee=Ya(o.bits/gr*100),te=Ji(a),ne=Yi(te),T=o.bits>=ne,re=Ya(o.bits/ne*100),ie=Object.keys(o.storageBanks??{}).map(Number).filter(e=>o.storageBanks[e]>0).sort((e,t)=>e-t);return(0,I.jsxs)(Ta,{children:[(0,I.jsx)(wa,{offlineProgress:i,dismissOfflineProgress:r}),(0,I.jsx)(Ea,{children:`⚙️ Byte Foundry`}),(0,I.jsx)(Da,{children:o.mainGameUnlocked?b>0?`Main game unlocked — ${B(b)} bits left to transfer this cycle.`:`Transfer budget is fully spent — resets next Prestige.`:`Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.`}),(0,I.jsx)(Ma,{children:(0,I.jsxs)(Na,{"aria-label":`byte foundry balance`,$progress:C,children:[(0,I.jsx)(Oa,{children:`Memory`}),(0,I.jsx)(ka,{children:Ka(o.bits,o.capacity,o.byteCreated)}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry bit balance`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity}),o.byteCreated&&(u<8?(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(Da,{children:[`+`,B(u),` bit`,u===1?``:`s`,`/sec`]}),(0,I.jsx)(Pa,{role:`progressbar`,"aria-label":`byte foundry production rate`,"aria-valuenow":u,"aria-valuemin":0,"aria-valuemax":8,children:Array.from({length:8},(e,t)=>(0,I.jsx)(Fa,{$filled:t<u},t))})]}):(0,I.jsxs)(Da,{children:[`+`,B(u/8),` Byte`,u/8==1?``:`s`,`/sec`]}))]})}),(0,I.jsx)(Aa,{"aria-label":`tap to generate a bit`,disabled:s,onClick:n.tapIntroBit,type:`button`,$compact:o.byteCreated,children:`👆 Tap`}),(0,I.jsxs)(ja,{children:[c&&(0,I.jsxs)(ar,{"aria-label":`combine 8 bits into a Byte`,onClick:n.combineIntroByte,type:`button`,variant:`primary`,$progress:S,children:[(0,I.jsx)(cr,{children:`🔗 Combine into a Byte`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry combine progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":8})]}),o.byteCreated&&(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(ar,{"aria-label":`sacrifice all bits for 10x capacity`,disabled:!s,onClick:n.pickIntroCapacityMilestone,title:`Empty Memory for 10x capacity`,type:`button`,variant:s?`prestige`:`neutral`,$progress:C,children:[(0,I.jsx)(cr,{children:`💥 Sacrifice for 10x Capacity`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry sacrifice progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity})]}),(0,I.jsxs)(ar,{"aria-label":`invest bits for double production`,disabled:!h,onClick:n.pickIntroProductionMilestone,title:m?`Already claimed ${p}/${p} at this tier`:`${B(f)} B — claim ${o.productionMilestoneTierClaims+1}/${p}`,type:`button`,variant:h?`info`:`neutral`,$progress:w,children:[(0,I.jsxs)(cr,{children:[`⚡ Invest for Double Production (`,B(f),` B)`]}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry invest progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":d})]})]})]}),o.byteCreated&&(0,I.jsxs)(Ra,{"aria-label":`byte foundry storage`,children:[(0,I.jsx)(Oa,{children:`Storage`}),(0,I.jsxs)(ar,{"aria-label":`build storage bank`,disabled:!T,onClick:n.buildStorageBank,title:`Costs ${B(ne)} bits (10x the block's own size) — banks a ${Ja(te)} block at Kilobytes' current level cost, redeemable right away`,type:`button`,variant:T?`info`:`neutral`,$progress:re,children:[(0,I.jsx)(cr,{children:`🏦 Build ${Ja(te)} Storage Bank (${B(ne)} bits)`}),(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry storage build progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":ne})]}),ie.length>0&&(0,I.jsx)(za,{role:`group`,"aria-label":`byte foundry storage banks`,children:ie.map(e=>{let t=o.storageBanks[e],r=Zi(a,e);return(0,I.jsx)(Ba,{"aria-label":`redeem ${Ja(e)} storage bank`,disabled:!r,onClick:()=>n.redeemStorageBank(e),title:r?`Redeems 1 ${Ja(e)} bank for 1 free Kilobyte`:`Redeemable once Kilobytes' level cost reaches ${Ja(e)}`,type:`button`,variant:r?`success`:`neutral`,children:`${Ja(e)} ×${t}`},e)})}),ie.length>0&&(0,I.jsx)(ar,{"aria-label":o.storageAutoRedeemEnabled?`pause storage auto-redeem`:`resume storage auto-redeem`,onClick:()=>n.setStorageAutoRedeemEnabled(!o.storageAutoRedeemEnabled),title:`Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed`,type:`button`,variant:`neutral`,children:(0,I.jsx)(cr,{children:o.storageAutoRedeemEnabled?`⏸ Pause Storage Auto-Redeem`:`▶ Resume Storage Auto-Redeem`})})]}),l&&(0,I.jsxs)(I.Fragment,{children:[(0,I.jsxs)(Oa,{children:[`Transfer to Kilobytes (`,y,` left)`]}),(0,I.jsx)(Ia,{role:`group`,"aria-label":`byte foundry kilobyte transfer blocks`,children:Array.from({length:_},(e,t)=>{let r=t<v,i=t===v;return(0,I.jsx)(La,{"aria-label":r?`transferred block ${t+1}`:i?`convert 1000 bits into 1 Kilobyte`:`locked transfer block ${t+1}`,disabled:r||!i||!x,onClick:i?n.convertIntroBitsToKilobytes:void 0,title:r?`Already transferred`:i?x?`1000 bits → 1 Kilobyte`:`Fill Memory to 1000 bits first`:`Transfer the block to your left first`,type:`button`,$active:i,$consumed:r,$progress:i?ee:void 0,children:i&&(0,I.jsx)(L,{role:`progressbar`,"aria-label":`byte foundry convert progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":1e3})},t)})})]}),t&&(0,I.jsx)(ar,{"aria-label":`Back to game`,onClick:t,title:`Back to game`,type:`button`,variant:`neutral`,children:(0,I.jsx)(cr,{children:`← Back to game`})})]})},Za=`0.5.0`,Qa=F.main`
   width: min(720px, calc(100vw - 2rem));
   margin: 0 auto;
   display: flex;
