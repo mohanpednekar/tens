@@ -35,13 +35,7 @@ the same unit, picked off `capacity` (raw bits before the Byte generator exists,
 capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
 B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier symbols — see
 "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
-balance"`), and, once `intro.byteCreated`, a second tracker line (`aria-label="byte foundry
-transfer-block tracker"`) showing `bits % getIntroTransferBudget(state)` in raw bits — a rolling
-view of progress within the current transfer-budget block (dynamic, not a fixed 8000 — see below).
-Rendered as `TrackerText` (a `styled(StatusText)` with full-strength `theme.color.text` and
-`font-weight: 600`, instead of `StatusText`'s own muted color/regular weight) so this specific line
-reads as live, meaningful progress rather than blending into the same muted tone as the
-passive-production readout right below it — followed by that readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
+balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
 paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
@@ -127,7 +121,10 @@ post-`mainGameUnlocked` — the mandatory gate has no way out.
 
 Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file): raw
 bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
-`TIER_DEFINITIONS`' own tier symbols) — a display-only convention, internal state always stores raw
+`TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places
+(`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
+`formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
+before it actually is — a display-only convention, internal state always stores raw
 bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
 "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
 matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
