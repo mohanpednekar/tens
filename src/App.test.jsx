@@ -5,6 +5,7 @@ import { version } from '../package.json'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   INTRO_AUTO_INVEST_THRESHOLD,
+  INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_MIN_TICK_SPEED_SECONDS,
@@ -2025,6 +2026,72 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
+test('shows one transfer block per remaining unit of the (default 8) transfer budget, only the leftmost clickable, and clicking it reveals the next as active', async () => {
+  const user = userEvent.setup()
+
+  // mainGameUnlocked seeded true (and reached via the voluntary nav link, like the "always-
+  // interactive" tests above) so a click here doesn't also navigate away to MainPage — isolating
+  // the block-sequencing behavior itself from the separate first-transfer-unlocks-the-game behavior
+  // already covered by the "manual convert button... unlocks the main game" test above.
+  // 2000 bits banked — exactly enough for two 1000-bit transfers — so clicking through the first
+  // block leaves 1000 bits behind, revealing the next block as already-active from that carried-
+  // over surplus rather than needing to wait for more production.
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true,
+      bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 2,
+      capacity: INTRO_AUTO_INVEST_THRESHOLD,
+      byteCreated: true,
+    },
+  })
+  render(<App />)
+  await user.click(screen.getByText('⚙️ Byte Foundry'))
+
+  const activeBlock = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
+  const lockedBlocks = screen.getAllByRole('button', { name: /^locked transfer block/i })
+  expect(activeBlock).toBeEnabled()
+  expect(lockedBlocks).toHaveLength(7)
+  lockedBlocks.forEach(block => expect(block).toBeDisabled())
+
+  await user.click(activeBlock)
+
+  // The block that was locked #2 is now the sole active block — already enabled from the 1000-bit
+  // surplus left over after the first transfer — and only 6 locked blocks remain.
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeEnabled()
+  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(6)
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(1)
+  expect(saved.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
+})
+
+test('auto-transfers every remaining block in bulk once the whole budget is available at once, and empties the block row', () => {
+  vi.useFakeTimers()
+
+  // A big jump — passive production or a large offline-progress catch-up — that skips straight
+  // past every individual block boundary in one go, rather than the player clicking through them.
+  seedIntroState({
+    bits: INTRO_AUTO_INVEST_THRESHOLD - 1,
+    capacity: INTRO_AUTO_INVEST_THRESHOLD,
+    byteCreated: true,
+    tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+    productionMultiplier: 1,
+  })
+  const { unmount } = render(<App />)
+
+  expect(screen.getAllByRole('button', { name: /transfer block|convert 1000 bits/i }).length).toBeGreaterThan(0)
+
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // Transitioned to MainPage (mainGameUnlocked flips on the bulk transfer) with all 8 Kilobytes
+  // granted at once — no transfer blocks left to click through one at a time.
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('tapping still increments Memory (still tappable) after the Byte generator exists', async () => {
   const user = userEvent.setup()
 
@@ -2038,6 +2105,22 @@ test('tapping still increments Memory (still tappable) after the Byte generator 
   await user.click(tapButton)
 
   expect(balanceBar).toHaveAttribute('aria-valuenow', '1')
+})
+
+test('shows the offline-progress notice on the Byte Foundry screen too, not just MainPage', () => {
+  // Regression test: applyOfflineProgress already replays tickIntroProduction/tickIntroAutoInvest
+  // during offline catch-up (tickGame runs them unconditionally, every tick, regardless of
+  // mainGameUnlocked) — the gap was that the notice itself only ever rendered inside MainPage, so a
+  // player who lands on (or is still gated to) ByteFoundryPage after being away saw no
+  // acknowledgment of it. mainGameUnlocked stays false here (bits stay far below capacity), so <App
+  // /> gates onto ByteFoundryPage — the notice should show there too.
+  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1 })
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+
+  render(<App />)
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
 test('the "Memory" label is shown on the balance card', () => {
@@ -2059,6 +2142,21 @@ test('the production rate shows a segmented block bar below 1 Byte/sec, and swit
   render(<App />)
   expect(screen.queryByRole('progressbar', { name: /byte foundry production rate/i })).not.toBeInTheDocument()
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
+})
+
+test('Invest for Double Production shows its cost in Bytes, with no stray comma from the button\'s mixed static/dynamic text', () => {
+  // Regression test for a ButtonContent bug: mixing literal text with an embedded {expression}
+  // (e.g. "Invest for Double Production ({cost} B)") used to render as "...(,1, B)" — a stray
+  // comma spliced in at each JSX child boundary — because ButtonContent's `String(children)` ran
+  // Array.prototype.toString() (bare-comma join) on what's actually an array of children whenever
+  // the label mixes text with an interpolated value, not a single string. See
+  // components/Button/index.jsx's ButtonContent.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
+  expect(investButton).toHaveTextContent('⚡ Invest for Double Production (1 B)')
+  expect(investButton.textContent).not.toContain(',')
 })
 
 test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
@@ -2290,7 +2388,7 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   // This cycle's shared transfer budget is exhausted, but the generator keeps running regardless.
-  expect(screen.getByText(/8000-bit transfer budget is fully spent/i)).toBeInTheDocument()
+  expect(screen.getByText(/transfer budget is fully spent/i)).toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
@@ -2298,8 +2396,8 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeInTheDocument()
-  // Convert is visible but disabled — the shared transfer budget, not a freeze, is what limits it.
-  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
+  // No transfer blocks render once this cycle's budget is fully spent — taken off the screen.
+  expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()

@@ -40,6 +40,7 @@ import {
   getGlobalTickspeedRegularStep,
   getIntroProductionMilestoneCost,
   getIntroProductionMilestoneMaxClaims,
+  getIntroTransferBudget,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
@@ -612,6 +613,19 @@ describe('isIntroConversionUnlocked', () => {
   })
 })
 
+describe('getIntroTransferBudget', () => {
+  it('is INTRO_AUTO_INVEST_THRESHOLD (DEFAULT_PURCHASE_BLOCK_SIZE Kilobyte units) at a fresh cycle\'s default block size', () => {
+    expect(getIntroTransferBudget(createInitialGameState())).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  })
+
+  it('grows with the Kilobyte tier\'s own current purchase block size, not a fixed constant', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
+    expect(getPurchaseBlockSize(state)).toBe(9)
+    expect(getIntroTransferBudget(state)).toBe(9 * INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+})
+
 describe('convertIntroBitsToKilobytes', () => {
   const firstTierId = TIER_DEFINITIONS[0].id
 
@@ -655,6 +669,19 @@ describe('convertIntroBitsToKilobytes', () => {
       mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD - 500,
     })
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
+  })
+
+  it('respects the dynamic (block-size-grown) budget rather than the old fixed 8000', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), lastTier.id, 101), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    // Block size grew to 9 (see getPurchaseBlockSize), so the transfer budget is now 9000 bits —
+    // another 1000-bit transfer is still allowed even though bitsTransferredThisCycle already
+    // equals the OLD fixed 8000 constant this replaced.
+    expect(getPurchaseBlockSize(state)).toBe(9)
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD + INTRO_BITS_PER_KILOBYTE_CONVERSION)
   })
 })
 
@@ -730,6 +757,21 @@ describe('tickIntroAutoInvest', () => {
       mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
     })
     expect(tickIntroAutoInvest(state)).toBe(state)
+  })
+
+  it('triggers at the dynamic (block-size-grown) threshold, not the old fixed 8000', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const grown = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
+    expect(getPurchaseBlockSize(grown)).toBe(9)
+
+    // Bits at exactly the OLD fixed threshold (8000) isn't enough yet — the grown budget is 9000.
+    const notYetFull = withIntro(grown, { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 10000, byteCreated: true })
+    expect(tickIntroAutoInvest(notYetFull)).toBe(notYetFull)
+
+    const full = withIntro(notYetFull, { bits: 9000 })
+    const after = tickIntroAutoInvest(full)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(9000)
   })
 })
 

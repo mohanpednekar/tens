@@ -20,48 +20,68 @@ view-tab system of its own. Unlike the old design, nothing here ever goes read-o
 renders identically whether reached as the mandatory gate or voluntarily; `onBack` (present only
 once `state.intro.mainGameUnlocked` is true) is the only thing that differs.
 
-Sections, top to bottom: a title/one-line status explainer (three variants — pre-unlock instructions,
-post-unlock with remaining transfer budget, or budget-exhausted, see below); a `StatCard`
+Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
+`docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
+non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
+catch up correctly during offline progress regardless of which page is active, so this page shows
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a title/one-line
+status explainer (three variants — pre-unlock instructions, post-unlock with remaining transfer
+budget, or budget-exhausted, see below); a `StatCard`
 (`aria-label="byte foundry balance"`) with a "Memory" label above `{bits} / {capacity}` plus a
 hidden `role="progressbar"` (`aria-label="byte foundry bit balance"`), and, once `intro.byteCreated`,
-a second tracker line (`aria-label="byte foundry 8000-bit tracker"`) showing
-`bits % INTRO_AUTO_INVEST_THRESHOLD` in raw bits — a rolling view of progress within the current
-8000-bit block, alongside the primary Bytes-denominated balance — followed by a passive-production
-readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line paired with a visible 8-block
-segmented `role="progressbar"` (`aria-label="byte foundry production rate"`, one block per whole
-bit/sec, filled left to right) showing rate progress toward 1 Byte/sec; at/above that, the block bar
-is replaced by a single "+N Byte(s)/sec" line instead (`getIntroProductionRate(intro) /
-BITS_PER_BYTE`). A large tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
-capacity`) calling `actions.tapIntroBit` — shrinks to half-width (`$compact`, `width: 50%`, same
-`5 / 3` aspect ratio as full size) once `byteCreated`, since passive production is the primary loop
-by then and tapping becomes a secondary/backup action, while remaining exactly as clickable; carries
-its own `$progress` fill (bits/capacity) and a paired hidden `role="progressbar"` (`aria-label="byte
-foundry tap progress"`), reusing `components/Button`'s exported `progressFill` helper directly since
-it isn't itself a `Button`. A "Combine into a Byte" button (`aria-label="combine 8 bits into a
-Byte"`, calling `actions.combineIntroByte`, `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only
-while `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two
-independently-gated milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all
-bits for 10x capacity"`, disabled unless `bits === capacity`, calling
-`actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest for Double
-Production" (`aria-label="invest bits for double production"`, its visible label including its own
-cost — `getIntroProductionMilestoneCost(intro.productionMilestoneTier)` — disabled unless `bits >=`
-that cost **and** `intro.productionMilestoneTierClaims < getIntroProductionMilestoneMaxClaims(tier)`;
-this cost is entirely independent of `capacity`, so the button is frequently enabled well before
-Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte Foundry") — rendered as ordinary, independent
-buttons with no coupling between their enabled states; each pairs with its own hidden
-`role="progressbar"` (`aria-label="byte foundry sacrifice progress"`/`"byte foundry invest
-progress"`, the latter's max set to the Invest cost, not `capacity`), matching `MainPage`'s own
-Buy/Upgrade button convention below. A "Transfer 1 KiloBits" button (`aria-label="convert 1000
-bits into 1 Kilobyte"`, calling `actions.convertIntroBitsToKilobytes`, `$progress`/hidden
-progressbar toward `INTRO_BITS_PER_KILOBYTE_CONVERSION`) shown whenever `isIntroConversionUnlocked(state)`,
-visible but disabled unless `bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION` **and** this cycle's
-remaining transfer budget (`INTRO_AUTO_INVEST_THRESHOLD - intro.bitsTransferredThisCycle`) can cover
-another 1000-bit transfer — its `title` explains which condition is unmet when disabled. The very
-first successful transfer this cycle (manual click here, or the `tickIntroAutoInvest` auto-convenience
-firing inside the shared tick loop once Memory fills to `INTRO_AUTO_INVEST_THRESHOLD`) sets
-`mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check reveals whatever page the
-player was last on (typically `'game'`) the instant that flips — no button or handler needed here for
-that transition itself.
+a second tracker line (`aria-label="byte foundry transfer-block tracker"`) showing
+`bits % getIntroTransferBudget(state)` in raw bits — a rolling view of progress within the current
+transfer-budget block (dynamic, not a fixed 8000 — see below), alongside the primary
+Bytes-denominated balance — followed by a passive-production readout: below `BITS_PER_BYTE` (8)
+bits/sec, a "+N bits/sec" line paired with a visible 8-block segmented `role="progressbar"`
+(`aria-label="byte foundry production rate"`, one block per whole bit/sec, filled left to right)
+showing rate progress toward 1 Byte/sec; at/above that, the block bar is replaced by a single "+N
+Byte(s)/sec" line instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A large tap button
+(`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling `actions.tapIntroBit`
+— shrinks to half-width (`$compact`, `width: 50%`, same `5 / 3` aspect ratio as full size) once
+`byteCreated`, since passive production is the primary loop by then and tapping becomes a
+secondary/backup action, while remaining exactly as clickable; carries its own `$progress` fill
+(bits/capacity) and a paired hidden `role="progressbar"` (`aria-label="byte foundry tap progress"`),
+reusing `components/Button`'s exported `progressFill` helper directly since it isn't itself a
+`Button`. A "Combine into a Byte" button (`aria-label="combine 8 bits into a Byte"`, calling
+`actions.combineIntroByte`, `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while
+`!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated
+milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x
+capacity"`, disabled unless `bits === capacity`, calling `actions.pickIntroCapacityMilestone`,
+`$progress` toward `capacity`) and "Invest for Double Production" (`aria-label="invest bits for
+double production"`, its visible label including its own cost **in Bytes** —
+`getIntroProductionMilestoneCost(intro.productionMilestoneTier) / BITS_PER_BYTE` — disabled unless
+`bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
+getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so the
+button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
+each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
+progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
+`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
+
+Below the action buttons, once `isIntroConversionUnlocked(state)` and at least one transfer remains
+this cycle, a **transfer-block row** (`role="group"`, `aria-label="byte foundry kilobyte transfer
+blocks"`), preceded by a small `SectionLabel` ("Transfer to Kilobytes (N blocks left)"): one square
+block per remaining `INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit transfer this cycle
+(`blocksRemaining = getIntroTransferBudget(state) / INTRO_BITS_PER_KILOBYTE_CONVERSION -
+floor(bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)`, dynamic — see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Only the leftmost (`$active`, index 0) block is
+interactive: `aria-label="convert 1000 bits into 1 Kilobyte"`, `$progress` = the existing
+bits-toward-1000 fill, `onClick={actions.convertIntroBitsToKilobytes}`, disabled unless `bits >=
+INTRO_BITS_PER_KILOBYTE_CONVERSION` **and** this cycle's remaining transfer budget
+(`getIntroTransferBudget(state) - intro.bitsTransferredThisCycle`) can cover another 1000-bit
+transfer, paired with a hidden `role="progressbar"` (`aria-label="byte foundry convert progress"`,
+reused from the old single-button design). Every block after it renders `aria-label="locked
+transfer block N"`, always disabled, `$progress={0}`, `title="Transfer the block to your left
+first"` — a visible placeholder showing how many transfers remain without being independently
+clickable. Already-transferred blocks simply aren't rendered at all, so the row visibly shrinks as
+the budget is spent (and disappears once `blocksRemaining` reaches 0) — no separate removal logic
+needed. The very first successful transfer this cycle (clicking the active block, or the
+`tickIntroAutoInvest` bulk auto-convenience firing inside the shared tick loop once Memory fills to
+the whole `getIntroTransferBudget(state)` at once — e.g. a big offline-progress jump — which empties
+every remaining block simultaneously) sets `mainGameUnlocked: true`, and `App.jsx`'s own
+`showingFoundry` render check reveals whatever page the player was last on (typically `'game'`) the
+instant that flips — no button or handler needed here for that transition itself.
 
 A "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
 button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
@@ -169,18 +189,19 @@ disappearing for the rest of the cycle — and stays just as interactive there a
   economy calculation — paired with a `VisuallyHidden
   role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
   visible `GoogolProgressLabel` ("N% to Prestige") underneath.
-- **HUD-scoped muted/accent text.** The offline notice's body text and the PP
-  header line's "N PP" figure render via `HudMutedText`/`HudGoldText` — a fork of the app-wide
-  `MutedText` (still hardcoded `#a3a3a3`, still used by `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/
-  `TopPrestigeBar`/`FullScreenCard`) — token-driven
+- **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
+  `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
+  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
   migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
   `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
   surface measures roughly 3.6:1 — below the 4.5:1 AA floor for normal text — but a `styled.b` renders
   bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also >=14pt (18.66px);
   1.1em (17.6px against the 16px root) fell just short of that threshold, so it's sized up to clear it
-  with margin. `Header`'s own text color and the offline notice's Dismiss button (`variant="neutral"`,
-  replacing the deprecated `color="darkgrey"` prop) are also token-driven as part of this same pass.
+  with margin. `Header`'s own text color is also token-driven as part of this same pass. The offline
+  notice's own body text/Dismiss button styling now lives in `components/OfflineProgressNotice` (see
+  below and `docs/COMPONENTS_REFERENCE.md`), not in this file — it uses its own token-driven
+  `NoticeText` rather than `HudMutedText`, since it's shared with `ByteFoundryPage` too.
 - **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
   display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
@@ -725,19 +746,25 @@ deliberate scroll pause but long enough to smooth over the crossing itself. `Sti
 repainting it from scratch every frame (a secondary contributor to the same flicker, given its solid
 `theme.color.page` background fill).
 
-**Offline notice.** When the hook reports a non-null `offlineProgress`, a dismissible
-`OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a fixed,
-viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered regardless of
-scroll position) rather than an inline card pushed into the page's normal document flow; never
-reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets `pointer-events: none` (with
-`pointer-events: auto` restored on the card itself) so the rest of the page stays clickable through
-the overlay's own surrounding space. The card has no click handler or `title` of its own — only the
-Dismiss button is interactive, keeping the whole-tile-is-clickable-and-also-has-a-tooltip pattern out
-of this component (see `docs/DESIGN_HISTORY.md` for why the earlier click-to-extend behavior was
-dropped) — and its content (description + centered Dismiss button) stacks in `StatCard`'s own
-flex-column, centered via `align-items`/`text-align: center` on the card. Self-dismisses via a
-countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's `$progress` fill, then
-an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before `dismissOfflineProgress` removes it.
+**Offline notice.** When the hook reports a non-null `offlineProgress`, MainPage renders the shared
+`components/OfflineProgressNotice` component (see `docs/COMPONENTS_REFERENCE.md`), passing
+`offlineProgress`/`dismissOfflineProgress` straight through — this component (and all the behavior
+described below) used to live inline in this file, but was extracted so `ByteFoundryPage` can render
+the exact same notice too (offline progress already applies to the Byte Foundry mechanically
+regardless of which page is active; only the notice itself was previously MainPage-exclusive). A
+dismissible `OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a
+fixed, viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered
+regardless of scroll position) rather than an inline card pushed into the page's normal document
+flow; never reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets
+`pointer-events: none` (with `pointer-events: auto` restored on the card itself) so the rest of the
+page stays clickable through the overlay's own surrounding space. The card has no click handler or
+`title` of its own — only the Dismiss button is interactive, keeping the whole-tile-is-clickable-and-
+also-has-a-tooltip pattern out of this component (see `docs/DESIGN_HISTORY.md` for why the earlier
+click-to-extend behavior was dropped) — and its content (description + centered Dismiss button)
+stacks in `StatCard`'s own flex-column, centered via `align-items`/`text-align: center` on the card.
+Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's
+`$progress` fill, then an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before
+`dismissOfflineProgress` removes it.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.

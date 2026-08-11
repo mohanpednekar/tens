@@ -160,8 +160,15 @@ export const ButtonLabel = styled.span`
 // icon-then-word convention (see MainPage), so the first space always lands right after the
 // icon glyph. Falls back to a single centered ButtonLabel for icon-less text (e.g. "Dismiss",
 // or any string with no space at all) rather than misreading its first word as an icon.
+//
+// `children` is an array, not a single string, whenever the caller's JSX mixes literal text with
+// an embedded {expression} (e.g. `<ButtonContent>Cost ({formatAmount(x)} B)</ButtonContent>`) —
+// JSX gives each text/expression segment its own array entry. Plain `String(children)` on such an
+// array uses Array.prototype.toString(), which joins with a bare comma (no space) — silently
+// splicing a "," into the rendered label at every interpolation boundary. Join with '' instead so
+// the segments concatenate back into the single string the caller actually wrote.
 export const ButtonContent = ({ children }) => {
-  const text = String(children)
+  const text = Array.isArray(children) ? children.join('') : String(children)
   const spaceIndex = text.indexOf(' ')
   if (spaceIndex === -1) return <ButtonLabel>{text}</ButtonLabel>
   return (

@@ -302,6 +302,27 @@ The following records *why* specific MainPage/component behaviors were built the
   `GoldText` styled component (only ever used inside this panel) were all deleted together. Any
   information a player might want (prestige count, unspent PP, production speed bonus, Auto-Prestige
   status) remains visible via the sticky PP header display and the PP Upgrades page.
+- **Offline notice extracted into `components/OfflineProgressNotice` so ByteFoundryPage can show it
+  too.** A request to "enable offline progress for the Byte Foundry" turned out, on investigation, to
+  already be satisfied at the engine level: `applyOfflineProgress` replays `tickGame` once per
+  simulated second, and `tickGame` unconditionally runs `tickIntroProduction`/`tickIntroAutoInvest`
+  first, every tick, regardless of `intro.mainGameUnlocked` — the Byte generator's passive production
+  and its auto-transfer-into-Kilobytes convenience both already caught up correctly while the game was
+  closed, with no code change needed there. The actual gap was that the "Welcome back! ... simulated N
+  of progress at 10% speed" notice itself only ever rendered inside `MainPage` — `App.jsx` already
+  passed the full `game` object (including `offlineProgress`/`dismissOfflineProgress`) to
+  `ByteFoundryPage` too, but that page never read those two fields, so a player who returned after
+  being away and landed on (or was still gated to) the Byte Foundry screen got no acknowledgment that
+  time had passed, even though their Memory/generator genuinely had progressed. Rather than
+  duplicating the notice's state/effects/styling into `ByteFoundryPage`, the whole thing (timing
+  constants, the countdown/fade/auto-dismiss state and effects, and the JSX) was extracted verbatim
+  out of `MainPage` into a new shared `components/OfflineProgressNotice`, taking
+  `{ offlineProgress, dismissOfflineProgress }` as props — the same two fields `useIncrementalGame()`
+  already returns — and both pages now render it identically near their own top (`MainPage` after its
+  `Header`, `ByteFoundryPage` after its `Title`). `HudMutedText` (used elsewhere in `MainPage` beyond
+  just this notice) was deliberately left in place rather than moved; the extracted component defines
+  its own equivalent `NoticeText` instead, so the move doesn't couple `ByteFoundryPage` to a
+  MainPage-only styled component.
 
 ## Economy model
 
@@ -467,6 +488,56 @@ view of progress within the current 8000-bit block, independent of the transfer-
 above (confirmed via the request's own worked example, `9000 % 8000 = 1000`, which the primary
 Bytes figure — `9000 ÷ 8 = 1125`, not the `1128`/`128` figures in the original request — doesn't
 otherwise convey).
+
+### The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way
+
+The entry above capped the Byte Foundry's per-cycle bit-to-Kilobyte transfer budget at a fixed
+`INTRO_AUTO_INVEST_THRESHOLD` (8000 bits). A follow-up request offered two designs for surfacing
+that budget as a row of clickable "transfer blocks" instead of a single repeatable button: a fixed 8
+blocks of 1000 bits each, or blocks sized to the Kilobyte tier's own current purchase block size
+(`getPurchaseBlockSize`, the same live, possibly-growing value the main game's own Buy button
+already reads) and explicitly "usable at any point in the whole game" — offered as a deliberately
+tentative alternative ("usually not worth it, but just possible"). The tentative option was chosen
+over the simpler default.
+
+Implemented as `getIntroTransferBudget(state) = getPurchaseBlockSize(state) *
+INTRO_BITS_PER_KILOBYTE_CONVERSION`, replacing the fixed constant everywhere it previously gated the
+budget (`getIntroRemainingTransferBudget`, `tickIntroAutoInvest`'s bulk-transfer trigger/amount).
+Since `getPurchaseBlockSize` starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (8) and only grows later in a
+run (once the last tier's own level count crosses `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`),
+this is numerically identical to the old fixed 8000 at a fresh cycle — no regression at the common
+case, just no longer hardcoded. `INTRO_AUTO_INVEST_THRESHOLD` itself wasn't removed — it still names
+the unrelated 2-claims-per-Invest-tier cutoff (`getIntroProductionMilestoneMaxClaims`), which was
+never part of this change and happens to share the same 8000 value by coincidence, not by shared
+meaning anymore. `ByteFoundryPage`'s single "Transfer 1 KiloBits" button was replaced by a
+`TransferBlocksRow` of `blockCount - blocksTransferred` blocks (one per remaining
+`INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit transfer), with only the leftmost ever clickable/interactive
+— confirmed block semantics: a block's fill is simply a visual read of the existing `bits`-vs-1000
+progress (no new state needed), so any Memory surplus left over after a click carries straight into
+the newly-active next block, letting a large-enough balance be clicked through several blocks in a
+row. The existing `tickIntroAutoInvest` auto-convenience became the "once every remaining block is
+simultaneously available at once — e.g. a big offline-progress jump — auto-transfer them all in
+bulk and empty the row" edge case the request also asked for, needing no new logic beyond swapping
+in the dynamic budget it already used.
+
+The same round asked for Invest's cost to display in Bytes rather than bits (always exact —
+`getIntroProductionMilestoneCost` only ever returns multiples of `BITS_PER_BYTE`) and reported a "UI
+bug on Invest for double production with quotes shown as commas." Investigating that bug (rather
+than guessing at a fix) traced it to `components/Button/index.jsx`'s `ButtonContent`, not to
+anything in `ByteFoundryPage` itself: `ButtonContent` did `String(children)`, which works for a
+caller passing one plain string, but the Invest button's label mixes literal text with an embedded
+`{formatAmount(cost)}` expression — JSX hands such mixed content to `children` as an **array** of
+text/expression segments, not one string, and `String()` on an array invokes
+`Array.prototype.toString()`, which joins with a bare comma. The rendered label read literally as
+`"Invest for Double Production (,1, B)"` — a real, reproducible bug (confirmed via a failing
+`getByText` assertion whose DOM dump showed the stray commas), not a rendering-artifact false alarm.
+Fixed at the root — `Array.isArray(children) ? children.join('') : String(children)` — rather than
+only patching the one call site, since `docs/COMPONENTS_REFERENCE.md` had actually documented the
+old, narrower contract ("`ButtonContent` only accepts a single string child; callers with multiple
+JSX expressions should use `ButtonIcon`/`ButtonLabel` directly instead") — the Invest button's own
+call site had unknowingly violated that documented constraint. Given the fix makes `ButtonContent`
+robust to exactly this pattern, the doc was updated to describe the new, more permissive contract
+instead of re-asserting the old footgun.
 
 ### Why `getTierCost` uses a multiplier form, not a literal power
 

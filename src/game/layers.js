@@ -116,13 +116,13 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// Once the intro bit balance reaches this (== the capacity stage reached after 3 Sacrifice picks:
-// 8 → 80 → 800 → 8000), the full balance auto-converts into Kilobytes, same as a manual convert
-// but without needing a click (see tickIntroAutoInvest in engine.js). Also doubles as the shared,
-// per-Prestige-cycle CAP on how many bits may ever be converted into Kilobytes in total — manual
-// convertIntroBitsToKilobytes clicks and this auto-convert both draw from and are capped by the
-// same running intro.bitsTransferredThisCycle total (see engine.js) — so reaching this threshold
-// via any combination of manual/auto conversions stops further transfers until the next Prestige.
+// The per-cycle bit-to-Kilobyte transfer budget/auto-convert trigger point is no longer this fixed
+// value — it's dynamic (see getIntroTransferBudget in engine.js, tied to the Kilobyte tier's own
+// current purchase block size). This constant's only remaining role is the cost cutoff for
+// getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier through 1000 Bytes' worth,
+// 1 claim per tier after) — kept as a named constant since 8000 bits (1000 Bytes) is still a
+// meaningful, independent boundary for that unrelated mechanic, coincidentally matching the
+// transfer budget's own historical default (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
 export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see

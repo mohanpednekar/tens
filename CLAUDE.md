@@ -223,6 +223,11 @@ src/
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
+                               JSX), extracted so both MainPage and ByteFoundryPage can render it —
+                               offline progress already applies to the Byte Foundry mechanically
+                               regardless of page, this just makes the notice itself page-agnostic
+                               too. Full contract: `docs/COMPONENTS_REFERENCE.md`
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
@@ -394,19 +399,28 @@ loop's own real-time resolution, then switches to doubling the per-tick amount i
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
 Once capacity reaches 1000 Bytes (8000 bits — the same threshold `isIntroConversionUnlocked` has always
-used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte); the very first
-successful conversion (manual, or via the "Memory fills to 8000 bits" auto-convert convenience) unlocks
-the main game immediately — no need to wait for a full 8000-bit balance. Further manual and auto
-conversions keep working after that, sharing one running **per-cycle transfer budget**
-(`intro.bitsTransferredThisCycle`, capped at `INTRO_AUTO_INVEST_THRESHOLD`, 8000 bits total) — once that
-cap is hit, by any combination of manual/auto conversions, no more transfers happen until the next
-Prestige reopens a fresh budget. Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/
-Invest all stay live indefinitely, every cycle, regardless of how much of the transfer budget remains.
-The balance card also always shows a second tracker (`intro.bits % INTRO_AUTO_INVEST_THRESHOLD`, in bits)
-alongside the primary Bytes-denominated balance, for a rolling view of progress within the current
-8000-bit block once past `byteCreated`. **The generator itself (capacity/whether it exists/its
-tickspeed/its rate/its independent Invest cost-ladder progress) is permanent, carried over by every real
-Prestige** — only Memory (the current bit balance), the main-game-unlock gate, and the transfer budget
+used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte) via a row of
+**transfer blocks** at the bottom of the screen — one block per remaining 1000-bit transfer this cycle,
+filling left to right; only the leftmost (active) block is ever clickable, and clicking it transfers just
+that block, revealing the next as active (any surplus Memory left over carries straight into it, so a
+large enough balance lets you click through several blocks in a row). The very first successful transfer
+(clicking a block, or via the "Memory fills to the full budget" auto-convert convenience, which fires the
+instant every remaining block's worth is available at once — e.g. a big offline-progress jump — and
+auto-transfers them all in bulk) unlocks the main game immediately — no need to wait for a full balance.
+Further transfers keep working after that, sharing one running **per-cycle transfer budget**
+(`intro.bitsTransferredThisCycle`, capped at `getIntroTransferBudget(state)`) — **dynamic, not a fixed
+8000**: exactly enough for `getPurchaseBlockSize(state)` Kilobyte units, the same live, possibly-growing
+block size the main game's own tier01 Buy button already reads (starts at `DEFAULT_PURCHASE_BLOCK_SIZE`,
+8, so 8000 bits at a fresh cycle — identical to the old fixed constant — only growing later in a run).
+Once that budget is hit, by any combination of block clicks or the bulk auto-convenience, no more
+transfers happen (and the block row disappears) until the next Prestige reopens a fresh budget. Nothing
+about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/Invest all stay live indefinitely, every
+cycle, regardless of how much of the transfer budget remains. The balance card also always shows a second
+tracker (`intro.bits % getIntroTransferBudget(state)`, in bits) alongside the primary Bytes-denominated
+balance, for a rolling view of progress within the current transfer-budget block once past `byteCreated`.
+**The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
+cost-ladder progress) is permanent, carried over by every real Prestige** — only Memory (the current bit
+balance), the main-game-unlock gate, and the transfer budget
 reset each cycle, so returning cycles are a fast pit-stop, not a full replay; Speed Up/Overclock leave the
 whole thing untouched either way, same as any other intra-cycle soft reset. Full state shape, engine
 functions, and constants: see the "Byte Foundry" section of `docs/ECONOMY_REFERENCE.md`.
@@ -502,7 +516,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (791 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (799 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

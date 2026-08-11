@@ -1,7 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
+import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, isIntroConversionUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST } from 'game/layers'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, isIntroConversionUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -28,7 +29,7 @@ const StatusText = styled.p`
   text-align: center;
 `
 
-const MemoryLabel = styled.p`
+const SectionLabel = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
@@ -102,6 +103,41 @@ const RateBlock = styled.span`
   background: ${props => (props.$filled ? props.theme.color.good : props.theme.color.surfaceSunken)};
 `
 
+const TransferBlocksRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
+// One block per remaining 1000-bit transfer this cycle (see getIntroTransferBudget) — only the
+// leftmost (index 0, $active) is ever interactive; the rest render as empty, disabled placeholders
+// so the player can see how many transfers are left. $progress reuses Button's own gradient-fill
+// convention, same as every other actionable control on this page.
+const TransferBlock = styled.button`
+  flex: 1 1 2.5rem;
+  aspect-ratio: 1;
+  border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  border-radius: ${props => props.theme.radius.sm};
+  background: transparent;
+  color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+  ${progressFill}
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.2);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+`
+
 // Numbers read in Bytes once the Byte generator exists — every capacity value in the ladder
 // (8, 80, 800, 8000, …) is evenly divisible by BITS_PER_BYTE, so this always yields clean whole
 // numbers. Before the Byte exists there's nothing to denominate in yet, so raw bits read better
@@ -114,14 +150,14 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
-// read-only: Tap/Combine/Sacrifice/Invest and further Convert transfers (up to this cycle's shared
-// transfer budget, see remainingTransferBudget below) all stay fully live whether reached via the
-// mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
+// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (up to this cycle's shared,
+// dynamic transfer budget, see remainingTransferBudget below) all stay fully live whether reached
+// via the mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
 // tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is
 // PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle,
 // until the next Prestige resets Memory (and the transfer budget) fresh.
 const ByteFoundryPage = ({ game, onBack }) => {
-  const { actions, state } = game
+  const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
 
   const isFull = intro.bits >= intro.capacity
@@ -130,31 +166,40 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
+  const investCostBytes = investCost / BITS_PER_BYTE
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   const canInvest = intro.bits >= investCost && !investClaimsUsedUp
 
-  const remainingTransferBudget = Math.max(0, INTRO_AUTO_INVEST_THRESHOLD - intro.bitsTransferredThisCycle)
-  const canConvert = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION && remainingTransferBudget >= INTRO_BITS_PER_KILOBYTE_CONVERSION
+  // The transfer budget (how many 1000-bit blocks this cycle allows in total) is dynamic — tied to
+  // the Kilobyte tier's own current purchase block size (see getIntroTransferBudget), same as the
+  // main game's own Buy button, not a fixed number.
+  const transferBudget = getIntroTransferBudget(state)
+  const blockCount = transferBudget / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  const blocksTransferred = Math.floor(intro.bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  const blocksRemaining = Math.max(0, blockCount - blocksTransferred)
+  const remainingTransferBudget = Math.max(0, transferBudget - intro.bitsTransferredThisCycle)
+  const canTransferBlock = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION && remainingTransferBudget >= INTRO_BITS_PER_KILOBYTE_CONVERSION
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const investProgress = clampPercent((intro.bits / investCost) * 100)
-  const convertProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
+  const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
   return (
     <RootDiv>
+      <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
       <Title>⚙️ Byte Foundry</Title>
       <StatusText>
         {!intro.mainGameUnlocked
           ? 'Tap to generate bits into your Memory. Combine 8 bits into a Byte to start producing more automatically.'
           : remainingTransferBudget > 0
-            ? `Main game unlocked! Your Byte generator keeps running here — convert more 1000-bit sets into Kilobytes any time, up to ${formatAmount(remainingTransferBudget)} bits left this cycle.`
-            : 'This cycle’s 8000-bit transfer budget is fully spent. Your Byte generator and its upgrades keep running — a fresh budget opens after your next Prestige.'}
+            ? `Main game unlocked! Your Byte generator keeps running here — transfer more 1000-bit blocks into Kilobytes any time, up to ${formatAmount(remainingTransferBudget)} bits left this cycle.`
+            : 'This cycle’s transfer budget is fully spent. Your Byte generator and its upgrades keep running — a fresh budget opens after your next Prestige.'}
       </StatusText>
 
       <StatCard aria-label="byte foundry balance">
-        <MemoryLabel>Memory</MemoryLabel>
+        <SectionLabel>Memory</SectionLabel>
         <BalanceText>
           {formatBitBalance(intro.bits, intro.byteCreated)} / {formatBitBalance(intro.capacity, intro.byteCreated)}
         </BalanceText>
@@ -166,8 +211,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
           aria-valuemax={intro.capacity}
         />
         {intro.byteCreated && (
-          <StatusText aria-label="byte foundry 8000-bit tracker">
-            {formatAmount(intro.bits % INTRO_AUTO_INVEST_THRESHOLD)} bit{(intro.bits % INTRO_AUTO_INVEST_THRESHOLD) === 1 ? '' : 's'} of this cycle's 8000
+          <StatusText aria-label="byte foundry transfer-block tracker">
+            {formatAmount(intro.bits % transferBudget)} bit{(intro.bits % transferBudget) === 1 ? '' : 's'} of this cycle's {formatAmount(transferBudget)}
           </StatusText>
         )}
         {intro.byteCreated && (
@@ -253,13 +298,13 @@ const ByteFoundryPage = ({ game, onBack }) => {
             title={
               investClaimsUsedUp
                 ? `Already claimed ${investMaxClaims} of ${investMaxClaims} at this cost tier`
-                : `Costs ${formatAmount(investCost)} bits — claim ${intro.productionMilestoneTierClaims + 1} of ${investMaxClaims} at this cost tier`
+                : `Costs ${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1} of ${investMaxClaims} at this cost tier`
             }
             type="button"
             variant={canInvest ? 'info' : 'neutral'}
             $progress={investProgress}
           >
-            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCost)} bits)</ButtonContent>
+            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCostBytes)} B)</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry invest progress"
@@ -270,31 +315,44 @@ const ByteFoundryPage = ({ game, onBack }) => {
           </Button>
         </>)}
 
-        {revealed && (
-          <Button
-            aria-label="convert 1000 bits into 1 Kilobyte"
-            disabled={!canConvert}
-            onClick={actions.convertIntroBitsToKilobytes}
-            title={
-              remainingTransferBudget < INTRO_BITS_PER_KILOBYTE_CONVERSION
-                ? 'This cycle’s 8000-bit transfer budget is already spent — resets on your next Prestige'
-                : 'Spends 1000 bits from your Memory to grant 1 Kilobyte in the main game'
-            }
-            type="button"
-            variant={canConvert ? 'success' : 'neutral'}
-            $progress={convertProgress}
-          >
-            <ButtonContent>💾 Transfer 1 KiloBits</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry convert progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
-            />
-          </Button>
-        )}
       </ActionsRow>
+
+      {revealed && blocksRemaining > 0 && (<>
+        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} block{blocksRemaining === 1 ? '' : 's'} left)</SectionLabel>
+        <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
+          {Array.from({ length: blocksRemaining }, (_, index) => {
+            const isActive = index === 0
+            return (
+              <TransferBlock
+                key={blocksTransferred + index}
+                aria-label={isActive ? 'convert 1000 bits into 1 Kilobyte' : `locked transfer block ${blocksTransferred + index + 1}`}
+                disabled={!isActive || !canTransferBlock}
+                onClick={isActive ? actions.convertIntroBitsToKilobytes : undefined}
+                title={
+                  !isActive
+                    ? 'Transfer the block to your left first'
+                    : remainingTransferBudget < INTRO_BITS_PER_KILOBYTE_CONVERSION
+                      ? 'This cycle’s transfer budget is already spent — resets on your next Prestige'
+                      : 'Spends 1000 bits from your Memory to grant 1 Kilobyte in the main game'
+                }
+                type="button"
+                $active={isActive}
+                $progress={isActive ? activeBlockProgress : 0}
+              >
+                {isActive && (
+                  <VisuallyHidden
+                    role="progressbar"
+                    aria-label="byte foundry convert progress"
+                    aria-valuenow={intro.bits}
+                    aria-valuemin={0}
+                    aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
+                  />
+                )}
+              </TransferBlock>
+            )
+          })}
+        </TransferBlocksRow>
+      </>)}
 
       {onBack && (
         <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">

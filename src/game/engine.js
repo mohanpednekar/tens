@@ -305,8 +305,8 @@ export const createInitialGameState = () => ({
     mainGameUnlocked: false,
     // Resets to 0 every real Prestige. Cumulative bits ever converted into Kilobytes this cycle,
     // manual convertIntroBitsToKilobytes clicks and tickIntroAutoInvest combined — capped at
-    // INTRO_AUTO_INVEST_THRESHOLD; both conversion paths refuse once the remaining budget can't
-    // cover another INTRO_BITS_PER_KILOBYTE_CONVERSION-sized transfer.
+    // getIntroTransferBudget(state) (dynamic — see there); both conversion paths refuse once the
+    // remaining budget can't cover another INTRO_BITS_PER_KILOBYTE_CONVERSION-sized transfer.
     bitsTransferredThisCycle: 0,
   },
 })
@@ -1294,11 +1294,21 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// How many more bits may be converted into Kilobytes this cycle before
-// INTRO_AUTO_INVEST_THRESHOLD's shared cap is hit — see bitsTransferredThisCycle in
-// createInitialGameState. Shared by convertIntroBitsToKilobytes and tickIntroAutoInvest below.
+// This cycle's total transfer budget, in bits — how much Memory may ever be converted into
+// Kilobytes in one Prestige cycle. Dynamic, not a fixed constant: exactly enough to grant
+// getPurchaseBlockSize(state) Kilobyte units (the SAME live, possibly-growing block size the main
+// game's own Buy button already reads for tier01) — INTRO_BITS_PER_KILOBYTE_CONVERSION per unit.
+// At a fresh cycle's default block size (DEFAULT_PURCHASE_BLOCK_SIZE, 8), this is 8000, matching
+// the constant this replaced; it only grows later in a run, once the last tier's own level count
+// crosses PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS (see getPurchaseBlockSize).
+export const getIntroTransferBudget = state =>
+  getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION
+
+// How many more bits may be converted into Kilobytes this cycle before getIntroTransferBudget's
+// shared cap is hit — see bitsTransferredThisCycle in createInitialGameState. Shared by
+// convertIntroBitsToKilobytes and tickIntroAutoInvest below.
 const getIntroRemainingTransferBudget = state =>
-  Math.max(0, INTRO_AUTO_INVEST_THRESHOLD - state.intro.bitsTransferredThisCycle)
+  Math.max(0, getIntroTransferBudget(state) - state.intro.bitsTransferredThisCycle)
 
 // Manual "convert 1000 bits into 1 Kilobyte": spends INTRO_BITS_PER_KILOBYTE_CONVERSION bits from
 // the intro's own pool and grants 1 free unit of the main game's first tier via grantTierUnits —
@@ -1360,20 +1370,21 @@ export const tickIntroProduction = elapsedSeconds => state => {
 
 // Auto-convert convenience, mirroring tickGame's own autobuyer "wait until the whole batch is
 // affordable, then fire once" convention (see tickGame below), just keyed on a bit-balance
-// threshold instead of a Money cost: once bits reaches INTRO_AUTO_INVEST_THRESHOLD (8000), it
-// auto-transfers without needing a manual convertIntroBitsToKilobytes click — a convenience for a
-// player who lets Memory fill all the way rather than converting in smaller chunks. Shares the
-// exact same cycle-wide transfer budget as the manual path (see getIntroRemainingTransferBudget)
-// and is a no-op once that budget is exhausted; transfers only the remaining budget if less than a
-// full 8000 is left (always a whole multiple of INTRO_BITS_PER_KILOBYTE_CONVERSION, since every
+// threshold instead of a Money cost: once bits reaches getIntroTransferBudget(state) — the WHOLE
+// remaining budget available at once, e.g. a fast-production or offline-catch-up jump that skips
+// past several individual 1000-bit blocks before the player could click through them one at a
+// time — it auto-transfers the lot without needing manual convertIntroBitsToKilobytes clicks. A
+// no-op once that budget is exhausted; transfers only the remaining budget if less than the full
+// amount is left (always a whole multiple of INTRO_BITS_PER_KILOBYTE_CONVERSION, since every
 // transfer — manual or auto — moves in exact 1000-bit units), granting proportionally fewer
 // Kilobytes. Also flips mainGameUnlocked on its first success, same as the manual path.
 export const tickIntroAutoInvest = state => {
-  if (state.intro.bits < INTRO_AUTO_INVEST_THRESHOLD) return state
+  const transferBudget = getIntroTransferBudget(state)
+  if (state.intro.bits < transferBudget) return state
   const remainingBudget = getIntroRemainingTransferBudget(state)
   if (remainingBudget <= 0) return state
 
-  const transferAmount = Math.min(INTRO_AUTO_INVEST_THRESHOLD, remainingBudget)
+  const transferAmount = Math.min(transferBudget, remainingBudget)
   const kilobytesGranted = transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION
 
   const firstTierId = TIER_DEFINITIONS[0].id
