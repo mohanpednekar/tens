@@ -47,22 +47,22 @@ const BalanceText = styled.p`
 
 // Once the Byte generator exists, tapping is a secondary/backup action (passive production is the
 // primary loop now) — $compact shrinks the button accordingly, while it stays just as clickable
-// (same disabled={isFull} gating either way). $progress reuses Button's own gradient-fill
-// convention (see components/Button's exported progressFill) so it indicates fill-toward-capacity
-// the same way every other actionable control on this page now does (see the buttons below).
+// (same disabled={isFull} gating either way). No progress fill here — Memory's own tile already
+// shows the same bits/capacity fill, so a duplicate meter on the tap button itself would be
+// redundant.
 const TapArea = styled.button`
   position: relative;
   width: ${props => (props.$compact ? '50%' : '100%')};
   aspect-ratio: 5 / 3;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
+  background: ${props => props.theme.color.surfaceSunken};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   font-family: ${props => props.theme.font.display};
   font-size: ${props => (props.$compact ? props.theme.type.scale.lg.size : props.theme.type.scale.xl.size)};
   font-weight: 700;
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease, width 0.2s ease, font-size 0.2s ease;
-  ${progressFill}
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -84,8 +84,10 @@ const ActionsRow = styled.div`
   width: 100%;
 `
 
-// Memory and Cache sit side by side rather than stacked — wraps to a single column on narrow
-// viewports since RootDiv itself caps at 480px.
+// A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
+// straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
+// as a row item (grow to fill available width) instead of a column item (which would instead try
+// to grow the tile's height).
 const TilesRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -93,8 +95,8 @@ const TilesRow = styled.div`
   width: 100%;
 `
 
-// Reuses Button's own progressFill gradient (see components/Button) so Memory/Cache fill toward
-// their capacity the same visual way every actionable control on this page already does, rather
+// Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
+// its capacity the same visual way every actionable control on this page already does, rather
 // than introducing a second, differently-styled meter convention.
 const FillableStatCard = styled(StatCard)`
   flex: 1 1 160px;
@@ -127,16 +129,20 @@ const TransferBlocksRow = styled.div`
   width: 100%;
 `
 
-// One block per remaining 1000-bit transfer this cycle (see getIntroTransferBudget) — only the
-// leftmost (index 0, $active) is ever interactive; the rest render as empty, disabled placeholders
-// so the player can see how many transfers are left. $progress reuses Button's own gradient-fill
-// convention, same as every other actionable control on this page.
+// One block per this cycle's whole transfer budget (see getIntroTransferBudget) — always all
+// `blockCount` of them, for the whole cycle; blocks never disappear once transferred. Three
+// visual states, read together as one continuous progress bar: $consumed (already transferred —
+// solid muted fill, permanently disabled), $active (the sole clickable one — accent border, partial
+// progressFill gradient toward its own 1000-bit threshold), and plain/upcoming (neither prop set —
+// empty outline, disabled placeholder). Only the active block is ever passed a $progress value —
+// progressFill returns null without one, so the plain `background` rule below (transparent, or
+// surfaceSunken once $consumed) applies instead.
 const TransferBlock = styled.button`
   flex: 1 1 2.5rem;
   aspect-ratio: 1;
   border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   border-radius: ${props => props.theme.radius.sm};
-  background: transparent;
+  background: ${props => (props.$consumed ? props.theme.color.surfaceSunken : 'transparent')};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease;
@@ -153,6 +159,34 @@ const TransferBlock = styled.button`
   &:disabled {
     cursor: not-allowed;
   }
+`
+
+// Groups the whole Storage mechanic (Build/held banks/auto-redeem) into its own labeled, visually
+// contained section instead of interleaving it flat into ActionsRow alongside Sacrifice/Invest —
+// as more bank denominations accumulate over a long run, a shared container with a compact chip
+// row (below) scales far better than one more full-width button per size.
+const StorageSection = styled(StatCard)`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+  align-items: stretch;
+`
+
+const StorageChipsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
+// A compact, wrapping chip per held bank denomination — same Button component (and its `variant`
+// success/neutral semantics) as the rest of the page, just shrunk from a full-width block down to
+// an inline chip via `flex: 0 0 auto` and tighter padding.
+const StorageChip = styled(Button)`
+  flex: 0 0 auto;
+  width: auto;
+  padding: ${props => props.theme.space.xs} ${props => props.theme.space.sm};
 `
 
 // Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
@@ -252,13 +286,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const investProgress = clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
-  // Cache is Memory's small rolling counterpart: the current progress toward the next convertible
-  // 1000-bit (1 KiloBits) chunk, wrapping back to 0 every time that chunk is spent — unlike Memory
-  // (fullProgress above), which tracks the whole balance against its much larger capacity. Only
-  // meaningful once conversion itself is revealed (see `revealed` above).
-  const cacheBits = intro.bits % INTRO_BITS_PER_KILOBYTE_CONVERSION
-  const cacheProgress = clampPercent((cacheBits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
-
   // Storage: bank blocks sized to tier01's (Kilobytes') own future per-unit level costs — build
   // now (10x the size, from Memory), redeem later once tier01's level actually reaches that cost.
   const nextStorageBankSize = getNextStorageBankSize(state)
@@ -315,22 +342,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
             )
           )}
         </FillableStatCard>
-
-        {revealed && (
-          <FillableStatCard aria-label="byte foundry cache" $progress={cacheProgress}>
-            <SectionLabel>Cache 1KB</SectionLabel>
-            <BalanceText>
-              {formatAmount(cacheBits)} / {formatAmount(INTRO_BITS_PER_KILOBYTE_CONVERSION)} bits
-            </BalanceText>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry cache progress"
-              aria-valuenow={cacheBits}
-              aria-valuemin={0}
-              aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
-            />
-          </FillableStatCard>
-        )}
       </TilesRow>
 
       <TapArea
@@ -339,16 +350,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
         onClick={actions.tapIntroBit}
         type="button"
         $compact={intro.byteCreated}
-        $progress={fullProgress}
       >
         👆 Tap
-        <VisuallyHidden
-          role="progressbar"
-          aria-label="byte foundry tap progress"
-          aria-valuenow={intro.bits}
-          aria-valuemin={0}
-          aria-valuemax={intro.capacity}
-        />
       </TapArea>
 
       <ActionsRow>
@@ -414,6 +417,13 @@ const ByteFoundryPage = ({ game, onBack }) => {
             />
           </Button>
 
+        </>)}
+
+      </ActionsRow>
+
+      {intro.byteCreated && (
+        <StorageSection aria-label="byte foundry storage">
+          <SectionLabel>Storage</SectionLabel>
           <Button
             aria-label="build storage bank"
             disabled={!canBuildStorageBank}
@@ -433,27 +443,31 @@ const ByteFoundryPage = ({ game, onBack }) => {
             />
           </Button>
 
-          {heldStorageBankSizes.map(size => {
-            const count = intro.storageBanks[size]
-            const redeemable = isStorageBankRedeemable(state, size)
-            return (
-              <Button
-                key={size}
-                aria-label={`redeem ${formatStorageSize(size)} storage bank`}
-                disabled={!redeemable}
-                onClick={() => actions.redeemStorageBank(size)}
-                title={
-                  redeemable
-                    ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
-                    : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`
-                }
-                type="button"
-                variant={redeemable ? 'success' : 'neutral'}
-              >
-                <ButtonContent>{`📤 Redeem ${formatStorageSize(size)} Bank (×${count})`}</ButtonContent>
-              </Button>
-            )
-          })}
+          {heldStorageBankSizes.length > 0 && (
+            <StorageChipsRow role="group" aria-label="byte foundry storage banks">
+              {heldStorageBankSizes.map(size => {
+                const count = intro.storageBanks[size]
+                const redeemable = isStorageBankRedeemable(state, size)
+                return (
+                  <StorageChip
+                    key={size}
+                    aria-label={`redeem ${formatStorageSize(size)} storage bank`}
+                    disabled={!redeemable}
+                    onClick={() => actions.redeemStorageBank(size)}
+                    title={
+                      redeemable
+                        ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
+                        : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`
+                    }
+                    type="button"
+                    variant={redeemable ? 'success' : 'neutral'}
+                  >
+                    {`${formatStorageSize(size)} ×${count}`}
+                  </StorageChip>
+                )
+              })}
+            </StorageChipsRow>
+          )}
 
           {heldStorageBankSizes.length > 0 && (
             <Button
@@ -468,31 +482,38 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </ButtonContent>
             </Button>
           )}
-        </>)}
+        </StorageSection>
+      )}
 
-      </ActionsRow>
-
-      {revealed && blocksRemaining > 0 && (<>
+      {revealed && (<>
         <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: blocksRemaining }, (_, index) => {
-            const isActive = index === 0
+          {Array.from({ length: blockCount }, (_, index) => {
+            const isConsumed = index < blocksTransferred
+            const isActive = index === blocksTransferred
             return (
               <TransferBlock
-                key={blocksTransferred + index}
-                aria-label={isActive ? 'convert 1000 bits into 1 Kilobyte' : `locked transfer block ${blocksTransferred + index + 1}`}
-                disabled={!isActive || !canTransferBlock}
+                key={index}
+                aria-label={
+                  isConsumed
+                    ? `transferred block ${index + 1}`
+                    : isActive
+                      ? 'convert 1000 bits into 1 Kilobyte'
+                      : `locked transfer block ${index + 1}`
+                }
+                disabled={isConsumed || !isActive || !canTransferBlock}
                 onClick={isActive ? actions.convertIntroBitsToKilobytes : undefined}
                 title={
-                  !isActive
-                    ? 'Transfer the block to your left first'
-                    : remainingTransferBudget < INTRO_BITS_PER_KILOBYTE_CONVERSION
-                      ? 'Transfer budget spent — resets next Prestige'
-                      : '1000 bits → 1 Kilobyte'
+                  isConsumed
+                    ? 'Already transferred'
+                    : isActive
+                      ? (canTransferBlock ? '1000 bits → 1 Kilobyte' : 'Fill Memory to 1000 bits first')
+                      : 'Transfer the block to your left first'
                 }
                 type="button"
                 $active={isActive}
-                $progress={isActive ? activeBlockProgress : 0}
+                $consumed={isConsumed}
+                $progress={isActive ? activeBlockProgress : undefined}
               >
                 {isActive && (
                   <VisuallyHidden
