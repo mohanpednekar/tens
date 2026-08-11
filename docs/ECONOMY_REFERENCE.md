@@ -279,11 +279,13 @@ small), then B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINI
 symbols (every capacity value in the Sacrifice ladder is evenly divisible by `BITS_PER_BYTE`, so this
 never loses precision at the Byte boundary). Both numbers always render in the *same* unit (picked
 off `capacity`, the larger of the two), so a balance never reads in a coarser unit than its own cap.
-Once `byteCreated`, it also shows a `bits % getIntroTransferBudget(state)` tracker in raw bits (a
-rolling view of progress within the current, dynamic transfer-budget block) and the current
-production rate. The Tap button itself carries no `$progress`/hidden progressbar of its own — the
-Memory tile above already shows the identical bits/capacity fill, so a second meter on the tap
-button would just duplicate it.
+The unit conversion (`floorToDecimals`, 3 decimal places — matching `formatAmount`'s own default
+max-fraction-digits) floors rather than rounds, the same never-overstate rationale as
+`formatCurrency` in `engine.js`: an Intl-rounded 7999/8000 bits would otherwise read as "1 KB"
+one tick before it's actually full. Once `byteCreated`, the tile also shows the current production
+rate. The Tap button itself carries no `$progress`/hidden progressbar of its own — the Memory tile
+above already shows the identical bits/capacity fill, so a second meter on the tap button would
+just duplicate it.
 
 Invest's own cost (`getIntroProductionMilestoneCost(tier)`) is shown on its button in **Bytes**
 (`cost ÷ BITS_PER_BYTE`, always a clean whole number — every tier's cost is evenly divisible by 8),

@@ -388,6 +388,23 @@ The following records *why* specific MainPage/component behaviors were built the
      info versus incidental text. A new `TrackerText = styled(StatusText)` (full-strength
      `theme.color.text`, `font-weight: 600`) is used for this one line only, giving it enough contrast
      to actually stand out against its neighbors.
+- **The "bits this cycle" tracker is removed entirely; the Memory tile's Bytes-unit balance now
+  floors instead of rounds.** Two follow-up requests on the tracker/formatting added in the round
+  above:
+  1. The `TrackerText` line just added (previous entry) was asked to be removed outright rather than
+     restyled further — the player didn't find the raw-bits "X / Y bits this cycle" figure useful
+     once it had enough contrast to actually read. Nothing else consumed `intro.bits % transferBudget`,
+     so this was a pure deletion (JSX block, the now-unused `TrackerText` styled component, and its
+     explanatory comment) with no state/logic follow-on.
+  2. The Bytes-unit conversion (`formatMemoryAmount`'s `bits / unit.divisor` branch) went through
+     `formatAmount`, which rounds to the nearest of up to 3 decimal places (Intl's default) — so a
+     balance could read as, e.g., "1 KB / 1 KB" one tick before it actually reached 1000 bits. This is
+     the exact overstatement problem `formatCurrency` (`engine.js`) already solved for the money
+     display ("floors rather than rounds so a displayed amount never overstates the actual spendable
+     balance") — the same fix (floor, not round) was applied here via a small local
+     `floorToDecimals(value, decimals)` helper, floored at the same 3 decimal places `formatAmount`
+     already shows rather than to a whole unit, since existing fractional display (e.g. "0.5 KB") was
+     still wanted — only the rounding *direction* needed to change, not the precision.
 
 ## Economy model
 

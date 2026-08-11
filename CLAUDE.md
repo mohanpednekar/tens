@@ -426,10 +426,11 @@ The page renders a single, button-style filling tile, **Memory** (the balance it
 capacity`, both scaled into the largest appropriate unit — raw bits before the Byte generator exists
 (capacity is always exactly 8 bits/1 Byte until then, so there's nothing to meaningfully denominate
 in yet), then B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier
-symbols), plus a second tracker (`intro.bits % getIntroTransferBudget(state)`, in bits) once past
-`byteCreated`, for a rolling view of progress within the current (dynamic) transfer budget. The Tap
-button carries no progress fill/hidden progressbar of its own — Memory's own tile already shows the
-same bits/capacity fill, so a duplicate meter on the tap button would add nothing.
+symbols; the unit conversion floors rather than rounds, same never-overstate rationale as
+`formatCurrency`, so a balance never reads as a complete unit — e.g. "1 KB" — one tick before it
+actually is). The Tap button carries no progress fill/hidden progressbar of its own — Memory's own
+tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
+nothing.
 
 **Storage** gets its own labeled section on the page (separate from Sacrifice/Invest), grouping the
 Build button, a compact wrapping row of chips — one per held bank denomination, labeled `<size>
@@ -551,7 +552,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (829 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (831 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

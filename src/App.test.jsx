@@ -2313,6 +2313,27 @@ test('Memory renders bits/capacity scaled into the same appropriate unit (KB), n
   expect(balanceBar.closest('section')).toHaveTextContent('0.5 KB / 1 KB')
 })
 
+test('Memory balance floors the Bytes-unit conversion instead of rounding, so it never reads complete early', () => {
+  // 7999/8000 bits *rounds* to "1 KB" at formatAmount's default 3-decimal precision but should
+  // *floor* to "0.999 KB" — the same never-overstate rationale as formatCurrency in engine.js,
+  // applied to the Byte Foundry's own Bytes-unit display.
+  seedIntroState({ bits: 7999, capacity: 8000, byteCreated: true })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('0.999 KB / 1 KB')
+  expect(balanceBar.closest('section')).not.toHaveTextContent('1 KB / 1 KB')
+})
+
+test('Memory tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
+  seedIntroState({ bits: 4500, capacity: 8000, byteCreated: true })
+  render(<App />)
+
+  expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByText(/bits this cycle/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/byte foundry transfer-block tracker/i)).not.toBeInTheDocument()
+})
+
 
 // --- Byte Foundry Storage (bank blocks) ---
 // tier01 (Kilobytes) starts at level 1 (per-unit cost 1000 bits/Bits, "1 KB") — buildStorageBank

@@ -29,16 +29,6 @@ const StatusText = styled.p`
   text-align: center;
 `
 
-// A stronger-contrast variant of StatusText for the Memory tile's transfer-block tracker
-// specifically — it's live progress toward this cycle's transfer budget, not secondary/incidental
-// text like the production-rate readout beside it, so it's given full-strength text color and a
-// bolder weight to actually stand out rather than blending into the same muted tone as everything
-// else on the tile.
-const TrackerText = styled(StatusText)`
-  color: ${props => props.theme.color.text};
-  font-weight: 600;
-`
-
 const SectionLabel = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
@@ -233,8 +223,16 @@ const getMemoryUnit = (capacityBits, byteCreated) => {
   return { symbol: MEMORY_UNIT_SYMBOLS[unitIndex], divisor }
 }
 
+// Floors rather than rounds, same "never overstate" rationale as formatCurrency in engine.js — an
+// Intl-rounded 999.9/1000 bits would otherwise read as "1 KB / 1 KB" one tick before it's actually
+// full. 3 decimal places matches formatAmount's own default max-fraction-digits, so this only
+// changes the rounding direction, not the displayed precision.
+const floorToDecimals = (value, decimals) => Math.floor(value * 10 ** decimals) / 10 ** decimals
+
 const formatMemoryAmount = (bits, unit) =>
-  unit ? `${formatAmount(bits / unit.divisor)} ${unit.symbol}` : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+  unit
+    ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
+    : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
 // Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
@@ -337,11 +335,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
             aria-valuemin={0}
             aria-valuemax={intro.capacity}
           />
-          {intro.byteCreated && (
-            <TrackerText aria-label="byte foundry transfer-block tracker">
-              {formatAmount(intro.bits % transferBudget)} / {formatAmount(transferBudget)} bits this cycle
-            </TrackerText>
-          )}
           {intro.byteCreated && (
             productionRate < BITS_PER_BYTE ? (
               <>
