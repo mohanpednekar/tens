@@ -323,6 +323,71 @@ The following records *why* specific MainPage/component behaviors were built the
   just this notice) was deliberately left in place rather than moved; the extracted component defines
   its own equivalent `NoticeText` instead, so the move doesn't couple `ByteFoundryPage` to a
   MainPage-only styled component.
+- **Cache tile removed; transfer blocks become persistent instead of shrinking; Tap loses its
+  progress fill; Storage gets its own labeled section.** Four related `ByteFoundryPage` requests in
+  one round, all pure UI (no `engine.js`/`layers.js` change needed for any of them):
+  1. The Cache 1KB tile (added alongside the Memory/Storage redesign in the previous entry) was
+     removed — once the transfer-block row itself always renders every block for the whole cycle
+     (see point 2), the active block's own partial fill already shows the same "progress toward the
+     next convertible 1000-bit chunk" the Cache tile existed to surface, making the second tile
+     redundant.
+  2. Transfer blocks used to be rendered via `Array.from({ length: blocksRemaining })` — only the
+     not-yet-transferred ones, so a click simply removed that block from the array and the row
+     visibly shrank. The player wanted spent blocks to stay in place, greyed out, so the full history
+     of a cycle's transfers stays visible rather than disappearing. The fix renders
+     `Array.from({ length: blockCount })` (the fixed total, `getIntroTransferBudget(state) /
+     INTRO_BITS_PER_KILOBYTE_CONVERSION`) always, deriving each block's consumed/active/upcoming state
+     from comparing its index to `blocksTransferred` — no block is ever removed from the array, only
+     re-styled. The consumed look intentionally bypasses `progressFill` entirely (only the active
+     block ever gets a `$progress` prop) in favor of a plain solid `background:
+     theme.color.surfaceSunken` behind a new `$consumed` prop — tried first via `progressFill`'s own
+     disabled-alpha dimming (`$progress={100}`), but that blends to a barely-there tint at the
+     existing low disabled alpha, not the clearly "done, filled-in" look actually wanted; a direct
+     solid fill reads unambiguously as spent, and the row overall — solid/partial/empty segments left
+     to right — was requested to read as "one long progress bar," which the direct-fill approach
+     achieves more legibly than a faint gradient would have.
+  3. The Tap button's own `$progress` fill/hidden progressbar were removed — Memory's own tile
+     already shows the identical bits/capacity fill, so the tap button's copy was pure duplication.
+     Removing `${progressFill}` from `TapArea` incidentally also removed the button's own background
+     (progressFill's gradient always painted over `theme.color.surfaceSunken` as its base — the one
+     place that base color was coming from), leaving default browser button styling (a stark white
+     button) until caught by a Playwright screenshot check and fixed with an explicit `background:
+     theme.color.surfaceSunken` rule on `TapArea` — worth remembering if `progressFill` is ever
+     removed from another component that relied on it for more than just the fill itself.
+  4. Storage's "Build Storage Bank" button and one full-width "Redeem ⟨size⟩ Bank (×N)" button per
+     held denomination used to sit flat in the same `ActionsRow` list as Sacrifice/Invest, growing by
+     one more full-width button every time a new bank size was built. Storage now gets its own
+     labeled `StorageSection` (a `styled(StatCard)`, matching the page's existing tile/section visual
+     language), and the one-button-per-size list became a compact, wrapping row of small chips
+     (`StorageChip = styled(Button)`, same `aria-label`/`variant` semantics as before, just shrunk to
+     `flex: 0 0 auto` with tighter padding and a shorter `<size> ×<count>` label) — scales far better
+     than a growing button stack as more denominations accumulate over a long run.
+- **Storage's buildable size drops from "one level ahead" to tier01's current level; the Memory
+  tile's transfer-block tracker gets a stronger-contrast style.** Two follow-up reports on the round
+  above:
+  1. "I don't see a way to build 1KB Storage bank" — correct: `getNextStorageBankSize` (the previous
+     entry) always targeted tier01's NEXT level cost (10,000 bits at a fresh save, since tier01
+     starts at level 1), specifically so a freshly built bank was never immediately redeemable. Asked
+     directly whether Storage should expose every ladder size at once (1KB/10KB/100KB/… simultaneously
+     buildable) or just start the single buildable size lower, the answer was the latter: renamed to
+     `getStorageBankSize` and changed to target tier01's CURRENT level cost
+     (`getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)`, no `+ 1`) — starts at 1000 bits
+     ("1 KB") on a fresh save, and still only ever offers one buildable size at a time, advancing as
+     tier01 levels up, same as before. The natural consequence — a freshly built bank now matches
+     tier01's price exactly, so `isStorageBankRedeemable`'s existing `<=` check makes it redeemable
+     immediately rather than only after a future level-up — was kept rather than special-cased around,
+     since `getFirstTierCost` only ever grows within a cycle (documented in the entry above): a bank
+     built at today's price never becomes *un*redeemable later, so "immediately redeemable" isn't a
+     bug, it's what "current level" implies. This still leaves a genuine use for banking rather than
+     just buying directly: queuing several banks ahead of an autobuyer catch-up burst (or a run of
+     manual buys) at today's price, then redeeming them whenever convenient, rather than the price
+     climbing between each individual purchase.
+  2. The Memory tile's "X / Y bits this cycle" transfer-budget tracker was reported as rendering but
+     easy to miss — it shared `StatusText`'s plain muted color/regular weight with the
+     passive-production readout right below it, so nothing set it apart as live, meaningful progress
+     info versus incidental text. A new `TrackerText = styled(StatusText)` (full-strength
+     `theme.color.text`, `font-weight: 600`) is used for this one line only, giving it enough contrast
+     to actually stand out against its neighbors.
 
 ## Economy model
 
