@@ -51,18 +51,16 @@ const BalanceText = styled.p`
 // the same way every other actionable control on this page now does (see the buttons below).
 const TapArea = styled.button`
   position: relative;
-  width: ${props => (props.$compact ? 'auto' : '100%')};
-  min-width: ${props => (props.$compact ? '150px' : 'auto')};
-  padding: ${props => (props.$compact ? `${props.theme.space.sm} ${props.theme.space.xl}` : '0')};
-  aspect-ratio: ${props => (props.$compact ? 'auto' : '5 / 3')};
+  width: ${props => (props.$compact ? '50%' : '100%')};
+  aspect-ratio: 5 / 3;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$compact ? props.theme.type.scale.md.size : props.theme.type.scale.xl.size)};
+  font-size: ${props => (props.$compact ? props.theme.type.scale.lg.size : props.theme.type.scale.xl.size)};
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease, font-size 0.2s ease;
+  transition: filter 0.15s ease, transform 0.05s ease, width 0.2s ease, font-size 0.2s ease;
   ${progressFill}
 
   &:hover:not(:disabled) {
