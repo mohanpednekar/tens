@@ -189,6 +189,382 @@ jobs:
           node-version: 22
           cache: yarn
 
+      - name: Compose prompt
+        id: compose-prompt
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          REPO: ${{ github.repository }}
+          OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
+          OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
+          OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
+          MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
+          MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
+          FAILING_PRS: ${{ steps.guard.outputs.failing_prs }}
+          DEPENDABOT_ALERTS: ${{ steps.guard.outputs.dependabot_alerts }}
+          DEPENDABOT_PRS: ${{ steps.guard.outputs.dependabot_prs }}
+        run: |
+          # Assembled here, rather than inline in the claude-code-action step's with.prompt
+          # field below, to work around a GitHub Actions parser limit: a YAML scalar mixing
+          # literal text with templated expressions gets compiled into one combined expression
+          # capped at 21,000 characters (literal text + expressions together) - this prompt's
+          # literal text alone was already past that. Composing it here with plain bash and
+          # exposing it as a single step output lets the action step's prompt field be a pure,
+          # single expression reference to this step's own output (no mixed content, so the
+          # limit doesn't apply), with the actual wording unchanged. Substitution uses bash's
+          # own parameter-expansion string replacement rather than envsubst, which isn't
+          # guaranteed present on the runner image. See docs/DESIGN_HISTORY.md for the
+          # incident this fixes.
+          #
+          # NOTE for future edits: this comment block deliberately avoids writing the literal
+          # dollar-brace-brace expression syntax, even inside this comment or in backticks -
+          # GitHub Actions substitutes that syntax anywhere in a run: block's raw text before
+          # bash ever sees it, comments included, so writing it literally here would itself be
+          # parsed as an (invalid, empty) expression and break the workflow file the same way
+          # this fix addresses.
+          : "${OPEN_PRS:=(none)}"
+          : "${OPEN_TASKS:=(none)}"
+          : "${OPEN_GAP_ISSUES:=(none)}"
+          : "${FAILING_PRS:=(none)}"
+          : "${DEPENDABOT_ALERTS:=(none)}"
+          : "${DEPENDABOT_PRS:=(none)}"
+          if [ "$MAIN_CI_BROKEN" = "true" ]; then
+            MAIN_CI_STATUS_LINE="FAILED: $MAIN_CI_RUN_URL"
+          else
+            MAIN_CI_STATUS_LINE="is green."
+          fi
+          cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
+          You are running as a scheduled, unattended maintenance job on this repository
+          (REPO: $REPO). Nobody is watching this run, so only make changes
+          you are confident are safe, small, and correct. There is no fixed turn-count cap on this
+          run. Instead, before picking or sizing a task below, estimate how much of the current
+          rolling 5-hour Claude usage window is likely still available and aim to keep this run's
+          planned work at or under roughly 50% of a full window's worth of effort — every tool call
+          counts as a turn, so use elapsed turns/time so far in the run as your practical signal
+          once you're underway. This is a self-estimated heuristic, not a metered value: you have no
+          visibility into how much of the window autonomous-pr-followup.yml or interactive usage may
+          already be consuming concurrently. 50% is a soft aim, not a hard stop — its margin exists
+          to absorb both that estimation inaccuracy and unknown concurrent usage, so modestly
+          overshooting it because a task turned out bigger than expected is fine, not a failure to
+          avoid at all costs. Work efficiently regardless: avoid redundant reads and re-checks.
+
+          Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
+          setup, and you must follow it exactly.
+
+          Currently-open autonomous PRs (branch: title):
+          $OPEN_PRS
+
+          Open task backlog (issues labeled claude-task, curated by the maintainer in planning
+          sessions):
+          $OPEN_TASKS
+
+          Currently-open gap-analysis proposals (number: title), filed by a previous run's gap
+          analysis task (see Phase B item 6):
+          $OPEN_GAP_ISSUES
+
+          Main branch CI status: the latest completed run of ci.yml on main
+          $MAIN_CI_STATUS_LINE
+
+          Open PRs with a failing check (excludes claude/auto-* branches, which
+          autonomous-pr-followup.yml already owns, and fork PRs):
+          $FAILING_PRS
+
+          Currently-open Dependabot security alerts, most severe first (critical, then high,
+          then medium, then low):
+          $DEPENDABOT_ALERTS
+
+          Currently-open Dependabot dependency-update PRs (branch: title) — cross-check these
+          against the alerts above before deciding an alert needs a fix of your own; a fix
+          already in flight there means Phase 0(b) above (or pr-auto-merge.yml, once its
+          checks pass) already has it covered:
+          $DEPENDABOT_PRS
+
+          This is a side project — time is not a constraint (one task every 5 hours is fine), but
+          your self-estimated usage-window budget per run is (see above). Before you start
+          implementing whatever task you pick below, roughly size it against that budget, reserving
+          a buffer of roughly the last 15-20% of it for test + commit + push + PR-open overhead, so
+          you don't run out mid-work. If a task looks too large to land safely within that budget
+          even after buffering:
+          - For a Phase A task issue, implement the largest coherent, independently-valuable,
+            test-covered SLICE of the spec first — see the `Part of #<number>` guidance in Phase A
+            below, instead of abandoning the task or attempting the whole thing at once.
+          - For a Phase B menu task, scope this run to one coherent sub-area (e.g. one file, one
+            specific gap) rather than trying to cover everything the item could mean at once, and
+            leave the rest for a future run to pick up under the same menu item.
+
+          Either way, don't wait until everything is finished to create visible progress: open the
+          PR as soon as there's a meaningful, buildable, test-passing first commit rather than only
+          at the very end, and push each subsequent meaningful commit as you make it rather than
+          batching every commit into one push at the end. If the run is ever cut short by the usage
+          budget, whatever has already landed then stays as real, discoverable progress on a real
+          PR instead of being lost with the ephemeral runner.
+
+          You do exactly ONE unit of work per run, chosen in three phases. A CI/CD failure
+          (Phase 0) always outranks the task backlog (Phase A), which always outranks the
+          maintenance menu (Phase B) — check them in that order and stop at the first one that
+          applies.
+
+          PHASE 0 — CI/CD failures (highest priority; skip straight past Phase A/B if this
+          applies, even if the 5-PR ceiling below would otherwise skip the run entirely). A
+          failing CI check blocks every other PR from merging via the required `test` check and
+          erodes trust in the automation, so treat it as more urgent than any feature or
+          maintenance work:
+          - (a) If "Main branch CI status" above says FAILED, that is the single highest
+            priority thing to do this run, full stop — do not also attempt Phase A or B. Open
+            the failing run with `gh run view <run-id> --log-failed` (parse the run id from the
+            URL) to find the actual error, create a branch named
+            `claude/heal-main-<short-slug>` off the latest main, make the smallest correct fix
+            that gets `yarn test` (and `yarn build` if the failure is build-related) green again,
+            push it, and open a PR with `gh pr create` explaining what broke and why the fix
+            addresses it. Do not merge it yourself. This branch prefix is already recognized by
+            pr-auto-merge.yml's low-risk auto-merge path, so a small fix can merge without
+            waiting for a human or for your next run.
+          - (b) Otherwise, if "Open PRs with a failing check" above is non-empty, pick one (most
+            valuable first) and unblock it:
+            - For a Dependabot PR (branch starts with `dependabot/`): these usually fail because
+              the branch has gone stale against main (e.g. it predates a source change the PR's
+              own copy of the tests doesn't know about yet), not because of the dependency bump
+              itself. Confirm with `gh pr view <number> --json mergeStateStatus` — if it shows
+              the branch is behind, request a rebase by commenting exactly `@dependabot rebase`
+              via `gh pr comment <number> --body '@dependabot rebase'`. Check
+              `gh pr view <number> --json comments` first and skip this PR if that comment is
+              already there from a previous run (rebase runs asynchronously; don't re-request or
+              push your own commits to a `dependabot/*` branch). If the branch is NOT behind
+              main, the failure is a real issue with the bump itself — leave it for a human, do
+              not attempt a code fix.
+            - For any other non-`claude/auto-*` PR, only act if you can identify a genuine,
+              small, confidently-correct fix; otherwise leave it for a human rather than guessing.
+            - After handling one PR this way, end the run — do not also attempt Phase A or B.
+          - (c) Otherwise, if "Currently-open Dependabot security alerts" above has any
+            critical or high severity entry, handle the single most severe one (critical
+            before high; lowest alert number breaks a tie) — a real, disclosed vulnerability
+            outranks the feature/maintenance backlog the same way a broken main outranks
+            everything else:
+            - First check whether "Currently-open Dependabot dependency-update PRs" already
+              has an entry for the same package (match by package name against the PR title
+              or branch). If so, a fix is already in flight — Phase 0(b) above (if it's
+              failing) or pr-auto-merge.yml (once its checks pass) already has it covered, so
+              skip straight to whichever of (a)/(b) actually applies instead of duplicating
+              that work here.
+            - Otherwise, read the alert's full detail with
+              `gh api repos/$REPO/dependabot/alerts/<number>` for the
+              vulnerable/patched version range. If the patched version is a safe patch or
+              minor bump of a direct dependency, apply it (`yarn upgrade
+              <package>@<patched-version>`, respecting yarn.lock / Yarn Classic v1), confirm
+              `yarn test` and `yarn build` are green, and open a PR on branch
+              `claude/auto-dep-alert-<number>-<short-slug>` whose body notes
+              `Addresses Dependabot alert #<number>`. Merging removes the vulnerable version,
+              which is what actually closes the alert — never call the Dependabot alerts API
+              to dismiss it directly; a forced dismissal without a real fix would just hide a
+              live vulnerability.
+            - If the fix needs a major/breaking bump, or the affected package isn't something
+              you can safely resolve with confidence this run, do not attempt it half-way:
+              file a `claude-task` issue instead (`gh issue create`) describing the alert
+              (package, severity, summary, URL) so it enters the ordinary Phase A backlog at
+              the front of the queue. Ensure both labels exist first (idempotent):
+              `gh label create priority:high --color b60205 --description "Jumps the Phase A
+              backlog queue" --force` and `gh label create security --color d93f0b
+              --description "Tracks a Dependabot security alert" --force`; apply
+              `claude-task`, `priority:high`, and `security` to the new issue.
+            - Either way (direct fix or issue filed), end the run — do not also attempt Phase
+              A or B.
+          - (d) If none of (a), (b), or (c) apply (main is green, the failing-PR list is
+            empty, and there is no unaddressed critical/high Dependabot alert), fall through
+            to Phase A.
+
+          PHASE A — task backlog next. If the backlog above is non-empty, walk it in order and
+          implement the first candidate that turns out to actually be implementable — do not
+          stop at the first candidate just because it's skippable or turns out infeasible; keep
+          moving down the order until you land on one you can implement, or you've worked through
+          every eligible candidate:
+          - Eligible means: no open autonomous PR above already covers it (its issue number
+            appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
+            is not blocked — if the issue body says "Blocked by #N", check #N with
+            `gh issue view N` and skip this task while #N is still open. (Issues labeled
+            `blocked` — either an environment/permission blocker, or a task issue where a
+            second consecutive run confirmed it can't be implemented as written, see the
+            comment-history check below — are excluded from the backlog list above before you
+            ever see it.)
+          - Order: issues labeled priority:high first, then normal (unlabeled) issues by lowest
+            issue number (FIFO), then issues labeled priority:low last — a priority:low issue is
+            only picked once no priority:high or normal-priority eligible candidate remains open.
+            This is the order you walk candidates in, not just how you pick the first one.
+            priority:low means "wait your turn behind everything else by default," not an
+            absolute ban: a priority:low issue can still be picked earlier if a maintainer or an
+            interactive session asks for it directly, or if it's genuinely the only eligible
+            candidate left (everything else is blocked/covered/exhausted). Idempotently ensure
+            the label exists before relying on it: `gh label create priority:low --color c5def5
+            --description "Deferred until the rest of the backlog clears" --force`.
+          - For each candidate in turn: first check its own comment history for a prior
+            automated investigation you'd otherwise just repeat: `gh issue view <number> --json
+            comments --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`.
+            If the most recent comment(s) already reached a "not implementable as currently
+            written" conclusion (stale/superseded spec, unresolvable ambiguity, etc.) — and
+            nothing has changed since that would justify re-deriving it (no maintainer reply or
+            issue-body edit after that comment, and no code change to the mechanism/files that
+            comment discusses) — do not redo the full investigation from scratch. If this issue
+            already has at least ONE prior comment reaching that same conclusion under those
+            conditions, this run's independent look is a confirmed repeat: leave one short
+            comment pointing at the earlier analysis instead of re-deriving pages of reasoning,
+            apply the `blocked` label immediately (see the label instructions below — the same
+            label and exclusion mechanism now applies to this case too, not just
+            environment/permission blockers) so a third run never re-hits the same wall, and move
+            on to the next eligible candidate in order. If this is the first time you are
+            reaching this conclusion (no qualifying prior comment), proceed to read the full spec
+            as normal.
+          - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
+            its acceptance criteria are the definition of done, its "Out of scope" section is
+            binding, and its "Verification" steps must be run in addition to `yarn test`.
+          - If this candidate turns out infeasible for reasons other than size (ambiguous spec,
+            can't get tests green after a reasonable attempt), do NOT half-land it: leave a
+            comment on the issue with `gh issue comment` explaining exactly what's blocking, make
+            no changes, and move on to the next eligible candidate in order (do not stop the run
+            here). If the blocker is an environment/permission restriction of this unattended
+            session itself (e.g. a Write the harness refuses to grant, like new files under
+            .claude/), ALSO label the issue so future runs stop re-attempting it and burning their
+            budget on the same wall: `gh label create blocked --color d93f0b --description
+            "Infeasible for unattended runs until a human unblocks it" --force`, then
+            `gh issue edit <number> --add-label blocked`. A human removes the label once
+            unblocked. Do not apply the label on an ordinary spec/test problem's FIRST occurrence
+            — stay comment-only initially, since a human may resolve it (close, rewrite, edit)
+            before automation needs to step in. But per the comment-history check above, if this
+            run's conclusion duplicates a prior comment's "infeasible as written" finding with
+            nothing new in between, that's no longer a first occurrence — apply the `blocked`
+            label right then, on this same run, rather than leaving it comment-only again and
+            waiting for a third or later run to notice the pattern.
+          - Budget guard on the walk itself: each skipped/infeasible candidate still costs turns
+            (comment history check, spec read, investigation, comment). Weigh that spend against
+            your self-estimated usage-window budget as you go — if you've already burned a
+            meaningful chunk of this run's budget walking past infeasible candidates and there
+            isn't enough left to confidently implement, test, and open a PR for whatever you'd
+            pick up next (even a small slice), stop the walk there rather than continuing to
+            consume budget with nothing to show for it. Ending the run with no PR after having
+            left honest comments on every candidate you actually looked at is a fine outcome —
+            better than forcing a rushed implementation of whatever candidate you happened to
+            reach right as the budget ran out.
+          - Once you land on a candidate you can actually implement, treat it exactly as before:
+            name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
+            branch name is how future runs know this task is already in flight), and make the PR
+            body include the line `Closes #<number>` so merging auto-closes the task — UNLESS
+            this PR is a partial slice per the budget guidance above, in which case use
+            `Part of #<number>` instead (no auto-close) and leave a `gh issue comment` on the task
+            issue summarizing exactly what this slice covers and what remains, so a future run can
+            pick up the rest (the issue stays open and eligible; only the PR that completes the
+            full spec includes `Closes #<number>`).
+          - If you work through every eligible candidate in the backlog without finding one you
+            can implement, end the run without a PR — you've still made real progress (comments,
+            and any new `blocked` labels, are durable signal for the next run and for a human),
+            just not a code change this run.
+
+          PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
+          eligible task issue in Phase A, pick exactly one of the following menu tasks —
+          whichever is most valuable given the current state of the repo. Minimise PRs for
+          similar work: if one of the open
+          PRs above already covers the same task/purpose you were about to pursue (e.g. another
+          test-coverage PR while a test-coverage PR is already open), don't open a duplicate —
+          either pick a different, genuinely independent task from the menu instead, or if every
+          applicable task already has a matching open PR, make no changes this run. Conversely,
+          do open a separate PR for a task that's genuinely independent of what's already open
+          (e.g. a dependency bump alongside an already-open docs-sync PR) — the goal is avoiding
+          redundant PRs, not minimising the total PR count.
+
+          1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
+             src/game/layers.js, or src/game/storage.js and add tests for them.
+          2. Dependency & security maintenance — run `yarn audit`, and check the medium/low
+             severity entries in "Currently-open Dependabot security alerts" above (critical/high
+             entries are Phase 0(c)'s responsibility, not this menu item, and won't still be
+             listed there once handled). If there are safe patch or minor version bumps
+             available for either source, apply them via `yarn install`/`yarn upgrade`
+             (respecting yarn.lock, Yarn Classic v1 format) and confirm nothing breaks.
+          3. Code quality / simplification — look for dead code, duplicated logic, or drift from
+             CLAUDE.md's documented three-layer architecture (engine.js / useIncrementalGame.js /
+             MainPage) and fix it.
+          4. CLAUDE.md documentation sync — compare CLAUDE.md's documented function signatures,
+             constants, state shape, and test counts against the real source, and correct any
+             drift you find.
+          5. Workflow self-improvement — review this task menu and this workflow file
+             (.github/workflows/autonomous-maintenance.yml) itself: tighten a task description,
+             add a new low-risk task type, or retire one that repeatedly finds nothing to do. You
+             may edit ONLY .github/workflows/autonomous-maintenance.yml for this task — no other
+             file under .github/workflows/. You must NOT weaken or remove, even in the name of
+             "improving" it: the duplicate-PR guard step, the self-estimated usage-window budgeting
+             instructions (the ~50%-of-window soft target and its self-scoping fallback behavior),
+             the settings.permissions.deny list protecting the other workflow files, the requirement
+             that you never merge your own PR, the requirement to always open a PR for human
+             review instead of pushing straight to main, or the rule that the Phase A task
+             backlog always takes priority over this menu.
+          6. Gap analysis — survey the repo for a gap not already covered by an open issue or PR:
+             a missing test, stale or missing documentation, a CI/CD failure mode nothing
+             currently watches (Phase 0 above already covers a red main and stale/failing PRs —
+             this is for other gaps, e.g. deploy.yml or CodeQL failures going unwatched), an
+             unaddressed dependency/security finding, or a thin Phase A backlog. Skip any gap
+             already covered by one of the currently-open gap-analysis
+             proposals listed above. File exactly 1 well-specified claude-task issue (via
+             `gh issue create`) proposing a concrete solution — match the structure of
+             `.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance
+             criteria / Files likely touched / Out of scope / Verification / Explicit
+             authorizations / Dependencies) and size it the same way a human-authored task issue
+             would be sized (small enough for one run's budget, or explicitly split with
+             "Blocked by #N" if it's bigger). Do NOT implement the fix yourself in this run —
+             this task only proposes, it never opens a PR. Label the new issue with both
+             `claude-task` and `gap-analysis`; ensure the `gap-analysis` label exists first
+             (idempotent: `gh label create gap-analysis --color 0e8a16 --description
+             "Proposal filed by a gap-analysis run" --force`).
+
+          Hard constraints, no exceptions:
+          - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js), and
+            never make game-design/economy-rule changes, UNLESS you are implementing a Phase A
+            task issue whose "Explicit authorizations" section explicitly permits that specific
+            change — a claude-task issue is the maintainer's written sign-off. During Phase B
+            menu runs (and Phase 0 heal-main fixes) this ban is absolute.
+          - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-pr-followup.yml,
+            or pr-auto-merge.yml.
+          - Never change the dev/test server host binding away from 127.0.0.1.
+          - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
+            force-push, and never push directly to main.
+          - Never push your own commits to a `dependabot/*` branch — Dependabot owns that
+            branch's content; the only allowed interaction is the `@dependabot rebase` comment
+            described in Phase 0(b).
+          - Never call the Dependabot alerts API to dismiss an alert directly — an alert closes
+            automatically once the vulnerable version is gone from a merged fix; only Phase
+            0(c)'s actual dependency bump (or a human) may resolve one.
+          - If a change touches anything CLAUDE.md documents (function signatures, constants,
+            state shape, economy/game-rule behavior, file layout, or test counts), update
+            CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
+          - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
+            before doing anything else.
+
+          If, after all three phases, there is nothing safe and meaningful to do this run (no CI/CD
+          failure, no eligible task issue, and no menu task worth doing), make no changes and end
+          without creating a branch or PR — do not force a change just to have something to show.
+
+          If you do make a code change: create a branch named `claude/heal-main-<short-slug>` for a
+          Phase 0(a) fix, `claude/auto-dep-alert-<number>-<short-slug>` for a Phase 0(c) direct
+          fix, `claude/auto-task-<number>-<short-slug>` for a Phase A task, or
+          `claude/auto-<short-task-slug>` for a Phase B menu task, commit, push it, and open a pull
+          request against main using `gh pr create`. Structure the PR body to match
+          .github/pull_request_template.md (Summary / Test plan / Documentation sections), filling
+          in the checkboxes truthfully based on what you actually ran — and for a Phase A task,
+          include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per the
+          budget guidance above). The three exceptions are Phase 0(b)'s Dependabot rebase request
+          (a comment, not a branch or PR), Phase 0(c)'s issue-filing path when a critical/high
+          alert needs more than a safe direct bump, and Phase B item 6 (gap analysis) — all three
+          produce a filed issue or comment, not a branch or PR.
+          TEMPLATE_EOF
+          prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
+          prompt_text=${prompt_text//'$REPO'/$REPO}
+          prompt_text=${prompt_text//'$OPEN_PRS'/$OPEN_PRS}
+          prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
+          prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
+          prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
+          prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
+          prompt_text=${prompt_text//'$DEPENDABOT_PRS'/$DEPENDABOT_PRS}
+          prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}
+          {
+            echo "prompt<<PROMPT_COMPOSE_EOF"
+            printf '%s\n' "$prompt_text"
+            echo "PROMPT_COMPOSE_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run autonomous maintenance task
         id: claude
         if: steps.guard.outputs.skip != 'true'
@@ -226,323 +602,7 @@ jobs:
                 ]
               }
             }
-          prompt: |
-            You are running as a scheduled, unattended maintenance job on this repository
-            (REPO: ${{ github.repository }}). Nobody is watching this run, so only make changes
-            you are confident are safe, small, and correct. There is no fixed turn-count cap on this
-            run. Instead, before picking or sizing a task below, estimate how much of the current
-            rolling 5-hour Claude usage window is likely still available and aim to keep this run's
-            planned work at or under roughly 50% of a full window's worth of effort — every tool call
-            counts as a turn, so use elapsed turns/time so far in the run as your practical signal
-            once you're underway. This is a self-estimated heuristic, not a metered value: you have no
-            visibility into how much of the window autonomous-pr-followup.yml or interactive usage may
-            already be consuming concurrently. 50% is a soft aim, not a hard stop — its margin exists
-            to absorb both that estimation inaccuracy and unknown concurrent usage, so modestly
-            overshooting it because a task turned out bigger than expected is fine, not a failure to
-            avoid at all costs. Work efficiently regardless: avoid redundant reads and re-checks.
-
-            Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
-            setup, and you must follow it exactly.
-
-            Currently-open autonomous PRs (branch: title):
-            ${{ steps.guard.outputs.open_prs || '(none)' }}
-
-            Open task backlog (issues labeled claude-task, curated by the maintainer in planning
-            sessions):
-            ${{ steps.guard.outputs.open_tasks || '(none)' }}
-
-            Currently-open gap-analysis proposals (number: title), filed by a previous run's gap
-            analysis task (see Phase B item 6):
-            ${{ steps.guard.outputs.open_gap_issues || '(none)' }}
-
-            Main branch CI status: the latest completed run of ci.yml on main
-            ${{ steps.guard.outputs.main_ci_broken == 'true' && format('FAILED: {0}', steps.guard.outputs.main_ci_run_url) || 'is green.' }}
-
-            Open PRs with a failing check (excludes claude/auto-* branches, which
-            autonomous-pr-followup.yml already owns, and fork PRs):
-            ${{ steps.guard.outputs.failing_prs || '(none)' }}
-
-            Currently-open Dependabot security alerts, most severe first (critical, then high,
-            then medium, then low):
-            ${{ steps.guard.outputs.dependabot_alerts || '(none)' }}
-
-            Currently-open Dependabot dependency-update PRs (branch: title) — cross-check these
-            against the alerts above before deciding an alert needs a fix of your own; a fix
-            already in flight there means Phase 0(b) above (or pr-auto-merge.yml, once its
-            checks pass) already has it covered:
-            ${{ steps.guard.outputs.dependabot_prs || '(none)' }}
-
-            This is a side project — time is not a constraint (one task every 5 hours is fine), but
-            your self-estimated usage-window budget per run is (see above). Before you start
-            implementing whatever task you pick below, roughly size it against that budget, reserving
-            a buffer of roughly the last 15-20% of it for test + commit + push + PR-open overhead, so
-            you don't run out mid-work. If a task looks too large to land safely within that budget
-            even after buffering:
-            - For a Phase A task issue, implement the largest coherent, independently-valuable,
-              test-covered SLICE of the spec first — see the `Part of #<number>` guidance in Phase A
-              below, instead of abandoning the task or attempting the whole thing at once.
-            - For a Phase B menu task, scope this run to one coherent sub-area (e.g. one file, one
-              specific gap) rather than trying to cover everything the item could mean at once, and
-              leave the rest for a future run to pick up under the same menu item.
-
-            Either way, don't wait until everything is finished to create visible progress: open the
-            PR as soon as there's a meaningful, buildable, test-passing first commit rather than only
-            at the very end, and push each subsequent meaningful commit as you make it rather than
-            batching every commit into one push at the end. If the run is ever cut short by the usage
-            budget, whatever has already landed then stays as real, discoverable progress on a real
-            PR instead of being lost with the ephemeral runner.
-
-            You do exactly ONE unit of work per run, chosen in three phases. A CI/CD failure
-            (Phase 0) always outranks the task backlog (Phase A), which always outranks the
-            maintenance menu (Phase B) — check them in that order and stop at the first one that
-            applies.
-
-            PHASE 0 — CI/CD failures (highest priority; skip straight past Phase A/B if this
-            applies, even if the 5-PR ceiling below would otherwise skip the run entirely). A
-            failing CI check blocks every other PR from merging via the required `test` check and
-            erodes trust in the automation, so treat it as more urgent than any feature or
-            maintenance work:
-            - (a) If "Main branch CI status" above says FAILED, that is the single highest
-              priority thing to do this run, full stop — do not also attempt Phase A or B. Open
-              the failing run with `gh run view <run-id> --log-failed` (parse the run id from the
-              URL) to find the actual error, create a branch named
-              `claude/heal-main-<short-slug>` off the latest main, make the smallest correct fix
-              that gets `yarn test` (and `yarn build` if the failure is build-related) green again,
-              push it, and open a PR with `gh pr create` explaining what broke and why the fix
-              addresses it. Do not merge it yourself. This branch prefix is already recognized by
-              pr-auto-merge.yml's low-risk auto-merge path, so a small fix can merge without
-              waiting for a human or for your next run.
-            - (b) Otherwise, if "Open PRs with a failing check" above is non-empty, pick one (most
-              valuable first) and unblock it:
-              - For a Dependabot PR (branch starts with `dependabot/`): these usually fail because
-                the branch has gone stale against main (e.g. it predates a source change the PR's
-                own copy of the tests doesn't know about yet), not because of the dependency bump
-                itself. Confirm with `gh pr view <number> --json mergeStateStatus` — if it shows
-                the branch is behind, request a rebase by commenting exactly `@dependabot rebase`
-                via `gh pr comment <number> --body '@dependabot rebase'`. Check
-                `gh pr view <number> --json comments` first and skip this PR if that comment is
-                already there from a previous run (rebase runs asynchronously; don't re-request or
-                push your own commits to a `dependabot/*` branch). If the branch is NOT behind
-                main, the failure is a real issue with the bump itself — leave it for a human, do
-                not attempt a code fix.
-              - For any other non-`claude/auto-*` PR, only act if you can identify a genuine,
-                small, confidently-correct fix; otherwise leave it for a human rather than guessing.
-              - After handling one PR this way, end the run — do not also attempt Phase A or B.
-            - (c) Otherwise, if "Currently-open Dependabot security alerts" above has any
-              critical or high severity entry, handle the single most severe one (critical
-              before high; lowest alert number breaks a tie) — a real, disclosed vulnerability
-              outranks the feature/maintenance backlog the same way a broken main outranks
-              everything else:
-              - First check whether "Currently-open Dependabot dependency-update PRs" already
-                has an entry for the same package (match by package name against the PR title
-                or branch). If so, a fix is already in flight — Phase 0(b) above (if it's
-                failing) or pr-auto-merge.yml (once its checks pass) already has it covered, so
-                skip straight to whichever of (a)/(b) actually applies instead of duplicating
-                that work here.
-              - Otherwise, read the alert's full detail with
-                `gh api repos/${{ github.repository }}/dependabot/alerts/<number>` for the
-                vulnerable/patched version range. If the patched version is a safe patch or
-                minor bump of a direct dependency, apply it (`yarn upgrade
-                <package>@<patched-version>`, respecting yarn.lock / Yarn Classic v1), confirm
-                `yarn test` and `yarn build` are green, and open a PR on branch
-                `claude/auto-dep-alert-<number>-<short-slug>` whose body notes
-                `Addresses Dependabot alert #<number>`. Merging removes the vulnerable version,
-                which is what actually closes the alert — never call the Dependabot alerts API
-                to dismiss it directly; a forced dismissal without a real fix would just hide a
-                live vulnerability.
-              - If the fix needs a major/breaking bump, or the affected package isn't something
-                you can safely resolve with confidence this run, do not attempt it half-way:
-                file a `claude-task` issue instead (`gh issue create`) describing the alert
-                (package, severity, summary, URL) so it enters the ordinary Phase A backlog at
-                the front of the queue. Ensure both labels exist first (idempotent):
-                `gh label create priority:high --color b60205 --description "Jumps the Phase A
-                backlog queue" --force` and `gh label create security --color d93f0b
-                --description "Tracks a Dependabot security alert" --force`; apply
-                `claude-task`, `priority:high`, and `security` to the new issue.
-              - Either way (direct fix or issue filed), end the run — do not also attempt Phase
-                A or B.
-            - (d) If none of (a), (b), or (c) apply (main is green, the failing-PR list is
-              empty, and there is no unaddressed critical/high Dependabot alert), fall through
-              to Phase A.
-
-            PHASE A — task backlog next. If the backlog above is non-empty, walk it in order and
-            implement the first candidate that turns out to actually be implementable — do not
-            stop at the first candidate just because it's skippable or turns out infeasible; keep
-            moving down the order until you land on one you can implement, or you've worked through
-            every eligible candidate:
-            - Eligible means: no open autonomous PR above already covers it (its issue number
-              appears in a branch name like claude/auto-task-<number>-* or in a PR title), and it
-              is not blocked — if the issue body says "Blocked by #N", check #N with
-              `gh issue view N` and skip this task while #N is still open. (Issues labeled
-              `blocked` — either an environment/permission blocker, or a task issue where a
-              second consecutive run confirmed it can't be implemented as written, see the
-              comment-history check below — are excluded from the backlog list above before you
-              ever see it.)
-            - Order: issues labeled priority:high first, then normal (unlabeled) issues by lowest
-              issue number (FIFO), then issues labeled priority:low last — a priority:low issue is
-              only picked once no priority:high or normal-priority eligible candidate remains open.
-              This is the order you walk candidates in, not just how you pick the first one.
-              priority:low means "wait your turn behind everything else by default," not an
-              absolute ban: a priority:low issue can still be picked earlier if a maintainer or an
-              interactive session asks for it directly, or if it's genuinely the only eligible
-              candidate left (everything else is blocked/covered/exhausted). Idempotently ensure
-              the label exists before relying on it: `gh label create priority:low --color c5def5
-              --description "Deferred until the rest of the backlog clears" --force`.
-            - For each candidate in turn: first check its own comment history for a prior
-              automated investigation you'd otherwise just repeat: `gh issue view <number> --json
-              comments --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`.
-              If the most recent comment(s) already reached a "not implementable as currently
-              written" conclusion (stale/superseded spec, unresolvable ambiguity, etc.) — and
-              nothing has changed since that would justify re-deriving it (no maintainer reply or
-              issue-body edit after that comment, and no code change to the mechanism/files that
-              comment discusses) — do not redo the full investigation from scratch. If this issue
-              already has at least ONE prior comment reaching that same conclusion under those
-              conditions, this run's independent look is a confirmed repeat: leave one short
-              comment pointing at the earlier analysis instead of re-deriving pages of reasoning,
-              apply the `blocked` label immediately (see the label instructions below — the same
-              label and exclusion mechanism now applies to this case too, not just
-              environment/permission blockers) so a third run never re-hits the same wall, and move
-              on to the next eligible candidate in order. If this is the first time you are
-              reaching this conclusion (no qualifying prior comment), proceed to read the full spec
-              as normal.
-            - Read the full spec with `gh issue view <number>`. Implement exactly what it says —
-              its acceptance criteria are the definition of done, its "Out of scope" section is
-              binding, and its "Verification" steps must be run in addition to `yarn test`.
-            - If this candidate turns out infeasible for reasons other than size (ambiguous spec,
-              can't get tests green after a reasonable attempt), do NOT half-land it: leave a
-              comment on the issue with `gh issue comment` explaining exactly what's blocking, make
-              no changes, and move on to the next eligible candidate in order (do not stop the run
-              here). If the blocker is an environment/permission restriction of this unattended
-              session itself (e.g. a Write the harness refuses to grant, like new files under
-              .claude/), ALSO label the issue so future runs stop re-attempting it and burning their
-              budget on the same wall: `gh label create blocked --color d93f0b --description
-              "Infeasible for unattended runs until a human unblocks it" --force`, then
-              `gh issue edit <number> --add-label blocked`. A human removes the label once
-              unblocked. Do not apply the label on an ordinary spec/test problem's FIRST occurrence
-              — stay comment-only initially, since a human may resolve it (close, rewrite, edit)
-              before automation needs to step in. But per the comment-history check above, if this
-              run's conclusion duplicates a prior comment's "infeasible as written" finding with
-              nothing new in between, that's no longer a first occurrence — apply the `blocked`
-              label right then, on this same run, rather than leaving it comment-only again and
-              waiting for a third or later run to notice the pattern.
-            - Budget guard on the walk itself: each skipped/infeasible candidate still costs turns
-              (comment history check, spec read, investigation, comment). Weigh that spend against
-              your self-estimated usage-window budget as you go — if you've already burned a
-              meaningful chunk of this run's budget walking past infeasible candidates and there
-              isn't enough left to confidently implement, test, and open a PR for whatever you'd
-              pick up next (even a small slice), stop the walk there rather than continuing to
-              consume budget with nothing to show for it. Ending the run with no PR after having
-              left honest comments on every candidate you actually looked at is a fine outcome —
-              better than forcing a rushed implementation of whatever candidate you happened to
-              reach right as the budget ran out.
-            - Once you land on a candidate you can actually implement, treat it exactly as before:
-              name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
-              branch name is how future runs know this task is already in flight), and make the PR
-              body include the line `Closes #<number>` so merging auto-closes the task — UNLESS
-              this PR is a partial slice per the budget guidance above, in which case use
-              `Part of #<number>` instead (no auto-close) and leave a `gh issue comment` on the task
-              issue summarizing exactly what this slice covers and what remains, so a future run can
-              pick up the rest (the issue stays open and eligible; only the PR that completes the
-              full spec includes `Closes #<number>`).
-            - If you work through every eligible candidate in the backlog without finding one you
-              can implement, end the run without a PR — you've still made real progress (comments,
-              and any new `blocked` labels, are durable signal for the next run and for a human),
-              just not a code change this run.
-
-            PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
-            eligible task issue in Phase A, pick exactly one of the following menu tasks —
-            whichever is most valuable given the current state of the repo. Minimise PRs for
-            similar work: if one of the open
-            PRs above already covers the same task/purpose you were about to pursue (e.g. another
-            test-coverage PR while a test-coverage PR is already open), don't open a duplicate —
-            either pick a different, genuinely independent task from the menu instead, or if every
-            applicable task already has a matching open PR, make no changes this run. Conversely,
-            do open a separate PR for a task that's genuinely independent of what's already open
-            (e.g. a dependency bump alongside an already-open docs-sync PR) — the goal is avoiding
-            redundant PRs, not minimising the total PR count.
-
-            1. Test coverage gaps — find untested branches or edge cases in src/game/engine.js,
-               src/game/layers.js, or src/game/storage.js and add tests for them.
-            2. Dependency & security maintenance — run `yarn audit`, and check the medium/low
-               severity entries in "Currently-open Dependabot security alerts" above (critical/high
-               entries are Phase 0(c)'s responsibility, not this menu item, and won't still be
-               listed there once handled). If there are safe patch or minor version bumps
-               available for either source, apply them via `yarn install`/`yarn upgrade`
-               (respecting yarn.lock, Yarn Classic v1 format) and confirm nothing breaks.
-            3. Code quality / simplification — look for dead code, duplicated logic, or drift from
-               CLAUDE.md's documented three-layer architecture (engine.js / useIncrementalGame.js /
-               MainPage) and fix it.
-            4. CLAUDE.md documentation sync — compare CLAUDE.md's documented function signatures,
-               constants, state shape, and test counts against the real source, and correct any
-               drift you find.
-            5. Workflow self-improvement — review this task menu and this workflow file
-               (.github/workflows/autonomous-maintenance.yml) itself: tighten a task description,
-               add a new low-risk task type, or retire one that repeatedly finds nothing to do. You
-               may edit ONLY .github/workflows/autonomous-maintenance.yml for this task — no other
-               file under .github/workflows/. You must NOT weaken or remove, even in the name of
-               "improving" it: the duplicate-PR guard step, the self-estimated usage-window budgeting
-               instructions (the ~50%-of-window soft target and its self-scoping fallback behavior),
-               the settings.permissions.deny list protecting the other workflow files, the requirement
-               that you never merge your own PR, the requirement to always open a PR for human
-               review instead of pushing straight to main, or the rule that the Phase A task
-               backlog always takes priority over this menu.
-            6. Gap analysis — survey the repo for a gap not already covered by an open issue or PR:
-               a missing test, stale or missing documentation, a CI/CD failure mode nothing
-               currently watches (Phase 0 above already covers a red main and stale/failing PRs —
-               this is for other gaps, e.g. deploy.yml or CodeQL failures going unwatched), an
-               unaddressed dependency/security finding, or a thin Phase A backlog. Skip any gap
-               already covered by one of the currently-open gap-analysis
-               proposals listed above. File exactly 1 well-specified claude-task issue (via
-               `gh issue create`) proposing a concrete solution — match the structure of
-               `.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance
-               criteria / Files likely touched / Out of scope / Verification / Explicit
-               authorizations / Dependencies) and size it the same way a human-authored task issue
-               would be sized (small enough for one run's budget, or explicitly split with
-               "Blocked by #N" if it's bigger). Do NOT implement the fix yourself in this run —
-               this task only proposes, it never opens a PR. Label the new issue with both
-               `claude-task` and `gap-analysis`; ensure the `gap-analysis` label exists first
-               (idempotent: `gh label create gap-analysis --color 0e8a16 --description
-               "Proposal filed by a gap-analysis run" --force`).
-
-            Hard constraints, no exceptions:
-            - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js), and
-              never make game-design/economy-rule changes, UNLESS you are implementing a Phase A
-              task issue whose "Explicit authorizations" section explicitly permits that specific
-              change — a claude-task issue is the maintainer's written sign-off. During Phase B
-              menu runs (and Phase 0 heal-main fixes) this ban is absolute.
-            - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-pr-followup.yml,
-              or pr-auto-merge.yml.
-            - Never change the dev/test server host binding away from 127.0.0.1.
-            - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
-              force-push, and never push directly to main.
-            - Never push your own commits to a `dependabot/*` branch — Dependabot owns that
-              branch's content; the only allowed interaction is the `@dependabot rebase` comment
-              described in Phase 0(b).
-            - Never call the Dependabot alerts API to dismiss an alert directly — an alert closes
-              automatically once the vulnerable version is gone from a merged fix; only Phase
-              0(c)'s actual dependency bump (or a human) may resolve one.
-            - If a change touches anything CLAUDE.md documents (function signatures, constants,
-              state shape, economy/game-rule behavior, file layout, or test counts), update
-              CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
-            - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
-              before doing anything else.
-
-            If, after all three phases, there is nothing safe and meaningful to do this run (no CI/CD
-            failure, no eligible task issue, and no menu task worth doing), make no changes and end
-            without creating a branch or PR — do not force a change just to have something to show.
-
-            If you do make a code change: create a branch named `claude/heal-main-<short-slug>` for a
-            Phase 0(a) fix, `claude/auto-dep-alert-<number>-<short-slug>` for a Phase 0(c) direct
-            fix, `claude/auto-task-<number>-<short-slug>` for a Phase A task, or
-            `claude/auto-<short-task-slug>` for a Phase B menu task, commit, push it, and open a pull
-            request against main using `gh pr create`. Structure the PR body to match
-            .github/pull_request_template.md (Summary / Test plan / Documentation sections), filling
-            in the checkboxes truthfully based on what you actually ran — and for a Phase A task,
-            include the `Closes #<number>` line (or `Part of #<number>` for a partial slice, per the
-            budget guidance above). The three exceptions are Phase 0(b)'s Dependabot rebase request
-            (a comment, not a branch or PR), Phase 0(c)'s issue-filing path when a critical/high
-            alert needs more than a safe direct bump, and Phase B item 6 (gap analysis) — all three
-            produce a filed issue or comment, not a branch or PR.
+          prompt: ${{ steps.compose-prompt.outputs.prompt }}
 
       - name: Classify Claude step failure
         # Companion to the continue-on-error above: keep every real failure red, but treat

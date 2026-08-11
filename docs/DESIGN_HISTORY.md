@@ -154,6 +154,53 @@ longer than expected and manually re-kicks it via `workflow_dispatch`. This note
 the mitigation that's actually in place; the watchdog mechanism itself lives outside this repo/issue
 system and isn't something a `claude-task` PR implements.
 
+### Outage: the main prompt tripped GitHub's 21,000-character mixed-expression limit
+
+Confirmed live on 2026-08-10: every run of `autonomous-maintenance.yml` (scheduled and
+`workflow_dispatch` alike) started failing instantly, with zero jobs scheduled and the run's display
+name falling back to the workflow's file path instead of its `name:` — both signs of a workflow file
+GitHub couldn't parse, not a job that ran and then failed. The run's annotation read "Exceeded max
+expression length 21000" at the line where the `claude-code-action` step's `with.prompt:` block began.
+GitHub Actions compiles a YAML scalar that mixes literal text with `${{ }}` expressions into one
+combined expression internally (turning the literal segments into string-literal pieces around the
+expression parts), and caps that *combined* length — literal text plus expressions together — at
+21,000 characters. The main prompt's literal text (Phase 0/A/B instructions, hard constraints, PR
+body/branch-naming conventions) had grown past that on its own well before counting its 9 embedded
+`${{ steps.guard.outputs.* }}` interpolations; nothing about the size or count of the individual
+expressions themselves was the problem. This had presumably been growing for a while (the prompt
+documents its own Phase B item 5 self-improvement path, which edits this same file), but only actually
+broke once the combined length finally crossed 21,000 sometime between a 2026-08-10 15:55 UTC green
+scheduled run and a 17:41 UTC run.
+
+The fix (see `CLAUDE.md`'s "Automation workflows" and the `Compose prompt` step in
+`autonomous-maintenance.yml`) moves prompt assembly into its own step, ahead of the `claude-code-action`
+step: the static prompt text is written to a file via a quoted bash heredoc (so it's pure literal text,
+no GitHub expression syntax inside it at all — quoting the heredoc delimiter also protects the
+backticks the prompt uses for inline code spans from bash's own command-substitution, since an
+*unquoted* heredoc would try to execute them), the handful of dynamic values (open PR/task/alert lists,
+CI status) are substituted in via bash's own `${var//pattern/replacement}` parameter expansion rather
+than a GitHub expression, and the result is exposed as a single step output. The `claude-code-action`
+step's `prompt:` field then becomes a single pure expression — `${{ steps.compose-prompt.outputs.prompt
+}}` — with no literal text mixed in, so GitHub never compiles it into the oversized combined form and
+the 21,000 limit doesn't apply regardless of how long the underlying prompt text grows. `envsubst` (the
+more obvious substitution tool) was deliberately not used — it isn't confirmed present on GitHub's
+hosted `ubuntu-latest` runner image (the existence of several third-party "envsubst-action" Marketplace
+wrappers whose sole purpose is supplying it is itself evidence it isn't reliably preinstalled), so
+depending on it would trade one outage cause for a subtler one. This pattern (assemble in a prior step,
+reference the result as a lone expression) is the standard workaround for any workflow step whose
+literal instructional text is inherently large and expected to keep growing — worth reapplying to
+`claude_args`/`settings:` here or to `autonomous-pr-followup.yml`'s own prompt if either ever approaches
+the same limit, rather than trimming content to stay under it.
+
+A parser-level failure like this is invisible to the job-status reconciliation steps described above
+(`Classify Claude step failure`, `Fail on denied file modifications`) — those inspect the action's own
+execution-output JSON, which is never produced when the workflow file itself fails to parse before any
+job is scheduled. The dormancy watchdog above (external, `workflow_dispatch`-based) would eventually
+have re-kicked the workflow, but every kick would have hit the identical parse error until a human or
+an interactive session edited the file — this class of failure needed exactly the kind of out-of-band
+detection this session used (checking the Actions run history and the run's own annotation directly)
+rather than anything the workflow's own internal reconciliation logic could self-heal.
+
 ### PR follow-up (`autonomous-pr-followup.yml`) — security reasoning
 
 Because it's triggered by events that can fire on any PR (including one opened from a fork), it
