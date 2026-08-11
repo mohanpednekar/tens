@@ -20,24 +20,37 @@ view-tab system of its own. It serves two roles, switched on `state.intro.comple
 
 - **Mandatory gate** (`intro.completed === false`, no `onBack` prop passed): the full interactive
   screen. Sections, top to bottom: a title/one-line explainer; a `StatCard`
-  (`aria-label="byte foundry balance"`) showing `{bits} / {capacity}` plus a hidden
-  `role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once `intro.byteCreated`, a
-  passive-production status line; a large tap button (`aria-label="tap to generate a bit"`,
-  disabled once `bits >= capacity`) calling `actions.tapIntroBit`; a "Combine into a Byte" button
-  (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`) shown only while
-  `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two
-  independently-gated milestone buttons — "Sacrifice for 10x Capacity"
-  (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless `bits === capacity`, calling
-  `actions.pickIntroCapacityMilestone`) and "Invest for Double Production"
-  (`aria-label="invest bits for double production"`, disabled unless `bits >= capacity`, calling
-  `actions.pickIntroProductionMilestone`) — rendered as ordinary, independent buttons with no
-  coupling between their enabled states, matching the engine-level correction that these two
-  offers are not mutually exclusive (see docs/ECONOMY_REFERENCE.md's "Byte Foundry"); a "Convert
-  to a Kilobyte" button (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling
-  `actions.convertIntroBitsToKilobytes`) shown while `isIntroConversionUnlocked(state) && bits >=
-  INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next phase indicator"
-  (`aria-label="next phase indicator"`) shown once `isIntroConversionUnlocked(state)`. The
-  8000-bit auto-invest transition itself needs no button or handler here at all — it fires from
+  (`aria-label="byte foundry balance"`) with a "Memory" label above `{bits} / {capacity}` plus a
+  hidden `role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once
+  `intro.byteCreated`, a passive-production readout — below `BITS_PER_BYTE` (8) bits/sec, a
+  "+N bits/sec" line paired with a visible 8-block segmented `role="progressbar"`
+  (`aria-label="byte foundry production rate"`, one block per whole bit/sec, filled left to right)
+  showing rate progress toward 1 Byte/sec; at/above that, the block bar is replaced by a single
+  "+N Byte(s)/sec" line instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A large tap
+  button (`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling
+  `actions.tapIntroBit` — shrinks (`$compact`) once `byteCreated`, since passive production is the
+  primary loop by then and tapping becomes a secondary/backup action, while remaining exactly as
+  clickable; carries its own `$progress` fill (bits/capacity) and a paired hidden `role="progressbar"`
+  (`aria-label="byte foundry tap progress"`), reusing `components/Button`'s exported `progressFill`
+  helper directly since it isn't itself a `Button`. A "Combine into a Byte" button
+  (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`, `$progress`
+  toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
+  INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons —
+  "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless
+  `bits === capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`)
+  and "Invest for Double Production" (`aria-label="invest bits for double production"`, disabled
+  unless `bits >= capacity` **or** `capacity === intro.productionMilestoneClaimedAtCapacity`
+  (already claimed at this tier — see docs/ECONOMY_REFERENCE.md's "Byte Foundry"), calling
+  `actions.pickIntroProductionMilestone`, same `$progress`) — rendered as ordinary, independent
+  buttons with no coupling between their enabled states, matching the engine-level correction that
+  these two offers are not mutually exclusive; each pairs with its own hidden `role="progressbar"`
+  (`aria-label="byte foundry sacrifice progress"`/`"byte foundry invest progress"`), matching
+  `MainPage`'s own Buy/Upgrade button convention below. A "Convert to a Kilobyte" button
+  (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling `actions.convertIntroBitsToKilobytes`,
+  `$progress`/hidden progressbar toward `INTRO_BITS_PER_KILOBYTE_CONVERSION`) shown while
+  `isIntroConversionUnlocked(state) && bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next
+  phase indicator" (`aria-label="next phase indicator"`) shown once `isIntroConversionUnlocked(state)`.
+  The 8000-bit auto-invest transition itself needs no button or handler here at all — it fires from
   `tickIntroAutoInvest` inside the shared tick loop (see `useIncrementalGame`), and `App.jsx`'s own
   `showingFoundry` render check reveals whatever page the player was last on (typically `'game'`)
   the instant `intro.completed` flips true.
@@ -46,17 +59,20 @@ view-tab system of its own. It serves two roles, switched on `state.intro.comple
   once `intro.completed` (see the functions' own `if (state.intro.completed) return state` guards
   in `engine.js`) — replaced by a completion message and a "← Back to game" button
   (`aria-label="Back to game"`, same convention as `InfoPage`'s own back button, calling `onBack`).
-  The balance `StatCard` still renders, showing this cycle's frozen final stats (bits/capacity/
-  production multiplier as they stood when `intro.completed` was set); the passive-production line
-  and "next phase indicator" are hidden since neither applies anymore.
+  The balance `StatCard` still renders, showing this cycle's frozen final Memory stats (bits/capacity
+  as they stood when `intro.completed` was set); the production-rate readout and "next phase
+  indicator" are hidden since neither applies anymore.
 
 Numbers are formatted in **Bytes** (`bits ÷ BITS_PER_BYTE`, always a clean whole number) once
 `byteCreated` is true, and in raw bits before that (`formatBitBalance` helper, local to this file)
-— a display-only convention, internal state always stores raw bit counts. This page reappears
-every time a real Prestige resets `intro` back to fresh defaults (see `prestigeGame` in
-docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — and,
-once completed, persists as a screen the player can return to at any time rather than disappearing
-for the rest of the cycle.
+— a display-only convention, internal state always stores raw bit counts. This page's gate reappears
+every time a real Prestige resets Memory (`bits`/`productionAccumulator`) and the completion gate
+back to fresh (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it
+sets the pace for every run — but the Byte generator itself (byteCreated/capacity/tickSpeedSeconds/
+productionMultiplier/productionMilestoneClaimedAtCapacity) is permanent and carries over, so the
+gate is a fast pit-stop after the first cycle, not a full replay. Once completed, the page also
+persists as a screen the player can return to at any time (via `onOpenFoundry`) rather than
+disappearing for the rest of the cycle.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`

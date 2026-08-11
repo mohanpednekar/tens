@@ -355,6 +355,47 @@ migration backfill (`isPreByteFoundrySave`/`storage.js`'s `intro.completed: true
 predates the `intro` field entirely) is also unaffected — it remains a one-time, load-time decision
 for saves this old, orthogonal to what a real Prestige now does going forward for every save.
 
+### The Byte generator becomes permanent — only "Memory" and the gate reset each Prestige
+
+The entry above made the Byte Foundry reset back to `createInitialGameState()`'s fresh defaults on
+every real Prestige, generator included — a full replay each cycle: re-tap to 8, re-combine into a
+Byte, regrow capacity and production rate from scratch. That was the explicit request at the time,
+but immediately playing it out revealed it read as needless busywork once a player already had a
+maxed-out generator from previous cycles — rebuilding the exact same capacity/rate ladder by hand
+every single Prestige, with no way to skip ahead.
+
+Corrected: `prestigeGame` now resets only two things inside `intro` — `bits`/`productionAccumulator`
+("Memory," the tappable/producible balance) and `completed` (the gate) — back to fresh. Every other
+field (`capacity`, `byteCreated`, `tickSpeedSeconds`, `productionMultiplier`,
+`productionMilestoneClaimedAtCapacity`) is now carried over from `state` unchanged, exactly like an
+unlocked autobuyer. The mandatory gate itself is unaffected by this change and still reopens every
+real Prestige (confirmed explicitly, rather than assumed, before implementing) — only what's already
+built *inside* it when it reopens changes. In practice this means the very first cycle plays out the
+full bootstrap loop, and every cycle after that is a fast pit-stop: Memory refills using whatever
+capacity/rate was already earned, typically crossing the 8000-bit auto-invest threshold in a handful
+of ticks rather than a full replay. `speedUpGame`/`overclockGame` needed no change — they already
+carried the whole `intro` object through untouched, Memory included, and that stays correct.
+
+This also prompted a related fix to the underlying production model, requested in the same round: a
+manual tap had always credited a flat `+1` bit regardless of the Byte's actual rate, and passive
+production ran on an implicit continuous bits/sec rate rather than an explicit tickspeed — unlike
+every tier in the main game, which has a real `baseTickSpeedSeconds` and delivers production in
+discrete periodic batches (see "Tier production tickspeed" in `docs/ECONOMY_REFERENCE.md`). Both
+were brought in line: `intro.tickSpeedSeconds` (starting at 1 second, mirroring a tier's own base
+period) plus a new `getIntroProductionRate(intro)` helper now drive both a tap (which credits "one
+second's worth" at the current rate, not a flat 1) and `tickIntroProduction` (which delivers one
+discrete batch every `tickSpeedSeconds`, exactly like `tickGame`'s own per-tier production). "Invest
+for Double Production" doubles this rate by first halving `tickSpeedSeconds` — the same
+tickspeed-vs-production split tiers already use — until that would breach
+`INTRO_MIN_TICK_SPEED_SECONDS` (the live tick loop's own real-time resolution, `TICK_RATE_MS`), at
+which point it switches to multiplying `productionMultiplier` (the batch size) instead, so growth
+never stalls once the tick loop's own granularity limit is reached. A related balance concern
+surfaced in the same round — "Invest for Double Production" could previously be picked over and over
+at the same capacity tier by simply refilling Memory and re-clicking, with no cap — addressed by a
+new `productionMilestoneClaimedAtCapacity` field gating it to once per capacity tier reached (a fresh
+Sacrifice, which always grows `capacity` to a strictly higher value, re-opens it for exactly one more
+claim).
+
 ### Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number
 
 Once Bytes stopped being a tier and the main game's base currency stayed denominated in Bits, framing

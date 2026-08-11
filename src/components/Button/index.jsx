@@ -70,7 +70,9 @@ const clampPercent = value => Math.min(100, Math.max(0, value ?? 0))
 // disabled fills use a much lower alpha that keeps disabled text >=4.5:1 against the blended
 // background. Defaults (when a caller passes neither prop) fall back to the `good`/`warn`
 // tokens — the same semantic pairing the old `#4ade80`/`#fbbf24` hardcoded defaults stood in for.
-const progressFill = ({ disabled, $progress, $secondaryProgress, $progressColor, $secondaryProgressColor, theme }) => {
+// Exported so bespoke, non-Button styled components (e.g. ByteFoundryPage's own big TapArea) can
+// apply the same progress-fill convention without duplicating this gradient math.
+export const progressFill = ({ disabled, $progress, $secondaryProgress, $progressColor, $secondaryProgressColor, theme }) => {
   if ($progress == null && $secondaryProgress == null) return null
   const progressColor = $progressColor ?? theme.color.good
   const secondaryProgressColor = $secondaryProgressColor ?? theme.color.warn

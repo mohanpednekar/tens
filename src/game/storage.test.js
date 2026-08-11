@@ -636,7 +636,10 @@ describe('schema migration', () => {
   it('preserves a save\'s own in-progress intro state rather than backfilling it', () => {
     const state = {
       ...createInitialGameState(),
-      intro: { bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, productionMultiplier: 2, completed: false },
+      intro: {
+        bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
+        productionMultiplier: 2, productionMilestoneClaimedAtCapacity: 8, completed: false,
+      },
     }
     saveGameState(state)
     const loaded = loadGameState()

@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_KILOBYTES_GRANTED, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_KILOBYTES_GRANTED, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -269,16 +269,28 @@ export const createInitialGameState = () => ({
   // conversions into owned Kilobytes (see convertIntroBitsToKilobytes/tickIntroAutoInvest below).
   // Field naming ('intro') is deliberately decoupled from the page's own themed name ("Byte
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
-  // completed is reset back to false by every real prestigeGame call (a fresh Byte Foundry
-  // playthrough gates the start of every new Prestige cycle) — speedUpGame/overclockGame are
-  // intra-cycle soft resets, not new cycles, and still carry intro through unchanged (see there).
+  //
+  // Two distinct halves, per prestigeGame (see there): "Memory" (bits/productionAccumulator) plus
+  // the completion gate (completed) reset to fresh every real Prestige — a new cycle always starts
+  // this screen's balance from 0 and re-shows it before MainPage. The Byte generator itself and
+  // every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
+  // productionMilestoneClaimedAtCapacity) are PERMANENT, carried over unchanged exactly like an
+  // unlocked autobuyer — so each cycle's gate reopens with whatever production strength was
+  // already built, not from scratch. speedUpGame/overclockGame carry the whole object through
+  // untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
   intro: {
-    bits: 0,                   // always an integer — the tappable/producible balance
-    productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators
-    capacity: INTRO_STARTING_CAPACITY,
-    byteCreated: false,        // one persistent Byte generator — a flag, not a counter
-    productionMultiplier: 1,
-    completed: false,
+    bits: 0,                   // "Memory" — always an integer, the tappable/producible balance. Resets on Prestige.
+    productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
+    capacity: INTRO_STARTING_CAPACITY,        // PERMANENT — Memory's ceiling, grown by "Sacrifice for 10x Capacity"
+    byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
+    tickSpeedSeconds: INTRO_STARTING_TICK_SPEED_SECONDS, // PERMANENT — the delivery period a batch lands every, see getIntroProductionRate
+    productionMultiplier: 1,   // PERMANENT — see getIntroProductionRate/pickIntroProductionMilestone
+    // PERMANENT — the capacity tier (see above) "Invest for Double Production" was last claimed
+    // at, null before ever claimed. Since capacity only ever grows (via Sacrifice), comparing it
+    // directly against this marker is enough to gate Invest to once per tier — see
+    // pickIntroProductionMilestone.
+    productionMilestoneClaimedAtCapacity: null,
+    completed: false,          // resets to false every real Prestige — see prestigeGame
   },
 })
 
@@ -1150,11 +1162,31 @@ const grantTierUnits = (tierId, quantity) => state => {
   return latchEverUnlockedTiers(result)
 }
 
-// Manual tap — +1 bit, capped at capacity. No-op once full or once the intro is completed.
+// The Byte generator's current bits/sec, whether or not it's been built yet: how much
+// (INTRO_BYTE_BASE_RATE * productionMultiplier) is delivered per batch, divided by how often
+// (tickSpeedSeconds) — see tickIntroProduction below. At the starting values (1 bit, every 1s)
+// this is exactly 1 bit/sec; "Invest for Double Production" doubles it either by halving
+// tickSpeedSeconds or multiplying productionMultiplier (see pickIntroProductionMilestone), and
+// either path keeps this rate an exact integer at every step (both factors are always powers of
+// INTRO_PRODUCTION_MULTIPLIER_STEP, so the division never leaves a fraction). Used both to size a
+// manual tap (see tapIntroBit below) and to display the passive-production rate.
+export const getIntroProductionRate = intro =>
+  (INTRO_BYTE_BASE_RATE * intro.productionMultiplier) / intro.tickSpeedSeconds
+
+// Manual tap — credits "one second's worth" at the Byte generator's current rate (see
+// getIntroProductionRate), capped at capacity. Before the Byte exists (or at the starting rate),
+// this is the same flat 1 bit it's always been; once "Invest for Double Production" has grown the
+// rate, a tap scales right along with passive production instead of staying stuck at 1. No-op
+// once full or once the intro is completed.
 export const tapIntroBit = state => {
   if (state.intro.completed) return state
   if (state.intro.bits >= state.intro.capacity) return state
-  return { ...state, intro: { ...state.intro, bits: state.intro.bits + 1 } }
+  // Math.max(1, …) is a defensive floor (rate is always >= 1 by construction — productionMultiplier
+  // only ever grows and tickSpeedSeconds only ever shrinks from their starting 1/1 — but guards
+  // against a corrupted/hand-edited save where that invariant doesn't hold) — the same posture as
+  // clampNonNegative elsewhere in this file.
+  const tapAmount = Math.max(1, Math.floor(getIntroProductionRate(state.intro)))
+  return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + tapAmount) } }
 }
 
 // One-time "combine into a Byte": consumes INTRO_BYTE_COMBINE_COST (8) bits, creates the single
@@ -1185,18 +1217,36 @@ export const pickIntroCapacityMilestone = state => {
 // choice like the capacity offer above: requires bits >= capacity (reusing the current capacity
 // as this action's own cost), deducts exactly that amount (leaving any remainder — nets to 0
 // today only because bits is hard-capped at capacity by tapIntroBit/tickIntroProduction), and
-// multiplies productionMultiplier by INTRO_PRODUCTION_MULTIPLIER_STEP. Independently callable — no
-// coupling to pickIntroCapacityMilestone's own state, unlike a mutually-exclusive either/or. No-op
-// below cost or once completed.
+// doubles the Byte generator's overall bits/sec rate (see getIntroProductionRate) by
+// INTRO_PRODUCTION_MULTIPLIER_STEP. Independently callable — no coupling to
+// pickIntroCapacityMilestone's own state, unlike a mutually-exclusive either/or. No-op below cost,
+// once completed, or once already claimed at the current capacity tier (see
+// productionMilestoneClaimedAtCapacity below) — claimable only once per power-of-10 capacity tier
+// (1 Byte, 10 Bytes, 100 Bytes, …); reaching a new tier via pickIntroCapacityMilestone re-opens it.
+//
+// Doubling the rate speeds up delivery (halves tickSpeedSeconds) first, same as the main game's
+// own tickspeed-vs-production split (see getEffectiveTierTickSpeedSeconds/CLAUDE.md's "Tier
+// production tickspeed") — only once that would push tickSpeedSeconds below
+// INTRO_MIN_TICK_SPEED_SECONDS (the live tick loop's own real-time resolution, TICK_RATE_MS) does
+// it switch to multiplying productionMultiplier (growing the batch) instead, so growth never
+// stalls once the tick loop's own granularity limit is reached.
 export const pickIntroProductionMilestone = state => {
   if (state.intro.completed) return state
   if (state.intro.bits < state.intro.capacity) return state
+  if (state.intro.capacity === state.intro.productionMilestoneClaimedAtCapacity) return state
+
+  const fasterTickSpeed = state.intro.tickSpeedSeconds / INTRO_PRODUCTION_MULTIPLIER_STEP
+  const canSpeedUp = fasterTickSpeed >= INTRO_MIN_TICK_SPEED_SECONDS
+
   return {
     ...state,
     intro: {
       ...state.intro,
       bits: clampNonNegative(state.intro.bits - state.intro.capacity),
-      productionMultiplier: state.intro.productionMultiplier * INTRO_PRODUCTION_MULTIPLIER_STEP,
+      productionMilestoneClaimedAtCapacity: state.intro.capacity,
+      ...(canSpeedUp
+        ? { tickSpeedSeconds: fasterTickSpeed }
+        : { productionMultiplier: state.intro.productionMultiplier * INTRO_PRODUCTION_MULTIPLIER_STEP }),
     },
   }
 }
@@ -1222,30 +1272,34 @@ export const convertIntroBitsToKilobytes = state => {
 
 // Tick-time passive production for the Byte generator — no-op immediately once completed or
 // before byteCreated (both cheap guards, so a player past the intro or who hasn't built their Byte
-// yet costs/gains nothing here). Accumulates INTRO_BYTE_BASE_RATE * productionMultiplier bits/sec
-// into productionAccumulator (same epsilon-tolerant whole-unit-crossing pattern as
-// tierProductionAccumulators in tickGame), crediting whole bits capped at capacity — any
-// accumulator amount that a capacity cap actually clips is simply not banked forward, same rule
-// tapIntroBit follows.
+// yet costs/gains nothing here). Delivers one batch of INTRO_BYTE_BASE_RATE * productionMultiplier
+// bits every tickSpeedSeconds — the exact same "accumulate elapsed real time, deliver a whole
+// batch once a full period has passed, bank the remainder" model TIER_DEFINITIONS' own per-tier
+// production uses (see tickGame's tierProductionAccumulators handling and "Tier production
+// tickspeed" in CLAUDE.md), just against the intro's own tickSpeedSeconds/productionMultiplier
+// instead of a tier's. Bits are capped at capacity — any batch amount a capacity cap actually
+// clips is simply not banked forward, same rule tapIntroBit follows.
 export const tickIntroProduction = elapsedSeconds => state => {
   if (state.intro.completed || !state.intro.byteCreated) return state
 
-  const rate = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier
-  const accumulated = state.intro.productionAccumulator + elapsedSeconds * rate
-  const bitsToAdd = Math.floor(accumulated + TICK_ACCUMULATION_EPSILON)
+  const tickSpeed = state.intro.tickSpeedSeconds
+  const accumulated = state.intro.productionAccumulator + elapsedSeconds
+  const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
 
-  if (bitsToAdd <= 0) {
+  if (ticksElapsed <= 0) {
     return accumulated === state.intro.productionAccumulator
       ? state
       : { ...state, intro: { ...state.intro, productionAccumulator: accumulated } }
   }
+
+  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed
 
   return {
     ...state,
     intro: {
       ...state.intro,
       bits: Math.min(state.intro.capacity, state.intro.bits + bitsToAdd),
-      productionAccumulator: accumulated - bitsToAdd,
+      productionAccumulator: accumulated - ticksElapsed * tickSpeed,
     },
   }
 }
@@ -1488,11 +1542,25 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
-    // The Byte Foundry intro now resets on every real Prestige, in the same atomic reset as
-    // resources/owned above — a fresh run always starts by tapping out a new Byte generator.
-    // speedUpGame/overclockGame (below) are intra-cycle soft resets, not new cycles, and still
-    // carry intro through untouched.
-    intro: initial.intro,
+    // "Memory" (bits/productionAccumulator) and the completion gate reset to fresh on every real
+    // Prestige, in the same atomic reset as resources/owned above — a new cycle always starts this
+    // screen's balance from 0 and re-shows it before MainPage. The Byte generator itself and every
+    // upgrade to it — capacity/byteCreated/tickSpeedSeconds/productionMultiplier/
+    // productionMilestoneClaimedAtCapacity — are PERMANENT and carried over from state, exactly
+    // like an unlocked autobuyer, so each cycle's gate reopens with whatever production strength
+    // was already built rather than from scratch. speedUpGame/overclockGame (below) are
+    // intra-cycle soft resets, not new cycles, and still carry the whole intro object through
+    // untouched either way.
+    intro: {
+      ...initial.intro,
+      // Falls back to initial.intro's own fresh values (rather than throwing) for a state that
+      // predates the intro field entirely — same defensive posture as autobuyers/smartAutobuyer/etc. below.
+      capacity: state.intro?.capacity ?? initial.intro.capacity,
+      byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
+      tickSpeedSeconds: state.intro?.tickSpeedSeconds ?? initial.intro.tickSpeedSeconds,
+      productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
+      productionMilestoneClaimedAtCapacity: state.intro?.productionMilestoneClaimedAtCapacity ?? initial.intro.productionMilestoneClaimedAtCapacity,
+    },
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused
     // preference should survive a Prestige exactly like the autobuyer unlock itself does (see
@@ -1583,8 +1651,9 @@ export const speedUpGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which now resets intro every cycle — see there), this is an
-    // intra-cycle soft reset and still carries intro through untouched.
+    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
+    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
+    // through completely untouched, Memory included.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as prestigeGame gives these two "enabled" flags — see there.
@@ -1644,8 +1713,9 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which now resets intro every cycle — see there), this is an
-    // intra-cycle soft reset and still carries intro through untouched, same as speedUpGame.
+    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
+    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
+    // through completely untouched, same as speedUpGame.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as speedUpGame/prestigeGame give these two "enabled" flags — see there.

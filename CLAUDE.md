@@ -372,16 +372,26 @@ only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` 
 `docs/DESIGN_HISTORY.md` for why.
 
 Bytes are no longer a purchasable tier — they were pulled out of `TIER_DEFINITIONS` entirely in favor of
-the **Byte Foundry**, a separate pre-game tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above)
-that every fresh save must complete before the main game (`tier01` = Kilobytes onward) is reachable at
-all. The player taps to accumulate bits (capped at a capacity, starting at 8), combines their first 8 into
-a permanent Byte generator (which then produces bits passively), and grows two independent tracks each
-time the balance fills: sacrificing the full balance for 10x capacity, or spending the current capacity's
-worth of bits (without requiring fullness, and without draining beyond that cost) to double the Byte's
-production rate. Once capacity reaches 1000, bits can be manually converted (1000 bits → 1 Kilobyte) or,
-once the balance reaches 8000, the whole balance auto-converts into 8 Kilobytes exactly once — the
-one-time transition into the main game. Full state shape, engine functions, and constants: see the "Byte
-Foundry" section of `docs/ECONOMY_REFERENCE.md`.
+the **Byte Foundry**, a separate tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above) that
+every fresh save — and every real Prestige cycle after that — must complete before the main game (`tier01`
+= Kilobytes onward) is reachable. The player taps to accumulate bits into "Memory" (capped at a capacity,
+starting at 8 bits = 1 Byte), combines their first 8 into a permanent Byte generator (which then produces
+bits passively, on an explicit tickspeed — starting at 1 bit every 1 second, like a tier's own
+`baseTickSpeedSeconds`), and grows two independent tracks each time Memory fills: sacrificing the full
+balance for 10x capacity (repeatable), or spending the current capacity's worth of Memory (without
+requiring fullness, and without draining beyond that cost) to double the Byte's overall bits/sec rate —
+claimable only once per capacity tier reached (a fresh Sacrifice re-opens it). Doubling first halves the
+delivery period (like a tier's own tickspeed multiplier) until the live tick loop's own real-time
+resolution, then switches to doubling the per-tick amount instead. A manual tap always credits "one
+second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1. Once capacity reaches
+1000, Memory can be manually converted (1000 bits → 1 Kilobyte) or, once it reaches 8000, the whole
+balance auto-converts into 8 Kilobytes — sending the player into the main game. **The generator itself
+(capacity/whether it exists/its tickspeed/its rate/which tier "double production" was last claimed at) is
+permanent, carried over by every real Prestige** — only Memory (the current bit balance) and the
+completion gate reset each cycle, so returning cycles are a fast pit-stop, not a full replay; Speed
+Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle soft reset. Full
+state shape, engine functions, and constants: see the "Byte Foundry" section of
+`docs/ECONOMY_REFERENCE.md`.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -474,7 +484,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (734 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (780 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

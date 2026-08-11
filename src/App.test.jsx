@@ -7,7 +7,9 @@ import {
   INTRO_AUTO_INVEST_THRESHOLD,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
+  INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
+  INTRO_STARTING_TICK_SPEED_SECONDS,
   PRESTIGE_THRESHOLD,
   TICK_RATE_MS,
 } from 'game/layers'
@@ -2021,16 +2023,127 @@ test('the convert button and next-phase indicator stay hidden below the conversi
   expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
+test('tapping still increments Memory (still tappable) after the Byte generator exists', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({ bits: 0, capacity: 1000, byteCreated: true })
+  render(<App />)
+
+  const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+
+  await user.click(tapButton)
+
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '1')
+})
+
+test('the "Memory" label is shown on the balance card', () => {
+  render(<App />)
+  expect(screen.getByText('Memory')).toBeInTheDocument()
+})
+
+test('the production rate shows a segmented block bar below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
+  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
+  const { unmount } = render(<App />)
+
+  const rateBar = screen.getByRole('progressbar', { name: /byte foundry production rate/i })
+  expect(rateBar).toHaveAttribute('aria-valuenow', '4')
+  expect(rateBar).toHaveAttribute('aria-valuemax', '8')
+  expect(screen.getByText(/\+4 bits\/sec/i)).toBeInTheDocument()
+  unmount()
+
+  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
+  render(<App />)
+  expect(screen.queryByRole('progressbar', { name: /byte foundry production rate/i })).not.toBeInTheDocument()
+  expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
+})
+
+test('Invest for Double Production is claimable only once per capacity tier, and re-opens once Sacrifice grows capacity', async () => {
+  const user = userEvent.setup()
+
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  const { unmount } = render(<App />)
+
+  const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
+  expect(investButton).toBeEnabled()
+  await user.click(investButton)
+
+  // Refill to full again at the SAME capacity tier — Invest stays disabled, already claimed here.
+  for (let i = 0; i < INTRO_STARTING_CAPACITY; i++) {
+    await user.click(screen.getByRole('button', { name: /tap to generate a bit/i }))
+  }
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
+
+  // Sacrifice grows capacity to a new tier — Invest re-opens once full there too.
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  const newCapacity = INTRO_STARTING_CAPACITY * 10
+  expect(saved.intro.capacity).toBe(newCapacity)
+  expect(saved.intro.productionMilestoneClaimedAtCapacity).toBe(INTRO_STARTING_CAPACITY)
+
+  // Seed straight to full at the new capacity (rather than many real taps) and re-render — Invest
+  // is enabled again since capacity no longer matches the stale claim marker.
+  unmount()
+  saved.intro.bits = newCapacity
+  localStorage.setItem('tens_game_state', JSON.stringify(saved))
+  render(<App />)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
+})
+
+test('action buttons show fill progress toward their own threshold, matching the main game\'s button convention', () => {
+  seedIntroState({ bits: 4, capacity: 8, byteCreated: true })
+  render(<App />)
+
+  const sacrificeProgress = screen.getByRole('progressbar', { name: /byte foundry sacrifice progress/i })
+  expect(sacrificeProgress).toHaveAttribute('aria-valuenow', '4')
+  expect(sacrificeProgress).toHaveAttribute('aria-valuemax', '8')
+
+  const investProgress = screen.getByRole('progressbar', { name: /byte foundry invest progress/i })
+  expect(investProgress).toHaveAttribute('aria-valuenow', '4')
+  expect(investProgress).toHaveAttribute('aria-valuemax', '8')
+
+  const tapProgress = screen.getByRole('progressbar', { name: /byte foundry tap progress/i })
+  expect(tapProgress).toHaveAttribute('aria-valuenow', '4')
+  expect(tapProgress).toHaveAttribute('aria-valuemax', '8')
+})
+
+test('the Combine button shows fill progress toward INTRO_BYTE_COMBINE_COST', () => {
+  // The Combine button only ever renders once bits >= INTRO_BYTE_COMBINE_COST (its own condition
+  // for appearing at all) — since capacity starts exactly equal to that cost, it's only ever
+  // observable at a full 8/8, not partway; this still confirms the progressbar reports the right
+  // raw values rather than e.g. a stale/mismatched max.
+  seedIntroState({ bits: INTRO_BYTE_COMBINE_COST })
+  render(<App />)
+
+  const combineProgress = screen.getByRole('progressbar', { name: /byte foundry combine progress/i })
+  expect(combineProgress).toHaveAttribute('aria-valuenow', String(INTRO_BYTE_COMBINE_COST))
+  expect(combineProgress).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
+})
+
+test('the Convert button shows fill progress toward INTRO_BITS_PER_KILOBYTE_CONVERSION', () => {
+  // Same "only observable at 100%" constraint as the Combine button above — canConvert requires
+  // bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION for the button to render at all.
+  seedIntroState({ bits: INTRO_CONVERSION_UNLOCK_CAPACITY, capacity: INTRO_CONVERSION_UNLOCK_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  const convertProgress = screen.getByRole('progressbar', { name: /byte foundry convert progress/i })
+  expect(convertProgress).toHaveAttribute('aria-valuenow', String(INTRO_CONVERSION_UNLOCK_CAPACITY))
+  expect(convertProgress).toHaveAttribute('aria-valuemax', String(INTRO_CONVERSION_UNLOCK_CAPACITY))
+})
+
 test('the intro auto-transitions into the main game once the bit balance crosses the auto-invest threshold', () => {
   vi.useFakeTimers()
 
-  // One tick (0.1s) at a 10x production multiplier (10 bits/sec) credits exactly 1 bit — enough
-  // to cross from one below the threshold to the threshold itself.
+  // One tick (0.1s) at the tick loop's own fastest resolution (tickSpeedSeconds ==
+  // INTRO_MIN_TICK_SPEED_SECONDS) delivers exactly one batch of 1 bit — enough to cross from one
+  // below the threshold to the threshold itself.
   seedIntroState({
     bits: INTRO_AUTO_INVEST_THRESHOLD - 1,
     capacity: INTRO_AUTO_INVEST_THRESHOLD,
     byteCreated: true,
-    productionMultiplier: 10,
+    tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+    productionMultiplier: 1,
   })
   const { unmount } = render(<App />)
 
@@ -2051,9 +2164,11 @@ test('the intro auto-transitions into the main game once the bit balance crosses
 // --- The Byte Foundry resets and reappears after every real Prestige ---
 // A real Prestige now sends the player back through the intro every cycle (see engine.js's
 // prestigeGame and App.jsx's bidirectional page-sync effect) — it's no longer a one-time-ever gate.
-// Speed Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
+// But the Byte generator itself (capacity/byteCreated/tickSpeedSeconds/productionMultiplier) is
+// PERMANENT — only Memory (bits/productionAccumulator) and the completion gate reset. Speed
+// Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
 
-test('a real Prestige from MainPage navigates back to the Byte Foundry with a freshly reset intro', async () => {
+test('a real Prestige from MainPage navigates back to the Byte Foundry, resetting Memory but keeping the generator permanent', async () => {
   const user = userEvent.setup()
 
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
@@ -2061,7 +2176,7 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry with a fr
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-    intro: { completed: true, bits: 500, capacity: 8000, byteCreated: true, productionMultiplier: 4 },
+    intro: { completed: true, bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
   })
   render(<App />)
 
@@ -2072,9 +2187,14 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry with a fr
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  // Memory + the gate reset to fresh.
   expect(saved.intro.completed).toBe(false)
-  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-  expect(saved.intro.byteCreated).toBe(false)
+  expect(saved.intro.bits).toBe(0)
+  // The generator and its upgrades are permanent — carried over from before the Prestige.
+  expect(saved.intro.capacity).toBe(8000)
+  expect(saved.intro.byteCreated).toBe(true)
+  expect(saved.intro.tickSpeedSeconds).toBe(0.125)
+  expect(saved.intro.productionMultiplier).toBe(4)
 })
 
 test('completing the Byte Foundry again after a Prestige navigates forward into MainPage with newly re-granted Kilobytes', () => {
@@ -2084,7 +2204,10 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   // owned already at their fresh post-Prestige defaults, intro reset and one tick away from its
   // own auto-invest threshold again.
   seedIntroState(
-    { bits: INTRO_AUTO_INVEST_THRESHOLD - 1, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, productionMultiplier: 10 },
+    {
+      bits: INTRO_AUTO_INVEST_THRESHOLD - 1, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 1,
+    },
     { prestige: { xp: 0, points: 1, count: 1, highestMilestone: 100 } }
   )
   const { unmount } = render(<App />)
@@ -2155,7 +2278,7 @@ test('MainPage\'s Byte Foundry link navigates to a read-only review of the compl
   await user.click(screen.getByText('⚙️ Byte Foundry'))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.getByText(/this run.s byte foundry is complete/i)).toBeInTheDocument()
+  expect(screen.getByText(/this cycle.s memory is spent/i)).toBeInTheDocument()
   // The frozen stats are still shown, in Bytes (capacity 8000 bits = 1000 Bytes).
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
