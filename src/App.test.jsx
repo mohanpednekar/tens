@@ -23,15 +23,16 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Every test exercising MainPage (the vast majority of this file) needs the Byte Foundry intro
-// already completed, or <App /> lands on ByteFoundryPage instead (see App.jsx's page routing —
-// `intro.completed` is the only thing that decides which page a fresh/seeded save opens on).
-// `migrateState` backfills the rest of the `intro` shape from `createInitialGameState()`'s own
-// defaults regardless (see storage.js), so `{ completed: true }` alone is always sufficient here —
-// no need to spell out bits/capacity/etc. by hand. Pass `overrides.intro` to seed a specific
-// (incomplete) intro state instead, e.g. for ByteFoundryPage's own tests below.
+// Every test exercising MainPage (the vast majority of this file) needs the Byte Foundry's
+// main-game gate already unlocked, or <App /> lands on ByteFoundryPage instead (see App.jsx's page
+// routing — `intro.mainGameUnlocked` is the only thing that decides which page a fresh/seeded save
+// opens on). `migrateState` backfills the rest of the `intro` shape from
+// `createInitialGameState()`'s own defaults regardless (see storage.js), so
+// `{ mainGameUnlocked: true }` alone is always sufficient here — no need to spell out
+// bits/capacity/etc. by hand. Pass `overrides.intro` to seed a specific (still-gated) intro state
+// instead, e.g. for ByteFoundryPage's own tests below.
 const seedMainGameState = (overrides = {}) =>
-  localStorage.setItem('tens_game_state', JSON.stringify({ intro: { completed: true }, ...overrides }))
+  localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true }, ...overrides }))
 
 test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
@@ -106,9 +107,9 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
-  // A full Reset produces createInitialGameState()'s fresh intro.completed: false, and the app's
-  // bidirectional page sync (see App.jsx) follows it back to the Byte Foundry, same as a real
-  // Prestige — a Reset is at least as much "a new run" as a Prestige is.
+  // A full Reset produces createInitialGameState()'s fresh intro.mainGameUnlocked: false, and the
+  // app's bidirectional page sync (see App.jsx) follows it back to the Byte Foundry, same as a
+  // real Prestige — a Reset is at least as much "a new run" as a Prestige is.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(0)
@@ -1878,9 +1879,10 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 // --- ByteFoundryPage (the pre-game intro) ---
 // A completely empty localStorage (cleared in beforeEach) loads createInitialGameState()'s own
 // fresh defaults directly (no migration involved at all — computeInitialGame only calls
-// migrateState when loadGameState() finds something saved) — intro.completed is false there, so
-// <App /> lands on ByteFoundryPage. Seeding tens_game_state with an explicit (incomplete) `intro`
-// object below reproduces later Byte Foundry states without tapping/combining/investing by hand.
+// migrateState when loadGameState() finds something saved) — intro.mainGameUnlocked is false
+// there, so <App /> lands on ByteFoundryPage. Seeding tens_game_state with an explicit (still-
+// gated) `intro` object below reproduces later Byte Foundry states without tapping/combining/
+// investing by hand.
 const seedIntroState = (introOverrides = {}, otherOverrides = {}) =>
   localStorage.setItem('tens_game_state', JSON.stringify({
     intro: {
@@ -1889,7 +1891,8 @@ const seedIntroState = (introOverrides = {}, otherOverrides = {}) =>
       capacity: INTRO_STARTING_CAPACITY,
       byteCreated: false,
       productionMultiplier: 1,
-      completed: false,
+      mainGameUnlocked: false,
+      bitsTransferredThisCycle: 0,
       ...introOverrides,
     },
     ...otherOverrides,
@@ -1990,7 +1993,7 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
   expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
 })
 
-test('the manual convert button and the next-phase indicator appear once capacity reaches the conversion-unlock threshold', async () => {
+test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
   const user = userEvent.setup()
 
   seedIntroState({
@@ -2000,26 +2003,25 @@ test('the manual convert button and the next-phase indicator appear once capacit
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^next phase indicator$/i)).toBeInTheDocument()
   const convertButton = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
-  expect(convertButton).toBeInTheDocument()
+  expect(convertButton).toBeEnabled()
 
   await user.click(convertButton)
 
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  // Grants 1 free Kilobyte unit in the main game's save data, from the separate intro bit pool —
-  // still on ByteFoundryPage (intro isn't complete yet), so this is only observable via the save.
+  // Grants 1 free Kilobyte unit in the main game's save data, from the separate intro bit pool,
+  // and — unlike the old design — this first conversion alone unlocks the main game, so <App />
+  // navigates straight to MainPage instead of staying on the Byte Foundry.
+  expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
-  expect(saved.intro.completed).toBe(false)
+  expect(saved.intro.mainGameUnlocked).toBe(true)
+  expect(saved.intro.bitsTransferredThisCycle).toBe(1000)
 })
 
-test('the convert button and next-phase indicator stay hidden below the conversion-unlock capacity', () => {
+test('the convert button stays hidden below the conversion-unlock capacity', () => {
   seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
   render(<App />)
 
-  expect(screen.queryByLabelText(/^next phase indicator$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
@@ -2059,34 +2061,41 @@ test('the production rate shows a segmented block bar below 1 Byte/sec, and swit
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
 })
 
-test('Invest for Double Production is claimable only once per capacity tier, and re-opens once Sacrifice grows capacity', async () => {
+test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
   const user = userEvent.setup()
 
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
-  const { unmount } = render(<App />)
+  // capacity is deliberately way above tier 0's cost (INTRO_STARTING_CAPACITY) — Invest's own
+  // ladder is decoupled from it, so neither claim below requires the balance to be full.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
+  let mounted = render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
   await user.click(investButton)
 
-  // Refill to full again at the SAME capacity tier — Invest stays disabled, already claimed here.
-  for (let i = 0; i < INTRO_STARTING_CAPACITY; i++) {
-    await user.click(screen.getByRole('button', { name: /tap to generate a bit/i }))
-  }
+  // Second claim at the same tier 0 cost — still enabled, not yet exhausted (2 claims per tier
+  // for the tiers up to INTRO_AUTO_INVEST_THRESHOLD).
+  let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.productionMilestoneTier).toBe(0)
+  expect(saved.intro.productionMilestoneTierClaims).toBe(1)
+  saved.intro.bits = INTRO_STARTING_CAPACITY
+  localStorage.setItem('tens_game_state', JSON.stringify(saved))
+  mounted.unmount()
+  mounted = render(<App />)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: /invest bits for double production/i }))
+
+  // Both tier-0 claims used — advanced to tier 1, whose cost (10x higher) the current balance
+  // can't cover yet, so Invest is disabled again.
+  saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.productionMilestoneTier).toBe(1)
+  expect(saved.intro.productionMilestoneTierClaims).toBe(0)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
 
-  // Sacrifice grows capacity to a new tier — Invest re-opens once full there too.
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  const newCapacity = INTRO_STARTING_CAPACITY * 10
-  expect(saved.intro.capacity).toBe(newCapacity)
-  expect(saved.intro.productionMilestoneClaimedAtCapacity).toBe(INTRO_STARTING_CAPACITY)
-
-  // Seed straight to full at the new capacity (rather than many real taps) and re-render — Invest
-  // is enabled again since capacity no longer matches the stale claim marker.
-  unmount()
-  saved.intro.bits = newCapacity
+  // Seeding enough bits to cover tier 1's (10x) cost re-enables it.
+  saved.intro.bits = INTRO_STARTING_CAPACITY * 10
   localStorage.setItem('tens_game_state', JSON.stringify(saved))
+  mounted.unmount()
   render(<App />)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
 })
@@ -2176,7 +2185,7 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-    intro: { completed: true, bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
+    intro: { mainGameUnlocked: true, bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
   })
   render(<App />)
 
@@ -2187,8 +2196,9 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Memory + the gate reset to fresh.
-  expect(saved.intro.completed).toBe(false)
+  // Memory + the gate + the transfer budget reset to fresh.
+  expect(saved.intro.mainGameUnlocked).toBe(false)
+  expect(saved.intro.bitsTransferredThisCycle).toBe(0)
   expect(saved.intro.bits).toBe(0)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(8000)
@@ -2241,15 +2251,15 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   fireEvent.click(screen.getByText('ℹ️ Guide'))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
-  // Auto-Prestige fires in the background and resets intro.completed to false, but the Guide page
-  // stays exactly where it was — App.jsx's sync effect is a no-op while page === 'info'.
+  // Auto-Prestige fires in the background and resets intro.mainGameUnlocked to false, but the
+  // Guide page stays exactly where it was — App.jsx's sync effect is a no-op while page === 'info'.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.intro.completed).toBe(false)
+  expect(saved.intro.mainGameUnlocked).toBe(false)
 
-  // Backing out lands on the Byte Foundry, not MainPage, the instant intro.completed is false.
+  // Backing out lands on the Byte Foundry, not MainPage, the instant intro.mainGameUnlocked is false.
   fireEvent.click(screen.getByRole('button', { name: /back to game/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
@@ -2257,20 +2267,21 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   vi.useRealTimers()
 })
 
-// --- The Byte Foundry persists as a voluntarily-revisitable screen ---
-// Once intro.completed is true, the Byte Foundry no longer disappears — MainPage's own
-// "⚙️ Byte Foundry" link reopens it as a read-only review of the current cycle's stats (every
-// action button is a guaranteed engine no-op once intro.completed, see ByteFoundryPage.jsx), with
-// its own "← Back to game" exit. Before intro.completed, it's still the same mandatory gate as
-// always — no Back button, no way to reach MainPage/InfoPage around it.
+// --- The Byte Foundry persists as a voluntarily-revisitable, always-interactive screen ---
+// Once intro.mainGameUnlocked is true, the Byte Foundry no longer disappears — MainPage's own
+// "⚙️ Byte Foundry" link reopens it at any time, with its own "← Back to game" exit. Unlike the
+// old completed-gated design, nothing here ever goes read-only: Tap/Sacrifice/Invest stay live
+// indefinitely, and Convert stays live too as long as this cycle's shared transfer budget isn't
+// exhausted. Before mainGameUnlocked, it's still the same mandatory gate as always — no Back
+// button, no way to reach MainPage/InfoPage around it.
 
-test('MainPage\'s Byte Foundry link navigates to a read-only review of the completed run, with a Back to game exit', async () => {
+test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, with a Back to game exit', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     intro: {
-      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
-      productionMultiplier: 4,
+      mainGameUnlocked: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      productionMultiplier: 4, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
     },
   })
   render(<App />)
@@ -2278,28 +2289,30 @@ test('MainPage\'s Byte Foundry link navigates to a read-only review of the compl
   await user.click(screen.getByText('⚙️ Byte Foundry'))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.getByText(/this cycle.s memory is spent/i)).toBeInTheDocument()
-  // The frozen stats are still shown, in Bytes (capacity 8000 bits = 1000 Bytes).
+  // This cycle's shared transfer budget is exhausted, but the generator keeps running regardless.
+  expect(screen.getByText(/8000-bit transfer budget is fully spent/i)).toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
-  // No interactive controls left — every action is a guaranteed no-op once intro.completed.
-  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /sacrifice all bits for 10x capacity/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /invest bits for double production/i })).not.toBeInTheDocument()
+  // Tap/Sacrifice/Invest all stay fully interactive — nothing here ever goes read-only.
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeInTheDocument()
+  // Convert is visible but disabled — the shared transfer budget, not a freeze, is what limits it.
+  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
 })
 
-test('the mandatory Byte Foundry gate (before intro.completed) has no Back to game exit', () => {
+test('the mandatory Byte Foundry gate (before mainGameUnlocked) has no Back to game exit', () => {
   render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
 
-test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns it into the live, interactive gate in place', () => {
+test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, dropping the Back button', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -2308,7 +2321,7 @@ test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns
     autoPrestige: 1,
     autoPrestigeAttemptBudget: 1,
     intro: {
-      completed: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      mainGameUnlocked: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
       productionMultiplier: 4,
     },
   })
@@ -2316,11 +2329,14 @@ test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns
 
   fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /tap to generate a bit/i })).not.toBeInTheDocument()
+  // Reached voluntarily — Tap was already live before the Prestige, same as after (see test above).
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /back to game/i })).toBeInTheDocument()
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Still on the same screen — no navigation jump — but now it's the fresh, interactive gate.
+  // Still on the same screen — no navigation jump — but now it's the mandatory gate: the Back
+  // button is gone, since mainGameUnlocked just flipped false.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
@@ -2330,9 +2346,9 @@ test('a Prestige firing while voluntarily viewing a completed Byte Foundry turns
 })
 
 // --- Chapters (inside the Milestones view) ---
-// Every chapter row is a plain boolean read of state.intro.completed / state.prestige.count — see
-// CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is
-// reachable at all (MainPage only ever renders once intro.completed is true), so it isn't varied
+// Every chapter row is a plain boolean read of state.intro.mainGameUnlocked / state.prestige.count
+// — see CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is
+// reachable at all (MainPage only ever renders once intro.mainGameUnlocked is true), so it isn't varied
 // here — the meaningful coverage is "Go Googol" tracking prestige.count, and that Chapters itself
 // is reachable before a first Prestige at all (see the "reachable both before and after" test above).
 test.each([

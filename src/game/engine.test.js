@@ -38,6 +38,8 @@ import {
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getGlobalTickspeedRegularStep,
+  getIntroProductionMilestoneCost,
+  getIntroProductionMilestoneMaxClaims,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
@@ -74,7 +76,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_KILOBYTES_GRANTED, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -428,9 +430,10 @@ describe('tapIntroBit', () => {
     expect(tapIntroBit(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { completed: true })
-    expect(tapIntroBit(state)).toBe(state)
+  it('keeps working after mainGameUnlocked — nothing about tapping ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: 0, capacity: 8 })
+    const after = tapIntroBit(state)
+    expect(after.intro.bits).toBe(1)
   })
 })
 
@@ -451,11 +454,6 @@ describe('combineIntroByte', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, byteCreated: true })
     expect(combineIntroByte(state)).toBe(state)
   })
-
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, completed: true })
-    expect(combineIntroByte(state)).toBe(state)
-  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -471,9 +469,10 @@ describe('pickIntroCapacityMilestone', () => {
     expect(pickIntroCapacityMilestone(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, completed: true })
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  it('keeps working after mainGameUnlocked — nothing about Sacrifice ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY })
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
   })
 
   it('does not touch tickSpeedSeconds/productionMultiplier', () => {
@@ -486,23 +485,54 @@ describe('pickIntroCapacityMilestone', () => {
   })
 })
 
+describe('getIntroProductionMilestoneCost', () => {
+  it('is INTRO_STARTING_CAPACITY at tier 0, growing by INTRO_CAPACITY_MULTIPLIER per tier', () => {
+    expect(getIntroProductionMilestoneCost(0)).toBe(INTRO_STARTING_CAPACITY)
+    expect(getIntroProductionMilestoneCost(1)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(getIntroProductionMilestoneCost(2)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 2)
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 3)
+  })
+})
+
+describe('getIntroProductionMilestoneMaxClaims', () => {
+  it('grants 2 claims for the four tiers up to and including INTRO_AUTO_INVEST_THRESHOLD (1/10/100/1000 Bytes)', () => {
+    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(3)).toBe(2)
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  })
+
+  it('grants only 1 claim from the next tier on', () => {
+    expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
+    expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
+  })
+})
+
 describe('pickIntroProductionMilestone', () => {
   it('halves tickSpeedSeconds (speeds up delivery) while that stays at/above INTRO_MIN_TICK_SPEED_SECONDS', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const after = pickIntroProductionMilestone(state)
     expect(after.intro.tickSpeedSeconds).toBe(1 / INTRO_PRODUCTION_MULTIPLIER_STEP)
     expect(after.intro.productionMultiplier).toBe(1)
   })
 
-  it('spends exactly the current capacity worth of bits', () => {
-    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 100, tickSpeedSeconds: 1 })
+  it('spends exactly this tier\'s cost, independent of the (much larger) current capacity', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: 8000, tickSpeedSeconds: 1 })
     const after = pickIntroProductionMilestone(state)
     expect(after.intro.bits).toBe(0)
   })
 
+  it('does not require a full Memory balance — only enough bits to cover this tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: 8000, tickSpeedSeconds: 1 })
+    expect(state.intro.bits).toBeLessThan(state.intro.capacity)
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro).not.toBe(state.intro)
+  })
+
   it('switches to multiplying productionMultiplier once halving tickSpeedSeconds would breach the floor', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: 100, capacity: 100, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 1,
+      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 1,
     })
     const after = pickIntroProductionMilestone(state)
     expect(after.intro.tickSpeedSeconds).toBe(INTRO_MIN_TICK_SPEED_SECONDS)
@@ -510,42 +540,63 @@ describe('pickIntroProductionMilestone', () => {
   })
 
   it('doubles the effective bits/sec rate either way', () => {
-    const speedingUp = withIntro(createInitialGameState(), { bits: 100, capacity: 100, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const speedingUp = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const afterSpeedUp = pickIntroProductionMilestone(speedingUp)
     expect(getIntroProductionRate(afterSpeedUp.intro)).toBe(getIntroProductionRate(speedingUp.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
 
-    const scalingAmount = withIntro(createInitialGameState(), { bits: 100, capacity: 100, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 2 })
+    const scalingAmount = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 2 })
     const afterScaleUp = pickIntroProductionMilestone(scalingAmount)
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('is claimable only once per capacity tier — a second pick at the same capacity is a no-op even at full balance again', () => {
-    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 100, tickSpeedSeconds: 1, productionMultiplier: 1 })
+  it('grants a second claim at the same tier 0 cost before advancing', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const afterFirst = pickIntroProductionMilestone(state)
-    expect(afterFirst.intro.productionMilestoneClaimedAtCapacity).toBe(100)
+    expect(afterFirst.intro.productionMilestoneTier).toBe(0)
+    expect(afterFirst.intro.productionMilestoneTierClaims).toBe(1)
 
-    const refilled = withIntro(afterFirst, { bits: 100 })
-    expect(pickIntroProductionMilestone(refilled)).toBe(refilled)
+    const refilled = withIntro(afterFirst, { bits: INTRO_STARTING_CAPACITY })
+    const afterSecond = pickIntroProductionMilestone(refilled)
+    expect(afterSecond.intro.productionMilestoneTier).toBe(1)
+    expect(afterSecond.intro.productionMilestoneTierClaims).toBe(0)
   })
 
-  it('re-opens once capacity grows to a new tier via Sacrifice', () => {
-    const claimed = withIntro(createInitialGameState(), {
-      bits: 0, capacity: 100, tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneClaimedAtCapacity: 100,
+  it('advances tier only after both claims at a 2-claim tier are used, then is claimable again at the new (10x) cost', () => {
+    const twiceClaimed = withIntro(createInitialGameState(), {
+      bits: 0, tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1, productionMilestoneTierClaims: 0,
     })
-    const grown = withIntro(claimed, { bits: 1000, capacity: 1000 })
-    const after = pickIntroProductionMilestone(grown)
-    expect(after.intro.productionMilestoneClaimedAtCapacity).toBe(1000)
-    expect(after.intro).not.toBe(grown.intro)
+    const refilled = withIntro(twiceClaimed, { bits: getIntroProductionMilestoneCost(1) })
+    const after = pickIntroProductionMilestone(refilled)
+    expect(after.intro.productionMilestoneTier).toBe(1)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
+    expect(after.intro.bits).toBe(0)
   })
 
-  it('is a no-op below a full balance', () => {
-    const state = withIntro(createInitialGameState(), { bits: 99, capacity: 100 })
+  it('grants only a single claim per tier once past INTRO_AUTO_INVEST_THRESHOLD (tier 4+)', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getIntroProductionMilestoneCost(4), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 4, productionMilestoneTierClaims: 0,
+    })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.productionMilestoneTier).toBe(5)
+    expect(after.intro.productionMilestoneTierClaims).toBe(0)
+  })
+
+  it('is a no-op below this tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1 })
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 100, completed: true })
+  it('is a no-op once every claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 2,
+    })
     expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('keeps working after mainGameUnlocked — nothing about Invest ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro).not.toBe(state.intro)
   })
 })
 
@@ -576,8 +627,33 @@ describe('convertIntroBitsToKilobytes', () => {
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000, completed: true })
+  it('flips mainGameUnlocked and grows bitsTransferredThisCycle on a successful convert', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+
+  it('keeps working after mainGameUnlocked, as long as budget remains', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 2000, bitsTransferredThisCycle: INTRO_BITS_PER_KILOBYTE_CONVERSION,
+    })
+    const after = convertIntroBitsToKilobytes(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION * 2)
+    expect(after.owned[firstTierId]).toBe(1)
+  })
+
+  it('is a no-op once this cycle\'s shared transfer budget is exhausted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    expect(convertIntroBitsToKilobytes(state)).toBe(state)
+  })
+
+  it('is a no-op if the remaining budget can\'t cover a full 1000-bit transfer', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD - 500,
+    })
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
   })
 })
@@ -588,9 +664,10 @@ describe('tickIntroProduction', () => {
     expect(tickIntroProduction(1)(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { byteCreated: true, completed: true })
-    expect(tickIntroProduction(1)(state)).toBe(state)
+  it('keeps producing after mainGameUnlocked — nothing about passive production ever freezes', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, tickSpeedSeconds: 1, productionMultiplier: 1, capacity: 100 })
+    const after = tickIntroProduction(1)(state)
+    expect(after.intro.bits).toBe(1)
   })
 
   it('delivers nothing before a full tickSpeedSeconds period has accumulated, banking the partial progress', () => {
@@ -629,17 +706,30 @@ describe('tickIntroAutoInvest', () => {
     expect(tickIntroAutoInvest(state)).toBe(state)
   })
 
-  it('is a no-op once completed', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD, completed: true })
-    expect(tickIntroAutoInvest(state)).toBe(state)
-  })
-
-  it('grants INTRO_AUTO_INVEST_KILOBYTES_GRANTED units, spends the full threshold, and marks completed', () => {
+  it('grants 8 units, spends the full threshold, and flips mainGameUnlocked, on a fresh cycle', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true })
     const after = tickIntroAutoInvest(state)
-    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_KILOBYTES_GRANTED)
+    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.completed).toBe(true)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  })
+
+  it('keeps working after mainGameUnlocked, transferring only the remaining budget once some has already been manually converted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 80000, byteCreated: true, bitsTransferredThisCycle: 3000,
+    })
+    const after = tickIntroAutoInvest(state)
+    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+    expect(after.intro.bits).toBe(INTRO_AUTO_INVEST_THRESHOLD - 5000)
+    expect(after.owned[firstTierId]).toBe(5000 / INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+
+  it('is a no-op once this cycle\'s shared transfer budget is fully exhausted', () => {
+    const state = withIntro(createInitialGameState(), {
+      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+    })
+    expect(tickIntroAutoInvest(state)).toBe(state)
   })
 })
 
@@ -3557,39 +3647,44 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry\'s Memory and completion gate across prestige, but keeps the generator and its upgrades permanent', () => {
+  it('resets the Byte Foundry\'s Memory/gate/transfer budget across prestige, but keeps the generator and its upgrades permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,
       byteCreated: true,
       tickSpeedSeconds: 0.125,
       productionMultiplier: 4,
-      productionMilestoneClaimedAtCapacity: 8000,
+      productionMilestoneTier: 3,
+      productionMilestoneTierClaims: 1,
       productionAccumulator: 2.5,
-      completed: true,
+      mainGameUnlocked: true,
+      bitsTransferredThisCycle: 8000,
     })
     const after = prestigeGame(state)
-    // Memory + the gate reset to fresh.
+    // Memory + the gate + the transfer budget reset to fresh.
     expect(after.intro.bits).toBe(0)
     expect(after.intro.productionAccumulator).toBe(0)
-    expect(after.intro.completed).toBe(false)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.bitsTransferredThisCycle).toBe(0)
     // The generator and every upgrade to it are permanent — carried over unchanged.
     expect(after.intro.capacity).toBe(8000)
     expect(after.intro.byteCreated).toBe(true)
     expect(after.intro.tickSpeedSeconds).toBe(0.125)
     expect(after.intro.productionMultiplier).toBe(4)
-    expect(after.intro.productionMilestoneClaimedAtCapacity).toBe(8000)
+    expect(after.intro.productionMilestoneTier).toBe(3)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
   })
 
   it('resets resources/owned together with the intro\'s Memory in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
     const state = withIntro(
       withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 8),
-      { bits: 4000, capacity: 8000, byteCreated: true, completed: true }
+      { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true, bitsTransferredThisCycle: 4000 }
     )
     const after = prestigeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.completed).toBe(false)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.bitsTransferredThisCycle).toBe(0)
     // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
     // no stale/wiped generator progress either.
     expect(after.intro.capacity).toBe(8000)
@@ -3873,7 +3968,8 @@ describe('speedUpGame', () => {
   it('keeps the Byte Foundry intro state permanently untouched across speed up, unlike prestige', () => {
     const seededIntro = {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
-      productionMilestoneClaimedAtCapacity: 8000, productionAccumulator: 2.5, completed: true,
+      productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
+      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = speedUpGame(state)
@@ -4112,7 +4208,8 @@ describe('overclockGame', () => {
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
     const seededIntro = {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
-      productionMilestoneClaimedAtCapacity: 8000, productionAccumulator: 2.5, completed: true,
+      productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
+      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = overclockGame(state)

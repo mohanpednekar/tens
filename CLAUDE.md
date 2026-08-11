@@ -227,16 +227,19 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
     ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen — a mandatory gate before each
-                               Prestige cycle's auto-invest transition into the main game (see "Economy
+                               Prestige cycle's transition into the main game (see "Economy
                                model" below and `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section),
-                               and, once that cycle's `intro.completed` is true, a permanent screen the
-                               player can voluntarily revisit at any time via MainPage's own "⚙️ Byte
-                               Foundry" link. Takes an `onBack` prop (only passed once `intro.completed`
-                               — the mandatory gate itself has no way out); when set, every action
-                               button is hidden in favor of a read-only stats review and a "← Back to
-                               game" exit, since every action is a guaranteed engine no-op once
-                               `intro.completed`. Receives the full `game` object (`{ state, actions,
-                               ... }` from `useIncrementalGame`) as a prop, same as MainPage
+                               and, once that cycle's `intro.mainGameUnlocked` is true (the first bits
+                               ever converted into Kilobytes this cycle — well before the transfer
+                               budget is exhausted), a permanent screen the player can voluntarily
+                               revisit at any time via MainPage's own "⚙️ Byte Foundry" link. Takes an
+                               `onBack` prop (only passed once `intro.mainGameUnlocked` — the mandatory
+                               gate itself has no way out); nothing here ever goes read-only —
+                               Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
+                               Convert stays live too as long as this cycle's shared transfer budget
+                               isn't exhausted (see `intro.bitsTransferredThisCycle` below). Receives
+                               the full `game` object (`{ state, actions, ... }` from
+                               `useIncrementalGame`) as a prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
                                (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
@@ -272,18 +275,19 @@ src/
                                (`'game'`/`'info'`/`'foundry'`, default `'game'`) — not a routing library,
                                same "local toggle, not real routing" convention MainPage's own
                                Game/Upgrades/Milestones view tabs already use. Which screen actually
-                               renders is a derived `showingFoundry = page !== 'info' && (!intro.completed
+                               renders is a derived `showingFoundry = page !== 'info' && (!intro.mainGameUnlocked
                                || page === 'foundry')` check, not `page` directly: ByteFoundryPage is both
-                               a *mandatory gate* (whenever `intro.completed` is false — no fresh
+                               a *mandatory gate* (whenever `intro.mainGameUnlocked` is false — no fresh
                                Kilobytes without tapping through it, see "Economy model" below) and, once
-                               completed, a *permanent, voluntarily-revisitable screen* reachable at any
+                               unlocked, a *permanent, voluntarily-revisitable screen* reachable at any
                                time via MainPage's own "⚙️ Byte Foundry" link (`page = 'foundry'`) to
                                review the current cycle's stats — it no longer disappears once passed.
                                `'info'` is excluded from the gate override, so a Prestige/Reset firing
                                while the Guide page is open doesn't yank the player off it — the gate
                                picks back up the instant they click back to `'game'`. Since `page` is
-                               independent of `intro.completed`, no syncing effect is needed at all: the
-                               gate resolving just reveals whatever `page` already was (typically `'game'`)
+                               independent of `intro.mainGameUnlocked`, no syncing effect is needed at
+                               all: the gate resolving just reveals whatever `page` already was
+                               (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -347,10 +351,11 @@ Strict three-layer separation:
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
    taking `game` (and an optional `onBack`) as props. It's the only way any Prestige cycle ever earns
    its first Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.completed` is false, with no way out. Once that cycle's
-   `intro.completed` flips true, it stops being a gate and becomes a permanent screen the player can
-   voluntarily reopen at any time (MainPage's "⚙️ Byte Foundry" link), shown read-only with a
-   `onBack`-driven exit back to MainPage.
+   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false, with no way out. Once
+   that cycle's `intro.mainGameUnlocked` flips true (the first bits ever converted into Kilobytes
+   this cycle), it stops being a gate and becomes a permanent screen the player can voluntarily
+   reopen at any time (MainPage's "⚙️ Byte Foundry" link), with an `onBack`-driven exit back to
+   MainPage — but it stays just as interactive either way, nothing here ever goes read-only.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
@@ -373,25 +378,38 @@ only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` 
 
 Bytes are no longer a purchasable tier — they were pulled out of `TIER_DEFINITIONS` entirely in favor of
 the **Byte Foundry**, a separate tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above) that
-every fresh save — and every real Prestige cycle after that — must complete before the main game (`tier01`
-= Kilobytes onward) is reachable. The player taps to accumulate bits into "Memory" (capped at a capacity,
-starting at 8 bits = 1 Byte), combines their first 8 into a permanent Byte generator (which then produces
-bits passively, on an explicit tickspeed — starting at 1 bit every 1 second, like a tier's own
+every fresh save — and every real Prestige cycle after that — must pass through before the main game
+(`tier01` = Kilobytes onward) is reachable. The player taps to accumulate bits into "Memory" (capped at a
+capacity, starting at 8 bits = 1 Byte), combines their first 8 into a permanent Byte generator (which then
+produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 second, like a tier's own
 `baseTickSpeedSeconds`), and grows two independent tracks each time Memory fills: sacrificing the full
-balance for 10x capacity (repeatable), or spending the current capacity's worth of Memory (without
-requiring fullness, and without draining beyond that cost) to double the Byte's overall bits/sec rate —
-claimable only once per capacity tier reached (a fresh Sacrifice re-opens it). Doubling first halves the
-delivery period (like a tier's own tickspeed multiplier) until the live tick loop's own real-time
-resolution, then switches to doubling the per-tick amount instead. A manual tap always credits "one
-second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1. Once capacity reaches
-1000, Memory can be manually converted (1000 bits → 1 Kilobyte) or, once it reaches 8000, the whole
-balance auto-converts into 8 Kilobytes — sending the player into the main game. **The generator itself
-(capacity/whether it exists/its tickspeed/its rate/which tier "double production" was last claimed at) is
-permanent, carried over by every real Prestige** — only Memory (the current bit balance) and the
-completion gate reset each cycle, so returning cycles are a fast pit-stop, not a full replay; Speed
-Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle soft reset. Full
-state shape, engine functions, and constants: see the "Byte Foundry" section of
-`docs/ECONOMY_REFERENCE.md`.
+balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
+independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
+step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
+current capacity) — **two claims per tier** for the first four tiers (1/10/100/1000 Bytes), one claim per
+tier from there on, each spending only that tier's own cost (not a full balance — a claim frequently
+doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
+Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
+loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
+always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
+
+Once capacity reaches 1000 Bytes (8000 bits — the same threshold `isIntroConversionUnlocked` has always
+used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte); the very first
+successful conversion (manual, or via the "Memory fills to 8000 bits" auto-convert convenience) unlocks
+the main game immediately — no need to wait for a full 8000-bit balance. Further manual and auto
+conversions keep working after that, sharing one running **per-cycle transfer budget**
+(`intro.bitsTransferredThisCycle`, capped at `INTRO_AUTO_INVEST_THRESHOLD`, 8000 bits total) — once that
+cap is hit, by any combination of manual/auto conversions, no more transfers happen until the next
+Prestige reopens a fresh budget. Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/
+Invest all stay live indefinitely, every cycle, regardless of how much of the transfer budget remains.
+The balance card also always shows a second tracker (`intro.bits % INTRO_AUTO_INVEST_THRESHOLD`, in bits)
+alongside the primary Bytes-denominated balance, for a rolling view of progress within the current
+8000-bit block once past `byteCreated`. **The generator itself (capacity/whether it exists/its
+tickspeed/its rate/its independent Invest cost-ladder progress) is permanent, carried over by every real
+Prestige** — only Memory (the current bit balance), the main-game-unlock gate, and the transfer budget
+reset each cycle, so returning cycles are a fast pit-stop, not a full replay; Speed Up/Overclock leave the
+whole thing untouched either way, same as any other intra-cycle soft reset. Full state shape, engine
+functions, and constants: see the "Byte Foundry" section of `docs/ECONOMY_REFERENCE.md`.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -484,7 +502,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (780 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (791 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -492,8 +510,10 @@ already cover the genuinely useful items on that checklist.
   save's `resources.Ones` balance is migrated to `resources.base` on load, and a save from before the tier
   ladder shifted has its per-tier data shifted down one slot (old `tier02`/Kilobytes → new `tier01`, …,
   old `tier01`/Bytes dropped entirely) — gated on the same one-time `intro === undefined` signal that
-  also backfills `intro.completed: true` for such a save (see `storage.js`'s `migrateState`/
-  `shiftOldTierIds`). `src/theme/contrast.js` (a
+  also backfills `intro.mainGameUnlocked: true` (and a fully-spent transfer budget) for such a save (see
+  `storage.js`'s `migrateState`/`shiftOldTierIds`); a separate, narrower backward-compat case backfills
+  `mainGameUnlocked`/`bitsTransferredThisCycle` from an old boolean `intro.completed` field for a save
+  that predates that field split but already has its own `intro`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.

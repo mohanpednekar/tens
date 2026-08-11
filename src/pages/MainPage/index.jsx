@@ -1445,7 +1445,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
       </StickyBalances>
 
       {/* Game and Milestones are always reachable (MainPage itself is only ever rendered once the
-          Byte Foundry intro is complete) — Chapters (see the Milestones view below) needs to be
+          Byte Foundry's main-game gate is unlocked) — Chapters (see the Milestones view below) needs to be
           visible before a first Prestige so "Go Googol" can actually be seen locked, not
           permanently pre-checked. Upgrades stays gated on !isFirstRun: PP upgrades genuinely don't
           exist before a first Prestige. */}
@@ -2216,7 +2216,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
           <UpgradeCategory aria-label="chapters category">
             <CategoryHeading>Chapters</CategoryHeading>
             {[
-              { label: 'The first KiloByte', reached: !!state.intro?.completed },
+              { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
               { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
               { label: 'Coming soon…', reached: false },
             ].map(chapter => (

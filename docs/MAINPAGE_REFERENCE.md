@@ -9,70 +9,75 @@ evergreen *explanation* (what used to live inline here as click-to-expand `InfoD
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
 link beside the page title; see CLAUDE.md's Architecture section for the split and
 `onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered while the Byte Foundry gate isn't
-active — i.e. `state.intro.completed` is true and the player hasn't voluntarily navigated to
+active — i.e. `state.intro.mainGameUnlocked` is true and the player hasn't voluntarily navigated to
 `ByteFoundryPage` via its own "⚙️ Byte Foundry" link (`onOpenFoundry` prop) — see "Byte Foundry
 page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
 
 **Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The tap screen — a separate, much
 simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
-view-tab system of its own. It serves two roles, switched on `state.intro.completed`:
+view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
+renders identically whether reached as the mandatory gate or voluntarily; `onBack` (present only
+once `state.intro.mainGameUnlocked` is true) is the only thing that differs.
 
-- **Mandatory gate** (`intro.completed === false`, no `onBack` prop passed): the full interactive
-  screen. Sections, top to bottom: a title/one-line explainer; a `StatCard`
-  (`aria-label="byte foundry balance"`) with a "Memory" label above `{bits} / {capacity}` plus a
-  hidden `role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once
-  `intro.byteCreated`, a passive-production readout — below `BITS_PER_BYTE` (8) bits/sec, a
-  "+N bits/sec" line paired with a visible 8-block segmented `role="progressbar"`
-  (`aria-label="byte foundry production rate"`, one block per whole bit/sec, filled left to right)
-  showing rate progress toward 1 Byte/sec; at/above that, the block bar is replaced by a single
-  "+N Byte(s)/sec" line instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A large tap
-  button (`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling
-  `actions.tapIntroBit` — shrinks (`$compact`) once `byteCreated`, since passive production is the
-  primary loop by then and tapping becomes a secondary/backup action, while remaining exactly as
-  clickable; carries its own `$progress` fill (bits/capacity) and a paired hidden `role="progressbar"`
-  (`aria-label="byte foundry tap progress"`), reusing `components/Button`'s exported `progressFill`
-  helper directly since it isn't itself a `Button`. A "Combine into a Byte" button
-  (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`, `$progress`
-  toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-  INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons —
-  "Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless
-  `bits === capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`)
-  and "Invest for Double Production" (`aria-label="invest bits for double production"`, disabled
-  unless `bits >= capacity` **or** `capacity === intro.productionMilestoneClaimedAtCapacity`
-  (already claimed at this tier — see docs/ECONOMY_REFERENCE.md's "Byte Foundry"), calling
-  `actions.pickIntroProductionMilestone`, same `$progress`) — rendered as ordinary, independent
-  buttons with no coupling between their enabled states, matching the engine-level correction that
-  these two offers are not mutually exclusive; each pairs with its own hidden `role="progressbar"`
-  (`aria-label="byte foundry sacrifice progress"`/`"byte foundry invest progress"`), matching
-  `MainPage`'s own Buy/Upgrade button convention below. A "Convert to a Kilobyte" button
-  (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling `actions.convertIntroBitsToKilobytes`,
-  `$progress`/hidden progressbar toward `INTRO_BITS_PER_KILOBYTE_CONVERSION`) shown while
-  `isIntroConversionUnlocked(state) && bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next
-  phase indicator" (`aria-label="next phase indicator"`) shown once `isIntroConversionUnlocked(state)`.
-  The 8000-bit auto-invest transition itself needs no button or handler here at all — it fires from
-  `tickIntroAutoInvest` inside the shared tick loop (see `useIncrementalGame`), and `App.jsx`'s own
-  `showingFoundry` render check reveals whatever page the player was last on (typically `'game'`)
-  the instant `intro.completed` flips true.
-- **Voluntary review** (`intro.completed === true`, reached via MainPage's "⚙️ Byte Foundry" link,
-  `onBack` prop passed): every action button above is hidden — each is a guaranteed engine no-op
-  once `intro.completed` (see the functions' own `if (state.intro.completed) return state` guards
-  in `engine.js`) — replaced by a completion message and a "← Back to game" button
-  (`aria-label="Back to game"`, same convention as `InfoPage`'s own back button, calling `onBack`).
-  The balance `StatCard` still renders, showing this cycle's frozen final Memory stats (bits/capacity
-  as they stood when `intro.completed` was set); the production-rate readout and "next phase
-  indicator" are hidden since neither applies anymore.
+Sections, top to bottom: a title/one-line status explainer (three variants — pre-unlock instructions,
+post-unlock with remaining transfer budget, or budget-exhausted, see below); a `StatCard`
+(`aria-label="byte foundry balance"`) with a "Memory" label above `{bits} / {capacity}` plus a
+hidden `role="progressbar"` (`aria-label="byte foundry bit balance"`), and, once `intro.byteCreated`,
+a second tracker line (`aria-label="byte foundry 8000-bit tracker"`) showing
+`bits % INTRO_AUTO_INVEST_THRESHOLD` in raw bits — a rolling view of progress within the current
+8000-bit block, alongside the primary Bytes-denominated balance — followed by a passive-production
+readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line paired with a visible 8-block
+segmented `role="progressbar"` (`aria-label="byte foundry production rate"`, one block per whole
+bit/sec, filled left to right) showing rate progress toward 1 Byte/sec; at/above that, the block bar
+is replaced by a single "+N Byte(s)/sec" line instead (`getIntroProductionRate(intro) /
+BITS_PER_BYTE`). A large tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
+capacity`) calling `actions.tapIntroBit` — shrinks to half-width (`$compact`, `width: 50%`, same
+`5 / 3` aspect ratio as full size) once `byteCreated`, since passive production is the primary loop
+by then and tapping becomes a secondary/backup action, while remaining exactly as clickable; carries
+its own `$progress` fill (bits/capacity) and a paired hidden `role="progressbar"` (`aria-label="byte
+foundry tap progress"`), reusing `components/Button`'s exported `progressFill` helper directly since
+it isn't itself a `Button`. A "Combine into a Byte" button (`aria-label="combine 8 bits into a
+Byte"`, calling `actions.combineIntroByte`, `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only
+while `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two
+independently-gated milestone buttons — "Sacrifice for 10x Capacity" (`aria-label="sacrifice all
+bits for 10x capacity"`, disabled unless `bits === capacity`, calling
+`actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest for Double
+Production" (`aria-label="invest bits for double production"`, its visible label including its own
+cost — `getIntroProductionMilestoneCost(intro.productionMilestoneTier)` — disabled unless `bits >=`
+that cost **and** `intro.productionMilestoneTierClaims < getIntroProductionMilestoneMaxClaims(tier)`;
+this cost is entirely independent of `capacity`, so the button is frequently enabled well before
+Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte Foundry") — rendered as ordinary, independent
+buttons with no coupling between their enabled states; each pairs with its own hidden
+`role="progressbar"` (`aria-label="byte foundry sacrifice progress"`/`"byte foundry invest
+progress"`, the latter's max set to the Invest cost, not `capacity`), matching `MainPage`'s own
+Buy/Upgrade button convention below. A "Convert to a Kilobyte" button (`aria-label="convert 1000
+bits into 1 Kilobyte"`, calling `actions.convertIntroBitsToKilobytes`, `$progress`/hidden
+progressbar toward `INTRO_BITS_PER_KILOBYTE_CONVERSION`) shown whenever `isIntroConversionUnlocked(state)`,
+visible but disabled unless `bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION` **and** this cycle's
+remaining transfer budget (`INTRO_AUTO_INVEST_THRESHOLD - intro.bitsTransferredThisCycle`) can cover
+another 1000-bit transfer — its `title` explains which condition is unmet when disabled. The very
+first successful transfer this cycle (manual click here, or the `tickIntroAutoInvest` auto-convenience
+firing inside the shared tick loop once Memory fills to `INTRO_AUTO_INVEST_THRESHOLD`) sets
+`mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check reveals whatever page the
+player was last on (typically `'game'`) the instant that flips — no button or handler needed here for
+that transition itself.
+
+A "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
+button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
+post-`mainGameUnlocked` — the mandatory gate has no way out.
 
 Numbers are formatted in **Bytes** (`bits ÷ BITS_PER_BYTE`, always a clean whole number) once
 `byteCreated` is true, and in raw bits before that (`formatBitBalance` helper, local to this file)
 — a display-only convention, internal state always stores raw bit counts. This page's gate reappears
-every time a real Prestige resets Memory (`bits`/`productionAccumulator`) and the completion gate
-back to fresh (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it
-sets the pace for every run — but the Byte generator itself (byteCreated/capacity/tickSpeedSeconds/
-productionMultiplier/productionMilestoneClaimedAtCapacity) is permanent and carries over, so the
-gate is a fast pit-stop after the first cycle, not a full replay. Once completed, the page also
-persists as a screen the player can return to at any time (via `onOpenFoundry`) rather than
-disappearing for the rest of the cycle.
+every time a real Prestige resets Memory (`bits`/`productionAccumulator`), the main-game-unlock gate
+(`mainGameUnlocked`), and this cycle's transfer budget (`bitsTransferredThisCycle`) back to fresh
+(see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace
+for every run — but the Byte generator itself (byteCreated/capacity/tickSpeedSeconds/
+productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is permanent and carries
+over, so the gate is a fast pit-stop after the first cycle, not a full replay. Once unlocked, the
+page also persists as a screen the player can return to at any time (via `onOpenFoundry`) rather than
+disappearing for the rest of the cycle — and stays just as interactive there as on the gate itself.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -249,8 +254,8 @@ disappearing for the rest of the cycle.
 **Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
 by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
 toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
-rendered (`MainPage` is only ever reached once the Byte Foundry intro is complete, see "Byte Foundry
-page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
+rendered (`MainPage` is only ever reached once the Byte Foundry's main-game gate is unlocked, see
+"Byte Foundry page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
 genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
 first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
 "Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
@@ -467,12 +472,12 @@ a real tracker. Lifting the whole `ViewNav` tab bar's Game/Milestones tabs out o
 view vs. PP Upgrades view vs. Milestones view" above) fixes this for "Go Googol" specifically: it can
 now genuinely be seen 🔒 before a first Prestige. Three static rows, no `role="progressbar"` on any of
 them (booleans, not counts — nothing to show numeric progress toward):
-1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.completed`
-   is true. Because `MainPage` (and this tab) is only reachable *after* `intro.completed` in the first
-   place, this row will always show ✅ the instant a player can see it at all — Chapter 1's completion is
-   a precondition for reaching this page, not something observable in-progress here. Fixing that too
-   would mean also surfacing a Chapters indicator on `ByteFoundryPage` itself (see below); that's an
-   acknowledged, deliberate scope boundary, not an oversight.
+1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.mainGameUnlocked`
+   is true. Because `MainPage` (and this tab) is only reachable *after* `intro.mainGameUnlocked` in the
+   first place, this row will always show ✅ the instant a player can see it at all — Chapter 1's
+   completion is a precondition for reaching this page, not something observable in-progress here.
+   Fixing that too would mean also surfacing a Chapters indicator on `ByteFoundryPage` itself (see
+   below); that's an acknowledged, deliberate scope boundary, not an oversight.
 2. **"Go Googol"** (`aria-label="Go Googol chapter"`) — ✅ once `state.prestige.count > 0`. The row this
    whole visibility fix was for — genuinely observable as 🔒 now.
 3. **"Coming soon…"** (`aria-label="Coming soon… chapter"`) — permanently 🔒, no unlock condition, a
@@ -480,7 +485,7 @@ them (booleans, not counts — nothing to show numeric progress toward):
 
 Each row shows a `PpUpgradeBadge` with `✅`/`🔒` plus the label; the `aria-label` on the badge itself
 spells out `"{label} chapter complete"`/`"{label} chapter not yet complete"` for assistive tech. Zero
-new `engine.js` logic backs this category — it reads `state.intro.completed` and the existing
+new `engine.js` logic backs this category — it reads `state.intro.mainGameUnlocked` and the existing
 `state.prestige.count` only.
 
 Below Chapters, two more categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/

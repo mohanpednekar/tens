@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionRate, isIntroConversionUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST } from 'game/layers'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, isIntroConversionUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -111,16 +111,15 @@ const formatBitBalance = (bits, byteCreated) =>
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// `onBack` is only passed once intro.completed is true — this page is otherwise a mandatory gate
-// with no way out (see App.jsx). When it's set, the player got here voluntarily (via MainPage's
-// "⚙️ Byte Foundry" link) to review a completed cycle's stats — every action button is hidden
-// rather than shown-but-disabled, since intro.completed makes every one of them a guaranteed
-// engine no-op (see tapIntroBit/combineIntroByte/pickIntroCapacityMilestone/
-// pickIntroProductionMilestone/convertIntroBitsToKilobytes in engine.js) — nothing left to do here
-// until the next Prestige resets Memory and makes this screen the mandatory gate again. The Byte
-// generator itself (capacity/byteCreated/tickSpeedSeconds/productionMultiplier) is PERMANENT —
-// see prestigeGame in engine.js — so only Memory (the bits balance) was actually spent; the
-// generator and its upgrades carry over into the next cycle untouched.
+// `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
+// page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
+// MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
+// read-only: Tap/Combine/Sacrifice/Invest and further Convert transfers (up to this cycle's shared
+// transfer budget, see remainingTransferBudget below) all stay fully live whether reached via the
+// mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
+// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is
+// PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle,
+// until the next Prestige resets Memory (and the transfer budget) fresh.
 const ByteFoundryPage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
@@ -128,21 +127,30 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const revealed = isIntroConversionUnlocked(state)
-  const canConvert = revealed && intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION
   const productionRate = getIntroProductionRate(intro)
-  const alreadyClaimedAtTier = intro.capacity === intro.productionMilestoneClaimedAtCapacity
+
+  const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
+  const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
+  const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
+  const canInvest = intro.bits >= investCost && !investClaimsUsedUp
+
+  const remainingTransferBudget = Math.max(0, INTRO_AUTO_INVEST_THRESHOLD - intro.bitsTransferredThisCycle)
+  const canConvert = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION && remainingTransferBudget >= INTRO_BITS_PER_KILOBYTE_CONVERSION
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
+  const investProgress = clampPercent((intro.bits / investCost) * 100)
   const convertProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
   return (
     <RootDiv>
       <Title>⚙️ Byte Foundry</Title>
       <StatusText>
-        {intro.completed
-          ? 'This cycle’s Memory is spent — it resets and this screen becomes the gate again after your next Prestige. Your Byte generator and its upgrades (capacity, speed, production) are permanent and carry over.'
-          : 'Tap to generate bits into your Memory. Combine 8 bits into a Byte to start producing more automatically.'}
+        {!intro.mainGameUnlocked
+          ? 'Tap to generate bits into your Memory. Combine 8 bits into a Byte to start producing more automatically.'
+          : remainingTransferBudget > 0
+            ? `Main game unlocked! Your Byte generator keeps running here — convert more 1000-bit sets into Kilobytes any time, up to ${formatAmount(remainingTransferBudget)} bits left this cycle.`
+            : 'This cycle’s 8000-bit transfer budget is fully spent. Your Byte generator and its upgrades keep running — a fresh budget opens after your next Prestige.'}
       </StatusText>
 
       <StatCard aria-label="byte foundry balance">
@@ -157,7 +165,12 @@ const ByteFoundryPage = ({ game, onBack }) => {
           aria-valuemin={0}
           aria-valuemax={intro.capacity}
         />
-        {intro.byteCreated && !intro.completed && (
+        {intro.byteCreated && (
+          <StatusText aria-label="byte foundry 8000-bit tracker">
+            {formatAmount(intro.bits % INTRO_AUTO_INVEST_THRESHOLD)} bit{(intro.bits % INTRO_AUTO_INVEST_THRESHOLD) === 1 ? '' : 's'} of this cycle's 8000
+          </StatusText>
+        )}
+        {intro.byteCreated && (
           productionRate < BITS_PER_BYTE ? (
             <>
               <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
@@ -175,117 +188,113 @@ const ByteFoundryPage = ({ game, onBack }) => {
         )}
       </StatCard>
 
-      {!intro.completed && (<>
-        <TapArea
-          aria-label="tap to generate a bit"
-          disabled={isFull}
-          onClick={actions.tapIntroBit}
-          type="button"
-          $compact={intro.byteCreated}
-          $progress={fullProgress}
-        >
-          👆 Tap
-          <VisuallyHidden
-            role="progressbar"
-            aria-label="byte foundry tap progress"
-            aria-valuenow={intro.bits}
-            aria-valuemin={0}
-            aria-valuemax={intro.capacity}
-          />
-        </TapArea>
+      <TapArea
+        aria-label="tap to generate a bit"
+        disabled={isFull}
+        onClick={actions.tapIntroBit}
+        type="button"
+        $compact={intro.byteCreated}
+        $progress={fullProgress}
+      >
+        👆 Tap
+        <VisuallyHidden
+          role="progressbar"
+          aria-label="byte foundry tap progress"
+          aria-valuenow={intro.bits}
+          aria-valuemin={0}
+          aria-valuemax={intro.capacity}
+        />
+      </TapArea>
 
-        <ActionsRow>
-          {canCombine && (
-            <Button
-              aria-label="combine 8 bits into a Byte"
-              onClick={actions.combineIntroByte}
-              type="button"
-              variant="primary"
-              $progress={combineProgress}
-            >
-              <ButtonContent>🔗 Combine into a Byte</ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry combine progress"
-                aria-valuenow={intro.bits}
-                aria-valuemin={0}
-                aria-valuemax={INTRO_BYTE_COMBINE_COST}
-              />
-            </Button>
-          )}
+      <ActionsRow>
+        {canCombine && (
+          <Button
+            aria-label="combine 8 bits into a Byte"
+            onClick={actions.combineIntroByte}
+            type="button"
+            variant="primary"
+            $progress={combineProgress}
+          >
+            <ButtonContent>🔗 Combine into a Byte</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry combine progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={INTRO_BYTE_COMBINE_COST}
+            />
+          </Button>
+        )}
 
-          {intro.byteCreated && (<>
-            <Button
-              aria-label="sacrifice all bits for 10x capacity"
-              disabled={!isFull}
-              onClick={actions.pickIntroCapacityMilestone}
-              title="Empties your Memory in exchange for 10x capacity"
-              type="button"
-              variant={isFull ? 'prestige' : 'neutral'}
-              $progress={fullProgress}
-            >
-              <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry sacrifice progress"
-                aria-valuenow={intro.bits}
-                aria-valuemin={0}
-                aria-valuemax={intro.capacity}
-              />
-            </Button>
+        {intro.byteCreated && (<>
+          <Button
+            aria-label="sacrifice all bits for 10x capacity"
+            disabled={!isFull}
+            onClick={actions.pickIntroCapacityMilestone}
+            title="Empties your Memory in exchange for 10x capacity"
+            type="button"
+            variant={isFull ? 'prestige' : 'neutral'}
+            $progress={fullProgress}
+          >
+            <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry sacrifice progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={intro.capacity}
+            />
+          </Button>
 
-            <Button
-              aria-label="invest bits for double production"
-              disabled={!isFull || alreadyClaimedAtTier}
-              onClick={actions.pickIntroProductionMilestone}
-              title={
-                alreadyClaimedAtTier
-                  ? 'Already claimed at this capacity — Sacrifice for 10x Capacity to unlock it again'
-                  : 'Spends your current capacity\'s worth of Memory to double your Byte\'s production rate'
-              }
-              type="button"
-              variant={isFull && !alreadyClaimedAtTier ? 'info' : 'neutral'}
-              $progress={fullProgress}
-            >
-              <ButtonContent>⚡ Invest for Double Production</ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry invest progress"
-                aria-valuenow={intro.bits}
-                aria-valuemin={0}
-                aria-valuemax={intro.capacity}
-              />
-            </Button>
-          </>)}
-
-          {canConvert && (
-            <Button
-              aria-label="convert 1000 bits into 1 Kilobyte"
-              onClick={actions.convertIntroBitsToKilobytes}
-              title="Spends 1000 bits from your Memory to grant 1 Kilobyte in the main game"
-              type="button"
-              variant="success"
-              $progress={convertProgress}
-            >
-              <ButtonContent>💾 Convert to a Kilobyte</ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry convert progress"
-                aria-valuenow={intro.bits}
-                aria-valuemin={0}
-                aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
-              />
-            </Button>
-          )}
-        </ActionsRow>
+          <Button
+            aria-label="invest bits for double production"
+            disabled={!canInvest}
+            onClick={actions.pickIntroProductionMilestone}
+            title={
+              investClaimsUsedUp
+                ? `Already claimed ${investMaxClaims} of ${investMaxClaims} at this cost tier`
+                : `Costs ${formatAmount(investCost)} bits — claim ${intro.productionMilestoneTierClaims + 1} of ${investMaxClaims} at this cost tier`
+            }
+            type="button"
+            variant={canInvest ? 'info' : 'neutral'}
+            $progress={investProgress}
+          >
+            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCost)} bits)</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry invest progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={investCost}
+            />
+          </Button>
+        </>)}
 
         {revealed && (
-          <StatusText aria-label="next phase indicator">
-            ✨ The main game is close — once you fill this capacity, everything auto-invests into
-            Kilobytes.
-          </StatusText>
+          <Button
+            aria-label="convert 1000 bits into 1 Kilobyte"
+            disabled={!canConvert}
+            onClick={actions.convertIntroBitsToKilobytes}
+            title={
+              remainingTransferBudget < INTRO_BITS_PER_KILOBYTE_CONVERSION
+                ? 'This cycle’s 8000-bit transfer budget is already spent — resets on your next Prestige'
+                : 'Spends 1000 bits from your Memory to grant 1 Kilobyte in the main game'
+            }
+            type="button"
+            variant={canConvert ? 'success' : 'neutral'}
+            $progress={convertProgress}
+          >
+            <ButtonContent>💾 Convert to a Kilobyte</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry convert progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
+            />
+          </Button>
         )}
-      </>)}
+      </ActionsRow>
 
       {onBack && (
         <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">

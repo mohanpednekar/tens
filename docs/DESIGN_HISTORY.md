@@ -415,6 +415,59 @@ reads 100% once Money's exponent reaches 100, which happens slightly before the 
 (exponent ≈100.9) is actually crossed — an intentionally accepted cosmetic imprecision rather than
 complicating the percent formula for a sub-1%-of-a-magnitude difference.
 
+### Main-game access decouples from the "everything freezes" flag, and Invest gets its own cost ladder
+
+The two entries above left the Byte Foundry with a single `intro.completed` flag doing three jobs at
+once: gating `App.jsx`'s routing into MainPage, freezing every intro action function to a permanent
+no-op, and driving `ByteFoundryPage`'s own read-only "voluntary revisit" view. A further round of
+player feedback asked for three related changes that this combined flag couldn't cleanly express:
+(1) main-game access should no longer wait for a full 8000-bit balance — the first manual 1000-bit
+conversion should unlock it immediately; (2) further conversions should keep working after that,
+shared across a running per-cycle budget capped at the same 8000 bits, whether done manually or via
+the existing auto-convert convenience; (3) Tap/Sacrifice/Invest should never freeze at all, matching
+the "Byte foundry never resets, it keeps running" philosophy the previous entry already established
+for the generator itself.
+
+Resolved by splitting the one flag into two, and removing the freeze concept entirely:
+`intro.mainGameUnlocked` (Memory-scoped, resets every real Prestige) now drives routing alone, set
+true the instant any bits are ever converted into Kilobytes this cycle — manual
+`convertIntroBitsToKilobytes` click or the `tickIntroAutoInvest` auto-convenience, whichever fires
+first. A new `intro.bitsTransferredThisCycle` counter (also Memory-scoped) tracks the running total
+converted this cycle, shared by both conversion paths and capped at `INTRO_AUTO_INVEST_THRESHOLD`
+(reusing the existing 8000 constant as the shared budget rather than adding a new one) — once
+exhausted, neither path fires again until the next Prestige reopens a fresh budget.
+`intro.completed` itself was removed outright: nothing needs a full-freeze flag once Tap/Sacrifice/
+Invest are permanently live and Convert is governed by the budget instead. `ByteFoundryPage`'s old
+"read-only voluntary review" rendering branch was removed for the same reason — the page now renders
+identically whether reached via the mandatory gate or the voluntary "⚙️ Byte Foundry" nav link;
+`onBack`'s only remaining effect is whether the "← Back to game" button shows.
+
+The same round also corrected a misreading of "Invest for Double Production"'s intended cost model.
+The previous entry's `productionMilestoneClaimedAtCapacity` field tied Invest's cost directly to the
+current `capacity` (always requiring a full balance to claim, since cost == capacity and Memory is
+hard-capped at capacity). The actual ask was for Invest to run on its **own independent cost ladder**
+— explicitly "nothing to do with capacity" — sharing only the same "×10 per step" shape (1 Byte, 10
+Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, …) the capacity ladder happens to use, tracked by a new,
+separate, permanent `productionMilestoneTier` (0-based index) plus `productionMilestoneTierClaims`.
+`getIntroProductionMilestoneCost(tier) = INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier`
+computes each tier's cost independent of `capacity` entirely, so a claim only ever needs `bits >=
+cost` — frequently satisfiable well before Memory is full, once Sacrifice has grown capacity ahead of
+this ladder, which is what "do not require full capacity" actually meant. Each of the four tiers up
+to `INTRO_AUTO_INVEST_THRESHOLD` (1/10/100/1000 Bytes) now grants **two** claims instead of one
+(`getIntroProductionMilestoneMaxClaims`), advancing to the next tier — with a fresh claim count —
+only once both are used; every tier after that keeps the original one-claim-per-tier behavior. The
+old `productionMilestoneClaimedAtCapacity` marker has no equivalent under the new model (it tracked a
+capacity value, not a tier index) — a save carrying it simply falls back to a fresh tier 0 on load,
+an accepted one-time reset of Invest progress for a feature that was still unreleased and being
+actively tuned at the time.
+
+Finally, the balance card gained a second, always-visible tracker (`bits % INTRO_AUTO_INVEST_THRESHOLD`,
+in raw bits) shown alongside the existing Bytes-denominated balance once `byteCreated` — a rolling
+view of progress within the current 8000-bit block, independent of the transfer-budget mechanics
+above (confirmed via the request's own worked example, `9000 % 8000 = 1000`, which the primary
+Bytes figure — `9000 ÷ 8 = 1125`, not the `1128`/`128` figures in the original request — doesn't
+otherwise convey).
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently
