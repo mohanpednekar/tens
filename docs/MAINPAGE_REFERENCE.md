@@ -37,8 +37,11 @@ B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own t
 "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
 balance"`), and, once `intro.byteCreated`, a second tracker line (`aria-label="byte foundry
 transfer-block tracker"`) showing `bits % getIntroTransferBudget(state)` in raw bits — a rolling
-view of progress within the current transfer-budget block (dynamic, not a fixed 8000 — see below) —
-followed by a passive-production readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
+view of progress within the current transfer-budget block (dynamic, not a fixed 8000 — see below).
+Rendered as `TrackerText` (a `styled(StatusText)` with full-strength `theme.color.text` and
+`font-weight: 600`, instead of `StatusText`'s own muted color/regular weight) so this specific line
+reads as live, meaningful progress rather than blending into the same muted tone as the
+passive-production readout right below it — followed by that readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
 paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
@@ -74,9 +77,10 @@ Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSectio
 `styled(StatCard)`, `aria-label="byte foundry storage"`) — kept out of the plain button stack above
 so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
 Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
-`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getNextStorageBankSize(state))`)
-whose visible label/cost always tracks `getNextStorageBankSize(state)` — tier01's (Kilobytes') own
-NEXT level's per-unit cost, one level ahead of wherever it currently is; disabled below that cost.
+`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
+whose visible label/cost always tracks `getStorageBankSize(state)` — tier01's (Kilobytes') own
+CURRENT per-unit level cost (starting at 1000 bits, "1 KB"), not a level ahead, so a freshly built
+bank is immediately redeemable; disabled below that cost.
 If any bank is held, a compact wrapping `StorageChipsRow` (`role="group"`, `aria-label="byte foundry
 storage banks"`) follows: one small chip per held denomination (`StorageChip`, a `styled(Button)`
 shrunk to `flex: 0 0 auto` with tighter padding instead of a full-width block), labeled `<size>

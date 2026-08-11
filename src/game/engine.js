@@ -1429,30 +1429,36 @@ export const tickIntroAutoInvest = state => {
 
 // --- Byte Foundry Storage (bank blocks) --- see the "Byte Foundry Storage" comment in layers.js
 // and intro.storageBanks/storageAutoRedeemEnabled in createInitialGameState above. A bank is a
-// discrete, already-paid-for block of bits sized to a future tier01 (Kilobytes) per-unit level
-// cost — built now, redeemed later once tier01's own level actually reaches that cost.
+// discrete, already-paid-for block of bits sized to tier01's (Kilobytes') own current per-unit
+// level cost — since tier01's own level cost only ever grows within a cycle (see
+// isStorageBankRedeemable below), a bank built at today's price stays redeemable for the rest of
+// the cycle even after tier01 levels up further; a player can bank ahead of a burst of manual/
+// autobuyer purchases and redeem the queued banks any time afterward, or redeem right away.
 
 // tier01's own per-unit cost at a given level is always an exact power of ten (baseCost = 1E3,
 // and getTierCost's epoch exponent is always a positive integer), so every size a bank is ever
 // built or redeemed at reads as a round KB/MB/GB/… value — never an arbitrary number.
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
-// The size (in bits) buildStorageBank currently builds: tier01's NEXT level's per-unit cost — one
-// level ahead of whatever tier01 is currently at — so a freshly built bank is never immediately
-// redeemable (see redeemStorageBank), only once tier01 actually reaches that level.
-export const getNextStorageBankSize = state =>
-  getFirstTierCost((state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1) + 1)
+// The size (in bits) buildStorageBank currently builds: tier01's CURRENT per-unit level cost —
+// starts at 1000 (1KB), the same price a level-1 tier01 purchase already costs, and tracks
+// whatever level tier01 is actually at as it grows. A bank built at this size is immediately
+// redeemable (see redeemStorageBank), since it already matches the current price; the ladder still
+// only ever offers one buildable size at a time, just anchored to "now" rather than "one level
+// ahead" — see docs/DESIGN_HISTORY.md for why this replaced the earlier next-level version.
+export const getStorageBankSize = state =>
+  getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
 
 // A bank's build cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own face value in bits.
 export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER
 
-// Builds one Storage bank sized to getNextStorageBankSize(state), spending
+// Builds one Storage bank sized to getStorageBankSize(state), spending
 // getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
 // "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
 // touches resources.base). No-op below cost. Building the same size more than once (e.g. while
-// waiting for tier01 to actually reach the level it was built for) simply accumulates count.
+// tier01 hasn't leveled up since the last build) simply accumulates count.
 export const buildStorageBank = state => {
-  const size = getNextStorageBankSize(state)
+  const size = getStorageBankSize(state)
   const cost = getStorageBankCost(size)
   if (state.intro.bits < cost) return state
 

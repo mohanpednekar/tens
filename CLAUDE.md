@@ -434,16 +434,20 @@ same bits/capacity fill, so a duplicate meter on the tap button would add nothin
 **Storage** gets its own labeled section on the page (separate from Sacrifice/Invest), grouping the
 Build button, a compact wrapping row of chips — one per held bank denomination, labeled `<size>
 ×<count>`, highlighted once redeemable — and the auto-redeem toggle together, rather than one
-full-width button per bank size stacked flat into the same list as every other action. It lets the
-player bank a block of bits now, to redeem later once `tier01` (Kilobytes) actually reaches the
-level cost that block was sized for — every block a bank is ever built or redeemed at is a round
-KB/MB/GB/… value, since it's always pegged to tier01's own (always-a-power-of-ten) per-unit level
-cost. Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value in bits
-from Memory; a held bank becomes redeemable (clickable) once its size is *at or below* tier01's
-*current* per-unit level cost — not a one-tick-only exact match, since tier01's own autobuyer can
-complete more than one level in a single tick (an attempt budget catching up after a broke/paused
-stretch), which could otherwise jump the level straight past the one a bank was sized for and
-strand it unredeemable forever. Redeeming grants 1 free Kilobyte unit, either by a manual click or automatically if the
+full-width button per bank size stacked flat into the same list as every other action. Building a
+bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value in bits from Memory —
+sized to `tier01`'s (Kilobytes') own **current** per-unit level cost (starting at 1000 bits, "1 KB",
+the same price a level-1 Kilobyte purchase already costs), not a level ahead, so a freshly built
+bank is immediately redeemable at that same price; every size a bank is ever built or redeemed at is
+a round KB/MB/GB/… value, since it's always pegged to tier01's own (always-a-power-of-ten) per-unit
+level cost. Because tier01's level cost only ever grows within a cycle, a bank stays redeemable for
+the rest of the cycle even after tier01 levels up further — a held bank is redeemable (clickable)
+whenever its size is *at or below* tier01's *current* per-unit level cost — not a one-tick-only
+exact match, since tier01's own autobuyer can complete more than one level in a single tick (an
+attempt budget catching up after a broke/paused stretch), which could otherwise jump the level
+straight past the one a bank was sized for and strand it unredeemable forever. This lets a player
+bank ahead of a purchase burst (building at today's price before an autobuyer catch-up raises it)
+and redeem the queued banks any time afterward, or redeem right away. Redeeming grants 1 free Kilobyte unit, either by a manual click or automatically if the
 player has enabled Storage's own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain
 preference, no PP or prerequisite purchase involved). Storage banks are **never lost** — nothing here
 ever expires or spends implicitly, only an explicit redeem (manual or auto) ever consumes one.

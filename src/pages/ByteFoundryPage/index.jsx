@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getNextStorageBankSize, getStorageBankCost, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -27,6 +27,16 @@ const StatusText = styled.p`
   margin: 0;
   color: ${props => props.theme.color.textMuted};
   text-align: center;
+`
+
+// A stronger-contrast variant of StatusText for the Memory tile's transfer-block tracker
+// specifically — it's live progress toward this cycle's transfer budget, not secondary/incidental
+// text like the production-rate readout beside it, so it's given full-strength text color and a
+// bolder weight to actually stand out rather than blending into the same muted tone as everything
+// else on the tile.
+const TrackerText = styled(StatusText)`
+  color: ${props => props.theme.color.text};
+  font-weight: 600;
 `
 
 const SectionLabel = styled.p`
@@ -226,7 +236,7 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
   return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
 }
 
-// Storage bank sizes are tier01's own per-unit level costs (see getNextStorageBankSize in
+// Storage bank sizes are tier01's own per-unit level costs (see getStorageBankSize in
 // engine.js) — a completely separate scale from Memory's Byte-based one above: 1000 bits is
 // "1 KB" here, matching INTRO_BITS_PER_KILOBYTE_CONVERSION and the Convert button's own
 // "KiloBits" naming (1000 bits, not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
@@ -286,10 +296,11 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const investProgress = clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
 
-  // Storage: bank blocks sized to tier01's (Kilobytes') own future per-unit level costs — build
-  // now (10x the size, from Memory), redeem later once tier01's level actually reaches that cost.
-  const nextStorageBankSize = getNextStorageBankSize(state)
-  const storageBankCost = getStorageBankCost(nextStorageBankSize)
+  // Storage: bank blocks sized to tier01's (Kilobytes') own current per-unit level cost — build
+  // now (10x the size, from Memory); already redeemable at that same price, and stays redeemable
+  // even after tier01 levels up further, since its level cost only ever grows within a cycle.
+  const storageBankSize = getStorageBankSize(state)
+  const storageBankCost = getStorageBankCost(storageBankSize)
   const canBuildStorageBank = intro.bits >= storageBankCost
   const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
   const heldStorageBankSizes = Object.keys(intro.storageBanks ?? {})
@@ -321,9 +332,9 @@ const ByteFoundryPage = ({ game, onBack }) => {
             aria-valuemax={intro.capacity}
           />
           {intro.byteCreated && (
-            <StatusText aria-label="byte foundry transfer-block tracker">
+            <TrackerText aria-label="byte foundry transfer-block tracker">
               {formatAmount(intro.bits % transferBudget)} / {formatAmount(transferBudget)} bits this cycle
-            </StatusText>
+            </TrackerText>
           )}
           {intro.byteCreated && (
             productionRate < BITS_PER_BYTE ? (
@@ -428,12 +439,12 @@ const ByteFoundryPage = ({ game, onBack }) => {
             aria-label="build storage bank"
             disabled={!canBuildStorageBank}
             onClick={actions.buildStorageBank}
-            title={`Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(nextStorageBankSize)} block, redeemable once Kilobytes' level cost reaches ${formatStorageSize(nextStorageBankSize)}`}
+            title={`Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block at Kilobytes' current level cost, redeemable right away`}
             type="button"
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(nextStorageBankSize)} Storage Bank (${formatAmount(storageBankCost)} bits)`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Storage Bank (${formatAmount(storageBankCost)} bits)`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"

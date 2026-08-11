@@ -45,7 +45,6 @@ import {
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
-  getNextStorageBankSize,
   getOfflineEffectiveSeconds,
   getOverclockRequirement,
   getPrestigePointsAwarded,
@@ -55,6 +54,7 @@ import {
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
   getStorageBankCost,
+  getStorageBankSize,
   getTierTickspeedAutobuyerMilestone,
   getSpeedUpMultiplier,
   getSpeedUpRequirement,
@@ -784,15 +784,15 @@ describe('tickIntroAutoInvest', () => {
 
 // ─── Byte Foundry Storage (bank blocks) ───────────────────────────────────────
 
-describe('getNextStorageBankSize', () => {
-  it('targets tier01\'s NEXT level cost, one level ahead of its current level', () => {
+describe('getStorageBankSize', () => {
+  it('targets tier01\'s CURRENT level cost', () => {
     const state = createInitialGameState() // tier01 at level 1
-    expect(getNextStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 1))
   })
 
   it('advances as tier01 levels up', () => {
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2)
-    expect(getNextStorageBankSize(state)).toBe(getTierCost(tensTier, 3))
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
   })
 })
 
@@ -803,8 +803,8 @@ describe('getStorageBankCost', () => {
 })
 
 describe('buildStorageBank', () => {
-  it('spends the build cost from Memory and adds one bank of the current next-level size', () => {
-    const size = getTierCost(tensTier, 2)
+  it('spends the build cost from Memory and adds one bank of the current-level size', () => {
+    const size = getTierCost(tensTier, 1)
     const cost = getStorageBankCost(size)
     const state = withIntro(createInitialGameState(), { bits: cost })
 
@@ -814,7 +814,7 @@ describe('buildStorageBank', () => {
   })
 
   it('accumulates count when building the same size again', () => {
-    const size = getTierCost(tensTier, 2)
+    const size = getTierCost(tensTier, 1)
     const cost = getStorageBankCost(size)
     const state = withIntro(createInitialGameState(), { bits: cost * 2 })
 
@@ -824,7 +824,7 @@ describe('buildStorageBank', () => {
   })
 
   it('is a no-op below the build cost', () => {
-    const size = getTierCost(tensTier, 2)
+    const size = getTierCost(tensTier, 1)
     const cost = getStorageBankCost(size)
     const state = withIntro(createInitialGameState(), { bits: cost - 1 })
     expect(buildStorageBank(state)).toBe(state)
