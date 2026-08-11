@@ -223,6 +223,11 @@ src/
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
+                               JSX), extracted so both MainPage and ByteFoundryPage can render it —
+                               offline progress already applies to the Byte Foundry mechanically
+                               regardless of page, this just makes the notice itself page-agnostic
+                               too. Full contract: `docs/COMPONENTS_REFERENCE.md`
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
@@ -386,31 +391,40 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **two claims per tier** for the first four tiers (1/10/100/1000 Bytes), one claim per
-tier from there on, each spending only that tier's own cost (not a full balance — a claim frequently
+current capacity) — **two claims per tier** for the first three tiers (1/10/100 Bytes), one claim per
+tier from 1000 Bytes on, each spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
-Once capacity reaches 1000 Bytes (8000 bits — the same threshold `isIntroConversionUnlocked` has always
-used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte); the very first
-successful conversion (manual, or via the "Memory fills to 8000 bits" auto-convert convenience) unlocks
-the main game immediately — no need to wait for a full 8000-bit balance. Further manual and auto
-conversions keep working after that, sharing one running **per-cycle transfer budget**
-(`intro.bitsTransferredThisCycle`, capped at `INTRO_AUTO_INVEST_THRESHOLD`, 8000 bits total) — once that
-cap is hit, by any combination of manual/auto conversions, no more transfers happen until the next
-Prestige reopens a fresh budget. Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/
-Invest/Storage all stay live indefinitely, every cycle, regardless of how much of the transfer budget
-remains. The page renders two side-by-side, button-style filling tiles: **Memory** (the balance itself,
+used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte) via a row of
+**transfer blocks** at the bottom of the screen — one block per remaining 1000-bit transfer this cycle,
+filling left to right; only the leftmost (active) block is ever clickable, and clicking it transfers just
+that block, revealing the next as active (any surplus Memory left over carries straight into it, so a
+large enough balance lets you click through several blocks in a row). The very first successful transfer
+(clicking a block, or via the "Memory fills to the full budget" auto-convert convenience, which fires the
+instant every remaining block's worth is available at once — e.g. a big offline-progress jump — and
+auto-transfers them all in bulk) unlocks the main game immediately — no need to wait for a full balance.
+Further transfers keep working after that, sharing one running **per-cycle transfer budget**
+(`intro.bitsTransferredThisCycle`, capped at `getIntroTransferBudget(state)`) — **dynamic, not a fixed
+8000**: exactly enough for `getPurchaseBlockSize(state)` Kilobyte units, the same live, possibly-growing
+block size the main game's own tier01 Buy button already reads (starts at `DEFAULT_PURCHASE_BLOCK_SIZE`,
+8, so 8000 bits at a fresh cycle — identical to the old fixed constant — only growing later in a run).
+Once that budget is hit, by any combination of block clicks or the bulk auto-convenience, no more
+transfers happen (and the block row disappears) until the next Prestige reopens a fresh budget. Nothing
+about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/Invest/Storage all stay live indefinitely,
+every cycle, regardless of how much of the transfer budget remains.
+
+The page renders two side-by-side, button-style filling tiles: **Memory** (the balance itself,
 `bits / capacity`, both scaled into the largest appropriate unit — raw bits before the Byte
 generator exists (capacity is always exactly 8 bits/1 Byte until then, so there's nothing to
 meaningfully denominate in yet), then B/KB/MB/…/QB by 1000 each step once it does, reusing
 `TIER_DEFINITIONS`' own tier symbols) and **Cache 1KB** (once
 `isIntroConversionUnlocked`), a small rolling counterpart showing `bits % INTRO_BITS_PER_KILOBYTE_CONVERSION`
 out of 1000 bits — progress toward the next convertible chunk, wrapping to 0 every time it's spent.
-Memory also always shows a second tracker (`intro.bits % INTRO_AUTO_INVEST_THRESHOLD`, in bits) once
-past `byteCreated`, for a rolling view of progress within the current 8000-bit transfer block.
+Memory also always shows a second tracker (`intro.bits % getIntroTransferBudget(state)`, in bits) once
+past `byteCreated`, for a rolling view of progress within the current (dynamic) transfer budget.
 
 **Storage** lets the player bank a block of bits now, to redeem later once `tier01` (Kilobytes) actually
 reaches the level cost that block was sized for — every block a bank is ever built or redeemed at is a
@@ -524,7 +538,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (823 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (831 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

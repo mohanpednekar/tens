@@ -156,11 +156,12 @@ per-cycle transfer budget described in step 7.
    tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is
    `getIntroProductionMilestoneCost(t) = INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** t`
    (8, 80, 800, 8000, 80000, … bits — the same "×10 per step" shape the capacity ladder happens to
-   share, but a completely separate counter). Because the cost is independent of `capacity`, a claim
-   only ever requires `bits >= cost` — **not** a full balance — which is frequently true well before
-   Memory is full, once Sacrifice has grown capacity ahead of this ladder. Each tier grants
-   `getIntroProductionMilestoneMaxClaims(t)` claims (2 for the four tiers whose cost is `<=
-   INTRO_AUTO_INVEST_THRESHOLD` — 1/10/100/1000 Bytes — 1 for every tier after that), tracked by
+   share, but a completely separate counter; `ByteFoundryPage` shows this cost in Bytes,
+   `cost / BITS_PER_BYTE`, on the button itself). Because the cost is independent of `capacity`, a
+   claim only ever requires `bits >= cost` — **not** a full balance — which is frequently true well
+   before Memory is full, once Sacrifice has grown capacity ahead of this ladder. Each tier grants
+   `getIntroProductionMilestoneMaxClaims(t)` claims (2 for the three tiers whose cost is `<
+   INTRO_AUTO_INVEST_THRESHOLD` — 1/10/100 Bytes — 1 for every tier from 1000 Bytes on), tracked by
    `productionMilestoneTierClaims`; a successful claim deducts exactly that tier's cost from `bits`
    and either stays at the same tier (incrementing `productionMilestoneTierClaims`) or, once the
    tier's claim limit is reached, advances to `productionMilestoneTier + 1` with a fresh claim count
@@ -172,28 +173,44 @@ per-cycle transfer budget described in step 7.
    `productionMultiplier` (growing the batch) instead, so growth never stalls once the tick loop's
    own granularity limit is reached. Never coupled to Sacrifice's own eligibility.
 6. Once `capacity` reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 — first true at the `capacity =
-   8000` stage, since capacity only ever takes the discrete 8/80/800/8000/… values), `isIntroConversionUnlocked(state)`
-   goes true: the manual **Convert to a Kilobyte** button (`convertIntroBitsToKilobytes`) becomes
-   available whenever `bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) AND this cycle's remaining
-   transfer budget (see step 7) can cover another 1000-bit transfer, spending 1000 bits from Memory
-   for 1 free Kilobyte unit — bypassing `isTierUnlocked`/`isProductionFrozen` entirely, since this
-   pays from the separate intro pool, not `resources.base`. **The very first successful transfer
-   this cycle — manual or via the auto-convenience in step 7 — sets `mainGameUnlocked: true`**,
-   opening `App.jsx`'s routing gate into MainPage immediately; the player no longer has to wait for
-   a full 8000-bit balance the way the old one-shot auto-invest required.
-7. All conversions — manual `convertIntroBitsToKilobytes` clicks and the auto-convenience below —
+   8000` stage, since capacity only ever takes the discrete 8/80/800/8000/… values),
+   `isIntroConversionUnlocked(state)` goes true: `ByteFoundryPage` shows a row of **transfer
+   blocks** at the bottom of the screen, one per remaining `INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit
+   (1000-bit) transfer this cycle (see `blocksRemaining` in step 7) — only the leftmost (active)
+   block is ever clickable; clicking it calls `convertIntroBitsToKilobytes` (spending 1000 bits from
+   Memory for 1 free Kilobyte unit — bypassing `isTierUnlocked`/`isProductionFrozen` entirely, since
+   this pays from the separate intro pool, not `resources.base`) and reveals the next block as
+   active (any Memory surplus left over after the transfer carries straight into it, so a large
+   enough balance lets a player click through several blocks in a row without waiting for more
+   production). **The very first successful transfer this cycle — a block click, or via the bulk
+   auto-convenience in step 7 — sets `mainGameUnlocked: true`**, opening `App.jsx`'s routing gate
+   into MainPage immediately; the player no longer has to wait for a full balance the way the old
+   one-shot auto-invest required.
+7. All conversions — block clicks (`convertIntroBitsToKilobytes`) and the auto-convenience below —
    draw from and are capped by one shared, running **`bitsTransferredThisCycle`** total, which can
-   never exceed `INTRO_AUTO_INVEST_THRESHOLD` (8000 bits) in a single cycle: both functions refuse
-   once the remaining budget (`INTRO_AUTO_INVEST_THRESHOLD - bitsTransferredThisCycle`) can't cover
-   another 1000-bit transfer. Separately, whenever `bits` reaches `INTRO_AUTO_INVEST_THRESHOLD`
-   (8000 — the full-capacity balance at the `capacity = 8000` stage), `tickIntroAutoInvest` (also
+   never exceed `getIntroTransferBudget(state)` in a single cycle. **This budget is dynamic, not a
+   fixed constant**: `getIntroTransferBudget(state) = getPurchaseBlockSize(state) *
+   INTRO_BITS_PER_KILOBYTE_CONVERSION` — exactly enough bits to grant `getPurchaseBlockSize(state)`
+   Kilobyte units, the same live, possibly-growing block size the main game's own `tier01` Buy
+   button already reads (see "The (configurable) purchase block size and tier levels" below). At a
+   fresh cycle's default block size (`DEFAULT_PURCHASE_BLOCK_SIZE`, 8), this is 8000 bits — identical
+   to the fixed `INTRO_AUTO_INVEST_THRESHOLD` constant this replaced — and only grows later in a run,
+   once the last tier's own level count crosses `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`.
+   `blocksRemaining = getPurchaseBlockSize(state) - floor(bitsTransferredThisCycle /
+   INTRO_BITS_PER_KILOBYTE_CONVERSION)` is what `ByteFoundryPage` renders as transfer blocks (step
+   6) — already-transferred blocks simply aren't rendered, so the row visibly shrinks as the budget
+   is spent and disappears entirely once exhausted. Both transfer paths refuse once the remaining
+   budget (`getIntroTransferBudget(state) - bitsTransferredThisCycle`) can't cover another 1000-bit
+   transfer. Separately, whenever `bits` reaches the full `getIntroTransferBudget(state)` at once
+   (e.g. a fast-production or offline-progress jump that skips past several individual block
+   boundaries before the player could click through them one at a time), `tickIntroAutoInvest` (also
    called from `tickGame`, mirroring the existing autobuyer "wait until the whole batch is
-   affordable, then fire once" convention) auto-transfers `min(INTRO_AUTO_INVEST_THRESHOLD,
-   remainingBudget)` bits — a convenience for a player who lets Memory fill all the way rather than
-   converting in smaller chunks, granting `transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION`
-   Kilobytes (always a whole number, since every transfer moves in exact 1000-bit units). Every real
-   `prestigeGame` call resets Memory (`bits`/`productionAccumulator`), the gate
-   (`mainGameUnlocked: false`), and the transfer budget (`bitsTransferredThisCycle: 0`) back to
+   affordable, then fire once" convention) auto-transfers `min(getIntroTransferBudget(state),
+   remainingBudget)` bits in bulk — granting `transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION`
+   Kilobytes at once (always a whole number, since every transfer moves in exact 1000-bit units) and
+   emptying the whole block row in one shot, same as if every remaining block had been clicked
+   individually. Every real `prestigeGame` call resets Memory (`bits`/`productionAccumulator`), the
+   gate (`mainGameUnlocked: false`), and the transfer budget (`bitsTransferredThisCycle: 0`) back to
    fresh — see the intro above — so a real Prestige sends the player back through the gate every
    cycle, but the generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
    productionMilestoneTier/productionMilestoneTierClaims) carries over, making every cycle after the
@@ -236,8 +253,8 @@ per-cycle transfer budget described in step 7.
 9. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
-   Tap/Sacrifice/Invest/Storage stay just as interactive as on the mandatory gate, and Convert stays
-   available too as long as this cycle's transfer budget isn't exhausted (see
+   Tap/Sacrifice/Invest/Storage stay just as interactive as on the mandatory gate, and the
+   transfer-block row stays available too as long as this cycle's transfer budget isn't exhausted (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
 
 Both `convertIntroBitsToKilobytes` and `tickIntroAutoInvest` grant free tier units via an internal
@@ -258,15 +275,18 @@ itself via a `FillableStatCard = styled(StatCard)` wrapper):
   Sacrifice ladder is evenly divisible by `BITS_PER_BYTE`, so this never loses precision at the
   Byte boundary). Both numbers always render in the *same* unit (picked off `capacity`, the larger
   of the two), so a balance never reads in a coarser unit than its own cap. Once `byteCreated`, it also shows a
-  `bits % INTRO_AUTO_INVEST_THRESHOLD` tracker in raw bits (progress within the current 8000-bit
-  transfer block) and the current production rate.
+  `bits % getIntroTransferBudget(state)` tracker in raw bits (a rolling view of progress within the
+  current, dynamic transfer-budget block) and the current production rate.
 - **Cache 1KB** (only once `isIntroConversionUnlocked`) shows `bits % INTRO_BITS_PER_KILOBYTE_CONVERSION`
   out of 1000 bits — the current progress toward the *next* convertible 1000-bit chunk, wrapping back
   to 0 every time that chunk is spent. Distinct from Memory's own `fullProgress` (whole balance vs.
   its much larger capacity): Cache is the small, fast, constantly-cycling counterpart, Memory the
   large slow-filling one — the same big-storage/small-scratch-space split the "Cache" name evokes.
 
-This is a display-only convention — internal state always stores raw bit counts.
+Invest's own cost (`getIntroProductionMilestoneCost(tier)`) is shown on its button in **Bytes**
+(`cost ÷ BITS_PER_BYTE`, always a clean whole number — every tier's cost is evenly divisible by 8),
+independent of Memory's own unit-scaled display above. This is a display-only convention — internal
+state always stores raw bit counts.
 
 ### Tier production tickspeed
 
@@ -1220,9 +1240,10 @@ engine state).
                                                           // past this point
     bitsTransferredThisCycle: 0,                          // Resets to 0 every real Prestige. Cumulative bits
                                                           // ever converted into Kilobytes this cycle, manual +
-                                                          // auto combined, capped at INTRO_AUTO_INVEST_THRESHOLD
-                                                          // — both conversion paths refuse once the remaining
-                                                          // budget can't cover another 1000-bit transfer
+                                                          // auto combined, capped at getIntroTransferBudget(state)
+                                                          // (dynamic — see there) — both conversion paths refuse
+                                                          // once the remaining budget can't cover another
+                                                          // 1000-bit transfer
     storageBanks: {},                                     // PERMANENT. { [capacityBits]: count } of built,
                                                           // not-yet-redeemed Storage banks — see
                                                           // buildStorageBank/redeemStorageBank
@@ -1264,12 +1285,13 @@ purchases were manual or automatic.
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
 | `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `intro.bits === intro.capacity`; drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
-| `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` if `getIntroProductionMilestoneCost(tier) <= INTRO_AUTO_INVEST_THRESHOLD` (the four tiers up to 1000 Bytes), else `1` |
+| `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` if `getIntroProductionMilestoneCost(tier) < INTRO_AUTO_INVEST_THRESHOLD` (the three tiers strictly below 1000 Bytes), else `1` (1000 Bytes on) |
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry "Invest for Double Production" — reads `cost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)`; requires `intro.bits >= cost` (NOT full capacity — cost is independent of `intro.capacity`) and `intro.productionMilestoneTierClaims < getIntroProductionMilestoneMaxClaims(tier)`; deducts exactly `cost` from `bits`, and either increments `productionMilestoneTierClaims` (same tier) or advances `productionMilestoneTier` with a fresh claim count of 0 once the tier's claim limit is reached. Doubles the overall rate: halves `tickSpeedSeconds` while that stays ≥ `INTRO_MIN_TICK_SPEED_SECONDS`, otherwise multiplies `productionMultiplier` by `INTRO_PRODUCTION_MULTIPLIER_STEP` instead. No-op below cost or once every claim at the current tier is already used. Never freezes |
-| `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (1000) — drives the manual convert button's visibility |
-| `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) bits from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op below cost or once this cycle's shared transfer budget (`INTRO_AUTO_INVEST_THRESHOLD - intro.bitsTransferredThisCycle`) can't cover another 1000-bit transfer. Sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success |
+| `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (1000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
+| `getIntroTransferBudget` | `state → number` | Byte Foundry: `getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION` — this cycle's total bit-to-Kilobyte transfer budget, dynamic (tied to the Kilobyte tier's own live purchase block size, not a fixed constant). 8000 at a fresh cycle's default block size |
+| `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) bits from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op below cost or once this cycle's shared transfer budget (`getIntroTransferBudget(state) - intro.bitsTransferredThisCycle`) can't cover another 1000-bit transfer. Sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success. Called once per transfer-block click in `ByteFoundryPage` |
 | `tickIntroProduction` | `elapsedSeconds → state → state` | Byte Foundry: passive production for the Byte generator — no-op immediately before `intro.byteCreated`. Delivers one batch of `INTRO_BYTE_BASE_RATE * productionMultiplier` bits every `tickSpeedSeconds` of elapsed time (the same discrete "accumulate, deliver a whole period, bank the remainder" model `tickGame`'s own per-tier production uses — see there), crediting whole bits capped at `capacity`. Never freezes once `byteCreated` |
-| `tickIntroAutoInvest` | `state → state` | Byte Foundry: auto-convert convenience, mirroring the autobuyer "wait until the whole batch is affordable, then fire once" convention above — no-op below `INTRO_AUTO_INVEST_THRESHOLD` (8000) or once this cycle's shared transfer budget is exhausted. Transfers `min(INTRO_AUTO_INVEST_THRESHOLD, remainingBudget)` bits via `grantTierUnits`, granting `transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION` Kilobytes; sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success — shares the exact same budget as `convertIntroBitsToKilobytes` above |
+| `tickIntroAutoInvest` | `state → state` | Byte Foundry: bulk auto-convert convenience, mirroring the autobuyer "wait until the whole batch is affordable, then fire once" convention above — no-op below `getIntroTransferBudget(state)` (dynamic — see there) or once this cycle's shared transfer budget is exhausted. Transfers `min(getIntroTransferBudget(state), remainingBudget)` bits via `grantTierUnits`, granting `transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION` Kilobytes at once (emptying every remaining transfer block in `ByteFoundryPage` in one shot); sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success — shares the exact same budget as `convertIntroBitsToKilobytes` above |
 | `getNextStorageBankSize` | `state → number` | Byte Foundry Storage: `getTierCost(TIER_DEFINITIONS[0], (purchaseLevels.tier01 ?? 1) + 1)` — tier01's (Kilobytes') NEXT level's per-unit cost, the size `buildStorageBank` currently builds at |
 | `getStorageBankCost` | `capacityBits → number` | Byte Foundry Storage: `capacityBits * STORAGE_BUILD_COST_MULTIPLIER` (10x the bank's own face value) |
 | `buildStorageBank` | `state → state` | Byte Foundry Storage: spends `getStorageBankCost(getNextStorageBankSize(state))` bits from `intro.bits`, adds one bank of that size to `intro.storageBanks` (counts accumulate on repeat builds of the same size). No-op below cost. Bypasses `isProductionFrozen` (separate currency pool, same posture as Combine/Sacrifice/Invest) |
@@ -1397,7 +1419,7 @@ purchases were manual or automatic.
 - `INTRO_BYTE_BASE_RATE = 1` — the Byte generator's base batch size, in bits, delivered once every `tickSpeedSeconds`, before `productionMultiplier`
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator
 - `INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000` — manual conversion rate: this many intro bits become 1 Kilobyte unit in the main game — matches Kilobytes' own real `baseCost` (1E3 Bits) in `TIER_DEFINITIONS`
-- `INTRO_AUTO_INVEST_THRESHOLD = 8000` — once the intro bit balance reaches this (the capacity stage reached after 3 Sacrifice picks: 8 → 80 → 800 → 8000), the full balance auto-converts into Kilobytes via `tickIntroAutoInvest`; also doubles as the shared, per-cycle CAP on total bits ever converted into Kilobytes (`intro.bitsTransferredThisCycle`), manual and auto conversions combined — see "Byte Foundry" below
+- `INTRO_AUTO_INVEST_THRESHOLD = 8000` — no longer the transfer-budget/auto-trigger threshold (that's dynamic now — see `getIntroTransferBudget` in `engine.js`, tied to `getPurchaseBlockSize`). Its only remaining role is the cost cutoff for `getIntroProductionMilestoneMaxClaims` (2 claims per Invest tier strictly below 1000 Bytes' worth — 1/10/100 Bytes — 1 claim per tier from 1000 Bytes on) — kept as a named constant since 8000 bits is still a meaningful, independent boundary for that unrelated mechanic, coincidentally matching the transfer budget's own historical default (`DEFAULT_PURCHASE_BLOCK_SIZE` × 1000)
 - `INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) — capacity threshold at which the manual convert action becomes available
 - `STORAGE_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Storage: a bank's build cost is this many times its own face value in bits (see `getStorageBankCost`/`buildStorageBank`) — a 1000-bit bank costs 10,000 bits to build, a 10,000-bit bank costs 100,000, and so on
 
