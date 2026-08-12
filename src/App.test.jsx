@@ -2462,9 +2462,9 @@ describe('Byte Foundry Storage', () => {
     expect(saved.intro.storageBanks[futureBankSize]).toBeUndefined()
 
     // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
-    // visible here as the (non-hidden) block-progress row, not just the hidden MainPage one.
-    const progressBar = screen.getByRole('progressbar', { name: /kilobytes purchase block progress/i })
-    expect(progressBar).toHaveAttribute('aria-valuenow', '1')
+    // visible here via the transfer-block row (a live mirror of the same progress), not just the
+    // hidden MainPage one.
+    expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
   test('the auto-redeem toggle appears once a bank above 1 KB is held and pauses/resumes automatic redeeming', () => {

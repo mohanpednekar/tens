@@ -201,10 +201,11 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    same live, possibly-growing block size the main game's own `tier01` Buy button already reads (see
    "The (configurable) purchase block size and tier levels" below). `ByteFoundryPage` always renders
    exactly `getPurchaseBlockSize(state)` transfer blocks (step 6), deriving each one's
-   consumed/active/upcoming state directly from `purchaseLevelProgress[tier01]` — the exact same live
-   value the "Kilobytes' current block" tracker in the Storage section (step 8) already shows, so the
-   two rows are always in lockstep. Because that's a genuine, uncapped tier-level progress counter
-   rather than a cycle-scoped budget, the row automatically rolls over to a fresh, empty block set for
+   consumed/active/upcoming state directly from `purchaseLevelProgress[tier01]`. This is the only
+   place `ByteFoundryPage` shows this progress — the Storage section (step 8) used to show a
+   redundant, separately-rendered copy of the identical value and no longer does. Because this is a
+   genuine, uncapped tier-level progress counter rather than a cycle-scoped budget, the row
+   automatically rolls over to a fresh, empty block set for
    the *next* level the instant one completes (`getPurchaseBlockSize(state)` blocks transferred),
    rather than ever sitting permanently "consumed." `convertIntroBitsToKilobytes` is a no-op only when
    `intro.bits < INTRO_BITS_PER_KILOBYTE_CONVERSION` — insufficient Memory, nothing else. Separately,

@@ -2,6 +2,7 @@
   "0": "engine.test.js",
   "1": "MainPage/index.jsx",
   "2": "engine.js",
+  "3": "useIncrementalGame.js",
   "4": "tokens.js",
   "5": "package.json",
   "6": "devDependencies",
@@ -37,6 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
+  "39": "InfoPage/index.jsx",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -46,7 +48,9 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "InfoPage/index.jsx",
-  "53": "getPurchaseBlockSize",
-  "54": "MainPage"
+  "49": "Button/index.jsx",
+  "50": "ByteFoundryPage",
+  "51": "OfflineProgressNotice/index.jsx",
+  "52": "isStorageBankRedeemable",
+  "54": "formatCurrency"
 }

@@ -415,9 +415,10 @@ block into a consumed one at once) unlocks the main game immediately — no need
 balance. **There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
 `tickIntroAutoInvest` (see `getIntroTransferBudget`) keep firing indefinitely, every time Memory
 reaches another 1000-bit/block-sized threshold, forever. The row is simply a live mirror of
-`purchaseLevelProgress[tier01]` — the same value the "Kilobytes' current block" tracker in the Storage
-section already shows — so the instant a level completes (`getPurchaseBlockSize(state)` blocks
-transferred), the whole row rolls over to a fresh, empty set of blocks tracking the *next* level
+`purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
+section used to show a redundant separate copy of the identical value and no longer does) — so the
+instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
+over to a fresh, empty set of blocks tracking the *next* level
 rather than sitting permanently "consumed." (A real Prestige still resets every tier's
 `purchaseLevels`/`purchaseLevelProgress` — including tier01's — back to a fresh level 1 (see
 `prestigeGame` in `engine.js`), so the row does still start over each cycle in practice, just as a
@@ -473,11 +474,10 @@ purchase involved) enabled. Either way, a given size auto-redeems **at most once
 cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank that
 refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
 lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
-ever empties one. The Storage section also shows a live, non-hidden squares row for `tier01`'s own
-current purchase-block progress (`getPurchaseBlockSize(state)` blocks, greyed for units already
-bought) — it advances identically whether a unit came from the main game's Buy button/autobuyer or
-from redeeming a Storage bank here, since both paths update `purchaseLevelProgress` via the same
-bookkeeping.
+ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
+Buy button/autobuyer purchase — visible on the transfer-block row described above (see "The very
+first successful transfer" paragraph), the only place this page shows that progress; the Storage
+section itself no longer duplicates it in a separate row.
 
 **The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
 cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the

@@ -63,8 +63,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "run-simulation.mjs"
     },
     {
@@ -75,8 +75,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_simulaterun",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "simulaterun()"
     },
     {
@@ -87,8 +87,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_formatduration",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "formatduration()"
     },
     {
@@ -98,8 +98,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_defaultppvalues",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "defaultppvalues"
     },
     {
@@ -109,8 +109,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_clivalues",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "clivalues"
     },
     {
@@ -120,8 +120,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_simulate",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "simulate.mjs"
     },
     {
@@ -1024,8 +1024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "app.jsx"
     },
     {
@@ -1036,8 +1036,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_app",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "app()"
     },
     {
@@ -1106,7 +1106,7 @@
       "_origin": "ast",
       "id": "src_components_button_index",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "button/index.jsx"
     },
     {
@@ -1117,7 +1117,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_variant_token",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "variant_token"
     },
     {
@@ -1129,7 +1129,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_resolvecolor",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "resolvecolor()"
     },
     {
@@ -1140,7 +1140,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_named_glow_rgb",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "named_glow_rgb"
     },
     {
@@ -1152,7 +1152,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_hextorgb",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "hextorgb()"
     },
     {
@@ -1164,7 +1164,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_getglowrgb",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "getglowrgb()"
     },
     {
@@ -1175,7 +1175,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_pulse",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "pulse"
     },
     {
@@ -1187,7 +1187,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_clamppercent",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "clamppercent()"
     },
     {
@@ -1199,7 +1199,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_progressfill",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "progressfill()"
     },
     {
@@ -1210,7 +1210,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_button",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "button"
     },
     {
@@ -1221,7 +1221,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_buttonicon",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "buttonicon"
     },
     {
@@ -1232,7 +1232,7 @@
       "_origin": "ast",
       "id": "src_components_button_index_buttonlabel",
       "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community_name": "Button/index.jsx",
       "norm_label": "buttonlabel"
     },
     {
@@ -1243,7 +1243,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_button_index_buttoncontent",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "buttoncontent()"
     },
@@ -1254,8 +1254,8 @@
       "source_location": "L185",
       "_origin": "ast",
       "id": "src_components_button_index_visuallyhidden",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "visuallyhidden"
     },
     {
@@ -1287,8 +1287,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_offlineprogressnotice_index",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "offlineprogressnotice/index.jsx"
     },
     {
@@ -1298,8 +1298,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_components_offlineprogressnotice_index_offlinenoticeoverlay",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "offlinenoticeoverlay"
     },
     {
@@ -1309,8 +1309,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_components_offlineprogressnotice_index_offlinenoticecard",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "offlinenoticecard"
     },
     {
@@ -1320,8 +1320,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_components_offlineprogressnotice_index_noticetext",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "noticetext"
     },
     {
@@ -1332,8 +1332,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_offlineprogressnotice_index_offlineprogressnotice",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "offlineprogressnotice()"
     },
     {
@@ -1343,8 +1343,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_statcard_index",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "statcard/index.js"
     },
     {
@@ -1354,8 +1354,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_components_statcard_index_statcard",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "statcard"
     },
     {
@@ -1377,8 +1377,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierid",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getlasttierid()"
     },
     {
@@ -1401,8 +1401,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_allresourceids",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "allresourceids()"
     },
     {
@@ -1413,8 +1413,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_createinitialgamestate",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "createinitialgamestate()"
     },
     {
@@ -1458,8 +1458,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatscientific",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatscientific()"
     },
     {
@@ -1470,8 +1470,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatamount",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatamount()"
     },
     {
@@ -1483,7 +1483,7 @@
       "_origin": "ast",
       "id": "src_game_engine_formatcurrency",
       "community": 54,
-      "community_name": "MainPage",
+      "community_name": "formatCurrency",
       "norm_label": "formatcurrency()"
     },
     {
@@ -1506,8 +1506,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpurchaseblocksize",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getpurchaseblocksize()"
     },
     {
@@ -1590,8 +1590,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockcost",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getautobuyerunlockcost()"
     },
     {
@@ -1602,7 +1602,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockmilestone",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getautobuyerunlockmilestone()"
     },
@@ -1614,7 +1614,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettiertickspeedautobuyermilestone",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "gettiertickspeedautobuyermilestone()"
     },
@@ -1626,7 +1626,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_applyautobuyermilestones",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "applyautobuyermilestones()"
     },
@@ -1638,8 +1638,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedproductionmultiplier",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettickspeedproductionmultiplier()"
     },
     {
@@ -1662,8 +1662,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
@@ -1674,8 +1674,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_countglobaltickspeedmilestones",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "countglobaltickspeedmilestones()"
     },
     {
@@ -1686,8 +1686,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedregularstep",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getglobaltickspeedregularstep()"
     },
     {
@@ -1698,8 +1698,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getglobaltickspeedproductionmultiplier()"
     },
     {
@@ -1710,8 +1710,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_islasttiertickspeedxpunlocked",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "islasttiertickspeedxpunlocked()"
     },
     {
@@ -1722,8 +1722,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedmultiplier",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getlasttierxptickspeedmultiplier()"
     },
     {
@@ -1758,8 +1758,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyprestigespeedbonus",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buyprestigespeedbonus()"
     },
     {
@@ -1770,8 +1770,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getsmartautobuyercost",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getsmartautobuyercost()"
     },
     {
@@ -1806,8 +1806,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getspeeduprequirement",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "getspeeduprequirement()"
     },
     {
@@ -1818,7 +1818,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getoverclockrequirement",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getoverclockrequirement()"
     },
@@ -1854,8 +1854,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isproductionfrozen",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "isproductionfrozen()"
     },
     {
@@ -1902,8 +1902,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeprogresspercent",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getprestigeprogresspercent()"
     },
     {
@@ -1914,8 +1914,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "geteffectivetiertickspeedseconds()"
     },
     {
@@ -1926,8 +1926,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierproductionprogresspercent",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierproductionprogresspercent()"
     },
     {
@@ -1974,8 +1974,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getofflineeffectiveseconds",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "getofflineeffectiveseconds()"
     },
     {
@@ -1986,8 +1986,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_applyofflineprogress",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "applyofflineprogress()"
     },
     {
@@ -1998,8 +1998,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatofflineduration",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 51,
+      "community_name": "OfflineProgressNotice/index.jsx",
       "norm_label": "formatofflineduration()"
     },
     {
@@ -2022,8 +2022,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierpurchasedcount",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierpurchasedcount()"
     },
     {
@@ -2058,8 +2058,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_granttierunits",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "granttierunits()"
     },
     {
@@ -2070,8 +2070,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionrate",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionrate()"
     },
     {
@@ -2082,8 +2082,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tapintrobit",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "tapintrobit()"
     },
     {
@@ -2094,8 +2094,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_combineintrobyte",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "combineintrobyte()"
     },
     {
@@ -2106,8 +2106,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_pickintrocapacitymilestone",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "pickintrocapacitymilestone()"
     },
     {
@@ -2118,8 +2118,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonecost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionmilestonecost()"
     },
     {
@@ -2130,8 +2130,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonemaxclaims",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionmilestonemaxclaims()"
     },
     {
@@ -2142,8 +2142,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_pickintroproductionmilestone",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "pickintroproductionmilestone()"
     },
     {
@@ -2154,8 +2154,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isintroconversionunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "isintroconversionunlocked()"
     },
     {
@@ -2166,8 +2166,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintrotransferbudget",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getintrotransferbudget()"
     },
     {
@@ -2178,8 +2178,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_convertintrobitstokilobytes",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "convertintrobitstokilobytes()"
     },
     {
@@ -2202,8 +2202,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickintroautoinvest",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "tickintroautoinvest()"
     },
     {
@@ -2214,8 +2214,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getfirsttiercost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "getfirsttiercost()"
     },
     {
@@ -2226,8 +2226,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebanksize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "getstoragebanksize()"
     },
     {
@@ -2238,8 +2238,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebankcost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getstoragebankcost()"
     },
     {
@@ -2250,8 +2250,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buildstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buildstoragebank()"
     },
     {
@@ -2274,8 +2274,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstoragebankredeemable",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "isstoragebankredeemable()"
     },
     {
@@ -2286,8 +2286,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_redeemstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "redeemstoragebank()"
     },
     {
@@ -2298,8 +2298,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickstorageautoredeem",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "tickstorageautoredeem()"
     },
     {
@@ -2310,8 +2310,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setstorageautoredeemenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setstorageautoredeemenabled()"
     },
     {
@@ -2322,8 +2322,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setautobuyerenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautobuyerenabled()"
     },
     {
@@ -2346,8 +2346,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buysmartautobuyer",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buysmartautobuyer()"
     },
     {
@@ -2358,8 +2358,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_settiertickspeedautobuyerenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "settiertickspeedautobuyerenabled()"
     },
     {
@@ -2382,8 +2382,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoprestigeenabled()"
     },
     {
@@ -2394,8 +2394,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestigeautobuyer",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buyautoprestigeautobuyer()"
     },
     {
@@ -2406,8 +2406,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeautobuyerenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoprestigeautobuyerenabled()"
     },
     {
@@ -2442,8 +2442,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_speedupgame",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "speedupgame()"
     },
     {
@@ -2454,8 +2454,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_overclockgame",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "overclockgame()"
     },
     {
@@ -2466,8 +2466,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautospeedup",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buyautospeedup()"
     },
     {
@@ -2478,8 +2478,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setautospeedupenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautospeedupenabled()"
     },
     {
@@ -2490,8 +2490,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedautobuyer",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buytickspeedautobuyer()"
     },
     {
@@ -2502,8 +2502,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_setautoglobaltickspeedenabled",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoglobaltickspeedenabled()"
     },
     {
@@ -2873,8 +2873,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withlasttiertickspeedxpunlocked",
-      "community": 53,
-      "community_name": "getPurchaseBlockSize",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "withlasttiertickspeedxpunlocked()"
     },
     {
@@ -2968,7 +2968,7 @@
       "_origin": "ast",
       "id": "src_game_layers_resource_symbol",
       "community": 54,
-      "community_name": "MainPage",
+      "community_name": "formatCurrency",
       "norm_label": "resource_symbol()"
     },
     {
@@ -3210,8 +3210,8 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "src_game_layers_default_purchase_block_size",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "default_purchase_block_size"
     },
     {
@@ -3540,8 +3540,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_storage",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "storage.js"
     },
     {
@@ -3551,8 +3551,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_game_storage_legacy_tier_id_map",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "legacy_tier_id_map"
     },
     {
@@ -3562,8 +3562,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_game_storage_legacy_removed_tier_ids",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "legacy_removed_tier_ids"
     },
     {
@@ -3574,8 +3574,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_migratetierkeys",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "migratetierkeys()"
     },
     {
@@ -3586,8 +3586,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_shifttieriddown",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "shifttieriddown()"
     },
     {
@@ -3598,8 +3598,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_shiftoldtierids",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "shiftoldtierids()"
     },
     {
@@ -3610,8 +3610,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_migratestate",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "migratestate()"
     },
     {
@@ -3622,8 +3622,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_savegamestate",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "savegamestate()"
     },
     {
@@ -3634,8 +3634,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_loadgamestate",
-      "community": 49,
-      "community_name": "InfoPage/index.jsx",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "loadgamestate()"
     },
     {
@@ -3646,8 +3646,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_loadlastsavetimestamp",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "loadlastsavetimestamp()"
     },
     {
@@ -3658,8 +3658,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_cleargamestate",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "cleargamestate()"
     },
     {
@@ -3669,8 +3669,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_storage_test",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "storage.test.js"
     },
     {
@@ -3680,8 +3680,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_useincrementalgame",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "useincrementalgame.js"
     },
     {
@@ -3692,8 +3692,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_useincrementalgame_computeinitialgame",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "computeinitialgame()"
     },
     {
@@ -3704,8 +3704,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_useincrementalgame_useincrementalgame",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "useincrementalgame()"
     },
     {
@@ -3715,8 +3715,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_index",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "src/index.jsx"
     },
     {
@@ -3726,8 +3726,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_index_rootelement",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "rootelement"
     },
     {
@@ -3764,10 +3764,21 @@
       "norm_label": "title"
     },
     {
+      "label": "Header",
+      "file_type": "code",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "src_pages_bytefoundrypage_index_header",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "header"
+    },
+    {
       "label": "StatusText",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L26",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_statustext",
       "community": 8,
@@ -3778,7 +3789,7 @@
       "label": "SectionLabel",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L32",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_sectionlabel",
       "community": 8,
@@ -3789,7 +3800,7 @@
       "label": "BalanceText",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L41",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_balancetext",
       "community": 8,
@@ -3800,7 +3811,7 @@
       "label": "TapArea",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L54",
+      "source_location": "L67",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_taparea",
       "community": 8,
@@ -3811,7 +3822,7 @@
       "label": "ActionsRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L81",
+      "source_location": "L94",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_actionsrow",
       "community": 8,
@@ -3822,7 +3833,7 @@
       "label": "TilesRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L92",
+      "source_location": "L105",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_tilesrow",
       "community": 8,
@@ -3833,7 +3844,7 @@
       "label": "FillableStatCard",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L105",
+      "source_location": "L118",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_fillablestatcard",
       "community": 8,
@@ -3844,7 +3855,7 @@
       "label": "RateBlocksRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L116",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_rateblocksrow",
       "community": 8,
@@ -3855,7 +3866,7 @@
       "label": "RateBlock",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L123",
+      "source_location": "L136",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_rateblock",
       "community": 8,
@@ -3866,7 +3877,7 @@
       "label": "TransferBlocksRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L137",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_transferblocksrow",
       "community": 8,
@@ -3877,7 +3888,7 @@
       "label": "TransferBlock",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L153",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_transferblock",
       "community": 8,
@@ -3888,7 +3899,7 @@
       "label": "StorageSection",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L182",
+      "source_location": "L195",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesection",
       "community": 8,
@@ -3899,7 +3910,7 @@
       "label": "StorageSizeRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L196",
+      "source_location": "L209",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesizerow",
       "community": 8,
@@ -3910,7 +3921,7 @@
       "label": "StorageSizeLabel",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L204",
+      "source_location": "L217",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesizelabel",
       "community": 8,
@@ -3921,7 +3932,7 @@
       "label": "StorageBankSquaresRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L210",
+      "source_location": "L223",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagebanksquaresrow",
       "community": 8,
@@ -3932,7 +3943,7 @@
       "label": "StorageBankSquare",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L225",
+      "source_location": "L238",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagebanksquare",
       "community": 8,
@@ -3943,7 +3954,7 @@
       "label": "MEMORY_UNIT_SYMBOLS",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L259",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_memory_unit_symbols",
       "community": 8,
@@ -3954,7 +3965,7 @@
       "label": "getMemoryUnit()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L271",
+      "source_location": "L284",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_getmemoryunit",
@@ -3966,7 +3977,7 @@
       "label": "floorToDecimals()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L286",
+      "source_location": "L299",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_floortodecimals",
@@ -3978,7 +3989,7 @@
       "label": "formatMemoryAmount()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L288",
+      "source_location": "L301",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -3990,7 +4001,7 @@
       "label": "formatMemoryBalance()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L294",
+      "source_location": "L307",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -4002,7 +4013,7 @@
       "label": "STORAGE_UNIT_SYMBOLS",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L306",
+      "source_location": "L319",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storage_unit_symbols",
       "community": 8,
@@ -4013,36 +4024,36 @@
       "label": "formatStorageSize()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L307",
+      "source_location": "L320",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatstoragesize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatstoragesize()"
     },
     {
       "label": "clampPercent()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L318",
+      "source_location": "L331",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_clamppercent",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "clamppercent()"
     },
     {
       "label": "ByteFoundryPage()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L329",
+      "source_location": "L342",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "bytefoundrypage()"
     },
     {
@@ -4052,7 +4063,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_infopage_index",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage/index.jsx"
     },
@@ -4063,7 +4074,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_pages_infopage_index_rootdiv",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "rootdiv"
     },
@@ -4074,7 +4085,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_pages_infopage_index_header",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "header"
     },
@@ -4085,7 +4096,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_pages_infopage_index_versiontext",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "versiontext"
     },
@@ -4096,7 +4107,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_pages_infopage_index_section",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "section"
     },
@@ -4108,7 +4119,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_infopage_index_infopage",
-      "community": 49,
+      "community": 39,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage()"
     },
@@ -4738,7 +4749,7 @@
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatcost",
       "community": 54,
-      "community_name": "MainPage",
+      "community_name": "formatCurrency",
       "norm_label": "formatcost()"
     },
     {
@@ -4749,8 +4760,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_progresspercent",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "progresspercent()"
     },
     {
@@ -4761,8 +4772,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatrate",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "formatrate()"
     },
     {
@@ -4773,8 +4784,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonuspercent",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "formatbonuspercent()"
     },
     {
@@ -4785,8 +4796,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "formatglobaltickspeedbonuspercent()"
     },
     {
@@ -4797,8 +4808,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonusormultiplier",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "formatbonusormultiplier()"
     },
     {
@@ -4809,8 +4820,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_mainpage",
-      "community": 54,
-      "community_name": "MainPage",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "mainpage()"
     },
     {
@@ -4820,8 +4831,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_reportwebvitals",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "reportwebvitals.js"
     },
     {
@@ -4832,8 +4843,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_reportwebvitals_reportwebvitals",
-      "community": 4,
-      "community_name": "tokens.js",
+      "community": 3,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "reportwebvitals()"
     },
     {
@@ -7882,7 +7893,7 @@
       "label": "Tier production tickspeed",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L331",
+      "source_location": "L332",
       "_origin": "ast",
       "id": "docs_economy_reference_tier_production_tickspeed",
       "community": 23,
@@ -7893,7 +7904,7 @@
       "label": "Multiplier outcomes are floored",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L375",
+      "source_location": "L376",
       "_origin": "ast",
       "id": "docs_economy_reference_multiplier_outcomes_are_floored",
       "community": 23,
@@ -7904,7 +7915,7 @@
       "label": "Production figure (tick-progress ring removed)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L398",
+      "source_location": "L399",
       "_origin": "ast",
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
       "community": 23,
@@ -7915,7 +7926,7 @@
       "label": "Offline progress",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L412",
+      "source_location": "L413",
       "_origin": "ast",
       "id": "docs_economy_reference_offline_progress",
       "community": 23,
@@ -7926,7 +7937,7 @@
       "label": "Prestige Points, autobuyer unlock, and the tickspeed multiplier",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L425",
+      "source_location": "L426",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
       "community": 23,
@@ -7937,7 +7948,7 @@
       "label": "Tier autobuyer/tier-tickspeed-autobuyer milestones",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L508",
+      "source_location": "L509",
       "_origin": "ast",
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
       "community": 23,
@@ -7948,7 +7959,7 @@
       "label": "Pause/resume for the global automations",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L546",
+      "source_location": "L547",
       "_origin": "ast",
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
       "community": 23,
@@ -7959,7 +7970,7 @@
       "label": "Pause/resume for per-tier automations",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L571",
+      "source_location": "L572",
       "_origin": "ast",
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
       "community": 23,
@@ -7970,7 +7981,7 @@
       "label": "Tickspeed multiplier",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L603",
+      "source_location": "L604",
       "_origin": "ast",
       "id": "docs_economy_reference_tickspeed_multiplier",
       "community": 23,
@@ -7981,7 +7992,7 @@
       "label": "The global tickspeed multiplier",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L633",
+      "source_location": "L634",
       "_origin": "ast",
       "id": "docs_economy_reference_the_global_tickspeed_multiplier",
       "community": 23,
@@ -7992,7 +8003,7 @@
       "label": "The last tier's XP-funded tickspeed",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L697",
+      "source_location": "L698",
       "_origin": "ast",
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
       "community": 23,
@@ -8003,7 +8014,7 @@
       "label": "Multiplier overflow safety",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L780",
+      "source_location": "L781",
       "_origin": "ast",
       "id": "docs_economy_reference_multiplier_overflow_safety",
       "community": 23,
@@ -8014,7 +8025,7 @@
       "label": "Prestige and the Googol freeze",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L797",
+      "source_location": "L798",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
       "community": 23,
@@ -8025,7 +8036,7 @@
       "label": "Speed Up",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L841",
+      "source_location": "L842",
       "_origin": "ast",
       "id": "docs_economy_reference_speed_up",
       "community": 23,
@@ -8036,7 +8047,7 @@
       "label": "Overclock",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L911",
+      "source_location": "L912",
       "_origin": "ast",
       "id": "docs_economy_reference_overclock",
       "community": 23,
@@ -8047,7 +8058,7 @@
       "label": "Prestige info is hidden until first prestige",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L977",
+      "source_location": "L978",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
       "community": 23,
@@ -8058,7 +8069,7 @@
       "label": "Reset",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L996",
+      "source_location": "L997",
       "_origin": "ast",
       "id": "docs_economy_reference_reset",
       "community": 23,
@@ -8069,7 +8080,7 @@
       "label": "Game state shape",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1005",
+      "source_location": "L1006",
       "_origin": "ast",
       "id": "docs_economy_reference_game_state_shape",
       "community": 23,
@@ -8080,7 +8091,7 @@
       "label": "Key engine functions (`src/game/engine.js`)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1320",
+      "source_location": "L1321",
       "_origin": "ast",
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
       "community": 23,
@@ -8091,7 +8102,7 @@
       "label": "Constants (`src/game/layers.js`)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1412",
+      "source_location": "L1413",
       "_origin": "ast",
       "id": "docs_economy_reference_constants_src_game_layers_js",
       "community": 23,
@@ -12997,7 +13008,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L413",
+      "source_location": "L433",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -13009,7 +13020,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L290",
+      "source_location": "L303",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -13021,7 +13032,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L308",
+      "source_location": "L321",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatstoragesize",
@@ -13261,7 +13272,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L350",
+      "source_location": "L363",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15745,7 +15756,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L336",
+      "source_location": "L349",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15913,7 +15924,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L338",
+      "source_location": "L351",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15961,7 +15972,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L340",
+      "source_location": "L353",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16033,7 +16044,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L335",
+      "source_location": "L348",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16189,7 +16200,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L365",
+      "source_location": "L378",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16237,7 +16248,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L366",
+      "source_location": "L379",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16345,7 +16356,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L369",
+      "source_location": "L382",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19317,7 +19328,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L81",
+      "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19328,7 +19339,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L41",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19339,7 +19350,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L329",
+      "source_location": "L342",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19350,7 +19361,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L318",
+      "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19361,7 +19372,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L105",
+      "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19372,7 +19383,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L286",
+      "source_location": "L299",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19383,7 +19394,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L288",
+      "source_location": "L301",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19394,7 +19405,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L294",
+      "source_location": "L307",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19405,7 +19416,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L307",
+      "source_location": "L320",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19416,7 +19427,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L271",
+      "source_location": "L284",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19427,7 +19438,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L259",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_pages_bytefoundrypage_index",
+      "target": "src_pages_bytefoundrypage_index_header",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19438,7 +19460,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L123",
+      "source_location": "L136",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19449,7 +19471,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L116",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19471,7 +19493,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L32",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19482,7 +19504,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L26",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19493,7 +19515,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L306",
+      "source_location": "L319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19504,7 +19526,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L225",
+      "source_location": "L238",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19515,7 +19537,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L210",
+      "source_location": "L223",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19526,7 +19548,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L182",
+      "source_location": "L195",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19537,7 +19559,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L204",
+      "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19548,7 +19570,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L196",
+      "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19559,7 +19581,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L54",
+      "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19570,7 +19592,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L92",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19592,7 +19614,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L153",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19603,7 +19625,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L137",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19615,7 +19637,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L295",
+      "source_location": "L308",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -19627,7 +19649,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L290",
+      "source_location": "L303",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -19639,7 +19661,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L296",
+      "source_location": "L309",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -19651,7 +19673,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L402",
+      "source_location": "L422",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19663,7 +19685,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L515",
+      "source_location": "L525",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19675,7 +19697,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L356",
+      "source_location": "L369",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -23420,7 +23442,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1412",
+      "source_location": "L1413",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23431,7 +23453,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1005",
+      "source_location": "L1006",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23442,7 +23464,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1320",
+      "source_location": "L1321",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23453,7 +23475,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L412",
+      "source_location": "L413",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23464,7 +23486,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L911",
+      "source_location": "L912",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23475,7 +23497,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L797",
+      "source_location": "L798",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23486,7 +23508,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L977",
+      "source_location": "L978",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23497,7 +23519,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L425",
+      "source_location": "L426",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23508,7 +23530,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L996",
+      "source_location": "L997",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23519,7 +23541,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L841",
+      "source_location": "L842",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23541,7 +23563,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L331",
+      "source_location": "L332",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -23552,7 +23574,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L375",
+      "source_location": "L376",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_tier_production_tickspeed",
@@ -23563,7 +23585,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L398",
+      "source_location": "L399",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_tier_production_tickspeed",
@@ -23574,7 +23596,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L780",
+      "source_location": "L781",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23585,7 +23607,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L571",
+      "source_location": "L572",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23596,7 +23618,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L546",
+      "source_location": "L547",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23607,7 +23629,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L633",
+      "source_location": "L634",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23618,7 +23640,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L697",
+      "source_location": "L698",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23629,7 +23651,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L603",
+      "source_location": "L604",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23640,7 +23662,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L508",
+      "source_location": "L509",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -23682,5 +23704,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2846f73537bfeec1cd16f0a7fbe517085739ba64"
+  "built_at_commit": "762231e96e306f9ea084db53df261677660568b5"
 }

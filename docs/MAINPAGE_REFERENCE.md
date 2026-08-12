@@ -24,9 +24,15 @@ Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
-the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a title/one-line
-status explainer (three variants — pre-unlock instructions, post-unlock with remaining transfer
-budget, or budget-exhausted, see below); a `TilesRow` (flex row) holding a single `FillableStatCard`
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a `Header` row
+(`display: flex`, `justify-content: space-between`, the same title/nav-link placement convention
+`MainPage`'s own `<Header>` and `InfoPage`'s own `<Header>` already use) pairing the page title with
+a "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
+button, calling `onBack`) — shown only once `onBack` is passed, i.e. only when reached voluntarily
+post-`mainGameUnlocked`, since the mandatory gate has no way out — rather than the exit sitting alone
+at the bottom of the page; a one-line status explainer below that (two variants — pre-unlock
+instructions, or a post-unlock acknowledgment that transfers keep working indefinitely, with no
+per-cycle cap to run into); a `TilesRow` (flex row) holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
@@ -43,14 +49,15 @@ at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line inste
 progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
 read directly off the active transfer block's own fill (see below).
 
-A large tap button (`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling
-`actions.tapIntroBit` — shrinks to half-width (`$compact`, `width: 50%`, same `5 / 3` aspect ratio as
-full size) once `byteCreated`, since passive production is the primary loop by then and tapping
-becomes a secondary/backup action, while remaining exactly as clickable. Deliberately carries no
-`$progress` fill or hidden progressbar of its own — Memory's own tile above already shows the
-identical bits/capacity fill, so a second meter on the tap button would just duplicate it; its
-`background` is set explicitly (`theme.color.surfaceSunken`) since it no longer gets that from
-`progressFill`'s own gradient (which used to double as the button's base fill). A "Combine into a
+A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
+capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
+(Actions/Storage/transfer blocks), rather than up near the Memory tile, since once `byteCreated`
+passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
+as clickable either way, and never shrinks or changes size. Deliberately carries no `$progress` fill
+or hidden progressbar of its own — Memory's own tile above already shows the identical bits/capacity
+fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
+(`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
+used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons —
@@ -102,21 +109,16 @@ purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's o
 has no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
 currently-fillable empty bank, smallest size first, whenever there's enough of it.
 
-The section closes with a live, non-hidden progress row for tier01's own current purchase-block
-progress: a `SectionLabel` ("Kilobytes' current block (N/blockSize)") above the same `RateBlocksRow`/
-`RateBlock` pair the production-rate display above already uses, sized to
-`getPurchaseBlockSize(state)` blocks (`role="progressbar"`, `aria-label="kilobytes purchase block
-progress"`) and filled up to `state.purchaseLevelProgress[TIER_DEFINITIONS[0].id]` — advancing
-identically whether a unit came from the main game's Buy button/autobuyer or from redeeming a
-Storage bank right here, since both update `purchaseLevelProgress` via the same bookkeeping
-(`grantTierUnits`/`buyTier`).
+The section used to close with its own live progress row mirroring tier01's current purchase-block
+progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once the transfer-block row
+below started reading that exact same value directly, making the two rows show identical information
+side by side; the transfer-block row is now the only place this progress is shown.
 
 Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
-own current purchase block, the identical value the "Kilobytes' current block" tracker above already
-shows (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
+own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
 `blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
 value, not a separately-tracked field) to pick one of three states: **consumed**
 (`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
@@ -140,10 +142,6 @@ offline-progress jump — which advances `purchaseLevelProgress` by a full block
 `mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check reveals whatever page the
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
-
-A "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
-button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
-post-`mainGameUnlocked` — the mandatory gate has no way out.
 
 Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file): raw
 bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing

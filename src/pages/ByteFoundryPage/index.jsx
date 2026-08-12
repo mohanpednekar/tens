@@ -20,7 +20,18 @@ const Title = styled.h1`
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
   margin: 0;
-  text-align: center;
+`
+
+// Title plus the "← Back to game" exit (when present) share one row, the same title/nav-link
+// placement convention MainPage's own <Header> and InfoPage's <Header> already use — rather than
+// the exit sitting alone at the bottom of the page, disconnected from the rest of the page's own
+// navigation.
+const Header = styled.header`
+  align-items: center;
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  justify-content: space-between;
+  width: 100%;
 `
 
 const StatusText = styled.p`
@@ -46,24 +57,26 @@ const BalanceText = styled.p`
   text-align: center;
 `
 
-// Once the Byte generator exists, tapping is a secondary/backup action (passive production is the
-// primary loop now) — $compact shrinks the button accordingly, while it stays just as clickable
-// (same disabled={isFull} gating either way). No progress fill here — Memory's own tile already
-// shows the same bits/capacity fill, so a duplicate meter on the tap button itself would be
-// redundant.
+// Tapping stays a fully live action forever (never freezes, never goes read-only — see
+// "Byte Foundry" in CLAUDE.md), but once the Byte generator exists it's a secondary/backup action
+// behind passive production, which is why it renders last on the page instead of up top — while
+// staying just as clickable (same disabled={isFull} gating either way) and always full width, the
+// same width every other action button on this page uses. No progress fill here — Memory's own
+// tile already shows the same bits/capacity fill, so a duplicate meter on the tap button itself
+// would be redundant.
 const TapArea = styled.button`
   position: relative;
-  width: ${props => (props.$compact ? '50%' : '100%')};
+  width: 100%;
   aspect-ratio: 5 / 3;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$compact ? props.theme.type.scale.lg.size : props.theme.type.scale.xl.size)};
+  font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease, width 0.2s ease, font-size 0.2s ease;
+  transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -320,12 +333,12 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
-// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (up to this cycle's shared,
-// dynamic transfer budget, see remainingTransferBudget below) all stay fully live whether reached
-// via the mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
-// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is
-// PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle,
-// until the next Prestige resets Memory (and the transfer budget) fresh.
+// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see
+// getIntroTransferBudget in engine.js) all stay fully live whether reached via the mandatory gate
+// or this voluntary link. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
+// productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is PERMANENT — see
+// prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
+// Prestige resets Memory fresh.
 const ByteFoundryPage = ({ game, onBack }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
@@ -389,7 +402,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
-      <Title>⚙️ Byte Foundry</Title>
+      <Header>
+        <Title>⚙️ Byte Foundry</Title>
+        {onBack && (
+          <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
+            <ButtonContent>← Back to game</ButtonContent>
+          </Button>
+        )}
+      </Header>
       <StatusText>
         {!intro.mainGameUnlocked
           ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
@@ -425,16 +445,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
           )}
         </FillableStatCard>
       </TilesRow>
-
-      <TapArea
-        aria-label="tap to generate a bit"
-        disabled={isFull}
-        onClick={actions.tapIntroBit}
-        type="button"
-        $compact={intro.byteCreated}
-      >
-        👆 Tap
-      </TapArea>
 
       <ActionsRow>
         {canCombine && (
@@ -590,19 +600,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </ButtonContent>
             </Button>
           )}
-
-          <SectionLabel>{`Kilobytes' current block (${tier01PurchaseProgress}/${purchaseBlockSize})`}</SectionLabel>
-          <RateBlocksRow
-            role="progressbar"
-            aria-label="kilobytes purchase block progress"
-            aria-valuenow={tier01PurchaseProgress}
-            aria-valuemin={0}
-            aria-valuemax={purchaseBlockSize}
-          >
-            {Array.from({ length: purchaseBlockSize }, (_, index) => (
-              <RateBlock key={index} $filled={index < tier01PurchaseProgress} />
-            ))}
-          </RateBlocksRow>
         </StorageSection>
       )}
 
@@ -651,11 +648,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </TransferBlocksRow>
       </>)}
 
-      {onBack && (
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
-        </Button>
-      )}
+      <TapArea
+        aria-label="tap to generate a bit"
+        disabled={isFull}
+        onClick={actions.tapIntroBit}
+        type="button"
+      >
+        👆 Tap
+      </TapArea>
     </RootDiv>
   )
 }
