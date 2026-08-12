@@ -24,9 +24,15 @@ Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
-the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a title/one-line
-status explainer (three variants — pre-unlock instructions, post-unlock with remaining transfer
-budget, or budget-exhausted, see below); a `TilesRow` (flex row) holding a single `FillableStatCard`
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a `Header` row
+(`display: flex`, `justify-content: space-between`, the same title/nav-link placement convention
+`MainPage`'s own `<Header>` and `InfoPage`'s own `<Header>` already use) pairing the page title with
+a "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
+button, calling `onBack`) — shown only once `onBack` is passed, i.e. only when reached voluntarily
+post-`mainGameUnlocked`, since the mandatory gate has no way out — rather than the exit sitting alone
+at the bottom of the page; a one-line status explainer below that (two variants — pre-unlock
+instructions, or a post-unlock acknowledgment that transfers keep working indefinitely, with no
+per-cycle cap to run into); a `TilesRow` (flex row) holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
@@ -43,25 +49,37 @@ at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line inste
 progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
 read directly off the active transfer block's own fill (see below).
 
-A large tap button (`aria-label="tap to generate a bit"`, disabled once `bits >= capacity`) calling
-`actions.tapIntroBit` — shrinks to half-width (`$compact`, `width: 50%`, same `5 / 3` aspect ratio as
-full size) once `byteCreated`, since passive production is the primary loop by then and tapping
-becomes a secondary/backup action, while remaining exactly as clickable. Deliberately carries no
-`$progress` fill or hidden progressbar of its own — Memory's own tile above already shows the
-identical bits/capacity fill, so a second meter on the tap button would just duplicate it; its
-`background` is set explicitly (`theme.color.surfaceSunken`) since it no longer gets that from
-`progressFill`'s own gradient (which used to double as the button's base fill). A "Combine into a
+A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
+capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
+(Actions/Storage/transfer blocks), rather than up near the Memory tile, since once `byteCreated`
+passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
+as clickable either way, and never shrinks or changes size. Deliberately carries no `$progress` fill
+or hidden progressbar of its own — Memory's own tile above already shows the identical bits/capacity
+fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
+(`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
+used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons —
-"Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless
-`bits === capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`)
-and "Invest for Double Production" (`aria-label="invest bits for double production"`, its visible
-label including its own cost **in Bytes** —
-`getIntroProductionMilestoneCost(intro.productionMilestoneTier) / BITS_PER_BYTE` — disabled unless
-`bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so the
-button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
+INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons — placed
+side by side in their own `MilestonesRow` (`display: flex`, each button `flex: 1`) rather than
+stacked, since they're a paired choice, not a list. Each renders its own two-line
+`MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
+`components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
+of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
+activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
+than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥 Memory ×10` — "Memory"
+matching the same term the balance tile above already uses for `capacity`, so the button's purpose
+reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
+Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
+capacity"` still carries the full description for assistive tech, disabled unless `bits ===
+capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest
+for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
+this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
+keeping visible even in the shortened label; `aria-label="invest bits for double production"`
+carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
+— disabled unless `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims
+< getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so
+the button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
 each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
@@ -72,12 +90,15 @@ Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSectio
 so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
 Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label/cost always tracks `getStorageBankSize(state)` — an independent ladder that
+whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
 1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
 skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
-the current size, decoupled from tier01's own CURRENT price; disabled below that cost. Building
-only ever constructs an EMPTY container — it does not fill it (see below).
+the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
+cost itself (parenthesized in the label, and in the button's `title`) renders via
+`formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same
+as Invest's cost above — rather than a raw unitless bit count. Building only ever constructs an
+EMPTY container — it does not fill it (see below).
 
 For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
 visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
@@ -93,30 +114,27 @@ placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeemi
 doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
 pool. `isStorageBankRedeemable`'s own gate is unchanged from before this ladder existed: at or below
 tier01's *current* per-unit level cost, not a one-tick-only exact match (see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the size rows, a final pause/resume-style
-toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
-`actions.setStorageAutoRedeemEnabled`, shown only once any size is currently full) flips
-`intro.storageAutoRedeemEnabled` — unlike every other automation toggle on this page, no prerequisite
-purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all
-(see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself (`tickStorageAutoFill`)
-has no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
-currently-fillable empty bank, smallest size first, whenever there's enough of it.
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). No pause/resume control for auto-redeem
+currently renders below the size rows — removed for now, with a UI to reintroduce it planned for
+later (see `docs/DESIGN_HISTORY.md`); `intro.storageAutoRedeemEnabled` still exists and now defaults
+`true` for every size (previously `false`), and `actions.setStorageAutoRedeemEnabled` stays fully
+wired for whenever that control returns — unlike every other automation toggle on this page, no
+prerequisite purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own
+auto-redeem at all (see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself
+(`tickStorageAutoFill`) has no UI control at all — it's fully automatic, every tick, no toggle:
+Memory cascades into every currently-fillable empty bank, smallest size first, whenever there's
+enough of it.
 
-The section closes with a live, non-hidden progress row for tier01's own current purchase-block
-progress: a `SectionLabel` ("Kilobytes' current block (N/blockSize)") above the same `RateBlocksRow`/
-`RateBlock` pair the production-rate display above already uses, sized to
-`getPurchaseBlockSize(state)` blocks (`role="progressbar"`, `aria-label="kilobytes purchase block
-progress"`) and filled up to `state.purchaseLevelProgress[TIER_DEFINITIONS[0].id]` — advancing
-identically whether a unit came from the main game's Buy button/autobuyer or from redeeming a
-Storage bank right here, since both update `purchaseLevelProgress` via the same bookkeeping
-(`grantTierUnits`/`buyTier`).
+The section used to close with its own live progress row mirroring tier01's current purchase-block
+progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once the transfer-block row
+below started reading that exact same value directly, making the two rows show identical information
+side by side; the transfer-block row is now the only place this progress is shown.
 
 Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
-own current purchase block, the identical value the "Kilobytes' current block" tracker above already
-shows (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
+own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
 `blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
 value, not a separately-tracked field) to pick one of three states: **consumed**
 (`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
@@ -141,19 +159,21 @@ offline-progress jump — which advances `purchaseLevelProgress` by a full block
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
 
-A "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
-button, calling `onBack`) shows only once `onBack` is passed, i.e. only when reached voluntarily
-post-`mainGameUnlocked` — the mandatory gate has no way out.
-
 Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file): raw
 bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
 `TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places
 (`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
 `formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
 before it actually is — a display-only convention, internal state always stores raw
-bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
-"Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
-matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
+bits. Every standalone Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via a
+further local helper, `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
+true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
+picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
+instead of stopping at a fixed unit. A separate `formatStorageSize` helper uses a different,
+Storage-*size*-specific scale (see "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry"
+section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — only for
+naming a bank's own *size* ("Build 1 KB Bank"), never for the bits actually spent to build it, which
+always renders via `formatBitsInNearestUnit` instead. This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
 docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's

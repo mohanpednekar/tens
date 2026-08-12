@@ -1043,11 +1043,13 @@ describe('tickStorageAutoRedeem', () => {
 describe('setStorageAutoRedeemEnabled', () => {
   it('toggles intro.storageAutoRedeemEnabled unconditionally — no prerequisite purchase, unlike setAutoSpeedUpEnabled', () => {
     const state = createInitialGameState()
-    expect(state.intro.storageAutoRedeemEnabled).toBe(false)
+    // Defaults true — no in-UI pause toggle is currently rendered (see ByteFoundryPage), so every
+    // size auto-redeems out of the box until that toggle returns.
+    expect(state.intro.storageAutoRedeemEnabled).toBe(true)
 
-    const enabled = setStorageAutoRedeemEnabled(true)(state)
-    expect(enabled.intro.storageAutoRedeemEnabled).toBe(true)
-    expect(setStorageAutoRedeemEnabled(false)(enabled).intro.storageAutoRedeemEnabled).toBe(false)
+    const disabled = setStorageAutoRedeemEnabled(false)(state)
+    expect(disabled.intro.storageAutoRedeemEnabled).toBe(false)
+    expect(setStorageAutoRedeemEnabled(true)(disabled).intro.storageAutoRedeemEnabled).toBe(true)
   })
 })
 

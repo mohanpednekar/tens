@@ -1987,6 +1987,16 @@ test('Invest for Double Production does not require or trigger the Sacrifice mil
   expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
 })
 
+test('Sacrifice for 10x Capacity shows what it will drain — the current capacity — on its own line below the label', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
+  render(<App />)
+
+  // INTRO_STARTING_CAPACITY * 100 = 800 bits = 100 Bytes, in the nearest fitting unit.
+  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+  expect(sacrificeButton).toHaveTextContent('💥 Memory ×10')
+  expect(sacrificeButton).toHaveTextContent('100 B')
+})
+
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
@@ -2168,19 +2178,30 @@ test('the production rate shows a segmented block bar below 1 Byte/sec, and swit
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
 })
 
-test('Invest for Double Production shows its cost in Bytes, with no stray comma from the button\'s mixed static/dynamic text', () => {
-  // Regression test for a ButtonContent bug: mixing literal text with an embedded {expression}
-  // (e.g. "Invest for Double Production ({cost} B)") used to render as "...(,1, B)" — a stray
-  // comma spliced in at each JSX child boundary — because ButtonContent's `String(children)` ran
-  // Array.prototype.toString() (bare-comma join) on what's actually an array of children whenever
-  // the label mixes text with an interpolated value, not a single string. See
-  // components/Button/index.jsx's ButtonContent.
+test('Invest for Double Production shows its cost on its own line below the label, with no stray comma', () => {
+  // Regression coverage for a past ButtonContent bug: mixing literal text with an embedded
+  // {expression} in one children array used to render a stray comma at each JSX child boundary
+  // (Array.prototype.toString()'s bare-comma join). This button no longer uses ButtonContent at
+  // all (its label and cost render as two separate lines instead — see MilestoneButtonContent),
+  // but the comma check stays as a general safety net.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, byteCreated: true })
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Invest for Double Production (1 B)')
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('1 B')
   expect(investButton.textContent).not.toContain(',')
+})
+
+test('Invest for Double Production shows its cost in the nearest fitting unit once it grows past 1000 Bytes', () => {
+  // Tier 3's cost is 8000 bits = 1000 Bytes — Memory's own B/KB/MB/… scale rolls that over to
+  // "1 KB" once a cost reaches the next unit boundary, rather than a fixed-unit "1,000 B".
+  seedIntroState({ productionMilestoneTier: 3, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('1 KB')
 })
 
 test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
@@ -2367,6 +2388,17 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).toBeDisabled()
   })
 
+  test('Build Storage Bank shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
+    seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
+    render(<App />)
+
+    // currentBankCost is 80,000 bits = 10,000 Bytes = 10 KB in Memory's own B/KB/MB/… scale — shown
+    // as "10 KB", not the raw "80,000" bit count with no unit at all.
+    const buildButton = screen.getByRole('button', { name: /build storage bank/i })
+    expect(buildButton).toHaveTextContent('10 KB')
+    expect(buildButton).not.toHaveTextContent('80,000')
+  })
+
   test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {
     vi.useFakeTimers() // never advanced — isolates the build click itself from any auto-fill tick
 
@@ -2462,12 +2494,12 @@ describe('Byte Foundry Storage', () => {
     expect(saved.intro.storageBanks[futureBankSize]).toBeUndefined()
 
     // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
-    // visible here as the (non-hidden) block-progress row, not just the hidden MainPage one.
-    const progressBar = screen.getByRole('progressbar', { name: /kilobytes purchase block progress/i })
-    expect(progressBar).toHaveAttribute('aria-valuenow', '1')
+    // visible here via the transfer-block row (a live mirror of the same progress), not just the
+    // hidden MainPage one.
+    expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
-  test('the auto-redeem toggle appears once a bank above 1 KB is held and pauses/resumes automatic redeeming', () => {
+  test('a bank above 1 KB auto-redeems by default, with no manual click needed and no pause toggle currently shown', () => {
     vi.useFakeTimers()
 
     seedIntroState(
@@ -2476,9 +2508,11 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
 
-    const resumeButton = screen.getByRole('button', { name: /resume storage auto-redeem/i })
-    fireEvent.click(resumeButton)
-    expect(screen.getByRole('button', { name: /pause storage auto-redeem/i })).toBeInTheDocument()
+    // storageAutoRedeemEnabled defaults true (see createInitialGameState) — no toggle click
+    // needed, and there's currently no in-UI pause toggle to click even if one wanted to (planned
+    // for later — see engine.js's storageAutoRedeemEnabled comment).
+    expect(screen.queryByRole('button', { name: /pause storage auto-redeem/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /resume storage auto-redeem/i })).not.toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 

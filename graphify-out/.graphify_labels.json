@@ -2,7 +2,8 @@
   "0": "engine.test.js",
   "1": "MainPage/index.jsx",
   "2": "engine.js",
-  "4": "tokens.js",
+  "3": "useIncrementalGame.js",
+  "4": "App.jsx",
   "5": "package.json",
   "6": "devDependencies",
   "7": "Economy model",
@@ -37,6 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
+  "39": "clampNonNegative",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -47,6 +49,7 @@
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
   "49": "InfoPage/index.jsx",
-  "53": "getPurchaseBlockSize",
-  "54": "MainPage"
+  "50": "tickGame",
+  "51": "isProductionFrozen",
+  "55": "formatBonusOrMultiplier"
 }

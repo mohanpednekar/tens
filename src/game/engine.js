@@ -318,11 +318,12 @@ export const createInitialGameState = () => ({
     storageBanksBuiltTotal: {},
     // PERMANENT — whether tickGame auto-redeems a matching Storage bank every tick (see
     // tickStorageAutoRedeem) instead of requiring a manual click. A plain preference, not a
-    // purchase — defaults off, same "off until the player opts in" posture as autobuyersEnabled's
-    // *true* default is emphatically not (this one starts false, since auto-redeeming is a new
-    // capability the player must discover and choose, not a pre-existing automation being paused).
-    // Doesn't gate the smallest (1 KB) denomination at all — see tickStorageAutoRedeem.
-    storageAutoRedeemEnabled: false,
+    // purchase — defaults ON for every size (no pause toggle is currently rendered — see
+    // ByteFoundryPage — so there's no in-UI way to turn it off yet; the field and
+    // setStorageAutoRedeemEnabled/tickStorageAutoRedeem plumbing all still exist for when that
+    // toggle returns). Doesn't gate the smallest (1 KB) denomination at all either way — see
+    // tickStorageAutoRedeem.
+    storageAutoRedeemEnabled: true,
     // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
     // Storage field above. { [capacityBits]: true } once tickStorageAutoRedeem has auto-redeemed
     // that size this cycle, capping auto-redeem at one bank per size per cycle — further eligible
@@ -1574,8 +1575,10 @@ export const redeemStorageBank = capacityBits => state => {
 // Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled and
 // intro.storageAutoRedeemedSizes below) — a no-op unless there's an eligible size. The smallest
 // denomination (INTRO_BITS_PER_KILOBYTE_CONVERSION, "1 KB") always attempts auto-redeem regardless
-// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still needs the
-// toggle enabled. Either way, a given size auto-redeems at most ONCE per real Prestige cycle (see
+// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still checks the
+// toggle, which currently defaults true (see createInitialGameState) with no in-UI way to turn it
+// off yet, so in practice every size auto-redeems today. Either way, a given size auto-redeems at
+// most ONCE per real Prestige cycle (see
 // storageAutoRedeemedSizes, which resets fresh every real Prestige — prestigeGame) — a bank that
 // refills later the same cycle (see tickStorageAutoFill) needs a manual click for the rest of it.
 // Redeems only the smallest eligible size per call — redeeming can itself grant a tier01 unit and

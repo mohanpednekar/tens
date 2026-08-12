@@ -20,7 +20,18 @@ const Title = styled.h1`
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
   margin: 0;
-  text-align: center;
+`
+
+// Title plus the "← Back to game" exit (when present) share one row, the same title/nav-link
+// placement convention MainPage's own <Header> and InfoPage's <Header> already use — rather than
+// the exit sitting alone at the bottom of the page, disconnected from the rest of the page's own
+// navigation.
+const Header = styled.header`
+  align-items: center;
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  justify-content: space-between;
+  width: 100%;
 `
 
 const StatusText = styled.p`
@@ -46,24 +57,26 @@ const BalanceText = styled.p`
   text-align: center;
 `
 
-// Once the Byte generator exists, tapping is a secondary/backup action (passive production is the
-// primary loop now) — $compact shrinks the button accordingly, while it stays just as clickable
-// (same disabled={isFull} gating either way). No progress fill here — Memory's own tile already
-// shows the same bits/capacity fill, so a duplicate meter on the tap button itself would be
-// redundant.
+// Tapping stays a fully live action forever (never freezes, never goes read-only — see
+// "Byte Foundry" in CLAUDE.md), but once the Byte generator exists it's a secondary/backup action
+// behind passive production, which is why it renders last on the page instead of up top — while
+// staying just as clickable (same disabled={isFull} gating either way) and always full width, the
+// same width every other action button on this page uses. No progress fill here — Memory's own
+// tile already shows the same bits/capacity fill, so a duplicate meter on the tap button itself
+// would be redundant.
 const TapArea = styled.button`
   position: relative;
-  width: ${props => (props.$compact ? '50%' : '100%')};
+  width: 100%;
   aspect-ratio: 5 / 3;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$compact ? props.theme.type.scale.lg.size : props.theme.type.scale.xl.size)};
+  font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease, width 0.2s ease, font-size 0.2s ease;
+  transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -83,6 +96,45 @@ const ActionsRow = styled.div`
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
+`
+
+// Sacrifice and Invest are two independent, frequently-compared milestone actions — placing them
+// side by side (each taking an equal share via `flex: 1`) reads as one paired choice rather than a
+// stacked list, unlike Combine above (a one-time, mutually-exclusive action with nothing to pair
+// against). `min-width: 0` lets each button's own label ellipsis-truncate (see ButtonLabel in
+// components/Button) instead of forcing the row wider than its container at narrow viewports.
+const MilestonesRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
+// Sacrifice/Invest's own two-line content: the symbol/label/multiplier on top, its cost — what
+// each one actually spends — on its own line below, in smaller/muted text, rather than crammed
+// inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
+// which only ever lays out a single icon+label row) so `Button`'s own `display: flex; align-items:
+// center; justify-content: center` still centers this whole block as one flex child.
+const MilestoneButtonContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+`
+
+const MilestoneCostLine = styled.span`
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.85;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
@@ -290,6 +342,13 @@ const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
+// Any Memory-denominated cost (Invest, Storage build) reads in whatever B/KB/MB/…/QB unit best
+// fits that specific amount, the same scale Memory's own balance uses — rather than a fixed unit
+// (e.g. always Bytes) that stops scaling once a cost crosses 1000 of it. `getMemoryUnit(bits,
+// true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
+// here since every caller of this helper (Invest/Storage) only renders once `byteCreated`.
+const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
+
 // Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
   const unit = getMemoryUnit(capacityBits, byteCreated)
@@ -320,12 +379,12 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
-// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (up to this cycle's shared,
-// dynamic transfer budget, see remainingTransferBudget below) all stay fully live whether reached
-// via the mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
-// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is
-// PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle,
-// until the next Prestige resets Memory (and the transfer budget) fresh.
+// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see
+// getIntroTransferBudget in engine.js) all stay fully live whether reached via the mandatory gate
+// or this voluntary link. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
+// productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is PERMANENT — see
+// prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
+// Prestige resets Memory fresh.
 const ByteFoundryPage = ({ game, onBack }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
@@ -336,7 +395,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
-  const investCostBytes = investCost / BITS_PER_BYTE
+  const investCostDisplay = formatBitsInNearestUnit(investCost)
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   const canInvest = intro.bits >= investCost && !investClaimsUsedUp
@@ -381,15 +440,18 @@ const ByteFoundryPage = ({ game, onBack }) => {
   ]
     .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0 || size === storageBankSize)
     .sort((a, b) => a - b)
-  const fullStorageBankSizes = Object.keys(intro.storageBanks ?? {})
-    .map(Number)
-    .filter(size => intro.storageBanks[size] > 0)
-    .sort((a, b) => a - b)
 
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
-      <Title>⚙️ Byte Foundry</Title>
+      <Header>
+        <Title>⚙️ Byte Foundry</Title>
+        {onBack && (
+          <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
+            <ButtonContent>← Back to game</ButtonContent>
+          </Button>
+        )}
+      </Header>
       <StatusText>
         {!intro.mainGameUnlocked
           ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
@@ -426,16 +488,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </FillableStatCard>
       </TilesRow>
 
-      <TapArea
-        aria-label="tap to generate a bit"
-        disabled={isFull}
-        onClick={actions.tapIntroBit}
-        type="button"
-        $compact={intro.byteCreated}
-      >
-        👆 Tap
-      </TapArea>
-
       <ActionsRow>
         {canCombine && (
           <Button
@@ -456,50 +508,57 @@ const ByteFoundryPage = ({ game, onBack }) => {
           </Button>
         )}
 
-        {intro.byteCreated && (<>
-          <Button
-            aria-label="sacrifice all bits for 10x capacity"
-            disabled={!isFull}
-            onClick={actions.pickIntroCapacityMilestone}
-            title="Empty Memory for 10x capacity"
-            type="button"
-            variant={isFull ? 'prestige' : 'neutral'}
-            $progress={fullProgress}
-          >
-            <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry sacrifice progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={intro.capacity}
-            />
-          </Button>
+        {intro.byteCreated && (
+          <MilestonesRow>
+            <Button
+              aria-label="sacrifice all bits for 10x capacity"
+              disabled={!isFull}
+              onClick={actions.pickIntroCapacityMilestone}
+              title="Empty Memory for 10x capacity"
+              type="button"
+              variant={isFull ? 'prestige' : 'neutral'}
+              $progress={fullProgress}
+            >
+              <MilestoneButtonContent>
+                <span>💥 Memory ×10</span>
+                <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
+              </MilestoneButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry sacrifice progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={intro.capacity}
+              />
+            </Button>
 
-          <Button
-            aria-label="invest bits for double production"
-            disabled={!canInvest}
-            onClick={actions.pickIntroProductionMilestone}
-            title={
-              investClaimsUsedUp
-                ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
-                : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
-            }
-            type="button"
-            variant={canInvest ? 'info' : 'neutral'}
-            $progress={investProgress}
-          >
-            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCostBytes)} B)</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry invest progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={investCost}
-            />
-          </Button>
-
-        </>)}
+            <Button
+              aria-label="invest bits for double production"
+              disabled={!canInvest}
+              onClick={actions.pickIntroProductionMilestone}
+              title={
+                investClaimsUsedUp
+                  ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
+                  : `${investCostDisplay} — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
+              }
+              type="button"
+              variant={canInvest ? 'info' : 'neutral'}
+              $progress={investProgress}
+            >
+              <MilestoneButtonContent>
+                <span>⚡ Bandwidth ×2</span>
+                <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
+              </MilestoneButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry invest progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={investCost}
+              />
+            </Button>
+          </MilestonesRow>
+        )}
 
       </ActionsRow>
 
@@ -512,14 +571,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
             onClick={actions.buildStorageBank}
             title={
               storageBankRedeemableNow
-                ? `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
-                : `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
+                ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
+                : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
             }
             type="button"
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatAmount(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -576,33 +635,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </StorageSizeRow>
             )
           })}
-
-          {fullStorageBankSizes.length > 0 && (
-            <Button
-              aria-label={intro.storageAutoRedeemEnabled ? 'pause storage auto-redeem' : 'resume storage auto-redeem'}
-              onClick={() => actions.setStorageAutoRedeemEnabled(!intro.storageAutoRedeemEnabled)}
-              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed (1 KB banks always auto-redeem once per cycle regardless of this toggle)"
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>
-                {intro.storageAutoRedeemEnabled ? '⏸ Pause Auto-Redeem' : '▶ Resume Auto-Redeem'}
-              </ButtonContent>
-            </Button>
-          )}
-
-          <SectionLabel>{`Kilobytes' current block (${tier01PurchaseProgress}/${purchaseBlockSize})`}</SectionLabel>
-          <RateBlocksRow
-            role="progressbar"
-            aria-label="kilobytes purchase block progress"
-            aria-valuenow={tier01PurchaseProgress}
-            aria-valuemin={0}
-            aria-valuemax={purchaseBlockSize}
-          >
-            {Array.from({ length: purchaseBlockSize }, (_, index) => (
-              <RateBlock key={index} $filled={index < tier01PurchaseProgress} />
-            ))}
-          </RateBlocksRow>
         </StorageSection>
       )}
 
@@ -651,11 +683,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </TransferBlocksRow>
       </>)}
 
-      {onBack && (
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
-        </Button>
-      )}
+      <TapArea
+        aria-label="tap to generate a bit"
+        disabled={isFull}
+        onClick={actions.tapIntroBit}
+        type="button"
+      >
+        👆 Tap
+      </TapArea>
     </RootDiv>
   )
 }

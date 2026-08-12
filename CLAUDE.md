@@ -415,9 +415,10 @@ block into a consumed one at once) unlocks the main game immediately — no need
 balance. **There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
 `tickIntroAutoInvest` (see `getIntroTransferBudget`) keep firing indefinitely, every time Memory
 reaches another 1000-bit/block-sized threshold, forever. The row is simply a live mirror of
-`purchaseLevelProgress[tier01]` — the same value the "Kilobytes' current block" tracker in the Storage
-section already shows — so the instant a level completes (`getPurchaseBlockSize(state)` blocks
-transferred), the whole row rolls over to a fresh, empty set of blocks tracking the *next* level
+`purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
+section used to show a redundant separate copy of the identical value and no longer does) — so the
+instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
+over to a fresh, empty set of blocks tracking the *next* level
 rather than sitting permanently "consumed." (A real Prestige still resets every tier's
 `purchaseLevels`/`purchaseLevelProgress` — including tier01's — back to a fresh level 1 (see
 `prestigeGame` in `engine.js`), so the row does still start over each cycle in practice, just as a
@@ -439,8 +440,9 @@ nothing.
 Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
 read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
 built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
-(rightmost) — and the auto-redeem toggle together, rather than one full-width button per bank size
-stacked flat into the same list as every other action. Banks are a genuine storage **medium**, not
+(rightmost) — rather than one full-width button per bank size stacked flat into the same list as
+every other action. (A pause/resume auto-redeem toggle used to render here too; removed for now —
+see below — with a UI to reintroduce it planned for later.) Banks are a genuine storage **medium**, not
 a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
 container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
 every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
@@ -467,17 +469,20 @@ before `tier01`'s price catches up) and redeem the queued banks any time afterwa
 away if the size already matches. Redeeming grants 1 free Kilobyte unit, either by a manual click or
 automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
 fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
-**always** attempts auto-redeem, regardless of the toggle — every larger size still needs Storage's
-own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain preference, no PP or prerequisite
-purchase involved) enabled. Either way, a given size auto-redeems **at most once per real Prestige
-cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank that
-refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
+**always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
+own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
+involved), which now **defaults `true` for every size** (previously `false`) — `ByteFoundryPage`
+currently renders no pause/resume button for it at all (removed for now; the toggle field,
+`setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
+for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
+auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real
+Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank
+that refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
 lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
-ever empties one. The Storage section also shows a live, non-hidden squares row for `tier01`'s own
-current purchase-block progress (`getPurchaseBlockSize(state)` blocks, greyed for units already
-bought) — it advances identically whether a unit came from the main game's Buy button/autobuyer or
-from redeeming a Storage bank here, since both paths update `purchaseLevelProgress` via the same
-bookkeeping.
+ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
+Buy button/autobuyer purchase — visible on the transfer-block row described above (see "The very
+first successful transfer" paragraph), the only place this page shows that progress; the Storage
+section itself no longer duplicates it in a separate row.
 
 **The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
 cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the
@@ -655,7 +660,10 @@ the shipped app — nothing under `graphify-out/` is imported by `src/`.
 The graph has been built and `graphify-out/` is committed so every session starts from the same map;
 per Graphify's own convention, `graphify-out/cost.json` and the two machine-local staging files
 `.graphify_python`/`.graphify_root` are gitignored (see `.gitignore`) — every graphify subcommand
-regenerates the latter two on demand if missing. The initial build (`graphify extract . --code-only`)
+regenerates the latter two on demand if missing. `graphify update` also auto-backs up "curated" files
+(community labels, etc.) into a dated `graphify-out/YYYY-MM-DD/` folder immediately before it would
+overwrite them; that's a local rollback safety net too, not a project artifact, so it's gitignored the
+same way rather than committed and deleted by hand after each run. The initial build (`graphify extract . --code-only`)
 covered code only; a subsequent `graphify update .` picked up this repo's markdown docs too (structural
 parsing — headings/links — not LLM semantic extraction, so still 0 token cost either way), so the graph
 now spans both source and docs.

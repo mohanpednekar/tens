@@ -201,10 +201,11 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    same live, possibly-growing block size the main game's own `tier01` Buy button already reads (see
    "The (configurable) purchase block size and tier levels" below). `ByteFoundryPage` always renders
    exactly `getPurchaseBlockSize(state)` transfer blocks (step 6), deriving each one's
-   consumed/active/upcoming state directly from `purchaseLevelProgress[tier01]` — the exact same live
-   value the "Kilobytes' current block" tracker in the Storage section (step 8) already shows, so the
-   two rows are always in lockstep. Because that's a genuine, uncapped tier-level progress counter
-   rather than a cycle-scoped budget, the row automatically rolls over to a fresh, empty block set for
+   consumed/active/upcoming state directly from `purchaseLevelProgress[tier01]`. This is the only
+   place `ByteFoundryPage` shows this progress — the Storage section (step 8) used to show a
+   redundant, separately-rendered copy of the identical value and no longer does. Because this is a
+   genuine, uncapped tier-level progress counter rather than a cycle-scoped budget, the row
+   automatically rolls over to a fresh, empty block set for
    the *next* level the instant one completes (`getPurchaseBlockSize(state)` blocks transferred),
    rather than ever sitting permanently "consumed." `convertIntroBitsToKilobytes` is a no-op only when
    `intro.bits < INTRO_BITS_PER_KILOBYTE_CONVERSION` — insufficient Memory, nothing else. Separately,
@@ -271,22 +272,25 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    from Memory via `tickStorageAutoFill` already, not a further bit-to-Kilobyte conversion at redeem
    time. Redeeming can be manual (a click) or automatic: `setStorageAutoRedeemEnabled(enabled)`
    toggles `storageAutoRedeemEnabled` unconditionally (no prerequisite purchase, unlike the PP-funded
-   automations elsewhere in this game), and `tickStorageAutoRedeem` — called from every branch of
-   `tickGame`, frozen or not (it bypasses the production freeze the same way `redeemStorageBank`
-   itself does), right after `tickStorageAutoFill` each tick (so a bank filled THIS tick can also
-   redeem the same tick) and after every other per-tick automation including a possible automatic
-   Speed Up, so it always sees tier01's truly final level for the tick — auto-redeems the smallest
-   eligible full bank each tick (redeeming can itself advance tier01's level/cost, so a further
-   eligible bank just gets picked up on a later tick, imperceptibly fast at the tick loop's ~10Hz
-   cadence). "Eligible" has two extra conditions on top of `isStorageBankRedeemable`: the smallest
-   denomination (`INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB") is exempt from
+   automations elsewhere in this game) — it now **defaults `true`** (see `createInitialGameState`;
+   previously `false`), and `ByteFoundryPage` currently renders no pause/resume control for it at all
+   (removed for now, planned to return later — see `docs/DESIGN_HISTORY.md` — while the field/setter
+   stay fully wired), so in practice every size auto-redeems out of the box today. `tickStorageAutoRedeem`
+   — called from every branch of `tickGame`, frozen or not (it bypasses the production freeze the same way
+   `redeemStorageBank` itself does), right after `tickStorageAutoFill` each tick (so a bank filled THIS
+   tick can also redeem the same tick) and after every other per-tick automation including a possible
+   automatic Speed Up, so it always sees tier01's truly final level for the tick — auto-redeems the
+   smallest eligible full bank each tick (redeeming can itself advance tier01's level/cost, so a
+   further eligible bank just gets picked up on a later tick, imperceptibly fast at the tick loop's
+   ~10Hz cadence). "Eligible" has two extra conditions on top of `isStorageBankRedeemable`: the
+   smallest denomination (`INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB") is exempt from
    `storageAutoRedeemEnabled` entirely (it always attempts auto-redeem) while every larger size still
-   needs the toggle enabled; and either way, a size auto-redeems at most **once per real Prestige
-   cycle**, tracked in `storageAutoRedeemedSizes` (reset fresh every real Prestige, unlike every
-   other Storage field here) — a bank that refills later the same cycle needs a manual click for the
-   rest of it. Storage banks are **never lost**: nothing here ever expires, decays, or gets spent
-   implicitly — only an explicit redeem (manual or auto-configured) ever empties one, and it's
-   immediately eligible to be auto-filled again.
+   checks it; and either way, a size auto-redeems at most **once per real Prestige cycle**, tracked
+   in `storageAutoRedeemedSizes` (reset fresh every real Prestige, unlike every other Storage field
+   here) — a bank that refills later the same cycle needs a manual click for the rest of it. Storage
+   banks are **never lost**: nothing here ever expires, decays, or gets spent implicitly — only an
+   explicit redeem (manual or auto-configured) ever empties one, and it's immediately eligible to be
+   auto-filled again.
 9. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
@@ -319,14 +323,26 @@ rate. The Tap button itself carries no `$progress`/hidden progressbar of its own
 above already shows the identical bits/capacity fill, so a second meter on the tap button would
 just duplicate it.
 
-Invest's own cost (`getIntroProductionMilestoneCost(tier)`) is shown on its button in **Bytes**
-(`cost ÷ BITS_PER_BYTE`, always a clean whole number — every tier's cost is evenly divisible by 8),
-independent of Memory's own unit-scaled display above. This is a display-only convention — internal
-state always stores raw bit counts.
+Every Memory-denominated cost shown anywhere on this page — Sacrifice's cost (`intro.capacity`
+itself, since a Sacrifice always drains the current balance in full), Invest's own cost
+(`getIntroProductionMilestoneCost(tier)`), and Storage's build cost (`getStorageBankCost`) — renders
+in whichever B/KB/MB/…/QB unit best fits that specific amount (`formatBitsInNearestUnit`, a local
+helper reusing `getMemoryUnit`/`formatMemoryAmount` directly: `getMemoryUnit(bits, true)` picks the
+unit that fits `bits` itself when called this way), the same scale Memory's own balance uses, rather
+than a fixed unit that stops scaling once a cost crosses 1000 of it — e.g. Invest's tier-3 cost
+(8000 bits) reads "1 KB", not "1,000 B", and a 1 KB Storage bank's 80,000-bit build cost reads
+"10 KB", not a raw unitless "80,000". Sacrifice and Invest each render their own cost on a second
+line below the button's symbol/label/multiplier (`MilestoneButtonContent`/`MilestoneCostLine`, a
+local two-line layout — not `components/Button`'s single-row `ButtonContent`), in smaller/muted
+text, rather than crammed inline in parentheses; Storage's build cost stays parenthesized inline in
+its own label instead, since that button's label already names the bank's *size* separately (see
+`formatStorageSize` below) and the cost is the only other number on it. This is a display-only
+convention — internal state always stores raw bit counts.
 
-Storage's Build button, per-size full/empty/not-built squares rows, and auto-redeem toggle render inside their own labeled
+Storage's Build button and per-size full/empty/not-built squares rows render inside their own labeled
 section (`StorageSection`, a `styled(StatCard)`) rather than flat alongside Sacrifice/Invest — see
-docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level layout.
+docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level layout. (No auto-redeem
+pause/resume control renders currently — see the "Redeeming" paragraph above.)
 
 ### Tier production tickspeed
 
@@ -1294,8 +1310,10 @@ engine state).
                                                           // size, full or empty — redeeming never decrements
                                                           // this; drives getStorageBankSize's one-way ladder
                                                           // advance. Empty count = builtTotal - storageBanks
-    storageAutoRedeemEnabled: false,                      // PERMANENT. Plain preference, no prerequisite
+    storageAutoRedeemEnabled: true,                       // PERMANENT. Plain preference, no prerequisite
                                                           // purchase — see setStorageAutoRedeemEnabled.
+                                                          // Defaults true (no in-UI pause toggle is
+                                                          // currently rendered — planned for later).
                                                           // Doesn't gate the 1 KB denomination at all
     storageAutoRedeemedSizes: {},                         // NOT permanent — resets to {} every real Prestige,
                                                           // unlike every other Storage field above.
