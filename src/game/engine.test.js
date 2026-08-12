@@ -41,7 +41,6 @@ import {
   getGlobalTickspeedRegularStep,
   getIntroProductionMilestoneCost,
   getIntroProductionMilestoneMaxClaims,
-  getIntroTransferBudget,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
@@ -85,7 +84,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -504,14 +503,10 @@ describe('getIntroProductionMilestoneCost', () => {
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('grants 2 claims for the three tiers below INTRO_AUTO_INVEST_THRESHOLD (1/10/100 Bytes)', () => {
-    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
-    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
-    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
-  })
-
-  it('grants only 1 claim from the tier reaching INTRO_AUTO_INVEST_THRESHOLD (1000 Bytes) on', () => {
-    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_AUTO_INVEST_THRESHOLD)
+  it('always grants exactly 1 claim per tier, regardless of cost — a single-shot purchase, same as Sacrifice', () => {
+    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(1)
+    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(1)
+    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(3)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
@@ -558,36 +553,25 @@ describe('pickIntroProductionMilestone', () => {
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('grants a second claim at the same tier 0 cost before advancing', () => {
+  it('advances to the next tier immediately after a single claim, at any tier, with a fresh claim count of 0', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
-    const afterFirst = pickIntroProductionMilestone(state)
-    expect(afterFirst.intro.productionMilestoneTier).toBe(0)
-    expect(afterFirst.intro.productionMilestoneTierClaims).toBe(1)
+    const afterTier0 = pickIntroProductionMilestone(state)
+    expect(afterTier0.intro.productionMilestoneTier).toBe(1)
+    expect(afterTier0.intro.productionMilestoneTierClaims).toBe(0)
 
-    const refilled = withIntro(afterFirst, { bits: INTRO_STARTING_CAPACITY })
-    const afterSecond = pickIntroProductionMilestone(refilled)
-    expect(afterSecond.intro.productionMilestoneTier).toBe(1)
-    expect(afterSecond.intro.productionMilestoneTierClaims).toBe(0)
+    const refilled = withIntro(afterTier0, { bits: getIntroProductionMilestoneCost(4), productionMilestoneTier: 4 })
+    const afterTier4 = pickIntroProductionMilestone(refilled)
+    expect(afterTier4.intro.productionMilestoneTier).toBe(5)
+    expect(afterTier4.intro.productionMilestoneTierClaims).toBe(0)
   })
 
-  it('advances tier only after both claims at a 2-claim tier are used, then is claimable again at the new (10x) cost', () => {
-    const twiceClaimed = withIntro(createInitialGameState(), {
-      bits: 0, tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1, productionMilestoneTierClaims: 0,
-    })
-    const refilled = withIntro(twiceClaimed, { bits: getIntroProductionMilestoneCost(1) })
-    const after = pickIntroProductionMilestone(refilled)
-    expect(after.intro.productionMilestoneTier).toBe(1)
-    expect(after.intro.productionMilestoneTierClaims).toBe(1)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('grants only a single claim per tier once past INTRO_AUTO_INVEST_THRESHOLD (tier 4+)', () => {
+  it('spends exactly the claimed tier\'s cost, draining bits to 0 when the balance matches it exactly', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: getIntroProductionMilestoneCost(4), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 4, productionMilestoneTierClaims: 0,
+      bits: getIntroProductionMilestoneCost(1), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1,
     })
     const after = pickIntroProductionMilestone(state)
-    expect(after.intro.productionMilestoneTier).toBe(5)
-    expect(after.intro.productionMilestoneTierClaims).toBe(0)
+    expect(after.intro.productionMilestoneTier).toBe(2)
+    expect(after.intro.bits).toBe(0)
   })
 
   it('is a no-op below this tier\'s cost', () => {
@@ -595,9 +579,9 @@ describe('pickIntroProductionMilestone', () => {
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
 
-  it('is a no-op once every claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
+  it('is a no-op once the claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 2,
+      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 1,
     })
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
@@ -618,19 +602,6 @@ describe('isIntroConversionUnlocked', () => {
   it('is true once capacity reaches INTRO_CONVERSION_UNLOCK_CAPACITY', () => {
     const state = withIntro(createInitialGameState(), { capacity: 1000 })
     expect(isIntroConversionUnlocked(state)).toBe(true)
-  })
-})
-
-describe('getIntroTransferBudget', () => {
-  it('is INTRO_AUTO_INVEST_THRESHOLD (DEFAULT_PURCHASE_BLOCK_SIZE Kilobyte units) at a fresh cycle\'s default block size', () => {
-    expect(getIntroTransferBudget(createInitialGameState())).toBe(INTRO_AUTO_INVEST_THRESHOLD)
-  })
-
-  it('grows with the Kilobyte tier\'s own current purchase block size, not a fixed constant', () => {
-    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
-    expect(getPurchaseBlockSize(state)).toBe(9)
-    expect(getIntroTransferBudget(state)).toBe(9 * INTRO_BITS_PER_KILOBYTE_CONVERSION)
   })
 })
 
@@ -722,46 +693,61 @@ describe('tickIntroProduction', () => {
 describe('tickIntroAutoInvest', () => {
   const firstTierId = TIER_DEFINITIONS[0].id
 
-  it('is a no-op below INTRO_AUTO_INVEST_THRESHOLD', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD - 1 })
+  it('is a no-op below a single INTRO_BITS_PER_KILOBYTE_CONVERSION unit', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION - 1 })
     expect(tickIntroAutoInvest(state)).toBe(state)
   })
 
-  it('grants 8 units, spends the full threshold, and flips mainGameUnlocked, on a fresh cycle', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true })
+  // Regression test: an earlier version waited for a whole getPurchaseBlockSize(state)-sized batch
+  // (8000 bits at a fresh cycle) before converting anything at all, which made the transfer-block
+  // row look permanently stuck on block 1 (pinned at 100%, bits clamped past 1000) for the entire
+  // time bits climbed from 1000 up toward the full batch — see docs/DESIGN_HISTORY.md. Converting a
+  // single unit as soon as it's affordable is what makes the row advance live, block by block.
+  it('converts a single unit as soon as one is affordable, without waiting for a whole batch', () => {
+    const state = withIntro(createInitialGameState(), { bits: 1500, capacity: 10000, byteCreated: true })
     const after = tickIntroAutoInvest(state)
-    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
-    expect(after.intro.bits).toBe(0)
+    expect(after.owned[firstTierId]).toBe(1)
+    expect(after.intro.bits).toBe(500)
     expect(after.intro.mainGameUnlocked).toBe(true)
   })
 
-  it('fires again every time bits reach the threshold again, with no per-cycle cap', () => {
+  it('converts every complete unit that fits in a single call, not just one, when several are affordable at once', () => {
+    const state = withIntro(createInitialGameState(), { bits: 5 * INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 10000, byteCreated: true })
+    const after = tickIntroAutoInvest(state)
+    expect(after.owned[firstTierId]).toBe(5)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  // Same "at most one level's worth per call" safety bound buyTierQuantity's own autobuyer path
+  // uses (getTierBulkQuantity) — so an extreme bits balance can't loop this an unbounded number of
+  // times in a single tick; a jump spanning more than one level's worth of units completes the
+  // rest on a later tick instead.
+  it('caps at the current level\'s remaining block boundary, leaving the rest for a later call', () => {
+    const bitsForTwoFullLevels = DEFAULT_PURCHASE_BLOCK_SIZE * 2 * INTRO_BITS_PER_KILOBYTE_CONVERSION
+    const state = withIntro(createInitialGameState(), { bits: bitsForTwoFullLevels, capacity: bitsForTwoFullLevels, byteCreated: true })
+    const after = tickIntroAutoInvest(state)
+    expect(after.owned[firstTierId]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
+    expect(after.purchaseLevels[firstTierId]).toBe(2)
+    expect(after.purchaseLevelProgress[firstTierId]).toBe(0)
+    expect(after.intro.bits).toBe(DEFAULT_PURCHASE_BLOCK_SIZE * INTRO_BITS_PER_KILOBYTE_CONVERSION)
+
+    const again = tickIntroAutoInvest(after)
+    expect(again.owned[firstTierId]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE * 2)
+    expect(again.intro.bits).toBe(0)
+  })
+
+  it('fires again every time another unit becomes affordable, with no per-cycle cap', () => {
     const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 80000, byteCreated: true,
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 80000, byteCreated: true,
     })
     const after = tickIntroAutoInvest(state)
     expect(after.intro.bits).toBe(0)
-    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
+    expect(after.owned[firstTierId]).toBe(1)
 
-    const again = withIntro(after, { bits: INTRO_AUTO_INVEST_THRESHOLD })
+    const again = withIntro(after, { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION })
     const afterAgain = tickIntroAutoInvest(again)
     expect(afterAgain.intro.bits).toBe(0)
-    expect(afterAgain.owned[firstTierId]).toBe((INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 2)
-  })
-
-  it('triggers at the dynamic (block-size-grown) threshold, not the old fixed 8000', () => {
-    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    const grown = withPurchaseLevel(createInitialGameState(), lastTier.id, 101)
-    expect(getPurchaseBlockSize(grown)).toBe(9)
-
-    // Bits at exactly the OLD fixed threshold (8000) isn't enough yet — the grown budget is 9000.
-    const notYetFull = withIntro(grown, { bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 10000, byteCreated: true })
-    expect(tickIntroAutoInvest(notYetFull)).toBe(notYetFull)
-
-    const full = withIntro(notYetFull, { bits: 9000 })
-    const after = tickIntroAutoInvest(full)
-    expect(after.intro.mainGameUnlocked).toBe(true)
-    expect(after.intro.bits).toBe(0)
+    expect(afterAgain.owned[firstTierId]).toBe(2)
   })
 })
 

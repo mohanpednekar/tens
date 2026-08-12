@@ -842,6 +842,61 @@ new save. When the pause/resume UI returns, it can just re-add a button calling 
 `actions.setStorageAutoRedeemEnabled` used before — nothing about the underlying mechanism needs
 revisiting, only where it renders.
 
+### The transfer-block row looked permanently stuck — `tickIntroAutoInvest` waited for a whole batch instead of converting live
+
+A bug report: "the 8 blocks at the bottom are not showing progress. Only the first one is getting
+filled and nothing happens after that." Reproduced live (seeding a high production rate, no manual
+clicks) rather than guessing at a fix: `intro.bits` climbed steadily from 0 toward 8000 (a fresh
+cycle's full `getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION` batch) while
+`purchaseLevelProgress[tier01]` stayed at exactly 0 the entire time, only to jump straight back to 0
+again once the batch completed (having briefly touched 8 and immediately rolled the level over
+within the very same tick). From the player's side this read as block 1 sitting pinned at 100% fill
+(`intro.bits` clamped past 1000 in the progress calculation) for as long as it took Memory to climb
+the rest of the way to the full batch, with blocks 2-8 never visibly doing anything — because
+`tickIntroAutoInvest` (see the entry above, "Implemented as `getIntroTransferBudget(state)`...")
+had always required the *entire* batch to be affordable before converting anything at all, a design
+that made sense for its original purpose (catching up in bulk after a big offline-progress jump) but
+ran every tick regardless, so it was also the only thing driving ordinary live play — and ordinary
+live play accumulates *toward* that threshold gradually, which is exactly the case the "wait for the
+whole batch" design didn't handle.
+
+Resolved by making `tickIntroAutoInvest` convert one `INTRO_BITS_PER_KILOBYTE_CONVERSION`-bit unit
+at a time, live, via a loop over `convertIntroBitsToKilobytes` itself (so it inherits the identical
+`mainGameUnlocked`-flipping behavior a manual click already has, rather than duplicating it) — capped
+per call at `getTierBulkQuantity(getPurchaseBlockSize(state), purchaseLevelProgress[tier01],
+Number.MAX_SAFE_INTEGER)`, the same "at most one level's worth per call" safety bound the tier
+autobuyers themselves already use via `buyTierQuantity`, so an extreme Memory balance (e.g. after a
+long-Sacrificed capacity) can't loop this an unbounded number of times in a single tick — a jump
+spanning more than one level's worth of units simply finishes on the next tick instead, exactly like
+an autobuyer catching up after a broke stretch. `getIntroTransferBudget` itself is now dead code (its
+only remaining caller was the removed one-shot-batch check) and was deleted rather than left unused,
+along with `INTRO_AUTO_INVEST_THRESHOLD` once `getIntroProductionMilestoneMaxClaims`'s own reliance on
+it was separately removed in the same round (see below).
+
+Converting per-unit immediately surfaced a second, previously-latent conflict: `tickGame` ran
+`tickIntroAutoInvest` *before* `tickStorageAutoFill`/`tickStorageAutoRedeem`, so once auto-invest
+could fire on every single affordable unit rather than only a rare full-batch jump, it started
+winning the race for fresh Memory against a Storage bank the player had already built and was
+waiting to fill — a regression caught by an existing test (seeding exactly enough Memory to fill one
+empty 1 KB bank) that started failing with the page having already navigated away to `MainPage`
+before the test's own assertions ran, since auto-invest's own `mainGameUnlocked: true` fired first.
+Resolved by reordering `tickGame`'s intro/storage handling: `tickStorageAutoFill` now runs
+immediately after `tickIntroProduction`, *ahead of* `tickIntroAutoInvest`, so a built bank gets first
+claim on fresh Memory; `tickIntroAutoInvest` then converts whatever's left over. This is safe because
+`tickStorageAutoFill` has no dependency on tier01's level at all (only `intro.bits`/`storageBanks`/
+`storageBanksBuiltTotal`) — unlike `tickStorageAutoRedeem`, which still has to run last, after
+autobuyers/Speed Up, so it always checks `isStorageBankRedeemable` against the tick's truly final
+tier01 level; only the fill half of the old combined `tickStorage` helper needed to move.
+
+The same round also tightened "Invest for Double Production" to a single claim per tier across the
+board (an explicit request — "give only one attempt per cost for bandwidth as well," matching
+Sacrifice for 10x Capacity's own one-shot posture) by simplifying `getIntroProductionMilestoneMaxClaims`
+to always return `1`, superseding the two-tier `INTRO_AUTO_INVEST_THRESHOLD` cutoff from "The
+1000-Byte Invest tier drops from two claims to one" above. The `productionMilestoneTierClaims`
+tracking field and `pickIntroProductionMilestone`'s own generic claim-counting logic were left in
+place rather than ripped out, since they cost nothing to keep and stay ready for a future
+tier-dependent claim count without any further code changes.
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently

@@ -152,10 +152,11 @@ tier01's own purchase-block progress rather than a cycle-scoped budget, once
 `blocksTransferred` reaches `purchaseBlockSize` (tier01's level completes), `purchaseLevelProgress`
 itself resets to 0 for the next level, and the row rolls over to a fresh all-upcoming set for that
 next level automatically — it never gets stuck fully `$consumed`. The very first successful transfer
-(clicking the active block, or the `tickIntroAutoInvest` bulk auto-convenience firing inside the
-shared tick loop once Memory fills to a whole `getIntroTransferBudget(state)` at once — e.g. a big
-offline-progress jump — which advances `purchaseLevelProgress` by a full block's worth at once) sets
-`mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check reveals whatever page the
+(clicking the active block, or the `tickIntroAutoInvest` auto-convenience firing inside the shared
+tick loop the instant a single unit is affordable — live, block by block, not just once a whole
+batch accumulates at once — which advances `purchaseLevelProgress` by one unit per call, capped at
+completing one tier01 level per call) sets `mainGameUnlocked: true`, and `App.jsx`'s own
+`showingFoundry` render check reveals whatever page the
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
 
