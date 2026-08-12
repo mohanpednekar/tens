@@ -114,28 +114,29 @@ Storage bank right here, since both update `purchaseLevelProgress` via the same 
 Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
-`getIntroTransferBudget(state) / INTRO_BITS_PER_KILOBYTE_CONVERSION` blocks (`blockCount`) for the
-whole cycle — blocks never disappear once transferred, only change how they render, so the row is a
-fixed length rather than shrinking (dynamic block count — see docs/ECONOMY_REFERENCE.md's "Byte
-Foundry" step 7). Each block's index is compared against `blocksTransferred =
-floor(bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)` to pick one of three states:
-**consumed** (`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently
-disabled, `title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
+`getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
+own current purchase block, the identical value the "Kilobytes' current block" tracker above already
+shows (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
+`blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
+value, not a separately-tracked field) to pick one of three states: **consumed**
+(`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
+`title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
 `theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
 (`index === blocksTransferred`, at most one at a time) — `aria-label="convert 1000 bits into 1
 Kilobyte"`, `$progress` = the existing bits-toward-1000 fill, `onClick={actions.convertIntroBitsToKilobytes}`,
-disabled unless `bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION` **and** this cycle's remaining transfer
-budget (`getIntroTransferBudget(state) - intro.bitsTransferredThisCycle`) can cover another 1000-bit
-transfer, paired with a hidden `role="progressbar"` (`aria-label="byte foundry convert progress"`);
+disabled only when `bits < INTRO_BITS_PER_KILOBYTE_CONVERSION` — **there is no per-cycle cap to run
+into** — paired with a hidden `role="progressbar"` (`aria-label="byte foundry convert progress"`);
 **upcoming** (every later index) — `aria-label="locked transfer block N"`, always disabled,
 `title="Transfer the block to your left first"`, empty (`background: transparent`). Read
 left-to-right, consumed (filled)/active (partially filled)/upcoming (empty) blocks together look
-like one continuous progress bar rather than a shrinking list. Once the whole budget is spent, no
-block is `$active` at all — every one simply reads `$consumed` — until the next Prestige resets
-`bitsTransferredThisCycle` to 0 and the row goes back to all-upcoming. The very first successful
-transfer this cycle (clicking the active block, or the `tickIntroAutoInvest` bulk auto-convenience
-firing inside the shared tick loop once Memory fills to the whole `getIntroTransferBudget(state)` at
-once — e.g. a big offline-progress jump — which marks every remaining block consumed at once) sets
+like one continuous progress bar rather than a shrinking list. Because the row is a live mirror of
+tier01's own purchase-block progress rather than a cycle-scoped budget, once
+`blocksTransferred` reaches `purchaseBlockSize` (tier01's level completes), `purchaseLevelProgress`
+itself resets to 0 for the next level, and the row rolls over to a fresh all-upcoming set for that
+next level automatically — it never gets stuck fully `$consumed`. The very first successful transfer
+(clicking the active block, or the `tickIntroAutoInvest` bulk auto-convenience firing inside the
+shared tick loop once Memory fills to a whole `getIntroTransferBudget(state)` at once — e.g. a big
+offline-progress jump — which advances `purchaseLevelProgress` by a full block's worth at once) sets
 `mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check reveals whatever page the
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
@@ -153,9 +154,10 @@ before it actually is — a display-only convention, internal state always store
 bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
 "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
 matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
-(`bits`/`productionAccumulator`), the main-game-unlock gate (`mainGameUnlocked`), and this cycle's
-transfer budget (`bitsTransferredThisCycle`) back to fresh (see `prestigeGame` in
-docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — but the
+(`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
+along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
+docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
+not a one-time-ever gate, it sets the pace for every run — but the
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
 `storageBanksBuiltTotal`/`storageAutoRedeemEnabled` — but NOT `storageAutoRedeemedSizes`, which

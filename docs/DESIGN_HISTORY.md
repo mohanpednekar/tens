@@ -783,6 +783,45 @@ call site had unknowingly violated that documented constraint. Given the fix mak
 robust to exactly this pattern, the doc was updated to describe the new, more permissive contract
 instead of re-asserting the old footgun.
 
+### The per-cycle transfer budget cap was removed — the transfer row mirrors tier01's own purchase-block progress instead
+
+The entry above made the transfer budget dynamic but kept it a genuine per-cycle cap: a shared
+`intro.bitsTransferredThisCycle` counter, reset to 0 only by the next real Prestige, that both
+`convertIntroBitsToKilobytes` and `tickIntroAutoInvest` refused to exceed. In practice this produced
+a confusing coincidence at a fresh cycle's default block size (8): completing the *very first*
+tier01 purchase block (`purchaseLevelProgress[tier01]` wrapping from 8 back to 0) landed on exactly
+the same tick as the transfer budget being fully spent (`bitsTransferredThisCycle` hitting
+`getIntroTransferBudget`), since both were sized off the same `DEFAULT_PURCHASE_BLOCK_SIZE`. A
+screenshot showing "Kilobytes' current block (0/8)" and "Transfer to Kilobytes (0 left)" both reading
+empty at once was reported as broken. Explaining it as an expected coincidence of the two counters
+lining up was rejected: the actual design intent was for the transfer row to keep tracking tier01's
+next level's blocks indefinitely, the same way it tracked the first level — not to run out and wait
+for a Prestige to refill it. In other words, the "budget" framing itself was the bug, not any
+particular number.
+
+Resolved by deleting the cap entirely rather than patching its edge cases. `intro.bitsTransferredThisCycle`
+and `getIntroRemainingTransferBudget` are gone; `convertIntroBitsToKilobytes` is now a no-op only when
+`intro.bits < INTRO_BITS_PER_KILOBYTE_CONVERSION`, and `tickIntroAutoInvest` fires every time `bits`
+reaches `getIntroTransferBudget(state)` again, with no cooldown. `getIntroTransferBudget` itself
+survives unchanged in shape (`getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION`), but
+its role changed from "the cap" to just `tickIntroAutoInvest`'s own batch-size threshold. The
+`ByteFoundryPage` transfer row no longer derives its consumed/active/upcoming states from a
+cycle-scoped counter at all — it reads `purchaseLevelProgress[tier01]` directly, the exact value the
+adjacent "Kilobytes' current block" tracker already displayed (both trackers were always describing
+the same underlying progress; only one of them was wired to the wrong state). Since
+`purchaseLevelProgress` is a genuine, unbounded tier-level counter that naturally wraps to 0 the
+instant a level completes (see `grantTierUnits`), the row now rolls over to a fresh block set for the
+next level automatically, forever — with no special-casing needed for "what happens when the budget
+runs out," because there is no longer a budget to run out. The apparent per-cycle reset behavior
+survives anyway, as a side effect: a real Prestige still resets every tier's
+`purchaseLevels`/`purchaseLevelProgress` (tier01 included) back to a fresh level 1, so the row does
+still restart each cycle in practice — it's just no longer driven by transfer-specific state.
+
+Removing the field also simplified `storage.js`'s save migration: the two backward-compat branches
+that used to backfill a synthetic "fully-spent" `bitsTransferredThisCycle` value for a save predating
+`mainGameUnlocked` now only need to backfill `mainGameUnlocked` itself, since there's no companion
+budget field left to keep consistent with it.
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently

@@ -116,13 +116,15 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// The per-cycle bit-to-Kilobyte transfer budget/auto-convert trigger point is no longer this fixed
-// value — it's dynamic (see getIntroTransferBudget in engine.js, tied to the Kilobyte tier's own
-// current purchase block size). This constant's only remaining role is the cost cutoff for
-// getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly below 1000 Bytes'
-// worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since 8000 bits (1000
-// Bytes) is still a meaningful, independent boundary for that unrelated mechanic, coincidentally
-// matching the transfer budget's own historical default (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
+// The bit-to-Kilobyte auto-convert batch threshold (see getIntroTransferBudget in engine.js) is no
+// longer this fixed value — it's dynamic, tied to the Kilobyte tier's own current purchase block
+// size, and (unlike an earlier version of this mechanic) has no cycle-wide cap at all any more —
+// it can fire repeatedly, batch after batch, forever. This constant's only remaining role is the
+// cost cutoff for getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly
+// below 1000 Bytes' worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since
+// 8000 bits (1000 Bytes) is still a meaningful, independent boundary for that unrelated mechanic,
+// coincidentally matching the auto-convert batch size's own historical default
+// (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
 export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
@@ -139,9 +141,9 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // any empty container as it accumulates, smallest size first, and whatever's left over simply
 // stays as Memory's own balance. Redeeming a FULL bank grants 1 free tier01 unit once tier01's own
 // current per-unit level cost actually reaches that size, and empties the bank again — reusable,
-// not single-use. Distinct from — and not counted against — the intro's ordinary
-// bitsTransferredThisCycle transfer budget (see INTRO_AUTO_INVEST_THRESHOLD above): a bank's
-// contents came from Memory via auto-fill, not a further transfer out of it at redeem time.
+// not single-use. Distinct from ordinary bit-to-Kilobyte conversion (see
+// convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a bank's contents came from
+// Memory via auto-fill, not a further transfer out of it at redeem time.
 // Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
 // "never lost," and a full bank's contents ride through a real Prestige untouched even though
 // Memory itself resets, letting banked-up Storage give a fresh cycle a head start.

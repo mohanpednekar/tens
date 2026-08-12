@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, createInitialGameState } from './engine'
-import { DEFAULT_PURCHASE_BLOCK_SIZE, INTRO_AUTO_INVEST_THRESHOLD } from './layers'
+import { DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
 
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
@@ -152,9 +152,8 @@ const migrateState = saved => {
     derivedPurchaseLevelProgress[tierId] = legacyPurchased - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
   })
   // A save from before the Byte Foundry intro existed has no `intro` field at all — such a player
-  // already has real main-game progress (owned tiers, PP, etc.), so backfill mainGameUnlocked:
-  // true (and a fully-spent bitsTransferredThisCycle, matching what "already past this cycle's
-  // transfer budget" implies) and send them straight to MainPage rather than making them play the
+  // already has real main-game progress (owned tiers, PP, etc.), so backfill
+  // mainGameUnlocked: true and send them straight to MainPage rather than making them play the
   // intro from scratch; every other intro field is irrelevant once mainGameUnlocked is true but
   // kept whole via fresh's defaults regardless. A truly fresh browser (loadGameState returns null,
   // this function never runs at all) still gets createInitialGameState's real
@@ -162,7 +161,7 @@ const migrateState = saved => {
   //
   // A save that already has its own `intro` (this feature already existed for it) merges
   // normally — EXCEPT one further backward-compat case: a save from between the Byte Foundry's
-  // original release and this mainGameUnlocked/bitsTransferredThisCycle split has an old boolean
+  // original release and this mainGameUnlocked field's introduction has an old boolean
   // `completed` field but no `mainGameUnlocked` key at all. Naively merging such a save would
   // silently default mainGameUnlocked to fresh's `false`, sending an already-unlocked player back
   // through the mandatory gate — so that case is backfilled explicitly from the old `completed`
@@ -171,13 +170,12 @@ const migrateState = saved => {
   // already has `mainGameUnlocked` (post-this-change) needs no such backfill and merges normally.
   const introPredatesMainGameUnlocked = saved.intro !== undefined && saved.intro.mainGameUnlocked === undefined
   const migratedIntro = isPreByteFoundrySave
-    ? { ...fresh.intro, mainGameUnlocked: true, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD }
+    ? { ...fresh.intro, mainGameUnlocked: true }
     : {
       ...fresh.intro,
       ...saved.intro,
       ...(introPredatesMainGameUnlocked ? {
         mainGameUnlocked: saved.intro.completed === true,
-        bitsTransferredThisCycle: saved.intro.completed === true ? INTRO_AUTO_INVEST_THRESHOLD : 0,
       } : {}),
     }
 
