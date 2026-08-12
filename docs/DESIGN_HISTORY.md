@@ -455,6 +455,54 @@ The following records *why* specific MainPage/component behaviors were built the
   redundant "Storage" (already the section's own heading) and " bits" suffix (context-implied) from
   both this button and the auto-redeem toggle's "Storage Auto-Redeem" label, confirmed to fit at
   320px through the same worst-case cost value.
+- **Storage becomes a genuine storage medium — banks auto-fill from Memory and are reusable, not
+  single-use; the build ladder is corrected to tier01's real (sparse) level-cost sequence; the
+  build cost is corrected to bytes, not bits.** A further round of clarification on the independent-
+  ladder redesign (two entries above) corrected three things at once:
+  1. **Banks were pre-paid at build time** — `buildStorageBank` spent the full build cost and
+     immediately marked the bank held/redeemable in the same call, so "build" and "fill" were the
+     same action. The clarification: "The cost of storage banks is only to build the storage banks
+     permanently. They are still empty once built... They get auto filled as memory fills up. They
+     also get freed up to be filled up again once consumed" — banks are a genuine storage *medium*:
+     building only ever constructs a permanent, EMPTY container (`buildStorageBank` now touches only
+     `storageBanksBuiltTotal`, never `storageBanks`); a new `tickStorageAutoFill` — unconditional, no
+     toggle, run every tick — cascades Memory into every currently-fillable empty bank in one pass,
+     smallest size first ("whenever memory has enough... it fills it... starting from smallest to
+     largest, and at the end, memory fills itself"), moving `size` bits out of Memory and into
+     `storageBanks[size]` for each one it can afford, until nothing more is fillable. Redeeming a
+     full bank (`redeemStorageBank`, unchanged) now explicitly empties it again rather than spending
+     it forever — `storageBanksBuiltTotal` was never touched by redeeming even before this change, so
+     the "reusable, not single-use" behavior was really just a matter of `tickStorageAutoFill`
+     existing to refill what redeeming freed up.
+  2. **The build ladder's sizes were a synthetic ×10 sequence** — 1 KB, 10 KB, 100 KB, 1 MB, …,
+     independent of what `tier01` (Kilobytes) could actually cost. Called out directly: "100 KB
+     banks cannot exist as KB tier doesn't have them. We directly jump to 1MB banks after 10 KB" —
+     `tier01`'s own cost-epoch exponent sequence (`getCostEpochExponent`: 1, 2, 4, 7, 11, …, a "1 plus
+     a triangular number" progression) skips values as levels increase, so `tier01`'s real per-unit
+     level costs are 1,000 / 10,000 / 1,000,000 / 1,000,000,000 / … — level 3 jumps straight from
+     10,000 to 1,000,000, skipping 100,000 entirely. `getStorageBankSize` was rewritten to walk
+     `getTierCost(TIER_DEFINITIONS[0], level)` for level 1, 2, 3, … (still advancing to the next level
+     once `STORAGE_BANK_LADDER_CAP` banks have been built at the current one) rather than repeatedly
+     multiplying by 10 — the ladder now can only ever offer a size `tier01` itself could actually cost,
+     matching the "consumed amount must match the corresponding block or level cost of the KB tier"
+     requirement exactly, and reproducing the skip automatically as a side effect of reusing the same
+     cost function rather than needing to special-case which round numbers to skip.
+  3. **The build cost's "10x" was computed in bits, not bytes** — `getStorageBankCost` multiplied a
+     bank's own bit-denominated size by `STORAGE_BUILD_COST_MULTIPLIER` directly, so a 1,000-bit
+     ("1 KB") bank cost 10,000 bits. Corrected explicitly: "By 10x, I meant 1KB Bank should cost
+     10KBytes, not 10Kbits" — `getStorageBankCost` now multiplies by `BITS_PER_BYTE` (8) as well,
+     so a 1,000-bit bank costs `1000 * 10 * 8` = 80,000 bits (10,000 bytes), an 8x increase across
+     every size the ladder ever offers.
+
+  On the UI side, the squares row's three states were renamed to match: **full** (replacing "held" —
+  currently holding Memory's bits, redeemable once `tier01`'s price matches) and **empty** (a new
+  state — built but not yet auto-filled, a dim muted-bordered fill distinct from the plain
+  not-yet-built placeholder) replace the old **held**/**consumed** pair, since a redeemed bank no
+  longer reads as permanently "consumed" — it becomes **empty** again, the same visual state a
+  freshly built, not-yet-filled bank already uses. No new state fields were needed: `storageBanks`
+  already meant "how many of this size are currently spendable," which is exactly "currently full"
+  under the corrected model — only what populates it changed (auto-fill instead of build-time
+  pre-payment).
 - **The "bits this cycle" tracker is removed entirely; the Memory tile's Bytes-unit balance now
   floors instead of rounds.** Two follow-up requests on the tracker/formatting added in the round
   above:

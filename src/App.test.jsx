@@ -5,6 +5,7 @@ import { version } from '../package.json'
 import { getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
+  BITS_PER_BYTE,
   INTRO_AUTO_INVEST_THRESHOLD,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -2336,19 +2337,23 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 
 
 // --- Byte Foundry Storage (bank blocks) ---
-// The buildable size is an independent ladder starting at 1000 bits ("1 KB") that only advances to
-// the next size (×10) once STORAGE_BANK_LADDER_CAP banks have ever been built at the current one —
-// decoupled from tier01's own level cost (see getStorageBankSize in engine.js). A built bank's
-// redeemability is separately gated on tier01's (Kilobytes') CURRENT per-unit level cost catching
-// up to that bank's size. Every test here uses fake timers (never advanced, unless a test is
-// specifically exercising a tick boundary) rather than real userEvent delays — with byteCreated
-// true and Memory's own passive production live, a real tick landing between a click and its
-// assertions would non-deterministically shift Memory's balance and could trip the Byte Foundry's
-// own bulk transfer-budget auto-convert.
+// The buildable size is an independent ladder starting at 1000 bits ("1 KB") that walks tier01's
+// own per-unit LEVEL COST sequence (skipping values tier01's own costs skip), advancing to the
+// next level's cost once STORAGE_BANK_LADDER_CAP banks have ever been built at the current one —
+// decoupled from tier01's own CURRENT level (see getStorageBankSize in engine.js). Banks are a
+// storage MEDIUM, not a one-shot pre-paid item: building one only constructs an EMPTY container
+// (paying STORAGE_BUILD_COST_MULTIPLIER × BITS_PER_BYTE times its size, in bytes — see
+// getStorageBankCost); Memory then auto-fills any empty container on a later tick (see
+// tickStorageAutoFill), smallest size first. A FULL bank's redeemability is separately gated on
+// tier01's (Kilobytes') CURRENT per-unit level cost catching up to that bank's size. Every test
+// here uses fake timers (never advanced, unless a test is specifically exercising a tick boundary)
+// rather than real userEvent delays — with byteCreated true and Memory's own passive production
+// live, a real tick landing between a click and its assertions would non-deterministically shift
+// Memory's balance and could trip the Byte Foundry's own bulk transfer-budget auto-convert.
 describe('Byte Foundry Storage', () => {
   const tier01 = TIER_DEFINITIONS[0]
   const currentBankSize = 1000 // the ladder's starting size
-  const currentBankCost = currentBankSize * STORAGE_BUILD_COST_MULTIPLIER
+  const currentBankCost = currentBankSize * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE
   // A larger, not-yet-reached size — used to exercise the "held bank becomes redeemable once
   // tier01's level catches up to it" path independent of what the Build button currently offers.
   const futureBankSize = getTierCost(tier01, 2)
@@ -2362,19 +2367,50 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).toBeDisabled()
   })
 
-  test('building a bank spends the build cost from Memory and adds an already-redeemable bank', () => {
+  test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {
+    vi.useFakeTimers() // never advanced — isolates the build click itself from any auto-fill tick
+
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
-    render(<App />)
+    const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /build storage bank/i }))
 
+    // Building spends the build cost — separate from, and not the same as, filling the bank.
     const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
     expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+    // The bank exists (built) but starts empty — no "redeem" square for it yet.
+    expect(screen.queryByRole('button', { name: /redeem 1 kb storage bank/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
 
-    // The bank is sized to tier01's own current level cost, so it's redeemable right away — no
-    // tick has fired yet (fake timers, never advanced), so it's still held, not auto-redeemed.
-    const redeemButton = screen.getByRole('button', { name: /redeem 1 kb storage bank/i })
-    expect(redeemButton).toBeEnabled()
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('Memory auto-fills an empty bank on a later tick — the fill and the build are separate steps', () => {
+    vi.useFakeTimers()
+
+    // A bank already built (empty) plus enough Memory to fill exactly one of it.
+    seedIntroState({
+      bits: currentBankSize,
+      capacity: currentBankSize,
+      byteCreated: true,
+      storageBanksBuiltTotal: { [currentBankSize]: 1 },
+    })
+    const { unmount } = render(<App />)
+    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    // Filled and immediately auto-redeemed in the same tick (1 KB is exempt from the auto-redeem
+    // toggle) — the bank ends up empty again, ready to be refilled, with 1 free Kilobyte granted.
+    const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+    expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.owned.tier01).toBe(1)
+
+    unmount()
+    vi.useRealTimers()
   })
 
   test('a 1 KB bank auto-redeems on the very next tick even with the auto-redeem toggle off', () => {

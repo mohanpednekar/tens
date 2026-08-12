@@ -222,49 +222,67 @@ per-cycle transfer budget described in step 7.
    soft resets, not new cycles, and still carry the whole `intro` object through completely
    untouched, Memory included. A full Reset also restarts the intro from true scratch (via
    `createInitialGameState()`'s fresh defaults for every field, generator included).
-8. **Storage** (`storageBanks: { [capacityBits]: count }`, `storageBanksBuiltTotal: { [capacityBits]:
-   cumulativeCount }`, `storageAutoRedeemEnabled`, `storageAutoRedeemedSizes: { [capacityBits]: true }`)
-   lets the player bank a block of bits now, via its own **independent build ladder**, and redeem it
-   later once `tier01`'s (Kilobytes') own current per-unit level cost catches up to that size.
-   `getStorageBankSize(state)` starts at `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000 bits, "1 KB") and
-   multiplies by 10 every time `STORAGE_BANK_LADDER_CAP` (10) banks have *ever* been built at the
-   current size — read from `storageBanksBuiltTotal`, a cumulative counter `redeemStorageBank` never
-   decrements, so the ladder only ever advances (a player can build ahead of or fall behind `tier01`'s
-   actual price; deliberately decoupled from `tier01`'s level, unlike an earlier version of this
-   feature — see `docs/DESIGN_HISTORY.md`). Because `getTierCost` only ever multiplies `baseCost`
-   (`1E3`) by a power of ten and the ladder itself only ever multiplies by 10, every size this ever
-   produces is a clean KB/MB/GB/… value. **Build Storage Bank** (`buildStorageBank`) spends
-   `getStorageBankCost(size) = size * STORAGE_BUILD_COST_MULTIPLIER` (10x the block's own face value)
-   bits from Memory and adds one bank of that size to both `storageBanks` (held, spent by redeeming)
-   and `storageBanksBuiltTotal` (cumulative, drives the ladder). A held bank is redeemable once its
-   size is **at or below** tier01's *current* per-unit level cost (`isStorageBankRedeemable`,
-   unchanged from before this ladder was decoupled) — not a one-tick-only exact match: tier01's own
-   autobuyer can complete more than one level in a single tick (a banked attempt budget catching up
-   after a broke/paused stretch), which can jump the level straight past the one a bank was sized for
-   without ever equaling it exactly; an exact-match check would then strand that bank permanently
-   unredeemable, breaking the "never lost" guarantee below. `<=` is safe since `getFirstTierCost` only
-   ever grows with level within a cycle — it only drops back on a Prestige/Speed Up/Overclock reset,
-   at which point a bank correctly goes back to waiting for the price to climb back up to it, still
-   held, not lost. `redeemStorageBank(capacityBits)` then consumes one matching bank and grants 1 free
-   tier01 unit via the same `grantTierUnits` helper described below — bypassing `isProductionFrozen`/
-   `isTierUnlocked`/cost entirely, and deliberately **not** drawn from or counted against
-   `bitsTransferredThisCycle` (step 7's budget), since a bank was already fully paid for at build
+8. **Storage** (`storageBanks: { [capacityBits]: currentlyFullCount }`, `storageBanksBuiltTotal:
+   { [capacityBits]: cumulativeBuiltCount }`, `storageAutoRedeemEnabled`, `storageAutoRedeemedSizes:
+   { [capacityBits]: true }`) is a genuine storage **medium**, not a one-shot pre-paid item: a bank
+   is a permanent, reusable container that Memory auto-fills over time and redeeming empties again.
+   `getStorageBankSize(state)` walks `tier01`'s (Kilobytes') own per-unit **LEVEL COST sequence** —
+   `getTierCost(TIER_DEFINITIONS[0], level)` for level 1, 2, 3, … — rather than a synthetic ×10
+   progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` (10) banks have
+   *ever* been built at the current one, read from `storageBanksBuiltTotal` (a cumulative counter
+   `redeemStorageBank` never decrements, so the ladder only ever advances; deliberately decoupled
+   from `tier01`'s CURRENT level, unlike an earlier version of this feature — see
+   `docs/DESIGN_HISTORY.md`). Because `getCostEpochExponent`'s triangular-number exponent sequence
+   (1, 2, 4, 7, 11, …) skips values as `tier01` levels grow, this ladder skips sizes too: `tier01`
+   level 3 costs 1,000,000 bits ("1 MB"), never 100,000 ("100 KB"), so a 100 KB bank can never exist.
+   **Build Storage Bank** (`buildStorageBank`) spends `getStorageBankCost(size) = size *
+   STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE` — 10x the block's own face value **in bytes, not
+   bits** (a 1000-bit/"1 KB" bank costs 10,000 bytes = 80,000 bits) — and only increments
+   `storageBanksBuiltTotal`: this is a one-time construction fee for an EMPTY container, and does
+   **not** touch `storageBanks` (the currently-full count) at all.
+
+   `tickStorageAutoFill(state)` is what actually fills a bank: unconditionally (no toggle, no
+   prerequisite), every tick, it cascades Memory into every currently-fillable empty bank in one
+   pass, smallest size first — while some size has `storageBanksBuiltTotal[size] >
+   storageBanks[size]` (an empty container exists) and `intro.bits >= size`, it moves exactly `size`
+   bits out of Memory and into that bank (`storageBanks[size] += 1`), then repeats; since sizes are
+   checked smallest-first and cost scales with size, once the smallest remaining empty size is
+   unaffordable no larger one can be either, so the cascade always terminates in one call. Whatever
+   Memory has left over once nothing more is fillable simply stays as its own ordinary balance.
+
+   A currently-**full** bank is redeemable once its size is **at or below** tier01's *current*
+   per-unit level cost (`isStorageBankRedeemable`, unchanged by this redesign) — not a one-tick-only
+   exact match: tier01's own autobuyer can complete more than one level in a single tick (a banked
+   attempt budget catching up after a broke/paused stretch), which can jump the level straight past
+   the one a bank was sized for without ever equaling it exactly; an exact-match check would then
+   strand that bank permanently unredeemable, breaking the "never lost" guarantee below. `<=` is safe
+   since `getFirstTierCost` only ever grows with level within a cycle — it only drops back on a
+   Prestige/Speed Up/Overclock reset, at which point a full bank correctly goes back to waiting for
+   the price to climb back up to it, still full, not lost. `redeemStorageBank(capacityBits)` then
+   empties one matching full bank (`storageBanks[capacityBits] -= 1` — NOT `storageBanksBuiltTotal`,
+   which is untouched, so the emptied bank re-enters the fillable pool for `tickStorageAutoFill` to
+   fill again later) and grants 1 free tier01 unit via the same `grantTierUnits` helper described
+   below — bypassing `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately **not**
+   drawn from or counted against `bitsTransferredThisCycle` (step 7's budget), since a bank's
+   contents came from Memory via `tickStorageAutoFill` already, not a further transfer at redeem
    time. Redeeming can be manual (a click) or automatic: `setStorageAutoRedeemEnabled(enabled)`
    toggles `storageAutoRedeemEnabled` unconditionally (no prerequisite purchase, unlike the PP-funded
    automations elsewhere in this game), and `tickStorageAutoRedeem` — called from every branch of
    `tickGame`, frozen or not (it bypasses the production freeze the same way `redeemStorageBank`
-   itself does), after every other per-tick automation including a possible automatic Speed Up, so
-   it always sees tier01's truly final level for the tick — auto-redeems the smallest eligible held
-   bank each tick (redeeming can itself advance tier01's level/cost, so a further eligible bank just
-   gets picked up on a later tick, imperceptibly fast at the tick loop's ~10Hz cadence). "Eligible"
-   now has two extra conditions on top of `isStorageBankRedeemable`: the smallest denomination
-   (`INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB") is exempt from `storageAutoRedeemEnabled` entirely
-   (it always attempts auto-redeem) while every larger size still needs the toggle enabled; and
-   either way, a size auto-redeems at most **once per real Prestige cycle**, tracked in
-   `storageAutoRedeemedSizes` (reset fresh every real Prestige, unlike every other Storage field
-   here) — a further eligible bank of an already-auto-redeemed size needs a manual click for the rest
-   of the cycle. Storage banks are **never lost**: nothing here ever expires, decays, or gets spent
-   implicitly — only an explicit redeem (manual or auto-configured) ever consumes one.
+   itself does), right after `tickStorageAutoFill` each tick (so a bank filled THIS tick can also
+   redeem the same tick) and after every other per-tick automation including a possible automatic
+   Speed Up, so it always sees tier01's truly final level for the tick — auto-redeems the smallest
+   eligible full bank each tick (redeeming can itself advance tier01's level/cost, so a further
+   eligible bank just gets picked up on a later tick, imperceptibly fast at the tick loop's ~10Hz
+   cadence). "Eligible" has two extra conditions on top of `isStorageBankRedeemable`: the smallest
+   denomination (`INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB") is exempt from
+   `storageAutoRedeemEnabled` entirely (it always attempts auto-redeem) while every larger size still
+   needs the toggle enabled; and either way, a size auto-redeems at most **once per real Prestige
+   cycle**, tracked in `storageAutoRedeemedSizes` (reset fresh every real Prestige, unlike every
+   other Storage field here) — a bank that refills later the same cycle needs a manual click for the
+   rest of it. Storage banks are **never lost**: nothing here ever expires, decays, or gets spent
+   implicitly — only an explicit redeem (manual or auto-configured) ever empties one, and it's
+   immediately eligible to be auto-filled again.
 9. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
@@ -302,7 +320,7 @@ Invest's own cost (`getIntroProductionMilestoneCost(tier)`) is shown on its butt
 independent of Memory's own unit-scaled display above. This is a display-only convention — internal
 state always stores raw bit counts.
 
-Storage's Build button, held-bank chips, and auto-redeem toggle render inside their own labeled
+Storage's Build button, per-size full/empty/not-built squares rows, and auto-redeem toggle render inside their own labeled
 section (`StorageSection`, a `styled(StatCard)`) rather than flat alongside Sacrifice/Invest — see
 docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level layout.
 
@@ -1262,13 +1280,16 @@ engine state).
                                                           // (dynamic — see there) — both conversion paths refuse
                                                           // once the remaining budget can't cover another
                                                           // 1000-bit transfer
-    storageBanks: {},                                     // PERMANENT. { [capacityBits]: count } of built,
-                                                          // not-yet-redeemed Storage banks — see
-                                                          // buildStorageBank/redeemStorageBank
+    storageBanks: {},                                     // PERMANENT. { [capacityBits]: count } of
+                                                          // currently-FULL Storage banks of that size — see
+                                                          // tickStorageAutoFill/redeemStorageBank. A full
+                                                          // bank's contents ride through a real Prestige
+                                                          // untouched even though Memory itself resets
     storageBanksBuiltTotal: {},                           // PERMANENT. { [capacityBits]: cumulative count }
-                                                          // of every bank ever built at that size — redeeming
-                                                          // never decrements this; drives getStorageBankSize's
-                                                          // one-way ladder advance
+                                                          // of every bank ever built (constructed) at that
+                                                          // size, full or empty — redeeming never decrements
+                                                          // this; drives getStorageBankSize's one-way ladder
+                                                          // advance. Empty count = builtTotal - storageBanks
     storageAutoRedeemEnabled: false,                      // PERMANENT. Plain preference, no prerequisite
                                                           // purchase — see setStorageAutoRedeemEnabled.
                                                           // Doesn't gate the 1 KB denomination at all
@@ -1319,12 +1340,13 @@ purchases were manual or automatic.
 | `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000) bits from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op below cost or once this cycle's shared transfer budget (`getIntroTransferBudget(state) - intro.bitsTransferredThisCycle`) can't cover another 1000-bit transfer. Sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success. Called once per transfer-block click in `ByteFoundryPage` |
 | `tickIntroProduction` | `elapsedSeconds → state → state` | Byte Foundry: passive production for the Byte generator — no-op immediately before `intro.byteCreated`. Delivers one batch of `INTRO_BYTE_BASE_RATE * productionMultiplier` bits every `tickSpeedSeconds` of elapsed time (the same discrete "accumulate, deliver a whole period, bank the remainder" model `tickGame`'s own per-tier production uses — see there), crediting whole bits capped at `capacity`. Never freezes once `byteCreated` |
 | `tickIntroAutoInvest` | `state → state` | Byte Foundry: bulk auto-convert convenience, mirroring the autobuyer "wait until the whole batch is affordable, then fire once" convention above — no-op below `getIntroTransferBudget(state)` (dynamic — see there) or once this cycle's shared transfer budget is exhausted. Transfers `min(getIntroTransferBudget(state), remainingBudget)` bits via `grantTierUnits`, granting `transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION` Kilobytes at once (marking every remaining transfer block in `ByteFoundryPage` as consumed in one shot — blocks stay rendered, just re-styled); sets `mainGameUnlocked: true` and grows `bitsTransferredThisCycle` on success — shares the exact same budget as `convertIntroBitsToKilobytes` above |
-| `getStorageBankSize` | `state → number` | Byte Foundry Storage: an independent ladder starting at `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000, "1 KB") and multiplying by 10 every time `STORAGE_BANK_LADDER_CAP` banks have ever been built at the current size (read from `intro.storageBanksBuiltTotal`, cumulative — never decremented by redeeming) — the size `buildStorageBank` currently builds at. Deliberately decoupled from tier01's (Kilobytes') own current level cost; see `isStorageBankRedeemable` for the separate check on whether a built bank is spendable yet |
-| `getStorageBankCost` | `capacityBits → number` | Byte Foundry Storage: `capacityBits * STORAGE_BUILD_COST_MULTIPLIER` (10x the bank's own face value) |
-| `buildStorageBank` | `state → state` | Byte Foundry Storage: spends `getStorageBankCost(getStorageBankSize(state))` bits from `intro.bits`, adds one bank of that size to both `intro.storageBanks` (held, counts accumulate on repeat builds of the same size) and `intro.storageBanksBuiltTotal` (cumulative, drives the ladder). No-op below cost. Bypasses `isProductionFrozen` (separate currency pool, same posture as Combine/Sacrifice/Invest) |
-| `isStorageBankRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Storage: `capacityBits <= getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — at or below tier01's CURRENT per-unit level cost, not a one-tick-only exact match (an autobuyer burst can jump tier01's level, and hence its cost, straight past a bank's exact size in a single tick — see `getFirstTierCost`'s comment in `engine.js`). Unchanged by the build ladder becoming independent of tier01's price — this is still the only gate on whether a built bank is spendable |
-| `redeemStorageBank` | `capacityBits → state → state` | Byte Foundry Storage: no-op if no bank of that size is held or `isStorageBankRedeemable` is false; otherwise decrements `intro.storageBanks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.storageBanksBuiltTotal[capacityBits]` is untouched, it never decrements) and grants 1 free `TIER_DEFINITIONS[0]` unit via `grantTierUnits` — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and is NOT drawn from/counted against `bitsTransferredThisCycle` (a bank was already fully paid for at build time) |
-| `tickStorageAutoRedeem` | `state → state` | Byte Foundry Storage: no-op unless there's an eligible size. A size is eligible if a bank of it is held, `isStorageBankRedeemable`, not already in `intro.storageAutoRedeemedSizes` this cycle, AND (it's `INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB" — exempt from the toggle — OR `intro.storageAutoRedeemEnabled` is true). Redeems the smallest eligible size and marks it in `storageAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (`storageAutoRedeemedSizes` resets fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemStorageBank` itself), after every other per-tick automation (including a possible automatic Speed Up), so it always reacts to tier01's truly final level for the tick |
+| `getStorageBankSize` | `state → number` | Byte Foundry Storage: an independent ladder that walks tier01's own per-unit LEVEL COST sequence (`getTierCost(TIER_DEFINITIONS[0], level)` for level 1, 2, 3, …) rather than a synthetic ×10 progression, advancing to the next level's cost every time `STORAGE_BANK_LADDER_CAP` banks have ever been built at the current one (read from `intro.storageBanksBuiltTotal`, cumulative — never decremented by redeeming) — the size `buildStorageBank` currently builds at. Because `getCostEpochExponent`'s exponent sequence skips values, this skips sizes too (e.g. level 3 = 1,000,000, never 100,000). Deliberately decoupled from tier01's own CURRENT level cost; see `isStorageBankRedeemable` for the separate check on whether a built bank is spendable once full |
+| `getStorageBankCost` | `capacityBits → number` | Byte Foundry Storage: `capacityBits * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE` — 10x the bank's own face value, in BYTES not bits (a 1000-bit bank costs 80,000 bits to build). Pays only for the empty container — not what fills it |
+| `buildStorageBank` | `state → state` | Byte Foundry Storage: spends `getStorageBankCost(getStorageBankSize(state))` bits from `intro.bits`, adds one EMPTY bank of that size to `intro.storageBanksBuiltTotal` only (cumulative, drives the ladder) — deliberately does NOT touch `intro.storageBanks` (the currently-full count); a freshly built bank starts empty, filled later by `tickStorageAutoFill`. No-op below cost. Bypasses `isProductionFrozen` (separate currency pool, same posture as Combine/Sacrifice/Invest) |
+| `tickStorageAutoFill` | `state → state` | Byte Foundry Storage: cascades Memory into every currently-fillable EMPTY bank in one pass, smallest size first — while some size has `storageBanksBuiltTotal[size] > storageBanks[size]` (an empty container) and `intro.bits >= size`, moves `size` bits from `intro.bits` into `intro.storageBanks[size]` (+1), then repeats; terminates because affordability is monotonic with size. Whatever's left over stays as Memory's own balance. Unconditional — no toggle, no prerequisite. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic. Same-reference no-op when nothing is fillable |
+| `isStorageBankRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Storage: `capacityBits <= getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — at or below tier01's CURRENT per-unit level cost, not a one-tick-only exact match (an autobuyer burst can jump tier01's level, and hence its cost, straight past a bank's exact size in a single tick — see `getFirstTierCost`'s comment in `engine.js`). Unaffected by this redesign — still the only gate on whether a FULL bank is spendable |
+| `redeemStorageBank` | `capacityBits → state → state` | Byte Foundry Storage: no-op if no bank of that size is currently full (`intro.storageBanks[capacityBits] <= 0`) or `isStorageBankRedeemable` is false; otherwise decrements `intro.storageBanks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.storageBanksBuiltTotal[capacityBits]` is untouched, it never decrements, so the bank re-enters the fillable pool) and grants 1 free `TIER_DEFINITIONS[0]` unit via `grantTierUnits` — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and is NOT drawn from/counted against `bitsTransferredThisCycle` (a bank's contents came from Memory via `tickStorageAutoFill`, not a further transfer at redeem time) |
+| `tickStorageAutoRedeem` | `state → state` | Byte Foundry Storage: no-op unless there's an eligible size. A size is eligible if a bank of it is currently FULL, `isStorageBankRedeemable`, not already in `intro.storageAutoRedeemedSizes` this cycle, AND (it's `INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB" — exempt from the toggle — OR `intro.storageAutoRedeemEnabled` is true). Redeems the smallest eligible size and marks it in `storageAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (`storageAutoRedeemedSizes` resets fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemStorageBank` itself), immediately after `tickStorageAutoFill` (so a bank filled THIS tick can redeem the same tick) and after every other per-tick automation (including a possible automatic Speed Up), so it always reacts to tier01's truly final level for the tick |
 | `setStorageAutoRedeemEnabled` | `enabled → state → state` | Byte Foundry Storage: unconditionally sets `intro.storageAutoRedeemEnabled` — a plain preference, no prerequisite purchase (unlike `setAutoSpeedUpEnabled`/etc., which no-op until their parent automation is bought). Doesn't gate the 1 KB denomination's auto-redeem at all — see `tickStorageAutoRedeem` |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |

@@ -50,5 +50,12 @@
   "48": "Design history & rationale",
   "49": "Button/index.jsx",
   "50": "dependencies",
-  "51": "OfflineProgressNotice/index.jsx"
+  "51": "OfflineProgressNotice/index.jsx",
+  "52": "clampNonNegative",
+  "53": "tickGame",
+  "54": "MainPage",
+  "55": "ByteFoundryPage",
+  "56": "run-simulation.mjs",
+  "57": "isStorageBankRedeemable",
+  "58": "getSmartAutobuyerCost"
 }
