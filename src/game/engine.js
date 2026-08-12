@@ -316,7 +316,7 @@ export const formatCurrency = value => {
     ? `${currencyNumberFormatter.format(safeValue)} ${symbol}`
     : `${formatScientific(safeValue)} ${symbol}`
 }
-
+const fib = n => n < 2 ? n : fib(n - 1) + fib(n - 2);
 // The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 4, 7, 11, 16, 22, …
 // for epochs 0, 1, 2, 3, 4, 5, 6, … — each epoch adds one more than the last epoch's increment (a
 // "1 plus a triangular number" progression: exponent(e) = 1 + e*(e+1)/2). A negative epoch is
@@ -366,7 +366,7 @@ export const getPurchaseBlockSize = state => {
 // integer — no rounding needed.
 export const getTierCost = (tier, level) => {
   const epoch = Math.max(0, clampNonNegative(level) - 1)
-  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
+  return tier.baseCost * (10 ** fib(epoch))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
