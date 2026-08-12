@@ -655,7 +655,10 @@ the shipped app — nothing under `graphify-out/` is imported by `src/`.
 The graph has been built and `graphify-out/` is committed so every session starts from the same map;
 per Graphify's own convention, `graphify-out/cost.json` and the two machine-local staging files
 `.graphify_python`/`.graphify_root` are gitignored (see `.gitignore`) — every graphify subcommand
-regenerates the latter two on demand if missing. The initial build (`graphify extract . --code-only`)
+regenerates the latter two on demand if missing. `graphify update` also auto-backs up "curated" files
+(community labels, etc.) into a dated `graphify-out/YYYY-MM-DD/` folder immediately before it would
+overwrite them; that's a local rollback safety net too, not a project artifact, so it's gitignored the
+same way rather than committed and deleted by hand after each run. The initial build (`graphify extract . --code-only`)
 covered code only; a subsequent `graphify update .` picked up this repo's markdown docs too (structural
 parsing — headings/links — not LLM semantic extraction, so still 0 token cost either way), so the graph
 now spans both source and docs.
