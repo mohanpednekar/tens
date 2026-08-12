@@ -62,20 +62,24 @@ Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combin
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons — placed
 side by side in their own `MilestonesRow` (`display: flex`, each button `flex: 1`) rather than
-stacked, since they're a paired choice, not a list — "Sacrifice for 10x Capacity" (visible label
-`💥 Memory ×10` — a short symbol/label pair over the full sentence, "Memory" matching the same term
-the balance tile above already uses for `capacity`, so the button's purpose reads at a glance even
-compressed; `aria-label="sacrifice all bits for 10x capacity"` still carries the full description for
-assistive tech, disabled unless `bits === capacity`, calling `actions.pickIntroCapacityMilestone`,
-`$progress` toward `capacity`) and "Invest for Double Production" (visible label
-`⚡ Bandwidth ×2 ({cost})` — "Bandwidth" naming the bits/sec production rate this multiplies, plus
-its own cost, since the cost itself is live, dynamic information worth keeping visible even in the
-shortened label, formatted via the local `formatBitsInNearestUnit` helper (see below) rather than a
-fixed unit; `aria-label="invest bits for double production"` carries the full description — cost
-`getIntroProductionMilestoneCost(intro.productionMilestoneTier)` — disabled unless
-`bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so the
-button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
+stacked, since they're a paired choice, not a list. Each renders its own two-line
+`MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
+`components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
+of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
+activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
+than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥 Memory ×10` — "Memory"
+matching the same term the balance tile above already uses for `capacity`, so the button's purpose
+reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
+Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
+capacity"` still carries the full description for assistive tech, disabled unless `bits ===
+capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest
+for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
+this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
+keeping visible even in the shortened label; `aria-label="invest bits for double production"`
+carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
+— disabled unless `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims
+< getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so
+the button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
 each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
@@ -159,7 +163,7 @@ bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemo
 (`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
 `formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
 before it actually is — a display-only convention, internal state always stores raw
-bits. Every standalone Memory-denominated cost (Invest, Storage build) reuses this exact scale via a
+bits. Every standalone Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via a
 further local helper, `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
 true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
 picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows

@@ -1987,6 +1987,16 @@ test('Invest for Double Production does not require or trigger the Sacrifice mil
   expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
 })
 
+test('Sacrifice for 10x Capacity shows what it will drain — the current capacity — on its own line below the label', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
+  render(<App />)
+
+  // INTRO_STARTING_CAPACITY * 100 = 800 bits = 100 Bytes, in the nearest fitting unit.
+  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+  expect(sacrificeButton).toHaveTextContent('💥 Memory ×10')
+  expect(sacrificeButton).toHaveTextContent('100 B')
+})
+
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
@@ -2168,17 +2178,18 @@ test('the production rate shows a segmented block bar below 1 Byte/sec, and swit
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
 })
 
-test('Invest for Double Production shows its cost in Bytes, with no stray comma from the button\'s mixed static/dynamic text', () => {
-  // Regression test for a ButtonContent bug: mixing literal text with an embedded {expression}
-  // (e.g. "×2 ({cost} B)") used to render as ",1, B)" — a stray comma spliced in at each JSX child
-  // boundary — because ButtonContent's `String(children)` ran Array.prototype.toString() (bare-comma
-  // join) on what's actually an array of children whenever the label mixes text with an
-  // interpolated value, not a single string. See components/Button/index.jsx's ButtonContent.
+test('Invest for Double Production shows its cost on its own line below the label, with no stray comma', () => {
+  // Regression coverage for a past ButtonContent bug: mixing literal text with an embedded
+  // {expression} in one children array used to render a stray comma at each JSX child boundary
+  // (Array.prototype.toString()'s bare-comma join). This button no longer uses ButtonContent at
+  // all (its label and cost render as two separate lines instead — see MilestoneButtonContent),
+  // but the comma check stays as a general safety net.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, byteCreated: true })
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2 (1 B)')
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('1 B')
   expect(investButton.textContent).not.toContain(',')
 })
 
@@ -2189,7 +2200,8 @@ test('Invest for Double Production shows its cost in the nearest fitting unit on
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2 (1 KB)')
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('1 KB')
 })
 
 test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {

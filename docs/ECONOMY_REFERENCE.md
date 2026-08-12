@@ -320,15 +320,21 @@ rate. The Tap button itself carries no `$progress`/hidden progressbar of its own
 above already shows the identical bits/capacity fill, so a second meter on the tap button would
 just duplicate it.
 
-Every Memory-denominated cost shown anywhere on this page — Invest's own cost
-(`getIntroProductionMilestoneCost(tier)`) and Storage's build cost (`getStorageBankCost`) — renders
+Every Memory-denominated cost shown anywhere on this page — Sacrifice's cost (`intro.capacity`
+itself, since a Sacrifice always drains the current balance in full), Invest's own cost
+(`getIntroProductionMilestoneCost(tier)`), and Storage's build cost (`getStorageBankCost`) — renders
 in whichever B/KB/MB/…/QB unit best fits that specific amount (`formatBitsInNearestUnit`, a local
 helper reusing `getMemoryUnit`/`formatMemoryAmount` directly: `getMemoryUnit(bits, true)` picks the
 unit that fits `bits` itself when called this way), the same scale Memory's own balance uses, rather
 than a fixed unit that stops scaling once a cost crosses 1000 of it — e.g. Invest's tier-3 cost
 (8000 bits) reads "1 KB", not "1,000 B", and a 1 KB Storage bank's 80,000-bit build cost reads
-"10 KB", not a raw unitless "80,000". This is a display-only convention — internal state always
-stores raw bit counts.
+"10 KB", not a raw unitless "80,000". Sacrifice and Invest each render their own cost on a second
+line below the button's symbol/label/multiplier (`MilestoneButtonContent`/`MilestoneCostLine`, a
+local two-line layout — not `components/Button`'s single-row `ButtonContent`), in smaller/muted
+text, rather than crammed inline in parentheses; Storage's build cost stays parenthesized inline in
+its own label instead, since that button's label already names the bank's *size* separately (see
+`formatStorageSize` below) and the cost is the only other number on it. This is a display-only
+convention — internal state always stores raw bit counts.
 
 Storage's Build button, per-size full/empty/not-built squares rows, and auto-redeem toggle render inside their own labeled
 section (`StorageSection`, a `styled(StatCard)`) rather than flat alongside Sacrifice/Invest — see

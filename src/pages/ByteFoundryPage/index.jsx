@@ -114,6 +114,29 @@ const MilestonesRow = styled.div`
   }
 `
 
+// Sacrifice/Invest's own two-line content: the symbol/label/multiplier on top, its cost — what
+// each one actually spends — on its own line below, in smaller/muted text, rather than crammed
+// inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
+// which only ever lays out a single icon+label row) so `Button`'s own `display: flex; align-items:
+// center; justify-content: center` still centers this whole block as one flex child.
+const MilestoneButtonContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+`
+
+const MilestoneCostLine = styled.span`
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.85;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
 // straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
 // as a row item (grow to fill available width) instead of a column item (which would instead try
@@ -500,7 +523,10 @@ const ByteFoundryPage = ({ game, onBack }) => {
               variant={isFull ? 'prestige' : 'neutral'}
               $progress={fullProgress}
             >
-              <ButtonContent>💥 Memory ×10</ButtonContent>
+              <MilestoneButtonContent>
+                <span>💥 Memory ×10</span>
+                <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
+              </MilestoneButtonContent>
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry sacrifice progress"
@@ -523,7 +549,10 @@ const ByteFoundryPage = ({ game, onBack }) => {
               variant={canInvest ? 'info' : 'neutral'}
               $progress={investProgress}
             >
-              <ButtonContent>⚡ Bandwidth ×2 ({investCostDisplay})</ButtonContent>
+              <MilestoneButtonContent>
+                <span>⚡ Bandwidth ×2</span>
+                <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
+              </MilestoneButtonContent>
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry invest progress"
