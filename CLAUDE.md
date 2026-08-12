@@ -444,8 +444,12 @@ actually is). The Tap button carries no progress fill/hidden progressbar of its 
 tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
 nothing.
 
-**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest), grouping the
-Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
+**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest) — hidden
+entirely until Memory's own capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own
+B/KB/MB/… scale, 80,000 bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than
+the Kilobyte-transfer row's own 1000-bit gate, since Storage is a later-game mechanic. Once revealed,
+it groups the Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size
+ever reached —
 read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
 built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
 (rightmost) — rather than one full-width button per bank size stacked flat into the same list as

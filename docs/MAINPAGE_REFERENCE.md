@@ -85,10 +85,13 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSection`, a
-`styled(StatCard)`, `aria-label="byte foundry storage"`) — kept out of the plain button stack above
-so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
-Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
+Once `isStorageUnlocked(state)` — Memory's own capacity has reached `INTRO_STORAGE_UNLOCK_CAPACITY`
+(10 KB in Memory's own scale, 80,000 bits; see `game/layers.js`), a later, more deliberate reveal
+than `revealed`'s own 1000-bit gate above (`storageRevealed` locally) — a separate labeled
+**Storage** section (`StorageSection`, a `styled(StatCard)`, `aria-label="byte foundry storage"`) —
+kept out of the plain button stack above so it reads as its own grouped mechanic rather than one
+more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank" button
+(`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
 whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then

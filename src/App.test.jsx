@@ -13,6 +13,7 @@ import {
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
   INTRO_STARTING_TICK_SPEED_SECONDS,
+  INTRO_STORAGE_UNLOCK_CAPACITY,
   PRESTIGE_THRESHOLD,
   STORAGE_BUILD_COST_MULTIPLIER,
   TICK_RATE_MS,
@@ -2380,6 +2381,19 @@ describe('Byte Foundry Storage', () => {
   // tier01's level catches up to it" path independent of what the Build button currently offers.
   const futureBankSize = getTierCost(tier01, 2)
 
+  test('the Storage section stays hidden until Memory capacity reaches 10 KB (INTRO_STORAGE_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1, byteCreated: true })
+    const { unmount } = render(<App />)
+    expect(screen.queryByRole('region', { name: /byte foundry storage/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /build storage bank/i })).not.toBeInTheDocument()
+    unmount()
+
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+    expect(screen.getByRole('region', { name: /byte foundry storage/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeInTheDocument()
+  })
+
   test('Build Storage Bank is disabled below its cost and enabled once affordable, starting at 1 KB', () => {
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true })
     render(<App />)
@@ -2422,10 +2436,11 @@ describe('Byte Foundry Storage', () => {
   test('Memory auto-fills an empty bank on a later tick — the fill and the build are separate steps', () => {
     vi.useFakeTimers()
 
-    // A bank already built (empty) plus enough Memory to fill exactly one of it.
+    // A bank already built (empty) plus enough Memory to fill exactly one of it. Capacity must
+    // also clear INTRO_STORAGE_UNLOCK_CAPACITY for the Storage section to even render.
     seedIntroState({
       bits: currentBankSize,
-      capacity: currentBankSize,
+      capacity: INTRO_STORAGE_UNLOCK_CAPACITY,
       byteCreated: true,
       storageBanksBuiltTotal: { [currentBankSize]: 1 },
     })
@@ -2449,7 +2464,7 @@ describe('Byte Foundry Storage', () => {
   test('a 1 KB bank auto-redeems on the very next tick even with the auto-redeem toggle off', () => {
     vi.useFakeTimers()
 
-    seedIntroState({ bits: 0, capacity: currentBankSize, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
     const { unmount } = render(<App />)
     expect(screen.getByRole('button', { name: /redeem 1 kb storage bank/i })).toBeEnabled()
 
@@ -2465,9 +2480,11 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', () => {
-    // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable.
+    // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable. Capacity
+    // is seeded above INTRO_STORAGE_UNLOCK_CAPACITY (well above futureBankSize too) so the Storage
+    // section renders at all.
     seedIntroState(
-      { bits: 0, capacity: futureBankSize, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
     )
     const { unmount } = render(<App />)
 
@@ -2476,7 +2493,7 @@ describe('Byte Foundry Storage', () => {
 
     // tier01 now at level 2 — its current per-unit cost (10,000) matches the held bank.
     seedIntroState(
-      { bits: 0, capacity: futureBankSize, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
     render(<App />)

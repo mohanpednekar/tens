@@ -19,6 +19,7 @@ import {
   createInitialGameState,
   getIntroProductionRate,
   isIntroConversionUnlocked,
+  isStorageUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
   setAutobuyerEnabled,
@@ -84,7 +85,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -602,6 +603,18 @@ describe('isIntroConversionUnlocked', () => {
   it('is true once capacity reaches INTRO_CONVERSION_UNLOCK_CAPACITY', () => {
     const state = withIntro(createInitialGameState(), { capacity: 1000 })
     expect(isIntroConversionUnlocked(state)).toBe(true)
+  })
+})
+
+describe('isStorageUnlocked', () => {
+  it('is false below INTRO_STORAGE_UNLOCK_CAPACITY (10 KB in Memory\'s own scale)', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1 })
+    expect(isStorageUnlocked(state)).toBe(false)
+  })
+
+  it('is true once capacity reaches INTRO_STORAGE_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_STORAGE_UNLOCK_CAPACITY })
+    expect(isStorageUnlocked(state)).toBe(true)
   })
 })
 
