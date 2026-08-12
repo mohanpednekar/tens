@@ -70,6 +70,21 @@ next scheduled run retries automatically. Confirmed live on 2026-07-29: a run ex
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
 read as a real break to the next run's Phase 0 CI check.
 
+**Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
+`compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
+Phase 0/A/B text described below — into a file via a quoted bash heredoc, substitutes the handful of
+dynamic values (open PR/task/gap-issue lists, CI status, failing PRs, Dependabot alerts/PRs) using
+bash's own `${var//pattern/replacement}` parameter expansion, and exposes the result as a single step
+output. The `claude-code-action` step's `with.prompt:` is then just `${{ steps.compose-prompt.outputs.
+prompt }}` — a lone expression with no literal text mixed in. This exists because GitHub Actions caps a
+YAML scalar that mixes literal text and `${{ }}` expressions at 21,000 combined characters once
+compiled, and this prompt's literal instructional text alone crossed that threshold on 2026-08-10,
+taking the workflow down entirely (every run failed at parse time, before any job was even scheduled)
+until fixed. See `docs/DESIGN_HISTORY.md` for the full incident. Anyone extending the prompt text (e.g.
+via Phase B item 5's self-improvement task) edits the heredoc inside the `Compose prompt` step, not a
+`with.prompt:` block — and should keep new dynamic values passed the same way (a step output
+substituted via bash parameter expansion), not as an inline `${{ }}` back in the `with:` block.
+
 **Guard-step list feeds are explicitly `--limit`-ed and, for the task backlog, capped/sorted for
 display.** `gh issue list`/`gh pr list` default to `--limit 30`, newest-first — a silent truncation,
 not an error, on any repo with more open items than that. This repo hit it for real: with 30+ open
