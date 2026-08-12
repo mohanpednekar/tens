@@ -897,6 +897,50 @@ tracking field and `pickIntroProductionMilestone`'s own generic claim-counting l
 place rather than ripped out, since they cost nothing to keep and stay ready for a future
 tier-dependent claim count without any further code changes.
 
+### Transfer-block/Storage-bank cost stops being pinned to tier01's fresh-level-1 price
+
+Both the Kilobyte-transfer blocks and Storage bank redemption originally priced themselves off a
+flat rate: `convertIntroBitsToKilobytes` always spent exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION`
+(1000) bits per unit, and `isStorageBankRedeemable` accepted any bank whose size was `<=` tier01's
+*current* per-unit level cost. Both were literally true only at a fresh cycle's starting level, where
+tier01's level-1 cost happens to equal that same 1000-bit constant. Once tier01 leveled past 1 within
+a cycle — its real per-unit cost climbing to 10,000, then 100,000, and so on — a transfer block kept
+converting at the stale 1000-bit rate, and a small, already-built bank (e.g. a 1 KB bank) stayed
+"redeemable" under the `<=` check even though tier01's real Kilobyte price had grown far past it: a
+report that "Only the actual cost of a full level of tier01 should be auto redeemed (from bank or
+memory). Currently the level 1 cost is being redeemed without checking real cost" identified this as
+a bug, not a deliberate design choice that happened to look that way (both mechanisms were originally
+*intended* to track tier01's real cost, per their own doc comments predating this fix; the flat
+1000-bit reference and the `<=` inequality were the actual defects, not something to work around).
+
+Two designs were considered before implementing. The first, more literal reading of the bug report —
+"only tier01's own real, current per-unit cost should ever be spent, from either source, and nothing
+else on the Byte Foundry page should be usable outside of that" — would have disabled Tap, Combine,
+Sacrifice, and Invest entirely, turning the whole page into a single spend-at-current-price action.
+Asked directly, the reporter confirmed a narrower scope: fix the cost dynamics only ("Close, but
+Tap/Sacrifice/Invest should stay usable") — those mechanisms are deliberately-designed, independent
+Byte Foundry actions (see "Economy model" in `CLAUDE.md`) with no bug report against them, and nothing
+about the flat-rate/`<=` defects implicated their own behavior.
+
+The fix: a new `getIntroKilobyteConversionCost(state)` (`getTierCost(TIER_DEFINITIONS[0],
+purchaseLevels.tier01 ?? 1)`) replaced the flat constant everywhere a conversion actually spends bits
+(`convertIntroBitsToKilobytes`, and transitively `tickIntroAutoInvest`'s per-unit loop) — the exact
+same value `getStorageBankSize`/`isStorageBankRedeemable` already computed, so a transfer block and a
+Storage bank of the same size now cost/redeem identically. `isStorageBankRedeemable` switched from
+`<=` to `===`: a bank is redeemable only when its size *exactly* equals tier01's current per-unit
+cost, not merely at or below it. This reopens a question the original `<=` design was explicitly
+built to avoid (see "Storage's buildable size drops from 'one level ahead' to tier01's current level"
+above): an autobuyer burst completing more than one tier01 level in a single tick can jump the price
+straight past a bank's exact size without it ever equaling that size mid-tick, leaving the bank
+un-redeemable for the rest of that stretch. This is accepted as a temporary-wait, not a "never lost"
+regression: `getFirstTierCost` only ever grows with level *within* a cycle, so the next Speed
+Up/Overclock/Prestige resets tier01's level back down, and its price regrows through that exact value
+again on the way back up — a full bank simply waits, unredeemable, until the next reset cycle reaches
+its size again, rather than losing its contents. `INTRO_BITS_PER_KILOBYTE_CONVERSION` itself was kept
+(not deleted) since it's still true and useful as `INTRO_CONVERSION_UNLOCK_CAPACITY`'s fixed threshold
+value and as a fresh-cycle-level-1 test fixture — only its use as an actual ongoing conversion price
+was wrong and removed.
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently

@@ -85,10 +85,13 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSection`, a
-`styled(StatCard)`, `aria-label="byte foundry storage"`) — kept out of the plain button stack above
-so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
-Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
+Once `isStorageUnlocked(state)` — Memory's own capacity has reached `INTRO_STORAGE_UNLOCK_CAPACITY`
+(10 KB in Memory's own scale, 80,000 bits; see `game/layers.js`), a later, more deliberate reveal
+than `revealed`'s own 1000-bit gate above (`storageRevealed` locally) — a separate labeled
+**Storage** section (`StorageSection`, a `styled(StatCard)`, `aria-label="byte foundry storage"`) —
+kept out of the plain button stack above so it reads as its own grouped mechanic rather than one
+more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank" button
+(`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
 whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
@@ -112,9 +115,10 @@ duller fill) — **empty** (built but not yet auto-filled — a dim muted-border
 `aria-label="empty <size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only
 placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank
 doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
-pool. `isStorageBankRedeemable`'s own gate is unchanged from before this ladder existed: at or below
-tier01's *current* per-unit level cost, not a one-tick-only exact match (see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). No pause/resume control for auto-redeem
+pool. `isStorageBankRedeemable`'s own gate is a genuine one-tick-only EXACT match against
+tier01's *current* per-unit level cost (an earlier version used "at or below" — see
+docs/DESIGN_HISTORY.md for why that undervalued a bank; see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry" section for the full behavior). No pause/resume control for auto-redeem
 currently renders below the size rows — removed for now, with a UI to reintroduce it planned for
 later (see `docs/DESIGN_HISTORY.md`); `intro.storageAutoRedeemEnabled` still exists and now defaults
 `true` for every size (previously `false`), and `actions.setStorageAutoRedeemEnabled` stays fully
@@ -140,10 +144,14 @@ value, not a separately-tracked field) to pick one of three states: **consumed**
 (`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
 `title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
 `theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
-(`index === blocksTransferred`, at most one at a time) — `aria-label="convert 1000 bits into 1
-Kilobyte"`, `$progress` = the existing bits-toward-1000 fill, `onClick={actions.convertIntroBitsToKilobytes}`,
-disabled only when `bits < INTRO_BITS_PER_KILOBYTE_CONVERSION` — **there is no per-cycle cap to run
-into** — paired with a hidden `role="progressbar"` (`aria-label="byte foundry convert progress"`);
+(`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
+Kilobyte"` where `<cost>` is `formatStorageSize(transferBlockCost)` and `transferBlockCost =
+getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
+`INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1 KB" at a fresh cycle's level 1, "10 KB" once tier01
+reaches level 2, and so on), `$progress` = the bits-toward-`transferBlockCost` fill,
+`onClick={actions.convertIntroBitsToKilobytes}`, disabled only when `bits < transferBlockCost` —
+**there is no per-cycle cap to run into** — paired with a hidden `role="progressbar"`
+(`aria-label="byte foundry convert progress"`, `aria-valuemax={transferBlockCost}`);
 **upcoming** (every later index) — `aria-label="locked transfer block N"`, always disabled,
 `title="Transfer the block to your left first"`, empty (`background: transparent`). Read
 left-to-right, consumed (filled)/active (partially filled)/upcoming (empty) blocks together look
@@ -172,8 +180,10 @@ true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity
 picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
 instead of stopping at a fixed unit. A separate `formatStorageSize` helper uses a different,
 Storage-*size*-specific scale (see "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry"
-section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — only for
-naming a bank's own *size* ("Build 1 KB Bank"), never for the bits actually spent to build it, which
+section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — used both for
+naming a bank's own *size* ("Build 1 KB Bank") and for the transfer block's own dynamic cost (the
+active block's `aria-label`/`title`, since `getIntroKilobyteConversionCost` is the same underlying
+value/scale as a bank size) — never for the bits actually spent to build a bank, which
 always renders via `formatBitsInNearestUnit` instead. This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in

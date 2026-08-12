@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -355,12 +355,12 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
   return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
 }
 
-// Storage bank sizes are tier01's own per-unit level costs (see getStorageBankSize in
-// engine.js) — a completely separate scale from Memory's Byte-based one above: 1000 bits is
-// "1 KB" here, matching INTRO_BITS_PER_KILOBYTE_CONVERSION and the Convert button's own
-// "KiloBits" naming (1000 bits, not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
-// symbols for the same "byte-scale themed" reason Memory's own ladder does. Every bank size is
-// already an exact power of ten by construction (getTierCost), so this always lands on a clean,
+// Storage bank sizes AND the transfer block's own dynamic cost (getIntroKilobyteConversionCost)
+// are both tier01's own per-unit level costs (see getStorageBankSize in engine.js), so they share
+// this one formatting scale — a completely separate scale from Memory's Byte-based one above: 1000
+// bits is "1 KB" here ("KiloBits", not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
+// symbols for the same "byte-scale themed" reason Memory's own ladder does. Every value passed in
+// is already an exact power of ten by construction (getTierCost), so this always lands on a clean,
 // whole-number label.
 const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
 const formatStorageSize = bits => {
@@ -392,6 +392,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const revealed = isIntroConversionUnlocked(state)
+  const storageRevealed = isStorageUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
@@ -410,12 +411,15 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
   const blocksTransferred = tier01PurchaseProgress
   const blocksRemaining = purchaseBlockSize - tier01PurchaseProgress
-  const canTransferBlock = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION
+  // tier01's own CURRENT per-unit cost — what one transfer block actually costs right now, not a
+  // fixed rate (see getIntroKilobyteConversionCost in engine.js).
+  const transferBlockCost = getIntroKilobyteConversionCost(state)
+  const canTransferBlock = intro.bits >= transferBlockCost
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const investProgress = clampPercent((intro.bits / investCost) * 100)
-  const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
+  const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
   // Storage: an independent build ladder (1 KB, then 10 KB, … — see getStorageBankSize) offers one
   // buildable size at a time, STORAGE_BANK_LADDER_CAP banks per size before advancing; a built
@@ -558,7 +562,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
 
       </ActionsRow>
 
-      {intro.byteCreated && (
+      {storageRevealed && (
         <StorageSection aria-label="byte foundry storage">
           <SectionLabel>Storage</SectionLabel>
           <Button
@@ -647,7 +651,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? `transferred block ${index + 1}`
                     : isActive
-                      ? 'convert 1000 bits into 1 Kilobyte'
+                      ? `convert ${formatStorageSize(transferBlockCost)} into 1 Kilobyte`
                       : `locked transfer block ${index + 1}`
                 }
                 disabled={isConsumed || !isActive || !canTransferBlock}
@@ -656,7 +660,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? '1000 bits → 1 Kilobyte' : 'Fill Memory to 1000 bits first')
+                      ? (canTransferBlock ? `${formatStorageSize(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"
@@ -670,7 +674,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                     aria-label="byte foundry convert progress"
                     aria-valuenow={intro.bits}
                     aria-valuemin={0}
-                    aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
+                    aria-valuemax={transferBlockCost}
                   />
                 )}
               </TransferBlock>

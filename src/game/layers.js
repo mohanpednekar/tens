@@ -137,6 +137,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
 // "never lost," and a full bank's contents ride through a real Prestige untouched even though
 // Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
+// until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
+// per step — see ByteFoundryPage's getMemoryUnit — not the 1000-bits-per-"KB" scale the bank-size
+// ladder above uses) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 → 8000 → 80000 via
+// Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed only once the
+// player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
+export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
 // A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
 // build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
 // bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits

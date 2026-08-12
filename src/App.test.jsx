@@ -13,6 +13,7 @@ import {
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
   INTRO_STARTING_TICK_SPEED_SECONDS,
+  INTRO_STORAGE_UNLOCK_CAPACITY,
   PRESTIGE_THRESHOLD,
   STORAGE_BUILD_COST_MULTIPLIER,
   TICK_RATE_MS,
@@ -2028,7 +2029,7 @@ test('the manual convert button appears once capacity reaches the conversion-unl
   })
   render(<App />)
 
-  const convertButton = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
+  const convertButton = screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })
   expect(convertButton).toBeEnabled()
 
   await user.click(convertButton)
@@ -2046,7 +2047,23 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
   render(<App />)
 
-  expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).not.toBeInTheDocument()
+})
+
+test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, bits: 0, capacity: 100000, byteCreated: true },
+    purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+
+  // tier01 is at level 2 — its own current per-unit cost is 10,000 bits ("10 KB"), not the
+  // level-1 rate (1000 bits/"1 KB") the transfer block used to be pinned to forever.
+  const activeBlock = screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })
+  expect(activeBlock).toBeDisabled()
+  const progressbar = within(activeBlock).getByRole('progressbar', { name: /byte foundry convert progress/i })
+  expect(progressbar).toHaveAttribute('aria-valuemax', '10000')
 })
 
 test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', () => {
@@ -2074,7 +2091,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
 
   const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
-  const activeBlock = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
+  const activeBlock = screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })
   const lockedBlocks = screen.getAllByRole('button', { name: /^locked transfer block/i })
   expect(activeBlock).toBeEnabled()
   expect(lockedBlocks).toHaveLength(7)
@@ -2090,7 +2107,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   // spent stays on screen too, greyed out as consumed, instead of disappearing — the group still
   // holds all 8 blocks total.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).toBeEnabled()
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(6)
   expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
@@ -2116,7 +2133,7 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   })
   const { unmount } = render(<App />)
 
-  expect(screen.getAllByRole('button', { name: /transfer block|convert 1000 bits/i }).length).toBeGreaterThan(0)
+  expect(screen.getAllByRole('button', { name: /transfer block|convert 1 KB/i }).length).toBeGreaterThan(0)
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
@@ -2128,11 +2145,12 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   // Navigating back to the Byte Foundry shows a fresh, empty row for the next level rather than the
   // blocks staying permanently "consumed" — there is no per-cycle transfer cap any more, so the row
   // just keeps mirroring tier01's own live purchase-block progress, which reset to 0 once the level
-  // completed.
+  // completed. tier01 is now at level 2, so each block's own cost has stepped up to 10 KB
+  // (getIntroKilobyteConversionCost), not the level-1 1 KB rate.
   fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
   expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(7)
-  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -2380,6 +2398,19 @@ describe('Byte Foundry Storage', () => {
   // tier01's level catches up to it" path independent of what the Build button currently offers.
   const futureBankSize = getTierCost(tier01, 2)
 
+  test('the Storage section stays hidden until Memory capacity reaches 10 KB (INTRO_STORAGE_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1, byteCreated: true })
+    const { unmount } = render(<App />)
+    expect(screen.queryByRole('region', { name: /byte foundry storage/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /build storage bank/i })).not.toBeInTheDocument()
+    unmount()
+
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+    expect(screen.getByRole('region', { name: /byte foundry storage/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeInTheDocument()
+  })
+
   test('Build Storage Bank is disabled below its cost and enabled once affordable, starting at 1 KB', () => {
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true })
     render(<App />)
@@ -2422,10 +2453,11 @@ describe('Byte Foundry Storage', () => {
   test('Memory auto-fills an empty bank on a later tick — the fill and the build are separate steps', () => {
     vi.useFakeTimers()
 
-    // A bank already built (empty) plus enough Memory to fill exactly one of it.
+    // A bank already built (empty) plus enough Memory to fill exactly one of it. Capacity must
+    // also clear INTRO_STORAGE_UNLOCK_CAPACITY for the Storage section to even render.
     seedIntroState({
       bits: currentBankSize,
-      capacity: currentBankSize,
+      capacity: INTRO_STORAGE_UNLOCK_CAPACITY,
       byteCreated: true,
       storageBanksBuiltTotal: { [currentBankSize]: 1 },
     })
@@ -2449,7 +2481,7 @@ describe('Byte Foundry Storage', () => {
   test('a 1 KB bank auto-redeems on the very next tick even with the auto-redeem toggle off', () => {
     vi.useFakeTimers()
 
-    seedIntroState({ bits: 0, capacity: currentBankSize, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
     const { unmount } = render(<App />)
     expect(screen.getByRole('button', { name: /redeem 1 kb storage bank/i })).toBeEnabled()
 
@@ -2465,9 +2497,11 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', () => {
-    // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable.
+    // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable. Capacity
+    // is seeded above INTRO_STORAGE_UNLOCK_CAPACITY (well above futureBankSize too) so the Storage
+    // section renders at all.
     seedIntroState(
-      { bits: 0, capacity: futureBankSize, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
     )
     const { unmount } = render(<App />)
 
@@ -2476,7 +2510,7 @@ describe('Byte Foundry Storage', () => {
 
     // tier01 now at level 2 — its current per-unit cost (10,000) matches the held bank.
     seedIntroState(
-      { bits: 0, capacity: futureBankSize, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
     render(<App />)
@@ -2656,7 +2690,7 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   // The transfer row mirrors tier01's own live purchase-block progress — no per-cycle cap, so it
   // keeps offering an active (if currently unaffordable) block rather than ever going fully consumed.
   expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(3)
-  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).toBeDisabled()
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(4)
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
