@@ -434,43 +434,56 @@ nothing.
 
 **Storage** gets its own labeled section on the page (separate from Sacrifice/Invest), grouping the
 Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
-read together as one progress bar: already-redeemed (consumed, leftmost), currently held
-(clickable once redeemable), then not-yet-built placeholders (rightmost), so squares fill smallest-
-to-largest both within a row and across rows — and the auto-redeem toggle together, rather than one
-full-width button per bank size stacked flat into the same list as every other action. The buildable
-size is its own **independent ladder** (`getStorageBankSize`), decoupled from `tier01`'s (Kilobytes')
-current price: it starts at 1000 bits ("1 KB") and only advances to the next size (×10 — 10 KB, then
-100 KB, …) once `STORAGE_BANK_LADDER_CAP` banks have *ever* been built at the current size (tracked
-by `intro.storageBanksBuiltTotal`, a cumulative counter redeeming never decrements, so the ladder
-only ever advances — a player can build ahead of or fall behind `tier01`'s actual price). Building a
-bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value in bits from Memory;
-every size the ladder ever offers is a round KB/MB/GB/… value (always a power of ten). A built bank's
-redeemability is a separate check (`isStorageBankRedeemable`): a held bank is redeemable (clickable)
-whenever its size is *at or below* `tier01`'s *current* per-unit level cost — not a one-tick-only
-exact match, since `tier01`'s own autobuyer can complete more than one level in a single tick (an
-attempt budget catching up after a broke/paused stretch), which could otherwise jump the level
-straight past the one a bank was sized for and strand it unredeemable forever; because that cost only
-ever grows within a cycle, a bank stays redeemable for the rest of the cycle once reached. This lets a
-player bank ahead of a purchase burst (building at today's ladder size before `tier01`'s price catches
-up) and redeem the queued banks any time afterward, or redeem right away if the size already matches.
-Redeeming grants 1 free Kilobyte unit, either by a manual click or automatically. The smallest, 1 KB
-denomination **always** attempts auto-redeem, regardless of the toggle — every larger size still
-needs Storage's own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain preference, no PP
-or prerequisite purchase involved) enabled. Either way, a given size auto-redeems **at most once per
-real Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) —
-further eligible banks of an already-auto-redeemed size need a manual click for the rest of the
-cycle. Storage banks are **never lost** — nothing here ever expires or spends implicitly, only an
-explicit redeem (manual or auto) ever consumes one. The Storage section also shows a live,
-non-hidden squares row for `tier01`'s own current purchase-block progress
-(`getPurchaseBlockSize(state)` blocks, greyed for units already bought) — it advances identically
-whether a unit came from the main game's Buy button/autobuyer or from redeeming a Storage bank here,
-since both paths update `purchaseLevelProgress` via the same bookkeeping.
+read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
+built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
+(rightmost) — and the auto-redeem toggle together, rather than one full-width button per bank size
+stacked flat into the same list as every other action. Banks are a genuine storage **medium**, not
+a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
+container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
+every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
+through every currently-fillable size in one pass before whatever's left over simply stays as
+Memory's own balance. The buildable size is its own **independent ladder** (`getStorageBankSize`),
+decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own per-unit **level cost
+sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
+progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
+been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
+redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
+(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
+bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
+ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
+is a separate check (`isStorageBankRedeemable`): it's redeemable (clickable) whenever its size is
+*at or below* `tier01`'s *current* per-unit level cost — not a one-tick-only exact match, since
+`tier01`'s own autobuyer can complete more than one level in a single tick (an attempt budget
+catching up after a broke/paused stretch), which could otherwise jump the level straight past the
+one a bank was sized for and strand it unredeemable forever; because that cost only ever grows
+within a cycle, a full bank stays redeemable for the rest of the cycle once reached. This lets a
+player bank ahead of a purchase burst (building — and letting Memory fill — at today's ladder size
+before `tier01`'s price catches up) and redeem the queued banks any time afterward, or redeem right
+away if the size already matches. Redeeming grants 1 free Kilobyte unit, either by a manual click or
+automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
+fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
+**always** attempts auto-redeem, regardless of the toggle — every larger size still needs Storage's
+own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain preference, no PP or prerequisite
+purchase involved) enabled. Either way, a given size auto-redeems **at most once per real Prestige
+cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank that
+refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
+lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
+ever empties one. The Storage section also shows a live, non-hidden squares row for `tier01`'s own
+current purchase-block progress (`getPurchaseBlockSize(state)` blocks, greyed for units already
+bought) — it advances identically whether a unit came from the main game's Buy button/autobuyer or
+from redeeming a Storage bank here, since both paths update `purchaseLevelProgress` via the same
+bookkeeping.
 
 **The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
-cost-ladder progress) and Storage (every banked block, the cumulative build ladder, and the
+cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the
 auto-redeem preference — but NOT `storageAutoRedeemedSizes`, which resets every real Prestige) are
-permanent, carried over by every real Prestige** — only Memory (the current bit balance), the
-main-game-unlock gate, and the transfer budget reset each cycle, so returning cycles are a fast pit-stop, not a full
+permanent, carried over by every real Prestige** — a bank already full when Prestige fires stays
+full, its contents intact even though Memory itself resets, giving a fresh cycle a head start
+(immediately redeemable once `tier01`'s fresh level 1 cost matches). Only Memory (the current bit
+balance), the main-game-unlock gate, and the transfer budget reset each cycle, so returning cycles
+are a fast pit-stop, not a full
 replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
@@ -566,7 +579,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (839 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (846 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

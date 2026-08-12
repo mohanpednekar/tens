@@ -72,28 +72,35 @@ Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSectio
 so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
 Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label/cost always tracks `getStorageBankSize(state)` — an independent ladder starting
-at 1000 bits ("1 KB") and multiplying by 10 every `STORAGE_BANK_LADDER_CAP` (10) banks ever built at
-the current size, decoupled from tier01's (Kilobytes') own price; disabled below that cost.
+whose visible label/cost always tracks `getStorageBankSize(state)` — an independent ladder that
+walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
+1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
+skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
+the current size, decoupled from tier01's own CURRENT price; disabled below that cost. Building
+only ever constructs an EMPTY container — it does not fill it (see below).
 
 For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
 visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
-`StorageSizeLabel` (`"<size> banks (<built>/<STORAGE_BANK_LADDER_CAP>)"`) above a
+`StorageSizeLabel` (`"<size> banks (<full> full, <built>/<STORAGE_BANK_LADDER_CAP> built)"`) above a
 `StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
 `STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
-bar, filling left-to-right: **consumed** (already redeemed — leftmost, solid muted fill,
-`aria-label="redeemed <size> bank"`, permanently disabled) — **held** (built and awaiting redeem —
-accent border, `aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
+bar, filling left-to-right: **full** (leftmost, holding Memory's bits — accent border,
+`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
 clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
-duller fill) — **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built
-<size> bank"`, always disabled). `isStorageBankRedeemable`'s own gate is unchanged from before this
-ladder existed: at or below tier01's *current* per-unit level cost, not a one-tick-only exact match
-(see docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the size rows, a final pause/resume-
-style toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
-`actions.setStorageAutoRedeemEnabled`, shown only once any size is held) flips
+duller fill) — **empty** (built but not yet auto-filled — a dim muted-bordered fill,
+`aria-label="empty <size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only
+placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank
+doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
+pool. `isStorageBankRedeemable`'s own gate is unchanged from before this ladder existed: at or below
+tier01's *current* per-unit level cost, not a one-tick-only exact match (see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the size rows, a final pause/resume-style
+toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
+`actions.setStorageAutoRedeemEnabled`, shown only once any size is currently full) flips
 `intro.storageAutoRedeemEnabled` — unlike every other automation toggle on this page, no prerequisite
 purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all
-(see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row).
+(see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself (`tickStorageAutoFill`)
+has no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
+currently-fillable empty bank, smallest size first, whenever there's enough of it.
 
 The section closes with a live, non-hidden progress row for tier01's own current purchase-block
 progress: a `SectionLabel` ("Kilobytes' current block (N/blockSize)") above the same `RateBlocksRow`/
@@ -152,8 +159,9 @@ docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace f
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
 `storageBanksBuiltTotal`/`storageAutoRedeemEnabled` — but NOT `storageAutoRedeemedSizes`, which
-resets every real Prestige) are both permanent and carry over, so the gate is a fast pit-stop after
-the first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
+resets every real Prestige) are both permanent and carry over — a bank already FULL when Prestige
+fires stays full, giving the next cycle a head start — so the gate is a fast pit-stop after the
+first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
 return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
 stays just as interactive there as on the gate itself.
 

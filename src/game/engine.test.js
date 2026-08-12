@@ -82,9 +82,10 @@ import {
   tickGame,
   tickIntroAutoInvest,
   tickIntroProduction,
+  tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -795,51 +796,58 @@ describe('getStorageBankSize', () => {
     expect(getStorageBankSize(state)).toBe(1000)
   })
 
-  it('advances to the next size (×10) once STORAGE_BANK_LADDER_CAP banks have ever been built at the current size', () => {
+  it('advances to tier01\'s NEXT level cost once STORAGE_BANK_LADDER_CAP banks have ever been built at the current size', () => {
     const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP } })
-    expect(getStorageBankSize(state)).toBe(10000)
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2)) // 10,000
   })
 
   it('does not regress after banks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
-      storageBanks: { 1000: 3 }, // some already redeemed, some still held — either way, below the cap
+      storageBanks: { 1000: 3 }, // some already redeemed, some still full — either way, below the cap
     })
-    expect(getStorageBankSize(state)).toBe(10000)
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
   })
 
-  it('can advance multiple steps at once if a much larger size was somehow already maxed out', () => {
+  it('skips a size tier01\'s own level-cost sequence skips (100,000) — jumps straight from 10,000 to 1,000,000', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
     })
-    expect(getStorageBankSize(state)).toBe(100000)
+    // tier01's cost-epoch exponent sequence (1, 2, 4, 7, …) skips level 3's exponent straight to 4,
+    // so level 3 costs 1,000,000, never 100,000.
+    expect(getTierCost(tensTier, 3)).toBe(1000000)
+    expect(getStorageBankSize(state)).toBe(1000000)
   })
 })
 
 describe('getStorageBankCost', () => {
-  it('is STORAGE_BUILD_COST_MULTIPLIER times the bank\'s own size', () => {
-    expect(getStorageBankCost(1000)).toBe(1000 * STORAGE_BUILD_COST_MULTIPLIER)
+  it('is STORAGE_BUILD_COST_MULTIPLIER times the bank\'s own size, expressed in BYTES not bits', () => {
+    // A 1000-bit ("1 KB") bank costs 10 KB*BYTES* (10,000 bytes = 80,000 bits) to build, not
+    // 10,000 bits — see the "Byte Foundry Storage" comment in layers.js.
+    expect(getStorageBankCost(1000)).toBe(1000 * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE)
+    expect(getStorageBankCost(1000)).toBe(80000)
   })
 })
 
 describe('buildStorageBank', () => {
-  it('spends the build cost from Memory and adds one bank of the current offered size', () => {
+  it('spends the build cost from Memory and constructs one EMPTY bank of the current offered size', () => {
     const cost = getStorageBankCost(1000)
     const state = withIntro(createInitialGameState(), { bits: cost })
 
     const after = buildStorageBank(state)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.storageBanks[1000]).toBe(1)
     expect(after.intro.storageBanksBuiltTotal[1000]).toBe(1)
+    // Building never fills it — storageBanks (the currently-FULL count) stays untouched.
+    expect(after.intro.storageBanks[1000]).toBeUndefined()
   })
 
-  it('accumulates both storageBanks (held) and storageBanksBuiltTotal (cumulative) when building the same size again', () => {
+  it('accumulates storageBanksBuiltTotal (cumulative) when building the same size again, still empty', () => {
     const cost = getStorageBankCost(1000)
     const state = withIntro(createInitialGameState(), { bits: cost * 2 })
 
     const after = buildStorageBank(buildStorageBank(state))
-    expect(after.intro.storageBanks[1000]).toBe(2)
     expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
+    expect(after.intro.storageBanks[1000]).toBeUndefined()
     expect(after.intro.bits).toBe(0)
   })
 
@@ -850,15 +858,66 @@ describe('buildStorageBank', () => {
   })
 
   it('starts building the next size up once the current one reaches STORAGE_BANK_LADDER_CAP built', () => {
+    const nextSize = getTierCost(tensTier, 2)
     const almostMaxed = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
-      bits: getStorageBankCost(1000) + getStorageBankCost(10000),
+      bits: getStorageBankCost(1000) + getStorageBankCost(nextSize),
     })
     const afterLast1KB = buildStorageBank(almostMaxed)
     expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
 
     const afterNext = buildStorageBank(afterLast1KB)
-    expect(afterNext.intro.storageBanksBuiltTotal[10000]).toBe(1)
+    expect(afterNext.intro.storageBanksBuiltTotal[nextSize]).toBe(1)
+  })
+})
+
+describe('tickStorageAutoFill', () => {
+  it('is a same-reference no-op with no built banks', () => {
+    const state = withIntro(createInitialGameState(), { bits: 5000 })
+    expect(tickStorageAutoFill(state)).toBe(state)
+  })
+
+  it('is a no-op when Memory can\'t cover the smallest empty bank', () => {
+    const state = withIntro(createInitialGameState(), { bits: 999, storageBanksBuiltTotal: { 1000: 1 } })
+    expect(tickStorageAutoFill(state)).toBe(state)
+  })
+
+  it('fills one empty bank exactly, spending its size in bits from Memory', () => {
+    const state = withIntro(createInitialGameState(), { bits: 1000, storageBanksBuiltTotal: { 1000: 1 } })
+    const after = tickStorageAutoFill(state)
+    expect(after.intro.storageBanks[1000]).toBe(1)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('cascades smallest to largest in one pass, leaving the remainder in Memory', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 12500,
+      storageBanksBuiltTotal: { 1000: 2, 10000: 1 },
+    })
+    const after = tickStorageAutoFill(state)
+    expect(after.intro.storageBanks[1000]).toBe(2) // both 1 KB banks filled first
+    expect(after.intro.storageBanks[10000]).toBe(1) // then the 10 KB one
+    expect(after.intro.bits).toBe(500) // 12500 - 1000 - 1000 - 10000
+  })
+
+  it('only fills as many banks of a size as are actually empty, even with surplus Memory', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 1_000_000,
+      storageBanksBuiltTotal: { 1000: 2 },
+      storageBanks: { 1000: 1 }, // one already full — only one more can be filled
+    })
+    const after = tickStorageAutoFill(state)
+    expect(after.intro.storageBanks[1000]).toBe(2)
+    expect(after.intro.bits).toBe(999000)
+  })
+
+  it('leaves an already-fully-filled size untouched', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 5000,
+      storageBanksBuiltTotal: { 1000: 1 },
+      storageBanks: { 1000: 1 },
+    })
+    expect(tickStorageAutoFill(state)).toBe(state)
   })
 })
 
