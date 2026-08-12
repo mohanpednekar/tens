@@ -72,6 +72,7 @@ import {
   isComputeCoreConversionUnlocked,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
+  isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
   isStorageBankRedeemable,
   isTierUnlocked,
@@ -469,9 +470,59 @@ describe('combineIntroByte', () => {
   })
 })
 
+// Every test below that expects Sacrifice to actually FIRE must also clear the other two gates
+// isMemoryCapacityUpgradeAvailable checks: byteCreated (Combine no longer possible) and the
+// current Invest tier's claim already used up (Invest's cost ladder starts at the exact same
+// INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
+// capacity both are simultaneously affordable unless Invest's claim is explicitly marked used).
+const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 1 }
+
+describe('isMemoryCapacityUpgradeAvailable', () => {
+  it('is false below a full balance, regardless of other upgrades', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false while Combine into a Byte is still possible (byteCreated false, bits covers the combine cost)', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, capacity: INTRO_BYTE_COMBINE_COST, byteCreated: false })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false while the current Invest tier is still affordable and unclaimed', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0,
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage bank is currently buildable, once Storage is revealed', () => {
+    // INTRO_STORAGE_UNLOCK_CAPACITY (80,000 bits) exactly matches the freshly-offered 1 KB bank's
+    // own build cost too, so a full balance at exactly this capacity can also afford it.
+    const capacity = INTRO_STORAGE_UNLOCK_CAPACITY
+    const state = withIntro(createInitialGameState(), { bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99 })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is true once Storage is revealed but the currently-offered bank size is unaffordable at this balance', () => {
+    const capacity = INTRO_STORAGE_UNLOCK_CAPACITY
+    const state = withIntro(createInitialGameState(), {
+      bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99,
+      // Pushes the offered Storage bank size up to 10,000 (800,000-bit build cost) — unaffordable
+      // at this balance, unlike the freshly-offered 1 KB size the previous test used.
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+  })
+
+  it('is true once Memory is full and neither Combine, Invest, nor Storage is currently possible', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+  })
+})
+
 describe('pickIntroCapacityMilestone', () => {
   it('requires a full balance, drains it, and multiplies capacity by INTRO_CAPACITY_MULTIPLIER', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
@@ -482,19 +533,40 @@ describe('pickIntroCapacityMilestone', () => {
     expect(pickIntroCapacityMilestone(state)).toBe(state)
   })
 
+  it('is a no-op while Combine into a Byte is still possible', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, capacity: INTRO_BYTE_COMBINE_COST, byteCreated: false })
+    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  })
+
+  it('is a no-op while the current Invest tier is still affordable and unclaimed', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0,
+    })
+    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  })
+
   it('keeps working after mainGameUnlocked — nothing about Sacrifice ever freezes', () => {
-    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY })
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
   })
 
   it('does not touch tickSpeedSeconds/productionMultiplier', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 0.25, productionMultiplier: 2,
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 0.25, productionMultiplier: 2, ...noOtherUpgradesLeft,
     })
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.tickSpeedSeconds).toBe(0.25)
     expect(after.intro.productionMultiplier).toBe(2)
+  })
+
+  it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft }),
+      PRESTIGE_THRESHOLD
+    )
+    expect(isProductionFrozen(state)).toBe(true)
+    expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
   })
 })
 

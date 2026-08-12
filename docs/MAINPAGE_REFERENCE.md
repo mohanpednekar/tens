@@ -71,8 +71,13 @@ than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥
 matching the same term the balance tile above already uses for `capacity`, so the button's purpose
 reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
 Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
-capacity"` still carries the full description for assistive tech, disabled unless `bits ===
-capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest
+capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
+`canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine/Invest/a buildable
+Storage bank must all be currently impossible too), with a `title` that names what to do first
+(`"Take every other currently-available upgrade first…"`) when the balance is full but the button
+is still disabled for that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
+`capacity`) and "Invest
 for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
 this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
 keeping visible even in the shortened label; `aria-label="invest bits for double production"`

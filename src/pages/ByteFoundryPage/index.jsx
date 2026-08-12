@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -399,6 +399,10 @@ const ByteFoundryPage = ({ game, onBack }) => {
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
+  // Sacrifice is offered only once Memory is full AND no other currently-possible action (Combine,
+  // Invest, building a Storage bank) is left to take first — see isMemoryCapacityUpgradeAvailable
+  // in engine.js for the full gate.
+  const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
   const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
@@ -525,11 +529,15 @@ const ByteFoundryPage = ({ game, onBack }) => {
           <MilestonesRow>
             <Button
               aria-label="sacrifice all bits for 10x capacity"
-              disabled={!isFull}
+              disabled={!canSacrifice}
               onClick={actions.pickIntroCapacityMilestone}
-              title="Empty Memory for 10x capacity"
+              title={
+                isFull && !canSacrifice
+                  ? 'Take every other currently-available upgrade first (Invest, or build a Storage bank)'
+                  : 'Empty Memory for 10x capacity'
+              }
               type="button"
-              variant={isFull ? 'prestige' : 'neutral'}
+              variant={canSacrifice ? 'prestige' : 'neutral'}
               $progress={fullProgress}
             >
               <MilestoneButtonContent>

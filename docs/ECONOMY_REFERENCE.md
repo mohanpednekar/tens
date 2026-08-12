@@ -151,10 +151,20 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    `INTRO_STARTING_TICK_SPEED_SECONDS` (1 second), so at the starting values this is exactly 1
    bit/sec. Bits are capped at `capacity`; any batch amount a capacity cap actually clips is not
    banked forward, same rule tapping follows.
-4. Whenever Memory is **full** (`bits === capacity`), **Sacrifice for 10x Capacity**
-   (`pickIntroCapacityMilestone`) becomes available: it drains the ENTIRE balance to 0 and multiplies
-   `capacity` by `INTRO_CAPACITY_MULTIPLIER` (10) — 1 Byte → 10 Bytes → 100 Bytes → 1000 Bytes → ….
+4. Whenever Memory is **full** (`bits === capacity`) **and** no other currently-possible action is
+   left to take first, **Sacrifice for 10x Capacity** (`pickIntroCapacityMilestone`) becomes
+   available: it drains the ENTIRE balance to 0 and multiplies `capacity` by
+   `INTRO_CAPACITY_MULTIPLIER` (10) — 1 Byte → 10 Bytes → 100 Bytes → 1000 Bytes → ….
    Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`.
+   `isMemoryCapacityUpgradeAvailable(state)` is the real gate (enforced inside
+   `pickIntroCapacityMilestone` itself, not just a disabled UI button — same "engine re-validates"
+   posture every other action in this game has): besides being full, it also requires that Combine
+   into a Byte (`!byteCreated`, affordable), the current Invest tier (step 5 below, affordable and
+   unclaimed), and any currently-buildable Storage bank (step 8 below, once revealed) are all NOT
+   currently possible. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY`
+   and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep unless
+   the player pulls ahead on one relative to the other — in practice this makes claiming the current
+   Invest tier a prerequisite for Sacrificing again almost every cycle.
 5. **Invest for Double Production** (`pickIntroProductionMilestone`) runs on its own **independent
    cost ladder**, entirely decoupled from `capacity`/Sacrifice — a separate, permanent progression
    tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is
@@ -1435,7 +1445,8 @@ purchases were manual or automatic.
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `(INTRO_BYTE_BASE_RATE * productionMultiplier) / tickSpeedSeconds` — always an exact integer, since both factors are always powers of `INTRO_PRODUCTION_MULTIPLIER_STEP`. Used by `tapIntroBit` and the passive-production display |
 | `tapIntroBit` | `state → state` | Byte Foundry: adds `getIntroProductionRate(intro)` bits to `intro.bits` — "one second's worth" at the current rate, not a flat 1 — capped at `intro.capacity`. No-op once already full. Never freezes |
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
-| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `intro.bits === intro.capacity`; drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
+| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 10x Capacity" can actually fire right now — `intro.bits === intro.capacity` **and** none of Combine into a Byte (`!byteCreated`, affordable), the current Invest tier (affordable, unclaimed), or a currently-buildable Storage bank (once `isStorageUnlocked`) is still possible with that same balance. Since Invest's own cost ladder (`getIntroProductionMilestoneCost`) starts at the same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep by default, so claiming the current Invest tier is effectively a prerequisite for Sacrificing again most cycles. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
+| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: always `1` — every tier is a single-shot purchase (an earlier version returned `2` for the three tiers below 1000 Bytes' worth — see `docs/DESIGN_HISTORY.md`); `tier` is unused now but kept as the parameter so callers don't need to change if a future tier-dependent claim count returns |
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry "Invest for Double Production" — reads `cost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)`; requires `intro.bits >= cost` (NOT full capacity — cost is independent of `intro.capacity`) and `intro.productionMilestoneTierClaims < getIntroProductionMilestoneMaxClaims(tier)`; deducts exactly `cost` from `bits`, and either increments `productionMilestoneTierClaims` (same tier) or advances `productionMilestoneTier` with a fresh claim count of 0 once the tier's claim limit is reached. Doubles the overall rate: halves `tickSpeedSeconds` while that stays ≥ `INTRO_MIN_TICK_SPEED_SECONDS`, otherwise multiplies `productionMultiplier` by `INTRO_PRODUCTION_MULTIPLIER_STEP` instead. No-op below cost or once every claim at the current tier is already used. Never freezes |
