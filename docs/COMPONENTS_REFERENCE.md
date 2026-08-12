@@ -14,7 +14,7 @@ styled money/amount display; color from `theme.color.text`, with its own `font-v
 
 ## `OfflineProgressNotice/index.jsx`
 
-styled (`.jsx` — needs JSX) "Welcome back! ... simulated N of progress at 10% speed" notice,
+styled (`.jsx` — needs JSX) "Welcome back! ... simulated N of progress at 50% speed" notice,
 extracted out of `MainPage` so both `MainPage` and `ByteFoundryPage` can render it — offline progress
 (computed once, at mount, in `useIncrementalGame.js`'s `computeInitialGame`) already applies to the
 Byte Foundry mechanically regardless of which page renders it (`tickGame` runs

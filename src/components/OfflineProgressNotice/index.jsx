@@ -101,7 +101,7 @@ const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
       <OfflineNoticeCard aria-label="offline progress notice" $fading={offlineNoticeFading}>
         <NoticeText>
           Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
-          {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 10% speed.
+          {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 50% speed.
         </NoticeText>
         <Button
           aria-label="Dismiss offline progress notice"
