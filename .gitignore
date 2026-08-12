@@ -56,3 +56,10 @@ Thumbs.db
 graphify-out/cost.json
 graphify-out/.graphify_python
 graphify-out/.graphify_root
+
+# graphify also auto-backs up its "curated" files (community labels, etc.) into a dated
+# graphify-out/YYYY-MM-DD/ folder immediately before `graphify update` would overwrite them — a
+# local rollback safety net, not a project artifact, and a fresh one appears (with that day's
+# date) on any machine that runs an update — so it's excluded the same way cost.json is, rather
+# than committed and re-deleted by hand each time
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/

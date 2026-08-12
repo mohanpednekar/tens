@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -20,7 +20,18 @@ const Title = styled.h1`
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
   margin: 0;
-  text-align: center;
+`
+
+// Title plus the "← Back to game" exit (when present) share one row, the same title/nav-link
+// placement convention MainPage's own <Header> and InfoPage's <Header> already use — rather than
+// the exit sitting alone at the bottom of the page, disconnected from the rest of the page's own
+// navigation.
+const Header = styled.header`
+  align-items: center;
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  justify-content: space-between;
+  width: 100%;
 `
 
 const StatusText = styled.p`
@@ -46,24 +57,26 @@ const BalanceText = styled.p`
   text-align: center;
 `
 
-// Once the Byte generator exists, tapping is a secondary/backup action (passive production is the
-// primary loop now) — $compact shrinks the button accordingly, while it stays just as clickable
-// (same disabled={isFull} gating either way). No progress fill here — Memory's own tile already
-// shows the same bits/capacity fill, so a duplicate meter on the tap button itself would be
-// redundant.
+// Tapping stays a fully live action forever (never freezes, never goes read-only — see
+// "Byte Foundry" in CLAUDE.md), but once the Byte generator exists it's a secondary/backup action
+// behind passive production, which is why it renders last on the page instead of up top — while
+// staying just as clickable (same disabled={isFull} gating either way) and always full width, the
+// same width every other action button on this page uses. No progress fill here — Memory's own
+// tile already shows the same bits/capacity fill, so a duplicate meter on the tap button itself
+// would be redundant.
 const TapArea = styled.button`
   position: relative;
-  width: ${props => (props.$compact ? '50%' : '100%')};
+  width: 100%;
   aspect-ratio: 5 / 3;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
   color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$compact ? props.theme.type.scale.lg.size : props.theme.type.scale.xl.size)};
+  font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease, width 0.2s ease, font-size 0.2s ease;
+  transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -83,6 +96,45 @@ const ActionsRow = styled.div`
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
+`
+
+// Sacrifice and Invest are two independent, frequently-compared milestone actions — placing them
+// side by side (each taking an equal share via `flex: 1`) reads as one paired choice rather than a
+// stacked list, unlike Combine above (a one-time, mutually-exclusive action with nothing to pair
+// against). `min-width: 0` lets each button's own label ellipsis-truncate (see ButtonLabel in
+// components/Button) instead of forcing the row wider than its container at narrow viewports.
+const MilestonesRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
+// Sacrifice/Invest's own two-line content: the symbol/label/multiplier on top, its cost — what
+// each one actually spends — on its own line below, in smaller/muted text, rather than crammed
+// inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
+// which only ever lays out a single icon+label row) so `Button`'s own `display: flex; align-items:
+// center; justify-content: center` still centers this whole block as one flex child.
+const MilestoneButtonContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+`
+
+const MilestoneCostLine = styled.span`
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.85;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
@@ -127,23 +179,32 @@ const RateBlock = styled.span`
   background: ${props => (props.$filled ? props.theme.color.good : props.theme.color.surfaceSunken)};
 `
 
+// `flex-wrap: nowrap` is deliberate — with `wrap`, once `blockCount` blocks (each `flex: 1 1
+// 2.5rem`, growable) no longer fit on one line at a narrow (mobile) width, the leftover blocks
+// spill onto a second row where they grow to fill ITS leftover space instead, ending up far wider
+// than the blocks on the row above — a visibly broken, misaligned grid. `nowrap` keeps every
+// block on one row and lets `flex-shrink` (already implied by `flex: 1 1 2.5rem`) narrow them
+// together instead, so the row always reads as one evenly-sized strip regardless of viewport
+// width or how large `blockCount` has grown.
 const TransferBlocksRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: ${props => props.theme.space.xs};
   width: 100%;
 `
 
-// One block per this cycle's whole transfer budget (see getIntroTransferBudget) — always all
-// `blockCount` of them, for the whole cycle; blocks never disappear once transferred. Three
-// visual states, read together as one continuous progress bar: $consumed (already transferred —
-// solid muted fill, permanently disabled), $active (the sole clickable one — accent border, partial
-// progressFill gradient toward its own 1000-bit threshold), and plain/upcoming (neither prop set —
-// empty outline, disabled placeholder). Only the active block is ever passed a $progress value —
-// progressFill returns null without one, so the plain `background` rule below (transparent, or
-// surfaceSunken once $consumed) applies instead.
+// One block per unit of tier01's (Kilobytes') own current purchase block size (getPurchaseBlockSize)
+// — this row is just a live mirror of purchaseLevelProgress[tier01], the same value the "Kilobytes'
+// current block" tracker above already shows, so it rolls over to a fresh, empty row the instant a
+// level completes rather than ever running out. Three visual states, read together as one continuous
+// progress bar: $consumed (already transferred this level — solid muted fill, permanently disabled),
+// $active (the sole clickable one — accent border, partial progressFill gradient toward its own
+// 1000-bit threshold), and plain/upcoming (neither prop set — empty outline, disabled placeholder).
+// Only the active block is ever passed a $progress value — progressFill returns null without one, so
+// the plain `background` rule below (transparent, or surfaceSunken once $consumed) applies instead.
 const TransferBlock = styled.button`
   flex: 1 1 2.5rem;
+  min-width: 0;
   aspect-ratio: 1;
   border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   border-radius: ${props => props.theme.radius.sm};
@@ -179,11 +240,11 @@ const StorageSection = styled(StatCard)`
 `
 
 // One row per bank size ever reached (ascending — smallest first), each a fixed
-// STORAGE_BANK_LADDER_CAP-long strip of squares read together as one progress bar: already-
-// redeemed (consumed, leftmost), currently held (clickable once redeemable), then not-yet-built
-// placeholders (rightmost) — "filled" (built) squares always sit left of "empty" ones within a
-// row, and a row only appears once its size has ever been built (or is the size currently
-// offered), so rows themselves read top-to-bottom smallest-to-largest too.
+// STORAGE_BANK_LADDER_CAP-long strip of squares read together as one progress bar: currently FULL
+// (leftmost, clickable once redeemable), then built-but-EMPTY — constructed, waiting for Memory to
+// auto-fill them (see tickStorageAutoFill) — then not-yet-built placeholders (rightmost). A row
+// only appears once its size has ever been built (or is the size currently offered), so rows
+// themselves read top-to-bottom smallest-to-largest too.
 const StorageSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -207,24 +268,26 @@ const StorageBankSquaresRow = styled.div`
   max-width: 260px;
 `
 
-// A single discrete, all-or-nothing bank — never partially filled, matching the mechanic itself.
-// $consumed (already redeemed — solid muted fill, permanently disabled) takes priority over $held
-// (built and awaiting redeem — accent border, filled green once $redeemable, a duller raised fill
-// otherwise, clickable only when both $held and $redeemable) over the plain empty/not-yet-built
-// placeholder (outline only, disabled).
+// A single discrete, all-or-nothing bank container — never partially filled, matching the
+// mechanic itself. $full (currently holding Memory's bits, awaiting redeem — accent border,
+// filled green once $redeemable, a duller raised fill otherwise, clickable only when both $full
+// and $redeemable) takes priority over $empty (built but not yet auto-filled by Memory — a dim
+// muted-bordered fill, distinct from the plain not-yet-built placeholder below it) over the plain
+// not-yet-built placeholder (transparent, outline only, disabled).
 const StorageBankSquare = styled.button`
   flex: 0 0 auto;
   width: 1.4rem;
   height: 1.4rem;
   border-radius: ${props => props.theme.radius.sm};
-  border: 1.5px solid ${props => (props.$held ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  border: 1.5px solid ${props =>
+    props.$full ? props.theme.color.accent : props.$empty ? props.theme.color.textMuted : props.theme.color.surfaceSunken};
   background: ${props =>
-    props.$consumed
-      ? props.theme.color.surfaceSunken
-      : props.$held
-        ? (props.$redeemable ? props.theme.color.good : props.theme.color.surfaceRaised)
+    props.$full
+      ? (props.$redeemable ? props.theme.color.good : props.theme.color.surfaceRaised)
+      : props.$empty
+        ? props.theme.color.surfaceSunken
         : 'transparent'};
-  cursor: ${props => (props.$held && props.$redeemable ? 'pointer' : 'default')};
+  cursor: ${props => (props.$full && props.$redeemable ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
@@ -279,18 +342,25 @@ const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
+// Any Memory-denominated cost (Invest, Storage build) reads in whatever B/KB/MB/…/QB unit best
+// fits that specific amount, the same scale Memory's own balance uses — rather than a fixed unit
+// (e.g. always Bytes) that stops scaling once a cost crosses 1000 of it. `getMemoryUnit(bits,
+// true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
+// here since every caller of this helper (Invest/Storage) only renders once `byteCreated`.
+const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
+
 // Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
   const unit = getMemoryUnit(capacityBits, byteCreated)
   return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
 }
 
-// Storage bank sizes are tier01's own per-unit level costs (see getStorageBankSize in
-// engine.js) — a completely separate scale from Memory's Byte-based one above: 1000 bits is
-// "1 KB" here, matching INTRO_BITS_PER_KILOBYTE_CONVERSION and the Convert button's own
-// "KiloBits" naming (1000 bits, not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
-// symbols for the same "byte-scale themed" reason Memory's own ladder does. Every bank size is
-// already an exact power of ten by construction (getTierCost), so this always lands on a clean,
+// Storage bank sizes AND the transfer block's own dynamic cost (getIntroKilobyteConversionCost)
+// are both tier01's own per-unit level costs (see getStorageBankSize in engine.js), so they share
+// this one formatting scale — a completely separate scale from Memory's Byte-based one above: 1000
+// bits is "1 KB" here ("KiloBits", not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB
+// symbols for the same "byte-scale themed" reason Memory's own ladder does. Every value passed in
+// is already an exact power of ten by construction (getTierCost), so this always lands on a clean,
 // whole-number label.
 const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
 const formatStorageSize = bits => {
@@ -309,12 +379,12 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
-// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (up to this cycle's shared,
-// dynamic transfer budget, see remainingTransferBudget below) all stay fully live whether reached
-// via the mandatory gate or this voluntary link. The Byte generator itself (capacity/byteCreated/
-// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is
-// PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle,
-// until the next Prestige resets Memory (and the transfer budget) fresh.
+// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see
+// tickIntroAutoInvest in engine.js) all stay fully live whether reached via the mandatory gate
+// or this voluntary link. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
+// productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is PERMANENT — see
+// prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
+// Prestige resets Memory fresh.
 const ByteFoundryPage = ({ game, onBack }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
@@ -322,28 +392,34 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const revealed = isIntroConversionUnlocked(state)
+  const storageRevealed = isStorageUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
-  const investCostBytes = investCost / BITS_PER_BYTE
+  const investCostDisplay = formatBitsInNearestUnit(investCost)
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   const canInvest = intro.bits >= investCost && !investClaimsUsedUp
 
-  // The transfer budget (how many 1000-bit blocks this cycle allows in total) is dynamic — tied to
-  // the Kilobyte tier's own current purchase block size (see getIntroTransferBudget), same as the
-  // main game's own Buy button, not a fixed number.
-  const transferBudget = getIntroTransferBudget(state)
-  const blockCount = transferBudget / INTRO_BITS_PER_KILOBYTE_CONVERSION
-  const blocksTransferred = Math.floor(intro.bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)
-  const blocksRemaining = Math.max(0, blockCount - blocksTransferred)
-  const remainingTransferBudget = Math.max(0, transferBudget - intro.bitsTransferredThisCycle)
-  const canTransferBlock = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION && remainingTransferBudget >= INTRO_BITS_PER_KILOBYTE_CONVERSION
+  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
+  // from the main game's Buy button/autobuyer, redeemStorageBank, or convertIntroBitsToKilobytes/
+  // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
+  // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
+  // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
+  // completes rather than ever running dry.
+  const purchaseBlockSize = getPurchaseBlockSize(state)
+  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
+  const blocksTransferred = tier01PurchaseProgress
+  const blocksRemaining = purchaseBlockSize - tier01PurchaseProgress
+  // tier01's own CURRENT per-unit cost — what one transfer block actually costs right now, not a
+  // fixed rate (see getIntroKilobyteConversionCost in engine.js).
+  const transferBlockCost = getIntroKilobyteConversionCost(state)
+  const canTransferBlock = intro.bits >= transferBlockCost
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const investProgress = clampPercent((intro.bits / investCost) * 100)
-  const activeBlockProgress = clampPercent((intro.bits / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 100)
+  const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
   // Storage: an independent build ladder (1 KB, then 10 KB, … — see getStorageBankSize) offers one
   // buildable size at a time, STORAGE_BANK_LADDER_CAP banks per size before advancing; a built
@@ -368,27 +444,22 @@ const ByteFoundryPage = ({ game, onBack }) => {
   ]
     .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0 || size === storageBankSize)
     .sort((a, b) => a - b)
-  const heldStorageBankSizes = Object.keys(intro.storageBanks ?? {})
-    .map(Number)
-    .filter(size => intro.storageBanks[size] > 0)
-    .sort((a, b) => a - b)
-
-  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units
-  // come from the main game's Buy button/autobuyer or from redeemStorageBank here, since both
-  // paths update purchaseLevelProgress via the same bookkeeping (see grantTierUnits/buyTier).
-  const purchaseBlockSize = getPurchaseBlockSize(state)
-  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
 
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
-      <Title>⚙️ Byte Foundry</Title>
+      <Header>
+        <Title>⚙️ Byte Foundry</Title>
+        {onBack && (
+          <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
+            <ButtonContent>← Back to game</ButtonContent>
+          </Button>
+        )}
+      </Header>
       <StatusText>
         {!intro.mainGameUnlocked
           ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
-          : remainingTransferBudget > 0
-            ? `Main game unlocked — ${formatAmount(remainingTransferBudget)} bits left to transfer this cycle.`
-            : 'Transfer budget is fully spent — resets next Prestige.'}
+          : 'Main game unlocked — keep transferring Memory into Kilobytes any time.'}
       </StatusText>
 
       <TilesRow>
@@ -421,16 +492,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </FillableStatCard>
       </TilesRow>
 
-      <TapArea
-        aria-label="tap to generate a bit"
-        disabled={isFull}
-        onClick={actions.tapIntroBit}
-        type="button"
-        $compact={intro.byteCreated}
-      >
-        👆 Tap
-      </TapArea>
-
       <ActionsRow>
         {canCombine && (
           <Button
@@ -451,54 +512,57 @@ const ByteFoundryPage = ({ game, onBack }) => {
           </Button>
         )}
 
-        {intro.byteCreated && (<>
-          <Button
-            aria-label="sacrifice all bits for 10x capacity"
-            disabled={!isFull}
-            onClick={actions.pickIntroCapacityMilestone}
-            title="Empty Memory for 10x capacity"
-            type="button"
-            variant={isFull ? 'prestige' : 'neutral'}
-            $progress={fullProgress}
-          >
-            <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry sacrifice progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={intro.capacity}
-            />
-          </Button>
+        {intro.byteCreated && (
+          <MilestonesRow>
+            <Button
+              aria-label="sacrifice all bits for 10x capacity"
+              disabled={!isFull}
+              onClick={actions.pickIntroCapacityMilestone}
+              title="Empty Memory for 10x capacity"
+              type="button"
+              variant={isFull ? 'prestige' : 'neutral'}
+              $progress={fullProgress}
+            >
+              <MilestoneButtonContent>
+                <span>💥 Memory ×10</span>
+                <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
+              </MilestoneButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry sacrifice progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={intro.capacity}
+              />
+            </Button>
 
-          <Button
-            aria-label="invest bits for double production"
-            disabled={!canInvest}
-            onClick={actions.pickIntroProductionMilestone}
-            title={
-              investClaimsUsedUp
-                ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
-                : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
-            }
-            type="button"
-            variant={canInvest ? 'info' : 'neutral'}
-            $progress={investProgress}
-          >
-            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCostBytes)} B)</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry invest progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={investCost}
-            />
-          </Button>
-
-        </>)}
+            <Button
+              aria-label="invest bits for double production"
+              disabled={!canInvest}
+              onClick={actions.pickIntroProductionMilestone}
+              title={investClaimsUsedUp ? 'Already claimed at this tier' : 'Doubles production rate'}
+              type="button"
+              variant={canInvest ? 'info' : 'neutral'}
+              $progress={investProgress}
+            >
+              <MilestoneButtonContent>
+                <span>⚡ Bandwidth ×2</span>
+                <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
+              </MilestoneButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry invest progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={investCost}
+              />
+            </Button>
+          </MilestonesRow>
+        )}
 
       </ActionsRow>
 
-      {intro.byteCreated && (
+      {storageRevealed && (
         <StorageSection aria-label="byte foundry storage">
           <SectionLabel>Storage</SectionLabel>
           <Button
@@ -507,14 +571,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
             onClick={actions.buildStorageBank}
             title={
               storageBankRedeemableNow
-                ? `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block, redeemable right away`
-                : `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size) — banks a ${formatStorageSize(storageBankSize)} block, redeemable once Kilobytes' level cost reaches it`
+                ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
+                : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
             }
             type="button"
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Storage Bank (${formatAmount(storageBankCost)} bits)`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -525,44 +589,44 @@ const ByteFoundryPage = ({ game, onBack }) => {
           </Button>
 
           {storageSizesToShow.map(size => {
-            const held = intro.storageBanks?.[size] ?? 0
-            // Falls back to `held` itself for a state whose storageBanksBuiltTotal doesn't (yet)
-            // account for every held bank — e.g. a migrated pre-ladder save — so a held bank is
-            // never rendered as if it didn't exist.
-            const builtTotal = Math.min(Math.max(storageBanksBuiltTotal[size] ?? 0, held), STORAGE_BANK_LADDER_CAP)
-            const consumedCount = Math.max(0, builtTotal - held)
+            const full = intro.storageBanks?.[size] ?? 0
+            // Falls back to `full` itself for a state whose storageBanksBuiltTotal doesn't (yet)
+            // account for every full bank — e.g. a migrated pre-fill-mechanic save — so a full
+            // bank is never rendered as if it didn't exist.
+            const builtTotal = Math.max(storageBanksBuiltTotal[size] ?? 0, full)
+            const emptyCount = Math.max(0, builtTotal - full)
             const redeemable = isStorageBankRedeemable(state, size)
             return (
               <StorageSizeRow key={size}>
-                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${builtTotal}/${STORAGE_BANK_LADDER_CAP})`}</StorageSizeLabel>
+                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
                 <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
                   {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
-                    const isConsumed = index < consumedCount
-                    const isHeld = !isConsumed && index < consumedCount + held
+                    const isFull = index < full
+                    const isEmpty = !isFull && index < full + emptyCount
                     return (
                       <StorageBankSquare
                         key={index}
                         aria-label={
-                          isConsumed
-                            ? `redeemed ${formatStorageSize(size)} bank`
-                            : isHeld
-                              ? `redeem ${formatStorageSize(size)} storage bank`
+                          isFull
+                            ? `redeem ${formatStorageSize(size)} storage bank`
+                            : isEmpty
+                              ? `empty ${formatStorageSize(size)} bank`
                               : `not yet built ${formatStorageSize(size)} bank`
                         }
-                        disabled={!isHeld || !redeemable}
-                        onClick={isHeld && redeemable ? () => actions.redeemStorageBank(size) : undefined}
+                        disabled={!isFull || !redeemable}
+                        onClick={isFull && redeemable ? () => actions.redeemStorageBank(size) : undefined}
                         title={
-                          isConsumed
-                            ? 'Already redeemed'
-                            : isHeld
-                              ? (redeemable
-                                ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte`
-                                : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                          isFull
+                            ? (redeemable
+                              ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
+                              : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                            : isEmpty
+                              ? 'Built, waiting for Memory to auto-fill it'
                               : 'Not yet built'
                         }
                         type="button"
-                        $consumed={isConsumed}
-                        $held={isHeld}
+                        $full={isFull}
+                        $empty={isEmpty}
                         $redeemable={redeemable}
                       />
                     )
@@ -571,40 +635,13 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </StorageSizeRow>
             )
           })}
-
-          {heldStorageBankSizes.length > 0 && (
-            <Button
-              aria-label={intro.storageAutoRedeemEnabled ? 'pause storage auto-redeem' : 'resume storage auto-redeem'}
-              onClick={() => actions.setStorageAutoRedeemEnabled(!intro.storageAutoRedeemEnabled)}
-              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed (1 KB banks always auto-redeem once per cycle regardless of this toggle)"
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>
-                {intro.storageAutoRedeemEnabled ? '⏸ Pause Storage Auto-Redeem' : '▶ Resume Storage Auto-Redeem'}
-              </ButtonContent>
-            </Button>
-          )}
-
-          <SectionLabel>{`Kilobytes' current block (${tier01PurchaseProgress}/${purchaseBlockSize})`}</SectionLabel>
-          <RateBlocksRow
-            role="progressbar"
-            aria-label="kilobytes purchase block progress"
-            aria-valuenow={tier01PurchaseProgress}
-            aria-valuemin={0}
-            aria-valuemax={purchaseBlockSize}
-          >
-            {Array.from({ length: purchaseBlockSize }, (_, index) => (
-              <RateBlock key={index} $filled={index < tier01PurchaseProgress} />
-            ))}
-          </RateBlocksRow>
         </StorageSection>
       )}
 
       {revealed && (<>
         <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: blockCount }, (_, index) => {
+          {Array.from({ length: purchaseBlockSize }, (_, index) => {
             const isConsumed = index < blocksTransferred
             const isActive = index === blocksTransferred
             return (
@@ -614,7 +651,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? `transferred block ${index + 1}`
                     : isActive
-                      ? 'convert 1000 bits into 1 Kilobyte'
+                      ? `convert ${formatStorageSize(transferBlockCost)} into 1 Kilobyte`
                       : `locked transfer block ${index + 1}`
                 }
                 disabled={isConsumed || !isActive || !canTransferBlock}
@@ -623,7 +660,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? '1000 bits → 1 Kilobyte' : 'Fill Memory to 1000 bits first')
+                      ? (canTransferBlock ? `${formatStorageSize(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"
@@ -637,7 +674,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                     aria-label="byte foundry convert progress"
                     aria-valuenow={intro.bits}
                     aria-valuemin={0}
-                    aria-valuemax={INTRO_BITS_PER_KILOBYTE_CONVERSION}
+                    aria-valuemax={transferBlockCost}
                   />
                 )}
               </TransferBlock>
@@ -646,11 +683,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </TransferBlocksRow>
       </>)}
 
-      {onBack && (
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
-        </Button>
-      )}
+      <TapArea
+        aria-label="tap to generate a bit"
+        disabled={isFull}
+        onClick={actions.tapIntroBit}
+        type="button"
+      >
+        👆 Tap
+      </TapArea>
     </RootDiv>
   )
 }

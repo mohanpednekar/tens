@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_AUTO_INVEST_THRESHOLD, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -271,17 +271,18 @@ export const createInitialGameState = () => ({
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
   // Three distinct groups, per prestigeGame (see there): "Memory" (bits/productionAccumulator/
-  // mainGameUnlocked/bitsTransferredThisCycle) reset to fresh every real Prestige — a new cycle
-  // always starts this screen's balance from 0 and re-shows it before MainPage. The Byte generator
-  // itself and every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
-  // productionMilestoneTier/productionMilestoneTierClaims) are PERMANENT, carried over unchanged
-  // exactly like an unlocked autobuyer — so each cycle's gate reopens with whatever production
-  // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
-  // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
+  // mainGameUnlocked) reset to fresh every real Prestige — a new cycle always starts this screen's
+  // balance from 0 and re-shows it before MainPage. The Byte generator itself and every upgrade to
+  // it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
+  // productionMilestoneTierClaims) are PERMANENT, carried over unchanged exactly like an unlocked
+  // autobuyer — so each cycle's gate reopens with whatever production strength was already built,
+  // not from scratch. speedUpGame/overclockGame carry the whole object through untouched either
+  // way (see there) — they're intra-cycle soft resets, not new cycles.
   //
-  // Nothing here ever fully "freezes" (there is no completed-style flag) — Tap/Combine/Sacrifice/
-  // Invest keep working indefinitely, every cycle; only converting bits into Kilobytes is capped,
-  // via bitsTransferredThisCycle below (see convertIntroBitsToKilobytes/tickIntroAutoInvest).
+  // Nothing here ever fully "freezes" (there is no completed-style flag, and converting bits into
+  // Kilobytes has no cap or budget of its own either — see convertIntroBitsToKilobytes/
+  // tickIntroAutoInvest below) — Tap/Combine/Sacrifice/Invest/Convert all keep working
+  // indefinitely, every cycle, for as long as Memory covers the cost.
   intro: {
     bits: 0,                   // "Memory" — always an integer, the tappable/producible balance. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
@@ -299,32 +300,30 @@ export const createInitialGameState = () => ({
     productionMilestoneTierClaims: 0,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
     // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
-    // drives App.jsx's page-routing gate away from this screen and into MainPage. Deliberately
-    // NOT the same flag as "everything's frozen" — the Byte Foundry stays fully interactive well
-    // past this point (see bitsTransferredThisCycle below for the actual limiting factor).
+    // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
+    // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
-    // Resets to 0 every real Prestige. Cumulative bits ever converted into Kilobytes this cycle,
-    // manual convertIntroBitsToKilobytes clicks and tickIntroAutoInvest combined — capped at
-    // getIntroTransferBudget(state) (dynamic — see there); both conversion paths refuse once the
-    // remaining budget can't cover another INTRO_BITS_PER_KILOBYTE_CONVERSION-sized transfer.
-    bitsTransferredThisCycle: 0,
-    // PERMANENT — { [capacityBits]: count } of built-but-not-yet-redeemed Storage banks (see
-    // buildStorageBank/redeemStorageBank below) — "never lost," survives Prestige/Speed Up/
-    // Overclock exactly like the Byte generator itself. Empty object, not per-denomination zeros,
-    // since the set of denominations ever built is open-ended.
+    // PERMANENT — { [capacityBits]: count } of currently-FULL Storage banks of that size (see
+    // tickStorageAutoFill/redeemStorageBank below) — "never lost," survives Prestige/Speed Up/
+    // Overclock exactly like the Byte generator itself (a full bank's contents ride through a real
+    // Prestige untouched even though Memory itself resets, since a bank is a separate store, not
+    // part of Memory). Empty object, not per-denomination zeros, since the set of denominations
+    // ever built is open-ended. The number of currently EMPTY banks of a size is always
+    // storageBanksBuiltTotal[size] - storageBanks[size].
     storageBanks: {},
-    // PERMANENT — { [capacityBits]: cumulative count } of every bank ever built at that size,
-    // including ones since redeemed — unlike storageBanks above, redeemStorageBank never
-    // decrements this. Drives getStorageBankSize's one-way ladder advance past
-    // STORAGE_BANK_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
+    // PERMANENT — { [capacityBits]: cumulative count } of every bank ever built (constructed) at
+    // that size, full or empty, including ones since redeemed — unlike storageBanks above,
+    // redeemStorageBank never decrements this. Drives getStorageBankSize's one-way ladder advance
+    // past STORAGE_BANK_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
     storageBanksBuiltTotal: {},
     // PERMANENT — whether tickGame auto-redeems a matching Storage bank every tick (see
     // tickStorageAutoRedeem) instead of requiring a manual click. A plain preference, not a
-    // purchase — defaults off, same "off until the player opts in" posture as autobuyersEnabled's
-    // *true* default is emphatically not (this one starts false, since auto-redeeming is a new
-    // capability the player must discover and choose, not a pre-existing automation being paused).
-    // Doesn't gate the smallest (1 KB) denomination at all — see tickStorageAutoRedeem.
-    storageAutoRedeemEnabled: false,
+    // purchase — defaults ON for every size (no pause toggle is currently rendered — see
+    // ByteFoundryPage — so there's no in-UI way to turn it off yet; the field and
+    // setStorageAutoRedeemEnabled/tickStorageAutoRedeem plumbing all still exist for when that
+    // toggle returns). Doesn't gate the smallest (1 KB) denomination at all either way — see
+    // tickStorageAutoRedeem.
+    storageAutoRedeemEnabled: true,
     // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
     // Storage field above. { [capacityBits]: true } once tickStorageAutoRedeem has auto-redeemed
     // that size this cycle, capping auto-redeem at one bank per size per cycle — further eligible
@@ -870,12 +869,18 @@ const checkMilestones = (resources, prestige) => {
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
-  // The Byte Foundry intro runs first, every tick — tickIntroProduction short-circuits to the
-  // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits/the shared transfer
-  // budget can't cover a transfer (their own first-line guards); neither ever fully freezes,
-  // matching the "return the same reference so React can bail out" convention every other no-op
-  // path in this function already follows.
-  const stateAfterIntro = tickIntroAutoInvest(tickIntroProduction(elapsedSeconds)(state))
+  // The Byte Foundry intro runs first, every tick: passive production, then Storage's own
+  // auto-fill (Memory -> empty banks) gets first claim on the resulting Memory balance, ahead of
+  // tickIntroAutoInvest's own direct bit-to-Kilobyte conversion — otherwise a bank the player has
+  // already built and is waiting to fill would be starved by fresh Memory being auto-converted out
+  // from under it before it ever reached the bank. Auto-fill doesn't depend on tier01's level at
+  // all (unlike auto-redeem below), so running it this early costs nothing. tickIntroAutoInvest
+  // then converts whatever Memory is left over. tickIntroProduction short-circuits to the
+  // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits can't cover even one
+  // more unit (their own first-line guards); neither ever fully freezes, matching the "return the
+  // same reference so React can bail out" convention every other no-op path in this function
+  // already follows.
+  const stateAfterIntro = tickIntroAutoInvest(tickStorageAutoFill(tickIntroProduction(elapsedSeconds)(state)))
 
   const autoPrestigeLevel = stateAfterIntro.autoPrestige ?? null
   // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
@@ -884,18 +889,26 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
   const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterIntro.autoPrestigeEnabled ?? true)
 
+  // Storage's own auto-redeem (full banks -> tier01 units) runs last, through every branch below,
+  // against this tick's FINAL tier01 level (post autobuyer/Speed Up) — isStorageBankRedeemable
+  // depends on it, so a bank whose size only just became redeemable once tier01 leveled up THIS
+  // tick still redeems the same tick. Auto-fill already ran above (see stateAfterIntro), ahead of
+  // tickIntroAutoInvest, since it has no such dependency on tier01's level. A same-reference no-op
+  // when nothing qualifies, so calling it costs nothing when Storage isn't in play at all.
+  const tickStorage = tickStorageAutoRedeem
+
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
   // equivalent copy) lets React's setState bail out of re-rendering while frozen, same as any
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
-  // even while otherwise frozen. Storage's own auto-redeem still runs through every branch here
-  // (via tickStorageAutoRedeem, itself a same-reference no-op when nothing qualifies) — like
-  // redeemStorageBank/convertIntroBitsToKilobytes, it pays from a separate currency pool and
-  // deliberately bypasses this freeze entirely, so a player who's crossed the Prestige threshold
-  // but hasn't manually prestiged yet doesn't have to wait for that click to redeem a bank.
+  // even while otherwise frozen. Storage's own auto-fill/auto-redeem still run through every
+  // branch here — like redeemStorageBank/convertIntroBitsToKilobytes, they pay from a separate
+  // currency pool and deliberately bypass this freeze entirely, so a player who's crossed the
+  // Prestige threshold but hasn't manually prestiged yet doesn't have to wait for that click to
+  // fill/redeem a bank.
   if (isProductionFrozen(stateAfterIntro)) {
-    if (!autoPrestigeActive) return tickStorageAutoRedeem(stateAfterIntro)
+    if (!autoPrestigeActive) return tickStorage(stateAfterIntro)
     const nextBudget = (stateAfterIntro.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
@@ -903,8 +916,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
     // prestigeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorageAutoRedeem(prestigeGame(stateAfterIntro))
-    return tickStorageAutoRedeem({ ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget })
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(prestigeGame(stateAfterIntro))
+    return tickStorage({ ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget })
   }
 
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus) —
@@ -1074,9 +1087,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     : stateAfterAutoPrestigeAutobuyer
 
   // Runs last, against this tick's final tier01 level (post autobuyer/Speed Up), so a Storage bank
-  // sized for a level tier01 only just reached THIS tick can redeem the same tick — see
-  // tickStorageAutoRedeem/redeemStorageBank below.
-  return tickStorageAutoRedeem(stateAfterSpeedUp)
+  // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
+  // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
+  return tickStorage(stateAfterSpeedUp)
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
@@ -1187,9 +1200,8 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // --- Byte Foundry (pre-game intro) --- state lives in state.intro (see createInitialGameState
 // above); INTRO_* constants live in layers.js. A currency pool entirely separate from Money
 // (resources.base) until the manual/auto conversions into owned Kilobytes below. Nothing here ever
-// fully freezes — Tap/Combine/Sacrifice/Invest stay live indefinitely, every cycle; only
-// converting bits into Kilobytes (manual or auto) is capped, by the shared per-cycle transfer
-// budget (see getIntroRemainingTransferBudget below).
+// fully freezes — Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle,
+// with no cap or per-cycle budget on converting bits into Kilobytes.
 
 // Grants `quantity` free units of a tier, mirroring buyTier's owned/resources/purchased/
 // purchaseLevels/purchaseLevelProgress bookkeeping exactly (so a granted unit advances level/
@@ -1277,11 +1289,14 @@ export const pickIntroCapacityMilestone = state => {
 export const getIntroProductionMilestoneCost = tier =>
   INTRO_STARTING_CAPACITY * (INTRO_CAPACITY_MULTIPLIER ** clampNonNegative(tier))
 
-// How many claims a given productionMilestoneTier grants: 2 for the three tiers below where
-// Kilobyte transfers unlock (1/10/100 Bytes — cost < INTRO_AUTO_INVEST_THRESHOLD), 1 for every
-// tier from 1000 Bytes on (cost >= INTRO_AUTO_INVEST_THRESHOLD).
-export const getIntroProductionMilestoneMaxClaims = tier =>
-  getIntroProductionMilestoneCost(tier) < INTRO_AUTO_INVEST_THRESHOLD ? 2 : 1
+// How many claims a given productionMilestoneTier grants before advancing to the next: always 1 —
+// every tier is a single-shot purchase at its own cost, the same one-attempt-per-cost posture
+// "Sacrifice for 10x Capacity" already has. An earlier version granted 2 claims for the three
+// cheapest tiers (1/10/100 Bytes) before this tightened to 1 across the board — see
+// docs/DESIGN_HISTORY.md. `tier` is unused now but kept as the parameter so callers (and
+// pickIntroProductionMilestone's own `getIntroProductionMilestoneMaxClaims(tier)` call) don't need
+// to change if a future tier-dependent claim count ever returns.
+export const getIntroProductionMilestoneMaxClaims = tier => 1
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at
@@ -1333,40 +1348,42 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// This cycle's total transfer budget, in bits — how much Memory may ever be converted into
-// Kilobytes in one Prestige cycle. Dynamic, not a fixed constant: exactly enough to grant
-// getPurchaseBlockSize(state) Kilobyte units (the SAME live, possibly-growing block size the main
-// game's own Buy button already reads for tier01) — INTRO_BITS_PER_KILOBYTE_CONVERSION per unit.
-// At a fresh cycle's default block size (DEFAULT_PURCHASE_BLOCK_SIZE, 8), this is 8000, matching
-// the constant this replaced; it only grows later in a run, once the last tier's own level count
-// crosses PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS (see getPurchaseBlockSize).
-export const getIntroTransferBudget = state =>
-  getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION
+// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, bank
+// squares rows) should be shown at all — true once capacity has grown enough to ever hold
+// INTRO_STORAGE_UNLOCK_CAPACITY (10 KB in Memory's own scale, 80,000 bits) at once. A later, more
+// deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
+export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_STORAGE_UNLOCK_CAPACITY
 
-// How many more bits may be converted into Kilobytes this cycle before getIntroTransferBudget's
-// shared cap is hit — see bitsTransferredThisCycle in createInitialGameState. Shared by
-// convertIntroBitsToKilobytes and tickIntroAutoInvest below.
-const getIntroRemainingTransferBudget = state =>
-  Math.max(0, getIntroTransferBudget(state) - state.intro.bitsTransferredThisCycle)
+// The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
+// per-unit level cost, the exact same value getStorageBankSize/isStorageBankRedeemable already key
+// off (see the Storage section below) — not a fixed rate. At a fresh cycle's starting level this is
+// exactly INTRO_BITS_PER_KILOBYTE_CONVERSION (1000 bits, tier01's own baseCost), but it grows in
+// lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2, and so on), so
+// a transfer block's real value never falls behind what tier01 itself currently costs. An earlier
+// version stayed flat at INTRO_BITS_PER_KILOBYTE_CONVERSION forever, which undervalued a transfer
+// once tier01's price grew past it — see docs/DESIGN_HISTORY.md.
+export const getIntroKilobyteConversionCost = state =>
+  getTierCost(TIER_DEFINITIONS[0], state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
 
-// Manual "convert 1000 bits into 1 Kilobyte": spends INTRO_BITS_PER_KILOBYTE_CONVERSION bits from
+// Manual "convert Memory into 1 Kilobyte": spends getIntroKilobyteConversionCost(state) bits from
 // the intro's own pool and grants 1 free unit of the main game's first tier via grantTierUnits —
 // bypasses isTierUnlocked/isProductionFrozen entirely, since this pays from a separate currency
-// pool, not resources.base. No-op below cost or once this cycle's shared transfer budget (see
-// getIntroRemainingTransferBudget) can't cover another 1000-bit transfer. The first successful
+// pool, not resources.base. No-op below cost — otherwise always available, every cycle, with no
+// separate budget or cap of its own (tier01's own purchaseLevelProgress/getPurchaseBlockSize is
+// what the transfer-block row on screen actually tracks, and that already rolls over into the
+// next level's blocks on its own once one completes — see ByteFoundryPage). The first successful
 // call ever this cycle also flips mainGameUnlocked, opening the App.jsx routing gate into
 // MainPage — set unconditionally (harmless once already true), so this is the earliest of the two
 // transfer paths (this or the auto-invest below) to actually fire that does the unlocking.
 export const convertIntroBitsToKilobytes = state => {
-  if (state.intro.bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return state
-  if (getIntroRemainingTransferBudget(state) < INTRO_BITS_PER_KILOBYTE_CONVERSION) return state
+  const cost = getIntroKilobyteConversionCost(state)
+  if (state.intro.bits < cost) return state
   const firstTierId = TIER_DEFINITIONS[0].id
   return grantTierUnits(firstTierId, 1)({
     ...state,
     intro: {
       ...state.intro,
-      bits: state.intro.bits - INTRO_BITS_PER_KILOBYTE_CONVERSION,
-      bitsTransferredThisCycle: state.intro.bitsTransferredThisCycle + INTRO_BITS_PER_KILOBYTE_CONVERSION,
+      bits: state.intro.bits - cost,
       mainGameUnlocked: true,
     },
   })
@@ -1407,78 +1424,86 @@ export const tickIntroProduction = elapsedSeconds => state => {
   }
 }
 
-// Auto-convert convenience, mirroring tickGame's own autobuyer "wait until the whole batch is
-// affordable, then fire once" convention (see tickGame below), just keyed on a bit-balance
-// threshold instead of a Money cost: once bits reaches getIntroTransferBudget(state) — the WHOLE
-// remaining budget available at once, e.g. a fast-production or offline-catch-up jump that skips
-// past several individual 1000-bit blocks before the player could click through them one at a
-// time — it auto-transfers the lot without needing manual convertIntroBitsToKilobytes clicks. A
-// no-op once that budget is exhausted; transfers only the remaining budget if less than the full
-// amount is left (always a whole multiple of INTRO_BITS_PER_KILOBYTE_CONVERSION, since every
-// transfer — manual or auto — moves in exact 1000-bit units), granting proportionally fewer
-// Kilobytes. Also flips mainGameUnlocked on its first success, same as the manual path.
+// Auto-convert convenience — fires every tick, converting one unit at a time (at
+// getIntroKilobyteConversionCost(state), tier01's own current per-unit cost — not a fixed rate) via
+// convertIntroBitsToKilobytes itself (so it flips mainGameUnlocked on first success and behaves
+// identically to a manual click), for as long as bits still affords another unit. Used to wait for
+// a whole getPurchaseBlockSize(state)-sized batch before firing even once — which meant the
+// transfer-block row's active block visually sat pinned at 100% (bits clamped past the per-unit
+// cost) for the entire time bits climbed toward that full batch, looking frozen, with
+// blocks 2+ never activating until the batch completed and the whole level reset in the same tick
+// (see docs/DESIGN_HISTORY.md). Converting one unit at a time instead makes the row advance live,
+// block by block, exactly like a manual click would. Capped at getTierBulkQuantity's own "at most
+// one level's worth per call" bound — the same safety cap buyTierQuantity's own autobuyer path
+// uses — so an enormous bits balance (e.g. after a long-Sacrificed capacity) can't loop this an
+// unbounded number of times in a single tick; a jump spanning more than one level's worth of units
+// completes the rest on the following ticks instead, same as any other autobuyer catching up.
 export const tickIntroAutoInvest = state => {
-  const transferBudget = getIntroTransferBudget(state)
-  if (state.intro.bits < transferBudget) return state
-  const remainingBudget = getIntroRemainingTransferBudget(state)
-  if (remainingBudget <= 0) return state
-
-  const transferAmount = Math.min(transferBudget, remainingBudget)
-  const kilobytesGranted = transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION
-
   const firstTierId = TIER_DEFINITIONS[0].id
-  return grantTierUnits(firstTierId, kilobytesGranted)({
-    ...state,
-    intro: {
-      ...state.intro,
-      bits: state.intro.bits - transferAmount,
-      bitsTransferredThisCycle: state.intro.bitsTransferredThisCycle + transferAmount,
-      mainGameUnlocked: true,
-    },
-  })
+  const levelProgress = state.purchaseLevelProgress?.[firstTierId] ?? 0
+  const blockSize = getPurchaseBlockSize(state)
+  const maxUnitsThisCall = getTierBulkQuantity(blockSize, levelProgress, Number.MAX_SAFE_INTEGER)
+
+  let result = state
+  for (let i = 0; i < maxUnitsThisCall; i++) {
+    const next = convertIntroBitsToKilobytes(result)
+    if (next === result) break // no longer affordable
+    result = next
+  }
+  return result
 }
 
 // --- Byte Foundry Storage (bank blocks) --- see the "Byte Foundry Storage" comment in layers.js
 // and intro.storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes
-// in createInitialGameState above. A bank is a discrete, already-paid-for block of bits, sized by
-// its own independent build ladder (see getStorageBankSize below) rather than tier01's price
-// directly — since tier01's own per-unit level cost only ever grows within a cycle (see
-// isStorageBankRedeemable below), a bank built at any size stays redeemable for the rest of the
-// cycle the moment tier01's price reaches it, even after tier01 levels up further; a player can
-// bank ahead of a burst of manual/autobuyer purchases and redeem the queued banks any time
-// afterward, or redeem right away if the size already matches tier01's current price.
+// in createInitialGameState above. Banks are a genuine storage MEDIUM, not a one-shot pre-paid
+// item: building one (buildStorageBank) only constructs a permanent, EMPTY container of a given
+// size — Memory (intro.bits) then auto-fills any empty container as it accumulates (see
+// tickStorageAutoFill), smallest size first. `intro.storageBanks[size]` counts how many banks of
+// that size are currently FULL (this is what redeemStorageBank spends); `intro.storageBanksBuiltTotal[size]`
+// is the permanent, never-decremented total ever built — the number of currently EMPTY banks of a
+// size is always `storageBanksBuiltTotal[size] - storageBanks[size]`. Consuming (redeeming) a full
+// bank empties it again, returning it to the fillable pool — banks are reusable, not single-use.
 
-// tier01's own per-unit cost at a given level is always an exact power of ten (baseCost = 1E3,
-// and getTierCost's epoch exponent is always a positive integer), so every size a bank is ever
-// built or redeemed at reads as a round KB/MB/GB/… value — never an arbitrary number.
+// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's triangular-
+// number exponent sequence jumps 1, 2, 4, 7, 11, … — e.g. level 3 is 1,000,000, not 100,000), so
+// every size a bank is ever built or redeemed at is one of tier01's own actual per-unit level
+// costs, never an arbitrary round number in between (a 100,000-bit/"100 KB" bank can never exist,
+// since no tier01 level ever costs that).
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
-// The size (in bits) buildStorageBank currently builds: an independent ladder starting at
-// INTRO_BITS_PER_KILOBYTE_CONVERSION (1000 bits, "1 KB") and multiplying by 10 every time
-// STORAGE_BANK_LADDER_CAP banks have ever been built at the current size — read from
-// storageBanksBuiltTotal, a cumulative counter redeeming never decrements, so the ladder only ever
-// advances (see the "Byte Foundry Storage" comment in layers.js for why this is deliberately
-// decoupled from tier01's own current level cost, unlike an earlier version of this feature —
+// The size (in bits) buildStorageBank currently builds: an independent ladder that walks tier01's
+// own level-cost sequence (level 1, 2, 3, … via getFirstTierCost) rather than tier01's CURRENT
+// level directly, advancing to the next level's cost once STORAGE_BANK_LADDER_CAP banks have ever
+// been built at the current one — read from storageBanksBuiltTotal, a cumulative counter that
+// redeeming never decrements, so the ladder only ever advances (see the "Byte Foundry Storage"
+// comment in layers.js for why this is deliberately decoupled from tier01's own CURRENT level —
 // docs/DESIGN_HISTORY.md). A freshly offered size isn't necessarily redeemable yet — see
 // isStorageBankRedeemable below for the separate, tier01-price-driven gate on that.
 export const getStorageBankSize = state => {
   const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
-  let size = INTRO_BITS_PER_KILOBYTE_CONVERSION
+  let level = 1
+  let size = getFirstTierCost(level)
   while ((builtTotal[size] ?? 0) >= STORAGE_BANK_LADDER_CAP) {
-    size *= 10
+    level += 1
+    size = getFirstTierCost(level)
   }
   return size
 }
 
-// A bank's build cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own face value in bits.
-export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER
+// A bank's one-time build (construction) cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own
+// face value, expressed in BYTES rather than bits: a 1000-bit ("1 KB") bank costs 10 KB*BYTES*
+// (10,000 bytes = 80,000 bits), not 10,000 bits. This cost only ever pays for the empty container
+// itself — it is NOT what fills it (see tickStorageAutoFill).
+export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE
 
-// Builds one Storage bank sized to getStorageBankSize(state), spending
+// Builds one EMPTY Storage bank sized to getStorageBankSize(state), spending
 // getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
 // "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
-// touches resources.base). No-op below cost. Building the same size more than once (before the
-// ladder advances to the next size) simply accumulates count — both in storageBanks (held, what
-// redeemStorageBank spends) and storageBanksBuiltTotal (cumulative, what advances the ladder).
+// touches resources.base). No-op below cost. Only advances storageBanksBuiltTotal (the permanent,
+// cumulative build ladder) — deliberately does NOT touch storageBanks (the currently-FULL count):
+// a freshly built bank starts empty and has to be filled by Memory like any other, via
+// tickStorageAutoFill. Building the same size more than once (before the ladder advances to the
+// next size) simply accumulates storageBanksBuiltTotal further.
 export const buildStorageBank = state => {
   const size = getStorageBankSize(state)
   const cost = getStorageBankCost(size)
@@ -1489,10 +1514,6 @@ export const buildStorageBank = state => {
     intro: {
       ...state.intro,
       bits: state.intro.bits - cost,
-      storageBanks: {
-        ...state.intro.storageBanks,
-        [size]: (state.intro.storageBanks?.[size] ?? 0) + 1,
-      },
       storageBanksBuiltTotal: {
         ...state.intro.storageBanksBuiltTotal,
         [size]: (state.intro.storageBanksBuiltTotal?.[size] ?? 0) + 1,
@@ -1501,31 +1522,66 @@ export const buildStorageBank = state => {
   }
 }
 
-// A bank becomes redeemable once tier01's CURRENT per-unit level cost reaches (or has passed) its
-// own face value — not a one-tick-only exact match. tier01's own autobuyer can complete more than
-// one level in a single tick (a banked attempt budget catching up after a broke/paused stretch —
-// see tickGame's autobuyer loop), which can jump the level straight past the one a bank was built
-// for without ever equaling it exactly; an exact-match check would then strand that bank
-// permanently unredeemable, breaking the "never lost" guarantee. `<=` is safe here because
-// getFirstTierCost only ever grows with level within a cycle (it only drops back on a
-// Prestige/Speed Up/Overclock reset, at which point a bank correctly goes back to waiting for the
-// price to climb back up to it, still held, not lost).
-export const isStorageBankRedeemable = (state, capacityBits) =>
-  capacityBits <= getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+// Cascades Memory into every currently-fillable EMPTY bank in one pass, smallest size first: while
+// there's a size with at least one empty container (storageBanksBuiltTotal[size] >
+// storageBanks[size]) that intro.bits can fully cover, moves exactly `size` bits out of Memory and
+// into that bank (storageBanks[size] += 1), then repeats — since sizes are checked smallest-first
+// and cost scales with size, once the smallest remaining empty size is unaffordable no larger one
+// can be either, so the loop always terminates. Whatever's left over when nothing more can be
+// filled simply stays as Memory's own ordinary balance — auto-filling is otherwise unconditional
+// (no toggle, no prerequisite, unlike auto-redeem below) and bypasses isProductionFrozen, the same
+// "separate currency pool" posture every other Byte Foundry mechanic already has. A same-reference
+// no-op when nothing is fillable.
+export const tickStorageAutoFill = state => {
+  const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
+  let bits = state.intro.bits
+  let storageBanks = state.intro.storageBanks ?? {}
+  let filledAny = false
 
-// Redeems one held bank of `capacityBits`, granting 1 free tier01 unit via grantTierUnits — same
-// "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely"
-// rationale as convertIntroBitsToKilobytes, and deliberately NOT drawn from/counted against the
-// ordinary bitsTransferredThisCycle budget: a bank was already fully paid for (10x over) at build
-// time, so redeeming it isn't a further transfer out of Memory. No-op if no bank of that size is
-// held, or if it isn't currently redeemable (see isStorageBankRedeemable).
+  for (;;) {
+    const fillableSize = Object.keys(builtTotal)
+      .map(Number)
+      .filter(size => (builtTotal[size] ?? 0) > (storageBanks[size] ?? 0))
+      .filter(size => bits >= size)
+      .sort((a, b) => a - b)[0]
+    if (fillableSize === undefined) break
+
+    bits -= fillableSize
+    storageBanks = { ...storageBanks, [fillableSize]: (storageBanks[fillableSize] ?? 0) + 1 }
+    filledAny = true
+  }
+
+  if (!filledAny) return state
+  return { ...state, intro: { ...state.intro, bits, storageBanks } }
+}
+
+// A bank becomes redeemable only once tier01's CURRENT per-unit level cost EXACTLY matches its own
+// face value — a full 10 KB bank redeems only while tier01's own current cost is exactly 10 KB, not
+// merely once that cost has reached or passed it (an earlier version used `<=`, letting an old,
+// smaller bank redeem for a full unit long after tier01's real price had grown past it — see
+// docs/DESIGN_HISTORY.md). Because `getFirstTierCost` only ever grows with level within a cycle,
+// tier01's own autobuyer completing more than one level in a single tick (a banked attempt budget
+// catching up after a broke/paused stretch — see tickGame's autobuyer loop) can jump the price
+// straight past a bank's size without it ever exactly matching mid-tick; such a bank simply waits,
+// still full and not lost, until the next Speed Up/Overclock/Prestige resets tier01's level back
+// down and its price grows back up through that exact value again.
+export const isStorageBankRedeemable = (state, capacityBits) =>
+  capacityBits === getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+
+// Redeems one currently-FULL bank of `capacityBits`, granting 1 free tier01 unit via
+// grantTierUnits — same "pays from a separate currency pool, bypasses
+// isProductionFrozen/isTierUnlocked/cost entirely" rationale as convertIntroBitsToKilobytes — a
+// bank's contents came from Memory via tickStorageAutoFill already, not from a further transfer.
+// The bank itself is NOT lost — it becomes empty again (storageBanksBuiltTotal is untouched),
+// re-entering the fillable pool for tickStorageAutoFill to fill again later. No-op if no bank of
+// that size is currently full, or if it isn't yet redeemable (see isStorageBankRedeemable).
 export const redeemStorageBank = capacityBits => state => {
-  const held = state.intro.storageBanks?.[capacityBits] ?? 0
-  if (held <= 0) return state
+  const full = state.intro.storageBanks?.[capacityBits] ?? 0
+  if (full <= 0) return state
   if (!isStorageBankRedeemable(state, capacityBits)) return state
 
   const { [capacityBits]: _removed, ...remainingBanks } = state.intro.storageBanks
-  const nextBanks = held > 1 ? { ...state.intro.storageBanks, [capacityBits]: held - 1 } : remainingBanks
+  const nextBanks = full > 1 ? { ...state.intro.storageBanks, [capacityBits]: full - 1 } : remainingBanks
 
   const firstTierId = TIER_DEFINITIONS[0].id
   return grantTierUnits(firstTierId, 1)({
@@ -1537,10 +1593,12 @@ export const redeemStorageBank = capacityBits => state => {
 // Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled and
 // intro.storageAutoRedeemedSizes below) — a no-op unless there's an eligible size. The smallest
 // denomination (INTRO_BITS_PER_KILOBYTE_CONVERSION, "1 KB") always attempts auto-redeem regardless
-// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still needs the
-// toggle enabled. Either way, a given size auto-redeems at most ONCE per real Prestige cycle (see
-// storageAutoRedeemedSizes, which resets fresh every real Prestige — prestigeGame) — further
-// eligible banks of an already-auto-redeemed size need a manual click for the rest of the cycle.
+// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still checks the
+// toggle, which currently defaults true (see createInitialGameState) with no in-UI way to turn it
+// off yet, so in practice every size auto-redeems today. Either way, a given size auto-redeems at
+// most ONCE per real Prestige cycle (see
+// storageAutoRedeemedSizes, which resets fresh every real Prestige — prestigeGame) — a bank that
+// refills later the same cycle (see tickStorageAutoFill) needs a manual click for the rest of it.
 // Redeems only the smallest eligible size per call — redeeming can itself grant a tier01 unit and
 // advance its level/cost (via grantTierUnits), so redeeming more than one size correctly needs the
 // cost recomputed in between; rather than looping that here, this piggybacks on tickGame's own
@@ -1797,7 +1855,7 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
-    // "Memory" (bits/productionAccumulator/mainGameUnlocked/bitsTransferredThisCycle) resets to
+    // "Memory" (bits/productionAccumulator/mainGameUnlocked) resets to
     // fresh on every real Prestige, in the same atomic reset as resources/owned above — a new
     // cycle always starts this screen's balance from 0 and re-shows it before MainPage. The Byte
     // generator itself and every upgrade to it — capacity/byteCreated/tickSpeedSeconds/
@@ -1816,11 +1874,14 @@ export const prestigeGame = state => {
       productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
       productionMilestoneTier: state.intro?.productionMilestoneTier ?? initial.intro.productionMilestoneTier,
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
-      // Storage banks, the cumulative build ladder, and the auto-redeem preference are just as
-      // permanent as the Byte generator itself above — "never lost," not part of this cycle's
-      // Memory reset. storageAutoRedeemedSizes is deliberately NOT carried over here — it falls
-      // through to initial.intro's fresh {} default below, since "once per run" resets every real
-      // Prestige (see tickStorageAutoRedeem).
+      // Storage banks (full or empty), the cumulative build ladder, and the auto-redeem preference
+      // are just as permanent as the Byte generator itself above — "never lost," not part of this
+      // cycle's Memory reset. A bank already FULL when Prestige fires stays full, its contents
+      // intact even though Memory itself resets to 0 — this is what lets banked-up Storage give a
+      // new cycle a head start, redeemable immediately once tier01's fresh level 1 cost matches.
+      // storageAutoRedeemedSizes is deliberately NOT carried over here — it falls through to
+      // initial.intro's fresh {} default below, since "once per run" resets every real Prestige
+      // (see tickStorageAutoRedeem).
       storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
       storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
       storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
