@@ -493,7 +493,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
               variant={isFull ? 'prestige' : 'neutral'}
               $progress={fullProgress}
             >
-              <ButtonContent>💥 ×10</ButtonContent>
+              <ButtonContent>💥 Memory ×10</ButtonContent>
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry sacrifice progress"
@@ -516,7 +516,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
               variant={canInvest ? 'info' : 'neutral'}
               $progress={investProgress}
             >
-              <ButtonContent>⚡ ×2 ({formatAmount(investCostBytes)} B)</ButtonContent>
+              <ButtonContent>⚡ Bandwidth ×2 ({formatAmount(investCostBytes)} B)</ButtonContent>
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry invest progress"

@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1786506472.998619,
-    "ast_hash": "29a7b9bb2507e4543dd5df8112a1727d",
+    "mtime": 1786506811.6106393,
+    "ast_hash": "bb9a10b91e96703a3301aa212d4dfc13",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
@@ -315,13 +315,13 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1786506557.554624,
-    "ast_hash": "0534608fb8c677d28d00114e4d9fbb2f",
+    "mtime": 1786506837.5146408,
+    "ast_hash": "7a3fad18d83b82265970957dd90cdda8",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786506243.0346055,
-    "ast_hash": "6b6a84c997d9819f4d3eeaf0cb419cd6",
+    "mtime": 1786506745.9026353,
+    "ast_hash": "1aaa6e4b6d4e29dc466750cf2840fffb",
     "semantic_hash": ""
   },
   "README.md": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786506509.1666212,
-    "ast_hash": "45cc2c7ebc4f42b5c45cc8c0c1aaf583",
+    "mtime": 1786506824.99864,
+    "ast_hash": "685bf0a2f9b078f38b0984655d651d61",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1786506464.2026186,
-    "ast_hash": "6ba35a92c68d9e36346f50e0307625f3",
+    "mtime": 1786506805.8946388,
+    "ast_hash": "67782a152e578779abdcae439e6d656d",
     "semantic_hash": ""
   },
   "src/components/OfflineProgressNotice/index.jsx": {

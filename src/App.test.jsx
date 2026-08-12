@@ -2178,7 +2178,7 @@ test('Invest for Double Production shows its cost in Bytes, with no stray comma 
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ ×2 (1 B)')
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2 (1 B)')
   expect(investButton.textContent).not.toContain(',')
 })
 
