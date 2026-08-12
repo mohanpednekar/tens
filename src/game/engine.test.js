@@ -35,7 +35,6 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
-  getComputeCoreStorageSizes,
   getCostEpochExponent,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
@@ -70,7 +69,7 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
-  isComputeCoreConversionReady,
+  isComputeCoreConversionUnlocked,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isProductionFrozen,
@@ -90,7 +89,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORE_MEMORY_COST, COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BANK_LADDER_MAX_SIZE, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -827,16 +826,15 @@ describe('getStorageBankSize', () => {
     expect(getStorageBankSize(state)).toBe(1000000)
   })
 
-  it('never advances past STORAGE_BANK_LADDER_MAX_SIZE (1,000,000/"1 MB") even once far more than STORAGE_BANK_LADDER_CAP have been built at it', () => {
-    expect(STORAGE_BANK_LADDER_MAX_SIZE).toBe(1000000)
+  it('keeps advancing indefinitely past 1,000,000 ("1 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: {
         1000: STORAGE_BANK_LADDER_CAP,
         10000: STORAGE_BANK_LADDER_CAP,
-        1000000: STORAGE_BANK_LADDER_CAP * 5, // way past the cap — the ladder has nowhere further to go
+        1000000: STORAGE_BANK_LADDER_CAP,
       },
     })
-    expect(getStorageBankSize(state)).toBe(1000000)
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 4)) // 1,000,000,000 — keeps going
   })
 })
 
@@ -1090,81 +1088,57 @@ describe('setStorageAutoRedeemEnabled', () => {
   })
 })
 
-describe('getComputeCoreStorageSizes', () => {
-  it('lists exactly the 3 sizes the now-capped Storage ladder ever offers: 1 KB, 10 KB, 1 MB', () => {
-    expect(getComputeCoreStorageSizes()).toEqual([1000, 10000, 1000000])
-  })
-})
-
-// All 3 sizes fully built and full, with Memory itself full — the condition
-// isComputeCoreConversionReady checks.
-const readyStorageBanks = () =>
-  Object.fromEntries(getComputeCoreStorageSizes().map(size => [size, STORAGE_BANK_LADDER_CAP]))
-
-describe('isComputeCoreConversionReady', () => {
-  it('is false when Memory is not full, even with every Storage size built and full', () => {
-    const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST - 1,
-    })
-    expect(isComputeCoreConversionReady(state)).toBe(false)
+describe('isComputeCoreConversionUnlocked', () => {
+  it('is false below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10 })
+    expect(isComputeCoreConversionUnlocked(state)).toBe(false)
   })
 
-  it('is false when Memory is full but at least one Storage size is short of STORAGE_BANK_LADDER_CAP full banks', () => {
-    const banks = readyStorageBanks()
-    banks[1000] = STORAGE_BANK_LADDER_CAP - 1
-    const state = withIntro(createInitialGameState(), {
-      storageBanks: banks,
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST,
-    })
-    expect(isComputeCoreConversionReady(state)).toBe(false)
-  })
-
-  it('is true once every Storage size has STORAGE_BANK_LADDER_CAP full banks and Memory is full', () => {
-    const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST,
-    })
-    expect(isComputeCoreConversionReady(state)).toBe(true)
+  it('is true once capacity reaches INTRO_COMPUTE_CORE_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
+    expect(isComputeCoreConversionUnlocked(state)).toBe(true)
   })
 })
 
 describe('tickComputeCoreConversion', () => {
-  it('is a same-reference no-op when not ready', () => {
-    const state = withIntro(createInitialGameState(), { bits: COMPUTE_CORE_MEMORY_COST, capacity: COMPUTE_CORE_MEMORY_COST })
+  it('is a same-reference no-op below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, even with Memory full', () => {
+    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10
+    const state = withIntro(createInitialGameState(), { capacity, bits: capacity })
     expect(tickComputeCoreConversion(state)).toBe(state)
   })
 
-  it('converts the entire Memory balance into whole Compute Cores once ready, spending exactly coresGained * COMPUTE_CORE_MEMORY_COST bits', () => {
+  it('is a same-reference no-op once unlocked but Memory is not yet full', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1,
     })
+    expect(tickComputeCoreConversion(state)).toBe(state)
+  })
+
+  it('flushes the ENTIRE current capacity for exactly 1 Compute Core once unlocked and full — the cost is capacity itself, not a fixed amount', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    })
+    const after = tickComputeCoreConversion(state)
+    expect(after.intro.computeCores).toBe(1)
+    expect(after.intro.bits).toBe(0)
+    // Capacity itself is untouched by this conversion — only Sacrifice grows it.
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)
+  })
+
+  it('costs more at a higher capacity — the same flush always grants exactly 1 Core regardless of how large capacity has grown', () => {
+    const bigCapacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 100
+    const state = withIntro(createInitialGameState(), { capacity: bigCapacity, bits: bigCapacity })
     const after = tickComputeCoreConversion(state)
     expect(after.intro.computeCores).toBe(1)
     expect(after.intro.bits).toBe(0)
   })
 
-  it('banks any remainder below a full Core\'s worth rather than forcing Memory to 0', () => {
-    const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST + 5,
-      bits: COMPUTE_CORE_MEMORY_COST + 5,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(5)
-  })
-
   it('accumulates onto any already-permanent Compute Core balance rather than overwriting it', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: 4,
     })
     const after = tickComputeCoreConversion(state)
@@ -1174,13 +1148,22 @@ describe('tickComputeCoreConversion', () => {
   it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
-        storageBanks: readyStorageBanks(),
-        capacity: COMPUTE_CORE_MEMORY_COST,
-        bits: COMPUTE_CORE_MEMORY_COST,
+        capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+        bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       }),
       PRESTIGE_THRESHOLD
     )
     expect(isProductionFrozen(state)).toBe(true)
+    expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
+  })
+
+  it('is unrelated to Storage — fires regardless of whether any Storage bank has ever been built', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      storageBanks: {},
+      storageBanksBuiltTotal: {},
+    })
     expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
   })
 })
@@ -1208,9 +1191,8 @@ describe('tickComputeNodeConversion', () => {
 describe('tickGame Compute Core/Node integration', () => {
   it('converts Memory into Compute Cores and Nodes as part of a regular tick, claiming Memory before tickIntroAutoInvest can convert it to Kilobytes', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanks: readyStorageBanks(),
-      capacity: COMPUTE_CORE_MEMORY_COST,
-      bits: COMPUTE_CORE_MEMORY_COST,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: COMPUTE_CORES_PER_NODE - 1, // one more Core completes a Node the same tick
       byteCreated: true,
     })

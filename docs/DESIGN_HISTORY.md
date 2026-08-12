@@ -1600,6 +1600,67 @@ with the capacity ladder. If this is ever revisited, don't silently unify the tw
 they're deliberately different constants for deliberately different reasons, and conflating them
 would either break the capacity-ladder alignment above or break the Storage ladder's own cap.
 
+**This entire design was superseded almost immediately** — see the next entry below. Kept here
+verbatim as a record of the reasoning that produced it (and because the Storage-ladder-vs-Memory-
+display "two different MBs" distinction it documents is still true and still relevant, independent
+of the Compute Core mechanic built on top of it), not because any of it still describes current
+behavior.
+
+### Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate
+
+The entry above shipped, then was immediately walked back in the same session before merging, once
+the maintainer thought through the mechanic further in a follow-up message: "make Compute Cores 10x
+less powerful than I mentioned and build up from there... A Compute Core shall always cost full
+memory capacity flushed but memory capacity upgrades will still be possible indefinitely but banks
+will be available only for tier 01 cost steps only. So increasing capacity will essentially make
+Compute Core effectively costly but user has to decide where to stop for best efficiency. Reveal
+Compute Cores once user has 100KB Memory capacity."
+
+This replaces the entire trigger/cost/reveal model from the previous entry:
+
+- **Cost**: no longer a fixed `COMPUTE_CORE_MEMORY_COST` (80,000,000 bits) — a Compute Core now
+  costs the CURRENT `intro.capacity`, flushing it entirely to 0 (`tickComputeCoreConversion`),
+  exactly mirroring `pickIntroCapacityMilestone`/Sacrifice's own "drains the ENTIRE balance"
+  behavior. Since `capacity` only grows via Sacrifice (never shrinks), this makes the strategic
+  trade explicit: Sacrifice further for a bigger-but-slower-to-refill flush (fewer, larger Cores
+  over time), or stop Sacrificing at a lower capacity for a smaller-but-faster one (more, smaller
+  Cores over time) — "user has to decide where to stop for best efficiency," in the maintainer's own
+  words. A player can, in principle, still click Sacrifice after Compute Cores are active (the
+  automatic conversion doesn't disable the button) — but since both act on the identical "Memory is
+  full" moment and the automatic conversion fires every tick (~10Hz), in practice continuing to
+  grow capacity past this point means deliberately choosing not to let a full-Memory tick auto-fire
+  a conversion, which only really works if the player has stopped relying on automatic conversion
+  firing at all yet. This tension was accepted as-is rather than engineered around (e.g. by making
+  Sacrifice and Compute Core conversion a paired manual choice) — the maintainer was offered that
+  alternative explicitly (a manual "choose Sacrifice or Convert each time Memory fills" framing) and
+  chose the automatic one instead.
+- **Gate**: `isComputeCoreConversionReady`'s Storage-bank-fullness check is gone entirely, replaced
+  by `isComputeCoreConversionUnlocked` — a pure capacity-magnitude predicate
+  (`capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`, 800,000 bits/"100 KB" in Memory's own display
+  scale, one Sacrifice stage past Storage's own reveal), the same convention
+  `isIntroConversionUnlocked`/`isStorageUnlocked` already use. Compute Cores are now completely
+  unrelated to Storage — a save with zero Storage banks ever built converts Memory into Cores just
+  as readily as one with a maxed-out Storage section.
+- **The Storage ladder cap is reverted.** `STORAGE_BANK_LADDER_MAX_SIZE` existed for exactly one
+  reason — so the old Storage-fullness-based readiness check had a finite set of sizes
+  (`getComputeCoreStorageSizes`) to check exhaustively. With that check gone, the cap serves no
+  purpose; `getStorageBankSize` goes back to advancing indefinitely through `tier01`'s level-cost
+  sequence forever, as it did before this whole feature existed. ("Banks will be available only for
+  tier01 cost steps only" in the maintainer's message turned out to just be restating this original,
+  uncapped behavior — not requesting a change from it.)
+- **This is Phase 1 only.** The maintainer's full vision for these resources is considerably larger:
+  spending Compute Cores (or higher, merged tiers) activates a temporary game-speed multiplier via
+  one of several duration/cost presets ("16-Core Burst for 10 min," "4-Core Standard for 1 hour,"
+  "2-Core Sustain for 10 hours" — the exact multiplier numbers given, 16×/4×/2×, were confirmed as
+  applying specifically at the Compute NODE tier, with Cores themselves "10x less powerful" than
+  that), and Cores merge upward through a whole ladder (8 Cores → 1 Node → 1 Cluster → 1 Network → 1
+  Grid, each merge worth another 10x), with its own dedicated page reachable once 8 Cores are held.
+  None of that shipped here — only the cost/reveal/trigger rework above, `intro.computeCores`/
+  `computeNodes` remaining pure counters with no gameplay effect yet. The maintainer explicitly chose
+  to phase this (rather than build the whole thing in one pass) given how much of the activation
+  system's own numbers were still being worked out live in conversation; the deferred scope is
+  tracked as a follow-up `claude-task` issue rather than guessed at here.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

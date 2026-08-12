@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -401,6 +401,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
+  const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
@@ -646,7 +647,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </StorageSection>
       )}
 
-      {storageRevealed && (
+      {computeCoreRevealed && (
         <ComputeSection aria-label="byte foundry compute">
           <SectionLabel>Compute</SectionLabel>
           <StatusText>
@@ -655,7 +656,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             {formatAmount(intro.computeNodes ?? 0)} Compute Node{(intro.computeNodes ?? 0) === 1 ? '' : 's'}
           </StatusText>
           <StatusText>
-            {`Memory auto-converts into Compute Cores (10 MB each) once every Storage size is built and full · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node`}
+            {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node`}
           </StatusText>
         </ComputeSection>
       )}
