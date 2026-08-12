@@ -40,6 +40,7 @@ import {
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getGlobalTickspeedRegularStep,
+  getIntroKilobyteConversionCost,
   getIntroProductionMilestoneCost,
   getIntroProductionMilestoneMaxClaims,
   getLastTierXpTickspeedMinConsumption,
@@ -618,40 +619,59 @@ describe('isStorageUnlocked', () => {
   })
 })
 
+describe('getIntroKilobyteConversionCost', () => {
+  it('is tier01\'s own starting per-unit cost (1000, matching INTRO_BITS_PER_KILOBYTE_CONVERSION) on a fresh cycle', () => {
+    expect(getIntroKilobyteConversionCost(createInitialGameState())).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  })
+
+  it('grows to tier01\'s own CURRENT per-unit level cost as it levels up, not a fixed rate', () => {
+    const state = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2)
+    expect(getIntroKilobyteConversionCost(state)).toBe(getTierCost(TIER_DEFINITIONS[0], 2))
+    expect(getIntroKilobyteConversionCost(state)).toBe(10000)
+  })
+})
+
 describe('convertIntroBitsToKilobytes', () => {
   const firstTierId = TIER_DEFINITIONS[0].id
+  const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) // 1000, === INTRO_BITS_PER_KILOBYTE_CONVERSION
+  const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) // 10,000
 
-  it('spends INTRO_BITS_PER_KILOBYTE_CONVERSION bits and grants 1 free unit of the first tier', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
+  it('spends tier01\'s CURRENT per-unit cost (getIntroKilobyteConversionCost) and grants 1 free unit', () => {
+    const state = withIntro(createInitialGameState(), { bits: level1Cost, capacity: level1Cost })
     const after = convertIntroBitsToKilobytes(state)
     expect(after.intro.bits).toBe(0)
     expect(after.owned[firstTierId]).toBe(1)
   })
 
-  it('is a no-op below the conversion cost', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION - 1, capacity: 1000 })
+  it('is a no-op below the current conversion cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: level1Cost - 1, capacity: level1Cost })
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
   })
 
   it('flips mainGameUnlocked on a successful convert', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
+    const state = withIntro(createInitialGameState(), { bits: level1Cost, capacity: level1Cost })
     const after = convertIntroBitsToKilobytes(state)
     expect(after.intro.mainGameUnlocked).toBe(true)
   })
 
-  it('keeps working indefinitely after mainGameUnlocked — there is no per-cycle transfer cap', () => {
-    const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 20, capacity: INTRO_BITS_PER_KILOBYTE_CONVERSION * 20,
-    })
+  // Regression test for a past design: the conversion cost used to be a flat
+  // INTRO_BITS_PER_KILOBYTE_CONVERSION forever, undervaluing a transfer once tier01's real price
+  // grew past it — see docs/DESIGN_HISTORY.md. The cost now steps up mid-sequence exactly like a
+  // manual Buy would.
+  it('steps its own cost up once tier01 levels up, and keeps working indefinitely — there is no per-cycle transfer cap', () => {
+    const totalBits = DEFAULT_PURCHASE_BLOCK_SIZE * level1Cost + 2 * level2Cost
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: totalBits, capacity: totalBits })
     let after = state
-    for (let i = 0; i < 20; i++) after = convertIntroBitsToKilobytes(after)
+    for (let i = 0; i < DEFAULT_PURCHASE_BLOCK_SIZE + 2; i++) after = convertIntroBitsToKilobytes(after)
     expect(after.intro.bits).toBe(0)
-    expect(after.owned[firstTierId]).toBe(20)
+    expect(after.owned[firstTierId]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE + 2)
+    expect(after.purchaseLevels[firstTierId]).toBe(2)
   })
 
   it('advances the first tier\'s own purchaseLevelProgress on every convert, rolling over once a level completes', () => {
+    const totalBits = DEFAULT_PURCHASE_BLOCK_SIZE * level1Cost + level2Cost
     const state = withIntro(withPurchaseLevel(createInitialGameState(), firstTierId, 1), {
-      bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * (DEFAULT_PURCHASE_BLOCK_SIZE + 1), capacity: INTRO_BITS_PER_KILOBYTE_CONVERSION * (DEFAULT_PURCHASE_BLOCK_SIZE + 1),
+      bits: totalBits, capacity: totalBits,
     })
     let after = state
     for (let i = 0; i < DEFAULT_PURCHASE_BLOCK_SIZE; i++) after = convertIntroBitsToKilobytes(after)
@@ -660,6 +680,7 @@ describe('convertIntroBitsToKilobytes', () => {
 
     const afterOneMore = convertIntroBitsToKilobytes(after)
     expect(afterOneMore.purchaseLevelProgress[firstTierId]).toBe(1)
+    expect(afterOneMore.intro.bits).toBe(0)
   })
 })
 
@@ -736,13 +757,15 @@ describe('tickIntroAutoInvest', () => {
   // times in a single tick; a jump spanning more than one level's worth of units completes the
   // rest on a later tick instead.
   it('caps at the current level\'s remaining block boundary, leaving the rest for a later call', () => {
-    const bitsForTwoFullLevels = DEFAULT_PURCHASE_BLOCK_SIZE * 2 * INTRO_BITS_PER_KILOBYTE_CONVERSION
+    const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) // 1000
+    const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) // 10,000
+    const bitsForTwoFullLevels = DEFAULT_PURCHASE_BLOCK_SIZE * level1Cost + DEFAULT_PURCHASE_BLOCK_SIZE * level2Cost
     const state = withIntro(createInitialGameState(), { bits: bitsForTwoFullLevels, capacity: bitsForTwoFullLevels, byteCreated: true })
     const after = tickIntroAutoInvest(state)
     expect(after.owned[firstTierId]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
     expect(after.purchaseLevels[firstTierId]).toBe(2)
     expect(after.purchaseLevelProgress[firstTierId]).toBe(0)
-    expect(after.intro.bits).toBe(DEFAULT_PURCHASE_BLOCK_SIZE * INTRO_BITS_PER_KILOBYTE_CONVERSION)
+    expect(after.intro.bits).toBe(DEFAULT_PURCHASE_BLOCK_SIZE * level2Cost)
 
     const again = tickIntroAutoInvest(after)
     expect(again.owned[firstTierId]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE * 2)
@@ -903,20 +926,21 @@ describe('tickStorageAutoFill', () => {
 })
 
 describe('isStorageBankRedeemable', () => {
-  it('is true when capacityBits is at or below tier01\'s current per-unit level cost, false above it', () => {
+  it('is true only when capacityBits EXACTLY matches tier01\'s current per-unit level cost', () => {
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000
     expect(isStorageBankRedeemable(state, getTierCost(tensTier, 2))).toBe(true) // exact match
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(true) // below — still redeemable
+    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(false) // below — no longer redeemable
     expect(isStorageBankRedeemable(state, getTierCost(tensTier, 3))).toBe(false) // above — not yet
   })
 
-  it('stays redeemable even when tier01\'s level jumps straight past the level a bank was sized for', () => {
-    // Regression: an autobuyer burst can complete more than one level in a single tick (see
-    // tickGame's autobuyer loop), skipping level 2 (the bank's own target) entirely on the way to
-    // level 5 — an exact-match check would strand the bank forever; `<=` must not.
+  it('is not redeemable once tier01\'s level jumps straight past the level a bank was sized for', () => {
+    // An autobuyer burst can complete more than one level in a single tick (see tickGame's
+    // autobuyer loop), skipping level 2 (the bank's own target) entirely on the way to level 5 —
+    // the bank stays full and held, not lost, but won't redeem again until a Speed Up/Overclock/
+    // Prestige resets tier01's level back down and it regrows through that exact cost.
     const size = getTierCost(tensTier, 2)
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
-    expect(isStorageBankRedeemable(state, size)).toBe(true)
+    expect(isStorageBankRedeemable(state, size)).toBe(false)
   })
 })
 
@@ -949,16 +973,14 @@ describe('redeemStorageBank', () => {
     expect(redeemStorageBank(size)(state)).toBe(state)
   })
 
-  it('redeems a bank sized for a level tier01 skipped straight past in one burst', () => {
+  it('is a no-op for a bank sized for a level tier01 skipped straight past in one burst — it stays held, not lost', () => {
     const size = getTierCost(tensTier, 2)
     const state = withPurchaseLevel(
       withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }),
       tensTier.id,
       5
     )
-    const after = redeemStorageBank(size)(state)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
-    expect(after.owned[tensTier.id]).toBe(1)
+    expect(redeemStorageBank(size)(state)).toBe(state)
   })
 
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
@@ -1010,7 +1032,7 @@ describe('tickStorageAutoRedeem', () => {
     expect(tickStorageAutoRedeem(state)).toBe(state)
   })
 
-  it('redeems only the smallest eligible bank when multiple sizes are held', () => {
+  it('only the exact-match size is eligible when multiple sizes are held — a smaller, no-longer-matching bank stays untouched', () => {
     const level1Size = getTierCost(tensTier, 1)
     const level2Size = getTierCost(tensTier, 2)
     const state = withPurchaseLevel(
@@ -1023,8 +1045,8 @@ describe('tickStorageAutoRedeem', () => {
     )
 
     const after = tickStorageAutoRedeem(state)
-    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
-    expect(after.intro.storageBanks[level2Size]).toBe(1)
+    expect(after.intro.storageBanks[level1Size]).toBe(1) // below current cost — no longer eligible
+    expect(after.intro.storageBanks[level2Size]).toBeUndefined() // exact match — redeemed
   })
 
   it('auto-redeems a given size at most once per cycle, leaving a further eligible bank of that size for a manual redeem', () => {
