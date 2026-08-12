@@ -1364,7 +1364,7 @@ export const getIntroProductionMilestoneCost = tier =>
 // docs/DESIGN_HISTORY.md. `tier` is unused now but kept as the parameter so callers (and
 // pickIntroProductionMilestone's own `getIntroProductionMilestoneMaxClaims(tier)` call) don't need
 // to change if a future tier-dependent claim count ever returns.
-export const getIntroProductionMilestoneMaxClaims = tier => 1
+export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at
