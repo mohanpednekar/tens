@@ -6,7 +6,7 @@ import { getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
-  INTRO_AUTO_INVEST_THRESHOLD,
+  DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
@@ -19,6 +19,12 @@ import {
   TIER_DEFINITIONS,
 } from 'game/layers'
 import App from './App'
+
+// A fresh cycle's full purchase block, in bits — exactly enough for tickIntroAutoInvest to convert
+// every unit of tier01's (Kilobytes') current 8-unit block in one call. Used only as a convenient
+// round number for seeding tests below; no longer a named threshold in the engine itself (an
+// earlier version gated tickIntroAutoInvest on this exact value — see docs/DESIGN_HISTORY.md).
+const FRESH_CYCLE_BLOCK_BITS = DEFAULT_PURCHASE_BLOCK_SIZE * INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 beforeEach(() => {
   localStorage.clear()
@@ -2043,8 +2049,11 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
-test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', async () => {
-  const user = userEvent.setup()
+test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', () => {
+  // Fake timers (not userEvent's real ones) so the live tick loop can't fire — and, now that
+  // tickIntroAutoInvest converts a unit the instant one is affordable (see docs/DESIGN_HISTORY.md),
+  // silently drain the pre-seeded balance — between mount and this test's own manual clicks below.
+  vi.useFakeTimers()
 
   // mainGameUnlocked seeded true (and reached via the voluntary nav link, like the "always-
   // interactive" tests above) so a click here doesn't also navigate away to MainPage — isolating
@@ -2057,12 +2066,12 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
     intro: {
       mainGameUnlocked: true,
       bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 2,
-      capacity: INTRO_AUTO_INVEST_THRESHOLD,
+      capacity: FRESH_CYCLE_BLOCK_BITS,
       byteCreated: true,
     },
   })
-  render(<App />)
-  await user.click(screen.getByText('⚙️ Byte Foundry'))
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
 
   const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
   const activeBlock = screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })
@@ -2074,7 +2083,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
   expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
 
-  await user.click(activeBlock)
+  fireEvent.click(activeBlock)
 
   // The block that was locked #2 is now the sole active block — already enabled from the 1000-bit
   // surplus left over after the first transfer — and only 6 locked blocks remain. The block just
@@ -2088,6 +2097,9 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
   expect(saved.purchaseLevelProgress.tier01).toBe(1)
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('auto-transfers a full block once the threshold is reached, then rolls the row over to a fresh block for the next tier01 level rather than staying consumed', () => {
@@ -2096,8 +2108,8 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   // A big jump — passive production or a large offline-progress catch-up — that skips straight
   // past every individual block boundary in one go, rather than the player clicking through them.
   seedIntroState({
-    bits: INTRO_AUTO_INVEST_THRESHOLD - 1,
-    capacity: INTRO_AUTO_INVEST_THRESHOLD,
+    bits: FRESH_CYCLE_BLOCK_BITS - 1,
+    capacity: FRESH_CYCLE_BLOCK_BITS,
     byteCreated: true,
     tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
     productionMultiplier: 1,
@@ -2204,33 +2216,22 @@ test('Invest for Double Production shows its cost in the nearest fitting unit on
   expect(investButton).toHaveTextContent('1 KB')
 })
 
-test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
+test('Invest for Double Production grants a single claim at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
   const user = userEvent.setup()
 
   // capacity is deliberately way above tier 0's cost (INTRO_STARTING_CAPACITY) — Invest's own
-  // ladder is decoupled from it, so neither claim below requires the balance to be full.
+  // ladder is decoupled from it, so the claim below doesn't require the balance to be full.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
-  let mounted = render(<App />)
+  const mounted = render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
   await user.click(investButton)
 
-  // Second claim at the same tier 0 cost — still enabled, not yet exhausted (2 claims per tier
-  // for the tiers up to INTRO_AUTO_INVEST_THRESHOLD).
-  let saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.intro.productionMilestoneTier).toBe(0)
-  expect(saved.intro.productionMilestoneTierClaims).toBe(1)
-  saved.intro.bits = INTRO_STARTING_CAPACITY
-  localStorage.setItem('tens_game_state', JSON.stringify(saved))
-  mounted.unmount()
-  mounted = render(<App />)
-  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
-  await user.click(screen.getByRole('button', { name: /invest bits for double production/i }))
-
-  // Both tier-0 claims used — advanced to tier 1, whose cost (10x higher) the current balance
-  // can't cover yet, so Invest is disabled again.
-  saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  // A single claim at tier 0's cost immediately advances to tier 1, whose cost (10x higher) the
+  // current balance can't cover yet, so Invest is disabled again — every tier is a one-attempt
+  // purchase now, same as Sacrifice for 10x Capacity.
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.productionMilestoneTier).toBe(1)
   expect(saved.intro.productionMilestoneTierClaims).toBe(0)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
@@ -2292,8 +2293,8 @@ test('the intro auto-transitions into the main game once the bit balance crosses
   // INTRO_MIN_TICK_SPEED_SECONDS) delivers exactly one batch of 1 bit — enough to cross from one
   // below the threshold to the threshold itself.
   seedIntroState({
-    bits: INTRO_AUTO_INVEST_THRESHOLD - 1,
-    capacity: INTRO_AUTO_INVEST_THRESHOLD,
+    bits: FRESH_CYCLE_BLOCK_BITS - 1,
+    capacity: FRESH_CYCLE_BLOCK_BITS,
     byteCreated: true,
     tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
     productionMultiplier: 1,
@@ -2570,7 +2571,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   // own auto-invest threshold again.
   seedIntroState(
     {
-      bits: INTRO_AUTO_INVEST_THRESHOLD - 1, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true,
+      bits: FRESH_CYCLE_BLOCK_BITS - 1, capacity: FRESH_CYCLE_BLOCK_BITS, byteCreated: true,
       tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, productionMultiplier: 1,
     },
     { prestige: { xp: 0, points: 1, count: 1, highestMilestone: 100 } }

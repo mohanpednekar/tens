@@ -116,16 +116,6 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// The bit-to-Kilobyte auto-convert batch threshold (see getIntroTransferBudget in engine.js) is no
-// longer this fixed value — it's dynamic, tied to the Kilobyte tier's own current purchase block
-// size, and (unlike an earlier version of this mechanic) has no cycle-wide cap at all any more —
-// it can fire repeatedly, batch after batch, forever. This constant's only remaining role is the
-// cost cutoff for getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly
-// below 1000 Bytes' worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since
-// 8000 bits (1000 Bytes) is still a meaningful, independent boundary for that unrelated mechanic,
-// coincidentally matching the auto-convert batch size's own historical default
-// (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
-export const INTRO_AUTO_INVEST_THRESHOLD = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many

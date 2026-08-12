@@ -380,7 +380,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
 // read-only: Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see
-// getIntroTransferBudget in engine.js) all stay fully live whether reached via the mandatory gate
+// tickIntroAutoInvest in engine.js) all stay fully live whether reached via the mandatory gate
 // or this voluntary link. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
 // productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is PERMANENT — see
 // prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
@@ -536,11 +536,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
               aria-label="invest bits for double production"
               disabled={!canInvest}
               onClick={actions.pickIntroProductionMilestone}
-              title={
-                investClaimsUsedUp
-                  ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
-                  : `${investCostDisplay} — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
-              }
+              title={investClaimsUsedUp ? 'Already claimed at this tier' : 'Doubles production rate'}
               type="button"
               variant={canInvest ? 'info' : 'neutral'}
               $progress={investProgress}

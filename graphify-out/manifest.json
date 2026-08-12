@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1786508420.370735,
-    "ast_hash": "1f0946acf4e74fced74d6a31271e21d1",
+    "mtime": 1786519505.938675,
+    "ast_hash": "8f0f8dd7b5e2ad47f3ab7953b8617971",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
@@ -85,18 +85,18 @@
     "semantic_hash": "ac3dd0faabd148bbc7e29d97f4540faf"
   },
   "src/game/engine.js": {
-    "mtime": 1786508289.798727,
-    "ast_hash": "6828d4c77a81175d6094ff37654640e4",
+    "mtime": 1786519208.4106817,
+    "ast_hash": "85b3b36793351cdbee8c281b3a5f9ea9",
     "semantic_hash": ""
   },
   "src/game/engine.test.js": {
-    "mtime": 1786508496.1987393,
-    "ast_hash": "30e040e90bc50792b756a54a5cb0d1df",
+    "mtime": 1786518934.958688,
+    "ast_hash": "1a73c2691810f4a098e11dd89a65006a",
     "semantic_hash": ""
   },
   "src/game/layers.js": {
-    "mtime": 1786504478.5025005,
-    "ast_hash": "94298bbc8bad5333048f4012797d0446",
+    "mtime": 1786518787.5026915,
+    "ast_hash": "36bb8b7cf438084a13fd6ec06f8cd0bb",
     "semantic_hash": ""
   },
   "src/game/layers.test.js": {
@@ -315,13 +315,13 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1786508786.6107566,
-    "ast_hash": "eaf2b8710502b672f5cb2f9ab593454b",
+    "mtime": 1786520020.8186631,
+    "ast_hash": "bec6d3c75c161ccf3a2abed126c8b820",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786508636.9307477,
-    "ast_hash": "213ca55ca8976f329e32c6e53f38d718",
+    "mtime": 1786519777.2066689,
+    "ast_hash": "233540499d5b04330965ce47826bf37b",
     "semantic_hash": ""
   },
   "README.md": {
@@ -340,18 +340,18 @@
     "semantic_hash": ""
   },
   "docs/DESIGN_HISTORY.md": {
-    "mtime": 1786508774.998756,
-    "ast_hash": "e236bafd5d8c7a47dfec484daaa847f3",
+    "mtime": 1786519996.6106637,
+    "ast_hash": "bccc24eefd71e26da782b1ab56668f14",
     "semantic_hash": ""
   },
   "docs/ECONOMY_REFERENCE.md": {
-    "mtime": 1786508719.7987525,
-    "ast_hash": "cfc3dd275224a7ae58fdfe252f932aa6",
+    "mtime": 1786519929.5346653,
+    "ast_hash": "a5492ddf1ff035602c843e13d36a9476",
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786508743.070754,
-    "ast_hash": "f85ba7fd68ded53fbb8b70dcc0ef8dbf",
+    "mtime": 1786519948.898665,
+    "ast_hash": "f2f6850b80c8ecfcdf61bdcff67aa2b0",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1786508330.9867296,
-    "ast_hash": "1aba7b856fc558e35a085ccbab852c30",
+    "mtime": 1786519959.1146646,
+    "ast_hash": "6d1516838b198b73a0df5ddc30aadeb1",
     "semantic_hash": ""
   },
   "src/components/OfflineProgressNotice/index.jsx": {

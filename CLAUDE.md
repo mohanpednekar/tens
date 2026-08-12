@@ -391,8 +391,9 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **two claims per tier** for the first three tiers (1/10/100 Bytes), one claim per
-tier from 1000 Bytes on, each spending only that tier's own cost (not a full balance — a claim frequently
+current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
+tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+`docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
@@ -408,13 +409,20 @@ active (any surplus Memory left over carries straight into it, so a large enough
 click through several blocks in a row) — the one just spent stays in place too, now greyed out/fully
 filled to show it's consumed. Read left-to-right, the row's already-consumed (filled), one active
 (partially filled), and still-upcoming (empty) blocks together read as one continuous progress bar
-rather than a shrinking list. The very first successful transfer (clicking a block, or via the "Memory
-fills to a full block" auto-convert convenience, which fires the instant a full block's worth is
-available at once — e.g. a big offline-progress jump — and auto-transfers it in bulk, turning that
-block into a consumed one at once) unlocks the main game immediately — no need to wait for a full
-balance. **There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
-`tickIntroAutoInvest` (see `getIntroTransferBudget`) keep firing indefinitely, every time Memory
-reaches another 1000-bit/block-sized threshold, forever. The row is simply a live mirror of
+rather than a shrinking list. The very first successful transfer (clicking a block, or via
+`tickIntroAutoInvest`'s own auto-convert convenience, which fires every tick a single 1000-bit unit
+is affordable — live, block by block, the same as a manual click, not just once a whole block's
+worth accumulates at once; an earlier version waited for the latter, which made the row look
+permanently stuck on block 1 for the entire time bits climbed toward that full batch — see
+`docs/DESIGN_HISTORY.md`) unlocks the main game immediately — no need to wait for a full balance.
+**There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
+`tickIntroAutoInvest` keep firing indefinitely, every time Memory reaches another 1000-bit
+threshold, forever (capped only at completing one tier01 level per tick — the same
+"at most one level's worth per call" bound the tier autobuyers themselves use — so an extreme
+balance can't loop unboundedly in a single tick; a jump spanning more than one level finishes on
+the next tick instead). Storage's own auto-fill (see below) gets first claim on fresh Memory ahead
+of this conversion, so a bank the player has already built isn't starved of Memory it's waiting to
+be filled with. The row is simply a live mirror of
 `purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
 section used to show a redundant separate copy of the identical value and no longer does) — so the
 instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
