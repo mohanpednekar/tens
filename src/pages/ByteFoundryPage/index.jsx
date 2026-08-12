@@ -98,6 +98,22 @@ const ActionsRow = styled.div`
   width: 100%;
 `
 
+// Sacrifice and Invest are two independent, frequently-compared milestone actions — placing them
+// side by side (each taking an equal share via `flex: 1`) reads as one paired choice rather than a
+// stacked list, unlike Combine above (a one-time, mutually-exclusive action with nothing to pair
+// against). `min-width: 0` lets each button's own label ellipsis-truncate (see ButtonLabel in
+// components/Button) instead of forcing the row wider than its container at narrow viewports.
+const MilestonesRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
 // straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
 // as a row item (grow to fill available width) instead of a column item (which would instead try
@@ -466,50 +482,51 @@ const ByteFoundryPage = ({ game, onBack }) => {
           </Button>
         )}
 
-        {intro.byteCreated && (<>
-          <Button
-            aria-label="sacrifice all bits for 10x capacity"
-            disabled={!isFull}
-            onClick={actions.pickIntroCapacityMilestone}
-            title="Empty Memory for 10x capacity"
-            type="button"
-            variant={isFull ? 'prestige' : 'neutral'}
-            $progress={fullProgress}
-          >
-            <ButtonContent>💥 Sacrifice for 10x Capacity</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry sacrifice progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={intro.capacity}
-            />
-          </Button>
+        {intro.byteCreated && (
+          <MilestonesRow>
+            <Button
+              aria-label="sacrifice all bits for 10x capacity"
+              disabled={!isFull}
+              onClick={actions.pickIntroCapacityMilestone}
+              title="Empty Memory for 10x capacity"
+              type="button"
+              variant={isFull ? 'prestige' : 'neutral'}
+              $progress={fullProgress}
+            >
+              <ButtonContent>💥 ×10</ButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry sacrifice progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={intro.capacity}
+              />
+            </Button>
 
-          <Button
-            aria-label="invest bits for double production"
-            disabled={!canInvest}
-            onClick={actions.pickIntroProductionMilestone}
-            title={
-              investClaimsUsedUp
-                ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
-                : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
-            }
-            type="button"
-            variant={canInvest ? 'info' : 'neutral'}
-            $progress={investProgress}
-          >
-            <ButtonContent>⚡ Invest for Double Production ({formatAmount(investCostBytes)} B)</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry invest progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={investCost}
-            />
-          </Button>
-
-        </>)}
+            <Button
+              aria-label="invest bits for double production"
+              disabled={!canInvest}
+              onClick={actions.pickIntroProductionMilestone}
+              title={
+                investClaimsUsedUp
+                  ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
+                  : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
+              }
+              type="button"
+              variant={canInvest ? 'info' : 'neutral'}
+              $progress={investProgress}
+            >
+              <ButtonContent>⚡ ×2 ({formatAmount(investCostBytes)} B)</ButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry invest progress"
+                aria-valuenow={intro.bits}
+                aria-valuemin={0}
+                aria-valuemax={investCost}
+              />
+            </Button>
+          </MilestonesRow>
+        )}
 
       </ActionsRow>
 

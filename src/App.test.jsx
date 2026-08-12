@@ -2170,16 +2170,15 @@ test('the production rate shows a segmented block bar below 1 Byte/sec, and swit
 
 test('Invest for Double Production shows its cost in Bytes, with no stray comma from the button\'s mixed static/dynamic text', () => {
   // Regression test for a ButtonContent bug: mixing literal text with an embedded {expression}
-  // (e.g. "Invest for Double Production ({cost} B)") used to render as "...(,1, B)" — a stray
-  // comma spliced in at each JSX child boundary — because ButtonContent's `String(children)` ran
-  // Array.prototype.toString() (bare-comma join) on what's actually an array of children whenever
-  // the label mixes text with an interpolated value, not a single string. See
-  // components/Button/index.jsx's ButtonContent.
+  // (e.g. "×2 ({cost} B)") used to render as ",1, B)" — a stray comma spliced in at each JSX child
+  // boundary — because ButtonContent's `String(children)` ran Array.prototype.toString() (bare-comma
+  // join) on what's actually an array of children whenever the label mixes text with an
+  // interpolated value, not a single string. See components/Button/index.jsx's ButtonContent.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, byteCreated: true })
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Invest for Double Production (1 B)')
+  expect(investButton).toHaveTextContent('⚡ ×2 (1 B)')
   expect(investButton.textContent).not.toContain(',')
 })
 

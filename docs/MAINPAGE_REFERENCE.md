@@ -60,12 +60,16 @@ fill, so a second meter on the tap button would just duplicate it; its `backgrou
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons —
-"Sacrifice for 10x Capacity" (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless
-`bits === capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`)
-and "Invest for Double Production" (`aria-label="invest bits for double production"`, its visible
-label including its own cost **in Bytes** —
-`getIntroProductionMilestoneCost(intro.productionMilestoneTier) / BITS_PER_BYTE` — disabled unless
+INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons — placed
+side by side in their own `MilestonesRow` (`display: flex`, each button `flex: 1`) rather than
+stacked, since they're a paired choice, not a list — "Sacrifice for 10x Capacity" (visible label
+`💥 ×10`, a symbol over the full mechanic name; `aria-label="sacrifice all bits for 10x capacity"`
+still carries the full description for assistive tech, disabled unless `bits === capacity`, calling
+`actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest for Double
+Production" (visible label `⚡ ×2 ({cost} B)` — a symbol plus its own cost, since the cost itself is
+live, dynamic information worth keeping visible even in the shortened label;
+`aria-label="invest bits for double production"` carries the full description — its cost **in
+Bytes** — `getIntroProductionMilestoneCost(intro.productionMilestoneTier) / BITS_PER_BYTE` — disabled unless
 `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
 getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so the
 button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte

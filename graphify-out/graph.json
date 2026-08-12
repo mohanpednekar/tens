@@ -231,7 +231,7 @@
       "_origin": "ast",
       "id": "package",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "package.json"
     },
     {
@@ -242,7 +242,7 @@
       "_origin": "ast",
       "id": "package_name",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "name"
     },
     {
@@ -253,7 +253,7 @@
       "_origin": "ast",
       "id": "package_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "version"
     },
     {
@@ -264,7 +264,7 @@
       "_origin": "ast",
       "id": "package_private",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "private"
     },
     {
@@ -275,7 +275,7 @@
       "_origin": "ast",
       "id": "package_type",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "type"
     },
     {
@@ -286,7 +286,7 @@
       "_origin": "ast",
       "id": "package_packagemanager",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "packagemanager"
     },
     {
@@ -297,7 +297,7 @@
       "_origin": "ast",
       "id": "package_resolutions",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "resolutions"
     },
     {
@@ -308,7 +308,7 @@
       "_origin": "ast",
       "id": "package_resolutions_glob_minimatch_brace_expansion",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/glob/minimatch/brace-expansion"
     },
     {
@@ -319,7 +319,7 @@
       "_origin": "ast",
       "id": "package_resolutions_filelist_minimatch_brace_expansion",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/filelist/minimatch/brace-expansion"
     },
     {
@@ -330,7 +330,7 @@
       "_origin": "ast",
       "id": "package_resolutions_fast_uri",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/fast-uri"
     },
     {
@@ -341,7 +341,7 @@
       "_origin": "ast",
       "id": "package_resolutions_nanoid",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/nanoid"
     },
     {
@@ -351,8 +351,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "package_dependencies",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "dependencies"
     },
     {
@@ -362,8 +362,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "package_dependencies_fontsource_inter",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -373,8 +373,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "fontsource_inter",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -384,8 +384,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "package_dependencies_fontsource_space_grotesk",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -395,8 +395,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "fontsource_space_grotesk",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -406,8 +406,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "package_dependencies_react",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -417,8 +417,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "react",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -428,8 +428,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "package_dependencies_react_dom",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -439,8 +439,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "react_dom",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -450,8 +450,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "package_dependencies_react_is",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-is"
     },
     {
@@ -461,8 +461,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "react_is",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-is"
     },
     {
@@ -472,8 +472,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "package_dependencies_styled_components",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -483,8 +483,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "styled_components",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -494,8 +494,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "package_dependencies_web_vitals",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
     },
     {
@@ -505,8 +505,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "web_vitals",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
     },
     {
@@ -770,7 +770,7 @@
       "_origin": "ast",
       "id": "package_scripts",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "scripts"
     },
     {
@@ -781,7 +781,7 @@
       "_origin": "ast",
       "id": "package_scripts_start",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "start"
     },
     {
@@ -792,7 +792,7 @@
       "_origin": "ast",
       "id": "package_scripts_dev",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "dev"
     },
     {
@@ -803,7 +803,7 @@
       "_origin": "ast",
       "id": "package_scripts_build",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "build"
     },
     {
@@ -814,7 +814,7 @@
       "_origin": "ast",
       "id": "package_scripts_test",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test"
     },
     {
@@ -825,7 +825,7 @@
       "_origin": "ast",
       "id": "package_scripts_test_watch",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test:watch"
     },
     {
@@ -836,7 +836,7 @@
       "_origin": "ast",
       "id": "package_scripts_test_e2e",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test:e2e"
     },
     {
@@ -847,7 +847,7 @@
       "_origin": "ast",
       "id": "package_scripts_audit",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "audit"
     },
     {
@@ -858,7 +858,7 @@
       "_origin": "ast",
       "id": "package_scripts_gen_pwa_icons",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "gen-pwa-icons"
     },
     {
@@ -869,7 +869,7 @@
       "_origin": "ast",
       "id": "package_browserslist",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "browserslist"
     },
     {
@@ -880,7 +880,7 @@
       "_origin": "ast",
       "id": "package_browserslist_production",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "production"
     },
     {
@@ -891,7 +891,7 @@
       "_origin": "ast",
       "id": "ref_0_2",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": ">0.2%"
     },
     {
@@ -902,7 +902,7 @@
       "_origin": "ast",
       "id": "ref_not_dead",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "not dead"
     },
     {
@@ -913,7 +913,7 @@
       "_origin": "ast",
       "id": "ref_not_op_mini_all",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "not op_mini all"
     },
     {
@@ -924,7 +924,7 @@
       "_origin": "ast",
       "id": "package_browserslist_development",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "development"
     },
     {
@@ -935,7 +935,7 @@
       "_origin": "ast",
       "id": "ref_last_1_chrome_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 chrome version"
     },
     {
@@ -946,7 +946,7 @@
       "_origin": "ast",
       "id": "ref_last_1_firefox_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 firefox version"
     },
     {
@@ -957,7 +957,7 @@
       "_origin": "ast",
       "id": "ref_last_1_safari_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 safari version"
     },
     {
@@ -1024,8 +1024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "app.jsx"
     },
     {
@@ -1036,8 +1036,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_app",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "app()"
     },
     {
@@ -1243,8 +1243,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_button_index_buttoncontent",
-      "community": 39,
-      "community_name": "InfoPage/index.jsx",
+      "community": 49,
+      "community_name": "Button/index.jsx",
       "norm_label": "buttoncontent()"
     },
     {
@@ -1458,8 +1458,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatscientific",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "formatscientific()"
     },
     {
@@ -1470,8 +1470,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatamount",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "formatamount()"
     },
     {
@@ -1602,7 +1602,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockmilestone",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getautobuyerunlockmilestone()"
     },
@@ -1614,7 +1614,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettiertickspeedautobuyermilestone",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "gettiertickspeedautobuyermilestone()"
     },
@@ -1626,7 +1626,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_applyautobuyermilestones",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "applyautobuyermilestones()"
     },
@@ -1818,7 +1818,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getoverclockrequirement",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getoverclockrequirement()"
     },
@@ -2070,8 +2070,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionrate",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getintroproductionrate()"
     },
     {
@@ -2118,8 +2118,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonecost",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getintroproductionmilestonecost()"
     },
     {
@@ -2130,8 +2130,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonemaxclaims",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getintroproductionmilestonemaxclaims()"
     },
     {
@@ -2142,8 +2142,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_pickintroproductionmilestone",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "pickintroproductionmilestone()"
     },
     {
@@ -2154,8 +2154,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isintroconversionunlocked",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "isintroconversionunlocked()"
     },
     {
@@ -2214,8 +2214,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getfirsttiercost",
-      "community": 52,
-      "community_name": "isStorageBankRedeemable",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getfirsttiercost()"
     },
     {
@@ -2226,8 +2226,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebanksize",
-      "community": 52,
-      "community_name": "isStorageBankRedeemable",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getstoragebanksize()"
     },
     {
@@ -2238,8 +2238,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebankcost",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getstoragebankcost()"
     },
     {
@@ -2250,8 +2250,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buildstoragebank",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "buildstoragebank()"
     },
     {
@@ -2274,8 +2274,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstoragebankredeemable",
-      "community": 52,
-      "community_name": "isStorageBankRedeemable",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "isstoragebankredeemable()"
     },
     {
@@ -2286,8 +2286,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_redeemstoragebank",
-      "community": 52,
-      "community_name": "isStorageBankRedeemable",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "redeemstoragebank()"
     },
     {
@@ -2298,8 +2298,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickstorageautoredeem",
-      "community": 52,
-      "community_name": "isStorageBankRedeemable",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "tickstorageautoredeem()"
     },
     {
@@ -3210,8 +3210,8 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "src_game_layers_default_purchase_block_size",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "default_purchase_block_size"
     },
     {
@@ -3669,8 +3669,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_storage_test",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "storage.test.js"
     },
     {
@@ -3715,8 +3715,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_index",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "src/index.jsx"
     },
     {
@@ -3726,8 +3726,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_index_rootelement",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "rootelement"
     },
     {
@@ -3830,10 +3830,21 @@
       "norm_label": "actionsrow"
     },
     {
+      "label": "MilestonesRow",
+      "file_type": "code",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L106",
+      "_origin": "ast",
+      "id": "src_pages_bytefoundrypage_index_milestonesrow",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "milestonesrow"
+    },
+    {
       "label": "TilesRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L105",
+      "source_location": "L121",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_tilesrow",
       "community": 8,
@@ -3844,7 +3855,7 @@
       "label": "FillableStatCard",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L118",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_fillablestatcard",
       "community": 8,
@@ -3855,7 +3866,7 @@
       "label": "RateBlocksRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L129",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_rateblocksrow",
       "community": 8,
@@ -3866,7 +3877,7 @@
       "label": "RateBlock",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L136",
+      "source_location": "L152",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_rateblock",
       "community": 8,
@@ -3877,7 +3888,7 @@
       "label": "TransferBlocksRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L150",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_transferblocksrow",
       "community": 8,
@@ -3888,7 +3899,7 @@
       "label": "TransferBlock",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L166",
+      "source_location": "L182",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_transferblock",
       "community": 8,
@@ -3899,7 +3910,7 @@
       "label": "StorageSection",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L195",
+      "source_location": "L211",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesection",
       "community": 8,
@@ -3910,7 +3921,7 @@
       "label": "StorageSizeRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L209",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesizerow",
       "community": 8,
@@ -3921,7 +3932,7 @@
       "label": "StorageSizeLabel",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L217",
+      "source_location": "L233",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagesizelabel",
       "community": 8,
@@ -3932,7 +3943,7 @@
       "label": "StorageBankSquaresRow",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L223",
+      "source_location": "L239",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagebanksquaresrow",
       "community": 8,
@@ -3943,7 +3954,7 @@
       "label": "StorageBankSquare",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L238",
+      "source_location": "L254",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storagebanksquare",
       "community": 8,
@@ -3954,7 +3965,7 @@
       "label": "MEMORY_UNIT_SYMBOLS",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L272",
+      "source_location": "L288",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_memory_unit_symbols",
       "community": 8,
@@ -3965,7 +3976,7 @@
       "label": "getMemoryUnit()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L284",
+      "source_location": "L300",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_getmemoryunit",
@@ -3977,7 +3988,7 @@
       "label": "floorToDecimals()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L299",
+      "source_location": "L315",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_floortodecimals",
@@ -3989,7 +4000,7 @@
       "label": "formatMemoryAmount()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L301",
+      "source_location": "L317",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -4001,7 +4012,7 @@
       "label": "formatMemoryBalance()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L307",
+      "source_location": "L323",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -4013,7 +4024,7 @@
       "label": "STORAGE_UNIT_SYMBOLS",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L319",
+      "source_location": "L335",
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_storage_unit_symbols",
       "community": 8,
@@ -4024,36 +4035,36 @@
       "label": "formatStorageSize()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L320",
+      "source_location": "L336",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatstoragesize",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "formatstoragesize()"
     },
     {
       "label": "clampPercent()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L331",
+      "source_location": "L347",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_clamppercent",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "clamppercent()"
     },
     {
       "label": "ByteFoundryPage()",
       "file_type": "code",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L342",
+      "source_location": "L358",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "community": 50,
-      "community_name": "ByteFoundryPage",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "bytefoundrypage()"
     },
     {
@@ -4063,7 +4074,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_infopage_index",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage/index.jsx"
     },
@@ -4074,7 +4085,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_pages_infopage_index_rootdiv",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "rootdiv"
     },
@@ -4085,7 +4096,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_pages_infopage_index_header",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "header"
     },
@@ -4096,7 +4107,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_pages_infopage_index_versiontext",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "versiontext"
     },
@@ -4107,7 +4118,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_pages_infopage_index_section",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "section"
     },
@@ -4119,7 +4130,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_infopage_index_infopage",
-      "community": 39,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage()"
     },
@@ -4831,8 +4842,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_reportwebvitals",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "reportwebvitals.js"
     },
     {
@@ -4843,8 +4854,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_reportwebvitals_reportwebvitals",
-      "community": 3,
-      "community_name": "useIncrementalGame.js",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "reportwebvitals()"
     },
     {
@@ -4866,7 +4877,7 @@
       "_origin": "ast",
       "id": "src_theme_globalstyle",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "globalstyle.js"
     },
     {
@@ -4877,7 +4888,7 @@
       "_origin": "ast",
       "id": "src_theme_globalstyle_globalstyle",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "globalstyle"
     },
     {
@@ -4888,7 +4899,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "contrast.js"
     },
     {
@@ -4900,7 +4911,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_srgbchanneltolinear",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "srgbchanneltolinear()"
     },
     {
@@ -4912,7 +4923,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_relativeluminance",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "relativeluminance()"
     },
     {
@@ -4924,7 +4935,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_hextorgb",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "hextorgb()"
     },
     {
@@ -4936,7 +4947,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_getcontrastratio",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "getcontrastratio()"
     },
     {
@@ -4947,7 +4958,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_aa_normal_text",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "aa_normal_text"
     },
     {
@@ -4958,7 +4969,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_aa_large_text",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "aa_large_text"
     },
     {
@@ -4969,7 +4980,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_aa_ui_component",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "aa_ui_component"
     },
     {
@@ -4980,7 +4991,7 @@
       "_origin": "ast",
       "id": "src_theme_contrast_test",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "contrast.test.js"
     },
     {
@@ -4991,7 +5002,7 @@
       "_origin": "ast",
       "id": "src_theme_fonts",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "fonts.js"
     },
     {
@@ -5002,7 +5013,7 @@
       "_origin": "ast",
       "id": "src_theme_index",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "theme/index.jsx"
     },
     {
@@ -5014,7 +5025,7 @@
       "_origin": "ast",
       "id": "src_theme_index_themeprovider",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "themeprovider()"
     },
     {
@@ -5025,7 +5036,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_contrast_test",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "tokens.contrast.test.js"
     },
     {
@@ -5036,7 +5047,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "tokens.js"
     },
     {
@@ -5047,7 +5058,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_palette",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "palette"
     },
     {
@@ -5058,7 +5069,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_shadow",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "shadow"
     },
     {
@@ -5069,7 +5080,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_tieraccents",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "tieraccents"
     },
     {
@@ -5080,7 +5091,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_space",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "space"
     },
     {
@@ -5091,7 +5102,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_radius",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "radius"
     },
     {
@@ -5102,7 +5113,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_motion",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "motion"
     },
     {
@@ -5113,7 +5124,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_font",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "font"
     },
     {
@@ -5124,7 +5135,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_type",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "type"
     },
     {
@@ -5135,7 +5146,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_modes",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "modes"
     },
     {
@@ -5146,7 +5157,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_default_mode",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "default_mode"
     },
     {
@@ -5158,7 +5169,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_buildtheme",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "buildtheme()"
     },
     {
@@ -5169,7 +5180,7 @@
       "_origin": "ast",
       "id": "src_theme_tokens_themes",
       "community": 4,
-      "community_name": "tokens.js",
+      "community_name": "App.jsx",
       "norm_label": "themes"
     },
     {
@@ -13008,7 +13019,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L433",
+      "source_location": "L449",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -13020,7 +13031,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L303",
+      "source_location": "L319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -13032,7 +13043,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L321",
+      "source_location": "L337",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatstoragesize",
@@ -13272,7 +13283,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L363",
+      "source_location": "L379",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15756,7 +15767,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L349",
+      "source_location": "L365",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15924,7 +15935,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L351",
+      "source_location": "L367",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -15972,7 +15983,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L353",
+      "source_location": "L369",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16044,7 +16055,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L348",
+      "source_location": "L364",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16200,7 +16211,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L378",
+      "source_location": "L394",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16248,7 +16259,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L379",
+      "source_location": "L395",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -16356,7 +16367,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L382",
+      "source_location": "L398",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19350,7 +19361,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L342",
+      "source_location": "L358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19361,7 +19372,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L331",
+      "source_location": "L347",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19372,7 +19383,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L118",
+      "source_location": "L134",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19383,7 +19394,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L299",
+      "source_location": "L315",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19394,7 +19405,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L301",
+      "source_location": "L317",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19405,7 +19416,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L307",
+      "source_location": "L323",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19416,7 +19427,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L320",
+      "source_location": "L336",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19427,7 +19438,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L284",
+      "source_location": "L300",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19449,7 +19460,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L272",
+      "source_location": "L288",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19460,7 +19471,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L136",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_pages_bytefoundrypage_index",
+      "target": "src_pages_bytefoundrypage_index_milestonesrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L152",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19471,7 +19493,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L129",
+      "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19515,7 +19537,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L319",
+      "source_location": "L335",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19526,7 +19548,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L238",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19537,7 +19559,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L223",
+      "source_location": "L239",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19548,7 +19570,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L195",
+      "source_location": "L211",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19559,7 +19581,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L217",
+      "source_location": "L233",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19570,7 +19592,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L209",
+      "source_location": "L225",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19592,7 +19614,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L105",
+      "source_location": "L121",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19614,7 +19636,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L166",
+      "source_location": "L182",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19625,7 +19647,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L150",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index",
@@ -19637,7 +19659,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L308",
+      "source_location": "L324",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -19649,7 +19671,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L303",
+      "source_location": "L319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemoryamount",
@@ -19661,7 +19683,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L309",
+      "source_location": "L325",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_formatmemorybalance",
@@ -19673,7 +19695,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L422",
+      "source_location": "L438",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19685,7 +19707,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L525",
+      "source_location": "L542",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -19697,7 +19719,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L369",
+      "source_location": "L385",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -23704,5 +23726,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "762231e96e306f9ea084db53df261677660568b5"
+  "built_at_commit": "32d70ffb1e70dd75e8ff1cd964c28a7d8b8dd011"
 }
