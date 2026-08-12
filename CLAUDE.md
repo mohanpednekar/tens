@@ -440,8 +440,9 @@ nothing.
 Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
 read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
 built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
-(rightmost) — and the auto-redeem toggle together, rather than one full-width button per bank size
-stacked flat into the same list as every other action. Banks are a genuine storage **medium**, not
+(rightmost) — rather than one full-width button per bank size stacked flat into the same list as
+every other action. (A pause/resume auto-redeem toggle used to render here too; removed for now —
+see below — with a UI to reintroduce it planned for later.) Banks are a genuine storage **medium**, not
 a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
 container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
 every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
@@ -468,11 +469,15 @@ before `tier01`'s price catches up) and redeem the queued banks any time afterwa
 away if the size already matches. Redeeming grants 1 free Kilobyte unit, either by a manual click or
 automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
 fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
-**always** attempts auto-redeem, regardless of the toggle — every larger size still needs Storage's
-own auto-redeem toggle (`intro.storageAutoRedeemEnabled` — a plain preference, no PP or prerequisite
-purchase involved) enabled. Either way, a given size auto-redeems **at most once per real Prestige
-cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank that
-refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
+**always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
+own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
+involved), which now **defaults `true` for every size** (previously `false`) — `ByteFoundryPage`
+currently renders no pause/resume button for it at all (removed for now; the toggle field,
+`setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
+for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
+auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real
+Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank
+that refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
 lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
 ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
 Buy button/autobuyer purchase — visible on the transfer-block row described above (see "The very

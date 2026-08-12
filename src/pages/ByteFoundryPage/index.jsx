@@ -440,10 +440,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
   ]
     .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0 || size === storageBankSize)
     .sort((a, b) => a - b)
-  const fullStorageBankSizes = Object.keys(intro.storageBanks ?? {})
-    .map(Number)
-    .filter(size => intro.storageBanks[size] > 0)
-    .sort((a, b) => a - b)
 
   return (
     <RootDiv>
@@ -639,20 +635,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </StorageSizeRow>
             )
           })}
-
-          {fullStorageBankSizes.length > 0 && (
-            <Button
-              aria-label={intro.storageAutoRedeemEnabled ? 'pause storage auto-redeem' : 'resume storage auto-redeem'}
-              onClick={() => actions.setStorageAutoRedeemEnabled(!intro.storageAutoRedeemEnabled)}
-              title="Automatically redeems a matching bank the instant Kilobytes' level cost reaches it, no click needed (1 KB banks always auto-redeem once per cycle regardless of this toggle)"
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>
-                {intro.storageAutoRedeemEnabled ? '⏸ Pause Auto-Redeem' : '▶ Resume Auto-Redeem'}
-              </ButtonContent>
-            </Button>
-          )}
         </StorageSection>
       )}
 

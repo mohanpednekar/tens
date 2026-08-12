@@ -2499,7 +2499,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
-  test('the auto-redeem toggle appears once a bank above 1 KB is held and pauses/resumes automatic redeeming', () => {
+  test('a bank above 1 KB auto-redeems by default, with no manual click needed and no pause toggle currently shown', () => {
     vi.useFakeTimers()
 
     seedIntroState(
@@ -2508,9 +2508,11 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
 
-    const resumeButton = screen.getByRole('button', { name: /resume storage auto-redeem/i })
-    fireEvent.click(resumeButton)
-    expect(screen.getByRole('button', { name: /pause storage auto-redeem/i })).toBeInTheDocument()
+    // storageAutoRedeemEnabled defaults true (see createInitialGameState) — no toggle click
+    // needed, and there's currently no in-UI pause toggle to click even if one wanted to (planned
+    // for later — see engine.js's storageAutoRedeemEnabled comment).
+    expect(screen.queryByRole('button', { name: /pause storage auto-redeem/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /resume storage auto-redeem/i })).not.toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 

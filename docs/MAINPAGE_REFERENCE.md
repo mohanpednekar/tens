@@ -114,14 +114,16 @@ placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeemi
 doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
 pool. `isStorageBankRedeemable`'s own gate is unchanged from before this ladder existed: at or below
 tier01's *current* per-unit level cost, not a one-tick-only exact match (see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). Below the size rows, a final pause/resume-style
-toggle (`aria-label="pause storage auto-redeem"`/`"resume storage auto-redeem"`, calling
-`actions.setStorageAutoRedeemEnabled`, shown only once any size is currently full) flips
-`intro.storageAutoRedeemEnabled` — unlike every other automation toggle on this page, no prerequisite
-purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all
-(see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself (`tickStorageAutoFill`)
-has no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
-currently-fillable empty bank, smallest size first, whenever there's enough of it.
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section). No pause/resume control for auto-redeem
+currently renders below the size rows — removed for now, with a UI to reintroduce it planned for
+later (see `docs/DESIGN_HISTORY.md`); `intro.storageAutoRedeemEnabled` still exists and now defaults
+`true` for every size (previously `false`), and `actions.setStorageAutoRedeemEnabled` stays fully
+wired for whenever that control returns — unlike every other automation toggle on this page, no
+prerequisite purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own
+auto-redeem at all (see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself
+(`tickStorageAutoFill`) has no UI control at all — it's fully automatic, every tick, no toggle:
+Memory cascades into every currently-fillable empty bank, smallest size first, whenever there's
+enough of it.
 
 The section used to close with its own live progress row mirroring tier01's current purchase-block
 progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once the transfer-block row

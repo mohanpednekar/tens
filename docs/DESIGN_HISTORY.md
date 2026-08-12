@@ -822,6 +822,26 @@ that used to backfill a synthetic "fully-spent" `bitsTransferredThisCycle` value
 `mainGameUnlocked` now only need to backfill `mainGameUnlocked` itself, since there's no companion
 budget field left to keep consistent with it.
 
+### Storage auto-redeem toggle button removed for now, default flipped to always-on
+
+The Storage section shipped with a pause/resume button (`⏸ Pause Auto-Redeem`/`▶ Resume
+Auto-Redeem`) for `intro.storageAutoRedeemEnabled`, defaulting `false` — a player had to discover and
+click it before any size above 1 KB would auto-redeem. A request came in to make auto-redeem the
+default behavior for every size, deferring an actual pause/resume UI to a later, separate pass rather
+than trying to design it now.
+
+Resolved by flipping `createInitialGameState`'s default to `true` and deleting the button from
+`ByteFoundryPage` (along with the `fullStorageBankSizes` local variable that existed solely to gate
+its visibility) — but leaving every piece of underlying plumbing untouched: the
+`storageAutoRedeemEnabled` field, `setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own
+check against it all still exist exactly as before, just with no way to flip the preference from the
+UI today. `storage.js`'s save migration needed no changes — a save that never explicitly set this
+field already falls through to `fresh.intro`'s default via the generic `{...fresh.intro,
+...saved.intro}` merge, so existing saves pick up the new `true` default automatically, same as any
+new save. When the pause/resume UI returns, it can just re-add a button calling the same
+`actions.setStorageAutoRedeemEnabled` used before — nothing about the underlying mechanism needs
+revisiting, only where it renders.
+
 ### Why `getTierCost` uses a multiplier form, not a literal power
 
 An earlier version of `getTierCost` read as a literal `baseCost^fib`. This put high tiers permanently
