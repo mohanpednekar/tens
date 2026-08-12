@@ -1101,7 +1101,9 @@ export const getOfflineEffectiveSeconds = elapsedRealSeconds =>
 // Catches a save up on the time it was closed/backgrounded by replaying tickGame one simulated
 // second at a time (rather than a single call with a large elapsedSeconds) so autobuyers get the
 // same one-purchase-attempt-per-second cadence they'd have had if the game had stayed open —
-// only at 10% speed, and capped to MAX_OFFLINE_SECONDS of real time.
+// only at 50% speed, and capped to MAX_OFFLINE_SECONDS of real time. tickGame unconditionally
+// drives both the main-game tiers and the Byte Foundry (tickIntroProduction/tickIntroAutoInvest/
+// tickStorage*), so this same 50% speed and cadence apply to the entire game, not just tiers.
 export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
   const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds)
   let result = state

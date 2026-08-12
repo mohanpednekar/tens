@@ -3358,17 +3358,17 @@ describe('tickGame', () => {
 // ─── getOfflineEffectiveSeconds ──────────────────────────────────────────────
 
 describe('getOfflineEffectiveSeconds', () => {
-  it('scales elapsed real seconds down to 10%', () => {
-    expect(getOfflineEffectiveSeconds(100)).toBe(10)
+  it('scales elapsed real seconds down to 50%', () => {
+    expect(getOfflineEffectiveSeconds(100)).toBe(50)
   })
 
   it('floors a fractional result', () => {
-    expect(getOfflineEffectiveSeconds(15)).toBe(1) // 1.5 → 1
+    expect(getOfflineEffectiveSeconds(15)).toBe(7) // 7.5 → 7
   })
 
   it('caps real elapsed time at MAX_OFFLINE_SECONDS before scaling', () => {
     expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS * 10)).toBe(
-      Math.floor(MAX_OFFLINE_SECONDS * 0.1)
+      Math.floor(MAX_OFFLINE_SECONDS * 0.5)
     )
   })
 
@@ -3380,23 +3380,23 @@ describe('getOfflineEffectiveSeconds', () => {
 // ─── applyOfflineProgress ─────────────────────────────────────────────────────
 
 describe('applyOfflineProgress', () => {
-  it('produces resources for 10% of the elapsed real time', () => {
+  it('produces resources for 50% of the elapsed real time', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
-    const after = applyOfflineProgress(100)(state) // 100s real → 10 simulated seconds
-    // tensTier's own 2s tickspeed fits 5 full periods into 10 simulated seconds: 5 generators × 5
-    // periods = +25 money
-    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 25)
+    const after = applyOfflineProgress(100)(state) // 100s real → 50 simulated seconds
+    // tensTier's own 2s tickspeed fits 25 full periods into 50 simulated seconds: 5 generators ×
+    // 25 periods = +125 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 125)
   })
 
   it('is a no-op for a gap too short to register a single simulated second', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
-    const after = applyOfflineProgress(5)(state) // 0.5 simulated seconds → floors to 0
+    const after = applyOfflineProgress(1)(state) // 0.5 simulated seconds → floors to 0
     expect(after).toBe(state)
   })
 
   it('runs an active autobuyer across each simulated second, not just once', () => {
     const state = withAutobuyer(withMoney(createInitialGameState(), 100000), tensTier.id, 2)
-    const after = applyOfflineProgress(100)(state) // 10 simulated seconds/ticks
+    const after = applyOfflineProgress(20)(state) // 20s real → 10 simulated seconds/ticks
     // The autobuyer attempt rate is flat (1/tick) regardless of tickspeed level (see tickGame) —
     // 10 simulated ticks fire exactly 10 purchases, one per tick, rather than bought in one lump
     // sum.

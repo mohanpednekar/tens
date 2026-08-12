@@ -164,9 +164,10 @@ export const STORAGE_BUILD_COST_MULTIPLIER = 10
 export const STORAGE_BANK_LADDER_CAP = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
-// simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
-// autobuyer loop outrun active play.
-export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
+// simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
+// alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short
+// absences, not a way to make the autobuyer loop outrun active play.
+export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60

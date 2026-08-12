@@ -441,18 +441,18 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
   expect(screen.getByRole('heading', { level: 3, name: /^kilobytes$/i })).toBeInTheDocument()
 })
 
-test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
+test('applies offline progress at 50% speed based on elapsed time since the last save', () => {
   seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  // 100 real seconds ago → 10 simulated seconds at 10% speed → Kilobytes delivers every 2s, so 5
-  // deliveries land in that window → 5 Kilobytes × 5 deliveries = +25 money
+  // 100 real seconds ago → 50 simulated seconds at 50% speed → Kilobytes delivers every 2s, so 25
+  // deliveries land in that window → 5 Kilobytes × 25 deliveries = +125 money
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('25 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('125 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
