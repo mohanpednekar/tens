@@ -89,7 +89,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1145,6 +1145,15 @@ describe('tickComputeCoreConversion', () => {
     expect(after.intro.computeCores).toBe(5)
   })
 
+  it('is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP, even with Memory full and unlocked', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      computeCores: COMPUTE_ENTITY_CAP,
+    })
+    expect(tickComputeCoreConversion(state)).toBe(state)
+  })
+
   it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
@@ -1185,6 +1194,24 @@ describe('tickComputeNodeConversion', () => {
     const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_CORES_PER_NODE, computeNodes: 7 })
     const after = tickComputeNodeConversion(state)
     expect(after.intro.computeNodes).toBe(8)
+  })
+
+  it('is a same-reference no-op once computeNodes is already at COMPUTE_ENTITY_CAP, even with enough Cores to merge', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_CORES_PER_NODE * 3,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    expect(tickComputeNodeConversion(state)).toBe(state)
+  })
+
+  it('caps nodesGained at the remaining room under COMPUTE_ENTITY_CAP, leaving surplus Cores unconverted rather than overflowing Nodes past the cap', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_CORES_PER_NODE * 3, // enough for 3 more Nodes
+      computeNodes: COMPUTE_ENTITY_CAP - 1, // only room for 1 more
+    })
+    const after = tickComputeNodeConversion(state)
+    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE * 2) // only 1 group of 8 spent
   })
 })
 

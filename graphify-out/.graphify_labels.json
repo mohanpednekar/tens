@@ -38,7 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
-  "39": "clampNonNegative",
+  "39": "tickGame",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -48,12 +48,11 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "storage.js",
-  "50": "buyTier",
-  "51": "dependencies",
-  "52": "isProductionFrozen",
-  "53": "formatAmount",
-  "54": "development",
-  "55": "MainPage",
-  "56": "isStorageBankRedeemable"
+  "49": "clampNonNegative",
+  "50": "getTierCost",
+  "51": "package.json",
+  "52": "run-simulation.mjs",
+  "53": "formatBonusOrMultiplier",
+  "54": "getSmartAutobuyerCost",
+  "55": "MainPage"
 }

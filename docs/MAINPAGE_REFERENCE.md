@@ -138,10 +138,11 @@ Below Storage, once `computeCoreRevealed` (`isComputeCoreConversionUnlocked(stat
 INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`, unrelated to Storage's own `storageRevealed` gate despite
 rendering right below it), a small **Compute** section (`ComputeSection`, a `styled(StatCard)`,
 `aria-label="byte foundry compute"`) shows the current `intro.computeCores`/`intro.computeNodes`
-counts as plain status text — unlike Storage there's nothing to click here yet (see
-`tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both counters are
-fully automatic), so this is a status readout, not another action section. See
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full mechanic.
+counts as `N/COMPUTE_ENTITY_CAP` (10) plain status text — unlike Storage there's nothing to click
+here yet (see `tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both
+counters are fully automatic, and both cap at `COMPUTE_ENTITY_CAP`), so this is a status readout,
+not another action section. See docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full
+mechanic.
 
 Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small

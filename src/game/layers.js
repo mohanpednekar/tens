@@ -180,6 +180,15 @@ export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 800_000
 // intro.computeCores and intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
+// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — applies to
+// intro.computeCores/computeNodes today, and is meant to apply the same way to a future
+// computeClusters/computeNetworks/computeGrids once a later merge tier adds them (see issue #280).
+// Once an entity is at this cap, further production into it pauses entirely (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js) rather than overflowing past
+// it or silently discarding progress — Memory itself simply stays full, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Storage banks already have when nothing can consume them yet.
+export const COMPUTE_ENTITY_CAP = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry

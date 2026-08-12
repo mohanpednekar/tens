@@ -2,7 +2,7 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -651,12 +651,10 @@ const ByteFoundryPage = ({ game, onBack }) => {
         <ComputeSection aria-label="byte foundry compute">
           <SectionLabel>Compute</SectionLabel>
           <StatusText>
-            {formatAmount(intro.computeCores ?? 0)} Compute Core{(intro.computeCores ?? 0) === 1 ? '' : 's'}
-            {' · '}
-            {formatAmount(intro.computeNodes ?? 0)} Compute Node{(intro.computeNodes ?? 0) === 1 ? '' : 's'}
+            {`Compute Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Compute Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
           </StatusText>
           <StatusText>
-            {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node`}
+            {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
           </StatusText>
         </ComputeSection>
       )}

@@ -6,6 +6,7 @@ import {
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
   COMPUTE_CORES_PER_NODE,
+  COMPUTE_ENTITY_CAP,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -213,5 +214,9 @@ describe('constants', () => {
 
   it('COMPUTE_CORES_PER_NODE is 8', () => {
     expect(COMPUTE_CORES_PER_NODE).toBe(8)
+  })
+
+  it('COMPUTE_ENTITY_CAP is 10', () => {
+    expect(COMPUTE_ENTITY_CAP).toBe(10)
   })
 })

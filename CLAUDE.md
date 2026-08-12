@@ -534,8 +534,13 @@ against a larger-but-slower one. This runs every tick right after Storage's own 
 `tickIntroAutoInvest`, so it claims Memory ahead of ordinary Kilobyte conversion once unlocked and
 full, the same "first claim" priority auto-fill itself already has. Every `COMPUTE_CORES_PER_NODE`
 (8) Compute Cores then auto-convert into 1 **Compute Node** the same tick
-(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are permanent
-counters, carried over every real Prestige exactly like the Byte generator/Storage banks — pure
+(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are capped at
+`COMPUTE_ENTITY_CAP` (10 — see `layers.js`, meant to apply the same way to any future merge tier
+built on top of this): once an entity is at the cap, further production into it simply pauses
+(Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
+than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
+lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
+generator/Storage banks — pure
 counters today, with no gameplay effect yet (a further mechanic spending them — activating a
 temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
 planned as a follow-up; see the `claude-task` backlog).
@@ -631,7 +636,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (866 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (870 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

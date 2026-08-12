@@ -341,10 +341,23 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    Immediately after, every complete group of `COMPUTE_CORES_PER_NODE` (8) Compute Cores converts
    into 1 Compute Node the same tick (`tickComputeNodeConversion`), banking any remainder below
    that. Both bypass `isProductionFrozen`, same posture as every other Byte Foundry mechanic (a
-   separate currency pool, not `resources.base`). Pure counters today — no gameplay effect yet, a
-   foundation for a later mechanic to spend them on (a temporary game-speed boost, and merging Cores
-   upward into Nodes/Clusters/Networks/Grids, is planned as a follow-up). `ByteFoundryPage` shows
-   both counts in a small "Compute" section once `isComputeCoreConversionUnlocked(state)`.
+   separate currency pool, not `resources.base`).
+
+   Both `computeCores` and `computeNodes` are capped at `COMPUTE_ENTITY_CAP` (10) — meant to apply
+   the same way to any future merge tier built on top of this (Clusters/Networks/Grids). Once an
+   entity is at the cap, further production into it pauses entirely rather than overflowing past it
+   or discarding progress: `tickComputeCoreConversion` becomes a no-op once `computeCores >=
+   COMPUTE_ENTITY_CAP` (Memory simply stays full, waiting), and `tickComputeNodeConversion` caps
+   `nodesGained` at whatever room remains under the cap, leaving a Core surplus beyond that
+   unconverted rather than letting `computeNodes` exceed it — those leftover Cores then count
+   against the Core-side cap too, eventually pausing Memory-to-Core conversion once both are maxed.
+   Nothing is ever lost while capped; it simply waits for the player to spend an entity down via a
+   future spending mechanic.
+
+   Pure counters today — no gameplay effect yet, a foundation for a later mechanic to spend them on
+   (a temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids, is
+   planned as a follow-up — see issue #280). `ByteFoundryPage` shows both counts (as `N/10`) in a
+   small "Compute" section once `isComputeCoreConversionUnlocked(state)`.
 10. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
@@ -1377,16 +1390,17 @@ engine state).
                                                           // unlike every other Storage field above.
                                                           // { [capacityBits]: true } once tickStorageAutoRedeem
                                                           // has auto-redeemed that size this cycle
-    computeCores: 0,                                      // PERMANENT. Auto-incremented by
-                                                          // tickComputeCoreConversion every time Memory is full,
-                                                          // once capacity reaches
+    computeCores: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+                                                          // Auto-incremented by tickComputeCoreConversion every
+                                                          // time Memory is full, once capacity reaches
                                                           // INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — each conversion
                                                           // flushes the CURRENT capacity (not a fixed cost) for
                                                           // exactly 1 Core. A pure counter — no gameplay effect yet
-    computeNodes: 0,                                      // PERMANENT. Auto-incremented by
-                                                          // tickComputeNodeConversion every time computeCores
-                                                          // reaches COMPUTE_CORES_PER_NODE (8), which are then
-                                                          // spent. A pure counter — no gameplay effect yet
+    computeNodes: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+                                                          // Auto-incremented by tickComputeNodeConversion every
+                                                          // time computeCores reaches COMPUTE_CORES_PER_NODE (8),
+                                                          // which are then spent. A pure counter — no gameplay
+                                                          // effect yet
   },
 }
 ```
@@ -1440,8 +1454,8 @@ purchases were manual or automatic.
 | `tickStorageAutoRedeem` | `state → state` | Byte Foundry Storage: no-op unless there's an eligible size. A size is eligible if a bank of it is currently FULL, `isStorageBankRedeemable`, not already in `intro.storageAutoRedeemedSizes` this cycle, AND (it's `INTRO_BITS_PER_KILOBYTE_CONVERSION`, "1 KB" — exempt from the toggle — OR `intro.storageAutoRedeemEnabled` is true). Redeems the smallest eligible size and marks it in `storageAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (`storageAutoRedeemedSizes` resets fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemStorageBank` itself), at the very end, after every other per-tick automation (including `tickStorageAutoFill`, which runs much earlier, right after production — see the `tickGame` row above — and a possible automatic Speed Up), so it always reacts to tier01's truly final level for the tick — a bank filled earlier the same tick can still redeem the same tick |
 | `setStorageAutoRedeemEnabled` | `enabled → state → state` | Byte Foundry Storage: unconditionally sets `intro.storageAutoRedeemEnabled` — a plain preference, no prerequisite purchase (unlike `setAutoSpeedUpEnabled`/etc., which no-op until their parent automation is bought). Doesn't gate the 1 KB denomination's auto-redeem at all — see `tickStorageAutoRedeem` |
 | `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 — 100 KB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "Compute" section at all, and whether `tickComputeCoreConversion` acts. Unrelated to Storage entirely (an earlier version gated on Storage bank fullness instead — see `docs/DESIGN_HISTORY.md`) |
-| `tickComputeCoreConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op unless `isComputeCoreConversionUnlocked`, or if Memory isn't yet full (`bits < capacity`); otherwise flushes the ENTIRE current `capacity` to 0 (the same "drains the ENTIRE balance" behavior `pickIntroCapacityMilestone`/Sacrifice already has) and adds exactly 1 to `intro.computeCores` — the cost is `capacity` itself, not a fixed amount, so it grows as the player Sacrifices further. Called from `tickGame` right after `tickStorageAutoFill` and before `tickIntroAutoInvest` — the same "first claim on Memory" priority `tickStorageAutoFill` itself already has over ordinary Kilobyte conversion. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic |
-| `tickComputeNodeConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op below `COMPUTE_CORES_PER_NODE` (8) Cores; otherwise converts every complete group of 8 into 1 Compute Node, banking the remainder in `intro.computeCores`. Called from `tickGame` right after `tickComputeCoreConversion`, so freshly-minted Cores convert the same tick they're earned |
+| `tickComputeCoreConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op unless `isComputeCoreConversionUnlocked`, if Memory isn't yet full (`bits < capacity`), or if `intro.computeCores` is already at `COMPUTE_ENTITY_CAP` (10 — Memory then just stays full, waiting, rather than flushing for nothing); otherwise flushes the ENTIRE current `capacity` to 0 (the same "drains the ENTIRE balance" behavior `pickIntroCapacityMilestone`/Sacrifice already has) and adds exactly 1 to `intro.computeCores` — the cost is `capacity` itself, not a fixed amount, so it grows as the player Sacrifices further. Called from `tickGame` right after `tickStorageAutoFill` and before `tickIntroAutoInvest` — the same "first claim on Memory" priority `tickStorageAutoFill` itself already has over ordinary Kilobyte conversion. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic |
+| `tickComputeNodeConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op below `COMPUTE_CORES_PER_NODE` (8) Cores, or once `intro.computeNodes` is already at `COMPUTE_ENTITY_CAP` (10); otherwise converts complete groups of 8 into Nodes, capped at however many Nodes still fit under `COMPUTE_ENTITY_CAP` (`roomForNodes`) — a Core surplus beyond what fits is left unconverted in `intro.computeCores` rather than overflowing `computeNodes` past the cap. Called from `tickGame` right after `tickComputeCoreConversion`, so freshly-minted Cores convert the same tick they're earned |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
 | `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.prestige.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `prestigeGame` (right after incrementing `count`) and from `storage.js`'s `migrateState` on load |
@@ -1568,4 +1582,5 @@ purchases were manual or automatic.
 - `STORAGE_BANK_LADDER_CAP = 10` — Byte Foundry Storage: how many banks can ever be built at the buildable ladder's current size before it advances ×10 to the next size (see `getStorageBankSize`) — tracked via the cumulative, never-decremented `intro.storageBanksBuiltTotal`
 - `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 800_000` — Byte Foundry Compute Cores: capacity threshold (100 KB in Memory's own B/KB/MB/… scale — `BITS_PER_BYTE * 1000` per step, same convention `INTRO_STORAGE_UNLOCK_CAPACITY` uses, NOT the Storage bank-size ladder's own scale) at which `ByteFoundryPage`'s "Compute" section becomes visible and `tickComputeCoreConversion` starts acting — one Sacrifice stage past `INTRO_STORAGE_UNLOCK_CAPACITY`'s own reveal, unrelated to Storage otherwise (see `isComputeCoreConversionUnlocked`)
 - `COMPUTE_CORES_PER_NODE = 8` — Byte Foundry Compute Cores: how many Compute Cores 1 Compute Node costs (see `tickComputeNodeConversion`)
+- `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes` today, meant to apply the same way to a future Cluster/Network/Grid tier) — see `tickComputeCoreConversion`/`tickComputeNodeConversion`
 

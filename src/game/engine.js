@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -1674,9 +1674,14 @@ export const setStorageAutoRedeemEnabled = enabled => state => ({
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Once isComputeCoreConversionUnlocked, Memory automatically converts into 1 Compute Core every
-// time it's full — a same-reference no-op before that capacity, or while Memory isn't yet full.
-// The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes the
-// entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE balance"
+// time it's full — a same-reference no-op before that capacity, while Memory isn't yet full, or
+// once intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in practice Cores
+// rarely reach this on their own, since tickComputeNodeConversion drains them into a Node at 8 —
+// this guard mainly matters once Nodes themselves are capped and stop accepting more, letting
+// Cores pile up behind that). While capped, Memory simply stays full rather than flushing for
+// nothing — no progress is lost, it just waits for the player to spend a Core/Node down. The cost
+// is always the CURRENT capacity itself (not a fixed amount): converting flushes the entire
+// balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE balance"
 // behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so there's
 // never a multi-Core batch in one event). This is deliberate, not incidental: since capacity only
 // ever grows via the player's own Sacrifice clicks, a higher capacity makes each future Core cost
@@ -1690,6 +1695,7 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 export const tickComputeCoreConversion = state => {
   if (!isComputeCoreConversionUnlocked(state)) return state
   if (state.intro.bits < state.intro.capacity) return state
+  if ((state.intro.computeCores ?? 0) >= COMPUTE_ENTITY_CAP) return state
 
   return {
     ...state,
@@ -1702,11 +1708,18 @@ export const tickComputeCoreConversion = state => {
 }
 
 // Converts every complete group of COMPUTE_CORES_PER_NODE (8) Compute Cores into 1 Compute Node —
-// a same-reference no-op below that threshold. Called from tickGame right after
+// a same-reference no-op below that threshold, or once intro.computeNodes is already at
+// COMPUTE_ENTITY_CAP (10 — see layers.js). Capped at however many Nodes there's still room for
+// (roomForNodes below), so a Core surplus beyond what fits is simply left unconverted in
+// computeCores instead of overflowing computeNodes past the cap — those leftover Cores then count
+// against tickComputeCoreConversion's own COMPUTE_ENTITY_CAP guard above, eventually pausing
+// Memory-to-Core conversion too once both are maxed. Called from tickGame right after
 // tickComputeCoreConversion, so freshly-minted Cores convert the same tick they're earned.
 export const tickComputeNodeConversion = state => {
   const cores = state.intro?.computeCores ?? 0
-  const nodesGained = Math.floor(cores / COMPUTE_CORES_PER_NODE)
+  const nodes = state.intro?.computeNodes ?? 0
+  const roomForNodes = Math.max(0, COMPUTE_ENTITY_CAP - nodes)
+  const nodesGained = Math.min(roomForNodes, Math.floor(cores / COMPUTE_CORES_PER_NODE))
   if (nodesGained <= 0) return state
 
   return {
@@ -1714,7 +1727,7 @@ export const tickComputeNodeConversion = state => {
     intro: {
       ...state.intro,
       computeCores: cores - nodesGained * COMPUTE_CORES_PER_NODE,
-      computeNodes: (state.intro.computeNodes ?? 0) + nodesGained,
+      computeNodes: nodes + nodesGained,
     },
   }
 }
