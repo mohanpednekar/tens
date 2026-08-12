@@ -399,6 +399,18 @@ Doubling first halves the delivery period (like a tier's own tickspeed multiplie
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
+**Sacrifice for 10x Capacity is offered only once nothing else currently possible has been done
+first.** `isMemoryCapacityUpgradeAvailable(state)` — the actual gate `pickIntroCapacityMilestone`
+itself enforces, not just a UI-only disabled state — requires Memory to be full (`bits === capacity`)
+**and** that none of Combine into a Byte (`!byteCreated` and affordable), the current Invest tier
+(affordable and unclaimed), or a currently-buildable Storage bank is still possible with that same
+balance. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY` value and grows
+by the same `INTRO_CAPACITY_MULTIPLIER` Sacrifice's own capacity does, the two stay in lockstep by
+default — in practice this means claiming the current Invest tier is a prerequisite for Sacrificing
+again, every cycle, unless the player has pulled ahead on one ladder relative to the other. This
+doesn't change what Sacrifice itself does (still drains the entire balance to 0, still multiplies
+`capacity` by `INTRO_CAPACITY_MULTIPLIER`) — only when it's allowed to fire.
+
 Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
 on capacity, not the current balance, so conversion becomes available well before Memory itself is
 ever full), Memory can be manually converted into Kilobytes via a row of **transfer blocks** at the
@@ -636,7 +648,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (870 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

@@ -1293,10 +1293,40 @@ export const combineIntroByte = state => {
   }
 }
 
-// "Sacrifice for 10x Capacity" — requires the bit balance to be full (bits === capacity); drains
-// the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op otherwise.
+// Predicate, not a reducer: whether "Sacrifice for 10x Capacity" can actually fire right now.
+// Memory must be full (bits === capacity) AND every OTHER Byte Foundry action currently possible
+// with that same balance — Combine into a Byte, Invest for Double Production, building a Storage
+// bank — must NOT currently be possible. Capacity growth is offered only once nothing else
+// productive can be done with a full balance, so a player never skips past a cheaper, immediately
+// available upgrade just because Memory happens to be full at the same moment. References
+// getIntroProductionMilestoneCost/getIntroProductionMilestoneMaxClaims/isStorageUnlocked/
+// getStorageBankSize/getStorageBankCost, all defined further down this file — safe, since none of
+// them are called until this function itself is (well after module evaluation completes). Used by
+// pickIntroCapacityMilestone's own guard below and directly by ByteFoundryPage to disable/hide the
+// button the same way — the same "engine re-validates, UI just mirrors it" convention every other
+// action in this file already follows (see "Security notes" in CLAUDE.md).
+export const isMemoryCapacityUpgradeAvailable = state => {
+  if (state.intro.bits < state.intro.capacity) return false
+  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
+
+  const investCost = getIntroProductionMilestoneCost(state.intro.productionMilestoneTier)
+  const investClaimsUsedUp = state.intro.productionMilestoneTierClaims >= getIntroProductionMilestoneMaxClaims(state.intro.productionMilestoneTier)
+  if (state.intro.bits >= investCost && !investClaimsUsedUp) return false
+
+  if (isStorageUnlocked(state)) {
+    const storageBankCost = getStorageBankCost(getStorageBankSize(state))
+    if (state.intro.bits >= storageBankCost) return false
+  }
+
+  return true
+}
+
+// "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
+// availability gate (Memory full AND no other currently-possible action left to take first).
+// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op
+// otherwise.
 export const pickIntroCapacityMilestone = state => {
-  if (state.intro.bits < state.intro.capacity) return state
+  if (!isMemoryCapacityUpgradeAvailable(state)) return state
   return {
     ...state,
     intro: { ...state.intro, bits: 0, capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER },

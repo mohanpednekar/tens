@@ -1661,6 +1661,40 @@ This replaces the entire trigger/cost/reveal model from the previous entry:
   system's own numbers were still being worked out live in conversation; the deferred scope is
   tracked as a follow-up `claude-task` issue rather than guessed at here.
 
+### Sacrifice for 10x Capacity gated behind every other currently-possible action
+
+Requested tersely: "Offer memory capacity upgrade only after all other possible upgrades are done."
+"Memory capacity upgrade" is Sacrifice for 10x Capacity (the only action that grows `intro.capacity`
+at all); "all other possible upgrades" resolved to the two other Byte Foundry milestone-style
+actions available at the same moment — Combine into a Byte (before `byteCreated`) and Invest for
+Double Production — plus building a Storage bank once Storage is revealed. Compute Core conversion
+was deliberately excluded: it doesn't touch `capacity` at all (it spends Memory, not grows the cap),
+so it isn't a "capacity upgrade" and this gate doesn't apply to it — the pre-existing tension between
+automatic Compute Core conversion and manual Sacrifice both firing on the same "Memory is full"
+moment (see the "Compute Cores reworked" entry above) is unaffected by this change.
+
+The gate (`isMemoryCapacityUpgradeAvailable`) is enforced inside `pickIntroCapacityMilestone` itself,
+not just a disabled UI button, matching this codebase's standing "engine re-validates, UI just
+mirrors it" convention (see CLAUDE.md's "Security notes"). A non-obvious consequence worth
+remembering if this is ever revisited: Invest's own cost ladder (`getIntroProductionMilestoneCost`)
+starts at the exact same `INTRO_STARTING_CAPACITY` value and grows by the exact same
+`INTRO_CAPACITY_MULTIPLIER` `capacity` itself does — the two ladders are numerically identical unless
+the player has claimed a different number of Invest tiers than Sacrifice picks. In practice this
+means the current Invest tier is almost always simultaneously affordable the instant Memory becomes
+full, so claiming it becomes a de facto prerequisite click before every single Sacrifice, not an
+occasional one — this was accepted as the natural, intended consequence of the request rather than
+something to engineer around (e.g. by decoupling the two ladders or exempting Invest from the gate),
+since it's exactly what "offer capacity upgrade only after all other upgrades are done" means in
+practice once the two ladders are that closely coupled by construction.
+
+This broke several existing tests that had previously (correctly, before this change) asserted
+Sacrifice and Invest were fully independent and simultaneously available from a fresh starting
+balance — those tests were updated to explicitly clear the Invest-claimed gate
+(`productionMilestoneTierClaims` already at max) wherever the test's actual point was Sacrifice's
+own behavior, and to assert the new "blocked while Invest is still claimable" state directly where
+that's what the test was checking instead (`engine.test.js`'s `isMemoryCapacityUpgradeAvailable`/
+`pickIntroCapacityMilestone` suites, `App.test.jsx`'s Sacrifice/Invest integration tests).
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
