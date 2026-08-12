@@ -82,11 +82,30 @@ export const INTRO_STARTING_CAPACITY = 8
 // "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
 // 8000 → … (see pickIntroCapacityMilestone in engine.js).
 export const INTRO_CAPACITY_MULTIPLIER = 10
-// "Invest for Double Production" multiplies the production-rate multiplier by this each time it's
-// taken: 1x → 2x → 4x → … (see pickIntroProductionMilestone in engine.js).
+// The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
+// per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
+// continuous rate). "Invest for Double Production" halves this (see
+// INTRO_MIN_TICK_SPEED_SECONDS/pickIntroProductionMilestone in engine.js) each time it's taken,
+// until the tick loop's own real-time resolution can't usefully go any faster.
+export const INTRO_STARTING_TICK_SPEED_SECONDS = 1
+// Floor for the Byte generator's tickSpeedSeconds — halving the period below the live tick loop's
+// own granularity (TICK_RATE_MS, i.e. 10 ticks/sec) wouldn't actually deliver bits any faster, only
+// make tickIntroProduction's per-call math finer-grained for no observable effect. Once
+// "Invest for Double Production" would halve tickSpeedSeconds below this, it multiplies
+// productionMultiplier instead — the same "speed up delivery, then scale the batch" split
+// TIER_DEFINITIONS' own tickspeed-vs-production-multiplier distinction already uses (see
+// getEffectiveTierTickSpeedSeconds in engine.js) — so growth never stalls once the tick loop's
+// own resolution limit is reached. See pickIntroProductionMilestone in engine.js.
+export const INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000
+// "Invest for Double Production" multiplies by this each time it's taken — either dividing
+// tickSpeedSeconds (speeding up delivery) or multiplying productionMultiplier (growing the batch
+// size), whichever INTRO_MIN_TICK_SPEED_SECONDS above currently allows (see
+// pickIntroProductionMilestone in engine.js). Net effect is the same either way: bits/sec doubles.
 export const INTRO_PRODUCTION_MULTIPLIER_STEP = 2
-// The one persistent Byte generator's base passive-production rate, in bits/sec, before
-// productionMultiplier is applied (see tickIntroProduction in engine.js).
+// The Byte generator's base batch size, in bits, delivered once every tickSpeedSeconds — before
+// productionMultiplier is applied (see tickIntroProduction/getIntroProductionRate in engine.js).
+// At the starting tickSpeedSeconds (1s) and productionMultiplier (1x) this is exactly 1 bit/sec,
+// matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
@@ -97,14 +116,6 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// Once the intro bit balance reaches this (== the capacity stage reached after 3 Sacrifice picks:
-// 8 → 80 → 800 → 8000), the full balance auto-converts into Kilobytes exactly once, transitioning
-// the player into the main game (see tickIntroAutoInvest in engine.js and the page-routing logic
-// in App.jsx).
-export const INTRO_AUTO_INVEST_THRESHOLD = 8000
-// How many Kilobyte units the one-time auto-invest above grants — INTRO_AUTO_INVEST_THRESHOLD
-// converted at the INTRO_BITS_PER_KILOBYTE_CONVERSION rate.
-export const INTRO_AUTO_INVEST_KILOBYTES_GRANTED = INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
@@ -112,10 +123,78 @@ export const INTRO_AUTO_INVEST_KILOBYTES_GRANTED = INTRO_AUTO_INVEST_THRESHOLD /
 // ladder above).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
+// --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/tickStorageAutoFill/
+// redeemStorageBank/tickStorageAutoRedeem/getStorageBankSize in engine.js and intro.storageBanks/
+// storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes in
+// createInitialGameState. Banks are a genuine storage MEDIUM, not a one-shot pre-paid item:
+// building one only constructs a permanent, EMPTY container; Memory (intro.bits) then auto-fills
+// any empty container as it accumulates, smallest size first, and whatever's left over simply
+// stays as Memory's own balance. Redeeming a FULL bank grants 1 free tier01 unit once tier01's own
+// current per-unit level cost actually reaches that size, and empties the bank again — reusable,
+// not single-use. Distinct from ordinary bit-to-Kilobyte conversion (see
+// convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a bank's contents came from
+// Memory via auto-fill, not a further transfer out of it at redeem time.
+// Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
+// "never lost," and a full bank's contents ride through a real Prestige untouched even though
+// Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
+// until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
+// per step — see ByteFoundryPage's getMemoryUnit — not the 1000-bits-per-"KB" scale the bank-size
+// ladder above uses) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 → 8000 → 80000 via
+// Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed only once the
+// player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
+export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
+// A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
+// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
+// bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
+// conversion. This cost only ever pays for the empty container — it is NOT what fills it.
+export const STORAGE_BUILD_COST_MULTIPLIER = 10
+// The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
+// level) for level 1, 2, 3, …) rather than a synthetic ×10 progression — offers tier01's level-1
+// cost (1000 bits, "1 KB") until STORAGE_BANK_LADDER_CAP of them have ever been built, then
+// tier01's level-2 cost (10,000 bits, "10 KB") until another STORAGE_BANK_LADDER_CAP, and so on
+// (see getStorageBankSize in engine.js). Because getCostEpochExponent's triangular-number exponent
+// sequence (1, 2, 4, 7, 11, …) skips values as levels increase, this ladder skips sizes too — e.g.
+// tier01's level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can
+// never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
+// (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
+// ahead of or fall behind tier01's actual price, with isStorageBankRedeemable the only gate on
+// whether a built bank is spendable yet. The ladder only ever advances — it's driven by
+// intro.storageBanksBuiltTotal, a cumulative count that redeeming a bank never decrements.
+export const STORAGE_BANK_LADDER_CAP = 10
+
+// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
+// costed a Compute Core at a fixed 10 MB of Memory, gated on every Storage bank size being built
+// and full first — superseded by the dynamic model below, which has no relationship to Storage at
+// all; see docs/DESIGN_HISTORY.md for why.
+//
+// Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
+// below activates — 100 KB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
+// step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
+// own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
+// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 800_000
+// 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
+// intro.computeCores and intro.computeNodes are permanent counters, carried over every real
+// Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
+export const COMPUTE_CORES_PER_NODE = 8
+// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — applies to
+// intro.computeCores/computeNodes today, and is meant to apply the same way to a future
+// computeClusters/computeNetworks/computeGrids once a later merge tier adds them (see issue #280).
+// Once an entity is at this cap, further production into it pauses entirely (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js) rather than overflowing past
+// it or silently discarding progress — Memory itself simply stays full, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Storage banks already have when nothing can consume them yet.
+export const COMPUTE_ENTITY_CAP = 10
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
-// simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
-// autobuyer loop outrun active play.
-export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
+// simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
+// alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short
+// absences, not a way to make the autobuyer loop outrun active play.
+export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60

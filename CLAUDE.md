@@ -223,20 +223,28 @@ src/
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
+                               JSX), extracted so both MainPage and ByteFoundryPage can render it —
+                               offline progress already applies to the Byte Foundry mechanically
+                               regardless of page, this just makes the notice itself page-agnostic
+                               too. Full contract: `docs/COMPONENTS_REFERENCE.md`
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
     ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen — a mandatory gate before each
-                               Prestige cycle's auto-invest transition into the main game (see "Economy
+                               Prestige cycle's transition into the main game (see "Economy
                                model" below and `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section),
-                               and, once that cycle's `intro.completed` is true, a permanent screen the
-                               player can voluntarily revisit at any time via MainPage's own "⚙️ Byte
-                               Foundry" link. Takes an `onBack` prop (only passed once `intro.completed`
-                               — the mandatory gate itself has no way out); when set, every action
-                               button is hidden in favor of a read-only stats review and a "← Back to
-                               game" exit, since every action is a guaranteed engine no-op once
-                               `intro.completed`. Receives the full `game` object (`{ state, actions,
-                               ... }` from `useIncrementalGame`) as a prop, same as MainPage
+                               and, once that cycle's `intro.mainGameUnlocked` is true (the first bits
+                               ever converted into Kilobytes this cycle — well before the transfer
+                               budget is exhausted), a permanent screen the player can voluntarily
+                               revisit at any time via MainPage's own "⚙️ Byte Foundry" link. Takes an
+                               `onBack` prop (only passed once `intro.mainGameUnlocked` — the mandatory
+                               gate itself has no way out); nothing here ever goes read-only —
+                               Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
+                               Convert stays live too — there is no per-cycle transfer cap at all, only
+                               tier01's own live purchase-block progress (see below). Receives
+                               the full `game` object (`{ state, actions, ... }` from
+                               `useIncrementalGame`) as a prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
                                (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
@@ -272,18 +280,19 @@ src/
                                (`'game'`/`'info'`/`'foundry'`, default `'game'`) — not a routing library,
                                same "local toggle, not real routing" convention MainPage's own
                                Game/Upgrades/Milestones view tabs already use. Which screen actually
-                               renders is a derived `showingFoundry = page !== 'info' && (!intro.completed
+                               renders is a derived `showingFoundry = page !== 'info' && (!intro.mainGameUnlocked
                                || page === 'foundry')` check, not `page` directly: ByteFoundryPage is both
-                               a *mandatory gate* (whenever `intro.completed` is false — no fresh
+                               a *mandatory gate* (whenever `intro.mainGameUnlocked` is false — no fresh
                                Kilobytes without tapping through it, see "Economy model" below) and, once
-                               completed, a *permanent, voluntarily-revisitable screen* reachable at any
+                               unlocked, a *permanent, voluntarily-revisitable screen* reachable at any
                                time via MainPage's own "⚙️ Byte Foundry" link (`page = 'foundry'`) to
                                review the current cycle's stats — it no longer disappears once passed.
                                `'info'` is excluded from the gate override, so a Prestige/Reset firing
                                while the Guide page is open doesn't yank the player off it — the gate
                                picks back up the instant they click back to `'game'`. Since `page` is
-                               independent of `intro.completed`, no syncing effect is needed at all: the
-                               gate resolving just reveals whatever `page` already was (typically `'game'`)
+                               independent of `intro.mainGameUnlocked`, no syncing effect is needed at
+                               all: the gate resolving just reveals whatever `page` already was
+                               (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -347,10 +356,11 @@ Strict three-layer separation:
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
    taking `game` (and an optional `onBack`) as props. It's the only way any Prestige cycle ever earns
    its first Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.completed` is false, with no way out. Once that cycle's
-   `intro.completed` flips true, it stops being a gate and becomes a permanent screen the player can
-   voluntarily reopen at any time (MainPage's "⚙️ Byte Foundry" link), shown read-only with a
-   `onBack`-driven exit back to MainPage.
+   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false, with no way out. Once
+   that cycle's `intro.mainGameUnlocked` flips true (the first bits ever converted into Kilobytes
+   this cycle), it stops being a gate and becomes a permanent screen the player can voluntarily
+   reopen at any time (MainPage's "⚙️ Byte Foundry" link), with an `onBack`-driven exit back to
+   MainPage — but it stays just as interactive either way, nothing here ever goes read-only.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
@@ -372,16 +382,180 @@ only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` 
 `docs/DESIGN_HISTORY.md` for why.
 
 Bytes are no longer a purchasable tier — they were pulled out of `TIER_DEFINITIONS` entirely in favor of
-the **Byte Foundry**, a separate pre-game tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above)
-that every fresh save must complete before the main game (`tier01` = Kilobytes onward) is reachable at
-all. The player taps to accumulate bits (capped at a capacity, starting at 8), combines their first 8 into
-a permanent Byte generator (which then produces bits passively), and grows two independent tracks each
-time the balance fills: sacrificing the full balance for 10x capacity, or spending the current capacity's
-worth of bits (without requiring fullness, and without draining beyond that cost) to double the Byte's
-production rate. Once capacity reaches 1000, bits can be manually converted (1000 bits → 1 Kilobyte) or,
-once the balance reaches 8000, the whole balance auto-converts into 8 Kilobytes exactly once — the
-one-time transition into the main game. Full state shape, engine functions, and constants: see the "Byte
-Foundry" section of `docs/ECONOMY_REFERENCE.md`.
+the **Byte Foundry**, a separate tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above) that
+every fresh save — and every real Prestige cycle after that — must pass through before the main game
+(`tier01` = Kilobytes onward) is reachable. The player taps to accumulate bits into "Memory" (capped at a
+capacity, starting at 8 bits = 1 Byte), combines their first 8 into a permanent Byte generator (which then
+produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 second, like a tier's own
+`baseTickSpeedSeconds`), and grows two independent tracks each time Memory fills: sacrificing the full
+balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
+independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
+step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
+current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
+tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+`docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
+doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
+Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
+loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
+always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
+
+**Sacrifice for 10x Capacity is offered only once nothing else currently possible has been done
+first.** `isMemoryCapacityUpgradeAvailable(state)` — the actual gate `pickIntroCapacityMilestone`
+itself enforces, not just a UI-only disabled state — requires Memory to be full (`bits === capacity`)
+**and** that none of Combine into a Byte (`!byteCreated` and affordable), the current Invest tier
+(affordable and unclaimed), or a currently-buildable Storage bank is still possible with that same
+balance. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY` value and grows
+by the same `INTRO_CAPACITY_MULTIPLIER` Sacrifice's own capacity does, the two stay in lockstep by
+default — in practice this means claiming the current Invest tier is a prerequisite for Sacrificing
+again, every cycle, unless the player has pulled ahead on one ladder relative to the other. This
+doesn't change what Sacrifice itself does (still drains the entire balance to 0, still multiplies
+`capacity` by `INTRO_CAPACITY_MULTIPLIER`) — only when it's allowed to fire.
+
+Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
+on capacity, not the current balance, so conversion becomes available well before Memory itself is
+ever full), Memory can be manually converted into Kilobytes via a row of **transfer blocks** at the
+bottom of the screen — always `getPurchaseBlockSize(state)` of them, one per unit of tier01's
+(Kilobytes') own current purchase block. Each block's own cost is `getIntroKilobyteConversionCost(state)`
+— tier01's own **current** real per-unit level cost (`getTierCost(TIER_DEFINITIONS[0], level)`), not a
+flat rate: exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000 bits) at a fresh cycle's starting level,
+but it steps up in lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2,
+and so on) — an earlier version stayed pinned at the flat 1000-bit rate forever, undervaluing a
+transfer once tier01's real price had grown past it; see `docs/DESIGN_HISTORY.md`. Only the leftmost
+not-yet-transferred (active) block is ever clickable, and clicking it transfers just that block,
+revealing the next as active (any surplus Memory left over carries straight into it, so a large enough
+balance lets you click through several blocks in a row) — the one just spent stays in place too, now
+greyed out/fully filled to show it's consumed. Read left-to-right, the row's already-consumed (filled),
+one active (partially filled), and still-upcoming (empty) blocks together read as one continuous
+progress bar rather than a shrinking list. The very first successful transfer (clicking a block, or via
+`tickIntroAutoInvest`'s own auto-convert convenience, which fires every tick a single unit is
+affordable at its current cost — live, block by block, the same as a manual click, not just once a
+whole block's worth accumulates at once; an earlier version waited for the latter, which made the row
+look permanently stuck on block 1 for the entire time bits climbed toward that full batch — see
+`docs/DESIGN_HISTORY.md`) unlocks the main game immediately — no need to wait for a full balance.
+**There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
+`tickIntroAutoInvest` keep firing indefinitely, every time Memory reaches another unit's worth at
+whatever tier01's current per-unit cost is, forever (capped only at completing one tier01 level per
+tick — the same "at most one level's worth per call" bound the tier autobuyers themselves use — so an
+extreme balance can't loop unboundedly in a single tick; a jump spanning more than one level finishes on
+the next tick instead). Storage's own auto-fill (see below) gets first claim on fresh Memory ahead
+of this conversion, so a bank the player has already built isn't starved of Memory it's waiting to
+be filled with. The row is simply a live mirror of
+`purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
+section used to show a redundant separate copy of the identical value and no longer does) — so the
+instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
+over to a fresh, empty set of blocks tracking the *next* level
+rather than sitting permanently "consumed." (A real Prestige still resets every tier's
+`purchaseLevels`/`purchaseLevelProgress` — including tier01's — back to a fresh level 1 (see
+`prestigeGame` in `engine.js`), so the row does still start over each cycle in practice, just as a
+side effect of that general reset, not because of any transfer-specific budget field.)
+Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/Invest/Storage/Convert all
+stay live indefinitely, every cycle.
+
+The page renders a single, button-style filling tile, **Memory** (the balance itself, `bits /
+capacity`, both scaled into the largest appropriate unit — raw bits before the Byte generator exists
+(capacity is always exactly 8 bits/1 Byte until then, so there's nothing to meaningfully denominate
+in yet), then B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier
+symbols; the unit conversion floors rather than rounds, same never-overstate rationale as
+`formatCurrency`, so a balance never reads as a complete unit — e.g. "1 KB" — one tick before it
+actually is). The Tap button carries no progress fill/hidden progressbar of its own — Memory's own
+tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
+nothing.
+
+**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest) — hidden
+entirely until Memory's own capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own
+B/KB/MB/… scale, 80,000 bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than
+the Kilobyte-transfer row's own 1000-bit gate, since Storage is a later-game mechanic. Once revealed,
+it groups the Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size
+ever reached —
+read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
+built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
+(rightmost) — rather than one full-width button per bank size stacked flat into the same list as
+every other action. (A pause/resume auto-redeem toggle used to render here too; removed for now —
+see below — with a UI to reintroduce it planned for later.) Banks are a genuine storage **medium**, not
+a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
+container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
+every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
+through every currently-fillable size in one pass before whatever's left over simply stays as
+Memory's own balance. The buildable size is its own **independent ladder** (`getStorageBankSize`),
+decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own per-unit **level cost
+sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
+progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
+been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
+redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
+(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
+bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
+ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
+is a separate check (`isStorageBankRedeemable`): it's redeemable (clickable) only when its size
+**exactly matches** `tier01`'s *current* per-unit level cost — a genuine one-tick-only exact match,
+not "at or below" (an earlier version used `<=`; see `docs/DESIGN_HISTORY.md` for why that
+undervalued a bank once tier01's real price had grown past its size, the same problem the transfer
+block's own dynamic cost above fixes). Because `tier01`'s own autobuyer can complete more than one
+level in a single tick (an attempt budget catching up after a broke/paused stretch), a burst can jump
+the level straight past the one a bank was sized for without its price ever exactly equaling that
+size mid-tick — such a bank simply waits, still full and not lost, since `tier01`'s per-unit cost only
+ever grows *within* a cycle; the next Speed Up/Overclock/Prestige resets its level back down and its
+price grows back up through that exact value again, making the bank redeemable once more. This lets a
+player bank ahead of a purchase burst (building — and letting Memory fill — at today's ladder size
+before `tier01`'s price catches up) and redeem the queued banks the moment the price matches, or right
+away if it already does. Redeeming grants 1 free Kilobyte unit, either by a manual click or
+automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
+fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
+**always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
+own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
+involved), which now **defaults `true` for every size** (previously `false`) — `ByteFoundryPage`
+currently renders no pause/resume button for it at all (removed for now; the toggle field,
+`setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
+for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
+auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real
+Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank
+that refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
+lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
+ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
+Buy button/autobuyer purchase — visible on the transfer-block row described above (see "The very
+first successful transfer" paragraph), the only place this page shows that progress; the Storage
+section itself no longer duplicates it in a separate row.
+
+**The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
+cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the
+auto-redeem preference — but NOT `storageAutoRedeemedSizes`, which resets every real Prestige) are
+permanent, carried over by every real Prestige** — a bank already full when Prestige fires stays
+full, its contents intact even though Memory itself resets, giving a fresh cycle a head start
+(immediately redeemable once `tier01`'s fresh level 1 cost matches). Only Memory (the current bit
+balance), the main-game-unlock gate, and tier01's own purchase-block progress (which the transfer row
+mirrors — see above) reset each cycle, so returning cycles
+are a fast pit-stop, not a full
+replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
+soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
+`docs/ECONOMY_REFERENCE.md`.
+
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
+Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
+gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
+(an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB
+cost; superseded, see `docs/DESIGN_HISTORY.md`). The cost is always the **current capacity itself**,
+not a fixed amount: a conversion flushes the entire balance to 0, exactly like Sacrifice for 10x
+Capacity's own full-balance drain, and always grants exactly 1 Core per flush (`bits` can never
+exceed `capacity`, so there's never a multi-Core batch in one event). Since capacity only grows via
+the player's own Sacrifice clicks, a higher capacity makes each future Core cost more (a bigger
+flush) without changing what a Core grants — the player decides how far to keep Sacrificing before
+letting automatic Core conversion take over instead, trading a smaller-but-more-frequent Core rate
+against a larger-but-slower one. This runs every tick right after Storage's own auto-fill and before
+`tickIntroAutoInvest`, so it claims Memory ahead of ordinary Kilobyte conversion once unlocked and
+full, the same "first claim" priority auto-fill itself already has. Every `COMPUTE_CORES_PER_NODE`
+(8) Compute Cores then auto-convert into 1 **Compute Node** the same tick
+(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are capped at
+`COMPUTE_ENTITY_CAP` (10 — see `layers.js`, meant to apply the same way to any future merge tier
+built on top of this): once an entity is at the cap, further production into it simply pauses
+(Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
+than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
+lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
+generator/Storage banks — pure
+counters today, with no gameplay effect yet (a further mechanic spending them — activating a
+temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
+planned as a follow-up; see the `claude-task` backlog).
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -474,7 +648,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (734 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -482,8 +656,10 @@ already cover the genuinely useful items on that checklist.
   save's `resources.Ones` balance is migrated to `resources.base` on load, and a save from before the tier
   ladder shifted has its per-tier data shifted down one slot (old `tier02`/Kilobytes → new `tier01`, …,
   old `tier01`/Bytes dropped entirely) — gated on the same one-time `intro === undefined` signal that
-  also backfills `intro.completed: true` for such a save (see `storage.js`'s `migrateState`/
-  `shiftOldTierIds`). `src/theme/contrast.js` (a
+  also backfills `intro.mainGameUnlocked: true` for such a save (see `storage.js`'s
+  `migrateState`/`shiftOldTierIds`); a separate, narrower backward-compat case backfills
+  `mainGameUnlocked` from an old boolean `intro.completed` field for a save that predates the
+  `mainGameUnlocked` field but already has its own `intro`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
@@ -503,7 +679,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (724, see "Testing" above) is unaffected by anything under `e2e/`.
+  (843, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
@@ -544,7 +720,10 @@ the shipped app — nothing under `graphify-out/` is imported by `src/`.
 The graph has been built and `graphify-out/` is committed so every session starts from the same map;
 per Graphify's own convention, `graphify-out/cost.json` and the two machine-local staging files
 `.graphify_python`/`.graphify_root` are gitignored (see `.gitignore`) — every graphify subcommand
-regenerates the latter two on demand if missing. The initial build (`graphify extract . --code-only`)
+regenerates the latter two on demand if missing. `graphify update` also auto-backs up "curated" files
+(community labels, etc.) into a dated `graphify-out/YYYY-MM-DD/` folder immediately before it would
+overwrite them; that's a local rollback safety net too, not a project artifact, so it's gitignored the
+same way rather than committed and deleted by hand after each run. The initial build (`graphify extract . --code-only`)
 covered code only; a subsequent `graphify update .` picked up this repo's markdown docs too (structural
 parsing — headings/links — not LLM semantic extraction, so still 0 token cost either way), so the graph
 now spans both source and docs.

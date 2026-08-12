@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
+import { applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -19,7 +19,7 @@ const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 // (with offline progress already folded in, if applicable) and a summary of that offline
 // progress for the UI to report — or null if there was no prior save, no recorded last-save
 // timestamp (an older save, or one that was never actually saved), or the gap was too short to
-// register even a single simulated second at 10% speed.
+// register even a single simulated second at 50% speed.
 const computeInitialGame = () => {
   const loaded = loadGameState()
   if (!loaded) return { state: createInitialGameState(), offlineProgress: null }
@@ -82,6 +82,9 @@ export const useIncrementalGame = () => {
     pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),
     pickIntroProductionMilestone: () => setState(pickIntroProductionMilestone),
     convertIntroBitsToKilobytes: () => setState(convertIntroBitsToKilobytes),
+    buildStorageBank: () => setState(buildStorageBank),
+    redeemStorageBank: capacityBits => setState(redeemStorageBank(capacityBits)),
+    setStorageAutoRedeemEnabled: enabled => setState(setStorageAutoRedeemEnabled(enabled)),
   }), [])
 
   const resetGame = useCallback(() => {

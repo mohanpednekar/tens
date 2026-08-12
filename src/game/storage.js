@@ -152,16 +152,32 @@ const migrateState = saved => {
     derivedPurchaseLevelProgress[tierId] = legacyPurchased - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
   })
   // A save from before the Byte Foundry intro existed has no `intro` field at all — such a player
-  // already has real main-game progress (owned tiers, PP, etc.), so backfill completed: true and
-  // send them straight to MainPage rather than making them play the intro from scratch; every
-  // other intro field is irrelevant once completed is true but kept whole via fresh's defaults
-  // regardless. A save that already has its own `intro` (this feature already existed for it)
-  // merges normally, untouched by this case. A truly fresh browser (loadGameState returns null,
+  // already has real main-game progress (owned tiers, PP, etc.), so backfill
+  // mainGameUnlocked: true and send them straight to MainPage rather than making them play the
+  // intro from scratch; every other intro field is irrelevant once mainGameUnlocked is true but
+  // kept whole via fresh's defaults regardless. A truly fresh browser (loadGameState returns null,
   // this function never runs at all) still gets createInitialGameState's real
-  // intro.completed: false default and sees the intro.
+  // intro.mainGameUnlocked: false default and sees the intro.
+  //
+  // A save that already has its own `intro` (this feature already existed for it) merges
+  // normally — EXCEPT one further backward-compat case: a save from between the Byte Foundry's
+  // original release and this mainGameUnlocked field's introduction has an old boolean
+  // `completed` field but no `mainGameUnlocked` key at all. Naively merging such a save would
+  // silently default mainGameUnlocked to fresh's `false`, sending an already-unlocked player back
+  // through the mandatory gate — so that case is backfilled explicitly from the old `completed`
+  // value instead. The stale `completed` key itself is left in place afterward (harmless once
+  // nothing reads it, same as any other superseded field elsewhere in this file). A save that
+  // already has `mainGameUnlocked` (post-this-change) needs no such backfill and merges normally.
+  const introPredatesMainGameUnlocked = saved.intro !== undefined && saved.intro.mainGameUnlocked === undefined
   const migratedIntro = isPreByteFoundrySave
-    ? { ...fresh.intro, completed: true }
-    : { ...fresh.intro, ...saved.intro }
+    ? { ...fresh.intro, mainGameUnlocked: true }
+    : {
+      ...fresh.intro,
+      ...saved.intro,
+      ...(introPredatesMainGameUnlocked ? {
+        mainGameUnlocked: saved.intro.completed === true,
+      } : {}),
+    }
 
   // applyAutobuyerMilestones (see engine.js) retroactively unlocks any tier autobuyer/tier-
   // tickspeed-autobuyer a save's prestige.count already qualifies for under the new

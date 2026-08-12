@@ -9,54 +9,209 @@ evergreen *explanation* (what used to live inline here as click-to-expand `InfoD
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
 link beside the page title; see CLAUDE.md's Architecture section for the split and
 `onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered while the Byte Foundry gate isn't
-active — i.e. `state.intro.completed` is true and the player hasn't voluntarily navigated to
+active — i.e. `state.intro.mainGameUnlocked` is true and the player hasn't voluntarily navigated to
 `ByteFoundryPage` via its own "⚙️ Byte Foundry" link (`onOpenFoundry` prop) — see "Byte Foundry
 page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
 
 **Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The tap screen — a separate, much
 simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
-view-tab system of its own. It serves two roles, switched on `state.intro.completed`:
+view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
+renders identically whether reached as the mandatory gate or voluntarily; `onBack` (present only
+once `state.intro.mainGameUnlocked` is true) is the only thing that differs.
 
-- **Mandatory gate** (`intro.completed === false`, no `onBack` prop passed): the full interactive
-  screen. Sections, top to bottom: a title/one-line explainer; a `StatCard`
-  (`aria-label="byte foundry balance"`) showing `{bits} / {capacity}` plus a hidden
-  `role="progressbar"` (`aria-label="byte foundry bit balance"`) and, once `intro.byteCreated`, a
-  passive-production status line; a large tap button (`aria-label="tap to generate a bit"`,
-  disabled once `bits >= capacity`) calling `actions.tapIntroBit`; a "Combine into a Byte" button
-  (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`) shown only while
-  `!byteCreated && bits >= INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two
-  independently-gated milestone buttons — "Sacrifice for 10x Capacity"
-  (`aria-label="sacrifice all bits for 10x capacity"`, disabled unless `bits === capacity`, calling
-  `actions.pickIntroCapacityMilestone`) and "Invest for Double Production"
-  (`aria-label="invest bits for double production"`, disabled unless `bits >= capacity`, calling
-  `actions.pickIntroProductionMilestone`) — rendered as ordinary, independent buttons with no
-  coupling between their enabled states, matching the engine-level correction that these two
-  offers are not mutually exclusive (see docs/ECONOMY_REFERENCE.md's "Byte Foundry"); a "Convert
-  to a Kilobyte" button (`aria-label="convert 1000 bits into 1 Kilobyte"`, calling
-  `actions.convertIntroBitsToKilobytes`) shown while `isIntroConversionUnlocked(state) && bits >=
-  INTRO_BITS_PER_KILOBYTE_CONVERSION`; and a "next phase indicator"
-  (`aria-label="next phase indicator"`) shown once `isIntroConversionUnlocked(state)`. The
-  8000-bit auto-invest transition itself needs no button or handler here at all — it fires from
-  `tickIntroAutoInvest` inside the shared tick loop (see `useIncrementalGame`), and `App.jsx`'s own
-  `showingFoundry` render check reveals whatever page the player was last on (typically `'game'`)
-  the instant `intro.completed` flips true.
-- **Voluntary review** (`intro.completed === true`, reached via MainPage's "⚙️ Byte Foundry" link,
-  `onBack` prop passed): every action button above is hidden — each is a guaranteed engine no-op
-  once `intro.completed` (see the functions' own `if (state.intro.completed) return state` guards
-  in `engine.js`) — replaced by a completion message and a "← Back to game" button
-  (`aria-label="Back to game"`, same convention as `InfoPage`'s own back button, calling `onBack`).
-  The balance `StatCard` still renders, showing this cycle's frozen final stats (bits/capacity/
-  production multiplier as they stood when `intro.completed` was set); the passive-production line
-  and "next phase indicator" are hidden since neither applies anymore.
+Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
+`docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
+non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
+catch up correctly during offline progress regardless of which page is active, so this page shows
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a `Header` row
+(`display: flex`, `justify-content: space-between`, the same title/nav-link placement convention
+`MainPage`'s own `<Header>` and `InfoPage`'s own `<Header>` already use) pairing the page title with
+a "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
+button, calling `onBack`) — shown only once `onBack` is passed, i.e. only when reached voluntarily
+post-`mainGameUnlocked`, since the mandatory gate has no way out — rather than the exit sitting alone
+at the bottom of the page; a one-line status explainer below that (two variants — pre-unlock
+instructions, or a post-unlock acknowledgment that transfers keep working indefinitely, with no
+per-cycle cap to run into); a `TilesRow` (flex row) holding a single `FillableStatCard`
+— a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
+directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
+visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
+= `bits / capacity`), has a "Memory" label above `{bits} / {capacity}` — both numbers scaled into
+the same unit, picked off `capacity` (raw bits before the Byte generator exists, since before that
+capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
+B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier symbols — see
+"Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
+balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
+paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
+rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
+at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
+(`getIntroProductionRate(intro) / BITS_PER_BYTE`). There is no separate Cache tile — the same
+progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
+read directly off the active transfer block's own fill (see below).
 
-Numbers are formatted in **Bytes** (`bits ÷ BITS_PER_BYTE`, always a clean whole number) once
-`byteCreated` is true, and in raw bits before that (`formatBitBalance` helper, local to this file)
-— a display-only convention, internal state always stores raw bit counts. This page reappears
-every time a real Prestige resets `intro` back to fresh defaults (see `prestigeGame` in
-docs/ECONOMY_REFERENCE.md) — it's not a one-time-ever gate, it sets the pace for every run — and,
-once completed, persists as a screen the player can return to at any time rather than disappearing
-for the rest of the cycle.
+A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
+capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
+(Actions/Storage/transfer blocks), rather than up near the Memory tile, since once `byteCreated`
+passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
+as clickable either way, and never shrinks or changes size. Deliberately carries no `$progress` fill
+or hidden progressbar of its own — Memory's own tile above already shows the identical bits/capacity
+fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
+(`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
+used to double as the button's base fill). A "Combine into a
+Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
+`$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
+INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons — placed
+side by side in their own `MilestonesRow` (`display: flex`, each button `flex: 1`) rather than
+stacked, since they're a paired choice, not a list. Each renders its own two-line
+`MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
+`components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
+of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
+activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
+than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥 Memory ×10` — "Memory"
+matching the same term the balance tile above already uses for `capacity`, so the button's purpose
+reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
+Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
+capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
+`canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine/Invest/a buildable
+Storage bank must all be currently impossible too), with a `title` that names what to do first
+(`"Take every other currently-available upgrade first…"`) when the balance is full but the button
+is still disabled for that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
+`capacity`) and "Invest
+for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
+this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
+keeping visible even in the shortened label; `aria-label="invest bits for double production"`
+carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
+— disabled unless `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims
+< getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so
+the button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
+each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
+progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
+`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
+
+Once `isStorageUnlocked(state)` — Memory's own capacity has reached `INTRO_STORAGE_UNLOCK_CAPACITY`
+(10 KB in Memory's own scale, 80,000 bits; see `game/layers.js`), a later, more deliberate reveal
+than `revealed`'s own 1000-bit gate above (`storageRevealed` locally) — a separate labeled
+**Storage** section (`StorageSection`, a `styled(StatCard)`, `aria-label="byte foundry storage"`) —
+kept out of the plain button stack above so it reads as its own grouped mechanic rather than one
+more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank" button
+(`aria-label="build storage bank"`, calling
+`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
+whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
+walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
+1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
+skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
+the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
+cost itself (parenthesized in the label, and in the button's `title`) renders via
+`formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same
+as Invest's cost above — rather than a raw unitless bit count. Building only ever constructs an
+EMPTY container — it does not fill it (see below).
+
+For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
+visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
+`StorageSizeLabel` (`"<size> banks (<full> full, <built>/<STORAGE_BANK_LADDER_CAP> built)"`) above a
+`StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
+`STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
+bar, filling left-to-right: **full** (leftmost, holding Memory's bits — accent border,
+`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
+clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
+duller fill) — **empty** (built but not yet auto-filled — a dim muted-bordered fill,
+`aria-label="empty <size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only
+placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank
+doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
+pool. `isStorageBankRedeemable`'s own gate is a genuine one-tick-only EXACT match against
+tier01's *current* per-unit level cost (an earlier version used "at or below" — see
+docs/DESIGN_HISTORY.md for why that undervalued a bank; see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry" section for the full behavior). No pause/resume control for auto-redeem
+currently renders below the size rows — removed for now, with a UI to reintroduce it planned for
+later (see `docs/DESIGN_HISTORY.md`); `intro.storageAutoRedeemEnabled` still exists and now defaults
+`true` for every size (previously `false`), and `actions.setStorageAutoRedeemEnabled` stays fully
+wired for whenever that control returns — unlike every other automation toggle on this page, no
+prerequisite purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own
+auto-redeem at all (see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself
+(`tickStorageAutoFill`) has no UI control at all — it's fully automatic, every tick, no toggle:
+Memory cascades into every currently-fillable empty bank, smallest size first, whenever there's
+enough of it.
+
+The section used to close with its own live progress row mirroring tier01's current purchase-block
+progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once the transfer-block row
+below started reading that exact same value directly, making the two rows show identical information
+side by side; the transfer-block row is now the only place this progress is shown.
+
+Below Storage, once `computeCoreRevealed` (`isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`, unrelated to Storage's own `storageRevealed` gate despite
+rendering right below it), a small **Compute** section (`ComputeSection`, a `styled(StatCard)`,
+`aria-label="byte foundry compute"`) shows the current `intro.computeCores`/`intro.computeNodes`
+counts as `N/COMPUTE_ENTITY_CAP` (10) plain status text — unlike Storage there's nothing to click
+here yet (see `tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both
+counters are fully automatic, and both cap at `COMPUTE_ENTITY_CAP`), so this is a status readout,
+not another action section. See docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full
+mechanic.
+
+Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+(`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
+`SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
+`getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
+own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
+`blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
+value, not a separately-tracked field) to pick one of three states: **consumed**
+(`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
+`title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
+`theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
+(`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
+Kilobyte"` where `<cost>` is `formatStorageSize(transferBlockCost)` and `transferBlockCost =
+getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
+`INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1 KB" at a fresh cycle's level 1, "10 KB" once tier01
+reaches level 2, and so on), `$progress` = the bits-toward-`transferBlockCost` fill,
+`onClick={actions.convertIntroBitsToKilobytes}`, disabled only when `bits < transferBlockCost` —
+**there is no per-cycle cap to run into** — paired with a hidden `role="progressbar"`
+(`aria-label="byte foundry convert progress"`, `aria-valuemax={transferBlockCost}`);
+**upcoming** (every later index) — `aria-label="locked transfer block N"`, always disabled,
+`title="Transfer the block to your left first"`, empty (`background: transparent`). Read
+left-to-right, consumed (filled)/active (partially filled)/upcoming (empty) blocks together look
+like one continuous progress bar rather than a shrinking list. Because the row is a live mirror of
+tier01's own purchase-block progress rather than a cycle-scoped budget, once
+`blocksTransferred` reaches `purchaseBlockSize` (tier01's level completes), `purchaseLevelProgress`
+itself resets to 0 for the next level, and the row rolls over to a fresh all-upcoming set for that
+next level automatically — it never gets stuck fully `$consumed`. The very first successful transfer
+(clicking the active block, or the `tickIntroAutoInvest` auto-convenience firing inside the shared
+tick loop the instant a single unit is affordable — live, block by block, not just once a whole
+batch accumulates at once — which advances `purchaseLevelProgress` by one unit per call, capped at
+completing one tier01 level per call) sets `mainGameUnlocked: true`, and `App.jsx`'s own
+`showingFoundry` render check reveals whatever page the
+player was last on (typically `'game'`) the instant that flips — no button or handler needed here
+for that transition itself.
+
+Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file): raw
+bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
+`TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places
+(`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
+`formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
+before it actually is — a display-only convention, internal state always stores raw
+bits. Every standalone Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via a
+further local helper, `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
+true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
+picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
+instead of stopping at a fixed unit. A separate `formatStorageSize` helper uses a different,
+Storage-*size*-specific scale (see "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry"
+section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — used both for
+naming a bank's own *size* ("Build 1 KB Bank") and for the transfer block's own dynamic cost (the
+active block's `aria-label`/`title`, since `getIntroKilobyteConversionCost` is the same underlying
+value/scale as a bank size) — never for the bits actually spent to build a bank, which
+always renders via `formatBitsInNearestUnit` instead. This page's gate reappears every time a real Prestige resets Memory
+(`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
+along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
+docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
+not a one-time-ever gate, it sets the pace for every run — but the
+Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
+productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
+`storageBanksBuiltTotal`/`storageAutoRedeemEnabled` — but NOT `storageAutoRedeemedSizes`, which
+resets every real Prestige) are both permanent and carry over — a bank already FULL when Prestige
+fires stays full, giving the next cycle a head start — so the gate is a fast pit-stop after the
+first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
+return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
+stays just as interactive there as on the gate itself.
 
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
@@ -148,18 +303,19 @@ for the rest of the cycle.
   economy calculation — paired with a `VisuallyHidden
   role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
   visible `GoogolProgressLabel` ("N% to Prestige") underneath.
-- **HUD-scoped muted/accent text.** The offline notice's body text and the PP
-  header line's "N PP" figure render via `HudMutedText`/`HudGoldText` — a fork of the app-wide
-  `MutedText` (still hardcoded `#a3a3a3`, still used by `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/
-  `TopPrestigeBar`/`FullScreenCard`) — token-driven
+- **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
+  `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
+  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
   migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
   `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
   surface measures roughly 3.6:1 — below the 4.5:1 AA floor for normal text — but a `styled.b` renders
   bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also >=14pt (18.66px);
   1.1em (17.6px against the 16px root) fell just short of that threshold, so it's sized up to clear it
-  with margin. `Header`'s own text color and the offline notice's Dismiss button (`variant="neutral"`,
-  replacing the deprecated `color="darkgrey"` prop) are also token-driven as part of this same pass.
+  with margin. `Header`'s own text color is also token-driven as part of this same pass. The offline
+  notice's own body text/Dismiss button styling now lives in `components/OfflineProgressNotice` (see
+  below and `docs/COMPONENTS_REFERENCE.md`), not in this file — it uses its own token-driven
+  `NoticeText` rather than `HudMutedText`, since it's shared with `ByteFoundryPage` too.
 - **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
   display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
@@ -233,8 +389,8 @@ for the rest of the cycle.
 **Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
 by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
 toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
-rendered (`MainPage` is only ever reached once the Byte Foundry intro is complete, see "Byte Foundry
-page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
+rendered (`MainPage` is only ever reached once the Byte Foundry's main-game gate is unlocked, see
+"Byte Foundry page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
 genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
 first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
 "Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
@@ -362,7 +518,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    Smart does moved to `InfoPage`'s own "Tier Autobuyers" section — see the file header note above);
    individual badges/buttons still carry no explanatory `title` text (only `aria-label`, for
    assistive tech), since that explanation lives on the Guide page instead. Per unlocked tier
-   (`isTierUnlocked`, the usual owned-count gate — see docs/ECONOMY_REFERENCE.md; there's no
+   (`isTierUnlocked`, the usual gate — see docs/ECONOMY_REFERENCE.md; there's no
    next-tier preview any more, since there's nothing left to preview a cost for), up to three
    independent controls. **Autobuyer unlock** and the **tier tickspeed autobuyer** are no longer PP
    purchases at all — both unlock automatically once `prestige.count` reaches their own milestone
@@ -451,12 +607,12 @@ a real tracker. Lifting the whole `ViewNav` tab bar's Game/Milestones tabs out o
 view vs. PP Upgrades view vs. Milestones view" above) fixes this for "Go Googol" specifically: it can
 now genuinely be seen 🔒 before a first Prestige. Three static rows, no `role="progressbar"` on any of
 them (booleans, not counts — nothing to show numeric progress toward):
-1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.completed`
-   is true. Because `MainPage` (and this tab) is only reachable *after* `intro.completed` in the first
-   place, this row will always show ✅ the instant a player can see it at all — Chapter 1's completion is
-   a precondition for reaching this page, not something observable in-progress here. Fixing that too
-   would mean also surfacing a Chapters indicator on `ByteFoundryPage` itself (see below); that's an
-   acknowledged, deliberate scope boundary, not an oversight.
+1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.mainGameUnlocked`
+   is true. Because `MainPage` (and this tab) is only reachable *after* `intro.mainGameUnlocked` in the
+   first place, this row will always show ✅ the instant a player can see it at all — Chapter 1's
+   completion is a precondition for reaching this page, not something observable in-progress here.
+   Fixing that too would mean also surfacing a Chapters indicator on `ByteFoundryPage` itself (see
+   below); that's an acknowledged, deliberate scope boundary, not an oversight.
 2. **"Go Googol"** (`aria-label="Go Googol chapter"`) — ✅ once `state.prestige.count > 0`. The row this
    whole visibility fix was for — genuinely observable as 🔒 now.
 3. **"Coming soon…"** (`aria-label="Coming soon… chapter"`) — permanently 🔒, no unlock condition, a
@@ -464,7 +620,7 @@ them (booleans, not counts — nothing to show numeric progress toward):
 
 Each row shows a `PpUpgradeBadge` with `✅`/`🔒` plus the label; the `aria-label` on the badge itself
 spells out `"{label} chapter complete"`/`"{label} chapter not yet complete"` for assistive tech. Zero
-new `engine.js` logic backs this category — it reads `state.intro.completed` and the existing
+new `engine.js` logic backs this category — it reads `state.intro.mainGameUnlocked` and the existing
 `state.prestige.count` only.
 
 Below Chapters, two more categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
@@ -704,19 +860,25 @@ deliberate scroll pause but long enough to smooth over the crossing itself. `Sti
 repainting it from scratch every frame (a secondary contributor to the same flicker, given its solid
 `theme.color.page` background fill).
 
-**Offline notice.** When the hook reports a non-null `offlineProgress`, a dismissible
-`OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a fixed,
-viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered regardless of
-scroll position) rather than an inline card pushed into the page's normal document flow; never
-reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets `pointer-events: none` (with
-`pointer-events: auto` restored on the card itself) so the rest of the page stays clickable through
-the overlay's own surrounding space. The card has no click handler or `title` of its own — only the
-Dismiss button is interactive, keeping the whole-tile-is-clickable-and-also-has-a-tooltip pattern out
-of this component (see `docs/DESIGN_HISTORY.md` for why the earlier click-to-extend behavior was
-dropped) — and its content (description + centered Dismiss button) stacks in `StatCard`'s own
-flex-column, centered via `align-items`/`text-align: center` on the card. Self-dismisses via a
-countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's `$progress` fill, then
-an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before `dismissOfflineProgress` removes it.
+**Offline notice.** When the hook reports a non-null `offlineProgress`, MainPage renders the shared
+`components/OfflineProgressNotice` component (see `docs/COMPONENTS_REFERENCE.md`), passing
+`offlineProgress`/`dismissOfflineProgress` straight through — this component (and all the behavior
+described below) used to live inline in this file, but was extracted so `ByteFoundryPage` can render
+the exact same notice too (offline progress already applies to the Byte Foundry mechanically
+regardless of which page is active; only the notice itself was previously MainPage-exclusive). A
+dismissible `OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a
+fixed, viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered
+regardless of scroll position) rather than an inline card pushed into the page's normal document
+flow; never reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets
+`pointer-events: none` (with `pointer-events: auto` restored on the card itself) so the rest of the
+page stays clickable through the overlay's own surrounding space. The card has no click handler or
+`title` of its own — only the Dismiss button is interactive, keeping the whole-tile-is-clickable-and-
+also-has-a-tooltip pattern out of this component (see `docs/DESIGN_HISTORY.md` for why the earlier
+click-to-extend behavior was dropped) — and its content (description + centered Dismiss button)
+stacks in `StatCard`'s own flex-column, centered via `align-items`/`text-align: center` on the card.
+Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's
+`$progress` fill, then an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before
+`dismissOfflineProgress` removes it.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.

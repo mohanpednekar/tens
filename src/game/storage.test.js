@@ -622,7 +622,7 @@ describe('schema migration', () => {
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
 
-  it('backfills intro.completed to true for a save from before the Byte Foundry intro existed (no intro field at all)', () => {
+  it('backfills mainGameUnlocked to true for a save from before the Byte Foundry intro existed (no intro field at all)', () => {
     const oldSave = {
       resources: { base: 5000 },
       owned: { [tensTier.id]: 3 },
@@ -630,17 +630,55 @@ describe('schema migration', () => {
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.intro.completed).toBe(true)
+    expect(loaded.intro.mainGameUnlocked).toBe(true)
   })
 
   it('preserves a save\'s own in-progress intro state rather than backfilling it', () => {
     const state = {
       ...createInitialGameState(),
-      intro: { bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, productionMultiplier: 2, completed: false },
+      intro: {
+        bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
+        productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
+        mainGameUnlocked: false,
+        storageBanks: { 1000: 1 }, storageBanksBuiltTotal: { 1000: 1 }, storageAutoRedeemEnabled: true,
+        storageAutoRedeemedSizes: {}, computeCores: 0, computeNodes: 0,
+      },
     }
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.intro).toEqual(state.intro)
+  })
+
+  it('backfills mainGameUnlocked from an old boolean intro.completed field for a save that predates the mainGameUnlocked field', () => {
+    const unlockedOldSave = {
+      ...createInitialGameState(),
+      intro: { bits: 0, capacity: 8000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1, completed: true },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(unlockedOldSave))
+    const loadedUnlocked = loadGameState()
+    expect(loadedUnlocked.intro.mainGameUnlocked).toBe(true)
+
+    const midGateOldSave = {
+      ...createInitialGameState(),
+      intro: { bits: 3, capacity: 8, byteCreated: false, tickSpeedSeconds: 1, productionMultiplier: 1, completed: false },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(midGateOldSave))
+    const loadedMidGate = loadGameState()
+    expect(loadedMidGate.intro.mainGameUnlocked).toBe(false)
+  })
+
+  it('resets the removed productionMilestoneClaimedAtCapacity marker to a fresh tier 0 rather than misreading it', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      intro: {
+        bits: 0, capacity: 8000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
+        productionMilestoneClaimedAtCapacity: 800, mainGameUnlocked: true,
+      },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.intro.productionMilestoneTier).toBe(0)
+    expect(loaded.intro.productionMilestoneTierClaims).toBe(0)
   })
 
 })
