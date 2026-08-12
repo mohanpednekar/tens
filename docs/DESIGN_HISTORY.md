@@ -1556,6 +1556,50 @@ gets one, same as every tier after it. The fix is a one-character boundary chang
 `getIntroProductionMilestoneMaxClaims`; nothing else about the independent cost-ladder model from the
 entry above changed.
 
+### Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature
+
+Requested as "once all storages are built and full and memory is also full, convert the entire
+memory into Compute Cores. 1 Compute Core costs 10 MB memory; 1 Compute Node costs 8 Compute Cores."
+Several things in that one-line request needed pinning down before implementation, confirmed with
+the maintainer rather than guessed:
+
+- **Trigger**: automatic every tick (`tickComputeCoreConversion`, called from `tickGame`), not a
+  manual button — the same posture every other Byte Foundry automation (`tickStorageAutoFill`/
+  `tickIntroAutoInvest`) already has.
+- **"All storages built and full" needs a finite set to check.** Before this feature, the Storage
+  bank ladder (`getStorageBankSize`) was open-ended — it walks `tier01`'s own level-cost sequence
+  forever, advancing to the next size every `STORAGE_BANK_LADDER_CAP` banks built. An open-ended
+  ladder can never be exhaustively "all built and full" for long (the next size always appears once
+  the current one caps out). The maintainer's own clarification ("Banks only go up to 1 MB") became
+  a new constant, `STORAGE_BANK_LADDER_MAX_SIZE = 1_000_000` — `getStorageBankSize` now stops
+  advancing once it reaches that size, so `getComputeCoreStorageSizes()` can enumerate a small, fixed
+  3-size set (1 KB, 10 KB, 1 MB) for `isComputeCoreConversionReady` to check exhaustively.
+- **Permanence**: `intro.computeCores`/`intro.computeNodes` are permanent, carried over every real
+  Prestige exactly like the Byte generator/Storage banks (`prestigeGame`) — confirmed explicitly
+  rather than assumed, since Memory itself (the currency they're converted from) resets every cycle.
+- **Payoff**: pure counters for now, no gameplay effect — explicitly deferred rather than invented
+  (an unrequested "what should Compute Nodes unlock" design would have been scope creep on a
+  one-line feature request).
+
+**Two different "MB" conventions collided, and had to be kept apart rather than unified.** This
+codebase already had two incompatible meanings for "1 MB" before this feature: Memory's own display
+scale (`getMemoryUnit` in `ByteFoundryPage`, `BITS_PER_BYTE × 1000²` = 8,000,000 bits per "MB",
+matching what the player actually sees the Memory tile denominated in) and the Storage bank
+ladder's own informal naming (`tier01`'s level-3 per-unit cost, 1,000,000 bits, called "1 MB" in
+existing comments purely because it numerically matches `tier02`'s `baseCost` — see the "Byte
+Foundry Storage" comment in `layers.js`, predating this feature). `STORAGE_BANK_LADDER_MAX_SIZE`
+(1,000,000) deliberately reuses the Storage ladder's own convention, since it caps that exact
+ladder. `COMPUTE_CORE_MEMORY_COST` ("10 MB memory" per the request) deliberately uses the OTHER
+convention instead (80,000,000 bits) — Compute Cores are costed in whatever the player actually
+sees Memory's own balance in, not the Storage-ladder/`tier01`-cost scale a Compute Core has no
+direct relationship to. This wasn't an arbitrary tie-breaker: 80,000,000 bits is exactly the 8th
+step of the Sacrifice capacity ladder (8 × 10⁷, one of `capacity`'s own actual reachable values), so
+a cycle that's Sacrificed capacity up that far converts a genuinely full Memory balance into whole
+Compute Cores with zero remainder — the Storage-ladder convention's 1,000,000 has no such alignment
+with the capacity ladder. If this is ever revisited, don't silently unify the two "MB" meanings —
+they're deliberately different constants for deliberately different reasons, and conflating them
+would either break the capacity-ladder alignment above or break the Storage ladder's own cap.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

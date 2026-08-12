@@ -5,6 +5,8 @@ import {
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
+  COMPUTE_CORE_MEMORY_COST,
+  COMPUTE_CORES_PER_NODE,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   MONEY_ID,
@@ -16,6 +18,7 @@ import {
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
   SPEED_UP_MULTIPLIER_BASE,
+  STORAGE_BANK_LADDER_MAX_SIZE,
   TICKSPEED_MULTIPLIER_BASE_EXPONENT,
   TICKSPEED_PRODUCTION_STEP,
   TIER_DEFINITIONS,
@@ -202,5 +205,18 @@ describe('constants', () => {
 
   it('OVERCLOCK_REQUIREMENT_STEP is 10 (a fixed 10-level jump per activation)', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(10)
+  })
+
+  it('STORAGE_BANK_LADDER_MAX_SIZE is 1,000,000 (tier01\'s level-3 per-unit cost, "1 MB" in the Storage ladder\'s own naming convention)', () => {
+    expect(STORAGE_BANK_LADDER_MAX_SIZE).toBe(1000000)
+  })
+
+  it('COMPUTE_CORE_MEMORY_COST is 80,000,000 bits (10 MB in Memory\'s own B/KB/MB display scale)', () => {
+    expect(COMPUTE_CORE_MEMORY_COST).toBe(80000000)
+    expect(COMPUTE_CORE_MEMORY_COST).toBe(10 * 1000 * 1000 * BITS_PER_BYTE)
+  })
+
+  it('COMPUTE_CORES_PER_NODE is 8', () => {
+    expect(COMPUTE_CORES_PER_NODE).toBe(8)
   })
 })

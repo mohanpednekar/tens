@@ -3,8 +3,8 @@
   "1": "MainPage/index.jsx",
   "2": "engine.js",
   "3": "Money/index.js",
-  "4": "App.jsx",
-  "5": "package.json",
+  "4": "tokens.js",
+  "5": "InfoPage/index.jsx",
   "6": "devDependencies",
   "7": "Economy model",
   "8": "ByteFoundryPage/index.jsx",
@@ -50,10 +50,13 @@
   "48": "Design history & rationale",
   "49": "Button/index.jsx",
   "50": "tickGame",
-  "51": "run-simulation.mjs",
-  "52": "storage.js",
+  "51": "dependencies",
+  "52": "ByteFoundryPage",
   "53": "formatCurrency",
   "54": "OfflineProgressNotice/index.jsx",
   "55": "formatBonusOrMultiplier",
-  "56": "InfoPage/index.jsx"
+  "56": "isStorageBankRedeemable",
+  "57": "getTierCost",
+  "58": "formatMemoryAmount",
+  "59": "buyGlobalTickspeedMultiplier"
 }

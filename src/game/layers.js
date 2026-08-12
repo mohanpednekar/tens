@@ -163,6 +163,36 @@ export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // intro.storageBanksBuiltTotal, a cumulative count that redeeming a bank never decrements.
 export const STORAGE_BANK_LADDER_CAP = 10
 
+// --- Byte Foundry Compute Cores/Nodes --- see tickComputeCoreConversion/tickComputeNodeConversion/
+// isComputeCoreConversionReady/getComputeCoreStorageSizes in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState.
+// Caps the Storage bank ladder above (getStorageBankSize) from advancing past this size — once
+// reached, buildStorageBank keeps offering more banks at this same size forever rather than
+// advancing to the next tier01 level cost. tier01's own level-3 per-unit cost (1,000,000 bits — "1
+// MB" in the Storage ladder's own naming convention two comments up; NOT the same "1 MB" Memory's
+// own B/KB/MB display scale means, which is BITS_PER_BYTE (8) × 1000² = 8,000,000 bits — see
+// getMemoryUnit in ByteFoundryPage). Capping the ladder here turns "every Storage size the ladder
+// ever offers" into a small, fixed set (1 KB, 10 KB, 1 MB — 3 sizes) that
+// isComputeCoreConversionReady below can check exhaustively, rather than an open-ended set that
+// condition could never stay satisfiable against for long.
+export const STORAGE_BANK_LADDER_MAX_SIZE = 1_000_000
+// Once every Storage bank size the (now-capped) ladder above ever offers has all
+// STORAGE_BANK_LADDER_CAP banks built AND currently full, and Memory itself is also full (bits >=
+// capacity), Memory is automatically converted into Compute Cores instead of idling — see
+// tickComputeCoreConversion in engine.js. Costed in Memory's OWN B/KB/MB/… display scale
+// (BITS_PER_BYTE (8) × 1000² per "MB" — see getMemoryUnit in ByteFoundryPage), deliberately a
+// different convention from STORAGE_BANK_LADDER_MAX_SIZE's own "1 MB" above, since this cost is
+// denominated in whatever unit the player actually sees Memory's own balance in, not the
+// Storage-ladder/tier01-cost scale. 10 MB = 80,000,000 bits — not a coincidence: that's exactly the
+// 8th step of the Sacrifice capacity ladder (8, 80, 800, …, 80,000,000, …), so a cycle that's
+// Sacrificed capacity up that far converts its entire full Memory balance into whole Compute Cores
+// with nothing left over.
+export const COMPUTE_CORE_MEMORY_COST = 80_000_000
+// 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
+// intro.computeCores and intro.computeNodes are permanent counters, carried over every real
+// Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
+export const COMPUTE_CORES_PER_NODE = 8
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
 // alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short

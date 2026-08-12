@@ -134,7 +134,14 @@ progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once
 below started reading that exact same value directly, making the two rows show identical information
 side by side; the transfer-block row is now the only place this progress is shown.
 
-Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below Storage, once `storageRevealed`, a small **Compute** section (`ComputeSection`, a
+`styled(StatCard)`, `aria-label="byte foundry compute"`) shows the current `intro.computeCores`/
+`intro.computeNodes` counts as plain status text — unlike Storage there's nothing to click here yet
+(see `tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both counters are
+fully automatic), so this is a status readout, not another action section. See
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full mechanic.
+
+Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')

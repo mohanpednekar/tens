@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORE_MEMORY_COST, COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BANK_LADDER_MAX_SIZE, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -329,6 +329,16 @@ export const createInitialGameState = () => ({
     // that size this cycle, capping auto-redeem at one bank per size per cycle — further eligible
     // banks of an already-auto-redeemed size need a manual click for the rest of the cycle.
     storageAutoRedeemedSizes: {},
+    // PERMANENT — like the Byte generator/Storage banks above, carried over every real Prestige
+    // (see prestigeGame). Automatically incremented by tickComputeCoreConversion once every
+    // Storage bank size the (capped) ladder ever offers is built AND full, and Memory itself is
+    // also full — see isComputeCoreConversionReady/COMPUTE_CORE_MEMORY_COST. A pure counter today
+    // — no gameplay effect yet.
+    computeCores: 0,
+    // PERMANENT — automatically incremented by tickComputeNodeConversion every time computeCores
+    // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). A pure counter
+    // today — no gameplay effect yet.
+    computeNodes: 0,
   },
 })
 
@@ -874,13 +884,21 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickIntroAutoInvest's own direct bit-to-Kilobyte conversion — otherwise a bank the player has
   // already built and is waiting to fill would be starved by fresh Memory being auto-converted out
   // from under it before it ever reached the bank. Auto-fill doesn't depend on tier01's level at
-  // all (unlike auto-redeem below), so running it this early costs nothing. tickIntroAutoInvest
-  // then converts whatever Memory is left over. tickIntroProduction short-circuits to the
+  // all (unlike auto-redeem below), so running it this early costs nothing.
+  //
+  // Compute Core conversion (tickComputeCoreConversion, then tickComputeNodeConversion) runs next,
+  // right after auto-fill and before tickIntroAutoInvest — the same "first claim" priority
+  // auto-fill itself has over ordinary Kilobyte conversion: once every Storage bank size is built
+  // and full and Memory is also full (isComputeCoreConversionReady), Memory converts into Compute
+  // Cores before any of it can be converted into Kilobytes instead. tickIntroAutoInvest then
+  // converts whatever Memory is left over. tickIntroProduction short-circuits to the
   // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits can't cover even one
-  // more unit (their own first-line guards); neither ever fully freezes, matching the "return the
-  // same reference so React can bail out" convention every other no-op path in this function
+  // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
+  // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
-  const stateAfterIntro = tickIntroAutoInvest(tickStorageAutoFill(tickIntroProduction(elapsedSeconds)(state)))
+  const stateAfterStorage = tickStorageAutoFill(tickIntroProduction(elapsedSeconds)(state))
+  const stateAfterComputeCores = tickComputeNodeConversion(tickComputeCoreConversion(stateAfterStorage))
+  const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeCores)
 
   const autoPrestigeLevel = stateAfterIntro.autoPrestige ?? null
   // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
@@ -1481,15 +1499,21 @@ const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 // comment in layers.js for why this is deliberately decoupled from tier01's own CURRENT level —
 // docs/DESIGN_HISTORY.md). A freshly offered size isn't necessarily redeemable yet — see
 // isStorageBankRedeemable below for the separate, tier01-price-driven gate on that.
+// Stops advancing once it reaches STORAGE_BANK_LADDER_MAX_SIZE (1,000,000 bits, "1 MB" in this
+// ladder's own naming convention — see layers.js): from then on this always returns that same
+// capped size, however many banks have ever been built at it, rather than continuing on to
+// tier01's next level cost. This turns "every Storage size the ladder ever offers" into a small,
+// fixed set (see getComputeCoreStorageSizes below) isComputeCoreConversionReady can check
+// exhaustively.
 export const getStorageBankSize = state => {
   const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
   let level = 1
   let size = getFirstTierCost(level)
-  while ((builtTotal[size] ?? 0) >= STORAGE_BANK_LADDER_CAP) {
+  while (size < STORAGE_BANK_LADDER_MAX_SIZE && (builtTotal[size] ?? 0) >= STORAGE_BANK_LADDER_CAP) {
     level += 1
     size = getFirstTierCost(level)
   }
-  return size
+  return Math.min(size, STORAGE_BANK_LADDER_MAX_SIZE)
 }
 
 // A bank's one-time build (construction) cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own
@@ -1635,6 +1659,78 @@ export const setStorageAutoRedeemEnabled = enabled => state => ({
   ...state,
   intro: { ...state.intro, storageAutoRedeemEnabled: !!enabled },
 })
+
+// --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
+// createInitialGameState and COMPUTE_CORE_MEMORY_COST/COMPUTE_CORES_PER_NODE/
+// STORAGE_BANK_LADDER_MAX_SIZE in layers.js.
+
+// Every Storage bank size the (now-capped, see getStorageBankSize) ladder ever offers — a small,
+// fixed set (1 KB, 10 KB, 1 MB) rather than an open-ended one, since the ladder no longer advances
+// past STORAGE_BANK_LADDER_MAX_SIZE. isComputeCoreConversionReady below checks every one of these
+// sizes exhaustively.
+export const getComputeCoreStorageSizes = () => {
+  const sizes = []
+  let level = 1
+  let size = getFirstTierCost(level)
+  while (size <= STORAGE_BANK_LADDER_MAX_SIZE) {
+    sizes.push(size)
+    level += 1
+    size = getFirstTierCost(level)
+  }
+  return sizes
+}
+
+// Predicate, not a reducer: true once every Storage bank size getComputeCoreStorageSizes lists has
+// at least STORAGE_BANK_LADDER_CAP banks currently FULL (intro.storageBanks[size] — which can never
+// exceed the number built, so this alone implies "built" too) AND Memory itself is full (bits >=
+// capacity). Drives tickComputeCoreConversion below.
+export const isComputeCoreConversionReady = state => {
+  const banks = state.intro?.storageBanks ?? {}
+  if (state.intro.bits < state.intro.capacity) return false
+  return getComputeCoreStorageSizes().every(size => (banks[size] ?? 0) >= STORAGE_BANK_LADDER_CAP)
+}
+
+// Once isComputeCoreConversionReady holds, converts Memory into Compute Cores at
+// COMPUTE_CORE_MEMORY_COST bits each — a same-reference no-op otherwise, or if Memory can't yet
+// afford even one Core. Spends only whole Cores' worth of bits, banking any remainder (there is
+// none in the common case, since COMPUTE_CORE_MEMORY_COST is itself one of the Sacrifice capacity
+// ladder's own values — see layers.js). Called from tickGame right after tickStorageAutoFill and
+// before tickIntroAutoInvest, so it claims Memory ahead of ordinary Kilobyte conversion once ready
+// — the same "first claim" priority tickStorageAutoFill itself has over tickIntroAutoInvest.
+// Bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic (a separate
+// currency pool, not resources.base).
+export const tickComputeCoreConversion = state => {
+  if (!isComputeCoreConversionReady(state)) return state
+  const coresGained = Math.floor(state.intro.bits / COMPUTE_CORE_MEMORY_COST)
+  if (coresGained <= 0) return state
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      bits: state.intro.bits - coresGained * COMPUTE_CORE_MEMORY_COST,
+      computeCores: (state.intro.computeCores ?? 0) + coresGained,
+    },
+  }
+}
+
+// Converts every complete group of COMPUTE_CORES_PER_NODE (8) Compute Cores into 1 Compute Node —
+// a same-reference no-op below that threshold. Called from tickGame right after
+// tickComputeCoreConversion, so freshly-minted Cores convert the same tick they're earned.
+export const tickComputeNodeConversion = state => {
+  const cores = state.intro?.computeCores ?? 0
+  const nodesGained = Math.floor(cores / COMPUTE_CORES_PER_NODE)
+  if (nodesGained <= 0) return state
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      computeCores: cores - nodesGained * COMPUTE_CORES_PER_NODE,
+      computeNodes: (state.intro.computeNodes ?? 0) + nodesGained,
+    },
+  }
+}
 
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
 // a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
@@ -1887,6 +1983,10 @@ export const prestigeGame = state => {
       storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
       storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
       storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
+      // Compute Cores/Nodes are just as permanent as the Byte generator/Storage above — carried
+      // over unchanged, never wiped by a real Prestige along with Memory itself.
+      computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
+      computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused

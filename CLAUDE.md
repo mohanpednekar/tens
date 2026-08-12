@@ -518,6 +518,22 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
+Once every Storage bank size the ladder ever offers — now capped at `STORAGE_BANK_LADDER_MAX_SIZE`
+(1,000,000 bits, "1 MB" in the Storage ladder's own naming convention; see `getStorageBankSize`,
+which stops advancing past this size rather than continuing on to tier01's next level cost — a
+fixed set of 3 sizes: 1 KB, 10 KB, 1 MB) — has `STORAGE_BANK_LADDER_CAP` (10) banks built **and**
+currently full, and Memory itself is also full (`bits >= capacity`), Memory automatically converts
+into **Compute Cores** instead of idling (`tickComputeCoreConversion`, gated on
+`isComputeCoreConversionReady`) — `COMPUTE_CORE_MEMORY_COST` (80,000,000 bits, "10 MB" in Memory's
+own B/KB/MB display scale — a deliberately different "MB" convention from the Storage-ladder one
+above, see `layers.js`) per Core, spending only whole Cores' worth and banking any remainder. This
+runs every tick right after Storage's own auto-fill and before `tickIntroAutoInvest`, so it claims
+Memory ahead of ordinary Kilobyte conversion once ready, the same "first claim" priority auto-fill
+itself already has. Every `COMPUTE_CORES_PER_NODE` (8) Compute Cores then auto-convert into 1
+**Compute Node** the same tick (`tickComputeNodeConversion`). Both `intro.computeCores` and
+`intro.computeNodes` are permanent counters, carried over every real Prestige exactly like the Byte
+generator/Storage banks — pure counters today, with no gameplay effect yet.
+
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
 tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the Byte
@@ -609,7 +625,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (843 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (867 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

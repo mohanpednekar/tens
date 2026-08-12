@@ -2,7 +2,7 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -301,6 +301,14 @@ const StorageBankSquare = styled.button`
   &:disabled {
     cursor: not-allowed;
   }
+`
+
+// Compute Cores/Nodes: a small, permanent status line — not its own full StatCard section like
+// Storage, since (unlike Storage) there's nothing to click here yet, just two live counters (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js).
+const ComputeSection = styled(StatCard)`
+  align-items: center;
+  width: 100%;
 `
 
 // Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
@@ -636,6 +644,20 @@ const ByteFoundryPage = ({ game, onBack }) => {
             )
           })}
         </StorageSection>
+      )}
+
+      {storageRevealed && (
+        <ComputeSection aria-label="byte foundry compute">
+          <SectionLabel>Compute</SectionLabel>
+          <StatusText>
+            {formatAmount(intro.computeCores ?? 0)} Compute Core{(intro.computeCores ?? 0) === 1 ? '' : 's'}
+            {' · '}
+            {formatAmount(intro.computeNodes ?? 0)} Compute Node{(intro.computeNodes ?? 0) === 1 ? '' : 's'}
+          </StatusText>
+          <StatusText>
+            {`Memory auto-converts into Compute Cores (10 MB each) once every Storage size is built and full · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node`}
+          </StatusText>
+        </ComputeSection>
       )}
 
       {revealed && (<>
