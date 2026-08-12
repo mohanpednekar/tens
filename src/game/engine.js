@@ -425,8 +425,7 @@ export const getPurchaseBlockSize = state => {
 // hasn't changed. No division is involved anywhere in this, so the result is always an exact
 // integer — no rounding needed.
 export const getTierCost = (tier, level) => {
-  const epoch = Math.max(0, clampNonNegative(level) - 1)
-  return tier.baseCost * (10 ** fib(epoch))
+  return tier.baseCost * (10 ** fib(level+1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
