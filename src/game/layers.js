@@ -163,6 +163,33 @@ export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // intro.storageBanksBuiltTotal, a cumulative count that redeeming a bank never decrements.
 export const STORAGE_BANK_LADDER_CAP = 10
 
+// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
+// costed a Compute Core at a fixed 10 MB of Memory, gated on every Storage bank size being built
+// and full first — superseded by the dynamic model below, which has no relationship to Storage at
+// all; see docs/DESIGN_HISTORY.md for why.
+//
+// Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
+// below activates — 100 KB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
+// step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
+// own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
+// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 800_000
+// 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
+// intro.computeCores and intro.computeNodes are permanent counters, carried over every real
+// Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
+export const COMPUTE_CORES_PER_NODE = 8
+// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — applies to
+// intro.computeCores/computeNodes today, and is meant to apply the same way to a future
+// computeClusters/computeNetworks/computeGrids once a later merge tier adds them (see issue #280).
+// Once an entity is at this cap, further production into it pauses entirely (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js) rather than overflowing past
+// it or silently discarding progress — Memory itself simply stays full, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Storage banks already have when nothing can consume them yet.
+export const COMPUTE_ENTITY_CAP = 10
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
 // alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short

@@ -641,7 +641,7 @@ describe('schema migration', () => {
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false,
         storageBanks: { 1000: 1 }, storageBanksBuiltTotal: { 1000: 1 }, storageAutoRedeemEnabled: true,
-        storageAutoRedeemedSizes: {},
+        storageAutoRedeemedSizes: {}, computeCores: 0, computeNodes: 0,
       },
     }
     saveGameState(state)

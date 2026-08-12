@@ -1,8 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -303,6 +303,14 @@ const StorageBankSquare = styled.button`
   }
 `
 
+// Compute Cores/Nodes: a small, permanent status line — not its own full StatCard section like
+// Storage, since (unlike Storage) there's nothing to click here yet, just two live counters (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js).
+const ComputeSection = styled(StatCard)`
+  align-items: center;
+  width: 100%;
+`
+
 // Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
 // TIER_DEFINITIONS' own KB..QB symbols (see layers.js) since Memory is byte-scale themed
 // identically to the main game's tiers. Every capacity value in the Sacrifice ladder (8, 80, 800,
@@ -393,6 +401,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
+  const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
@@ -636,6 +645,18 @@ const ByteFoundryPage = ({ game, onBack }) => {
             )
           })}
         </StorageSection>
+      )}
+
+      {computeCoreRevealed && (
+        <ComputeSection aria-label="byte foundry compute">
+          <SectionLabel>Compute</SectionLabel>
+          <StatusText>
+            {`Compute Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Compute Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
+          </StatusText>
+          <StatusText>
+            {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
+          </StatusText>
+        </ComputeSection>
       )}
 
       {revealed && (<>
