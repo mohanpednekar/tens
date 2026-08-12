@@ -271,17 +271,18 @@ export const createInitialGameState = () => ({
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
   // Three distinct groups, per prestigeGame (see there): "Memory" (bits/productionAccumulator/
-  // mainGameUnlocked/bitsTransferredThisCycle) reset to fresh every real Prestige — a new cycle
-  // always starts this screen's balance from 0 and re-shows it before MainPage. The Byte generator
-  // itself and every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
-  // productionMilestoneTier/productionMilestoneTierClaims) are PERMANENT, carried over unchanged
-  // exactly like an unlocked autobuyer — so each cycle's gate reopens with whatever production
-  // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
-  // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
+  // mainGameUnlocked) reset to fresh every real Prestige — a new cycle always starts this screen's
+  // balance from 0 and re-shows it before MainPage. The Byte generator itself and every upgrade to
+  // it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
+  // productionMilestoneTierClaims) are PERMANENT, carried over unchanged exactly like an unlocked
+  // autobuyer — so each cycle's gate reopens with whatever production strength was already built,
+  // not from scratch. speedUpGame/overclockGame carry the whole object through untouched either
+  // way (see there) — they're intra-cycle soft resets, not new cycles.
   //
-  // Nothing here ever fully "freezes" (there is no completed-style flag) — Tap/Combine/Sacrifice/
-  // Invest keep working indefinitely, every cycle; only converting bits into Kilobytes is capped,
-  // via bitsTransferredThisCycle below (see convertIntroBitsToKilobytes/tickIntroAutoInvest).
+  // Nothing here ever fully "freezes" (there is no completed-style flag, and converting bits into
+  // Kilobytes has no cap or budget of its own either — see convertIntroBitsToKilobytes/
+  // tickIntroAutoInvest below) — Tap/Combine/Sacrifice/Invest/Convert all keep working
+  // indefinitely, every cycle, for as long as Memory covers the cost.
   intro: {
     bits: 0,                   // "Memory" — always an integer, the tappable/producible balance. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
@@ -299,15 +300,9 @@ export const createInitialGameState = () => ({
     productionMilestoneTierClaims: 0,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
     // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
-    // drives App.jsx's page-routing gate away from this screen and into MainPage. Deliberately
-    // NOT the same flag as "everything's frozen" — the Byte Foundry stays fully interactive well
-    // past this point (see bitsTransferredThisCycle below for the actual limiting factor).
+    // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
+    // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
-    // Resets to 0 every real Prestige. Cumulative bits ever converted into Kilobytes this cycle,
-    // manual convertIntroBitsToKilobytes clicks and tickIntroAutoInvest combined — capped at
-    // getIntroTransferBudget(state) (dynamic — see there); both conversion paths refuse once the
-    // remaining budget can't cover another INTRO_BITS_PER_KILOBYTE_CONVERSION-sized transfer.
-    bitsTransferredThisCycle: 0,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Storage banks of that size (see
     // tickStorageAutoFill/redeemStorageBank below) — "never lost," survives Prestige/Speed Up/
     // Overclock exactly like the Byte generator itself (a full bank's contents ride through a real
@@ -1196,9 +1191,8 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // --- Byte Foundry (pre-game intro) --- state lives in state.intro (see createInitialGameState
 // above); INTRO_* constants live in layers.js. A currency pool entirely separate from Money
 // (resources.base) until the manual/auto conversions into owned Kilobytes below. Nothing here ever
-// fully freezes — Tap/Combine/Sacrifice/Invest stay live indefinitely, every cycle; only
-// converting bits into Kilobytes (manual or auto) is capped, by the shared per-cycle transfer
-// budget (see getIntroRemainingTransferBudget below).
+// fully freezes — Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle,
+// with no cap or per-cycle budget on converting bits into Kilobytes.
 
 // Grants `quantity` free units of a tier, mirroring buyTier's owned/resources/purchased/
 // purchaseLevels/purchaseLevelProgress bookkeeping exactly (so a granted unit advances level/
@@ -1342,40 +1336,37 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// This cycle's total transfer budget, in bits — how much Memory may ever be converted into
-// Kilobytes in one Prestige cycle. Dynamic, not a fixed constant: exactly enough to grant
-// getPurchaseBlockSize(state) Kilobyte units (the SAME live, possibly-growing block size the main
-// game's own Buy button already reads for tier01) — INTRO_BITS_PER_KILOBYTE_CONVERSION per unit.
-// At a fresh cycle's default block size (DEFAULT_PURCHASE_BLOCK_SIZE, 8), this is 8000, matching
-// the constant this replaced; it only grows later in a run, once the last tier's own level count
-// crosses PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS (see getPurchaseBlockSize).
+// The size, in bits, of one "batch" transfer from Memory into Kilobytes — how much
+// tickIntroAutoInvest waits for before auto-firing (see below). Dynamic, not a fixed constant:
+// exactly enough to grant getPurchaseBlockSize(state) Kilobyte units (the SAME live,
+// possibly-growing block size the main game's own Buy button already reads for tier01) —
+// INTRO_BITS_PER_KILOBYTE_CONVERSION per unit. At a fresh cycle's default block size
+// (DEFAULT_PURCHASE_BLOCK_SIZE, 8), this is 8000; it only grows later in a run, once the last
+// tier's own level count crosses PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS (see
+// getPurchaseBlockSize). Converting bits into Kilobytes has no cycle-wide cap or budget at all —
+// this is purely a batching threshold for the *automatic* path; the manual path
+// (convertIntroBitsToKilobytes) has no threshold of its own beyond the single 1000-bit unit cost.
 export const getIntroTransferBudget = state =>
   getPurchaseBlockSize(state) * INTRO_BITS_PER_KILOBYTE_CONVERSION
-
-// How many more bits may be converted into Kilobytes this cycle before getIntroTransferBudget's
-// shared cap is hit — see bitsTransferredThisCycle in createInitialGameState. Shared by
-// convertIntroBitsToKilobytes and tickIntroAutoInvest below.
-const getIntroRemainingTransferBudget = state =>
-  Math.max(0, getIntroTransferBudget(state) - state.intro.bitsTransferredThisCycle)
 
 // Manual "convert 1000 bits into 1 Kilobyte": spends INTRO_BITS_PER_KILOBYTE_CONVERSION bits from
 // the intro's own pool and grants 1 free unit of the main game's first tier via grantTierUnits —
 // bypasses isTierUnlocked/isProductionFrozen entirely, since this pays from a separate currency
-// pool, not resources.base. No-op below cost or once this cycle's shared transfer budget (see
-// getIntroRemainingTransferBudget) can't cover another 1000-bit transfer. The first successful
+// pool, not resources.base. No-op below cost — otherwise always available, every cycle, with no
+// separate budget or cap of its own (tier01's own purchaseLevelProgress/getPurchaseBlockSize is
+// what the transfer-block row on screen actually tracks, and that already rolls over into the
+// next level's blocks on its own once one completes — see ByteFoundryPage). The first successful
 // call ever this cycle also flips mainGameUnlocked, opening the App.jsx routing gate into
 // MainPage — set unconditionally (harmless once already true), so this is the earliest of the two
 // transfer paths (this or the auto-invest below) to actually fire that does the unlocking.
 export const convertIntroBitsToKilobytes = state => {
   if (state.intro.bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return state
-  if (getIntroRemainingTransferBudget(state) < INTRO_BITS_PER_KILOBYTE_CONVERSION) return state
   const firstTierId = TIER_DEFINITIONS[0].id
   return grantTierUnits(firstTierId, 1)({
     ...state,
     intro: {
       ...state.intro,
       bits: state.intro.bits - INTRO_BITS_PER_KILOBYTE_CONVERSION,
-      bitsTransferredThisCycle: state.intro.bitsTransferredThisCycle + INTRO_BITS_PER_KILOBYTE_CONVERSION,
       mainGameUnlocked: true,
     },
   })
@@ -1418,30 +1409,27 @@ export const tickIntroProduction = elapsedSeconds => state => {
 
 // Auto-convert convenience, mirroring tickGame's own autobuyer "wait until the whole batch is
 // affordable, then fire once" convention (see tickGame below), just keyed on a bit-balance
-// threshold instead of a Money cost: once bits reaches getIntroTransferBudget(state) — the WHOLE
-// remaining budget available at once, e.g. a fast-production or offline-catch-up jump that skips
-// past several individual 1000-bit blocks before the player could click through them one at a
-// time — it auto-transfers the lot without needing manual convertIntroBitsToKilobytes clicks. A
-// no-op once that budget is exhausted; transfers only the remaining budget if less than the full
-// amount is left (always a whole multiple of INTRO_BITS_PER_KILOBYTE_CONVERSION, since every
-// transfer — manual or auto — moves in exact 1000-bit units), granting proportionally fewer
-// Kilobytes. Also flips mainGameUnlocked on its first success, same as the manual path.
+// threshold instead of a Money cost: once bits reaches getIntroTransferBudget(state) — a whole
+// batch available at once, e.g. a fast-production or offline-catch-up jump that skips past
+// several individual 1000-bit blocks before the player could click through them one at a time —
+// it auto-transfers one whole batch without needing manual convertIntroBitsToKilobytes clicks. No
+// cap, no cycle-wide budget: this can fire repeatedly, tick after tick, for as long as Memory
+// keeps reaching another full batch — each fire grants getPurchaseBlockSize(state) Kilobytes
+// (using whatever the block size is AT FIRE TIME, so a level-up that changes it mid-run is picked
+// up on the very next fire). Also flips mainGameUnlocked on its first success, same as the manual
+// path.
 export const tickIntroAutoInvest = state => {
   const transferBudget = getIntroTransferBudget(state)
   if (state.intro.bits < transferBudget) return state
-  const remainingBudget = getIntroRemainingTransferBudget(state)
-  if (remainingBudget <= 0) return state
 
-  const transferAmount = Math.min(transferBudget, remainingBudget)
-  const kilobytesGranted = transferAmount / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  const kilobytesGranted = transferBudget / INTRO_BITS_PER_KILOBYTE_CONVERSION
 
   const firstTierId = TIER_DEFINITIONS[0].id
   return grantTierUnits(firstTierId, kilobytesGranted)({
     ...state,
     intro: {
       ...state.intro,
-      bits: state.intro.bits - transferAmount,
-      bitsTransferredThisCycle: state.intro.bitsTransferredThisCycle + transferAmount,
+      bits: state.intro.bits - transferBudget,
       mainGameUnlocked: true,
     },
   })
@@ -1563,8 +1551,7 @@ export const isStorageBankRedeemable = (state, capacityBits) =>
 
 // Redeems one currently-FULL bank of `capacityBits`, granting 1 free tier01 unit via
 // grantTierUnits — same "pays from a separate currency pool, bypasses
-// isProductionFrozen/isTierUnlocked/cost entirely" rationale as convertIntroBitsToKilobytes, and
-// deliberately NOT drawn from/counted against the ordinary bitsTransferredThisCycle budget: a
+// isProductionFrozen/isTierUnlocked/cost entirely" rationale as convertIntroBitsToKilobytes — a
 // bank's contents came from Memory via tickStorageAutoFill already, not from a further transfer.
 // The bank itself is NOT lost — it becomes empty again (storageBanksBuiltTotal is untouched),
 // re-entering the fillable pool for tickStorageAutoFill to fill again later. No-op if no bank of
@@ -1847,7 +1834,7 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
-    // "Memory" (bits/productionAccumulator/mainGameUnlocked/bitsTransferredThisCycle) resets to
+    // "Memory" (bits/productionAccumulator/mainGameUnlocked) resets to
     // fresh on every real Prestige, in the same atomic reset as resources/owned above — a new
     // cycle always starts this screen's balance from 0 and re-shows it before MainPage. The Byte
     // generator itself and every upgrade to it — capacity/byteCreated/tickSpeedSeconds/

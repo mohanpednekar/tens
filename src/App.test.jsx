@@ -1902,7 +1902,6 @@ const seedIntroState = (introOverrides = {}, otherOverrides = {}) =>
       byteCreated: false,
       productionMultiplier: 1,
       mainGameUnlocked: false,
-      bitsTransferredThisCycle: 0,
       ...introOverrides,
     },
     ...otherOverrides,
@@ -2025,7 +2024,6 @@ test('the manual convert button appears once capacity reaches the conversion-unl
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.bitsTransferredThisCycle).toBe(1000)
 })
 
 test('the convert button stays hidden below the conversion-unlock capacity', () => {
@@ -2035,7 +2033,7 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
-test('shows one transfer block per remaining unit of the (default 8) transfer budget, only the leftmost clickable, and clicking it reveals the next as active', async () => {
+test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', async () => {
   const user = userEvent.setup()
 
   // mainGameUnlocked seeded true (and reached via the voluntary nav link, like the "always-
@@ -2079,10 +2077,10 @@ test('shows one transfer block per remaining unit of the (default 8) transfer bu
   expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
-  expect(saved.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
+  expect(saved.purchaseLevelProgress.tier01).toBe(1)
 })
 
-test('auto-transfers every remaining block in bulk once the whole budget is available at once, and every block shows as consumed', () => {
+test('auto-transfers a full block once the threshold is reached, then rolls the row over to a fresh block for the next tier01 level rather than staying consumed', () => {
   vi.useFakeTimers()
 
   // A big jump — passive production or a large offline-progress catch-up — that skips straight
@@ -2100,17 +2098,19 @@ test('auto-transfers every remaining block in bulk once the whole budget is avai
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Transitioned to MainPage (mainGameUnlocked flips on the bulk transfer) with all 8 Kilobytes
-  // granted at once.
+  // Transitioned to MainPage (mainGameUnlocked flips on the bulk auto-invest) with all 8 Kilobytes
+  // granted at once, completing tier01's first level.
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
-  // Navigating back to the Byte Foundry confirms the blocks stayed in place, all now consumed —
-  // not removed/emptied — rather than silently vanishing off screen.
+  // Navigating back to the Byte Foundry shows a fresh, empty row for the next level rather than the
+  // blocks staying permanently "consumed" — there is no per-cycle transfer cap any more, so the row
+  // just keeps mirroring tier01's own live purchase-block progress, which reset to 0 once the level
+  // completed.
   fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
-  expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(8)
-  expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
-  expect(screen.queryAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(0)
+  expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
+  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(7)
+  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -2518,9 +2518,8 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Memory + the gate + the transfer budget reset to fresh.
+  // Memory + the gate reset to fresh.
   expect(saved.intro.mainGameUnlocked).toBe(false)
-  expect(saved.intro.bitsTransferredThisCycle).toBe(0)
   expect(saved.intro.bits).toBe(0)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(8000)
@@ -2603,16 +2602,15 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   seedMainGameState({
     intro: {
       mainGameUnlocked: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
-      productionMultiplier: 4, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+      productionMultiplier: 4,
     },
+    purchaseLevelProgress: { tier01: 3 },
   })
   render(<App />)
 
   await user.click(screen.getByText('⚙️ Byte Foundry'))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  // This cycle's shared transfer budget is exhausted, but the generator keeps running regardless.
-  expect(screen.getByText(/transfer budget is fully spent/i)).toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
@@ -2620,10 +2618,11 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeInTheDocument()
-  // Once this cycle's budget is fully spent, no block is active any more — but all 8 stay on
-  // screen, greyed out as consumed, rather than disappearing.
-  expect(screen.queryByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).not.toBeInTheDocument()
-  expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(8)
+  // The transfer row mirrors tier01's own live purchase-block progress — no per-cycle cap, so it
+  // keeps offering an active (if currently unaffordable) block rather than ever going fully consumed.
+  expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(3)
+  expect(screen.getByRole('button', { name: /convert 1000 bits into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(4)
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()

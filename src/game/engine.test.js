@@ -649,47 +649,33 @@ describe('convertIntroBitsToKilobytes', () => {
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
   })
 
-  it('flips mainGameUnlocked and grows bitsTransferredThisCycle on a successful convert', () => {
+  it('flips mainGameUnlocked on a successful convert', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 1000 })
     const after = convertIntroBitsToKilobytes(state)
     expect(after.intro.mainGameUnlocked).toBe(true)
-    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
   })
 
-  it('keeps working after mainGameUnlocked, as long as budget remains', () => {
+  it('keeps working indefinitely after mainGameUnlocked — there is no per-cycle transfer cap', () => {
     const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: 2000, bitsTransferredThisCycle: INTRO_BITS_PER_KILOBYTE_CONVERSION,
+      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 20, capacity: INTRO_BITS_PER_KILOBYTE_CONVERSION * 20,
     })
-    const after = convertIntroBitsToKilobytes(state)
-    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION * 2)
-    expect(after.owned[firstTierId]).toBe(1)
+    let after = state
+    for (let i = 0; i < 20; i++) after = convertIntroBitsToKilobytes(after)
+    expect(after.intro.bits).toBe(0)
+    expect(after.owned[firstTierId]).toBe(20)
   })
 
-  it('is a no-op once this cycle\'s shared transfer budget is exhausted', () => {
-    const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
+  it('advances the first tier\'s own purchaseLevelProgress on every convert, rolling over once a level completes', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), firstTierId, 1), {
+      bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * (DEFAULT_PURCHASE_BLOCK_SIZE + 1), capacity: INTRO_BITS_PER_KILOBYTE_CONVERSION * (DEFAULT_PURCHASE_BLOCK_SIZE + 1),
     })
-    expect(convertIntroBitsToKilobytes(state)).toBe(state)
-  })
+    let after = state
+    for (let i = 0; i < DEFAULT_PURCHASE_BLOCK_SIZE; i++) after = convertIntroBitsToKilobytes(after)
+    expect(after.purchaseLevels[firstTierId]).toBe(2)
+    expect(after.purchaseLevelProgress[firstTierId]).toBe(0)
 
-  it('is a no-op if the remaining budget can\'t cover a full 1000-bit transfer', () => {
-    const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, capacity: INTRO_AUTO_INVEST_THRESHOLD, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD - 500,
-    })
-    expect(convertIntroBitsToKilobytes(state)).toBe(state)
-  })
-
-  it('respects the dynamic (block-size-grown) budget rather than the old fixed 8000', () => {
-    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    const state = withIntro(withPurchaseLevel(createInitialGameState(), lastTier.id, 101), {
-      mainGameUnlocked: true, bits: INTRO_BITS_PER_KILOBYTE_CONVERSION, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
-    })
-    // Block size grew to 9 (see getPurchaseBlockSize), so the transfer budget is now 9000 bits —
-    // another 1000-bit transfer is still allowed even though bitsTransferredThisCycle already
-    // equals the OLD fixed 8000 constant this replaced.
-    expect(getPurchaseBlockSize(state)).toBe(9)
-    const after = convertIntroBitsToKilobytes(state)
-    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD + INTRO_BITS_PER_KILOBYTE_CONVERSION)
+    const afterOneMore = convertIntroBitsToKilobytes(after)
+    expect(afterOneMore.purchaseLevelProgress[firstTierId]).toBe(1)
   })
 })
 
@@ -747,24 +733,20 @@ describe('tickIntroAutoInvest', () => {
     expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.mainGameUnlocked).toBe(true)
-    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
   })
 
-  it('keeps working after mainGameUnlocked, transferring only the remaining budget once some has already been manually converted', () => {
+  it('fires again every time bits reach the threshold again, with no per-cycle cap', () => {
     const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 80000, byteCreated: true, bitsTransferredThisCycle: 3000,
+      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: 80000, byteCreated: true,
     })
     const after = tickIntroAutoInvest(state)
-    expect(after.intro.bitsTransferredThisCycle).toBe(INTRO_AUTO_INVEST_THRESHOLD)
-    expect(after.intro.bits).toBe(INTRO_AUTO_INVEST_THRESHOLD - 5000)
-    expect(after.owned[firstTierId]).toBe(5000 / INTRO_BITS_PER_KILOBYTE_CONVERSION)
-  })
+    expect(after.intro.bits).toBe(0)
+    expect(after.owned[firstTierId]).toBe(INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION)
 
-  it('is a no-op once this cycle\'s shared transfer budget is fully exhausted', () => {
-    const state = withIntro(createInitialGameState(), {
-      mainGameUnlocked: true, bits: INTRO_AUTO_INVEST_THRESHOLD, capacity: INTRO_AUTO_INVEST_THRESHOLD, byteCreated: true, bitsTransferredThisCycle: INTRO_AUTO_INVEST_THRESHOLD,
-    })
-    expect(tickIntroAutoInvest(state)).toBe(state)
+    const again = withIntro(after, { bits: INTRO_AUTO_INVEST_THRESHOLD })
+    const afterAgain = tickIntroAutoInvest(again)
+    expect(afterAgain.intro.bits).toBe(0)
+    expect(afterAgain.owned[firstTierId]).toBe((INTRO_AUTO_INVEST_THRESHOLD / INTRO_BITS_PER_KILOBYTE_CONVERSION) * 2)
   })
 
   it('triggers at the dynamic (block-size-grown) threshold, not the old fixed 8000', () => {
@@ -779,7 +761,7 @@ describe('tickIntroAutoInvest', () => {
     const full = withIntro(notYetFull, { bits: 9000 })
     const after = tickIntroAutoInvest(full)
     expect(after.intro.mainGameUnlocked).toBe(true)
-    expect(after.intro.bitsTransferredThisCycle).toBe(9000)
+    expect(after.intro.bits).toBe(0)
   })
 })
 
@@ -4079,7 +4061,7 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry\'s Memory/gate/transfer budget across prestige, but keeps the generator and its upgrades permanent', () => {
+  it('resets the Byte Foundry\'s Memory/gate across prestige, but keeps the generator and its upgrades permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,
@@ -4090,14 +4072,12 @@ describe('prestigeGame', () => {
       productionMilestoneTierClaims: 1,
       productionAccumulator: 2.5,
       mainGameUnlocked: true,
-      bitsTransferredThisCycle: 8000,
     })
     const after = prestigeGame(state)
-    // Memory + the gate + the transfer budget reset to fresh.
+    // Memory + the gate reset to fresh.
     expect(after.intro.bits).toBe(0)
     expect(after.intro.productionAccumulator).toBe(0)
     expect(after.intro.mainGameUnlocked).toBe(false)
-    expect(after.intro.bitsTransferredThisCycle).toBe(0)
     // The generator and every upgrade to it are permanent — carried over unchanged.
     expect(after.intro.capacity).toBe(8000)
     expect(after.intro.byteCreated).toBe(true)
@@ -4110,13 +4090,12 @@ describe('prestigeGame', () => {
   it('resets resources/owned together with the intro\'s Memory in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
     const state = withIntro(
       withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 8),
-      { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true, bitsTransferredThisCycle: 4000 }
+      { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true }
     )
     const after = prestigeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.mainGameUnlocked).toBe(false)
-    expect(after.intro.bitsTransferredThisCycle).toBe(0)
     // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
     // no stale/wiped generator progress either.
     expect(after.intro.capacity).toBe(8000)
@@ -4401,7 +4380,7 @@ describe('speedUpGame', () => {
     const seededIntro = {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
-      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
+      mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true },
     }
@@ -4643,7 +4622,7 @@ describe('overclockGame', () => {
     const seededIntro = {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
-      mainGameUnlocked: true, bitsTransferredThisCycle: 8000,
+      mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true },
     }

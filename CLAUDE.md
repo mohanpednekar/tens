@@ -241,8 +241,8 @@ src/
                                `onBack` prop (only passed once `intro.mainGameUnlocked` — the mandatory
                                gate itself has no way out); nothing here ever goes read-only —
                                Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
-                               Convert stays live too as long as this cycle's shared transfer budget
-                               isn't exhausted (see `intro.bitsTransferredThisCycle` below). Receives
+                               Convert stays live too — there is no per-cycle transfer cap at all, only
+                               tier01's own live purchase-block progress (see below). Receives
                                the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
@@ -398,29 +398,32 @@ Doubling first halves the delivery period (like a tier's own tickspeed multiplie
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
-used), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte) via a row of
-**transfer blocks** at the bottom of the screen — always all `getIntroTransferBudget(state) /
-INTRO_BITS_PER_KILOBYTE_CONVERSION` of them, for the whole cycle; blocks never disappear once
-transferred. Only the leftmost not-yet-transferred (active) block is ever clickable, and clicking it
-transfers just that block, revealing the next as active (any surplus Memory left over carries
-straight into it, so a large enough balance lets you click through several blocks in a row) — the
-one just spent stays in place too, now greyed out/fully filled to show it's consumed. Read
-left-to-right, the row's already-consumed (filled), one active (partially filled), and still-upcoming
-(empty) blocks together read as one continuous progress bar rather than a shrinking list. The very
-first successful transfer (clicking a block, or via the "Memory fills to the full budget"
-auto-convert convenience, which fires the instant every remaining block's worth is available at once
-— e.g. a big offline-progress jump — and auto-transfers them all in bulk, turning every remaining
+Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
+on capacity, not the current balance, so conversion becomes available well before Memory itself is
+ever full), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte) via a row of
+**transfer blocks** at the bottom of the screen — always `getPurchaseBlockSize(state)` of them, one per
+unit of tier01's (Kilobytes') own current purchase block. Only the leftmost not-yet-transferred
+(active) block is ever clickable, and clicking it transfers just that block, revealing the next as
+active (any surplus Memory left over carries straight into it, so a large enough balance lets you
+click through several blocks in a row) — the one just spent stays in place too, now greyed out/fully
+filled to show it's consumed. Read left-to-right, the row's already-consumed (filled), one active
+(partially filled), and still-upcoming (empty) blocks together read as one continuous progress bar
+rather than a shrinking list. The very first successful transfer (clicking a block, or via the "Memory
+fills to a full block" auto-convert convenience, which fires the instant a full block's worth is
+available at once — e.g. a big offline-progress jump — and auto-transfers it in bulk, turning that
 block into a consumed one at once) unlocks the main game immediately — no need to wait for a full
-balance. Further transfers keep working after that, sharing one running **per-cycle transfer budget**
-(`intro.bitsTransferredThisCycle`, capped at `getIntroTransferBudget(state)`) — **dynamic, not a fixed
-8000**: exactly enough for `getPurchaseBlockSize(state)` Kilobyte units, the same live, possibly-growing
-block size the main game's own tier01 Buy button already reads (starts at `DEFAULT_PURCHASE_BLOCK_SIZE`,
-8, so 8000 bits at a fresh cycle — identical to the old fixed constant — only growing later in a run).
-Once that budget is hit, by any combination of block clicks or the bulk auto-convenience, no block is
-active any more — every block simply shows as consumed — until the next Prestige reopens a fresh
-budget (and resets the whole row to empty/upcoming again). Nothing about the Byte Foundry itself ever
-fully freezes: Tap/Sacrifice/Invest/Storage all stay live indefinitely, every cycle, regardless of how
-much of the transfer budget remains.
+balance. **There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
+`tickIntroAutoInvest` (see `getIntroTransferBudget`) keep firing indefinitely, every time Memory
+reaches another 1000-bit/block-sized threshold, forever. The row is simply a live mirror of
+`purchaseLevelProgress[tier01]` — the same value the "Kilobytes' current block" tracker in the Storage
+section already shows — so the instant a level completes (`getPurchaseBlockSize(state)` blocks
+transferred), the whole row rolls over to a fresh, empty set of blocks tracking the *next* level
+rather than sitting permanently "consumed." (A real Prestige still resets every tier's
+`purchaseLevels`/`purchaseLevelProgress` — including tier01's — back to a fresh level 1 (see
+`prestigeGame` in `engine.js`), so the row does still start over each cycle in practice, just as a
+side effect of that general reset, not because of any transfer-specific budget field.)
+Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/Invest/Storage/Convert all
+stay live indefinitely, every cycle.
 
 The page renders a single, button-style filling tile, **Memory** (the balance itself, `bits /
 capacity`, both scaled into the largest appropriate unit — raw bits before the Byte generator exists
@@ -482,7 +485,8 @@ auto-redeem preference — but NOT `storageAutoRedeemedSizes`, which resets ever
 permanent, carried over by every real Prestige** — a bank already full when Prestige fires stays
 full, its contents intact even though Memory itself resets, giving a fresh cycle a head start
 (immediately redeemable once `tier01`'s fresh level 1 cost matches). Only Memory (the current bit
-balance), the main-game-unlock gate, and the transfer budget reset each cycle, so returning cycles
+balance), the main-game-unlock gate, and tier01's own purchase-block progress (which the transfer row
+mirrors — see above) reset each cycle, so returning cycles
 are a fast pit-stop, not a full
 replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
@@ -579,7 +583,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (846 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (843 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -587,10 +591,10 @@ already cover the genuinely useful items on that checklist.
   save's `resources.Ones` balance is migrated to `resources.base` on load, and a save from before the tier
   ladder shifted has its per-tier data shifted down one slot (old `tier02`/Kilobytes → new `tier01`, …,
   old `tier01`/Bytes dropped entirely) — gated on the same one-time `intro === undefined` signal that
-  also backfills `intro.mainGameUnlocked: true` (and a fully-spent transfer budget) for such a save (see
-  `storage.js`'s `migrateState`/`shiftOldTierIds`); a separate, narrower backward-compat case backfills
-  `mainGameUnlocked`/`bitsTransferredThisCycle` from an old boolean `intro.completed` field for a save
-  that predates that field split but already has its own `intro`. `src/theme/contrast.js` (a
+  also backfills `intro.mainGameUnlocked: true` for such a save (see `storage.js`'s
+  `migrateState`/`shiftOldTierIds`); a separate, narrower backward-compat case backfills
+  `mainGameUnlocked` from an old boolean `intro.completed` field for a save that predates the
+  `mainGameUnlocked` field but already has its own `intro`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
@@ -610,7 +614,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (823, see "Testing" above) is unaffected by anything under `e2e/`.
+  (843, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

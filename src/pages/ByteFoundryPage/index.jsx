@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getIntroTransferBudget, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
+import { formatAmount, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -141,14 +141,15 @@ const TransferBlocksRow = styled.div`
   width: 100%;
 `
 
-// One block per this cycle's whole transfer budget (see getIntroTransferBudget) — always all
-// `blockCount` of them, for the whole cycle; blocks never disappear once transferred. Three
-// visual states, read together as one continuous progress bar: $consumed (already transferred —
-// solid muted fill, permanently disabled), $active (the sole clickable one — accent border, partial
-// progressFill gradient toward its own 1000-bit threshold), and plain/upcoming (neither prop set —
-// empty outline, disabled placeholder). Only the active block is ever passed a $progress value —
-// progressFill returns null without one, so the plain `background` rule below (transparent, or
-// surfaceSunken once $consumed) applies instead.
+// One block per unit of tier01's (Kilobytes') own current purchase block size (getPurchaseBlockSize)
+// — this row is just a live mirror of purchaseLevelProgress[tier01], the same value the "Kilobytes'
+// current block" tracker above already shows, so it rolls over to a fresh, empty row the instant a
+// level completes rather than ever running out. Three visual states, read together as one continuous
+// progress bar: $consumed (already transferred this level — solid muted fill, permanently disabled),
+// $active (the sole clickable one — accent border, partial progressFill gradient toward its own
+// 1000-bit threshold), and plain/upcoming (neither prop set — empty outline, disabled placeholder).
+// Only the active block is ever passed a $progress value — progressFill returns null without one, so
+// the plain `background` rule below (transparent, or surfaceSunken once $consumed) applies instead.
 const TransferBlock = styled.button`
   flex: 1 1 2.5rem;
   min-width: 0;
@@ -340,15 +341,17 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   const canInvest = intro.bits >= investCost && !investClaimsUsedUp
 
-  // The transfer budget (how many 1000-bit blocks this cycle allows in total) is dynamic — tied to
-  // the Kilobyte tier's own current purchase block size (see getIntroTransferBudget), same as the
-  // main game's own Buy button, not a fixed number.
-  const transferBudget = getIntroTransferBudget(state)
-  const blockCount = transferBudget / INTRO_BITS_PER_KILOBYTE_CONVERSION
-  const blocksTransferred = Math.floor(intro.bitsTransferredThisCycle / INTRO_BITS_PER_KILOBYTE_CONVERSION)
-  const blocksRemaining = Math.max(0, blockCount - blocksTransferred)
-  const remainingTransferBudget = Math.max(0, transferBudget - intro.bitsTransferredThisCycle)
-  const canTransferBlock = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION && remainingTransferBudget >= INTRO_BITS_PER_KILOBYTE_CONVERSION
+  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
+  // from the main game's Buy button/autobuyer, redeemStorageBank, or convertIntroBitsToKilobytes/
+  // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
+  // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
+  // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
+  // completes rather than ever running dry.
+  const purchaseBlockSize = getPurchaseBlockSize(state)
+  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
+  const blocksTransferred = tier01PurchaseProgress
+  const blocksRemaining = purchaseBlockSize - tier01PurchaseProgress
+  const canTransferBlock = intro.bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
@@ -383,12 +386,6 @@ const ByteFoundryPage = ({ game, onBack }) => {
     .filter(size => intro.storageBanks[size] > 0)
     .sort((a, b) => a - b)
 
-  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units
-  // come from the main game's Buy button/autobuyer or from redeemStorageBank here, since both
-  // paths update purchaseLevelProgress via the same bookkeeping (see grantTierUnits/buyTier).
-  const purchaseBlockSize = getPurchaseBlockSize(state)
-  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
-
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
@@ -396,9 +393,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       <StatusText>
         {!intro.mainGameUnlocked
           ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
-          : remainingTransferBudget > 0
-            ? `Main game unlocked — ${formatAmount(remainingTransferBudget)} bits left to transfer this cycle.`
-            : 'Transfer budget is fully spent — resets next Prestige.'}
+          : 'Main game unlocked — keep transferring Memory into Kilobytes any time.'}
       </StatusText>
 
       <TilesRow>
@@ -614,7 +609,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       {revealed && (<>
         <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: blockCount }, (_, index) => {
+          {Array.from({ length: purchaseBlockSize }, (_, index) => {
             const isConsumed = index < blocksTransferred
             const isActive = index === blocksTransferred
             return (
