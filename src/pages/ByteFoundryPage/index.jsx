@@ -319,6 +319,13 @@ const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
+// Any Memory-denominated cost (Invest, Storage build) reads in whatever B/KB/MB/…/QB unit best
+// fits that specific amount, the same scale Memory's own balance uses — rather than a fixed unit
+// (e.g. always Bytes) that stops scaling once a cost crosses 1000 of it. `getMemoryUnit(bits,
+// true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
+// here since every caller of this helper (Invest/Storage) only renders once `byteCreated`.
+const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
+
 // Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit).
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
   const unit = getMemoryUnit(capacityBits, byteCreated)
@@ -365,7 +372,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
-  const investCostBytes = investCost / BITS_PER_BYTE
+  const investCostDisplay = formatBitsInNearestUnit(investCost)
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   const canInvest = intro.bits >= investCost && !investClaimsUsedUp
@@ -510,13 +517,13 @@ const ByteFoundryPage = ({ game, onBack }) => {
               title={
                 investClaimsUsedUp
                   ? `Already claimed ${investMaxClaims}/${investMaxClaims} at this tier`
-                  : `${formatAmount(investCostBytes)} B — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
+                  : `${investCostDisplay} — claim ${intro.productionMilestoneTierClaims + 1}/${investMaxClaims}`
               }
               type="button"
               variant={canInvest ? 'info' : 'neutral'}
               $progress={investProgress}
             >
-              <ButtonContent>⚡ Bandwidth ×2 ({formatAmount(investCostBytes)} B)</ButtonContent>
+              <ButtonContent>⚡ Bandwidth ×2 ({investCostDisplay})</ButtonContent>
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry invest progress"
@@ -539,14 +546,14 @@ const ByteFoundryPage = ({ game, onBack }) => {
             onClick={actions.buildStorageBank}
             title={
               storageBankRedeemableNow
-                ? `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
-                : `Costs ${formatAmount(storageBankCost)} bits (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
+                ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
+                : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
             }
             type="button"
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatAmount(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"

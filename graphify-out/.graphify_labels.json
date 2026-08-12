@@ -49,6 +49,10 @@
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
   "49": "Button/index.jsx",
+  "50": "ByteFoundryPage",
   "51": "OfflineProgressNotice/index.jsx",
-  "54": "formatCurrency"
+  "52": "isStorageBankRedeemable",
+  "53": "formatMemoryAmount",
+  "54": "formatCurrency",
+  "55": "formatBonusOrMultiplier"
 }

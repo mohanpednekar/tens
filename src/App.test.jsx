@@ -2182,6 +2182,16 @@ test('Invest for Double Production shows its cost in Bytes, with no stray comma 
   expect(investButton.textContent).not.toContain(',')
 })
 
+test('Invest for Double Production shows its cost in the nearest fitting unit once it grows past 1000 Bytes', () => {
+  // Tier 3's cost is 8000 bits = 1000 Bytes — Memory's own B/KB/MB/… scale rolls that over to
+  // "1 KB" once a cost reaches the next unit boundary, rather than a fixed-unit "1,000 B".
+  seedIntroState({ productionMilestoneTier: 3, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
+  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2 (1 KB)')
+})
+
 test('Invest for Double Production grants two claims at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
   const user = userEvent.setup()
 
@@ -2364,6 +2374,17 @@ describe('Byte Foundry Storage', () => {
     const buildButton = screen.getByRole('button', { name: /build storage bank/i })
     expect(buildButton).toHaveTextContent('1 KB')
     expect(buildButton).toBeDisabled()
+  })
+
+  test('Build Storage Bank shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
+    seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
+    render(<App />)
+
+    // currentBankCost is 80,000 bits = 10,000 Bytes = 10 KB in Memory's own B/KB/MB/… scale — shown
+    // as "10 KB", not the raw "80,000" bit count with no unit at all.
+    const buildButton = screen.getByRole('button', { name: /build storage bank/i })
+    expect(buildButton).toHaveTextContent('10 KB')
+    expect(buildButton).not.toHaveTextContent('80,000')
   })
 
   test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {

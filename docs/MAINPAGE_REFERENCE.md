@@ -68,10 +68,11 @@ the balance tile above already uses for `capacity`, so the button's purpose read
 compressed; `aria-label="sacrifice all bits for 10x capacity"` still carries the full description for
 assistive tech, disabled unless `bits === capacity`, calling `actions.pickIntroCapacityMilestone`,
 `$progress` toward `capacity`) and "Invest for Double Production" (visible label
-`⚡ Bandwidth ×2 ({cost} B)` — "Bandwidth" naming the bits/sec production rate this multiplies, plus
+`⚡ Bandwidth ×2 ({cost})` — "Bandwidth" naming the bits/sec production rate this multiplies, plus
 its own cost, since the cost itself is live, dynamic information worth keeping visible even in the
-shortened label; `aria-label="invest bits for double production"` carries the full description —
-its cost **in Bytes** — `getIntroProductionMilestoneCost(intro.productionMilestoneTier) / BITS_PER_BYTE` — disabled unless
+shortened label, formatted via the local `formatBitsInNearestUnit` helper (see below) rather than a
+fixed unit; `aria-label="invest bits for double production"` carries the full description — cost
+`getIntroProductionMilestoneCost(intro.productionMilestoneTier)` — disabled unless
 `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
 getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so the
 button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
@@ -85,12 +86,15 @@ Once `intro.byteCreated`, a separate labeled **Storage** section (`StorageSectio
 so it reads as its own grouped mechanic rather than one more item in the same list as Sacrifice/
 Invest. Inside it: a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label/cost always tracks `getStorageBankSize(state)` — an independent ladder that
+whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
 1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
 skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
-the current size, decoupled from tier01's own CURRENT price; disabled below that cost. Building
-only ever constructs an EMPTY container — it does not fill it (see below).
+the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
+cost itself (parenthesized in the label, and in the button's `title`) renders via
+`formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same
+as Invest's cost above — rather than a raw unitless bit count. Building only ever constructs an
+EMPTY container — it does not fill it (see below).
 
 For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
 visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
@@ -155,9 +159,15 @@ bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemo
 (`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
 `formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
 before it actually is — a display-only convention, internal state always stores raw
-bits, and a separate `formatStorageSize` helper uses a different, Storage-specific scale (see
-"Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
-matching tier01's own cost ladder, not 1000 Bytes). This page's gate reappears every time a real Prestige resets Memory
+bits. Every standalone Memory-denominated cost (Invest, Storage build) reuses this exact scale via a
+further local helper, `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
+true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
+picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
+instead of stopping at a fixed unit. A separate `formatStorageSize` helper uses a different,
+Storage-*size*-specific scale (see "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry"
+section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — only for
+naming a bank's own *size* ("Build 1 KB Bank"), never for the bits actually spent to build it, which
+always renders via `formatBitsInNearestUnit` instead. This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
 docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
