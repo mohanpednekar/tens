@@ -22,16 +22,16 @@
 // meant to be sped back up by investing in those rather than being structurally unable to keep pace
 // — see docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 2  },
-  { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 3  },
-  { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 4  },
-  { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 5  },
-  { id: 'tier05', name: 'Petabytes',   symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 6  },
-  { id: 'tier06', name: 'Exabytes',    symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 7  },
-  { id: 'tier07', name: 'Zettabytes',  symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 8  },
-  { id: 'tier08', name: 'Yottabytes',  symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 9  },
-  { id: 'tier09', name: 'Ronnabytes',  symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 10 },
-  { id: 'tier10', name: 'Quettabytes', symbol: 'QB', baseCost: 1E30, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 11 },
+  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1  },
+  { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2  },
+  { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3  },
+  { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4  },
+  { id: 'tier05', name: 'Petabytes',   symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5  },
+  { id: 'tier06', name: 'Exabytes',    symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6  },
+  { id: 'tier07', name: 'Zettabytes',  symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7  },
+  { id: 'tier08', name: 'Yottabytes',  symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8  },
+  { id: 'tier09', name: 'Ronnabytes',  symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9  },
+  { id: 'tier10', name: 'Quettabytes', symbol: 'QB', baseCost: 1E30, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
 ]
 
 
@@ -175,7 +175,7 @@ export const STORAGE_BANK_LADDER_CAP = 10
 // step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
 // own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
-export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 800_000
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
 // 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
 // intro.computeCores and intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
@@ -342,7 +342,7 @@ export const OVERCLOCK_REQUIREMENT_STEP = 10
 // itself fires far more often than either of those two over a run — but pricier than
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
 // smaller, earlier-game upgrade than Speed Up.
-export const AUTO_SPEED_UP_COST = 100
+export const AUTO_SPEED_UP_COST = 20
 // One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
 // tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
 // eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
@@ -350,7 +350,7 @@ export const AUTO_SPEED_UP_COST = 100
 // above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
-export const TICKSPEED_AUTOBUYER_COST = 20
+export const TICKSPEED_AUTOBUYER_COST = 10
 // One-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see engine.js's
 // buyAutoPrestigeAutobuyer) — once bought, tickGame calls buyAutoPrestige automatically every
 // tick once affordable, so a level-up beyond the first no longer needs a manual click. This is a
@@ -360,7 +360,7 @@ export const TICKSPEED_AUTOBUYER_COST = 20
 // cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but
 // well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
 // allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
-export const AUTO_PRESTIGE_AUTOBUYER_COST = 500
+export const AUTO_PRESTIGE_AUTOBUYER_COST = 100
 // Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
 // (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
