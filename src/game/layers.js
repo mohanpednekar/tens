@@ -115,7 +115,7 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // convertIntroBitsToKilobytes in engine.js) — matches Kilobytes' own real baseCost (1E3 Bits) in
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
-export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
+export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
