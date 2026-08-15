@@ -67,7 +67,7 @@ const BalanceText = styled.p`
 const TapArea = styled.button`
   position: relative;
   width: 100%;
-  aspect-ratio: 5 / 3;
+  aspect-ratio: 5 / 2;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
@@ -615,8 +615,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
             const redeemable = isStorageBankRedeemable(state, size)
             return (
               <StorageSizeRow key={size}>
-                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
-                <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
+                <StorageSizeLabel>{`${formatBitsInNearestUnit(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
+                <StorageBankSquaresRow role="group" aria-label={`${formatBitsInNearestUnit(size)} storage banks`}>
                   {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
                     const isFull = index < full
                     const isEmpty = !isFull && index < full + emptyCount
@@ -625,18 +625,18 @@ const ByteFoundryPage = ({ game, onBack }) => {
                         key={index}
                         aria-label={
                           isFull
-                            ? `redeem ${formatStorageSize(size)} storage bank`
+                            ? `redeem ${formatBitsInNearestUnit(size)} storage bank`
                             : isEmpty
-                              ? `empty ${formatStorageSize(size)} bank`
-                              : `not yet built ${formatStorageSize(size)} bank`
+                              ? `empty ${formatBitsInNearestUnit(size)} bank`
+                              : `not yet built ${formatBitsInNearestUnit(size)} bank`
                         }
                         disabled={!isFull || !redeemable}
                         onClick={isFull && redeemable ? () => actions.redeemStorageBank(size) : undefined}
                         title={
                           isFull
                             ? (redeemable
-                              ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
-                              : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                              ? `Redeems 1 ${formatBitsInNearestUnit(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
+                              : `Redeemable once Kilobytes' level cost reaches ${formatBitsInNearestUnit(size)}`)
                             : isEmpty
                               ? 'Built, waiting for Memory to auto-fill it'
                               : 'Not yet built'
@@ -668,7 +668,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       )}
 
       {revealed && (<>
-        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
+        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
           {Array.from({ length: purchaseBlockSize }, (_, index) => {
             const isConsumed = index < blocksTransferred
