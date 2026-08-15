@@ -67,7 +67,7 @@ const BalanceText = styled.p`
 const TapArea = styled.button`
   position: relative;
   width: 100%;
-  aspect-ratio: 5 / 3;
+  aspect-ratio: 5 / 2;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
@@ -372,14 +372,14 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 // whole-number label.
 const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
 const formatStorageSize = bits => {
-  if (bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
-  let value = bits / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  if (bits < 1000) return `${formatBitsInNearestUnit(bits)} bit${bits === 1 ? '' : 's'}`
+  let value = bits / 1000
   let unitIndex = 0
   while (value >= MEMORY_UNIT_SCALE && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
     value /= MEMORY_UNIT_SCALE
     unitIndex += 1
   }
-  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+  return `${formatBitsInNearestUnit(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -595,7 +595,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatBitsInNearestUnit(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -615,8 +615,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
             const redeemable = isStorageBankRedeemable(state, size)
             return (
               <StorageSizeRow key={size}>
-                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
-                <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
+                <StorageSizeLabel>{`${formatBitsInNearestUnit(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
+                <StorageBankSquaresRow role="group" aria-label={`${formatBitsInNearestUnit(size)} storage banks`}>
                   {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
                     const isFull = index < full
                     const isEmpty = !isFull && index < full + emptyCount
@@ -625,18 +625,18 @@ const ByteFoundryPage = ({ game, onBack }) => {
                         key={index}
                         aria-label={
                           isFull
-                            ? `redeem ${formatStorageSize(size)} storage bank`
+                            ? `redeem ${formatBitsInNearestUnit(size)} storage bank`
                             : isEmpty
-                              ? `empty ${formatStorageSize(size)} bank`
-                              : `not yet built ${formatStorageSize(size)} bank`
+                              ? `empty ${formatBitsInNearestUnit(size)} bank`
+                              : `not yet built ${formatBitsInNearestUnit(size)} bank`
                         }
                         disabled={!isFull || !redeemable}
                         onClick={isFull && redeemable ? () => actions.redeemStorageBank(size) : undefined}
                         title={
                           isFull
                             ? (redeemable
-                              ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
-                              : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                              ? `Redeems 1 ${formatBitsInNearestUnit(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
+                              : `Redeemable once Kilobytes' level cost reaches ${formatBitsInNearestUnit(size)}`)
                             : isEmpty
                               ? 'Built, waiting for Memory to auto-fill it'
                               : 'Not yet built'
@@ -668,7 +668,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
       )}
 
       {revealed && (<>
-        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
+        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
           {Array.from({ length: purchaseBlockSize }, (_, index) => {
             const isConsumed = index < blocksTransferred
@@ -680,7 +680,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? `transferred block ${index + 1}`
                     : isActive
-                      ? `convert ${formatStorageSize(transferBlockCost)} into 1 Kilobyte`
+                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
                       : `locked transfer block ${index + 1}`
                 }
                 disabled={isConsumed || !isActive || !canTransferBlock}
@@ -689,7 +689,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? `${formatStorageSize(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
+                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"
