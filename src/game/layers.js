@@ -22,16 +22,16 @@
 // meant to be sped back up by investing in those rather than being structurally unable to keep pace
 // — see docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 2  },
-  { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 3  },
-  { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 4  },
-  { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 5  },
-  { id: 'tier05', name: 'Petabytes',   symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 6  },
-  { id: 'tier06', name: 'Exabytes',    symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 7  },
-  { id: 'tier07', name: 'Zettabytes',  symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 8  },
-  { id: 'tier08', name: 'Yottabytes',  symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 9  },
-  { id: 'tier09', name: 'Ronnabytes',  symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 10 },
-  { id: 'tier10', name: 'Quettabytes', symbol: 'QB', baseCost: 1E30, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 11 },
+  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1  },
+  { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2  },
+  { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3  },
+  { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4  },
+  { id: 'tier05', name: 'Petabytes',   symbol: 'PB', baseCost: 1E15, costResourceId: 'base', producesResourceId: 'tier04', baseTickSpeedSeconds: 5  },
+  { id: 'tier06', name: 'Exabytes',    symbol: 'EB', baseCost: 1E18, costResourceId: 'base', producesResourceId: 'tier05', baseTickSpeedSeconds: 6  },
+  { id: 'tier07', name: 'Zettabytes',  symbol: 'ZB', baseCost: 1E21, costResourceId: 'base', producesResourceId: 'tier06', baseTickSpeedSeconds: 7  },
+  { id: 'tier08', name: 'Yottabytes',  symbol: 'YB', baseCost: 1E24, costResourceId: 'base', producesResourceId: 'tier07', baseTickSpeedSeconds: 8  },
+  { id: 'tier09', name: 'Ronnabytes',  symbol: 'RB', baseCost: 1E27, costResourceId: 'base', producesResourceId: 'tier08', baseTickSpeedSeconds: 9  },
+  { id: 'tier10', name: 'Quettabytes', symbol: 'QB', baseCost: 1E30, costResourceId: 'base', producesResourceId: 'tier09', baseTickSpeedSeconds: 10 },
 ]
 
 
@@ -115,17 +115,7 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // convertIntroBitsToKilobytes in engine.js) — matches Kilobytes' own real baseCost (1E3 Bits) in
 // TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
 // underlying "cost of a Kilobyte" even though they're tracked as separate balances.
-export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 1000
-// The bit-to-Kilobyte auto-convert batch threshold (see getIntroTransferBudget in engine.js) is no
-// longer this fixed value — it's dynamic, tied to the Kilobyte tier's own current purchase block
-// size, and (unlike an earlier version of this mechanic) has no cycle-wide cap at all any more —
-// it can fire repeatedly, batch after batch, forever. This constant's only remaining role is the
-// cost cutoff for getIntroProductionMilestoneMaxClaims below (2 claims per Invest tier strictly
-// below 1000 Bytes' worth, 1 claim per tier from 1000 Bytes on) — kept as a named constant since
-// 8000 bits (1000 Bytes) is still a meaningful, independent boundary for that unrelated mechanic,
-// coincidentally matching the auto-convert batch size's own historical default
-// (DEFAULT_PURCHASE_BLOCK_SIZE × 1000).
-export const INTRO_AUTO_INVEST_THRESHOLD = 8000
+export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
@@ -147,6 +137,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
 // "never lost," and a full bank's contents ride through a real Prestige untouched even though
 // Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
+// until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
+// per step — see ByteFoundryPage's getMemoryUnit — not the 1000-bits-per-"KB" scale the bank-size
+// ladder above uses) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 → 8000 → 80000 via
+// Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed only once the
+// player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
+export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
 // A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
 // build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
 // bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
@@ -166,10 +163,38 @@ export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // intro.storageBanksBuiltTotal, a cumulative count that redeeming a bank never decrements.
 export const STORAGE_BANK_LADDER_CAP = 10
 
+// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
+// costed a Compute Core at a fixed 10 MB of Memory, gated on every Storage bank size being built
+// and full first — superseded by the dynamic model below, which has no relationship to Storage at
+// all; see docs/DESIGN_HISTORY.md for why.
+//
+// Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
+// below activates — 100 KB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
+// step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
+// own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
+// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
+// 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
+// intro.computeCores and intro.computeNodes are permanent counters, carried over every real
+// Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
+export const COMPUTE_CORES_PER_NODE = 8
+// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — applies to
+// intro.computeCores/computeNodes today, and is meant to apply the same way to a future
+// computeClusters/computeNetworks/computeGrids once a later merge tier adds them (see issue #280).
+// Once an entity is at this cap, further production into it pauses entirely (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js) rather than overflowing past
+// it or silently discarding progress — Memory itself simply stays full, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Storage banks already have when nothing can consume them yet.
+export const COMPUTE_ENTITY_CAP = 10
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
-// simulated at 10% of normal speed — a courtesy for short absences, not a way to make the
-// autobuyer loop outrun active play.
-export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.1
+// simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
+// alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short
+// absences, not a way to make the autobuyer loop outrun active play.
+export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
@@ -303,7 +328,7 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // itself — Overclock's value is in how permanent and stackable it is (state.overclockCount is
 // never reset by an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame),
 // not in the size of any single activation.
-export const OVERCLOCK_PRODUCTION_STEP = 0.001
+export const OVERCLOCK_PRODUCTION_STEP = 0.01
 // How many more levels the last tier must reach before Overclock can activate again: a fixed
 // 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
 // steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
@@ -317,7 +342,7 @@ export const OVERCLOCK_REQUIREMENT_STEP = 10
 // itself fires far more often than either of those two over a run — but pricier than
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
 // smaller, earlier-game upgrade than Speed Up.
-export const AUTO_SPEED_UP_COST = 100
+export const AUTO_SPEED_UP_COST = 20
 // One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
 // tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
 // eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
@@ -325,7 +350,7 @@ export const AUTO_SPEED_UP_COST = 100
 // above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
-export const TICKSPEED_AUTOBUYER_COST = 20
+export const TICKSPEED_AUTOBUYER_COST = 10
 // One-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see engine.js's
 // buyAutoPrestigeAutobuyer) — once bought, tickGame calls buyAutoPrestige automatically every
 // tick once affordable, so a level-up beyond the first no longer needs a manual click. This is a
@@ -335,7 +360,7 @@ export const TICKSPEED_AUTOBUYER_COST = 20
 // cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but
 // well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
 // allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
-export const AUTO_PRESTIGE_AUTOBUYER_COST = 500
+export const AUTO_PRESTIGE_AUTOBUYER_COST = 100
 // Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
 // (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
 // XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/

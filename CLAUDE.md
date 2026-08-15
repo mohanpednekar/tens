@@ -391,30 +391,55 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **two claims per tier** for the first three tiers (1/10/100 Bytes), one claim per
-tier from 1000 Bytes on, each spending only that tier's own cost (not a full balance — a claim frequently
+current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
+tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+`docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
+**Sacrifice for 10x Capacity is offered only once nothing else currently possible has been done
+first.** `isMemoryCapacityUpgradeAvailable(state)` — the actual gate `pickIntroCapacityMilestone`
+itself enforces, not just a UI-only disabled state — requires Memory to be full (`bits === capacity`)
+**and** that none of Combine into a Byte (`!byteCreated` and affordable), the current Invest tier
+(affordable and unclaimed), or a currently-buildable Storage bank is still possible with that same
+balance. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY` value and grows
+by the same `INTRO_CAPACITY_MULTIPLIER` Sacrifice's own capacity does, the two stay in lockstep by
+default — in practice this means claiming the current Invest tier is a prerequisite for Sacrificing
+again, every cycle, unless the player has pulled ahead on one ladder relative to the other. This
+doesn't change what Sacrifice itself does (still drains the entire balance to 0, still multiplies
+`capacity` by `INTRO_CAPACITY_MULTIPLIER`) — only when it's allowed to fire.
+
 Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
 on capacity, not the current balance, so conversion becomes available well before Memory itself is
-ever full), Memory can be manually converted in 1000-bit chunks (1000 bits → 1 Kilobyte) via a row of
-**transfer blocks** at the bottom of the screen — always `getPurchaseBlockSize(state)` of them, one per
-unit of tier01's (Kilobytes') own current purchase block. Only the leftmost not-yet-transferred
-(active) block is ever clickable, and clicking it transfers just that block, revealing the next as
-active (any surplus Memory left over carries straight into it, so a large enough balance lets you
-click through several blocks in a row) — the one just spent stays in place too, now greyed out/fully
-filled to show it's consumed. Read left-to-right, the row's already-consumed (filled), one active
-(partially filled), and still-upcoming (empty) blocks together read as one continuous progress bar
-rather than a shrinking list. The very first successful transfer (clicking a block, or via the "Memory
-fills to a full block" auto-convert convenience, which fires the instant a full block's worth is
-available at once — e.g. a big offline-progress jump — and auto-transfers it in bulk, turning that
-block into a consumed one at once) unlocks the main game immediately — no need to wait for a full
-balance. **There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
-`tickIntroAutoInvest` (see `getIntroTransferBudget`) keep firing indefinitely, every time Memory
-reaches another 1000-bit/block-sized threshold, forever. The row is simply a live mirror of
+ever full), Memory can be manually converted into Kilobytes via a row of **transfer blocks** at the
+bottom of the screen — always `getPurchaseBlockSize(state)` of them, one per unit of tier01's
+(Kilobytes') own current purchase block. Each block's own cost is `getIntroKilobyteConversionCost(state)`
+— tier01's own **current** real per-unit level cost (`getTierCost(TIER_DEFINITIONS[0], level)`), not a
+flat rate: exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000 bits) at a fresh cycle's starting level,
+but it steps up in lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2,
+and so on) — an earlier version stayed pinned at the flat 1000-bit rate forever, undervaluing a
+transfer once tier01's real price had grown past it; see `docs/DESIGN_HISTORY.md`. Only the leftmost
+not-yet-transferred (active) block is ever clickable, and clicking it transfers just that block,
+revealing the next as active (any surplus Memory left over carries straight into it, so a large enough
+balance lets you click through several blocks in a row) — the one just spent stays in place too, now
+greyed out/fully filled to show it's consumed. Read left-to-right, the row's already-consumed (filled),
+one active (partially filled), and still-upcoming (empty) blocks together read as one continuous
+progress bar rather than a shrinking list. The very first successful transfer (clicking a block, or via
+`tickIntroAutoInvest`'s own auto-convert convenience, which fires every tick a single unit is
+affordable at its current cost — live, block by block, the same as a manual click, not just once a
+whole block's worth accumulates at once; an earlier version waited for the latter, which made the row
+look permanently stuck on block 1 for the entire time bits climbed toward that full batch — see
+`docs/DESIGN_HISTORY.md`) unlocks the main game immediately — no need to wait for a full balance.
+**There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
+`tickIntroAutoInvest` keep firing indefinitely, every time Memory reaches another unit's worth at
+whatever tier01's current per-unit cost is, forever (capped only at completing one tier01 level per
+tick — the same "at most one level's worth per call" bound the tier autobuyers themselves use — so an
+extreme balance can't loop unboundedly in a single tick; a jump spanning more than one level finishes on
+the next tick instead). Storage's own auto-fill (see below) gets first claim on fresh Memory ahead
+of this conversion, so a bank the player has already built isn't starved of Memory it's waiting to
+be filled with. The row is simply a live mirror of
 `purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
 section used to show a redundant separate copy of the identical value and no longer does) — so the
 instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
@@ -436,8 +461,12 @@ actually is). The Tap button carries no progress fill/hidden progressbar of its 
 tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
 nothing.
 
-**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest), grouping the
-Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
+**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest) — hidden
+entirely until Memory's own capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own
+B/KB/MB/… scale, 80,000 bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than
+the Kilobyte-transfer row's own 1000-bit gate, since Storage is a later-game mechanic. Once revealed,
+it groups the Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size
+ever reached —
 read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
 built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
 (rightmost) — rather than one full-width button per bank size stacked flat into the same list as
@@ -458,15 +487,19 @@ level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank 
 Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
 bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
 ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
-is a separate check (`isStorageBankRedeemable`): it's redeemable (clickable) whenever its size is
-*at or below* `tier01`'s *current* per-unit level cost — not a one-tick-only exact match, since
-`tier01`'s own autobuyer can complete more than one level in a single tick (an attempt budget
-catching up after a broke/paused stretch), which could otherwise jump the level straight past the
-one a bank was sized for and strand it unredeemable forever; because that cost only ever grows
-within a cycle, a full bank stays redeemable for the rest of the cycle once reached. This lets a
+is a separate check (`isStorageBankRedeemable`): it's redeemable (clickable) only when its size
+**exactly matches** `tier01`'s *current* per-unit level cost — a genuine one-tick-only exact match,
+not "at or below" (an earlier version used `<=`; see `docs/DESIGN_HISTORY.md` for why that
+undervalued a bank once tier01's real price had grown past its size, the same problem the transfer
+block's own dynamic cost above fixes). Because `tier01`'s own autobuyer can complete more than one
+level in a single tick (an attempt budget catching up after a broke/paused stretch), a burst can jump
+the level straight past the one a bank was sized for without its price ever exactly equaling that
+size mid-tick — such a bank simply waits, still full and not lost, since `tier01`'s per-unit cost only
+ever grows *within* a cycle; the next Speed Up/Overclock/Prestige resets its level back down and its
+price grows back up through that exact value again, making the bank redeemable once more. This lets a
 player bank ahead of a purchase burst (building — and letting Memory fill — at today's ladder size
-before `tier01`'s price catches up) and redeem the queued banks any time afterward, or redeem right
-away if the size already matches. Redeeming grants 1 free Kilobyte unit, either by a manual click or
+before `tier01`'s price catches up) and redeem the queued banks the moment the price matches, or right
+away if it already does. Redeeming grants 1 free Kilobyte unit, either by a manual click or
 automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
 fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
 **always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
@@ -496,6 +529,33 @@ are a fast pit-stop, not a full
 replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
+
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
+Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
+gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
+(an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB
+cost; superseded, see `docs/DESIGN_HISTORY.md`). The cost is always the **current capacity itself**,
+not a fixed amount: a conversion flushes the entire balance to 0, exactly like Sacrifice for 10x
+Capacity's own full-balance drain, and always grants exactly 1 Core per flush (`bits` can never
+exceed `capacity`, so there's never a multi-Core batch in one event). Since capacity only grows via
+the player's own Sacrifice clicks, a higher capacity makes each future Core cost more (a bigger
+flush) without changing what a Core grants — the player decides how far to keep Sacrificing before
+letting automatic Core conversion take over instead, trading a smaller-but-more-frequent Core rate
+against a larger-but-slower one. This runs every tick right after Storage's own auto-fill and before
+`tickIntroAutoInvest`, so it claims Memory ahead of ordinary Kilobyte conversion once unlocked and
+full, the same "first claim" priority auto-fill itself already has. Every `COMPUTE_CORES_PER_NODE`
+(8) Compute Cores then auto-convert into 1 **Compute Node** the same tick
+(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are capped at
+`COMPUTE_ENTITY_CAP` (10 — see `layers.js`, meant to apply the same way to any future merge tier
+built on top of this): once an entity is at the cap, further production into it simply pauses
+(Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
+than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
+lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
+generator/Storage banks — pure
+counters today, with no gameplay effect yet (a further mechanic spending them — activating a
+temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
+planned as a follow-up; see the `claude-task` backlog).
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -588,7 +648,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (846 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -619,7 +679,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (846, see "Testing" above) is unaffected by anything under `e2e/`.
+  (879, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

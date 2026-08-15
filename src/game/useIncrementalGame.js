@@ -19,7 +19,7 @@ const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 // (with offline progress already folded in, if applicable) and a summary of that offline
 // progress for the UI to report — or null if there was no prior save, no recorded last-save
 // timestamp (an older save, or one that was never actually saved), or the gap was too short to
-// register even a single simulated second at 10% speed.
+// register even a single simulated second at 50% speed.
 const computeInitialGame = () => {
   const loaded = loadGameState()
   if (!loaded) return { state: createInitialGameState(), offlineProgress: null }
