@@ -328,7 +328,7 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // itself — Overclock's value is in how permanent and stackable it is (state.overclockCount is
 // never reset by an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame),
 // not in the size of any single activation.
-export const OVERCLOCK_PRODUCTION_STEP = 0.001
+export const OVERCLOCK_PRODUCTION_STEP = 0.01
 // How many more levels the last tier must reach before Overclock can activate again: a fixed
 // 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
 // steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
