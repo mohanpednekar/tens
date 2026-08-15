@@ -1431,7 +1431,7 @@ export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_
 // version stayed flat at INTRO_BITS_PER_KILOBYTE_CONVERSION forever, which undervalued a transfer
 // once tier01's price grew past it — see docs/DESIGN_HISTORY.md.
 export const getIntroKilobyteConversionCost = state =>
-  getTierCost(TIER_DEFINITIONS[0], state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+  getTierCost(TIER_DEFINITIONS[0], state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1) * BITS_PER_BYTE
 
 // Manual "convert Memory into 1 Kilobyte": spends getIntroKilobyteConversionCost(state) bits from
 // the intro's own pool and grants 1 free unit of the main game's first tier via grantTierUnits —
