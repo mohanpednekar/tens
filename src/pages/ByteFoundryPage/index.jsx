@@ -372,14 +372,14 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 // whole-number label.
 const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
 const formatStorageSize = bits => {
-  if (bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
-  let value = bits / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  if (bits < 1000) return `${formatBitsInNearestUnit(bits)} bit${bits === 1 ? '' : 's'}`
+  let value = bits / 1000
   let unitIndex = 0
   while (value >= MEMORY_UNIT_SCALE && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
     value /= MEMORY_UNIT_SCALE
     unitIndex += 1
   }
-  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+  return `${formatBitsInNearestUnit(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -595,7 +595,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatBitsInNearestUnit(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -680,7 +680,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? `transferred block ${index + 1}`
                     : isActive
-                      ? `convert ${formatStorageSize(transferBlockCost)} into 1 Kilobyte`
+                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
                       : `locked transfer block ${index + 1}`
                 }
                 disabled={isConsumed || !isActive || !canTransferBlock}
@@ -689,7 +689,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? `${formatStorageSize(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
+                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"
