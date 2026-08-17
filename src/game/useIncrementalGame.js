@@ -79,25 +79,31 @@ export const useIncrementalGame = () => {
     // effect's own callbacks.
     let lastTickRealTime = Date.now()
 
-    // Shared by the interval below and the visibilitychange listener — whichever fires first for
-    // a given gap "claims" it (by rewinding lastTickRealTime to now before the other can see a
-    // stale value), so a coincidental near-simultaneous firing of both never double-counts the
-    // same gap.
+    // Shared by the interval below and the visibilitychange listener. lastTickRealTime is stamped
+    // only after the tick/catch-up work below actually finishes, not at entry — a large catch-up
+    // replays applyOfflineProgress one simulated second at a time (up to MAX_OFFLINE_SECONDS worth),
+    // which can itself take real wall-clock time to compute on a slow device; stamping at entry
+    // would let that processing time be mistaken for a further background gap by whichever call
+    // runs next, double-counting it. This is safe specifically because JS is single-threaded and
+    // this function is fully synchronous — two calls to runTick can never overlap, so the next call
+    // (whether from the interval or the visibilitychange listener) only ever starts after this one
+    // has fully returned and already restamped lastTickRealTime, never mid-flight.
     const runTick = () => {
       const now = Date.now()
       const gapSeconds = (now - lastTickRealTime) / 1000
-      lastTickRealTime = now
 
       if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
         const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
         if (caughtUp) {
           setState(caughtUp.state)
           setOfflineProgress(caughtUp.offlineProgress)
+          lastTickRealTime = Date.now()
           return
         }
       }
 
       setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
+      lastTickRealTime = Date.now()
     }
 
     const intervalId = window.setInterval(runTick, TICK_RATE_MS)

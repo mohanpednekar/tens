@@ -534,9 +534,14 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   `setInterval` scheduling jitter, which stays within tens of ms) is replayed via
   `computeOfflineCatchUp` instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
   smaller runs the ordinary tick, unchanged from before. Both the interval and the visibilitychange
-  listener call the exact same function, so whichever fires first for a given gap "claims" it by
-  resetting the tracked time immediately, before the other can observe a stale value — no
-  double-counting from a near-simultaneous firing of both.
+  listener call the exact same function, and the tracked time is only ever restamped *after* that
+  call's own tick/catch-up work finishes, never at entry — a large catch-up replays
+  `applyOfflineProgress` one simulated second at a time (up to `MAX_OFFLINE_SECONDS` worth), which can
+  itself take real wall-clock time to compute on a slow device, and stamping at entry would let a
+  slow replay's own processing time be mistaken for a further background gap by whichever call runs
+  next. Safe specifically because this function is synchronous and JS is single-threaded — two calls
+  can never overlap, so the next one only ever starts after the previous one has fully returned and
+  already restamped the tracked time.
 
   This second path exists because mobile browsers and installed-PWA hosts routinely throttle or fully
   suspend a backgrounded tab's `setInterval` timer without ever tearing the page down (unlike a true

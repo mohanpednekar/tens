@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "src/game/useIncrementalGame.js": {
-    "mtime": 1786993759.6888795,
-    "ast_hash": "a02db69894418a0b2f14cfcaa2534893",
+    "mtime": 1786994858.8368542,
+    "ast_hash": "92917801dae406c874fb3102990ec2e7",
     "semantic_hash": ""
   },
   "src/index.jsx": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "docs/ECONOMY_REFERENCE.md": {
-    "mtime": 1786993759.6808794,
-    "ast_hash": "ebdd4a32363233697a9f20b4a819617e",
+    "mtime": 1786994870.456854,
+    "ast_hash": "49653611814c3d23df58d8395dc6a8c9",
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
