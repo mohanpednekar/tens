@@ -1,6 +1,6 @@
 ---
 name: file-task-issue
-description: Authors a well-formed claude-task GitHub issue for this repo's autonomous maintenance backlog — the full Goal/Context/Spec/Files/Out-of-scope/Verification/Explicit-authorizations/Dependencies structure, correct size/priority labeling, the conflict-avoidance Blocked-by sequencing heuristic, and the narrow cases where no PR is expected. Use whenever asked to file a claude-task issue, split a large feature into a sequence of issues, or review/tighten an existing issue's spec before it's picked up.
+description: Authors a well-formed GitHub issue — either a claude-task issue for this repo's autonomous maintenance backlog, or a plain tracking issue for an interactive session's own work — using the full Goal/Context/Spec/Files/Out-of-scope/Verification/Explicit-authorizations/Dependencies structure, correct size/priority labeling, the conflict-avoidance Blocked-by sequencing heuristic, and the narrow cases where no PR is expected. Use whenever asked to file a claude-task issue, file a tracking issue for interactive work, split a large feature into a sequence of issues, or review/tighten an existing issue's spec before it's picked up.
 ---
 
 Filing a sloppy `claude-task` issue is expensive here: the implementing run is unattended and
@@ -9,6 +9,24 @@ later work ships (see "Specs go stale — write defensively" below) can gridlock
 backlog for weeks behind a `blocked` label nobody revisits. This skill packages the conventions
 this repo has actually converged on, across ~90 filed issues, so a new issue reproduces that rigor
 by default instead of by luck.
+
+## 0. `claude-task` backlog issue vs. interactive tracking issue
+
+This skill authors two different kinds of issue, and they must not be confused:
+
+- **`claude-task` backlog issue** — filed for `autonomous-maintenance.yml`'s Phase A backlog. Carries
+  the `claude-task` label plus a size/priority label (section 2 below).
+- **Interactive tracking issue** — filed by an interactive session for its own work, per CLAUDE.md's
+  "Issue tracking for interactive sessions" section. Same template sections make a good body, but it
+  **must not** carry the `claude-task` label — that label means "available for the autonomous backlog
+  to pick up," and applying it to a tracking issue for work already underway would make the automation
+  try to claim it too. Size/priority labels don't apply either, since nothing queues it. Comment on it
+  as the session's status changes and close it when the work concludes.
+
+Everything below (template sections, size/priority labels, `blocked`, sequencing, epics/sub-issues,
+"specs go stale", no-PR cases) is written for the backlog case but applies equally to a tracking
+issue's body and sub-issue structure — just skip the `claude-task` label and the size/priority labels
+for the tracking-issue case.
 
 ## 1. Use the template, section by section
 
@@ -88,6 +106,15 @@ Group a multi-issue feature under a parent "epic" issue (see #87–#92, #132) an
 concrete issue as a GitHub sub-issue of it (the `sub_issue_write` tool, or the repo's established
 convention — see #93). This is what makes a large in-flight initiative collapse to one row in the
 default Issues view instead of a dozen.
+
+For an interactive-session tracking epic (CLAUDE.md's "Issue tracking for interactive sessions")
+that's `size:M`/`size:L`-shaped, prefer splitting sub-issues along **coding / testing /
+documentation** phase lines over pure feature-slices — see that CLAUDE.md section for the exact
+split and which requirements stay mandatory in the coding sub-issue (green `yarn test`, core-logic
+tests, `CHANGELOG.md`, same-commit `CLAUDE.md` updates) versus which are genuinely deferrable to the
+testing/documentation sub-issues. This lets the coding sub-issue merge without waiting on the other
+two, while keeping them visible instead of dropped. A `size:S` task doesn't need this — one tracking
+issue is enough.
 
 ## 5. Specs go stale — write defensively, and re-verify before filing a rewrite
 

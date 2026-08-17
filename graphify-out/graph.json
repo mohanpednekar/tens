@@ -63,8 +63,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "run-simulation.mjs"
     },
     {
@@ -75,8 +75,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_simulaterun",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "simulaterun()"
     },
     {
@@ -87,8 +87,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_formatduration",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "formatduration()"
     },
     {
@@ -98,8 +98,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_defaultppvalues",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "defaultppvalues"
     },
     {
@@ -109,8 +109,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_clivalues",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "clivalues"
     },
     {
@@ -120,8 +120,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_simulate",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 2,
+      "community_name": "engine.js",
       "norm_label": "simulate.mjs"
     },
     {
@@ -231,7 +231,7 @@
       "_origin": "ast",
       "id": "package",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "package.json"
     },
     {
@@ -242,7 +242,7 @@
       "_origin": "ast",
       "id": "package_name",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "name"
     },
     {
@@ -253,7 +253,7 @@
       "_origin": "ast",
       "id": "package_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "version"
     },
     {
@@ -264,7 +264,7 @@
       "_origin": "ast",
       "id": "package_private",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "private"
     },
     {
@@ -275,7 +275,7 @@
       "_origin": "ast",
       "id": "package_type",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "type"
     },
     {
@@ -286,7 +286,7 @@
       "_origin": "ast",
       "id": "package_packagemanager",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "packagemanager"
     },
     {
@@ -297,7 +297,7 @@
       "_origin": "ast",
       "id": "package_resolutions",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "resolutions"
     },
     {
@@ -308,7 +308,7 @@
       "_origin": "ast",
       "id": "package_resolutions_glob_minimatch_brace_expansion",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/glob/minimatch/brace-expansion"
     },
     {
@@ -319,7 +319,7 @@
       "_origin": "ast",
       "id": "package_resolutions_filelist_minimatch_brace_expansion",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/filelist/minimatch/brace-expansion"
     },
     {
@@ -330,7 +330,7 @@
       "_origin": "ast",
       "id": "package_resolutions_fast_uri",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/fast-uri"
     },
     {
@@ -341,7 +341,7 @@
       "_origin": "ast",
       "id": "package_resolutions_nanoid",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "**/nanoid"
     },
     {
@@ -351,8 +351,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "package_dependencies",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "dependencies"
     },
     {
@@ -362,8 +362,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "package_dependencies_fontsource_inter",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -373,8 +373,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "fontsource_inter",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -384,8 +384,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "package_dependencies_fontsource_space_grotesk",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -395,8 +395,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "fontsource_space_grotesk",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -406,8 +406,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "package_dependencies_react",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -417,8 +417,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "react",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -428,8 +428,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "package_dependencies_react_dom",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -439,8 +439,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "react_dom",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -450,8 +450,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "package_dependencies_react_is",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-is"
     },
     {
@@ -461,8 +461,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "react_is",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "react-is"
     },
     {
@@ -472,8 +472,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "package_dependencies_styled_components",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -483,8 +483,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "styled_components",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -494,8 +494,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "package_dependencies_web_vitals",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
     },
     {
@@ -505,8 +505,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "web_vitals",
-      "community": 5,
-      "community_name": "package.json",
+      "community": 39,
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
     },
     {
@@ -770,7 +770,7 @@
       "_origin": "ast",
       "id": "package_scripts",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "scripts"
     },
     {
@@ -781,7 +781,7 @@
       "_origin": "ast",
       "id": "package_scripts_start",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "start"
     },
     {
@@ -792,7 +792,7 @@
       "_origin": "ast",
       "id": "package_scripts_dev",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "dev"
     },
     {
@@ -803,7 +803,7 @@
       "_origin": "ast",
       "id": "package_scripts_build",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "build"
     },
     {
@@ -814,7 +814,7 @@
       "_origin": "ast",
       "id": "package_scripts_test",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test"
     },
     {
@@ -825,7 +825,7 @@
       "_origin": "ast",
       "id": "package_scripts_test_watch",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test:watch"
     },
     {
@@ -836,7 +836,7 @@
       "_origin": "ast",
       "id": "package_scripts_test_e2e",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "test:e2e"
     },
     {
@@ -847,7 +847,7 @@
       "_origin": "ast",
       "id": "package_scripts_audit",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "audit"
     },
     {
@@ -858,7 +858,7 @@
       "_origin": "ast",
       "id": "package_scripts_gen_pwa_icons",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "gen-pwa-icons"
     },
     {
@@ -869,7 +869,7 @@
       "_origin": "ast",
       "id": "package_browserslist",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "browserslist"
     },
     {
@@ -880,7 +880,7 @@
       "_origin": "ast",
       "id": "package_browserslist_production",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "production"
     },
     {
@@ -891,7 +891,7 @@
       "_origin": "ast",
       "id": "ref_0_2",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": ">0.2%"
     },
     {
@@ -902,7 +902,7 @@
       "_origin": "ast",
       "id": "ref_not_dead",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "not dead"
     },
     {
@@ -913,7 +913,7 @@
       "_origin": "ast",
       "id": "ref_not_op_mini_all",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "not op_mini all"
     },
     {
@@ -924,7 +924,7 @@
       "_origin": "ast",
       "id": "package_browserslist_development",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "development"
     },
     {
@@ -935,7 +935,7 @@
       "_origin": "ast",
       "id": "ref_last_1_chrome_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 chrome version"
     },
     {
@@ -946,7 +946,7 @@
       "_origin": "ast",
       "id": "ref_last_1_firefox_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 firefox version"
     },
     {
@@ -957,7 +957,7 @@
       "_origin": "ast",
       "id": "ref_last_1_safari_version",
       "community": 5,
-      "community_name": "package.json",
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "last 1 safari version"
     },
     {
@@ -1243,8 +1243,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_button_index_buttoncontent",
-      "community": 56,
-      "community_name": "InfoPage/index.jsx",
+      "community": 49,
+      "community_name": "Button/index.jsx",
       "norm_label": "buttoncontent()"
     },
     {
@@ -1377,8 +1377,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierid",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getlasttierid()"
     },
     {
@@ -1389,8 +1389,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_clampnonnegative",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "clampnonnegative()"
     },
     {
@@ -1401,8 +1401,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_allresourceids",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "allresourceids()"
     },
     {
@@ -1413,8 +1413,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_createinitialgamestate",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "createinitialgamestate()"
     },
     {
@@ -1458,8 +1458,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatscientific",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatscientific()"
     },
     {
@@ -1470,8 +1470,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatamount",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatamount()"
     },
     {
@@ -1506,8 +1506,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpurchaseblocksize",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getpurchaseblocksize()"
     },
     {
@@ -1530,8 +1530,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierbulkquantity",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierbulkquantity()"
     },
     {
@@ -1554,8 +1554,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettieraffordablequantity",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettieraffordablequantity()"
     },
     {
@@ -1602,7 +1602,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockmilestone",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getautobuyerunlockmilestone()"
     },
@@ -1614,7 +1614,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettiertickspeedautobuyermilestone",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "gettiertickspeedautobuyermilestone()"
     },
@@ -1626,8 +1626,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_applyautobuyermilestones",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "applyautobuyermilestones()"
     },
     {
@@ -1638,8 +1638,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedproductionmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettickspeedproductionmultiplier()"
     },
     {
@@ -1650,8 +1650,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedmultipliercost",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getglobaltickspeedmultipliercost()"
     },
     {
@@ -1662,8 +1662,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
@@ -1674,8 +1674,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_countglobaltickspeedmilestones",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "countglobaltickspeedmilestones()"
     },
     {
@@ -1686,8 +1686,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedregularstep",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getglobaltickspeedregularstep()"
     },
     {
@@ -1698,8 +1698,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getglobaltickspeedproductionmultiplier()"
     },
     {
@@ -1710,8 +1710,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_islasttiertickspeedxpunlocked",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "islasttiertickspeedxpunlocked()"
     },
     {
@@ -1722,8 +1722,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getlasttierxptickspeedmultiplier()"
     },
     {
@@ -1734,8 +1734,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedminconsumption",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getlasttierxptickspeedminconsumption()"
     },
     {
@@ -1746,8 +1746,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeproductionmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getprestigeproductionmultiplier()"
     },
     {
@@ -1758,8 +1758,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyprestigespeedbonus",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buyprestigespeedbonus()"
     },
     {
@@ -1782,8 +1782,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpurchasemilestonemultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getpurchasemilestonemultiplier()"
     },
     {
@@ -1794,8 +1794,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getspeedupmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getspeedupmultiplier()"
     },
     {
@@ -1806,8 +1806,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getspeeduprequirement",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 5,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "getspeeduprequirement()"
     },
     {
@@ -1818,7 +1818,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getoverclockrequirement",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "getoverclockrequirement()"
     },
@@ -1830,8 +1830,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautoprestigecost",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getautoprestigecost()"
     },
     {
@@ -1842,8 +1842,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautoprestigeattemptrate",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getautoprestigeattemptrate()"
     },
     {
@@ -1854,8 +1854,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isproductionfrozen",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "isproductionfrozen()"
     },
     {
@@ -1866,8 +1866,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_istierunlocked",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "istierunlocked()"
     },
     {
@@ -1878,8 +1878,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_latcheverunlockedtiers",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "latcheverunlockedtiers()"
     },
     {
@@ -1890,8 +1890,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getmoneyexponent",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getmoneyexponent()"
     },
     {
@@ -1902,8 +1902,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeprogresspercent",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getprestigeprogresspercent()"
     },
     {
@@ -1914,8 +1914,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "geteffectivetiertickspeedseconds()"
     },
     {
@@ -1926,8 +1926,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierproductionprogresspercent",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierproductionprogresspercent()"
     },
     {
@@ -1938,8 +1938,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigepointsawarded",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "getprestigepointsawarded()"
     },
     {
@@ -1950,8 +1950,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_checkmilestones",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "checkmilestones()"
     },
     {
@@ -1962,8 +1962,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickgame",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "tickgame()"
     },
     {
@@ -2010,8 +2010,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierspendableamount",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierspendableamount()"
     },
     {
@@ -2022,8 +2022,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierpurchasedcount",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "gettierpurchasedcount()"
     },
     {
@@ -2034,8 +2034,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytier",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buytier()"
     },
     {
@@ -2046,8 +2046,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytierquantity",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buytierquantity()"
     },
     {
@@ -2058,8 +2058,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_granttierunits",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "granttierunits()"
     },
     {
@@ -2070,8 +2070,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionrate",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionrate()"
     },
     {
@@ -2082,8 +2082,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tapintrobit",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "tapintrobit()"
     },
     {
@@ -2118,8 +2118,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonecost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionmilestonecost()"
     },
     {
@@ -2130,8 +2130,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonemaxclaims",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionmilestonemaxclaims()"
     },
     {
@@ -2142,8 +2142,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_pickintroproductionmilestone",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "pickintroproductionmilestone()"
     },
     {
@@ -2154,8 +2154,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isintroconversionunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "isintroconversionunlocked()"
     },
     {
@@ -2166,8 +2166,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstorageunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "isstorageunlocked()"
     },
     {
@@ -2190,8 +2190,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_convertintrobitstokilobytes",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "convertintrobitstokilobytes()"
     },
     {
@@ -2202,8 +2202,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickintroproduction",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "tickintroproduction()"
     },
     {
@@ -2214,8 +2214,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickintroautoinvest",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "tickintroautoinvest()"
     },
     {
@@ -2226,8 +2226,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getfirsttiercost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 51,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "getfirsttiercost()"
     },
     {
@@ -2238,8 +2238,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebanksize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 51,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "getstoragebanksize()"
     },
     {
@@ -2250,8 +2250,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebankcost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getstoragebankcost()"
     },
     {
@@ -2262,8 +2262,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buildstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buildstoragebank()"
     },
     {
@@ -2274,8 +2274,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickstorageautofill",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "tickstorageautofill()"
     },
     {
@@ -2286,8 +2286,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstoragebankredeemable",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 51,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "isstoragebankredeemable()"
     },
     {
@@ -2298,8 +2298,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_redeemstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 51,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "redeemstoragebank()"
     },
     {
@@ -2310,8 +2310,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickstorageautoredeem",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 51,
+      "community_name": "isStorageBankRedeemable",
       "norm_label": "tickstorageautoredeem()"
     },
     {
@@ -2346,8 +2346,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedmultiplier",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buytickspeedmultiplier()"
     },
     {
@@ -2358,8 +2358,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buysmartautobuyer",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buysmartautobuyer()"
     },
     {
@@ -2382,8 +2382,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestige",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buyautoprestige()"
     },
     {
@@ -2406,8 +2406,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestigeautobuyer",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buyautoprestigeautobuyer()"
     },
     {
@@ -2430,8 +2430,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyglobaltickspeedmultiplier",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buyglobaltickspeedmultiplier()"
     },
     {
@@ -2442,8 +2442,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_prestigegame",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "prestigegame()"
     },
     {
@@ -2454,8 +2454,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_speedupgame",
-      "community": 51,
-      "community_name": "run-simulation.mjs",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "speedupgame()"
     },
     {
@@ -2478,8 +2478,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautospeedup",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buyautospeedup()"
     },
     {
@@ -2502,8 +2502,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedautobuyer",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "buytickspeedautobuyer()"
     },
     {
@@ -2526,8 +2526,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_consumexpforlasttiertickspeed",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "consumexpforlasttiertickspeed()"
     },
     {
@@ -2885,8 +2885,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withlasttiertickspeedxpunlocked",
-      "community": 50,
-      "community_name": "tickGame",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "withlasttiertickspeedxpunlocked()"
     },
     {
@@ -3552,8 +3552,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_storage",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "storage.js"
     },
     {
@@ -3563,8 +3563,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_game_storage_legacy_tier_id_map",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "legacy_tier_id_map"
     },
     {
@@ -3574,8 +3574,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_game_storage_legacy_removed_tier_ids",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "legacy_removed_tier_ids"
     },
     {
@@ -3586,8 +3586,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_migratetierkeys",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "migratetierkeys()"
     },
     {
@@ -3598,8 +3598,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_shifttieriddown",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "shifttieriddown()"
     },
     {
@@ -3610,8 +3610,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_shiftoldtierids",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "shiftoldtierids()"
     },
     {
@@ -3622,8 +3622,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_migratestate",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "migratestate()"
     },
     {
@@ -3646,8 +3646,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_loadgamestate",
-      "community": 52,
-      "community_name": "storage.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "loadgamestate()"
     },
     {
@@ -3681,8 +3681,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_storage_test",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "storage.test.js"
     },
     {
@@ -4014,8 +4014,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_getmemoryunit",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "formatMemoryAmount",
       "norm_label": "getmemoryunit()"
     },
     {
@@ -4026,8 +4026,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_floortodecimals",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "formatMemoryAmount",
       "norm_label": "floortodecimals()"
     },
     {
@@ -4038,8 +4038,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemoryamount",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatmemoryamount()"
     },
     {
@@ -4050,8 +4050,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatbitsinnearestunit",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatbitsinnearestunit()"
     },
     {
@@ -4062,8 +4062,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemorybalance",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 52,
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatmemorybalance()"
     },
     {
@@ -4085,8 +4085,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatstoragesize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "formatstoragesize()"
     },
     {
@@ -4097,8 +4097,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_clamppercent",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "clamppercent()"
     },
     {
@@ -4109,8 +4109,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 50,
+      "community_name": "ByteFoundryPage",
       "norm_label": "bytefoundrypage()"
     },
     {
@@ -4120,7 +4120,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_infopage_index",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage/index.jsx"
     },
@@ -4131,7 +4131,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_pages_infopage_index_rootdiv",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "rootdiv"
     },
@@ -4142,7 +4142,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_pages_infopage_index_header",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "header"
     },
@@ -4153,7 +4153,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_pages_infopage_index_versiontext",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "versiontext"
     },
@@ -4164,7 +4164,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_pages_infopage_index_section",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "section"
     },
@@ -4176,7 +4176,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_infopage_index_infopage",
-      "community": 56,
+      "community": 5,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage()"
     },
@@ -4817,8 +4817,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_progresspercent",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "progresspercent()"
     },
     {
@@ -4877,8 +4877,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_mainpage",
-      "community": 39,
-      "community_name": "clampNonNegative",
+      "community": 0,
+      "community_name": "engine.test.js",
       "norm_label": "mainpage()"
     },
     {
@@ -5461,10 +5461,21 @@
       "norm_label": "file-task-issue/skill.md"
     },
     {
-      "label": "1. Use the template, section by section",
+      "label": "0. `claude-task` backlog issue vs. interactive tracking issue",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L13",
+      "_origin": "ast",
+      "id": "claude_skills_file_task_issue_skill_0_claude_task_backlog_issue_vs_interactive_tracking_issue",
+      "community": 30,
+      "community_name": "file-task-issue/SKILL.md",
+      "norm_label": "0. `claude-task` backlog issue vs. interactive tracking issue"
+    },
+    {
+      "label": "1. Use the template, section by section",
+      "file_type": "document",
+      "source_file": ".claude/skills/file-task-issue/SKILL.md",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_1_use_the_template_section_by_section",
       "community": 30,
@@ -5475,7 +5486,7 @@
       "label": "2. Label conventions",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L40",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_2_label_conventions",
       "community": 30,
@@ -5486,7 +5497,7 @@
       "label": "3. Conflict-avoidance sequencing",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L70",
+      "source_location": "L88",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_3_conflict_avoidance_sequencing",
       "community": 30,
@@ -5497,7 +5508,7 @@
       "label": "4. Epics and sub-issues",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L85",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_4_epics_and_sub_issues",
       "community": 30,
@@ -5508,7 +5519,7 @@
       "label": "5. Specs go stale \u2014 write defensively, and re-verify before filing a rewrite",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L92",
+      "source_location": "L119",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_5_specs_go_stale_write_defensively_and_re_verify_before_filing_a_rewrite",
       "community": 30,
@@ -5519,7 +5530,7 @@
       "label": "6. When an issue needs no PR",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L108",
+      "source_location": "L135",
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill_6_when_an_issue_needs_no_pr",
       "community": 30,
@@ -6891,10 +6902,21 @@
       "norm_label": "pull requests"
     },
     {
-      "label": "Automation workflows",
+      "label": "Issue tracking for interactive sessions",
       "file_type": "document",
       "source_file": "CLAUDE.md",
       "source_location": "L121",
+      "_origin": "ast",
+      "id": "claude_issue_tracking_for_interactive_sessions",
+      "community": 24,
+      "community_name": "CLAUDE.md",
+      "norm_label": "issue tracking for interactive sessions"
+    },
+    {
+      "label": "Automation workflows",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L164",
       "_origin": "ast",
       "id": "claude_automation_workflows",
       "community": 24,
@@ -6905,7 +6927,7 @@
       "label": "Documentation",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L159",
+      "source_location": "L202",
       "_origin": "ast",
       "id": "claude_documentation",
       "community": 24,
@@ -6916,7 +6938,7 @@
       "label": "Changelog convention",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L169",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "claude_changelog_convention",
       "community": 24,
@@ -6927,7 +6949,7 @@
       "label": "Repo layout",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L182",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "claude_repo_layout",
       "community": 24,
@@ -6938,7 +6960,7 @@
       "label": "Architecture",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L323",
+      "source_location": "L368",
       "_origin": "ast",
       "id": "claude_architecture",
       "community": 24,
@@ -6949,7 +6971,7 @@
       "label": "Economy model",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L371",
+      "source_location": "L416",
       "_origin": "ast",
       "id": "claude_economy_model",
       "community": 24,
@@ -6960,7 +6982,7 @@
       "label": "Path aliases",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L535",
+      "source_location": "L580",
       "_origin": "ast",
       "id": "claude_path_aliases",
       "community": 24,
@@ -6971,7 +6993,7 @@
       "label": "Theming",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L542",
+      "source_location": "L587",
       "_origin": "ast",
       "id": "claude_theming",
       "community": 24,
@@ -6982,7 +7004,7 @@
       "label": "PWA support",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L555",
+      "source_location": "L600",
       "_origin": "ast",
       "id": "claude_pwa_support",
       "community": 24,
@@ -6993,7 +7015,7 @@
       "label": "Funding",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L566",
+      "source_location": "L611",
       "_origin": "ast",
       "id": "claude_funding",
       "community": 24,
@@ -7004,7 +7026,7 @@
       "label": "License",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L573",
+      "source_location": "L618",
       "_origin": "ast",
       "id": "claude_license",
       "community": 24,
@@ -7015,7 +7037,7 @@
       "label": "Testing",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L585",
+      "source_location": "L630",
       "_origin": "ast",
       "id": "claude_testing",
       "community": 24,
@@ -7026,7 +7048,7 @@
       "label": "End-to-end testing",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L628",
+      "source_location": "L673",
       "_origin": "ast",
       "id": "claude_end_to_end_testing",
       "community": 24,
@@ -7037,7 +7059,7 @@
       "label": "Security notes",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L662",
+      "source_location": "L707",
       "_origin": "ast",
       "id": "claude_security_notes",
       "community": 24,
@@ -7048,7 +7070,7 @@
       "label": "graphify",
       "file_type": "document",
       "source_file": "CLAUDE.md",
-      "source_location": "L671",
+      "source_location": "L716",
       "_origin": "ast",
       "id": "claude_graphify",
       "community": 24,
@@ -21444,6 +21466,17 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
+      "target": "claude_skills_file_task_issue_skill_0_claude_task_backlog_issue_vs_interactive_tracking_issue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/file-task-issue/SKILL.md",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude_skills_file_task_issue_skill",
       "target": "claude_skills_file_task_issue_skill_1_use_the_template_section_by_section",
       "confidence_score": 1.0
     },
@@ -21451,7 +21484,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L40",
+      "source_location": "L58",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
@@ -21462,7 +21495,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L70",
+      "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
@@ -21473,7 +21506,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L85",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
@@ -21484,7 +21517,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L92",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
@@ -21495,7 +21528,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
-      "source_location": "L108",
+      "source_location": "L135",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_file_task_issue_skill",
@@ -22650,7 +22683,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L323",
+      "source_location": "L368",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22661,7 +22694,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L121",
+      "source_location": "L164",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22683,7 +22716,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L159",
+      "source_location": "L202",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22694,7 +22727,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L371",
+      "source_location": "L416",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22705,7 +22738,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L566",
+      "source_location": "L611",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22716,7 +22749,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L671",
+      "source_location": "L716",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22738,7 +22771,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L573",
+      "source_location": "L121",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude_md_claude_claude",
+      "target": "claude_issue_tracking_for_interactive_sessions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L618",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22749,7 +22793,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L535",
+      "source_location": "L580",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22782,7 +22826,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L555",
+      "source_location": "L600",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22793,7 +22837,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L182",
+      "source_location": "L225",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22804,7 +22848,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L662",
+      "source_location": "L707",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22826,7 +22870,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L585",
+      "source_location": "L630",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22837,7 +22881,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L542",
+      "source_location": "L587",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -22848,7 +22892,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L169",
+      "source_location": "L212",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_documentation",
@@ -22859,7 +22903,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L628",
+      "source_location": "L673",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_testing",
@@ -23990,5 +24034,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c4714fc2414d0ac5b4cc86a75a6f0c48758b4c48"
+  "built_at_commit": "7fee54c35b05d9079cde6990e10ba6fa628c4702"
 }
