@@ -441,18 +441,18 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
   expect(screen.getByRole('heading', { level: 3, name: /^kilobytes$/i })).toBeInTheDocument()
 })
 
-test('applies offline progress at 10% speed based on elapsed time since the last save', () => {
+test('applies offline progress at 50% speed based on elapsed time since the last save', () => {
   seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  // 100 real seconds ago → 10 simulated seconds at 10% speed → Kilobytes delivers every 2s, so 5
-  // deliveries land in that window → 5 Kilobytes × 5 deliveries = +25 money
+  // 100 real seconds ago → 50 simulated seconds at 50% speed → Kilobytes delivers every 2s, so 25
+  // deliveries land in that window → 5 Kilobytes × 25 deliveries = +125 money
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('25 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('125 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -1966,28 +1966,33 @@ test('the milestone offers stay disabled while the bit balance is below capacity
 
 // The single most important behavioral regression to cover per the milestone-offer asymmetry
 // correction (see docs/DESIGN_HISTORY.md): "Invest for Double Production" is an ordinary
-// cost-gated purchase (requires bits >= capacity), NOT coupled to — and not blocked by having just
-// clicked — "Sacrifice for 10x Capacity", which alone requires a full balance and drains it to 0.
-test('Invest for Double Production does not require or trigger the Sacrifice milestone\'s own full-drain condition', async () => {
+// cost-gated purchase (requires bits >= capacity), unaffected by clicking "Sacrifice for 10x
+// Capacity" itself (which alone requires a full balance and drains it to 0) — the coupling between
+// the two now runs only the other way: Sacrifice is gated on Invest's current tier already being
+// claimed (see isMemoryCapacityUpgradeAvailable in engine.js), not the reverse.
+test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/×10-capacity effect as a side effect', async () => {
   const user = userEvent.setup()
 
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  // Invest's own current-tier claim is deliberately left unused here — Sacrifice requires every
+  // OTHER currently-possible action (including this one) to be already taken first, so with an
+  // unclaimed Invest tier still affordable at this same full balance, Sacrifice starts disabled.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0 })
   render(<App />)
 
   const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(sacrificeButton).toBeEnabled()
+  expect(sacrificeButton).toBeDisabled()
   expect(investButton).toBeEnabled()
 
   await user.click(investButton)
 
   // Capacity is untouched by Invest — the balance bar's own max stays at the starting capacity,
-  // proving Sacrifice's 10x-capacity effect was never triggered as a side effect.
+  // proving Sacrifice's 10x-capacity effect was never triggered as a side effect of claiming Invest.
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
-  // Invest still deducted its own cost (bits == capacity), so the balance is no longer full —
-  // Sacrifice (which requires bits === capacity) is correctly disabled now, not because Invest
-  // "used up" some shared state, but simply because the balance is no longer full.
+  // Invest deducted its own cost (bits == capacity at this tier), so the balance is no longer full —
+  // Sacrifice (which requires bits === capacity) is still disabled, now simply because the balance
+  // isn't full, rather than because of the unclaimed-Invest gate above (which claiming just cleared).
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(sacrificeButton).toBeDisabled()
   // The production rate doubled (1 × 2 = 2 bits/sec), confirming Invest's own effect landed.
@@ -2007,7 +2012,9 @@ test('Sacrifice for 10x Capacity shows what it will drain — the current capaci
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  // Invest's current-tier claim must already be used up — Sacrifice is only offered once every
+  // other currently-possible action (Combine, Invest, a Storage bank build) is no longer possible.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 1 })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))

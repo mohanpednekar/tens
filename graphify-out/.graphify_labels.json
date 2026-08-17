@@ -4,7 +4,7 @@
   "2": "engine.js",
   "3": "Money/index.js",
   "4": "App.jsx",
-  "5": "InfoPage/index.jsx",
+  "5": "Button/index.jsx",
   "6": "devDependencies",
   "7": "Economy model",
   "8": "ByteFoundryPage/index.jsx",
@@ -38,7 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
-  "39": "dependencies",
+  "39": "OfflineProgressNotice/index.jsx",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -48,11 +48,7 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "Button/index.jsx",
-  "50": "ByteFoundryPage",
-  "51": "isStorageBankRedeemable",
-  "52": "formatMemoryAmount",
-  "53": "formatCurrency",
-  "54": "OfflineProgressNotice/index.jsx",
-  "55": "formatBonusOrMultiplier"
+  "49": "InfoPage/index.jsx",
+  "51": "package.json",
+  "53": "formatBonusOrMultiplier"
 }

@@ -1,8 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isIntroConversionUnlocked, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -67,7 +67,7 @@ const BalanceText = styled.p`
 const TapArea = styled.button`
   position: relative;
   width: 100%;
-  aspect-ratio: 5 / 3;
+  aspect-ratio: 5 / 2;
   border: 1.5px solid ${props => props.theme.color.accent};
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surfaceSunken};
@@ -303,6 +303,14 @@ const StorageBankSquare = styled.button`
   }
 `
 
+// Compute Cores/Nodes: a small, permanent status line — not its own full StatCard section like
+// Storage, since (unlike Storage) there's nothing to click here yet, just two live counters (see
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js).
+const ComputeSection = styled(StatCard)`
+  align-items: center;
+  width: 100%;
+`
+
 // Memory's unit ladder: raw bits below 1 Byte, then B/KB/MB/… scaling by 1000 each step — reusing
 // TIER_DEFINITIONS' own KB..QB symbols (see layers.js) since Memory is byte-scale themed
 // identically to the main game's tiers. Every capacity value in the Sacrifice ladder (8, 80, 800,
@@ -364,14 +372,14 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 // whole-number label.
 const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
 const formatStorageSize = bits => {
-  if (bits < INTRO_BITS_PER_KILOBYTE_CONVERSION) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
-  let value = bits / INTRO_BITS_PER_KILOBYTE_CONVERSION
+  if (bits < 1000) return `${formatBitsInNearestUnit(bits)} bit${bits === 1 ? '' : 's'}`
+  let value = bits / 1000
   let unitIndex = 0
   while (value >= MEMORY_UNIT_SCALE && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
     value /= MEMORY_UNIT_SCALE
     unitIndex += 1
   }
-  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+  return `${formatBitsInNearestUnit(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -391,8 +399,13 @@ const ByteFoundryPage = ({ game, onBack }) => {
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
+  // Sacrifice is offered only once Memory is full AND no other currently-possible action (Combine,
+  // Invest, building a Storage bank) is left to take first — see isMemoryCapacityUpgradeAvailable
+  // in engine.js for the full gate.
+  const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
+  const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
@@ -516,11 +529,15 @@ const ByteFoundryPage = ({ game, onBack }) => {
           <MilestonesRow>
             <Button
               aria-label="sacrifice all bits for 10x capacity"
-              disabled={!isFull}
+              disabled={!canSacrifice}
               onClick={actions.pickIntroCapacityMilestone}
-              title="Empty Memory for 10x capacity"
+              title={
+                isFull && !canSacrifice
+                  ? 'Take every other currently-available upgrade first (Invest, or build a Storage bank)'
+                  : 'Empty Memory for 10x capacity'
+              }
               type="button"
-              variant={isFull ? 'prestige' : 'neutral'}
+              variant={canSacrifice ? 'prestige' : 'neutral'}
               $progress={fullProgress}
             >
               <MilestoneButtonContent>
@@ -578,7 +595,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             variant={canBuildStorageBank ? 'info' : 'neutral'}
             $progress={storageBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>{`🏦 Build ${formatBitsInNearestUnit(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
             <VisuallyHidden
               role="progressbar"
               aria-label="byte foundry storage build progress"
@@ -598,8 +615,8 @@ const ByteFoundryPage = ({ game, onBack }) => {
             const redeemable = isStorageBankRedeemable(state, size)
             return (
               <StorageSizeRow key={size}>
-                <StorageSizeLabel>{`${formatStorageSize(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
-                <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
+                <StorageSizeLabel>{`${formatBitsInNearestUnit(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
+                <StorageBankSquaresRow role="group" aria-label={`${formatBitsInNearestUnit(size)} storage banks`}>
                   {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
                     const isFull = index < full
                     const isEmpty = !isFull && index < full + emptyCount
@@ -608,18 +625,18 @@ const ByteFoundryPage = ({ game, onBack }) => {
                         key={index}
                         aria-label={
                           isFull
-                            ? `redeem ${formatStorageSize(size)} storage bank`
+                            ? `redeem ${formatBitsInNearestUnit(size)} storage bank`
                             : isEmpty
-                              ? `empty ${formatStorageSize(size)} bank`
-                              : `not yet built ${formatStorageSize(size)} bank`
+                              ? `empty ${formatBitsInNearestUnit(size)} bank`
+                              : `not yet built ${formatBitsInNearestUnit(size)} bank`
                         }
                         disabled={!isFull || !redeemable}
                         onClick={isFull && redeemable ? () => actions.redeemStorageBank(size) : undefined}
                         title={
                           isFull
                             ? (redeemable
-                              ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
-                              : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                              ? `Redeems 1 ${formatBitsInNearestUnit(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
+                              : `Redeemable once Kilobytes' level cost reaches ${formatBitsInNearestUnit(size)}`)
                             : isEmpty
                               ? 'Built, waiting for Memory to auto-fill it'
                               : 'Not yet built'
@@ -638,8 +655,20 @@ const ByteFoundryPage = ({ game, onBack }) => {
         </StorageSection>
       )}
 
+      {computeCoreRevealed && (
+        <ComputeSection aria-label="byte foundry compute">
+          <SectionLabel>Compute</SectionLabel>
+          <StatusText>
+            {`Compute Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Compute Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
+          </StatusText>
+          <StatusText>
+            {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
+          </StatusText>
+        </ComputeSection>
+      )}
+
       {revealed && (<>
-        <SectionLabel>Transfer to Kilobytes ({blocksRemaining} left)</SectionLabel>
+        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
           {Array.from({ length: purchaseBlockSize }, (_, index) => {
             const isConsumed = index < blocksTransferred
@@ -651,7 +680,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? `transferred block ${index + 1}`
                     : isActive
-                      ? `convert ${formatStorageSize(transferBlockCost)} into 1 Kilobyte`
+                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
                       : `locked transfer block ${index + 1}`
                 }
                 disabled={isConsumed || !isActive || !canTransferBlock}
@@ -660,7 +689,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? `${formatStorageSize(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
+                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatStorageSize(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"

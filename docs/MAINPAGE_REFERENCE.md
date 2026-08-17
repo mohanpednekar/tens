@@ -71,8 +71,13 @@ than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥
 matching the same term the balance tile above already uses for `capacity`, so the button's purpose
 reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
 Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
-capacity"` still carries the full description for assistive tech, disabled unless `bits ===
-capacity`, calling `actions.pickIntroCapacityMilestone`, `$progress` toward `capacity`) and "Invest
+capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
+`canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
+Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine/Invest/a buildable
+Storage bank must all be currently impossible too), with a `title` that names what to do first
+(`"Take every other currently-available upgrade first…"`) when the balance is full but the button
+is still disabled for that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
+`capacity`) and "Invest
 for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
 this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
 keeping visible even in the shortened label; `aria-label="invest bits for double production"`
@@ -134,7 +139,17 @@ progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once
 below started reading that exact same value directly, making the two rows show identical information
 side by side; the transfer-block row is now the only place this progress is shown.
 
-Below the Storage section, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below Storage, once `computeCoreRevealed` (`isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`, unrelated to Storage's own `storageRevealed` gate despite
+rendering right below it), a small **Compute** section (`ComputeSection`, a `styled(StatCard)`,
+`aria-label="byte foundry compute"`) shows the current `intro.computeCores`/`intro.computeNodes`
+counts as `N/COMPUTE_ENTITY_CAP` (10) plain status text — unlike Storage there's nothing to click
+here yet (see `tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both
+counters are fully automatic, and both cap at `COMPUTE_ENTITY_CAP`), so this is a status readout,
+not another action section. See docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full
+mechanic.
+
+Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')

@@ -5,8 +5,11 @@ import {
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
+  COMPUTE_CORES_PER_NODE,
+  COMPUTE_ENTITY_CAP,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   MONEY_ID,
   OVERCLOCK_PRODUCTION_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
@@ -202,5 +205,18 @@ describe('constants', () => {
 
   it('OVERCLOCK_REQUIREMENT_STEP is 10 (a fixed 10-level jump per activation)', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(10)
+  })
+
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 800,000 bits (100 KB in Memory\'s own B/KB/MB display scale)', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(800000)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(100 * 1000 * BITS_PER_BYTE)
+  })
+
+  it('COMPUTE_CORES_PER_NODE is 8', () => {
+    expect(COMPUTE_CORES_PER_NODE).toBe(8)
+  })
+
+  it('COMPUTE_ENTITY_CAP is 10', () => {
+    expect(COMPUTE_ENTITY_CAP).toBe(10)
   })
 })

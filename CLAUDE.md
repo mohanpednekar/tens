@@ -447,6 +447,18 @@ Doubling first halves the delivery period (like a tier's own tickspeed multiplie
 loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
 always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
 
+**Sacrifice for 10x Capacity is offered only once nothing else currently possible has been done
+first.** `isMemoryCapacityUpgradeAvailable(state)` — the actual gate `pickIntroCapacityMilestone`
+itself enforces, not just a UI-only disabled state — requires Memory to be full (`bits === capacity`)
+**and** that none of Combine into a Byte (`!byteCreated` and affordable), the current Invest tier
+(affordable and unclaimed), or a currently-buildable Storage bank is still possible with that same
+balance. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY` value and grows
+by the same `INTRO_CAPACITY_MULTIPLIER` Sacrifice's own capacity does, the two stay in lockstep by
+default — in practice this means claiming the current Invest tier is a prerequisite for Sacrificing
+again, every cycle, unless the player has pulled ahead on one ladder relative to the other. This
+doesn't change what Sacrifice itself does (still drains the entire balance to 0, still multiplies
+`capacity` by `INTRO_CAPACITY_MULTIPLIER`) — only when it's allowed to fire.
+
 Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
 on capacity, not the current balance, so conversion becomes available well before Memory itself is
 ever full), Memory can be manually converted into Kilobytes via a row of **transfer blocks** at the
@@ -566,6 +578,33 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
+Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
+gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
+(an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB
+cost; superseded, see `docs/DESIGN_HISTORY.md`). The cost is always the **current capacity itself**,
+not a fixed amount: a conversion flushes the entire balance to 0, exactly like Sacrifice for 10x
+Capacity's own full-balance drain, and always grants exactly 1 Core per flush (`bits` can never
+exceed `capacity`, so there's never a multi-Core batch in one event). Since capacity only grows via
+the player's own Sacrifice clicks, a higher capacity makes each future Core cost more (a bigger
+flush) without changing what a Core grants — the player decides how far to keep Sacrificing before
+letting automatic Core conversion take over instead, trading a smaller-but-more-frequent Core rate
+against a larger-but-slower one. This runs every tick right after Storage's own auto-fill and before
+`tickIntroAutoInvest`, so it claims Memory ahead of ordinary Kilobyte conversion once unlocked and
+full, the same "first claim" priority auto-fill itself already has. Every `COMPUTE_CORES_PER_NODE`
+(8) Compute Cores then auto-convert into 1 **Compute Node** the same tick
+(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are capped at
+`COMPUTE_ENTITY_CAP` (10 — see `layers.js`, meant to apply the same way to any future merge tier
+built on top of this): once an entity is at the cap, further production into it simply pauses
+(Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
+than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
+lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
+generator/Storage banks — pure
+counters today, with no gameplay effect yet (a further mechanic spending them — activating a
+temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
+planned as a follow-up; see the `claude-task` backlog).
+
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
 tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the Byte
@@ -657,7 +696,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (843 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
