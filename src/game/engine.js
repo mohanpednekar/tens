@@ -424,25 +424,9 @@ export const getPurchaseBlockSize = state => {
 // once `blockSize` has grown (see getPurchaseBlockSize), even though each individual unit's price
 // hasn't changed. No division is involved anywhere in this, so the result is always an exact
 // integer — no rounding needed.
-
-const fib = [0, 1], costs = new Map();
-
-const cost = (base, level) => {
-  const c = costs.get(base) ?? [base];
-
-  for (let i = fib.length; i <= level + 1; i++)
-    fib[i] = fib[i - 1] + fib[i - 2];
-
-  for (let i = c.length; i <= level; i++)
-    c[i] = base * 10 ** (fib[i + 1] - 1);
-
-  costs.set(base, c);
-  return c[level];
-};
-
-
 export const getTierCost = (tier, level) => {
-  return cost(tier.baseCost,level)
+  const epoch = Math.max(0, clampNonNegative(level) - 1)
+  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
@@ -1364,7 +1348,7 @@ export const getIntroProductionMilestoneCost = tier =>
 // docs/DESIGN_HISTORY.md. `tier` is unused now but kept as the parameter so callers (and
 // pickIntroProductionMilestone's own `getIntroProductionMilestoneMaxClaims(tier)` call) don't need
 // to change if a future tier-dependent claim count ever returns.
-export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
+export const getIntroProductionMilestoneMaxClaims = tier => 1
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at
@@ -1431,7 +1415,7 @@ export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_
 // version stayed flat at INTRO_BITS_PER_KILOBYTE_CONVERSION forever, which undervalued a transfer
 // once tier01's price grew past it — see docs/DESIGN_HISTORY.md.
 export const getIntroKilobyteConversionCost = state =>
-  getTierCost(TIER_DEFINITIONS[0], state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1) * BITS_PER_BYTE
+  getTierCost(TIER_DEFINITIONS[0], state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
 
 // Manual "convert Memory into 1 Kilobyte": spends getIntroKilobyteConversionCost(state) bits from
 // the intro's own pool and grants 1 free unit of the main game's first tier via grantTierUnits —
