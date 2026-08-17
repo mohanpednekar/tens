@@ -21,7 +21,10 @@ This skill authors two different kinds of issue, and they must not be confused:
   **must not** carry the `claude-task` label — that label means "available for the autonomous backlog
   to pick up," and applying it to a tracking issue for work already underway would make the automation
   try to claim it too. Size/priority labels don't apply either, since nothing queues it. Comment on it
-  as the session's status changes and close it when the work concludes.
+  as the session's status changes and close it when the work concludes. **Don't file it from the
+  `.github/ISSUE_TEMPLATE/claude-task.yml` template** — that template's own frontmatter auto-applies
+  the `claude-task` label (`labels: ["claude-task"]`), so using it here would mislabel the issue right
+  at creation. File a plain (blank) issue and borrow the section structure below instead.
 
 Everything below (template sections, size/priority labels, `blocked`, sequencing, epics/sub-issues,
 "specs go stale", no-PR cases) is written for the backlog case but applies equally to a tracking
@@ -30,8 +33,10 @@ for the tracking-issue case.
 
 ## 1. Use the template, section by section
 
-Always start from `.github/ISSUE_TEMPLATE/claude-task.yml` — don't restate its section
-skeleton here, just fill it in with this repo's conventions in mind:
+For a `claude-task` backlog issue, always start from `.github/ISSUE_TEMPLATE/claude-task.yml` — don't
+restate its section skeleton here, just fill it in with this repo's conventions in mind. For an
+interactive tracking issue, don't use that template (see section 0 — its frontmatter auto-applies the
+`claude-task` label); file a blank issue and reproduce the same section shape by hand:
 
 - **Goal** — one sentence, outcome-framed ("the Prestige panel shows X"), not task-framed
   ("update the Prestige panel").

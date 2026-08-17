@@ -128,8 +128,11 @@ skill's (`.claude/skills/file-task-issue/SKILL.md`) template conventions (Goal/C
 make a good tracking-issue body even when the issue isn't a backlog item. **Don't** apply the
 `claude-task` label to it — that label is reserved for items meant for `autonomous-maintenance.yml`'s
 Phase A backlog, and labeling a live interactive tracking issue that way would make the automation try
-to pick it up as unclaimed work. Comment on the issue at meaningful status changes (PR opened, a review
-round landed, work blocked/descoped) and close it once the PR merges or the task otherwise concludes.
+to pick it up as unclaimed work. For that reason, don't file it from the `claude-task.yml` issue
+template either — its frontmatter auto-applies the `claude-task` label — file a blank issue and borrow
+the template's section structure by hand instead. Comment on the issue at meaningful status changes
+(PR opened, a review round landed, work blocked/descoped) and close it once the PR merges or the task
+otherwise concludes.
 
 For work that naturally splits into multiple pieces, file a parent "epic" issue and attach each piece
 as a GitHub sub-issue of it — the same convention as the `file-task-issue` skill's "Epics and
