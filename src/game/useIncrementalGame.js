@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
@@ -15,25 +15,43 @@ import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } f
 // default), so there's nothing left to persist.
 const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 
+// A real-world gap between two successive live ticks larger than this is treated as the tab/app
+// having been backgrounded or suspended by the browser/OS — see the tick-loop effect below —
+// rather than ordinary `setInterval` scheduling jitter (which stays within a few tens of ms even
+// under load). 20x the live tick rate (TICK_RATE_MS = 100ms) comfortably clears that jitter while
+// still catching a real suspension quickly once it resumes.
+const BACKGROUND_TICK_GAP_THRESHOLD_SECONDS = 2
+
+// Shared by computeInitialGame (the one-time mount check) and the live tick loop's own gap
+// detection below — both need the identical "is this gap big enough to register as offline
+// progress, and what does catching it up produce" logic. Returns null if the gap doesn't clear
+// even a single simulated second at 50% speed (see getOfflineEffectiveSeconds/
+// OFFLINE_PROGRESS_SPEED_MULTIPLIER in layers.js).
+const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
+  const effectiveSeconds = elapsedRealSeconds > 0 ? getOfflineEffectiveSeconds(elapsedRealSeconds) : 0
+  if (effectiveSeconds <= 0) return null
+
+  return {
+    state: applyOfflineProgress(elapsedRealSeconds, BUY_QUANTITY)(state),
+    offlineProgress: { elapsedRealSeconds, effectiveSeconds },
+  }
+}
+
 // Runs once, at mount, before the regular tick timer starts. Computes the resting game state
 // (with offline progress already folded in, if applicable) and a summary of that offline
 // progress for the UI to report — or null if there was no prior save, no recorded last-save
 // timestamp (an older save, or one that was never actually saved), or the gap was too short to
-// register even a single simulated second at 50% speed.
+// register even a single simulated second at 50% speed. This only ever covers time the app was
+// fully torn down (a real page load/PWA cold start) — see the tick-loop effect below for the
+// separate, more common case of a tab/app merely backgrounded or suspended without a remount.
 const computeInitialGame = () => {
   const loaded = loadGameState()
   if (!loaded) return { state: createInitialGameState(), offlineProgress: null }
 
   const lastSaveTimestamp = loadLastSaveTimestamp()
   const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-  const effectiveSeconds = elapsedRealSeconds > 0 ? getOfflineEffectiveSeconds(elapsedRealSeconds) : 0
 
-  if (effectiveSeconds <= 0) return { state: loaded, offlineProgress: null }
-
-  return {
-    state: applyOfflineProgress(elapsedRealSeconds, BUY_QUANTITY)(loaded),
-    offlineProgress: { elapsedRealSeconds, effectiveSeconds },
-  }
+  return computeOfflineCatchUp(elapsedRealSeconds, loaded) ?? { state: loaded, offlineProgress: null }
 }
 
 export const useIncrementalGame = () => {
@@ -44,12 +62,58 @@ export const useIncrementalGame = () => {
   const [state, setState] = useState(initial.state)
   const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
-    }, TICK_RATE_MS)
+  // Mirrors `state` for the tick-loop effect below to read without depending on `state` itself —
+  // depending on it would tear down and recreate the interval/listener (and, worse, reset the
+  // gap-detection clock) on every single tick.
+  const stateRef = useRef(state)
+  useEffect(() => { stateRef.current = state }, [state])
 
-    return () => window.clearInterval(intervalId)
+  useEffect(() => {
+    // Real wall-clock time of the most recently processed tick (live or catch-up), used to detect
+    // a gap much larger than TICK_RATE_MS between two ticks — mobile browsers/PWA hosts routinely
+    // throttle or fully suspend a backgrounded tab's setInterval timer without ever tearing the
+    // page down, so the mount-time computeInitialGame check above (a one-shot effect that only
+    // ever runs again on a real remount/page reload) silently misses that time entirely: the app
+    // just resumes ticking forward from wherever it left off, with no catch-up and no notice. A
+    // plain closure variable, not a ref, since it's only ever read/written from inside this same
+    // effect's own callbacks.
+    let lastTickRealTime = Date.now()
+
+    // Shared by the interval below and the visibilitychange listener — whichever fires first for
+    // a given gap "claims" it (by rewinding lastTickRealTime to now before the other can see a
+    // stale value), so a coincidental near-simultaneous firing of both never double-counts the
+    // same gap.
+    const runTick = () => {
+      const now = Date.now()
+      const gapSeconds = (now - lastTickRealTime) / 1000
+      lastTickRealTime = now
+
+      if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
+        const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
+        if (caughtUp) {
+          setState(caughtUp.state)
+          setOfflineProgress(caughtUp.offlineProgress)
+          return
+        }
+      }
+
+      setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
+    }
+
+    const intervalId = window.setInterval(runTick, TICK_RATE_MS)
+
+    // Fires immediately on resume (foregrounding the tab/app, unlocking the phone, switching back
+    // from another app) rather than waiting for the interval's own next scheduled firing, which a
+    // fully suspended timer may never reach on its own until some other event wakes the page.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') runTick()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   // Persist to localStorage whenever state changes

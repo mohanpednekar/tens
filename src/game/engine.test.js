@@ -3625,9 +3625,9 @@ describe('applyOfflineProgress', () => {
   it('produces resources for 50% of the elapsed real time', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
     const after = applyOfflineProgress(100)(state) // 100s real → 50 simulated seconds
-    // tensTier's own 2s tickspeed fits 25 full periods into 50 simulated seconds: 5 generators ×
-    // 25 periods = +125 money
-    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 125)
+    // tensTier's own 1s tickspeed fits 50 full periods into 50 simulated seconds: 5 generators ×
+    // 50 periods = +250 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 250)
   })
 
   it('is a no-op for a gap too short to register a single simulated second', () => {

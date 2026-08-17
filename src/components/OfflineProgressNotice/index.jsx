@@ -52,20 +52,27 @@ const NoticeText = styled.p`
 `
 
 // Shown on whichever page happens to be active when the player returns (MainPage or
-// ByteFoundryPage) — offline progress is computed once, at mount, in useIncrementalGame regardless
-// of which page the player lands on, so this notice needs to be page-agnostic too. `offlineProgress`
-// is a one-shot value (see useIncrementalGame — it only ever transitions non-null → null via
-// dismissOfflineProgress, never null → non-null after mount), so a lazy initializer capturing its
-// start/end timestamps at mount time is enough; no effect is needed to (re)initialize it later, and
-// the timing itself never changes afterward.
+// ByteFoundryPage) — offline progress is computed in useIncrementalGame regardless of which page
+// the player lands on, so this notice needs to be page-agnostic too. `offlineProgress` is no
+// longer strictly one-shot: besides the original mount-time check, useIncrementalGame's tick loop
+// also catches up a real-world gap detected between two live ticks (the tab/app having been
+// backgrounded or suspended without a remount) any time during the session, each producing a
+// fresh `offlineProgress` object — so the countdown/fade timing below is (re)armed by an effect
+// keyed on the `offlineProgress` reference itself, rather than computed once via a lazy
+// initializer, so a later mid-session event restarts the countdown instead of inheriting the
+// first one's already-elapsed (or already dismissed) timing.
 const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
-  const [offlineNoticeTiming] = useState(() => {
-    if (!offlineProgress) return null
-    const now = Date.now()
-    return { start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS }
-  })
+  const [offlineNoticeTiming, setOfflineNoticeTiming] = useState(null)
   const [offlineNoticeFading, setOfflineNoticeFading] = useState(false)
   const [offlineNoticeRemainingPercent, setOfflineNoticeRemainingPercent] = useState(100)
+
+  useEffect(() => {
+    if (!offlineProgress) return
+    const now = Date.now()
+    setOfflineNoticeTiming({ start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS })
+    setOfflineNoticeFading(false)
+    setOfflineNoticeRemainingPercent(100)
+  }, [offlineProgress])
 
   useEffect(() => {
     // Guarded on offlineProgress (not just offlineNoticeTiming) so this effect re-runs — and its

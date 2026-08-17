@@ -16,17 +16,22 @@ styled money/amount display; color from `theme.color.text`, with its own `font-v
 
 styled (`.jsx` — needs JSX) "Welcome back! ... simulated N of progress at 50% speed" notice,
 extracted out of `MainPage` so both `MainPage` and `ByteFoundryPage` can render it — offline progress
-(computed once, at mount, in `useIncrementalGame.js`'s `computeInitialGame`) already applies to the
-Byte Foundry mechanically regardless of which page renders it (`tickGame` runs
-`tickIntroProduction`/`tickIntroAutoInvest` unconditionally, every tick, so `applyOfflineProgress`
-already catches the Byte generator's passive production and auto-transfers up while the game was
-closed), but the notice itself used to only ever render inside `MainPage` — a player landing on (or
-still gated to) `ByteFoundryPage` after being away got no acknowledgment of it. Takes
-`{ offlineProgress, dismissOfflineProgress }` (the same two fields `useIncrementalGame()` returns) as
-props and renders `null` when `offlineProgress` is `null`. Owns its own mount-time countdown/fade/
+(computed at mount by `useIncrementalGame.js`'s `computeInitialGame`, and again at any point
+mid-session that its live tick loop detects a real-world gap since its own last tick — see
+`docs/ECONOMY_REFERENCE.md`'s "Offline progress" section) already applies to the Byte Foundry
+mechanically regardless of which page renders it (`tickGame` runs `tickIntroProduction`/
+`tickIntroAutoInvest` unconditionally, every tick, so `applyOfflineProgress` already catches the Byte
+generator's passive production and auto-transfers up while the game was away), but the notice itself
+used to only ever render inside `MainPage` — a player landing on (or still gated to)
+`ByteFoundryPage` after being away got no acknowledgment of it. Takes `{ offlineProgress,
+dismissOfflineProgress }` (the same two fields `useIncrementalGame()` returns) as props and renders
+`null` when `offlineProgress` is `null`. `offlineProgress` is not a one-shot value — a mid-session
+gap detection can produce a fresh object any number of times in one mount — so the countdown/fade/
 auto-dismiss state (`OFFLINE_NOTICE_AUTO_DISMISS_MS` = 10s, `OFFLINE_NOTICE_FADE_MS` = 400ms,
-`OFFLINE_NOTICE_PROGRESS_INTERVAL_MS` = 100ms) — behavior is unchanged from before the extraction,
-just page-agnostic now. Renders as a fixed, centered overlay (`aria-label="offline progress notice"`
+`OFFLINE_NOTICE_PROGRESS_INTERVAL_MS` = 100ms) is (re)armed by an effect keyed on the
+`offlineProgress` object reference, not a one-time lazy initializer, so a later event restarts the
+countdown instead of inheriting an earlier (possibly already-elapsed or -dismissed) one's timing.
+Renders as a fixed, centered overlay (`aria-label="offline progress notice"`
 on the card) with a "Dismiss" button (`aria-label="Dismiss offline progress notice"`, its own hidden
 `role="progressbar"` counting down to auto-dismiss). Used by both `MainPage` (right after `Header`)
 and `ByteFoundryPage` (right after the page title), each supplying its own slice of the `game` prop
