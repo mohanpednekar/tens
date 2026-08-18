@@ -822,7 +822,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
+const MainPage = ({ game, onOpenFoundry, onOpenInfo, onOpenCompute }) => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
   const theme = useTheme()
   const { prestige } = state
@@ -1236,6 +1236,11 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
           <GuideLink onClick={onOpenFoundry} title="Review this run's Byte Foundry" type="button">
             ⚙️ Byte Foundry
           </GuideLink>
+          {state.intro?.computeMergePageUnlocked && (
+            <GuideLink onClick={onOpenCompute} title="Merge Compute Cores into Nodes, Clusters, Networks, Grids" type="button">
+              🖥️ Compute
+            </GuideLink>
+          )}
           <GuideLink onClick={onOpenInfo} title="How this game works" type="button">
             ℹ️ Guide
           </GuideLink>

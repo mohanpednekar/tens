@@ -1,4 +1,5 @@
 import ByteFoundryPage from 'pages/ByteFoundryPage'
+import ComputePage from 'pages/ComputePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
 import { useIncrementalGame } from 'game/useIncrementalGame'
@@ -24,11 +25,14 @@ function App() {
   // (the first bits ever converted into Kilobytes this cycle) and nothing about the Byte Foundry
   // itself ever freezes afterward — Tap/Sacrifice/Invest and further Convert transfers (up to this
   // cycle's shared budget) all keep working whether reached via the gate or the voluntary link.
-  // Excluding 'info' keeps the same courtesy the gate has always had: Auto-Prestige firing in the
-  // background while the player is reading the static Guide page doesn't yank them off it — the
-  // moment they click back to 'game' via onBack, this same check picks the gate back up on the
-  // very next render.
-  const showingFoundry = page !== 'info' && (!game.state.intro.mainGameUnlocked || page === 'foundry')
+  // Excluding 'info' (and, likewise, 'compute') keeps the same courtesy the gate has always had:
+  // Auto-Prestige firing in the background while the player is reading the static Guide page, or
+  // reviewing the Compute merge chain, doesn't yank them off it — the moment they click back to
+  // 'game' via onBack, this same check picks the gate back up on the very next render. In
+  // practice intro.computeMergePageUnlocked can't be true before mainGameUnlocked is anyway (it
+  // requires far more capacity than the intro gate does), but the exclusion is here for the same
+  // reason 'info' has it, not because it's reachable mid-gate today.
+  const showingFoundry = page !== 'info' && page !== 'compute' && (!game.state.intro.mainGameUnlocked || page === 'foundry')
 
   return (
     <ThemeProvider>
@@ -37,7 +41,9 @@ function App() {
         ? <ByteFoundryPage game={game} onBack={game.state.intro.mainGameUnlocked ? () => setPage('game') : undefined} />
         : page === 'info'
           ? <InfoPage onBack={() => setPage('game')} />
-          : <MainPage game={game} onOpenFoundry={() => setPage('foundry')} onOpenInfo={() => setPage('info')} />}
+          : page === 'compute'
+            ? <ComputePage game={game} onBack={() => setPage('game')} />
+            : <MainPage game={game} onOpenFoundry={() => setPage('foundry')} onOpenInfo={() => setPage('info')} onOpenCompute={() => setPage('compute')} />}
     </ThemeProvider>
   )
 }

@@ -278,6 +278,7 @@ docs/
   AUTOMATION.md                ← full Automation workflows reference (see above)
   ECONOMY_REFERENCE.md         ← full Economy model reference (see below)
   MAINPAGE_REFERENCE.md        ← full MainPage reference (see Architecture below)
+  COMPUTEPAGE_REFERENCE.md     ← full ComputePage (Compute merge chain) reference (see Architecture below)
   COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference (see below)
   THEMING_REFERENCE.md         ← full design-token/font/ThemeProvider reference (see Theming below)
   PWA_REFERENCE.md             ← full installable-PWA reference (see PWA support below)
@@ -318,10 +319,10 @@ src/
                                `useIncrementalGame`) as a prop, same as MainPage
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
-                               (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
-                               props — `game` is the full `useIncrementalGame()` object, lifted up into
-                               App.jsx (see below) so ByteFoundryPage and MainPage can share one
-                               save/tick loop. Full field-by-field reference:
+                               (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo,
+                               onOpenCompute }` props — `game` is the full `useIncrementalGame()`
+                               object, lifted up into App.jsx (see below) so ByteFoundryPage and
+                               MainPage can share one save/tick loop. Full field-by-field reference:
                                `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page: static, evergreen explanations of every mechanic
                                (Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones) that used
@@ -330,6 +331,15 @@ src/
                                thresholds) are derived from the same engine.js/layers.js constants the
                                game itself uses, not hardcoded. Reachable via MainPage's "ℹ️ Guide"
                                link; its own "← Back to game" button returns to MainPage
+    ComputePage/index.jsx   ← the Compute merge chain page (issue #280): three manual, player-
+                               triggered merge buttons — 8 Compute Nodes → 1 Cluster, 8 Clusters → 1
+                               Network, 8 Networks → 1 Grid (see "Economy model" below). Reachable via
+                               MainPage's "🖥️ Compute" link, itself hidden until
+                               `state.intro.computeMergePageUnlocked` (a permanent, one-time reveal
+                               latch — see below). Takes `{ game, onBack }`, same `game` shape as every
+                               other page; unlike ByteFoundryPage, `onBack` is unconditional here (no
+                               mandatory-gate variant of this page exists). Full field-by-field
+                               reference: `docs/COMPUTEPAGE_REFERENCE.md`
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -347,23 +357,24 @@ src/
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
-                               <ByteFoundryPage/>/<MainPage/>/<InfoPage/> via a local `page` useState
-                               (`'game'`/`'info'`/`'foundry'`, default `'game'`) — not a routing library,
-                               same "local toggle, not real routing" convention MainPage's own
-                               Game/Upgrades/Milestones view tabs already use. Which screen actually
-                               renders is a derived `showingFoundry = page !== 'info' && (!intro.mainGameUnlocked
-                               || page === 'foundry')` check, not `page` directly: ByteFoundryPage is both
+                               <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<ComputePage/> via a local
+                               `page` useState (`'game'`/`'info'`/`'foundry'`/`'compute'`, default
+                               `'game'`) — not a routing library, same "local toggle, not real routing"
+                               convention MainPage's own Game/Upgrades/Milestones view tabs already
+                               use. Which screen actually renders is a derived `showingFoundry = page
+                               !== 'info' && page !== 'compute' && (!intro.mainGameUnlocked || page ===
+                               'foundry')` check, not `page` directly: ByteFoundryPage is both
                                a *mandatory gate* (whenever `intro.mainGameUnlocked` is false — no fresh
                                Kilobytes without tapping through it, see "Economy model" below) and, once
                                unlocked, a *permanent, voluntarily-revisitable screen* reachable at any
                                time via MainPage's own "⚙️ Byte Foundry" link (`page = 'foundry'`) to
                                review the current cycle's stats — it no longer disappears once passed.
-                               `'info'` is excluded from the gate override, so a Prestige/Reset firing
-                               while the Guide page is open doesn't yank the player off it — the gate
-                               picks back up the instant they click back to `'game'`. Since `page` is
-                               independent of `intro.mainGameUnlocked`, no syncing effect is needed at
-                               all: the gate resolving just reveals whatever `page` already was
-                               (typically `'game'`)
+                               `'info'` and `'compute'` are both excluded from the gate override, so a
+                               Prestige/Reset firing while the Guide or Compute page is open doesn't
+                               yank the player off it — the gate picks back up the instant they click
+                               back to `'game'`. Since `page` is independent of `intro.mainGameUnlocked`,
+                               no syncing effect is needed at all: the gate resolving just reveals
+                               whatever `page` already was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -446,8 +457,15 @@ Strict three-layer separation:
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
    state at all, only pure constants/formulas from `game/engine.js`/`game/layers.js`, so nothing here
-   can drift out of sync with a live run. `App.jsx` toggles between the three pages locally; there
-   is still no routing library or backend involved.
+   can drift out of sync with a live run.
+6. **`ComputePage/index.jsx`** — the Compute merge chain page (see "Economy model" below), also a
+   pure renderer taking `{ game, onBack }` as props. Reachable only via MainPage's "🖥️ Compute" link,
+   itself hidden until `state.intro.computeMergePageUnlocked`. Unlike `ByteFoundryPage`, this page
+   has no mandatory-gate variant — `onBack` is unconditional, always returning to MainPage. See
+   `docs/COMPUTEPAGE_REFERENCE.md` for the full field-by-field layout.
+
+`App.jsx` toggles between all four pages locally via its own `page` state; there is still no
+routing library or backend involved.
 
 ## Economy model
 
@@ -652,8 +670,27 @@ state (`intro.computeBoostType`/`computeBoostStacks`/`computeBoostRemainingSecon
 reset to inactive on every real Prestige, unlike `computeCores`/`computeNodes` themselves — but
 carried through untouched by Speed Up/Overclock, same as the rest of `intro`. Activation happens on
 `ByteFoundryPage`'s own "Compute" section; `MainPage` shows a read-only status line while a boost is
-active, since its effect reaches `tier01` there too. Merging Cores upward into Nodes/Clusters/
-Networks/Grids is still planned as a follow-up (see the `claude-task` backlog).
+active, since its effect reaches `tier01` there too.
+
+**Compute Nodes can be merged further upward, entirely by player choice.** `intro.computeClusters`/
+`computeNetworks`/`computeGrids` extend the same ladder three tiers past Nodes — 8 Nodes → 1
+Cluster, 8 Clusters → 1 Network, 8 Networks → 1 Grid (`COMPUTE_MERGE_RATIO` = 8 in `layers.js`, the
+same ratio `COMPUTE_CORES_PER_NODE` uses for the automatic Core→Node step, but a separate constant
+since this chain is never automatic — `mergeComputeNodesIntoCluster`/`mergeComputeClustersIntoNetwork`/
+`mergeComputeNetworksIntoGrid` in `engine.js` only ever fire on an explicit player click). Each is
+capped at `COMPUTE_ENTITY_CAP` on its output the same way Core→Node is, leaving surplus input
+unconverted rather than overflowing past the cap. Nothing spends a Compute Grid yet — merging is
+the whole mechanic for now (see issue #280). A permanent, one-time reveal latch,
+`intro.computeMergePageUnlocked`, flips true (never re-clearing) the instant the CUMULATIVE total
+of Compute Cores ever earned first reaches `COMPUTE_CORES_PER_NODE` (8) — checked inside
+`tickComputeCoreConversion` on the post-increment total, before the very same tick's
+`tickComputeNodeConversion` converts that 8th Core back into the first Node — so merging Nodes back
+down later never re-hides the reveal. Once unlocked, MainPage's "🖥️ Compute" header link (beside
+"⚙️ Byte Foundry"/"ℹ️ Guide") opens `ComputePage`, a separate page showing all five compute-ladder
+counters and the three merge buttons; `ByteFoundryPage`'s own "Compute" section still shows only
+Cores/Nodes, so the two pages never duplicate the same counters. `computeClusters`/`computeNetworks`/
+`computeGrids`/`computeMergePageUnlocked` are all PERMANENT, carried over unchanged by every real
+Prestige exactly like `computeCores`/`computeNodes` themselves.
 
 **Sacrifice for 10x Capacity asks for confirmation before firing** (`window.confirm` — no modal
 component exists in the app to reuse, same rationale `MainPage`'s own Reset button confirm already
@@ -753,7 +790,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (881 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (942 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -784,7 +821,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (843, see "Testing" above) is unaffected by anything under `e2e/`.
+  (942, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

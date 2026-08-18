@@ -305,7 +305,11 @@ const StorageBankSquare = styled.button`
 
 // Compute Cores/Nodes: a small, permanent status line — not its own full StatCard section like
 // Storage, since (unlike Storage) there's nothing to click here yet, just two live counters (see
-// tickComputeCoreConversion/tickComputeNodeConversion in engine.js).
+// tickComputeCoreConversion/tickComputeNodeConversion in engine.js). Deliberately does NOT also
+// show computeClusters/computeNetworks/computeGrids once those exist (see issue #280) — that
+// merge chain, and its own Cores/Nodes counters for context, live entirely on the separate
+// ComputePage (reachable from MainPage's header once intro.computeMergePageUnlocked) instead, so
+// the two pages don't show duplicate copies of the same numbers.
 const ComputeSection = styled(StatCard)`
   align-items: center;
   width: 100%;

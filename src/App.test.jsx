@@ -2751,6 +2751,69 @@ describe('Byte Foundry Compute Boost', () => {
   })
 })
 
+describe('ComputePage merge chain', () => {
+  test('the 🖥️ Compute link is hidden on MainPage until computeMergePageUnlocked', () => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeMergePageUnlocked: false } })
+    render(<App />)
+    expect(screen.queryByText('🖥️ Compute')).not.toBeInTheDocument()
+  })
+
+  test('the 🖥️ Compute link navigates to ComputePage, with a Back to game exit', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({
+      intro: {
+        mainGameUnlocked: true, computeMergePageUnlocked: true,
+        computeCores: 2, computeNodes: 16, computeClusters: 3, computeNetworks: 0, computeGrids: 0,
+      },
+    })
+    render(<App />)
+
+    await user.click(screen.getByText('🖥️ Compute'))
+
+    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/cores.*2\/10/i)
+    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/nodes.*16\/10/i)
+    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/clusters.*3\/10/i)
+
+    await user.click(screen.getByRole('button', { name: /back to game/i }))
+    expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
+  })
+
+  test('a merge button stays disabled below a full group of 8 of the input entity', () => {
+    seedMainGameState({
+      intro: { mainGameUnlocked: true, computeMergePageUnlocked: true, computeNodes: 7, computeClusters: 0 },
+    })
+    render(<App />)
+    fireEvent.click(screen.getByText('🖥️ Compute'))
+
+    expect(screen.getByRole('button', { name: /merge 8 compute nodes into 1 compute cluster/i })).toBeDisabled()
+  })
+
+  test('merging spends 8 of the input entity for 1 of the output entity', () => {
+    seedMainGameState({
+      intro: { mainGameUnlocked: true, computeMergePageUnlocked: true, computeNodes: 9, computeClusters: 1 },
+    })
+    render(<App />)
+    fireEvent.click(screen.getByText('🖥️ Compute'))
+
+    fireEvent.click(screen.getByRole('button', { name: /merge 8 compute nodes into 1 compute cluster/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeNodes).toBe(1)
+    expect(saved.intro.computeClusters).toBe(2)
+  })
+
+  test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
+    seedMainGameState({
+      intro: { mainGameUnlocked: true, computeMergePageUnlocked: true, computeClusters: 24, computeNetworks: 10 },
+    })
+    render(<App />)
+    fireEvent.click(screen.getByText('🖥️ Compute'))
+
+    expect(screen.getByRole('button', { name: /merge 8 compute clusters into 1 compute network/i })).toBeDisabled()
+  })
+})
+
 // --- The Byte Foundry resets and reappears after every real Prestige ---
 // A real Prestige now sends the player back through the intro every cycle (see engine.js's
 // prestigeGame and App.jsx's bidirectional page-sync effect) — it's no longer a one-time-ever gate.

@@ -190,6 +190,12 @@ export const COMPUTE_CORES_PER_NODE = 8
 // spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
 // progress" posture Storage banks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
+// 8 of one compute-ladder entity merges into 1 of the next tier up — Node → Cluster → Network →
+// Grid (see mergeComputeNodesIntoCluster/mergeComputeClustersIntoNetwork/
+// mergeComputeNetworksIntoGrid in engine.js). Same ratio as COMPUTE_CORES_PER_NODE above, but this
+// merge chain is only ever player-triggered (a button click), never automatic on tick — the player
+// decides whether to merge a tier upward or keep spending/holding it.
+export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
 // tickComputeBoost in engine.js and intro.computeBoostType/computeBoostStacks/

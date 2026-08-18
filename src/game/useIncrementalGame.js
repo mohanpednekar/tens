@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
+import { activateComputeBoost, applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -156,6 +156,9 @@ export const useIncrementalGame = () => {
     redeemStorageBank: capacityBits => setState(redeemStorageBank(capacityBits)),
     setStorageAutoRedeemEnabled: enabled => setState(setStorageAutoRedeemEnabled(enabled)),
     activateComputeBoost: boostType => setState(activateComputeBoost(boostType)),
+    mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
+    mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
+    mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
   }), [])
 
   const resetGame = useCallback(() => {
