@@ -47,14 +47,17 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
-  "48": "clampNonNegative",
+  "48": "MainPage",
   "49": "ByteFoundryPage",
-  "50": "formatCurrency",
+  "50": "formatAmount",
   "51": "InfoPage/index.jsx",
   "52": "tickGame",
   "53": "formatBonusOrMultiplier",
-  "54": "formatAmount",
+  "54": "formatMemoryAmount",
   "55": "isStorageBankRedeemable",
   "56": "dependencies",
-  "57": "run-simulation.mjs"
+  "57": "clampNonNegative",
+  "58": "Design history & rationale",
+  "59": "getTierCost",
+  "60": "web-vitals"
 }

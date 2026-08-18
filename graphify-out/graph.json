@@ -64,19 +64,19 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "run-simulation.mjs"
     },
     {
       "label": "simulateRun()",
       "file_type": "code",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L51",
+      "source_location": "L56",
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_simulaterun",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "simulaterun()"
     },
     {
@@ -88,7 +88,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_formatduration",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "formatduration()"
     },
     {
@@ -99,7 +99,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_defaultppvalues",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "defaultppvalues"
     },
     {
@@ -110,7 +110,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_clivalues",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "clivalues"
     },
     {
@@ -121,7 +121,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_simulate",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "simulate.mjs"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "package.json",
       "source_location": "L20",
       "_origin": "ast",
-      "id": "web_vitals",
+      "id": "package_json_web_vitals",
       "community": 56,
       "community_name": "dependencies",
       "norm_label": "web-vitals"
@@ -1389,7 +1389,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_clampnonnegative",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "clampnonnegative()"
     },
@@ -1401,8 +1401,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_allresourceids",
-      "community": 2,
-      "community_name": "engine.js",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "allresourceids()"
     },
     {
@@ -1458,7 +1458,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatscientific",
-      "community": 54,
+      "community": 50,
       "community_name": "formatAmount",
       "norm_label": "formatscientific()"
     },
@@ -1470,7 +1470,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_formatamount",
-      "community": 54,
+      "community": 50,
       "community_name": "formatAmount",
       "norm_label": "formatamount()"
     },
@@ -1483,7 +1483,7 @@
       "_origin": "ast",
       "id": "src_game_engine_formatcurrency",
       "community": 50,
-      "community_name": "formatCurrency",
+      "community_name": "formatAmount",
       "norm_label": "formatcurrency()"
     },
     {
@@ -1494,8 +1494,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcostepochexponent",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "getcostepochexponent()"
     },
     {
@@ -1518,8 +1518,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettiercost",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "gettiercost()"
     },
     {
@@ -1530,8 +1530,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierbulkquantity",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "gettierbulkquantity()"
     },
     {
@@ -1542,8 +1542,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierquantitycost",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "gettierquantitycost()"
     },
     {
@@ -1554,8 +1554,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettieraffordablequantity",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "gettieraffordablequantity()"
     },
     {
@@ -1639,7 +1639,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedproductionmultiplier",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "gettickspeedproductionmultiplier()"
     },
     {
@@ -1651,7 +1651,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedmultipliercost",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getglobaltickspeedmultipliercost()"
     },
     {
@@ -1663,7 +1663,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
@@ -1675,7 +1675,7 @@
       "_origin": "ast",
       "id": "src_game_engine_countglobaltickspeedmilestones",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "countglobaltickspeedmilestones()"
     },
     {
@@ -1687,7 +1687,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedregularstep",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getglobaltickspeedregularstep()"
     },
     {
@@ -1699,7 +1699,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getglobaltickspeedproductionmultiplier()"
     },
     {
@@ -1723,7 +1723,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedmultiplier",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getlasttierxptickspeedmultiplier()"
     },
     {
@@ -1734,8 +1734,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedminconsumption",
-      "community": 48,
-      "community_name": "clampNonNegative",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getlasttierxptickspeedminconsumption()"
     },
     {
@@ -1746,8 +1746,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeproductionmultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getprestigeproductionmultiplier()"
     },
     {
@@ -1758,7 +1758,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyprestigespeedbonus",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buyprestigespeedbonus()"
     },
@@ -1782,8 +1782,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpurchasemilestonemultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getpurchasemilestonemultiplier()"
     },
     {
@@ -1794,8 +1794,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getspeedupmultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getspeedupmultiplier()"
     },
     {
@@ -1807,7 +1807,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getspeeduprequirement",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "getspeeduprequirement()"
     },
     {
@@ -1819,7 +1819,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getoverclockrequirement",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getoverclockrequirement()"
     },
     {
@@ -1830,7 +1830,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautoprestigecost",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "getautoprestigecost()"
     },
@@ -1842,8 +1842,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautoprestigeattemptrate",
-      "community": 48,
-      "community_name": "clampNonNegative",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getautoprestigeattemptrate()"
     },
     {
@@ -1854,7 +1854,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isproductionfrozen",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "isproductionfrozen()"
     },
@@ -1890,7 +1890,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getmoneyexponent",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "getmoneyexponent()"
     },
@@ -1902,7 +1902,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeprogresspercent",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "getprestigeprogresspercent()"
     },
@@ -1915,7 +1915,7 @@
       "_origin": "ast",
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "geteffectivetiertickspeedseconds()"
     },
     {
@@ -1927,7 +1927,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierproductionprogresspercent",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "gettierproductionprogresspercent()"
     },
     {
@@ -1939,7 +1939,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getprestigepointsawarded",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "getprestigepointsawarded()"
     },
     {
@@ -1950,7 +1950,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_checkmilestones",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "checkmilestones()"
     },
@@ -2154,8 +2154,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_pickintroproductionmilestone",
-      "community": 49,
-      "community_name": "ByteFoundryPage",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
       "norm_label": "pickintroproductionmilestone()"
     },
     {
@@ -2190,8 +2190,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintrokilobyteconversioncost",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "getintrokilobyteconversioncost()"
     },
     {
@@ -2202,8 +2202,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_convertintrobitstokilobytes",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "convertintrobitstokilobytes()"
     },
     {
@@ -2214,8 +2214,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickintroproduction",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "tickintroproduction()"
     },
     {
@@ -2226,8 +2226,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickintroautoinvest",
-      "community": 52,
-      "community_name": "tickGame",
+      "community": 59,
+      "community_name": "getTierCost",
       "norm_label": "tickintroautoinvest()"
     },
     {
@@ -2382,8 +2382,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeboostmultiplier",
-      "community": 0,
-      "community_name": "engine.test.js",
+      "community": 52,
+      "community_name": "tickGame",
       "norm_label": "getcomputeboostmultiplier()"
     },
     {
@@ -2454,7 +2454,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buysmartautobuyer",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buysmartautobuyer()"
     },
@@ -2478,7 +2478,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestige",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buyautoprestige()"
     },
@@ -2502,7 +2502,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestigeautobuyer",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buyautoprestigeautobuyer()"
     },
@@ -2527,7 +2527,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buyglobaltickspeedmultiplier",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "buyglobaltickspeedmultiplier()"
     },
     {
@@ -2551,7 +2551,7 @@
       "_origin": "ast",
       "id": "src_game_engine_speedupgame",
       "community": 57,
-      "community_name": "run-simulation.mjs",
+      "community_name": "clampNonNegative",
       "norm_label": "speedupgame()"
     },
     {
@@ -2574,7 +2574,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautospeedup",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buyautospeedup()"
     },
@@ -2598,7 +2598,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedautobuyer",
-      "community": 48,
+      "community": 57,
       "community_name": "clampNonNegative",
       "norm_label": "buytickspeedautobuyer()"
     },
@@ -3087,7 +3087,7 @@
       "_origin": "ast",
       "id": "src_game_layers_resource_symbol",
       "community": 50,
-      "community_name": "formatCurrency",
+      "community_name": "formatAmount",
       "norm_label": "resource_symbol()"
     },
     {
@@ -4200,7 +4200,7 @@
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_getmemoryunit",
       "community": 54,
-      "community_name": "formatAmount",
+      "community_name": "formatMemoryAmount",
       "norm_label": "getmemoryunit()"
     },
     {
@@ -4212,7 +4212,7 @@
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_floortodecimals",
       "community": 54,
-      "community_name": "formatAmount",
+      "community_name": "formatMemoryAmount",
       "norm_label": "floortodecimals()"
     },
     {
@@ -4224,7 +4224,7 @@
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemoryamount",
       "community": 54,
-      "community_name": "formatAmount",
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatmemoryamount()"
     },
     {
@@ -4236,7 +4236,7 @@
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatbitsinnearestunit",
       "community": 54,
-      "community_name": "formatAmount",
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatbitsinnearestunit()"
     },
     {
@@ -4248,7 +4248,7 @@
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemorybalance",
       "community": 54,
-      "community_name": "formatAmount",
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatmemorybalance()"
     },
     {
@@ -4270,7 +4270,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatstoragesize",
-      "community": 54,
+      "community": 50,
       "community_name": "formatAmount",
       "norm_label": "formatstoragesize()"
     },
@@ -5013,7 +5013,7 @@
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatcost",
       "community": 50,
-      "community_name": "formatCurrency",
+      "community_name": "formatAmount",
       "norm_label": "formatcost()"
     },
     {
@@ -5024,8 +5024,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_progresspercent",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
+      "community": 48,
+      "community_name": "MainPage",
       "norm_label": "progresspercent()"
     },
     {
@@ -5085,7 +5085,7 @@
       "_origin": "ast",
       "id": "src_pages_mainpage_index_mainpage",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "MainPage",
       "norm_label": "mainpage()"
     },
     {
@@ -5110,6 +5110,17 @@
       "community": 4,
       "community_name": "App.jsx",
       "norm_label": "reportwebvitals()"
+    },
+    {
+      "label": "web-vitals",
+      "file_type": "code",
+      "source_file": "web-vitals",
+      "confidence": "EXTRACTED",
+      "_origin": "ast",
+      "id": "web_vitals_web_vitals",
+      "community": 60,
+      "community_name": "web-vitals",
+      "norm_label": "web-vitals"
     },
     {
       "label": "setupTests.js",
@@ -6430,7 +6441,7 @@
       "label": "Usage",
       "file_type": "document",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
-      "source_location": "L47",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_skill_usage",
       "community": 37,
@@ -6441,7 +6452,7 @@
       "label": "When editing the simulation",
       "file_type": "document",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
-      "source_location": "L65",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_skill_when_editing_the_simulation",
       "community": 37,
@@ -7442,7 +7453,7 @@
       "label": "PR follow-up (`autonomous-pr-followup.yml`)",
       "file_type": "document",
       "source_file": "docs/AUTOMATION.md",
-      "source_location": "L208",
+      "source_location": "L223",
       "_origin": "ast",
       "id": "docs_automation_pr_follow_up_autonomous_pr_followup_yml",
       "community": 32,
@@ -7453,7 +7464,7 @@
       "label": "Auto-merge (`pr-auto-merge.yml`)",
       "file_type": "document",
       "source_file": "docs/AUTOMATION.md",
-      "source_location": "L222",
+      "source_location": "L237",
       "_origin": "ast",
       "id": "docs_automation_auto_merge_pr_auto_merge_yml",
       "community": 32,
@@ -7533,8 +7544,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_design_history",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "design_history.md"
     },
     {
@@ -7544,8 +7555,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_design_history_design_history_rationale",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "design history & rationale"
     },
     {
@@ -7665,8 +7676,8 @@
       "source_location": "L232",
       "_origin": "ast",
       "id": "docs_design_history_architecture_mainpage_ui_decisions",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "architecture / mainpage ui decisions"
     },
     {
@@ -8160,8 +8171,8 @@
       "source_location": "L1818",
       "_origin": "ast",
       "id": "docs_design_history_distribution",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "distribution"
     },
     {
@@ -8171,8 +8182,8 @@
       "source_location": "L1820",
       "_origin": "ast",
       "id": "docs_design_history_why_a_pwa_instead_of_capacitor_native_app_store_distribution",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "why a pwa instead of capacitor/native app-store distribution"
     },
     {
@@ -8182,8 +8193,8 @@
       "source_location": "L1834",
       "_origin": "ast",
       "id": "docs_design_history_documentation",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "documentation"
     },
     {
@@ -8193,8 +8204,8 @@
       "source_location": "L1836",
       "_origin": "ast",
       "id": "docs_design_history_why_semver_changelog_started_at_v0_5_0_not_v0_1_0_from_inception",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "why semver/changelog started at v0.5.0, not v0.1.0-from-inception"
     },
     {
@@ -8204,8 +8215,8 @@
       "source_location": "L1848",
       "_origin": "ast",
       "id": "docs_design_history_testing",
-      "community": 17,
-      "community_name": "Automation workflows",
+      "community": 58,
+      "community_name": "Design history & rationale",
       "norm_label": "testing"
     },
     {
@@ -8610,7 +8621,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L51",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8622,7 +8633,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8634,7 +8645,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8646,7 +8657,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8658,7 +8669,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8670,7 +8681,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8682,7 +8693,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8694,7 +8705,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8706,7 +8717,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8718,7 +8729,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L31",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8730,7 +8741,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L42",
+      "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8742,7 +8753,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L42",
+      "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8754,7 +8765,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L42",
+      "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation",
@@ -8787,7 +8798,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L63",
+      "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation_simulaterun",
@@ -8799,7 +8810,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L52",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation_simulaterun",
@@ -8823,7 +8834,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L57",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_run_simulation_simulaterun",
@@ -9294,7 +9305,7 @@
       "context": "import",
       "_origin": "ast",
       "source": "package_dependencies_web_vitals",
-      "target": "web_vitals",
+      "target": "package_json_web_vitals",
       "confidence_score": 1.0
     },
     {
@@ -23244,7 +23255,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
-      "source_location": "L47",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_skill",
@@ -23266,7 +23277,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
-      "source_location": "L65",
+      "source_location": "L75",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_skills_simulate_run_times_skill",
@@ -24168,7 +24179,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/AUTOMATION.md",
-      "source_location": "L222",
+      "source_location": "L237",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_automation_automation_workflows",
@@ -24190,7 +24201,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/AUTOMATION.md",
-      "source_location": "L208",
+      "source_location": "L223",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_automation_automation_workflows",
@@ -25233,5 +25244,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "53e83455fc61cba58ef731adff43922a16a4fefd"
+  "built_at_commit": "7f9346c355221c954abdb51fc5549b45bb92bb90"
 }
