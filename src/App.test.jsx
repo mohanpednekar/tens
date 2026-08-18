@@ -2521,14 +2521,18 @@ describe('Byte Foundry Storage', () => {
 
   const openStorage = () => fireEvent.click(screen.getByRole('button', { name: /open storage/i }))
 
-  test('the "open storage" nav button stays hidden until Memory capacity reaches 10 KB (INTRO_STORAGE_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+  test('Build Storage Bank stays hidden on ByteFoundryPage, and the "open storage" nav button stays hidden too, until Memory capacity reaches 10 KB (INTRO_STORAGE_UNLOCK_CAPACITY), even with the Byte generator built', () => {
     seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1, byteCreated: true })
     const { unmount } = render(<App />)
+    expect(screen.queryByRole('button', { name: /build storage bank/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /open storage/i })).not.toBeInTheDocument()
     unmount()
 
     seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
+    // Building the next bank stays on ByteFoundryPage itself — no navigation needed to reach it.
+    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeInTheDocument()
+
     const openButton = screen.getByRole('button', { name: /open storage/i })
     expect(openButton).toBeInTheDocument()
     // Always enabled once revealed — unlike Build/Fill themselves, reaching the screen to check on
@@ -2537,7 +2541,6 @@ describe('Byte Foundry Storage', () => {
 
     openStorage()
     expect(screen.getByRole('heading', { level: 1, name: /storage/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeInTheDocument()
   })
 
   test('Build Storage Bank is disabled below its cost and enabled once affordable, starting at 1 KB', () => {
@@ -2546,7 +2549,6 @@ describe('Byte Foundry Storage', () => {
     // Build for a different reason than the one this test is isolating.
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
-    openStorage()
 
     const buildButton = screen.getByRole('button', { name: /build storage bank/i })
     expect(buildButton).toHaveTextContent('1 KB')
@@ -2556,7 +2558,6 @@ describe('Byte Foundry Storage', () => {
   test('Build Storage Bank shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
-    openStorage()
 
     // currentBankCost is 80,000 bits = 10,000 Bytes = 10 KB in Memory's own B/KB/MB/… scale — shown
     // as "10 KB", not the raw "80,000" bit count with no unit at all.
@@ -2568,9 +2569,18 @@ describe('Byte Foundry Storage', () => {
   test('Build Storage Bank stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)
-    openStorage()
 
     expect(screen.getByRole('button', { name: /build storage bank/i })).toBeDisabled()
+  })
+
+  test('a brief per-size summary chip ("<size> <full>/<built>") shows on ByteFoundryPage once a bank has ever been built', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true,
+      storageBanksBuiltTotal: { [currentBankSize]: 3 }, storageBanks: { [currentBankSize]: 1 },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('group', { name: /^storage summary$/i })).toHaveTextContent('1 KB 1/3')
   })
 
   test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {
@@ -2578,13 +2588,18 @@ describe('Byte Foundry Storage', () => {
 
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     const { unmount } = render(<App />)
-    openStorage()
 
     fireEvent.click(screen.getByRole('button', { name: /build storage bank/i }))
 
     // Building spends the build cost — separate from, and not the same as, filling the bank.
-    expect(screen.getByText(/^memory:/i)).toHaveTextContent('0 B')
-    // The bank exists (built) but starts empty — no "redeem" square for it yet.
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.bits).toBe(0)
+    expect(saved.intro.storageBanksBuiltTotal[currentBankSize]).toBe(1)
+    // The bank exists (built) but starts empty — no full bank yet.
+    expect(saved.intro.storageBanks?.[currentBankSize] ?? 0).toBe(0)
+
+    // The detail (empty/full squares, redeeming) lives on StoragePage.
+    openStorage()
     expect(screen.queryByRole('button', { name: /redeem 1 kb storage bank/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
 
@@ -2613,9 +2628,9 @@ describe('Byte Foundry Storage', () => {
     // toggle) — the bank ends up empty again, ready to be refilled, with 1 free Kilobyte granted.
     // Auto-fill/auto-redeem are unaffected by the forced priority order — that only gates manual
     // clicks (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background automation.
-    expect(screen.getByText(/^memory:/i)).toHaveTextContent('0 B')
     expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.bits).toBe(0)
     expect(saved.owned.tier01).toBe(1)
 
     unmount()

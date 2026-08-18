@@ -38,6 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
+  "39": "ByteFoundryPage",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -47,10 +48,13 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "StoragePage/index.jsx",
-  "49": "InfoPage/index.jsx",
-  "51": "dependencies",
+  "49": "package.json",
+  "50": "ComputePage/index.jsx",
+  "51": "InfoPage/index.jsx",
+  "52": "formatAmount",
   "53": "formatBonusOrMultiplier",
   "54": "Design history & rationale",
   "55": "OfflineProgressNotice/index.jsx",
-  "56": "web-vitals"
+  "56": "web-vitals",
+  "57": "isBandwidthAvailable"
 }

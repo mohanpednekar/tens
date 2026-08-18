@@ -314,19 +314,24 @@ src/
                                gate itself has no way out); nothing here ever goes read-only —
                                Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
                                Convert stays live too — there is no per-cycle transfer cap at all, only
-                               tier01's own live purchase-block progress (see below). Storage and
-                               Compute each moved to their own dedicated screen (see
-                               StoragePage/ComputePage below) once revealed — this page only renders a
-                               nav button to reach them, always enabled once revealed (see "Economy
-                               model" below); their own actions stay gated by the forced priority
-                               order, same as Sacrifice/Invest here. Receives
+                               tier01's own live purchase-block progress (see below). Compute moved
+                               entirely to its own dedicated screen (see ComputePage below) once
+                               revealed — this page only renders a nav button to reach it, always
+                               enabled once revealed (see "Economy model" below); its own actions
+                               stay gated by the forced priority order, same as Sacrifice/Invest
+                               here. Storage split differently: the Build button (its own core-loop
+                               action) and a brief per-size summary chip row both stay on this page;
+                               only the fuller per-size detail and redeeming live on StoragePage
+                               (see below), reached via its own nav button. Receives
                                the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← the Storage screen, split out of ByteFoundryPage (see "Economy model"
-                               below) — Build button + one row of bank squares per size ever reached.
-                               Reached only via ByteFoundryPage's own "🏦 Storage" nav button; takes
-                               `{ game, onBack }`, `onBack` always returning to ByteFoundryPage
-                               (`page = 'foundry'`)
+    StoragePage/index.jsx   ← Storage's fuller detail screen, split out of ByteFoundryPage (see
+                               "Economy model" below) — one row of bank squares per size ever
+                               reached, for redeeming (Storage Bank Fill); NOT the Build button,
+                               which stays on ByteFoundryPage itself alongside its own per-size
+                               summary. Reached only via ByteFoundryPage's own "🏦 Storage" nav
+                               button; takes `{ game, onBack }`, `onBack` always returning to
+                               ByteFoundryPage (`page = 'foundry'`)
     ComputePage/index.jsx   ← the Compute screen, split out of ByteFoundryPage (see "Economy model"
                                below) — Compute Core/Node counters + the 3 Boost preset buttons.
                                Reached only via ByteFoundryPage's own "⚡ Compute" nav button; takes
@@ -466,14 +471,19 @@ Strict three-layer separation:
    flips true (the first bits ever converted into Kilobytes this cycle), it stops being a gate and
    becomes a permanent screen the player can voluntarily reopen at any time (MainPage's "⚙️ Byte
    Foundry" link), with an `onBack`-driven exit back to MainPage — but it stays just as interactive
-   either way, nothing here ever goes read-only. Storage and Compute each moved to their own
-   dedicated screen (see 4a/4b below) once revealed; this page only renders a nav button to reach
-   each, always enabled once revealed (their own actions inside stay gated by the forced priority
-   order — see "Economy model" below).
-4a. **`StoragePage/index.jsx`** — Storage's own dedicated screen, taking `{ game, onBack }`. Reached
-    only via ByteFoundryPage's "🏦 Storage" nav button; `onBack` always returns to ByteFoundryPage
-    (`page = 'foundry'`). A pure renderer, same "engine re-validates, UI just mirrors it" posture as
-    every other page here.
+   either way, nothing here ever goes read-only. Compute moved to its own dedicated screen (see 4b
+   below) once revealed; this page only renders a nav button to reach it, always enabled once
+   revealed. Storage split differently: Building the next bank (its own core-loop action, alongside
+   Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
+   `"10 KB 3/8"`) both stay here; only the fuller per-size detail and redeeming (Storage Bank Fill)
+   live on the dedicated `StoragePage` (see 4a below), reached via its own nav button, always
+   enabled once revealed. Every action — here or on either dedicated screen — stays gated by the
+   forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size full/empty/not-built
+    squares rows and redeeming (Storage Bank Fill) — NOT the Build button, which stays on
+    ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
+    Storage" nav button; `onBack` always returns to ByteFoundryPage (`page = 'foundry'`). A pure
+    renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
     (`page = 'foundry'`). Same posture as StoragePage above.
@@ -578,22 +588,28 @@ actually is). The Tap button carries no progress fill/hidden progressbar of its 
 tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
 nothing.
 
-**Storage** has its own dedicated screen, `StoragePage` (separate from ByteFoundryPage, which keeps
-only Sacrifice/Invest — see "Architecture" below) — reached via a "🏦 Storage" nav button on
-ByteFoundryPage, itself hidden entirely until Memory's own capacity reaches
-`INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale, 80,000 bits —
-`isStorageUnlocked` in `engine.js`), a deliberately later reveal than the Kilobyte-transfer row's
-own 1000-bit gate, since Storage is a later-game mechanic. Unlike Storage's/Compute's own actions
-(see "forced priority order" below), the nav button itself is always enabled once revealed — a
-permanent, voluntarily-revisitable screen, same posture as MainPage's own "⚙️ Byte Foundry" link —
-so the player can check on held/built banks even when nothing there is currently actionable;
-`onBack` always returns to ByteFoundryPage. StoragePage groups the Build button, one row of up to
-`STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached —
-read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
-built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
-(rightmost) — rather than one full-width button per bank size stacked flat into the same list as
-every other action. (A pause/resume auto-redeem toggle used to render here too; removed for now —
-see below — with a UI to reintroduce it planned for later.) Banks are a genuine storage **medium**, not
+**Building the next Storage bank stays on ByteFoundryPage itself**, alongside Sacrifice/Invest —
+its own core-loop action, ranked third in the forced priority order (see below) — rather than
+moving to a separate screen; a "Build \<size\> Bank (\<cost\>)" button, hidden until Memory's own
+capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale, 80,000
+bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than the Kilobyte-transfer
+row's own 1000-bit gate, since Storage is a later-game mechanic. Right below it, a brief per-size
+summary — one small chip per size ever reached, reading `"<size> <full>/<built>"` (e.g. `"10 KB
+3/8"` — 8 blocks of 10 KB ever built, 3 currently full) — gives an at-a-glance view of holdings
+without leaving this page. **Storage** also has its own dedicated screen, `StoragePage`, for the
+fuller per-size detail and for the one Storage action that lives only there, redeeming (Storage
+Bank Fill) — reached via a "🏦 Storage" nav button on ByteFoundryPage (same reveal gate as the
+Build button). Unlike Storage's/Compute's own actions (see "forced priority order" below), the nav
+button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
+posture as MainPage's own "⚙️ Byte Foundry" link — so the player can check on held/built banks even
+when nothing there is currently actionable; `onBack` always returns to ByteFoundryPage. StoragePage
+renders one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached — NOT
+the Build button, which stays on ByteFoundryPage — read together as one progress bar: currently
+**full** (leftmost, clickable once redeemable), then built-but-**empty** (constructed, waiting for
+Memory to auto-fill), then not-yet-built placeholders (rightmost) — rather than one full-width
+button per bank size stacked flat into the same list as every other action. (A pause/resume
+auto-redeem toggle used to render here too; removed for now — see below — with a UI to reintroduce
+it planned for later.) Banks are a genuine storage **medium**, not
 a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
 container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
 every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
@@ -626,8 +642,8 @@ automatically, and **empties the bank again** — it's reusable, not single-use,
 fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
 **always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
 own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
-involved), which now **defaults `true` for every size** (previously `false`) — `ByteFoundryPage`
-currently renders no pause/resume button for it at all (removed for now; the toggle field,
+involved), which now **defaults `true` for every size** (previously `false`) — neither
+ByteFoundryPage nor StoragePage currently renders a pause/resume button for it at all (removed for now; the toggle field,
 `setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
 for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
 auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real

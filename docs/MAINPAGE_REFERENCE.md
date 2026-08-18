@@ -98,19 +98,44 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Storage and Compute each moved to their own dedicated screen (`StoragePage`/`ComputePage` — see
-below) — this page only renders a nav button to reach each, once revealed. Unlike the actions inside
-those screens, both nav buttons are always enabled once revealed — a permanent,
-voluntarily-revisitable posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — so the player can
-check on held/built progress even when nothing there is currently actionable.
+Compute moved entirely to its own dedicated screen (`ComputePage` — see below) — this page only
+renders a nav button to reach it, once revealed (`computeCoreRevealed`,
+`isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`), always
+enabled regardless of what's currently actionable there — a permanent, voluntarily-revisitable
+posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — shown as a "⚡ Compute" button
+(`aria-label="open compute"`, calling `onOpenCompute`).
 
+Storage split differently: **Build Storage Bank** (`aria-label="build storage bank"`, calling
+`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
+stays on this page — its own core-loop action, alongside Sacrifice/Invest above — hidden until
 `storageRevealed` (`isStorageUnlocked(state)` — Memory's own capacity has reached
 `INTRO_STORAGE_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later, more deliberate
-reveal than `revealed`'s own 1000-bit gate above) shows a "🏦 Storage" button (`aria-label="open
-storage"`, calling `onOpenStorage`, always enabled). `computeCoreRevealed`
-(`isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`,
-unrelated to Storage's own `storageRevealed` gate despite rendering right below it) shows a "⚡
-Compute" button (`aria-label="open compute"`, calling `onOpenCompute`, always enabled).
+reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
+`getStorageBankSize(state)` — an independent ladder that walks tier01's own per-unit level-cost
+sequence (1000 bits/"1 KB", then 10,000/"10 KB", then 100,000/"100 KB", then 10,000,000/"10 MB" —
+skipping 1,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too) and only
+advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at the current size,
+decoupled from tier01's own CURRENT price. `disabled={!canBuildStorageBank}` where
+`canBuildStorageBank = isStorageBankBuildTurnAvailable(state)` — below the build cost, OR while a
+redeemable Storage Bank Fill/an affordable Bandwidth claim (both higher priority — see "Forced
+priority order" in docs/ECONOMY_REFERENCE.md) is currently available, with a `title` naming which
+to take first in the latter case. The build cost itself (parenthesized in the label, and in the
+button's `title`) renders via `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for
+that specific bit amount — rather than a raw unitless bit count. Building only ever constructs an
+EMPTY container — it does not fill it (see "Storage page" below).
+
+Right below Build, once anything has ever been built or is held, a brief `StorageSummaryRow`
+(`role="group"`, `aria-label="storage summary"`) shows one small `StorageSummaryChip` per size from
+`getStorageSizesToShow(state)` (ascending), each reading `"<size> <full>/<built>"` (e.g. `"10 KB
+3/8"` — 8 blocks of 10 KB ever built, 3 currently full via `Math.max(storageBanksBuiltTotal[size],
+full)`) — a compact, at-a-glance readout, deliberately not the fuller square-by-square grid
+StoragePage itself renders (see below); visiting StoragePage is still how a full bank actually gets
+redeemed.
+
+Below Build/the summary, a "🏦 Storage" nav button (`aria-label="open storage"`, calling
+`onOpenStorage`, same reveal gate as Build) reaches `StoragePage` for the fuller per-size detail and
+redeeming — always enabled regardless of what's currently actionable there, same posture as the
+Compute nav button above.
 
 Below the Storage/Compute nav buttons, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
@@ -157,14 +182,14 @@ Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact sca
 `engine.js`'s own `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
 true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
 picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
-instead of stopping at a fixed unit. `StoragePage`'s own local `formatStorageSize` helper uses a
-different, Storage-*size*-specific scale (see "Storage page" below and docs/ECONOMY_REFERENCE.md's
-"Byte Foundry" section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000
-Bytes) — used only for naming a bank's own *size* ("Build 1 KB Bank"), not for any bit amount
+instead of stopping at a fixed unit. `engine.js`'s own `formatStorageSize` export (shared by
+ByteFoundryPage and StoragePage) uses a different, Storage-*size*-specific scale (see "Storage
+page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
+matching tier01's own cost ladder, not 1000 Bytes) — used for naming a bank's own *size* ("Build 1
+KB Bank", the per-size summary chips, StoragePage's own size labels), not for any bit amount
 actually spent, which always renders via `formatBitsInNearestUnit` instead — including the
-transfer block's own dynamic cost (the active block's `aria-label`/`title`, rendered on
-ByteFoundryPage), even though `getIntroKilobyteConversionCost` is the same underlying value/scale
-as a bank size.
+transfer block's own dynamic cost (the active block's `aria-label`/`title`), even though
+`getIntroKilobyteConversionCost` is the same underlying value/scale as a bank size.
 This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
@@ -179,26 +204,14 @@ first cycle, not a full replay. Once unlocked, the page also persists as a scree
 return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
 stays just as interactive there as on the gate itself.
 
-**Storage page** (`src/pages/StoragePage/index.jsx`). Storage's own dedicated screen, split out of
+**Storage page** (`src/pages/StoragePage/index.jsx`). Storage's fuller detail screen, split out of
 ByteFoundryPage (see "Byte Foundry" section above) — reached only via ByteFoundryPage's "🏦 Storage"
 nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack
-}`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`),
-a `StatusText` line showing `Memory: ${formatBitsInNearestUnit(intro.bits)}` (there's no Memory
-tile here — that stays on ByteFoundryPage — so this line is the only balance readout on this page),
-then a "Build Storage Bank" button (`aria-label="build storage bank"`, calling
-`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that walks
-tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then 100,000/"100
-KB", then 10,000,000/"10 MB" — skipping 1,000,000/"1 MB", since `tier01`'s own cost-epoch exponent
-sequence skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been
-built at the current size, decoupled from tier01's own CURRENT price. `disabled={!canBuildStorageBank}`
-where `canBuildStorageBank = isStorageBankBuildTurnAvailable(state)` — below the build cost, OR
-while a redeemable Storage Bank Fill/an affordable Bandwidth claim (both higher priority — see
-"Forced priority order" in docs/ECONOMY_REFERENCE.md) is currently available, with a `title` naming
-which to take first in the latter case. The build cost itself (parenthesized in the label, and in
-the button's `title`) renders via `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit
-for that specific bit amount — rather than a raw unitless bit count. Building only ever constructs
-an EMPTY container — it does not fill it (see below).
+}`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`) is
+all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
+next bank (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this
+page holds only the fuller per-size squares grid and the one Storage action that lives only here,
+redeeming.
 
 For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
 visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a

@@ -1673,6 +1673,46 @@ export const getStorageBankSize = state => {
 // itself — it is NOT what fills it (see tickStorageAutoFill).
 export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE
 
+// Storage bank sizes AND the Byte Foundry's transfer block's own dynamic cost
+// (getIntroKilobyteConversionCost above) are both tier01's own per-unit level costs (see
+// getStorageBankSize above), so they share this one formatting scale — a completely separate
+// scale from Memory's Byte-based one (see formatBitsInNearestUnit above): 1000 bits is "1 KB"
+// here ("KiloBits", not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB symbols for the
+// same "byte-scale themed" reason Memory's own ladder does. Every value passed in is already an
+// exact power of ten by construction (getTierCost), so this always lands on a clean, whole-number
+// label. Shared by ByteFoundryPage (Build button/summary) and StoragePage (per-size bank labels).
+const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
+export const formatStorageSize = bits => {
+  if (bits < 1000) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+  let value = bits / 1000
+  let unitIndex = 0
+  while (value >= 1000 && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
+    value /= 1000
+    unitIndex += 1
+  }
+  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+}
+
+// Every Storage bank size worth showing (ByteFoundryPage's own brief per-size summary,
+// StoragePage's full per-size squares rows): every size ever built, any size still held (a
+// save/seed could hold banks without a matching storageBanksBuiltTotal entry — e.g. a migrated
+// pre-ladder save), plus whatever's currently offered (even at 0 built, so its row/goal is
+// visible before the first one is banked) — ascending, so rows read smallest-to-largest.
+export const getStorageSizesToShow = state => {
+  const storageBanksBuiltTotal = state.intro?.storageBanksBuiltTotal ?? {}
+  const storageBanks = state.intro?.storageBanks ?? {}
+  const currentSize = getStorageBankSize(state)
+  return [
+    ...new Set([
+      ...Object.keys(storageBanksBuiltTotal).map(Number),
+      ...Object.keys(storageBanks).map(Number),
+      currentSize,
+    ]),
+  ]
+    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (storageBanks[size] ?? 0) > 0 || size === currentSize)
+    .sort((a, b) => a - b)
+}
+
 // Builds one EMPTY Storage bank sized to getStorageBankSize(state), spending
 // getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
 // "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
