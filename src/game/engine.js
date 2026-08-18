@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -377,14 +377,24 @@ export const formatCurrency = value => {
     : `${formatScientific(safeValue)} ${symbol}`
 }
 
-// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 4, 7, 11, 16, 22, …
-// for epochs 0, 1, 2, 3, 4, 5, 6, … — each epoch adds one more than the last epoch's increment (a
-// "1 plus a triangular number" progression: exponent(e) = 1 + e*(e+1)/2). A negative epoch is
-// clamped to 0 rather than throwing. Supersedes an earlier Fibonacci-based version — see
-// docs/DESIGN_HISTORY.md.
+// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 13, 21, …
+// for epochs 0, 1, 2, 3, 4, 5, 6, … — the classic Fibonacci sequence (exponent(e) = fib(e+2) in
+// the canonical 0-indexed fib(0)=0, fib(1)=1 numbering), computed iteratively rather than via a
+// closed form (Fibonacci has no simple integer one) or naive recursion (which is exponential-time
+// for larger epochs — see docs/DESIGN_HISTORY.md for the regression that came from getting this
+// wrong). A negative epoch is clamped to 0 rather than throwing, and getTierCost below separately
+// clamps level 0/negative levels to level 1 (epoch 0) before this is ever called, so this function
+// itself never needs to handle a negative epoch from that caller.
 export const getCostEpochExponent = epoch => {
   const e = clampNonNegative(epoch)
-  return 1 + (e * (e + 1)) / 2
+  let a = 1 // exponent at epoch 0
+  let b = 2 // exponent at epoch 1
+  for (let i = 0; i < e; i++) {
+    const next = a + b
+    a = b
+    b = next
+  }
+  return a
 }
 
 // The purchase block size every tier's current level currently requires to complete — a single
@@ -407,7 +417,7 @@ export const getPurchaseBlockSize = state => {
 // The PER-UNIT price of a single purchase — fixed for a given tier+level, independent of the
 // current block size: baseCost * 10^(getCostEpochExponent(epoch) - 1); each level multiplies
 // baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. a
-// baseCost-10 tier's 4th level (epoch 3, exponent 7) costs 10^7 per unit. Every tier scales gently
+// baseCost-10 tier's 4th level (epoch 3, exponent 5) costs 10^5 per unit. Every tier scales gently
 // relative to its own baseCost (the exponent is added to baseCost's own power of ten, not
 // compounded into it), so high tiers don't become permanently out of reach within a handful of
 // levels. Deep epochs still eventually overflow to Infinity, which is safe: an infinite cost is
@@ -424,25 +434,9 @@ export const getPurchaseBlockSize = state => {
 // once `blockSize` has grown (see getPurchaseBlockSize), even though each individual unit's price
 // hasn't changed. No division is involved anywhere in this, so the result is always an exact
 // integer — no rounding needed.
-
-const fib = [0, 1], costs = new Map();
-
-const cost = (base, level) => {
-  const c = costs.get(base) ?? [base];
-
-  for (let i = fib.length; i <= level + 1; i++)
-    fib[i] = fib[i - 1] + fib[i - 2];
-
-  for (let i = c.length; i <= level; i++)
-    c[i] = base * 10 ** (fib[i + 1] - 1);
-
-  costs.set(base, c);
-  return c[level];
-};
-
-
 export const getTierCost = (tier, level) => {
-  return cost(tier.baseCost,level)
+  const epoch = Math.max(0, clampNonNegative(level) - 1)
+  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
@@ -1357,13 +1351,11 @@ export const pickIntroCapacityMilestone = state => {
 export const getIntroProductionMilestoneCost = tier =>
   INTRO_STARTING_CAPACITY * (INTRO_CAPACITY_MULTIPLIER ** clampNonNegative(tier))
 
-// How many claims a given productionMilestoneTier grants before advancing to the next: always 1 —
-// every tier is a single-shot purchase at its own cost, the same one-attempt-per-cost posture
-// "Sacrifice for 10x Capacity" already has. An earlier version granted 2 claims for the three
-// cheapest tiers (1/10/100 Bytes) before this tightened to 1 across the board — see
-// docs/DESIGN_HISTORY.md. `tier` is unused now but kept as the parameter so callers (and
-// pickIntroProductionMilestone's own `getIntroProductionMilestoneMaxClaims(tier)` call) don't need
-// to change if a future tier-dependent claim count ever returns.
+// How many claims a given productionMilestoneTier grants before advancing to the next: 2 for the
+// three cheapest tiers (0/1/2, i.e. 1/10/100 Bytes), 1 for every tier from there on — unlike
+// "Sacrifice for 10x Capacity"'s own flat one-attempt-per-cost posture, the earliest, cheapest
+// Invest tiers get a second attempt each before advancing. A previous iteration simplified this to
+// a flat 1 across the board; see docs/DESIGN_HISTORY.md for both that change and this reinstatement.
 export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
@@ -1425,7 +1417,7 @@ export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_
 // The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
 // per-unit level cost, the exact same value getStorageBankSize/isStorageBankRedeemable already key
 // off (see the Storage section below) — not a fixed rate. At a fresh cycle's starting level this is
-// exactly INTRO_BITS_PER_KILOBYTE_CONVERSION (1000 bits, tier01's own baseCost), but it grows in
+// exactly INTRO_BITS_PER_KILOBYTE_CONVERSION (8000 bits, BITS_PER_BYTE × tier01's own baseCost), but it grows in
 // lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2, and so on), so
 // a transfer block's real value never falls behind what tier01 itself currently costs. An earlier
 // version stayed flat at INTRO_BITS_PER_KILOBYTE_CONVERSION forever, which undervalued a transfer
@@ -1532,11 +1524,11 @@ export const tickIntroAutoInvest = state => {
 // size is always `storageBanksBuiltTotal[size] - storageBanks[size]`. Consuming (redeeming) a full
 // bank empties it again, returning it to the fillable pool — banks are reusable, not single-use.
 
-// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's triangular-
-// number exponent sequence jumps 1, 2, 4, 7, 11, … — e.g. level 3 is 1,000,000, not 100,000), so
-// every size a bank is ever built or redeemed at is one of tier01's own actual per-unit level
-// costs, never an arbitrary round number in between (a 100,000-bit/"100 KB" bank can never exist,
-// since no tier01 level ever costs that).
+// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's Fibonacci
+// exponent sequence jumps 1, 2, 3, 5, 8, … — e.g. level 4 is 10,000,000, not 1,000,000), so every
+// size a bank is ever built or redeemed at is one of tier01's own actual per-unit level costs,
+// never an arbitrary round number in between (a 1,000,000-bit/"1 MB" bank can never exist, since
+// no tier01 level ever costs that).
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
 // The size (in bits) buildStorageBank currently builds: an independent ladder that walks tier01's
@@ -1664,8 +1656,9 @@ export const redeemStorageBank = capacityBits => state => {
 
 // Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled and
 // intro.storageAutoRedeemedSizes below) — a no-op unless there's an eligible size. The smallest
-// denomination (INTRO_BITS_PER_KILOBYTE_CONVERSION, "1 KB") always attempts auto-redeem regardless
-// of storageAutoRedeemEnabled — a small always-on convenience; every larger size still checks the
+// denomination (tier01's own level-1 cost, "1 KB" — the first size getStorageBankSize ever offers)
+// always attempts auto-redeem regardless of storageAutoRedeemEnabled — a small always-on
+// convenience; every larger size still checks the
 // toggle, which currently defaults true (see createInitialGameState) with no in-UI way to turn it
 // off yet, so in practice every size auto-redeems today. Either way, a given size auto-redeems at
 // most ONCE per real Prestige cycle (see
@@ -1683,7 +1676,7 @@ export const tickStorageAutoRedeem = state => {
     .map(Number)
     .filter(size => (state.intro.storageBanks[size] ?? 0) > 0)
     .filter(size => !alreadyRedeemedThisCycle[size])
-    .filter(size => size === INTRO_BITS_PER_KILOBYTE_CONVERSION || state.intro.storageAutoRedeemEnabled)
+    .filter(size => size === getFirstTierCost(1) || state.intro.storageAutoRedeemEnabled)
     .filter(size => isStorageBankRedeemable(state, size))
     .sort((a, b) => a - b)[0]
   if (eligibleSize === undefined) return state
