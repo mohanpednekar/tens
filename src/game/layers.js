@@ -12,9 +12,9 @@
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=2s
-// up through tier10=11s — since a slower cadence divides that tier's real throughput (see
-// getTierBaseTickSpeedSeconds below) by up to 11x for the last tier, on top of the already-steep
+// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
+// up through tier10=10s — since a slower cadence divides that tier's real throughput (see
+// getTierBaseTickSpeedSeconds below) by up to 10x for the last tier, on top of the already-steep
 // cost curve (see getTierCost/getCostEpochExponent in engine.js). This ladder was tried once before
 // the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could offset
 // the slowdown; now that both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier)
@@ -112,15 +112,16 @@ export const INTRO_BYTE_BASE_RATE = 1
 // bits tapping alone can hold before the Byte exists to start producing more.
 export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // Manual conversion rate: this many intro bits become 1 Kilobyte unit in the main game (see
-// convertIntroBitsToKilobytes in engine.js) — matches Kilobytes' own real baseCost (1E3 Bits) in
-// TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
-// underlying "cost of a Kilobyte" even though they're tracked as separate balances.
+// convertIntroBitsToKilobytes in engine.js) — equal to BITS_PER_BYTE (8) × Kilobytes' own real
+// baseCost (1E3 Bits) in TIER_DEFINITIONS above (see getIntroKilobyteConversionCost's own
+// BITS_PER_BYTE multiplication in engine.js), so this starting rate lines up with tier01's actual
+// starting per-unit cost once expressed in bits.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
-// bits at once (capacity must reach 8000 before balance can reach 1000, given the 8/80/800/8000…
-// ladder above).
+// bits at once (capacity must reach 8000, given the 8/80/800/8000… ladder above, which is also
+// exactly the balance needed for a first conversion at this starting rate).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/tickStorageAutoFill/
@@ -145,17 +146,17 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
 export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
 // A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
-// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
-// bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
+// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 10,000,000-bit ("10 MB")
+// bank costs 100,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
 // conversion. This cost only ever pays for the empty container — it is NOT what fills it.
 export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
 // level) for level 1, 2, 3, …) rather than a synthetic ×10 progression — offers tier01's level-1
 // cost (1000 bits, "1 KB") until STORAGE_BANK_LADDER_CAP of them have ever been built, then
 // tier01's level-2 cost (10,000 bits, "10 KB") until another STORAGE_BANK_LADDER_CAP, and so on
-// (see getStorageBankSize in engine.js). Because getCostEpochExponent's triangular-number exponent
-// sequence (1, 2, 4, 7, 11, …) skips values as levels increase, this ladder skips sizes too — e.g.
-// tier01's level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can
+// (see getStorageBankSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
+// sequence (1, 2, 3, 5, 8, …) skips values as levels increase, this ladder skips sizes too — e.g.
+// tier01's level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can
 // never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
 // (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
 // ahead of or fall behind tier01's actual price, with isStorageBankRedeemable the only gate on
@@ -171,8 +172,8 @@ export const STORAGE_BANK_LADDER_CAP = 10
 // all; see docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
-// below activates — 100 KB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
-// step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
+// below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
+// step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
 // own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
@@ -316,18 +317,18 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // Per-activation boost to the (Money-funded) global tickspeed multiplier's own per-level step —
 // see engine.js's getGlobalTickspeedRegularStep/getGlobalTickspeedProductionMultiplier/
 // overclockGame — a second, much steeper Speed-Up-style soft reset. Each Overclock activation adds
-// another OVERCLOCK_PRODUCTION_STEP (0.1 percentage points) directly onto
+// another OVERCLOCK_PRODUCTION_STEP (1 percentage point) directly onto
 // GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), permanently raising the rate every *future* regular level
-// of the global tickspeed multiplier compounds at — 1% per level with no activations, 1.1% after
-// the first, 1.2% after the second, and so on (a milestone level's own 10% step,
+// of the global tickspeed multiplier compounds at — 1% per level with no activations, 2% after
+// the first, 3% after the second, and so on (a milestone level's own 10% step,
 // GLOBAL_TICKSPEED_MILESTONE_STEP, is unaffected). This is deliberately NOT a separate multiplier
 // stacked on top the way Speed Up's own production multiplier is — it reshapes the existing global
 // tickspeed track's own growth curve instead, so a level already bought before an Overclock
 // activation retroactively compounds at the new, higher rate from then on, same as every other
-// level. Deliberately two orders of magnitude smaller a step than GLOBAL_TICKSPEED_PRODUCTION_STEP
-// itself — Overclock's value is in how permanent and stackable it is (state.overclockCount is
-// never reset by an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame),
-// not in the size of any single activation.
+// level. Equal in size to GLOBAL_TICKSPEED_PRODUCTION_STEP itself — Overclock's value is in how
+// permanent and stackable it is (state.overclockCount is never reset by an ordinary Speed Up,
+// unlike globalTickspeedMultiplier itself — see speedUpGame), on top of already doubling the
+// regular step's own growth rate per activation.
 export const OVERCLOCK_PRODUCTION_STEP = 0.01
 // How many more levels the last tier must reach before Overclock can activate again: a fixed
 // 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
