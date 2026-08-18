@@ -796,8 +796,10 @@ const formatCost = (amount, resourceId) =>
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
 
 // "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero, used
-// for multiplier displays (Speed Up's next multiplier, the PP production speed bonus, Overclock's
-// own ×1.1-per-level multiplier).
+// for multiplier displays (Speed Up's next multiplier, the PP production speed bonus, the tier row's
+// "Effective tickspeed" breakdown). Overclock's own boost is folded into the Tickspeed upgrade's
+// per-level rate and displayed as a percentage via formatGlobalTickspeedBonusPercent instead — see
+// "Overclock" below — not through this helper.
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
 // Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used below +100% for
