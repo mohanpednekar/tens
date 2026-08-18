@@ -323,8 +323,14 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const storageBuildBlockedByPriority = intro.bits >= storageBankCost && !canBuildStorageBank
   const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
   const storageBankRedeemableNow = isStorageBankRedeemable(state, storageBankSize)
-  const storageSizesToShow = getStorageSizesToShow(state)
   const storageBanksBuiltTotal = intro.storageBanksBuiltTotal ?? {}
+  // getStorageSizesToShow always includes the currently-offered size even at 0 built (so
+  // StoragePage's own fuller detail can preview the goal before the first one is banked) — this
+  // brief summary is different: it should only ever report actual history, so a size with nothing
+  // built and nothing held is filtered back out here rather than showing a confusing "1 KB 0/0"
+  // chip before the player has ever built anything.
+  const storageSizesWithHistory = getStorageSizesToShow(state)
+    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemStorageBank, or convertIntroBitsToKilobytes/
@@ -500,9 +506,9 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
             />
           </Button>
 
-          {storageSizesToShow.length > 0 && (
+          {storageSizesWithHistory.length > 0 && (
             <StorageSummaryRow role="group" aria-label="storage summary">
-              {storageSizesToShow.map(size => {
+              {storageSizesWithHistory.map(size => {
                 const full = intro.storageBanks?.[size] ?? 0
                 const builtTotal = Math.max(storageBanksBuiltTotal[size] ?? 0, full)
                 return (

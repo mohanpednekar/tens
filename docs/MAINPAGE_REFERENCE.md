@@ -148,7 +148,7 @@ value, not a separately-tracked field) to pick one of three states: **consumed**
 `title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
 `theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
 (`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
-Kilobyte"` where `<cost>` is `formatStorageSize(transferBlockCost)` and `transferBlockCost =
+Kilobyte"` where `<cost>` is `formatBitsInNearestUnit(transferBlockCost)` and `transferBlockCost =
 getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
 `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1 KB" at a fresh cycle's level 1, "10 KB" once tier01
 reaches level 2, and so on), `$progress` = the bits-toward-`transferBlockCost` fill,

@@ -2583,6 +2583,13 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^storage summary$/i })).toHaveTextContent('1 KB 1/3')
   })
 
+  test('the summary stays hidden entirely before anything has ever been built or held, rather than showing a confusing "0/0" chip for the currently-offered size', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+
+    expect(screen.queryByRole('group', { name: /^storage summary$/i })).not.toBeInTheDocument()
+  })
+
   test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {
     vi.useFakeTimers() // never advanced — isolates the build click itself from any auto-fill tick
 
