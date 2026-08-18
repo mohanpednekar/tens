@@ -100,6 +100,21 @@ Keep PRs green through genuine fixes only — never `--no-verify`, never disable
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
 
+Once auto-merge is enabled on a PR (by anyone — human approval or `pr-auto-merge.yml`'s own
+low-risk path, see "Automation workflows" below), it silently sits inert if the PR falls out of
+sync with its base branch — GitHub won't merge a conflicted PR no matter how green its checks are,
+and won't say so loudly. Treat that mergeable state as something to actively check, not just wait
+on: whenever there's reason to look at a PR with auto-merge on (a "merge conflict" state notice, a
+push to the base branch, or just a routine check-in), fetch its current `mergeable_state` and, if
+it's conflicted, resolve it immediately rather than leaving it stalled — merge (or rebase, matching
+this repo's convention) the base branch into the PR branch, resolve the conflicts for real (never
+blindly take one side wholesale on a file with actual logic in it), rerun `yarn test` locally, and
+push. Prefer a merge over a rebase when the PR already has review comments/approvals tied to
+specific commits, since rebasing rewrites SHAs and can orphan that context. This applies whether the
+conflict is trivial (two unrelated doc/changelog bullets, `graphify-out/`'s generated files — safe
+to take the incoming side and regenerate) or substantive (overlapping logic in the same function) —
+the latter still needs a real read of both sides, not just `git checkout --theirs`.
+
 Before merging any PR that touches `TIER_DEFINITIONS` or other economy constants/formulas in
 `src/game/layers.js` (autonomous or interactive), run the `economy-change-review` skill
 (`.claude/skills/economy-change-review/SKILL.md`): a narrow, mechanical cross-check of the diff
