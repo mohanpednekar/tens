@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-08-18)
 
 ## Corpus Check
-- 66 files · ~200,415 words
+- 68 files · ~206,045 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 762 nodes · 1448 edges · 59 communities (46 shown, 13 thin omitted)
+- 784 nodes · 1533 edges · 54 communities (41 shown, 13 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cb65b830`
+- Built from commit: `ce18ea93`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -49,7 +49,6 @@
 - graphify reference: incremental update and cluster-only
 - simulate-run-times/SKILL.md
 - pull_request_template.md
-- storage.js
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - Copilot Instructions
@@ -58,37 +57,33 @@
 - MAINPAGE_REFERENCE.md
 - PWA_REFERENCE.md
 - THEMING_REFERENCE.md
-- clampNonNegative
-- InfoPage/index.jsx
-- formatCurrency
-- package.json
-- MainPage
+- StoragePage/index.jsx
+- dependencies
 - formatBonusOrMultiplier
 - Design history & rationale
 - OfflineProgressNotice/index.jsx
-- isProductionFrozen
-- buyGlobalTickspeedMultiplier
+- InfoPage/index.jsx
 
 ## God Nodes (most connected - your core abstractions)
-1. `Economy model` - 45 edges
+1. `Economy model` - 46 edges
 2. `clampNonNegative()` - 41 edges
 3. `MainPage()` - 41 edges
 4. `tickGame()` - 37 edges
 5. `useIncrementalGame()` - 37 edges
-6. `ByteFoundryPage()` - 21 edges
-7. `isProductionFrozen()` - 20 edges
+6. `isProductionFrozen()` - 20 edges
+7. `ByteFoundryPage()` - 17 edges
 8. `createInitialGameState()` - 15 edges
 9. `Economy model reference` - 15 edges
-10. `getPurchaseBlockSize()` - 14 edges
+10. `formatAmount()` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `simulateRun()` --calls--> `createInitialGameState()`  [EXTRACTED]
+- `simulateRun()` --calls--> `buyTierQuantity()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `tickGame()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `buyPrestigeSpeedBonus()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
-- `simulateRun()` --calls--> `buyTierQuantity()`  [EXTRACTED]
+- `simulateRun()` --calls--> `createInitialGameState()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `getSpeedUpRequirement()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
@@ -96,19 +91,19 @@
 ## Import Cycles
 - None detected.
 
-## Communities (59 total, 13 thin omitted)
+## Communities (54 total, 13 thin omitted)
 
 ### Community 0 - "engine.test.js"
-Cohesion: 0.06
-Nodes (8): buySmartAutobuyer(), getAutobuyerUnlockCost(), getComputeBoostMultiplier(), getSmartAutobuyerCost(), noOtherUpgradesLeft, unlockedLastTierState(), withOwned(), tickIntroProduction()
+Cohesion: 0.05
+Nodes (54): buyTickspeedMultiplier(), buyTier(), buyTierQuantity(), checkMilestones(), clampNonNegative(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones(), getAutobuyerUnlockCost() (+46 more)
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.03
-Nodes (57): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, COMPUTE_BOOST_LABELS, Disclosure (+49 more)
+Nodes (58): isGlobalTickspeedMultiplierUnlocked(), BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, COMPUTE_BOOST_LABELS (+50 more)
 
 ### Community 2 - "engine.js"
 Cohesion: 0.07
-Nodes (61): ALL_TIER_IDS, allResourceIds(), currencyNumberFormatter, plainNumberFormatter, scientificNumberFormatter, AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST (+53 more)
+Nodes (61): ALL_TIER_IDS, currencyNumberFormatter, MEMORY_UNIT_SYMBOLS, plainNumberFormatter, scientificNumberFormatter, AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST (+53 more)
 
 ### Community 4 - "App.jsx"
 Cohesion: 0.09
@@ -124,11 +119,11 @@ Nodes (23): jsdom, devDependencies, jsdom, @playwright/test, sharp, @testing-lib
 
 ### Community 7 - "Economy model"
 Cohesion: 0.04
-Nodes (45): Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Economy model, Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately, `getTierCost`'s division-based split was replaced by a fixed-price-times-blockSize model, `getTierCost` split into per-unit price vs. level-total price, Last tier's XP-funded tickspeed: from a permanent latch to a live owned >= 10 check (+37 more)
+Nodes (46): Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Economy model, Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately, Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens, `getTierCost`'s division-based split was replaced by a fixed-price-times-blockSize model, `getTierCost` split into per-unit price vs. level-total price (+38 more)
 
 ### Community 8 - "ByteFoundryPage/index.jsx"
-Cohesion: 0.06
-Nodes (53): buildStorageBank(), canActivateComputeBoost(), formatAmount(), formatScientific(), getFirstTierCost(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), getIntroProductionRate() (+45 more)
+Cohesion: 0.09
+Nodes (37): floorToDecimals(), formatBitsInNearestUnit(), formatMemoryAmount(), getIntroKilobyteConversionCost(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), getIntroProductionRate(), getMemoryUnit() (+29 more)
 
 ### Community 9 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -139,8 +134,8 @@ Cohesion: 0.40
 Nodes (4): compilerOptions, baseUrl, include, src
 
 ### Community 15 - "useIncrementalGame.js"
-Cohesion: 0.19
-Nodes (22): activateComputeBoost(), applyOfflineProgress(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyTickspeedAutobuyer(), combineIntroByte(), createInitialGameState(), getOfflineEffectiveSeconds() (+14 more)
+Cohesion: 0.10
+Nodes (43): cliValues, defaultPPValues, simulateRun(), activateComputeBoost(), allResourceIds(), applyOfflineProgress(), buyAutoPrestige(), buyAutoPrestigeAutobuyer() (+35 more)
 
 ### Community 17 - "Automation workflows"
 Cohesion: 0.20
@@ -214,29 +209,13 @@ Nodes (3): Usage, What it does, When editing the simulation
 Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
-### Community 39 - "storage.js"
-Cohesion: 0.27
-Nodes (11): applyAutobuyerMilestones(), clearGameState(), LEGACY_REMOVED_TIER_IDS, LEGACY_TIER_ID_MAP, loadGameState(), loadLastSaveTimestamp(), migrateState(), migrateTierKeys() (+3 more)
+### Community 50 - "StoragePage/index.jsx"
+Cohesion: 0.08
+Nodes (38): buildStorageBank(), canActivateComputeBoost(), formatAmount(), formatCurrency(), formatScientific(), getFirstTierCost(), getStorageBankCost(), getStorageBankSize() (+30 more)
 
-### Community 48 - "clampNonNegative"
-Cohesion: 0.15
-Nodes (23): buyAutoPrestige(), checkMilestones(), clampNonNegative(), convertIntroBitsToKilobytes(), getAutoPrestigeAttemptRate(), getAutoPrestigeCost(), getCostEpochExponent(), getIntroKilobyteConversionCost() (+15 more)
-
-### Community 49 - "InfoPage/index.jsx"
-Cohesion: 0.27
-Nodes (9): ButtonContent(), getAutobuyerUnlockMilestone(), getOverclockRequirement(), getTierTickspeedAutobuyerMilestone(), Header, InfoPage(), RootDiv, Section (+1 more)
-
-### Community 50 - "formatCurrency"
-Cohesion: 1.00
-Nodes (3): formatCurrency(), RESOURCE_SYMBOL(), formatCost()
-
-### Community 51 - "package.json"
-Cohesion: 0.05
-Nodes (43): @fontsource/inter, @fontsource/space-grotesk, browserslist, development, production, dependencies, @fontsource/inter, @fontsource/space-grotesk (+35 more)
-
-### Community 52 - "MainPage"
-Cohesion: 0.16
-Nodes (23): buyTickspeedMultiplier(), buyTier(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierId(), getLastTierXpTickspeedMinConsumption() (+15 more)
+### Community 51 - "dependencies"
+Cohesion: 0.13
+Nodes (15): @fontsource/inter, @fontsource/space-grotesk, dependencies, @fontsource/inter, @fontsource/space-grotesk, react, react-dom, react-is (+7 more)
 
 ### Community 53 - "formatBonusOrMultiplier"
 Cohesion: 0.50
@@ -250,33 +229,29 @@ Nodes (7): Architecture / MainPage UI decisions, Design history & rationale, Dis
 Cohesion: 0.28
 Nodes (7): VisuallyHidden, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), StatCard, formatOfflineDuration()
 
-### Community 57 - "isProductionFrozen"
-Cohesion: 0.33
-Nodes (8): cliValues, defaultPPValues, simulateRun(), buyPrestigeSpeedBonus(), buyTierQuantity(), getSpeedUpRequirement(), isProductionFrozen(), speedUpGame()
-
-### Community 58 - "buyGlobalTickspeedMultiplier"
-Cohesion: 0.67
-Nodes (3): buyGlobalTickspeedMultiplier(), getGlobalTickspeedMultiplierCost(), isGlobalTickspeedMultiplierUnlocked()
+### Community 59 - "InfoPage/index.jsx"
+Cohesion: 0.06
+Nodes (37): browserslist, development, production, name, packageManager, private, resolutions, **/fast-uri (+29 more)
 
 ## Knowledge Gaps
-- **375 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+370 more)
+- **384 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+379 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `devDependencies` connect `devDependencies` to `package.json`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `devDependencies` connect `devDependencies` to `InfoPage/index.jsx`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `InfoPage/index.jsx`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 16 inferred relationships involving `useIncrementalGame()` (e.g. with `buildStorageBank()` and `buyAutoPrestige()`) actually correct?**
   _`useIncrementalGame()` has 16 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `defaultPPValues`, `cliValues` to the rest of the system?**
-  _375 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _384 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `engine.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05512820512820513 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05389876880984952 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03333333333333333 - nodes in this community are weakly interconnected._
 - **Should `engine.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.07067603160667252 - nodes in this community are weakly interconnected._
-- **Should `App.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.08912655971479501 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07075873827791987 - nodes in this community are weakly interconnected._

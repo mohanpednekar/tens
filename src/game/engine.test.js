@@ -72,11 +72,19 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
+  isBandwidthAvailable,
+  isBandwidthTurnAvailable,
+  isComputeBoostTurnAvailable,
   isComputeCoreConversionUnlocked,
+  isComputeUpgradeAvailable,
+  isComputeUpgradeTurnAvailable,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
+  isStorageBankBuildAvailable,
+  isStorageBankBuildTurnAvailable,
+  isStorageBankFillAvailable,
   isStorageBankRedeemable,
   isTierUnlocked,
   overclockGame,
@@ -474,12 +482,15 @@ describe('combineIntroByte', () => {
   })
 })
 
-// Every test below that expects Sacrifice to actually FIRE must also clear the other two gates
+// Every test below that expects Sacrifice to actually FIRE must also clear the other gates
 // isMemoryCapacityUpgradeAvailable checks: byteCreated (Combine no longer possible) and the
 // current Invest tier's claims already used up (Invest's cost ladder starts at the exact same
 // INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
 // capacity both are simultaneously affordable unless Invest's claims are explicitly marked used —
 // tier 0 needs both of its 2 claims used up, not just 1, see getIntroProductionMilestoneMaxClaims).
+// Storage Bank Fill and Compute (the other two ranked above Memory in the forced priority order —
+// see isMemoryCapacityUpgradeAvailable) don't need clearing here since they default to unavailable
+// (no storageBanks, 0 computeCores) unless a test explicitly seeds them.
 const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
@@ -519,7 +530,28 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
-  it('is true once Memory is full and neither Combine, Invest, nor Storage is currently possible', () => {
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
+      storageBanks: { 1000: 1 },
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Compute Boost (higher priority) is currently available', () => {
+    // Pushes the Storage Bank Build ladder past level 3 (800,000,000-bit build cost, well above
+    // this balance) so Storage Bank Build doesn't ALSO block Sacrifice here — isolates the new
+    // Compute check itself, the same way the "Storage is revealed" tests above isolate Storage.
+    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
+    const state = withIntro(createInitialGameState(), {
+      bits: capacity, capacity, ...noOtherUpgradesLeft,
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP },
+      computeCores: 1,
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is true once Memory is full and neither Combine, Storage Bank Fill, Invest, Storage Bank Build, nor Compute is currently possible', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
@@ -682,6 +714,144 @@ describe('pickIntroProductionMilestone', () => {
     const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const after = pickIntroProductionMilestone(state)
     expect(after.intro).not.toBe(state.intro)
+  })
+
+  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1, storageBanks: { 1000: 1 },
+    })
+    expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+})
+
+// Base and forced-priority-turn predicates for the Byte Foundry's five recurring "upgrade"
+// actions — Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory (see CLAUDE.md's
+// "Byte Foundry" section and isMemoryCapacityUpgradeAvailable above, which composes these same
+// base predicates for Sacrifice's own gate).
+describe('isStorageBankFillAvailable', () => {
+  it('is false with no built banks', () => {
+    expect(isStorageBankFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)
+  })
+
+  it('is true with a FULL bank whose size matches tier01\'s current per-unit level cost', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(true)
+  })
+
+  it('is false with a FULL bank not yet redeemable (size doesn\'t match tier01\'s current cost)', () => {
+    const futureBankSize = getTierCost(tensTier, 2)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [futureBankSize]: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(false)
+  })
+
+  it('is false with a built bank that is still EMPTY', () => {
+    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(false)
+  })
+})
+
+describe('isBandwidthAvailable', () => {
+  it('is true once the current Invest tier\'s cost is affordable and unclaimed', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY })
+    expect(isBandwidthAvailable(state)).toBe(true)
+  })
+
+  it('is false below the current tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1 })
+    expect(isBandwidthAvailable(state)).toBe(false)
+  })
+
+  it('is false once every claim at the current tier is used up', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, productionMilestoneTierClaims: 2 })
+    expect(isBandwidthAvailable(state)).toBe(false)
+  })
+})
+
+describe('isStorageBankBuildAvailable', () => {
+  it('is true once the currently-offered bank size\'s build cost is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
+    expect(isStorageBankBuildAvailable(state)).toBe(true)
+  })
+
+  it('is false below the build cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) - 1 })
+    expect(isStorageBankBuildAvailable(state)).toBe(false)
+  })
+})
+
+describe('isComputeUpgradeAvailable', () => {
+  it('is false below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY even with a Compute Core in hand', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1, computeCores: 1 })
+    expect(isComputeUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false once unlocked but with no Compute Core to spend', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 0 })
+    expect(isComputeUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is true once unlocked with at least 1 Compute Core available to spend', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 1 })
+    expect(isComputeUpgradeAvailable(state)).toBe(true)
+  })
+})
+
+describe('isBandwidthTurnAvailable', () => {
+  it('matches isBandwidthAvailable with no Storage Bank Fill pending', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY })
+    expect(isBandwidthTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available, even though Bandwidth itself is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, storageBanks: { 1000: 1 } })
+    expect(isBandwidthTurnAvailable(state)).toBe(false)
+  })
+})
+
+describe('isStorageBankBuildTurnAvailable', () => {
+  it('matches isStorageBankBuildAvailable with nothing ranked above it pending', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2 })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
+    })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+  })
+})
+
+describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
+  const computeReady = { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 1, productionMilestoneTierClaims: 2 }
+
+  it('matches canActivateComputeBoost with nothing ranked above Compute pending', () => {
+    const state = withIntro(createInitialGameState(), computeReady)
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(true)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, bits: INTRO_STARTING_CAPACITY, productionMilestoneTierClaims: 0 })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, storageBanks: { 1000: 1 } })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Build (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, bits: getStorageBankCost(1000) })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 })
 
@@ -948,9 +1118,15 @@ describe('getStorageBankCost', () => {
 })
 
 describe('buildStorageBank', () => {
+  // Storage Bank Build now ranks below Bandwidth in the Byte Foundry's forced priority order (see
+  // isStorageBankBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable
+  // at every balance these tests use, so every test that expects a build to actually FIRE must
+  // mark the current Invest tier's claims already used up (mirroring noOtherUpgradesLeft above).
+  const bandwidthExhausted = { productionMilestoneTierClaims: 2 }
+
   it('spends the build cost from Memory and constructs one EMPTY bank of the current offered size', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost })
+    const state = withIntro(createInitialGameState(), { bits: cost, ...bandwidthExhausted })
 
     const after = buildStorageBank(state)
     expect(after.intro.bits).toBe(0)
@@ -961,7 +1137,7 @@ describe('buildStorageBank', () => {
 
   it('accumulates storageBanksBuiltTotal (cumulative) when building the same size again, still empty', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost * 2 })
+    const state = withIntro(createInitialGameState(), { bits: cost * 2, ...bandwidthExhausted })
 
     const after = buildStorageBank(buildStorageBank(state))
     expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
@@ -971,7 +1147,7 @@ describe('buildStorageBank', () => {
 
   it('is a no-op below the build cost', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost - 1 })
+    const state = withIntro(createInitialGameState(), { bits: cost - 1, ...bandwidthExhausted })
     expect(buildStorageBank(state)).toBe(state)
   })
 
@@ -980,12 +1156,27 @@ describe('buildStorageBank', () => {
     const almostMaxed = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
       bits: getStorageBankCost(1000) + getStorageBankCost(nextSize),
+      ...bandwidthExhausted,
     })
     const afterLast1KB = buildStorageBank(almostMaxed)
     expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
 
     const afterNext = buildStorageBank(afterLast1KB)
     expect(afterNext.intro.storageBanksBuiltTotal[nextSize]).toBe(1)
+  })
+
+  it('is a no-op while Bandwidth (higher priority) is currently available', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), { bits: cost })
+    expect(buildStorageBank(state)).toBe(state)
+  })
+
+  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), {
+      bits: cost, ...bandwidthExhausted, storageBanks: { 1000: 1 },
+    })
+    expect(buildStorageBank(state)).toBe(state)
   })
 })
 
@@ -1429,6 +1620,25 @@ describe('activateComputeBoost', () => {
   it('is a same-reference no-op once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, bits: INTRO_STARTING_CAPACITY })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while Storage Bank Build (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2,
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
     })
     expect(activateComputeBoost('burst')(state)).toBe(state)
   })

@@ -1327,30 +1327,62 @@ export const combineIntroByte = state => {
 }
 
 // Predicate, not a reducer: whether "Sacrifice for 10x Capacity" can actually fire right now.
-// Memory must be full (bits === capacity) AND every OTHER Byte Foundry action currently possible
-// with that same balance — Combine into a Byte, Invest for Double Production, building a Storage
-// bank — must NOT currently be possible. Capacity growth is offered only once nothing else
-// productive can be done with a full balance, so a player never skips past a cheaper, immediately
-// available upgrade just because Memory happens to be full at the same moment. References
-// getIntroProductionMilestoneCost/getIntroProductionMilestoneMaxClaims/isStorageUnlocked/
-// getStorageBankSize/getStorageBankCost, all defined further down this file — safe, since none of
-// them are called until this function itself is (well after module evaluation completes). Used by
-// pickIntroCapacityMilestone's own guard below and directly by ByteFoundryPage to disable/hide the
-// button the same way — the same "engine re-validates, UI just mirrors it" convention every other
-// action in this file already follows (see "Security notes" in CLAUDE.md).
+// Forced priority order for the Byte Foundry's five recurring "upgrade" actions — Storage Bank
+// Fill > Bandwidth > Storage Bank Build > Compute > Memory (see CLAUDE.md's "Byte Foundry"
+// section). Each base predicate below is that action's own plain availability check; whenever a
+// higher-ranked one is currently available, every lower-ranked action is disabled regardless of
+// its own cost, forcing the player to take the higher-priority upgrade first rather than letting
+// several compete for the same Memory balance at once — the "turn"-suffixed composites further
+// down this file (colocated with each action's own reducer) fold that ordering in. Combine into a
+// Byte (a one-off bootstrap step) sits outside this forced order entirely and keeps its own simple
+// gate, checked directly below.
+
+// "Storage Bank Fill" (highest priority) — true whenever ANY built bank, of any size, is both
+// currently FULL and redeemable right now (see isStorageBankRedeemable, defined further down this
+// file — safe, not called until this function itself is): a bank sitting full and redeemable is
+// value already earned, just waiting on a click, so nothing else is ever offered ahead of it.
+export const isStorageBankFillAvailable = state =>
+  Object.keys(state.intro?.storageBanks ?? {})
+    .map(Number)
+    .some(size => (state.intro.storageBanks[size] ?? 0) > 0 && isStorageBankRedeemable(state, size))
+
+// "Bandwidth" ("Invest for Double Production") — true whenever the current
+// productionMilestoneTier's own cost is affordable and hasn't already used up its claims.
+export const isBandwidthAvailable = state => {
+  const cost = getIntroProductionMilestoneCost(state.intro.productionMilestoneTier)
+  const claimsUsedUp = state.intro.productionMilestoneTierClaims >= getIntroProductionMilestoneMaxClaims(state.intro.productionMilestoneTier)
+  return state.intro.bits >= cost && !claimsUsedUp
+}
+
+// "Storage Bank Build" — true whenever the current ladder size's build cost is affordable (see
+// getStorageBankSize/getStorageBankCost, defined further down this file) — matches
+// buildStorageBank's own actual gate, which (like every other Byte Foundry reducer) has never
+// itself required isStorageUnlocked; that threshold only governs the button's own UI reveal.
+export const isStorageBankBuildAvailable = state =>
+  state.intro.bits >= getStorageBankCost(getStorageBankSize(state))
+
+// "Compute" — true once Compute Core conversion is unlocked and at least one boost preset is
+// mechanically activatable right now (see canActivateComputeBoost, defined further down this
+// file).
+export const isComputeUpgradeAvailable = state =>
+  isComputeCoreConversionUnlocked(state) &&
+  Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType))
+
+// "Memory" (lowest priority) — Memory must be full (bits === capacity) AND every action ranked
+// above it — Combine into a Byte, Storage Bank Fill, Bandwidth, Storage Bank Build, Compute — must
+// currently be unavailable. Capacity growth is offered only once nothing else productive can be
+// done with a full balance, so a player never skips past a cheaper, immediately available upgrade
+// just because Memory happens to be full at the same moment. Used by pickIntroCapacityMilestone's
+// own guard below and directly by ByteFoundryPage to disable/hide the button the same way — the
+// same "engine re-validates, UI just mirrors it" convention every other action in this file
+// already follows (see "Security notes" in CLAUDE.md).
 export const isMemoryCapacityUpgradeAvailable = state => {
   if (state.intro.bits < state.intro.capacity) return false
   if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
-
-  const investCost = getIntroProductionMilestoneCost(state.intro.productionMilestoneTier)
-  const investClaimsUsedUp = state.intro.productionMilestoneTierClaims >= getIntroProductionMilestoneMaxClaims(state.intro.productionMilestoneTier)
-  if (state.intro.bits >= investCost && !investClaimsUsedUp) return false
-
-  if (isStorageUnlocked(state)) {
-    const storageBankCost = getStorageBankCost(getStorageBankSize(state))
-    if (state.intro.bits >= storageBankCost) return false
-  }
-
+  if (isStorageBankFillAvailable(state)) return false
+  if (isBandwidthAvailable(state)) return false
+  if (isStorageBankBuildAvailable(state)) return false
+  if (isComputeUpgradeAvailable(state)) return false
   return true
 }
 
@@ -1399,14 +1431,21 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 // INTRO_MIN_TICK_SPEED_SECONDS (the live tick loop's own real-time resolution, TICK_RATE_MS) does
 // it switch to multiplying productionMultiplier (growing the batch) instead, so growth never
 // stalls once the tick loop's own granularity limit is reached.
+
+// "Bandwidth"'s own forced-priority turn (see the priority-order block above
+// isMemoryCapacityUpgradeAvailable): available AND nothing ranked above it (Storage Bank Fill)
+// currently is. Used by pickIntroProductionMilestone's own guard below and directly by
+// ByteFoundryPage to disable the button the same way.
+export const isBandwidthTurnAvailable = state =>
+  isBandwidthAvailable(state) && !isStorageBankFillAvailable(state)
+
 export const pickIntroProductionMilestone = state => {
+  if (!isBandwidthTurnAvailable(state)) return state
+
   const tier = state.intro.productionMilestoneTier
   const cost = getIntroProductionMilestoneCost(tier)
-  if (state.intro.bits < cost) return state
-
   const claims = state.intro.productionMilestoneTierClaims
   const maxClaims = getIntroProductionMilestoneMaxClaims(tier)
-  if (claims >= maxClaims) return state
 
   const fasterTickSpeed = state.intro.tickSpeedSeconds / INTRO_PRODUCTION_MULTIPLIER_STEP
   const canSpeedUp = fasterTickSpeed >= INTRO_MIN_TICK_SPEED_SECONDS
@@ -1436,6 +1475,48 @@ export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >
 // INTRO_STORAGE_UNLOCK_CAPACITY (10 KB in Memory's own scale, 80,000 bits) at once. A later, more
 // deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
 export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_STORAGE_UNLOCK_CAPACITY
+
+// Byte Foundry "Memory" unit ladder shared by ByteFoundryPage/StoragePage — raw bits below 1 Byte,
+// then B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own tier symbols since
+// Memory is byte-scale themed identically to the main game's tiers.
+const MEMORY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
+const MEMORY_UNIT_SCALE = 1000
+
+// The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
+// larger of the two, when comparing a balance against its own capacity) so a balance never shows
+// in a coarser unit than its own capacity — e.g. never "512 B / 1 KB". `byteCreated` gates whether
+// there's anything to denominate in yet at all: before the Byte generator exists, capacity is
+// always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte — capacity can only grow via Sacrifice,
+// itself only reachable once byteCreated), so a capacity-magnitude check alone can never catch
+// this phase. Without this gate, tapping through that very first 0-8 bit range would render as
+// fractional Bytes ("0.125 B", "0.25 B", …) — a less readable unit than the raw bit count for a
+// range this small.
+export const getMemoryUnit = (capacityBits, byteCreated) => {
+  if (!byteCreated) return null // nothing to denominate in yet — render as raw bits
+  let divisor = BITS_PER_BYTE
+  let unitIndex = 0
+  while (capacityBits / divisor >= MEMORY_UNIT_SCALE && unitIndex < MEMORY_UNIT_SYMBOLS.length - 1) {
+    divisor *= MEMORY_UNIT_SCALE
+    unitIndex += 1
+  }
+  return { symbol: MEMORY_UNIT_SYMBOLS[unitIndex], divisor }
+}
+
+// Floors rather than rounds, same "never overstate" rationale as formatCurrency above — an
+// Intl-rounded 999.9/1000 bits would otherwise read as "1 KB / 1 KB" one tick before it's actually
+// full.
+const floorToDecimals = (value, decimals) => Math.floor(value * 10 ** decimals) / 10 ** decimals
+
+export const formatMemoryAmount = (bits, unit) =>
+  unit
+    ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
+    : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+
+// Any Memory-denominated cost (Invest, Storage build) reads in whatever B/KB/MB/…/QB unit best
+// fits that specific amount — the same scale Memory's own balance uses. `getMemoryUnit(bits,
+// true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
+// here since every caller of this helper only renders once `byteCreated`.
+export const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
 
 // The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
 // per-unit level cost, the exact same value getStorageBankSize/isStorageBankRedeemable already key
@@ -1591,10 +1672,18 @@ export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_C
 // a freshly built bank starts empty and has to be filled by Memory like any other, via
 // tickStorageAutoFill. Building the same size more than once (before the ladder advances to the
 // next size) simply accumulates storageBanksBuiltTotal further.
+
+// "Storage Bank Build"'s own forced-priority turn: available AND nothing ranked above it (Storage
+// Bank Fill, Bandwidth) currently is. Used by buildStorageBank's own guard below and directly by
+// ByteFoundryPage/StoragePage to disable the button the same way.
+export const isStorageBankBuildTurnAvailable = state =>
+  isStorageBankBuildAvailable(state) && !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state)
+
 export const buildStorageBank = state => {
+  if (!isStorageBankBuildTurnAvailable(state)) return state
+
   const size = getStorageBankSize(state)
   const cost = getStorageBankCost(size)
-  if (state.intro.bits < cost) return state
 
   return {
     ...state,
@@ -1816,13 +1905,25 @@ export const canActivateComputeBoost = (state, boostType) => {
   return !(currentType === boostType && currentStacks >= COMPUTE_BOOST_MAX_STACKS)
 }
 
+// A specific Compute Boost preset's own forced-priority turn: mechanically activatable (see
+// canActivateComputeBoost above) AND nothing ranked above Compute (Storage Bank Fill, Bandwidth,
+// Storage Bank Build) currently is.
+export const isComputeBoostTurnAvailable = (state, boostType) =>
+  canActivateComputeBoost(state, boostType) &&
+  !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state) && !isStorageBankBuildAvailable(state)
+
+// Whether ANY Compute Boost preset currently has its turn — used to gate the Compute screen's own
+// nav entry point on ByteFoundryPage.
+export const isComputeUpgradeTurnAvailable = state =>
+  Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType))
+
 // Spends exactly 1 Compute Core (regardless of preset — see COMPUTE_BOOST_PRESETS in layers.js)
 // and either starts a fresh boost of boostType, or — if the same type is already active — stacks
 // it: computeBoostStacks += 1 and computeBoostRemainingSeconds += the preset's own durationSeconds
 // (extending the remaining time, not resetting it). No-op (same-reference) below
-// canActivateComputeBoost's guard above.
+// isComputeBoostTurnAvailable's guard above.
 export const activateComputeBoost = boostType => state => {
-  if (!canActivateComputeBoost(state, boostType)) return state
+  if (!isComputeBoostTurnAvailable(state, boostType)) return state
 
   const preset = COMPUTE_BOOST_PRESETS[boostType]
   const alreadyActive = (state.intro.computeBoostType ?? null) === boostType

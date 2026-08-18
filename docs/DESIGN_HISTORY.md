@@ -1897,6 +1897,57 @@ actually fires, spelling out that it's permanent and raises every future Compute
 "no modal component to reuse" rationale MainPage's own Reset button confirm already documents (see
 `handleSacrificeClick` in `ByteFoundryPage`).
 
+### Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens
+
+Requested directly: force an explicit priority order across the Byte Foundry's five recurring
+"upgrade" actions, disabling every lower-ranked one whenever a higher-ranked one is currently
+available — generalizing a pattern that already existed for exactly one pair (Sacrifice was already
+gated behind Combine/Invest/a buildable Storage bank, see "Sacrifice for 10x Capacity gated behind
+every other currently-possible action" above) into a full five-item chain, and adding two brand-new
+blocking conditions to that chain (a redeemable Storage Bank Fill, an activatable Compute Boost) that
+didn't participate in the gate at all before. Implemented as base predicates
+(`isStorageBankFillAvailable`/`isBandwidthAvailable`/`isStorageBankBuildAvailable`/
+`isComputeUpgradeAvailable`) composed into "turn"-suffixed predicates that fold the ranking in
+(`isBandwidthTurnAvailable`/`isStorageBankBuildTurnAvailable`/`isComputeBoostTurnAvailable`), each
+enforced inside its own reducer (not just a UI-disabled state) — the same "engine re-validates"
+posture the codebase already applies everywhere else. One correction made mid-implementation:
+`isStorageBankBuildAvailable` was initially written wrapped in an `isStorageUnlocked` check, mirroring
+the OLD `isMemoryCapacityUpgradeAvailable`'s own inline logic — but `buildStorageBank` itself has
+never required that threshold (only the UI reveal does), and wrapping it broke an existing
+`buildStorageBank` unit test that builds a bank below the Storage-reveal capacity. The wrapper was
+dropped; in practice this changes nothing observable through the UI, since a bank can never be
+buildable before `isStorageUnlocked` is true anyway (their thresholds coincide by construction — see
+`INTRO_STORAGE_UNLOCK_CAPACITY`'s own comment in `layers.js`).
+
+Requested alongside this: move Storage and Compute off ByteFoundryPage onto their own freshly
+designed screens (`StoragePage`/`ComputePage`), each reached via a nav button shown once revealed,
+worded as "reveal the dedicated screen on clicking that button once it is affordable." Read
+literally, this would gate the NAV BUTTON itself on the same priority chain as the actions inside
+it — but implementing that literally and testing it end-to-end surfaced a real problem: with the nav
+button disabled whenever nothing on that screen is currently actionable, a player can never open
+Storage to check on an already-built-but-not-yet-affordable-to-redeem bank, or open Compute to see
+banked Cores/Nodes, since "nothing currently actionable" is a common, ordinary state, not an edge
+case. That's a materially worse experience than the rest of the app's own established convention —
+MainPage's "⚙️ Byte Foundry" link is always enabled once unlocked, a permanent, voluntarily-
+revisitable screen regardless of what's currently affordable on it. The nav buttons were changed to
+follow that same always-enabled-once-revealed convention instead: `onOpenStorage`/`onOpenCompute` are
+plain, unconditional handlers, and only the actions INSIDE `StoragePage`/`ComputePage` (Build,
+Redeem, activate a Boost) stay gated by the priority chain. If a stricter, affordability-gated nav
+button is what was actually wanted, that's a one-line change at each nav button's own `disabled`
+prop (`disabled={!(isStorageBankFillAvailable(state) || isStorageBankBuildTurnAvailable(state))}` for
+Storage, `disabled={!isComputeUpgradeTurnAvailable(state)}` for Compute) — nothing else in the engine
+layer would need to change.
+
+This also meant fixing `App.jsx`'s own gate-override logic: `showingFoundry` previously forced
+`ByteFoundryPage` back onto the screen whenever `!intro.mainGameUnlocked`, *regardless* of `page`,
+with only `'info'` exempted (a deliberate courtesy so Auto-Prestige firing while reading the Guide
+page doesn't yank the player off it). Since `'storage'`/`'compute'` are reached only via a button ON
+`ByteFoundryPage` itself, and Storage/Compute's own reveal thresholds sit far above
+`mainGameUnlocked`'s own much-earlier flip point, the unmodified override made those two pages
+**permanently unreachable during the mandatory gate phase** — caught by an App-level test
+(`fireEvent.click` on the nav button silently landing back on the ByteFoundryPage heading instead of
+navigating). `'storage'`/`'compute'` were added to the same exclusion `'info'` already had.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
