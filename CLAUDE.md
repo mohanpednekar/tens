@@ -80,6 +80,14 @@ an explicit workflow file.
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
+PRs are opened as drafts by default, but a draft should only stay a draft while there's real,
+known work still pending on it — a queued follow-up commit, a fix still being written, tests that
+haven't been run yet. The moment a PR reflects genuinely finished work (its own local checks pass
+and nothing further is planned), mark it ready for review — don't leave it sitting in draft once
+there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
+indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
+every PR in this repo, autonomous or interactive.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
 bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
 confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
@@ -439,8 +447,9 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
-tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+current capacity) — **2 claims for the three cheapest tiers (1/10/100 Bytes), 1 claim for every tier
+from there on** (an intermediate iteration tightened this to a flat 1 claim across the board, matching
+Sacrifice's own one-shot posture, before the three-cheapest-tiers exception was reinstated — see
 `docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
@@ -529,9 +538,9 @@ decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own pe
 sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
 progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
 been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
-redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
-(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
-level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+redeeming never decrements). Because `getCostEpochExponent`'s Fibonacci exponent sequence
+(1, 2, 3, 5, 8, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can never exist.
 Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
 bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
 ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
@@ -578,8 +587,8 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
-Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
-Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 bits, "1 MB" in
+Memory's own B/KB/MB display scale — two Sacrifice stages past Storage's own reveal), Memory
 automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
 gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
 (an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB

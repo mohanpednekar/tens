@@ -48,7 +48,9 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "InfoPage/index.jsx",
-  "51": "package.json",
+  "49": "dependencies",
+  "50": "formatCurrency",
+  "51": "InfoPage/index.jsx",
+  "52": "web-vitals",
   "53": "formatBonusOrMultiplier"
 }
