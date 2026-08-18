@@ -2257,18 +2257,18 @@ describe('getSpeedUpRequirement', () => {
 })
 
 describe('getOverclockRequirement', () => {
-  it('is level 1 for the first claim (overclockCount 0)', () => {
-    expect(getOverclockRequirement(0)).toBe(1)
+  it('is level 2 for the first claim (overclockCount 0) — not level 1, which a fresh, untouched last tier already sits at', () => {
+    expect(getOverclockRequirement(0)).toBe(2)
   })
 
   it('increases by one more than the last claimed level, same +1-per-cycle shape as getSpeedUpRequirement', () => {
-    expect(getOverclockRequirement(1)).toBe(2)
-    expect(getOverclockRequirement(2)).toBe(3)
-    expect(getOverclockRequirement(3)).toBe(4)
+    expect(getOverclockRequirement(1)).toBe(3)
+    expect(getOverclockRequirement(2)).toBe(4)
+    expect(getOverclockRequirement(3)).toBe(5)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getOverclockRequirement(-1)).toBe(1)
+    expect(getOverclockRequirement(-1)).toBe(2)
   })
 })
 
@@ -4861,14 +4861,20 @@ describe('speedUpGame', () => {
 
 describe('overclockGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  // getOverclockRequirement(0) = 1 — a fresh state's last tier already starts at level 1, so it's
-  // eligible for its first claim out of the box.
-  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
+  // getOverclockRequirement(0) = 2 — a fresh state's last tier starts at level 1 by default, so it
+  // takes one real level of progress (to level 2) before the first claim of a cycle is eligible;
+  // level 1 alone is never enough (see the +2 floor in getOverclockRequirement's own comment).
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
+
+  it('does nothing when the last tier is still at its untouched default level (1) — the first claim of a cycle is never free', () => {
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
+    expect(overclockGame(state)).toBe(state)
+  })
 
   it('does nothing when the last tier is below the required level', () => {
-    // overclockCount 3 requires level 4; level 3 isn't there yet.
+    // overclockCount 3 requires level 5; level 4 isn't there yet.
     const state = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 3
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 4), 3
     )
     expect(overclockGame(state)).toBe(state)
   })
@@ -4880,26 +4886,26 @@ describe('overclockGame', () => {
 
   it('sets overclockCount to the last tier\'s current level on a claim', () => {
     const after = overclockGame(eligibleState())
-    expect(after.overclockCount).toBe(1)
-  })
-
-  it('requires one more level than the last claim, same +1-per-cycle shape as Speed Up\'s own ladder', () => {
-    // After 1 prior claim (now at level 1), the requirement is level 2, not level 1 again.
-    const stillLevel1 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 1), 1
-    )
-    expect(overclockGame(stillLevel1)).toBe(stillLevel1)
-
-    const level2 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
-    )
-    const after = overclockGame(level2)
     expect(after.overclockCount).toBe(2)
   })
 
+  it('requires one more level than the last claim, same +1-per-cycle shape as Speed Up\'s own ladder', () => {
+    // After 1 prior claim (now at level 2), the requirement is level 3, not level 2 again.
+    const stillLevel2 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
+    )
+    expect(overclockGame(stillLevel2)).toBe(stillLevel2)
+
+    const level3 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 1
+    )
+    const after = overclockGame(level3)
+    expect(after.overclockCount).toBe(3)
+  })
+
   it('jumps straight to the last tier\'s current level in one claim when behind, instead of requiring one claim per intermediate level', () => {
-    // Last claimed at level 5 (overclockCount 5, requirement 6), but the last tier has since
-    // reached level 8 — a single claim should catch all the way up to 8, not just to 6.
+    // Last claimed at level 5 (overclockCount 5, requirement 7), but the last tier has since
+    // reached level 8 — a single claim should catch all the way up to 8, not just to 7.
     const state = withOverclockCount(
       withPurchaseLevel(createInitialGameState(), lastTier.id, 8), 5
     )
@@ -5088,16 +5094,15 @@ describe('overclockGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which already meets the (≥1) requirement', () => {
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which still falls short of the (≥2) requirement', () => {
     const state = omit(createInitialGameState(), 'purchaseLevels')
-    const after = overclockGame(state)
-    expect(after.overclockCount).toBe(1)
+    expect(overclockGame(state)).toBe(state)
   })
 
   it('falls back to 0 when overclockCount is missing from state entirely', () => {
     const state = omit(eligibleState(), 'overclockCount')
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(1)
+    expect(after.overclockCount).toBe(2)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {

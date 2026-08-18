@@ -1068,13 +1068,17 @@ lives on the PP Upgrades page).
 ### Overclock
 
 A second, rarer soft-reset than Speed Up, sharing the same last-tier gate but with no fixed-step
-ladder of its own: `getOverclockRequirement(overclockCount) = (overclockCount + 1) *
-OVERCLOCK_REQUIREMENT_STEP` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — level 1 for the first claim, level 2
-for the second, level 3 for the third, … — the same +1-per-cycle shape `getSpeedUpRequirement` uses,
-just without Speed Up's own display offset (see below). A claim is gated on
-`state.purchaseLevels[lastTier.id]` reaching that requirement, but **jumps straight to the last
-tier's current level rather than just the minimum required** — see `overclockGame` below — so there's
-no fixed ladder to climb beyond what the last tier's own (already steep) cost curve already demands.
+ladder beyond a small floor: `getOverclockRequirement(overclockCount) = overclockCount *
+OVERCLOCK_REQUIREMENT_STEP + 2` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — level 2 for the first claim, level
+3 for the second, level 4 for the third, … — the same +1-per-cycle shape `getSpeedUpRequirement` uses,
+just without Speed Up's own display offset (see below). The `+2` floor (not `+1`/`+0`) is deliberate:
+every tier's `purchaseLevels` starts at 1 (the tier's own un-purchased default), so a requirement of
+exactly 1 would already be satisfied by a completely untouched last tier, making the first Overclock
+claim of every cycle free — requiring level 2 means at least one real level of last-tier progress is
+always needed first. A claim is gated on `state.purchaseLevels[lastTier.id]` reaching that
+requirement, but **jumps straight to the last tier's current level rather than just the minimum
+required** — see `overclockGame` below — so there's no fixed ladder to climb beyond that floor and
+whatever the last tier's own (already steep) cost curve demands from there.
 `overclockGame` (`engine.js`) does everything `speedUpGame` does — full
 resources/owned/purchased/tickspeedLevels/purchaseLevels/purchaseLevelProgress reset, `globalTickspeedMultiplier`
 reset to `null`, `lastTierXpConsumed`/`prestige.xp`/`prestige.highestMilestone` reset, every automation
@@ -1125,11 +1129,14 @@ above) — not grouped with `GlobalTickspeedCard`, which renders separately at t
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
 `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ ×{next} · Lv.{level}/{requirement}`
-— e.g. `⚡ ×1.01 · Lv.8/6` — mirroring `SpeedUpButton`'s own `×{next}` convention rather than a
+— e.g. `⚡ ×1.008 · Lv.8/7` — mirroring `SpeedUpButton`'s own `×{next}` convention rather than a
 percentage, since the reward is now a genuine multiplier. `{next}` is
 `getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` — what claiming right now
 would jump the multiplier to, accounting for a catch-up jump past the bare minimum requirement, not
-just `getOverclockMultiplier(overclockCount + 1)`. Unlike Speed Up's own button, **this level/requirement
+just `getOverclockMultiplier(overclockCount + 1)` — formatted with `formatPreciseRate` (3 decimal
+places, trimmed) rather than `formatRate`'s usual 2, since Overclock's 0.1%-per-level steps would
+otherwise round the first several claimed levels down to a bare "1", indistinguishable from no bonus.
+Unlike Speed Up's own button, **this level/requirement
 pair is NOT given the -1 "completed blocks" display offset** — `getOverclockRequirement`'s numbers are
 shown exactly as `state.purchaseLevels[lastTier.id]` and the requirement itself already read, matching
 the same raw level number the last tier's own Details disclosure shows, rather than introducing a
@@ -1569,7 +1576,7 @@ purchases were manual or automatic.
 | `getPurchaseMilestoneMultiplier` | `level → number` | `levelsCompleted = level - 1`, `megaBlocks = floor(levelsCompleted/10)`, `regularBlocks = levelsCompleted - megaBlocks`; returns `PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks` (`2`, `10`) — doubles a tier's own passive production at every completed level, the same boundary where `getTierCost`'s cost-epoch exponent steps up, **except** every 10th such level contributes a 10x factor instead of the regular 2x for that one level, compounding into the rest (e.g. level 81 → `2^9 * 10^1` = 5120, not `2^10` = 1024) — this "every 10th level" mega cadence is independent of the (now variable) block size and stays a fixed 10 regardless of level size. Takes the tier's current LEVEL directly, not a lifetime purchased count. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getSpeedUpMultiplier` | `speedUpCount → number` | `SPEED_UP_MULTIPLIER_BASE ** speedUpCount` (2^speedUpCount) — the unconditional, stacking production-speed multiplier from Speed Up activations; no unlock purchase needed, unlike `getPrestigeProductionMultiplier` |
 | `getSpeedUpRequirement` | `speedUpCount → number` | `speedUpCount + 6` — the last tier's LEVEL the *next* Speed Up needs: level 6 (displayed level 5) for the first activation, level 7 (displayed 6) for the second, level 8 (displayed 7) for the third, … Expressed as a level target rather than a lifetime-purchased-count threshold since how many purchases a level boundary corresponds to now depends on the current (possibly grown) block size, while the level number itself doesn't |
-| `getOverclockRequirement` | `overclockCount → number` | `(overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — the last tier's LEVEL the *next* Overclock claim needs: level 1 for the first claim, level 2 for the second, level 3 for the third, … Same `+1`-per-cycle shape as `getSpeedUpRequirement`, just without its display offset |
+| `getOverclockRequirement` | `overclockCount → number` | `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — the last tier's LEVEL the *next* Overclock claim needs: level 2 for the first claim, level 3 for the second, level 4 for the third, … Same `+1`-per-cycle shape as `getSpeedUpRequirement`, just without its display offset; the `+2` floor (not `+1`) stops a completely untouched last tier (which starts at level 1 by default) from making the first claim of a cycle free |
 | `getOverclockMultiplier` | `overclockCount → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.001`) — Overclock's own standalone reward, a genuine third factor in `getEffectiveTierTickSpeedSeconds` alongside the per-tier and global tickspeed multipliers: ×1 with no claims, ×1.001 after the first claimed level, ×1.001² after the second, and so on — applies regardless of whether the global tickspeed multiplier has ever been bought |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
 | `getTickspeedMultiplierCost` | `(tierId, targetLevel) → number` | `getTickspeedMultiplierBaseCost(tierIndex) ** (targetLevel - 1)` — the resource cost, in that tier's own resource, to reach `targetLevel`: level 1 costs `base^0 = 1` (the free baseline, never actually charged), level 2 costs exactly the tier's base cost (`base^1`), level 3 costs `base^2`, and so on. Money-funded only — unrelated to `getAutobuyerUnlockCost` (below) |
@@ -1651,7 +1658,7 @@ purchases were manual or automatic.
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
 - `SPEED_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Speed Up (see `getSpeedUpMultiplier`/`speedUpGame`, "Speed Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
 - `OVERCLOCK_MULTIPLIER_STEP = 0.001` — per-level base for Overclock's own standalone reward multiplier (see `getOverclockMultiplier`/`overclockGame`, "Overclock" above) — 0.1% compounded per claimed level, applied as a genuine third factor in `getEffectiveTierTickSpeedSeconds` alongside the per-tier and global tickspeed multipliers, not folded into either; unconditional, no PP unlock needed
-- `OVERCLOCK_REQUIREMENT_STEP = 1` — the per-claim level step for Overclock's own requirement (see `getOverclockRequirement`) — level 1 for the first claim, 2 for the second, 3 for the third, … the same `+1`-per-cycle shape as `getSpeedUpRequirement`'s own ladder, just without its display offset; a claim jumps straight to the last tier's current level (see `overclockGame`), not just one step, so there's no fixed ladder to climb beyond the last tier's own cost curve
+- `OVERCLOCK_REQUIREMENT_STEP = 1` — the per-cycle escalation step for Overclock's own requirement (see `getOverclockRequirement`, which adds a fixed `+2` floor on top: level 2 for the first claim, 3 for the second, 4 for the third, …) — the same `+1`-per-cycle shape as `getSpeedUpRequirement`'s own ladder, just without its display offset; a claim jumps straight to the last tier's current level (see `overclockGame`), not just one step, so there's no fixed ladder to climb beyond that floor and the last tier's own cost curve
 - `AUTO_SPEED_UP_COST = 20` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Speed Up
 - `TICKSPEED_AUTOBUYER_COST = 10` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
 - `AUTO_PRESTIGE_AUTOBUYER_COST = 100` — one-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see `buyAutoPrestigeAutobuyer`) — a "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one like the two costs above), only ever useful once Auto-Prestige has already been activated once, so priced below `AUTO_PRESTIGE_COST`'s own initial-activation cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but well above `AUTO_SPEED_UP_COST`/`TICKSPEED_AUTOBUYER_COST` above, since this row is gated behind `allTiersFullyAutomated` — a genuinely late-game convenience, not an early one

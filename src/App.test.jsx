@@ -846,33 +846,44 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
   render(<App />)
 
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 4/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeDisabled()
 })
 
 test('the Overclock button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 4 },
+    purchaseLevels: { tier09: 3, tier10: 5 },
     overclockCount: 3,
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 4/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeEnabled()
+})
+
+test('the first Overclock claim of a cycle is never free — a completely untouched last tier (level 1) is not enough', () => {
+  seedMainGameState({
+    resources: { Ones: 10 },
+    owned: { tier09: 10 },
+    purchaseLevels: { tier09: 3 },
+  })
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 2/i })).toBeDisabled()
 })
 
 test('the second Overclock requires one more level than the first, not the same level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 1 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
     overclockCount: 1,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 2/i })
+  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 3/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })).not.toBeInTheDocument()
 })
 
 test('the Overclock button shows the next multiplier and requirement progress on itself, using the raw (non-offset) tier level', () => {
@@ -884,15 +895,15 @@ test('the Overclock button shows the next multiplier and requirement progress on
   })
   render(<App />)
 
-  // Next claim requires the last tier to reach raw level 6 (Lv.8/6, not a "completed blocks"
+  // Next claim requires the last tier to reach raw level 7 (Lv.8/7, not a "completed blocks"
   // display offset — see getOverclockRequirement in engine.js) but a claim right now would jump
   // straight to level 8 (the last tier's own current level, ahead of the bare minimum), raising
-  // the standalone Overclock multiplier to ×1.01 (1.001^8) — both shown on the button itself, no
+  // the standalone Overclock multiplier to ×1.008 (1.001^8) — both shown on the button itself, no
   // separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 6\) — resets speed up's bonus and raises the standalone overclock multiplier to ×1\.01/i,
+    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises the standalone overclock multiplier to ×1\.008/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.01 · Lv.8/6')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.008 · Lv.8/7')
 })
 
 test('the Overclock card\'s disclosure states the current standalone multiplier once claimed', () => {
@@ -939,7 +950,7 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // speedUpCount 5 → next activation would raise the multiplier to ×64 (getSpeedUpMultiplier(6)).
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×64')
 
-  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })
+  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })
   expect(overclockButton).toBeEnabled()
 
   await user.click(overclockButton)
@@ -948,11 +959,11 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
   // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
-  // claim time), not just to 1, so the next cycle now requires level 9 — and Speed Up's own
+  // claim time), not just to 2, so the next cycle now requires level 10 — and Speed Up's own
   // stacking bonus is wiped back to ×2 (speedUpCount reset to 0, so the *next* activation would
   // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 9/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from level 8\./i)
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×2')
 })
@@ -966,7 +977,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })).toBeDisabled()
 })
 
 test('the PP Upgrades page groups purchases into labeled categories', async () => {

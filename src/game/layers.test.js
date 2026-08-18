@@ -203,7 +203,7 @@ describe('constants', () => {
     expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.001)
   })
 
-  it('OVERCLOCK_REQUIREMENT_STEP is 1 (one more level than the last claimed level, no fixed ladder)', () => {
+  it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 

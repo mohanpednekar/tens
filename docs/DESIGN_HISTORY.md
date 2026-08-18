@@ -1582,26 +1582,49 @@ Three changes shipped together:
    showing two of three active multipliers) had to be avoided again on this reintroduction —
    `MainPage`'s breakdown line now explicitly lists all three factors (`tier ×N, global ×N, overclock
    ×N`) rather than reusing the two-factor text unchanged.
-2. **Requirement**: `getOverclockRequirement` keeps its existing `(overclockCount + 1) *
-   OVERCLOCK_REQUIREMENT_STEP` formula, but `OVERCLOCK_REQUIREMENT_STEP` drops from a fixed 10 to 1 —
-   collapsing the old "much steeper, non-shrinking +10-per-activation ladder" (level 10, 20, 30, …)
-   down to the same `+1`-per-cycle shape `getSpeedUpRequirement` already uses (level 1, 2, 3, …),
-   just without Speed Up's own display offset. The maintainer's framing was "no levels concept at
-   all" beyond the last tier's own level — the intent being that the last tier's own (already steep)
-   cost curve should be what gates Overclock, not an additional artificial multiplier stacked on top
-   of it.
+2. **Requirement**: `getOverclockRequirement` collapses from `(overclockCount + 1) *
+   OVERCLOCK_REQUIREMENT_STEP` (the old fixed 10-per-activation ladder: level 10, 20, 30, …) to
+   `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` with `OVERCLOCK_REQUIREMENT_STEP = 1` — level 2
+   for the first claim, level 3 for the second, level 4 for the third, … the same `+1`-per-cycle shape
+   `getSpeedUpRequirement` already uses, just without Speed Up's own display offset. The maintainer's
+   framing was "no levels concept at all" beyond the last tier's own level — the intent being that the
+   last tier's own (already steep) cost curve should be what gates Overclock, not an additional
+   artificial multiplier stacked on top of it.
+
+   **The `+2` floor (not `+1`) is the result of a caught review bug, not the original design.** The
+   first version of this rework used `(overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP` unchanged
+   (i.e. a `+1` floor, requirement 1 for the first claim) — but every tier's `purchaseLevels` starts at
+   1 by default (the tier's own un-purchased state, not 0), so a requirement of exactly 1 was already
+   satisfied by a completely untouched last tier. That made the first Overclock claim of *every* cycle
+   free — click it the instant its panel appears, every time, for a permanent bonus at zero cost —
+   directly contradicting both the "last tier's own cost curve should gate this" intent above and this
+   same rework's own parallel fix to `getSpeedUpRequirement` (raising Speed Up's floor from level 1 to
+   level 5 specifically so its first activation isn't free either — see the entry on that above). A
+   `code-reviewer` pass caught this before merge by tracing the exact `purchaseLevels` default through
+   `overclockGame`'s eligibility check, not by manual testing — worth remembering if this formula is
+   ever touched again: **a `+N` floor here must always be checked against `purchaseLevels`' own
+   1-indexed starting value, not just against 0.**
 3. **Claim behavior — genuinely new, not a revert of anything**: `overclockGame` used to increment
    `overclockCount` by exactly 1 per activation. It now sets `overclockCount` to
    `state.purchaseLevels[lastTier.id]` directly — the last tier's level *at the moment of the claim*.
-   Combined with the requirement dropping to a `+1` ladder, this means a player who falls behind (last
+   Combined with the requirement's `+1`-per-cycle ladder, this means a player who falls behind (last
    claimed at level 5, but the last tier has since reached level 8, e.g. from letting an autobuyer run
    unattended) catches all the way up to level 8 in a single claim rather than needing three separate
    ones. The eligibility check still guarantees the jump is always at least a +1 gain over the previous
    `overclockCount`, so this can never move Overclock backwards.
 
+A related display issue caught in the same review pass: Overclock's multiplier compounds in steps of
+just 0.1% (`OVERCLOCK_MULTIPLIER_STEP`), but `MainPage`'s existing `formatRate` helper rounds to 2
+decimal places — which rounds `×1.001` through `×1.004` (the first 4 claimed levels) all down to a
+bare `×1`, indistinguishable from no bonus at all, on the `OverclockButton` and the tier row's
+"Effective tickspeed" breakdown (the money-balance breakdown's own Overclock line was unaffected,
+since it already used a separate, more precise percent formatter). Fixed with a new `formatPreciseRate`
+helper (3 decimal places, same trimming convention as `formatRate`) used everywhere Overclock's own
+multiplier is displayed.
+
 Everything else about `overclockGame` (the full soft-reset shape, which permanent flags/levels carry
 over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
-— only the reward formula, the requirement step size, and the claim's target value changed.
+— only the reward formula, the requirement formula, and the claim's target value changed.
 
 ### The 1000-Byte Invest tier drops from two claims to one
 

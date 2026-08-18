@@ -344,13 +344,15 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // factor). state.overclockCount is never reset by an ordinary Speed Up, unlike
 // globalTickspeedMultiplier itself — see speedUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.001
-// How many more levels the last tier must reach before the next Overclock level can be claimed: one
-// more than the last claimed level (see engine.js's getOverclockRequirement) — the same
-// +1-per-cycle shape Speed Up's own requirement uses (see getSpeedUpRequirement), just without its
-// display offset. There's no artificial ladder beyond the last tier's own level; that tier's already
-// steep cost curve is what makes reaching each successive level meaningfully harder. A claim jumps
-// straight to the last tier's current level (see overclockGame), so falling behind never requires
-// claiming every intermediate level one at a time.
+// The per-cycle escalation step for how many more levels the last tier must reach before the next
+// Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
+// +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never
+// make the first claim of a cycle free) — the same +1-per-cycle shape Speed Up's own requirement
+// uses (see getSpeedUpRequirement), just without its display offset. There's no artificial ladder
+// beyond that floor; the last tier's already-steep cost curve is what makes reaching each
+// successive level meaningfully harder. A claim jumps straight to the last tier's current level
+// (see overclockGame), so falling behind never requires claiming every intermediate level one at a
+// time.
 export const OVERCLOCK_REQUIREMENT_STEP = 1
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual

@@ -721,17 +721,21 @@ export const getSpeedUpMultiplier = speedUpCount =>
 export const getSpeedUpRequirement = speedUpCount =>
   clampNonNegative(speedUpCount) + 6
 
-// The last tier's LEVEL the *next* Overclock level requires: one more than the last claimed level
-// (level 1 for the first claim from overclockCount 0, level 2 for the second, and so on —
-// (overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP, with OVERCLOCK_REQUIREMENT_STEP now 1). Same
-// +1-per-cycle shape as getSpeedUpRequirement, just without its display offset — there's no
-// artificial ladder on top of the last tier's own level; that tier's already-steep cost curve is
-// what makes reaching each successive level hard. Expressed as a level target against
+// The last tier's LEVEL the *next* Overclock level requires: level 2 for the first claim
+// (overclockCount 0), level 3 for the second, and so on — overclockCount * OVERCLOCK_REQUIREMENT_STEP
+// + 2, with OVERCLOCK_REQUIREMENT_STEP = 1. The +2 floor (not +1/+0) is deliberate: every tier's
+// purchaseLevels starts at 1 (the tier's own un-purchased default — see createInitialGameState), so
+// a requirement of exactly 1 would already be satisfied by a completely untouched last tier, making
+// the first Overclock claim of every cycle free. Requiring level 2 means the last tier's own already-
+// steep cost curve has to demand at least one real level of progress before Overclock is claimable —
+// the same reasoning getSpeedUpRequirement's own floor bump above just applied to Speed Up. Beyond
+// that floor, each further claim needs one more level than the last, same +1-per-cycle shape as
+// getSpeedUpRequirement, just without its display offset. Expressed as a level target against
 // state.purchaseLevels[lastTierId] directly (no "completed blocks" display offset the way Speed
 // Up's own requirement gets — see docs/MAINPAGE_REFERENCE.md), so the number shown to the player
 // matches the same raw level number the last tier's own Details disclosure already shows.
 export const getOverclockRequirement = overclockCount =>
-  (clampNonNegative(overclockCount) + 1) * OVERCLOCK_REQUIREMENT_STEP
+  clampNonNegative(overclockCount) * OVERCLOCK_REQUIREMENT_STEP + 2
 
 // Overclock's own reward: a standalone multiplier compounding OVERCLOCK_MULTIPLIER_STEP (0.1%) per
 // claimed level, applied as a genuine third factor in getEffectiveTierTickSpeedSeconds alongside

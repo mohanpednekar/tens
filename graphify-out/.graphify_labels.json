@@ -51,10 +51,11 @@
   "49": "InfoPage/index.jsx",
   "50": "formatCurrency",
   "51": "package.json",
-  "52": "tickGame",
+  "52": "MainPage",
   "53": "formatBonusOrMultiplier",
   "54": "Design history & rationale",
-  "55": "getTierCost",
+  "55": "OfflineProgressNotice/index.jsx",
   "56": "web-vitals",
-  "57": "isProductionFrozen"
+  "57": "isProductionFrozen",
+  "58": "buyGlobalTickspeedMultiplier"
 }
