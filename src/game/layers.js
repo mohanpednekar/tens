@@ -334,15 +334,16 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
-// Per-level base for Overclock's own standalone reward multiplier — see engine.js's
-// getOverclockMultiplier/getEffectiveTierTickSpeedSeconds/overclockGame — a second, steeper
-// Speed-Up-style soft reset. Each claimed Overclock level compounds a further OVERCLOCK_MULTIPLIER_STEP
-// (10%, i.e. ×1.1 per level) onto a genuine third tickspeed factor, applied alongside (not folded
-// into) the per-tier and global tickspeed multipliers — so it applies even before the global
-// tickspeed multiplier has ever been bought, unlike an earlier version of this mechanic that folded
-// the bonus into that track's own per-level step instead (see docs/DESIGN_HISTORY.md for why this
-// moved back to a standalone factor). state.overclockCount is never reset by an ordinary Speed Up,
-// unlike globalTickspeedMultiplier itself — see speedUpGame.
+// Per-level growth factor for Overclock's own reward — see engine.js's
+// getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
+// Speed-Up-style soft reset. Each claimed Overclock level multiplies BOTH the (Money-funded) global
+// tickspeed multiplier's regular and milestone per-level steps by a further (1 +
+// OVERCLOCK_MULTIPLIER_STEP) factor (×1.1 per level) — folded directly into that existing track's
+// own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
+// the history of this mechanic moving between a standalone factor and a folded-in step). A direct
+// consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
+// level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
+// an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // The per-cycle escalation step for how many more levels the last tier must reach before the next
 // Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed

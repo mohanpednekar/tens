@@ -3,7 +3,7 @@ import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -996,22 +996,27 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
   // passes the next Overclock level — one more than the last claimed level (see
   // getOverclockRequirement/overclockGame in engine.js); no artificial ladder beyond that. Unlike
   // Speed Up, claiming it also wipes Speed Up's own stacking bonus back to zero (its speedUpCount
-  // resets to 0) in exchange for a standalone multiplier (getOverclockMultiplier), compounding ×1.1
-  // per level, applied as a genuine third tickspeed factor alongside the per-tier and global
-  // tickspeed multipliers. A claim jumps straight to the last tier's current level, so falling
-  // behind never requires claiming every intermediate level one at a time. Gated on the same
-  // lastTierUnlocked flag and progressive-disclosure pattern as Speed Up above.
+  // resets to 0) in exchange for permanently multiplying BOTH the (Money-funded) global Tickspeed
+  // upgrade's regular and milestone per-level steps by getOverclockMultiplier(overclockCount)
+  // (×1.1 per level) — folded into that existing track's own compounding rate, not a separate
+  // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
+  // bought. A claim jumps straight to the last tier's current level, so falling behind never
+  // requires claiming every intermediate level one at a time. Gated on the same lastTierUnlocked
+  // flag and progressive-disclosure pattern as Speed Up above.
   const [overclockEverRevealed, setOverclockEverRevealed] = useState(lastTierUnlocked)
   useEffect(() => {
     if (lastTierUnlocked) setOverclockEverRevealed(true)
   }, [lastTierUnlocked])
   const overclockCount = state.overclockCount ?? 0
-  const overclockMultiplier = getOverclockMultiplier(overclockCount)
   const overclockRequirement = getOverclockRequirement(overclockCount)
-  // What claiming Overclock right now would jump overclockCount (and so the multiplier) to — the
-  // last tier's own current level, per overclockGame's catch-up behavior, not just the minimum
-  // requirement — mirroring how nextSpeedUpMultiplier below previews Speed Up's own next multiplier.
-  const nextOverclockMultiplier = getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))
+  // The current/next per-level step the global Tickspeed upgrade's own REGULAR levels compound at,
+  // expressed as a "multiplier" (1 + step) purely so formatGlobalTickspeedBonusPercent's existing
+  // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
+  // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
+  // The "next" value previews what claiming right now would jump the rate to — the last tier's own
+  // current level, per overclockGame's catch-up behavior, not just the minimum requirement.
+  const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
+  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))
   // Unlike speedUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
   // offset — see getOverclockRequirement's own comment in engine.js: it's expressed as a raw level
   // target so the number shown here matches the same raw purchaseLevels number the last tier's own
@@ -1073,8 +1078,9 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each REGULAR level speeds up *every* tier's delivery
-  // frequency by another GLOBAL_TICKSPEED_PRODUCTION_STEP at once (1%), not the amount delivered
-  // (see getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
+  // frequency by another getGlobalTickspeedProductionMultiplier's own regular step (1% by default,
+  // permanently raised by Overclock — see above), not the amount delivered (see
+  // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
   // automation upgrade on this page, it's Money-funded (not PP) and lives on the Game view instead
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't accidentally spend
@@ -1082,11 +1088,11 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
   // resource is Money itself). The level itself resets to not-yet-bought on both Prestige and Speed
   // Up (see prestigeGame/speedUpGame in engine.js), same as tier02's owned count, so re-unlocking
   // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
-  // reset by Speed Up and no longer touches this track at all — see overclockMultiplier above,
-  // applied as its own separate factor in getEffectiveTierTickSpeedSeconds.
+  // reset by Speed Up — its boost to the per-level step survives across a re-unlock within the
+  // same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
@@ -1313,7 +1319,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `${formatBonusOrMultiplier(overclockMultiplier, { precise: true })} faster ticks on every tier (Lv.${overclockCount})`
+                    ? `Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
                     : `not yet claimed (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
                 </li>
               )}
@@ -1579,7 +1585,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
                   <ul>
                     <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
                     <li>
-                      Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)}, overclock ×{formatRate(overclockMultiplier)})
+                      Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
                     </li>
                     <li>
                       Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased) — purchase
@@ -1712,23 +1718,23 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                ×{formatRate(overclockMultiplier)} faster ticks on every tier from level {overclockCount}.
+                Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the standalone Overclock multiplier to ×${formatRate(nextOverclockMultiplier)}`}
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and raises the standalone Overclock multiplier to ×${formatRate(nextOverclockMultiplier)}`}
+            title={`Resets tiers (and Speed Up's bonus) and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextOverclockMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <ButtonLabel>{formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%/lvl{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"

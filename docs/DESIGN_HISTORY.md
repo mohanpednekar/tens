@@ -1626,25 +1626,58 @@ Everything else about `overclockGame` (the full soft-reset shape, which permanen
 over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
 — only the reward formula, the requirement formula, and the claim's target value changed.
 
-### Overclock, once more: reward step bumped from 0.1% to 10% per level
+### Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too
 
-A direct, same-session follow-up to the entry above, requested by the maintainer immediately after
-that rework shipped: `OVERCLOCK_MULTIPLIER_STEP` changed from `0.001` (×1.001 per claimed level) to
-`0.1` (×1.1 per claimed level) — a hundredfold increase in the per-level reward, with no other
-formula touched. `getOverclockMultiplier`'s shape (`(1 + OVERCLOCK_MULTIPLIER_STEP) **
-overclockCount`) and everything about `getOverclockRequirement`/`overclockGame`'s catch-up claim
-behavior from the entry above are unaffected — this is purely a constant-value change.
+A direct, same-session follow-up to the entry above ("Overclock, again"), and — importantly — this
+entry supersedes that one specifically on the standalone-vs-folded question, before that PR ever
+merged. The sequence within this one session: the maintainer first confirmed (twice, across two
+rounds of clarification) that they wanted a standalone multiplier reintroduced, explicitly overriding
+the original entry's "don't reintroduce" warning — that shipped and merged. Immediately after, as a
+follow-up, they asked to raise the per-level step from `0.1%` to `1.1x`; while implementing *that* as
+a second, still-unmerged PR, the maintainer clarified: "I meant for the tickspeed multiplier which
+starts at 1%" — i.e. the `1.1x` was always meant to apply to the *existing* `GLOBAL_TICKSPEED_PRODUCTION_STEP`
+(1%) track, not a new standalone factor unrelated to it. That reopens the exact standalone-vs-folded
+question the entry above had just resolved in favor of standalone — this time resolved the other way,
+before the standalone-multiplier PR's own follow-up ever reached `main`. **The original entry's
+"don't reintroduce a standalone Overclock multiplier" warning turns out to be the durable guidance
+after all** — a future session should default to the folded design described here unless explicitly
+told otherwise, and should re-confirm carefully (as this session eventually did) before reintroducing
+a standalone factor again.
 
-The entry above's `formatPreciseRate` fix (a 3-decimal-place display helper, added because
-`formatRate`'s 2-decimal rounding collapsed Overclock's first several ×1.001-per-level claims down
-to a bare "×1") is now unnecessary and was removed: at ×1.1 per level, `formatRate`'s ordinary
-2-decimal precision is already fully legible (×1.1, ×1.21, ×1.33, ×1.46, …) — none of the early
-levels round away to nothing. `MainPage`'s Overclock-specific multiplier displays (the button, the
-disclosure, and the tier row's "Effective tickspeed" breakdown) went back to using `formatRate`
-directly, same as every other multiplier display on the page. If `OVERCLOCK_MULTIPLIER_STEP` is ever
-lowered again significantly, re-check whether the early claimed levels still read distinctly from
-"×1" under `formatRate`'s 2-decimal rounding before assuming it's fine — that's exactly the bug the
-removed `formatPreciseRate` helper existed to fix.
+What actually changed from the entry above:
+
+1. **Reward folds back into `getGlobalTickspeedProductionMultiplier`**, reverting that function's
+   signature back to `(level, overclockCount = 0)` and removing the standalone third factor from
+   `getEffectiveTierTickSpeedSeconds` (back to the original two-factor division: tier × global).
+   `getOverclockMultiplier(overclockCount) = (1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount`
+   (`OVERCLOCK_MULTIPLIER_STEP = 0.1`, i.e. ×1.1 per level — the value requested in the same
+   follow-up) is now the growth factor multiplied into that function's own regular *and* milestone
+   steps: `regularStep = GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)`,
+   `milestoneStep = GLOBAL_TICKSPEED_MILESTONE_STEP * getOverclockMultiplier(overclockCount)`. A
+   direct consequence, same as before the entry above: Overclock has zero effect while the global
+   tickspeed multiplier itself is still at level 0/not yet bought.
+2. **Multiplicative, not additive** — this is the one deliberate difference from the very original
+   pre-"Overclock, again" folded design (see the top-of-section entry), which added a flat
+   percentage-point step per activation (`GLOBAL_TICKSPEED_PRODUCTION_STEP + overclockCount *
+   OVERCLOCK_PRODUCTION_STEP`). Here the step *compounds*: 1% → 1.1% → 1.21% → 1.331% → … per
+   claimed level, matching the maintainer's original "multiplicative per level instead of additive"
+   framing from the very start of this whole thread of requests.
+3. **Applies to milestone levels too** — a genuinely new twist neither prior folded design had. The
+   original pre-"Overclock, again" design left `GLOBAL_TICKSPEED_MILESTONE_STEP` (10%, every 10th
+   level) untouched by Overclock; this one multiplies it by the same `getOverclockMultiplier` factor
+   as the regular step, per explicit maintainer choice when asked directly whether milestones should
+   be included.
+4. **`formatPreciseRate` (added, then simplified away, in the entry above) never mattered here** —
+   `MainPage`'s Overclock displays go back to the pre-"Overclock, again" percentage-rate framing
+   (`⚡ N%/lvl · Lv.X/Y`, "Tickspeed upgrade's per-level rate is now N% (was 1%) from level X")
+   instead of a `×N` standalone-multiplier framing, so the precision problem that helper existed for
+   doesn't arise in this design at all.
+
+**Unchanged from the entry above** (these were never in question): `getOverclockRequirement`'s `+2`
+floor (a completely untouched last tier can never make the first claim of a cycle free) and its
+`+1`-per-cycle escalation beyond that floor; `overclockGame`'s catch-up claim (`overclockCount` jumps
+straight to the last tier's current level, not just `+1`); the full soft-reset shape and which
+permanent flags/levels survive it; wiping `speedUpCount` to 0 on claim.
 
 ### The 1000-Byte Invest tier drops from two claims to one
 

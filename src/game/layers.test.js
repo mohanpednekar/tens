@@ -199,7 +199,7 @@ describe('constants', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 
-  it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, a standalone multiplier)', () => {
+  it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, folded into the Tickspeed multiplier\'s own step)', () => {
     expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 

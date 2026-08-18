@@ -24,11 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always
   needs genuine progress) — and a claim jumps straight to the last tier's current level, so falling
-  behind never means claiming every intermediate level one at a time. The reward is now a standalone
-  ×1.1-per-level multiplier (compounding independently of the Money-funded Tickspeed upgrade)
-  instead of a +1-percentage-point boost to that upgrade's own per-level rate — it now applies even
-  before any Tickspeed level has been bought. Everything else (the full tiers/resources reset,
-  wiping Speed Up's own stacking bonus) is unchanged.
+  behind never means claiming every intermediate level one at a time. The reward itself now raises
+  the (Money-funded) Tickspeed upgrade's own per-level rate *multiplicatively* — ×1.1 per claimed
+  level, compounding (1% → 1.1% → 1.21% → …) and now applying to its every-10th-level milestone
+  bonus too, not just regular levels — instead of the old flat +1-percentage-point-per-activation
+  step. As before, it has no effect until at least one Tickspeed level is bought. Everything else
+  (the full tiers/resources reset, wiping Speed Up's own stacking bonus) is unchanged.
 - **Speed Up**'s first activation now requires the last tier to reach level 5 instead of level 1;
   each subsequent activation still needs exactly one more level than the last.
 - Every tier's per-level cost now scales along a Fibonacci-driven exponent sequence (1, 2, 3, 5, 8, 13, … per level, versus a flatter triangular-number sequence before) — costs grow the same way through level 2, then noticeably faster from level 3 on, and skip specific round numbers along the way (e.g. a level costing exactly 1,000,000× `baseCost` never occurs — the sequence jumps straight from 100,000× to 10,000,000×).
