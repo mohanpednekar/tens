@@ -530,8 +530,8 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
-Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
-Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 bits, "1 MB" in
+Memory's own B/KB/MB display scale — two Sacrifice stages past Storage's own reveal), Memory
 automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
 gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
 (an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB

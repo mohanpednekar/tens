@@ -1695,6 +1695,71 @@ own behavior, and to assert the new "blocked while Invest is still claimable" st
 that's what the test was checking instead (`engine.test.js`'s `isMemoryCapacityUpgradeAvailable`/
 `pickIntroCapacityMilestone` suites, `App.test.jsx`'s Sacrifice/Invest integration tests).
 
+### Two previously-rejected designs briefly resurfaced via un-reviewed direct commits, then reverted again
+
+A string of "Update engine.js"/"Update layers.js" commits, made directly through GitHub's web editor
+rather than through Claude Code, landed on `main` over a few days without going through the PR
+review/test loop this repo otherwise relies on (see "Pull requests"/economy-change-review skill in
+CLAUDE.md). Most were genuine, if informally-made, balance tweaks (see below), but two of them
+silently reintroduced designs this file already records as deliberately rejected:
+
+1. **`getTierCost`'s cost-epoch exponent sequence reverted from triangular back to Fibonacci.** Three
+   rapid, self-correcting edits (a naive O(2^n) recursive `fib`, then a memoized-but-still-Fibonacci
+   rewrite) replaced the triangular-number formula documented in "Purchase level resized from 10 to
+   8, and the cost-epoch sequence changed from Fibonacci to triangular" above — the exact sequence
+   that entry says was replaced "at the maintainer's explicit request." The reintroduced version also
+   had a live bug: `getTierCost(tier, 0)` / negative levels returned `undefined` instead of clamping
+   to level 1 (the memoized array had no entry at a negative index), whereas the triangular formula's
+   `Math.max(0, clampNonNegative(level) - 1)` epoch clamp handled that case correctly. Caught because
+   it orphaned `getCostEpochExponent` (still exported, now unreferenced by any other code) and broke
+   dozens of tests anchored to the documented triangular values (`getTierCost(tier, 3) === baseCost *
+   10^3`, the Storage bank ladder's "100,000 is skipped" narrative, etc.) — reverted back to
+   `getCostEpochExponent`-based pricing, the buggy `fib`/`cost` helpers deleted entirely.
+2. **`getIntroProductionMilestoneMaxClaims` reverted from a flat `1` back to `tier > 2 ? 1 : 2`.**
+   This undoes "The same round also tightened 'Invest for Double Production' to a single claim per
+   tier across the board (an explicit request...)" above almost exactly (a different hardcoded
+   condition than the removed `INTRO_AUTO_INVEST_THRESHOLD` cutoff, but the same "first few tiers get
+   2 claims" shape) — reverted back to the flat `1`.
+
+Both were caught only because CLAUDE.md's own "check `docs/DESIGN_HISTORY.md` before changing a
+formula a past iteration already tried and rejected" instruction is exactly what a from-scratch
+review of a diff against this file would trigger — a direct web-UI edit has no such review step at
+all, which is the actual gap this incident exposes. The remaining constant tweaks in the same commit
+run (`OVERCLOCK_PRODUCTION_STEP` 0.001→0.01, `AUTO_SPEED_UP_COST` 100→20, `TICKSPEED_AUTOBUYER_COST`
+20→10, `AUTO_PRESTIGE_AUTOBUYER_COST` 500→100, `INTRO_BITS_PER_KILOBYTE_CONVERSION` 1000→8000,
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` 800,000→8,000,000) don't match any previously-rejected design
+recorded here, so they were kept as genuine (if informal) balance changes — comments/tests/docs across
+`layers.js`/`engine.js`/`ByteFoundryPage`/`ECONOMY_REFERENCE.md`/`MAINPAGE_REFERENCE.md`/`CLAUDE.md`
+were brought back in sync with them rather than reverted. One of the same commits also corrected a
+real, pre-existing drift: `TIER_DEFINITIONS`' `baseTickSpeedSeconds` ladder had read tier01=2s through
+tier10=11s since Bytes was removed from the tier list, even though "Reintroducing the 1s-10s
+tickspeed ladder" above (and its own empirical `simulate-run-times` validation) specifically
+documents a `tierIndex + 1` (1s-10s) ladder — the commit's 2s-11s → 1s-10s edit brought the code back
+in line with that already-validated, already-documented design, so it was kept rather than treated as
+a third regression.
+
+Two ByteFoundryPage formatting call sites were also fixed in the same pass — not directly caused by
+this commit run's constant changes, but exposed by the accompanying `formatStorageSize` →
+`formatBitsInNearestUnit` rename sweep across two of these same commits, which correctly migrated most
+call sites (Storage bank redeem/empty/not-built squares, their aria-labels/tooltips) but missed the
+Build button's own size label (left it on the old function) and one transfer-block fallback tooltip
+(left it on the *new* function, inconsistent with its own sibling branch one line above using the
+other). `formatStorageSize` itself also picked up a real bug mid-rename: its internal number
+formatting was switched from `formatAmount` to `formatBitsInNearestUnit`, which expects a raw bit
+count and produces garbage (e.g. "0.125 B KB") when fed the already-KiloBit-scaled `value` the
+function computes internally. All three were fixed together: `formatStorageSize` restored to
+`formatAmount` internally (keeping the rename's own correct part — a hardcoded `1000` divisor/
+threshold decoupled from `INTRO_BITS_PER_KILOBYTE_CONVERSION`, so this KiloBit-denominated display
+scale doesn't silently drift if that unrelated constant changes again), and every size-denominated
+call site (Build button label, Storage bank squares) consistently uses `formatStorageSize`, while
+every genuine Byte-denominated cost (Storage build cost, transfer-block cost, Invest cost, Memory
+capacity) consistently uses `formatBitsInNearestUnit`. The `size === INTRO_BITS_PER_KILOBYTE_CONVERSION`
+"smallest bank exempt from the auto-redeem toggle" check in `tickStorageAutoRedeem` had the same class
+of bug — it happened to equal the smallest Storage bank size (1000) only because
+`INTRO_BITS_PER_KILOBYTE_CONVERSION` used to also be 1000; once that constant became 8000 (a
+different scale, per above) the comparison silently stopped matching the actual smallest bank size,
+so it was changed to compare against `getFirstTierCost(1)` (tier01's own real level-1 cost) directly.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
