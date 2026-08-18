@@ -6,9 +6,12 @@ import { getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
+  COMPUTE_BOOST_MAX_STACKS,
+  COMPUTE_BOOST_PRESETS,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
@@ -2066,8 +2069,9 @@ test('Sacrifice for 10x Capacity shows what it will drain — the current capaci
   expect(sacrificeButton).toHaveTextContent('100 B')
 })
 
-test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
+test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched, once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
 
   // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
   // only offered once every other currently-possible action (Combine, Invest, a Storage bank
@@ -2077,11 +2081,27 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
+  expect(window.confirm).toHaveBeenCalled()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * 10))
   // productionMultiplier is untouched by Sacrifice — still the base 1x rate.
   expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+})
+
+test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouched', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 })
 
 test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
@@ -2639,6 +2659,95 @@ describe('Byte Foundry Storage', () => {
 
     unmount()
     vi.useRealTimers()
+  })
+})
+
+describe('Byte Foundry Compute Boost', () => {
+  test('the Compute Boost buttons appear once the Compute section is revealed', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /activate sustain compute boost/i })).toBeInTheDocument()
+  })
+
+  test('every activation button stays disabled below 1 Compute Core', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0 })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /activate sustain compute boost/i })).toBeDisabled()
+  })
+
+  test('activating a boost spends exactly 1 Compute Core and shows the active status line', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: /activate burst compute boost/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(2)
+    expect(saved.intro.computeBoostType).toBe('burst')
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
+      new RegExp(`burst active.*×${COMPUTE_BOOST_PRESETS.burst.multiplier}`, 'i')
+    )
+  })
+
+  test('a different preset type stays disabled while another is active, but the SAME type can restack', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
+    const burstButton = screen.getByRole('button', { name: /activate burst compute boost/i })
+    expect(burstButton).toBeEnabled()
+
+    fireEvent.click(burstButton)
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostStacks).toBe(2)
+    expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+  })
+
+  test('a preset already at COMPUTE_BOOST_MAX_STACKS can no longer be activated', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1,
+      computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+  })
+
+  test('MainPage shows a read-only active-boost status line while one is running, and hides it once inactive', () => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
+    const { unmount } = render(<App />)
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
+      new RegExp(`standard.*×${COMPUTE_BOOST_PRESETS.standard.multiplier}`, 'i')
+    )
+    unmount()
+
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: null } })
+    render(<App />)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+  })
+
+  // Regression test: an unrecognized computeBoostType (e.g. a corrupted/hand-edited save, or a
+  // future preset rename leaving stale data behind) used to crash both pages' render by indexing
+  // COMPUTE_BOOST_PRESETS[type].multiplier without checking the preset actually exists first.
+  test('an unrecognized computeBoostType does not crash either page — the status line just stays hidden', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: 'does_not_exist', computeBoostStacks: 1 })
+    const { unmount } = render(<App />)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+    unmount()
+
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'does_not_exist', computeBoostStacks: 1 } })
+    render(<App />)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
 })
 

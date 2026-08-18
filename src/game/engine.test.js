@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activateComputeBoost,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPrestige,
@@ -13,6 +14,7 @@ import {
   buildStorageBank,
   buyTier,
   buyTierQuantity,
+  canActivateComputeBoost,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -35,6 +37,7 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getComputeBoostMultiplier,
   getCostEpochExponent,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
@@ -82,6 +85,7 @@ import {
   setStorageAutoRedeemEnabled,
   speedUpGame,
   tapIntroBit,
+  tickComputeBoost,
   tickComputeCoreConversion,
   tickComputeNodeConversion,
   tickGame,
@@ -90,7 +94,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1337,6 +1341,190 @@ describe('tickGame Compute Core/Node integration', () => {
     expect(after.intro.computeNodes).toBe(2)
     // Memory itself still resets fresh, unlike the permanent Compute counters above.
     expect(after.intro.bits).toBe(0)
+  })
+})
+
+describe('getComputeBoostMultiplier', () => {
+  it('is 1 (no bonus) when no boost is active', () => {
+    expect(getComputeBoostMultiplier(createInitialGameState().intro)).toBe(1)
+    expect(getComputeBoostMultiplier({ computeBoostType: null })).toBe(1)
+  })
+
+  it('returns the active preset\'s own multiplier', () => {
+    expect(getComputeBoostMultiplier({ computeBoostType: 'burst' })).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'standard' })).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'sustain' })).toBe(COMPUTE_BOOST_PRESETS.sustain.multiplier)
+  })
+})
+
+describe('canActivateComputeBoost', () => {
+  it('is false below 1 Compute Core', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 0 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+  })
+
+  it('is true with at least 1 Core and no boost currently active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+  })
+
+  it('is true for the SAME type already active, below the max stack count', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+  })
+
+  it('is false for a DIFFERENT type while one is already active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(canActivateComputeBoost(state, 'standard')).toBe(false)
+  })
+
+  it('is false once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+  })
+
+  it('is false for an unrecognized preset name', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    expect(canActivateComputeBoost(state, 'does_not_exist')).toBe(false)
+  })
+})
+
+describe('activateComputeBoost', () => {
+  it('spends exactly 1 Compute Core regardless of preset', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5 })
+    const after = activateComputeBoost('sustain')(state)
+    expect(after.intro.computeCores).toBe(4)
+  })
+
+  it('starts a fresh boost at the preset\'s own multiplier/duration', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    const after = activateComputeBoost('standard')(state)
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+  })
+
+  it('stacks the SAME type, extending remaining duration without resetting it or compounding the multiplier', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2, computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
+    })
+    const after = activateComputeBoost('burst')(state)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+    expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('is a same-reference no-op below 1 Compute Core', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 0 })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op for a different type while one is already active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(activateComputeBoost('standard')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+})
+
+describe('tickComputeBoost', () => {
+  it('is a same-reference no-op while no boost is active', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: null })
+    expect(tickComputeBoost(1)(state)).toBe(state)
+  })
+
+  it('counts remaining duration down by elapsedSeconds', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 10 })
+    const after = tickComputeBoost(3)(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(7)
+    expect(after.intro.computeBoostType).toBe('burst')
+  })
+
+  it('clears back to inactive once remaining duration reaches 0', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 1 })
+    const after = tickComputeBoost(1)(state)
+    expect(after.intro.computeBoostType).toBeNull()
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+  })
+
+  it('clears back to inactive when elapsedSeconds overshoots the remaining duration', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 1 })
+    const after = tickComputeBoost(5)(state)
+    expect(after.intro.computeBoostType).toBeNull()
+  })
+})
+
+describe('tickGame Compute Boost integration', () => {
+  it('multiplies Memory\'s own passive production while a boost is active', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, capacity: 1_000_000,
+      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
+    })
+    const after = tickGame(1)(state)
+    // Base rate is 1 bit/sec at the starting values; burst multiplies it ×16.
+    expect(after.intro.bits).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('multiplies tier01\'s own production while a boost is active, leaving every other tier unaffected', () => {
+    const secondTier = TIER_DEFINITIONS[1]
+    const state = withOwned(
+      withOwned(
+        withIntro(createInitialGameState(), { computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 60 }),
+        tensTier.id, 1
+      ),
+      secondTier.id, 1
+    )
+    // tier01's own baseTickSpeedSeconds is 1s, so a 1-second tick completes exactly one full period.
+    const after = tickGame(1)(state)
+    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×4, on top of the
+    // 1-money starting balance every fresh state begins with.
+    expect(after.resources[MONEY_ID]).toBe(1 + COMPUTE_BOOST_PRESETS.standard.multiplier)
+    // The second tier (produces tier01 itself) is NOT boosted — its own production this tick (if
+    // any) is unmultiplied, so tier01's owned count only ever reflects tier02's own unboosted rate,
+    // confirming the boost credit above landed solely via tier01's resource production, not owned.
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('counts the boost down as part of a regular tick, alongside everything else', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'sustain', computeBoostStacks: 1, computeBoostRemainingSeconds: 5 })
+    const after = tickGame(1)(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(4)
+  })
+
+  it('carries the boost through a real Prestige as run-scoped state — resets, unlike computeCores/computeNodes', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        computeCores: 5, computeNodes: 2,
+        computeBoostType: 'burst', computeBoostStacks: 3, computeBoostRemainingSeconds: 7,
+      }),
+      PRESTIGE_THRESHOLD
+    )
+    const after = prestigeGame(state)
+    expect(after.intro.computeCores).toBe(5) // permanent, carried over
+    expect(after.intro.computeNodes).toBe(2) // permanent, carried over
+    expect(after.intro.computeBoostType).toBeNull() // run-scoped, reset
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+  })
+
+  it('carries the boost through Speed Up/Overclock untouched — an intra-cycle soft reset, not a new cycle', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withIntro(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, getSpeedUpRequirement(0)),
+      { computeBoostType: 'sustain', computeBoostStacks: 4, computeBoostRemainingSeconds: 200 }
+    )
+    const after = speedUpGame(state)
+    expect(after.intro.computeBoostType).toBe('sustain')
+    expect(after.intro.computeBoostStacks).toBe(4)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(200)
   })
 })
 
@@ -4676,6 +4864,7 @@ describe('speedUpGame', () => {
       mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = speedUpGame(state)
@@ -4918,6 +5107,7 @@ describe('overclockGame', () => {
       mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = overclockGame(state)

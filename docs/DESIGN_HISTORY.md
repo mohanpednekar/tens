@@ -1781,6 +1781,40 @@ of bug — it happened to equal the smallest Storage bank size (1000) only becau
 different scale, per above) the comparison silently stopped matching the actual smallest bank size,
 so it was changed to compare against `getFirstTierCost(1)` (tier01's own real level-1 cost) directly.
 
+### Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation
+
+Every earlier Compute Cores/Nodes entry above ends the same way: "pure counters today, no gameplay
+effect yet." This entry is the first mechanic that actually spends them, requested in the same
+terse, iterative style as the mechanic's own earlier design ("Burst is 16x for 1 min / Standard is
+4x for 10 mins / Sustain is 2x for an hour... Use as temporary production multipliers for the base
+production tier of each screen... User can stack upto 10 of these for extended duration but only of
+same types"), with one live clarifying round: the maintainer initially described each preset as
+costing a matching number of Cores ("16-Core Burst," "4-Core Standard," "2-Core Sustain"), which
+directly contradicts `COMPUTE_ENTITY_CAP` (10) — a Core balance can never reach 16. Asked directly,
+the maintainer clarified: "16x, 4x, 2x are not costs. Those are the choices for effect for 10s, 1
+min and 10mins respectively" — i.e. those numbers are the MULTIPLIER strength only; the actual cost
+is a flat 1 Compute Core per activation regardless of which preset is chosen, matching the original
+framing ("Each usage of a Compute Core gives 3 choices"). **If this is ever revisited, don't
+reintroduce a per-preset Core cost** — that reading was already tried, contradicted the entity cap,
+and was explicitly corrected.
+
+Durations moved during the same conversation before landing on the final numbers implemented here:
+`COMPUTE_BOOST_PRESETS` in `layers.js` — Burst 10s, Standard 60s, Sustain 600s.
+
+"The base production tier of each screen... memory for Foundry, tier01 for main game" was
+interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
+Memory's own passive production (Byte Foundry) and `tier01`'s (Kilobytes') production (main game)
+*simultaneously* whenever active — not two independent, separately-targetable boosts. This reading
+was chosen (not confirmed) because introducing two independent boost-target selections would have
+doubled the state/UI surface for a request that gave no signal such a choice was wanted. If this
+turns out wrong, the fix is additive: a `computeBoostTarget` field and a per-target multiplier
+check, rather than removing anything already shipped.
+
+Also implemented alongside this: a native `window.confirm()` before Sacrifice for 10x Capacity
+actually fires, spelling out that it's permanent and raises every future Compute Core's cost — same
+"no modal component to reuse" rationale MainPage's own Reset button confirm already documents (see
+`handleSacrificeClick` in `ByteFoundryPage`).
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

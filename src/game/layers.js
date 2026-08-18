@@ -191,6 +191,26 @@ export const COMPUTE_CORES_PER_NODE = 8
 // progress" posture Storage banks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
 
+// --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
+// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostStacks/
+// computeBoostRemainingSeconds in createInitialGameState. Each usage of a Compute Core (always
+// exactly 1 spent per activation — the preset below picks the strength/duration, not the cost)
+// grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
+// Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
+// production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
+// (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
+// decaying back to inactive (see tickComputeBoost).
+export const COMPUTE_BOOST_PRESETS = {
+  burst: { multiplier: 16, durationSeconds: 10 },
+  standard: { multiplier: 4, durationSeconds: 60 },
+  sustain: { multiplier: 2, durationSeconds: 600 },
+}
+// Only one PRESET TYPE can be active at a time — a different type can't be started while one is
+// already running (see activateComputeBoost) — but the SAME type can be activated again while
+// already active, stacking up to this many times to extend the remaining duration; the multiplier
+// itself never compounds from stacking, only durationSeconds accumulates further.
+export const COMPUTE_BOOST_MAX_STACKS = 10
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
 // alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short

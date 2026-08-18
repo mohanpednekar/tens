@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_PRODUCTION_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -333,12 +333,25 @@ export const createInitialGameState = () => ({
     // (see prestigeGame). Automatically incremented by tickComputeCoreConversion every time Memory
     // is full, once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — each conversion
     // flushes the CURRENT capacity (not a fixed cost) for exactly 1 Core, so a higher capacity
-    // makes each future Core more expensive. A pure counter today — no gameplay effect yet.
+    // makes each future Core more expensive. Spent 1 at a time by activateComputeBoost below —
+    // see the "Byte Foundry Compute Boost" section of layers.js.
     computeCores: 0,
     // PERMANENT — automatically incremented by tickComputeNodeConversion every time computeCores
     // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). A pure counter
-    // today — no gameplay effect yet.
+    // today — merging Nodes upward into a further tier is still planned as a follow-up.
     computeNodes: 0,
+    // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
+    // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
+    // Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
+    // activateComputeBoost/tickComputeBoost/getComputeBoostMultiplier below.
+    computeBoostType: null,
+    // How many times the active preset has been stacked (see activateComputeBoost) — 0 while
+    // computeBoostType is null. Purely informational; only computeBoostRemainingSeconds drives
+    // the actual multiplier's expiry.
+    computeBoostStacks: 0,
+    // Counts down every tick (see tickComputeBoost), frozen or not, clearing computeBoostType back
+    // to null once it reaches 0.
+    computeBoostRemainingSeconds: 0,
   },
 })
 
@@ -910,7 +923,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // already follows.
   const stateAfterStorage = tickStorageAutoFill(tickIntroProduction(elapsedSeconds)(state))
   const stateAfterComputeCores = tickComputeNodeConversion(tickComputeCoreConversion(stateAfterStorage))
-  const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeCores)
+  // Counts an active Compute Boost's remaining duration down, unconditionally, alongside the rest
+  // of the Byte Foundry intro ticks above — see tickComputeBoost.
+  const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterComputeCores)
+  const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
 
   const autoPrestigeLevel = stateAfterIntro.autoPrestige ?? null
   // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
@@ -1028,15 +1044,20 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     if (ticksElapsed <= 0) return
 
     // Floored so owned/resources stay integer-valued: owned, ticksElapsed, speedUpMultiplier
-    // (always a power of 2), and tierMultiplier (always a product of powers of 2 and 10 — see
-    // getPurchaseMilestoneMultiplier) are already integers, so only the fractional Prestige Point
-    // production multiplier (getPrestigeProductionMultiplier, e.g. 50 unspent points → ×1.5) can
-    // introduce a fraction here — always >= 1, so flooring never zeroes out production for a tier
-    // with owned > 0. Neither tickspeed multiplier appears in this formula at all anymore —
-    // they've already done their work by shrinking tickSpeed above, which is what grew
-    // ticksElapsed.
+    // (always a power of 2), tierMultiplier (always a product of powers of 2 and 10 — see
+    // getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
+    // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
+    // fractional Prestige Point production multiplier (getPrestigeProductionMultiplier, e.g. 50
+    // unspent points → ×1.5) can introduce a fraction here — always >= 1, so flooring never zeroes
+    // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
+    // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
+    // is what grew ticksElapsed.
     const tierMultiplier = getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier)
+    // A Compute Boost (see getComputeBoostMultiplier/activateComputeBoost above) only ever applies
+    // to tier01 specifically — "the base production tier of each screen," Memory being the other
+    // (see tickIntroProduction) — every other tier's own multiplier stays 1 regardless.
+    const computeBoostMultiplier = tier.id === TIER_DEFINITIONS[0].id ? getComputeBoostMultiplier(stateAfterAutobuyers.intro) : 1
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -1472,7 +1493,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
       : { ...state, intro: { ...state.intro, productionAccumulator: accumulated } }
   }
 
-  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed
+  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed * getComputeBoostMultiplier(state.intro)
 
   return {
     ...state,
@@ -1771,6 +1792,75 @@ export const tickComputeNodeConversion = state => {
   }
 }
 
+// The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
+// no boost is active. Applied to Memory's own passive production (tickIntroProduction) and
+// tier01's production specifically (see tickGame) — "the base production tier of each screen."
+// Stacking (see activateComputeBoost) only ever extends computeBoostRemainingSeconds, never
+// compounds the multiplier itself.
+export const getComputeBoostMultiplier = intro =>
+  COMPUTE_BOOST_PRESETS[intro?.computeBoostType]?.multiplier ?? 1
+
+// Whether boostType can be activated right now: at least 1 Compute Core available, and either no
+// boost is currently active, the same type is (so it can stack), or the active type is already at
+// COMPUTE_BOOST_MAX_STACKS (blocking even a same-type restack once maxed). The actual gate
+// activateComputeBoost itself enforces, not just a UI-only disabled state — see "Security notes"
+// in CLAUDE.md.
+export const canActivateComputeBoost = (state, boostType) => {
+  if (!COMPUTE_BOOST_PRESETS[boostType]) return false
+  if ((state.intro.computeCores ?? 0) < 1) return false
+  const currentType = state.intro.computeBoostType ?? null
+  if (currentType !== null && currentType !== boostType) return false
+  const currentStacks = state.intro.computeBoostStacks ?? 0
+  return !(currentType === boostType && currentStacks >= COMPUTE_BOOST_MAX_STACKS)
+}
+
+// Spends exactly 1 Compute Core (regardless of preset — see COMPUTE_BOOST_PRESETS in layers.js)
+// and either starts a fresh boost of boostType, or — if the same type is already active — stacks
+// it: computeBoostStacks += 1 and computeBoostRemainingSeconds += the preset's own durationSeconds
+// (extending the remaining time, not resetting it). No-op (same-reference) below
+// canActivateComputeBoost's guard above.
+export const activateComputeBoost = boostType => state => {
+  if (!canActivateComputeBoost(state, boostType)) return state
+
+  const preset = COMPUTE_BOOST_PRESETS[boostType]
+  const alreadyActive = (state.intro.computeBoostType ?? null) === boostType
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      computeCores: (state.intro.computeCores ?? 0) - 1,
+      computeBoostType: boostType,
+      computeBoostStacks: alreadyActive ? (state.intro.computeBoostStacks ?? 0) + 1 : 1,
+      computeBoostRemainingSeconds: alreadyActive
+        ? (state.intro.computeBoostRemainingSeconds ?? 0) + preset.durationSeconds
+        : preset.durationSeconds,
+    },
+  }
+}
+
+// Counts the active boost's remaining duration down every tick, frozen or not (same posture as
+// every other Byte Foundry mechanic) — clears back to inactive (type null, stacks/remaining 0)
+// once it reaches 0. A same-reference no-op while no boost is active.
+export const tickComputeBoost = elapsedSeconds => state => {
+  if ((state.intro.computeBoostType ?? null) === null) return state
+
+  const remaining = (state.intro.computeBoostRemainingSeconds ?? 0) - elapsedSeconds
+  if (remaining > 0) {
+    return { ...state, intro: { ...state.intro, computeBoostRemainingSeconds: remaining } }
+  }
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      computeBoostType: null,
+      computeBoostStacks: 0,
+      computeBoostRemainingSeconds: 0,
+    },
+  }
+}
+
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
 // a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
 // should always be possible), and independently permanent from the autobuyer's own unlock (never
@@ -2026,6 +2116,10 @@ export const prestigeGame = state => {
       // over unchanged, never wiped by a real Prestige along with Memory itself.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
+      // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
+      // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an
+      // active boost is run-scoped and resets every real Prestige, unlike the Cores/Nodes it's
+      // spent from.
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused

@@ -1,8 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, STORAGE_BANK_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -384,6 +384,10 @@ const formatStorageSize = bits => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
+// Display labels for COMPUTE_BOOST_PRESETS' own keys (layers.js) — the preset objects themselves
+// are keyed by a plain lowercase identifier, not a display-ready name.
+const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
+
 // `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
 // page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
 // MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
@@ -407,6 +411,19 @@ const ByteFoundryPage = ({ game, onBack }) => {
   const storageRevealed = isStorageUnlocked(state)
   const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
+
+  // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Compute Core
+  // conversion costs more once capacity is higher) — same "no modal component to reuse, use
+  // window.confirm" rationale MainPage's own Reset button confirm already documents.
+  const handleSacrificeClick = () => {
+    const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
+    if (window.confirm(
+      `Sacrifice all of Memory to multiply capacity ×10, from ${formatBitsInNearestUnit(intro.capacity)} to ${formatBitsInNearestUnit(nextCapacity)}? ` +
+      'This is permanent and makes every future Compute Core cost more.'
+    )) {
+      actions.pickIntroCapacityMilestone()
+    }
+  }
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const investCostDisplay = formatBitsInNearestUnit(investCost)
@@ -530,7 +547,7 @@ const ByteFoundryPage = ({ game, onBack }) => {
             <Button
               aria-label="sacrifice all bits for 10x capacity"
               disabled={!canSacrifice}
-              onClick={actions.pickIntroCapacityMilestone}
+              onClick={handleSacrificeClick}
               title={
                 isFull && !canSacrifice
                   ? 'Take every other currently-available upgrade first (Invest, or build a Storage bank)'
@@ -664,6 +681,26 @@ const ByteFoundryPage = ({ game, onBack }) => {
           <StatusText>
             {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
           </StatusText>
+          <MilestonesRow>
+            {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => (
+              <Button
+                key={boostType}
+                aria-label={`activate ${boostType} compute boost`}
+                disabled={!canActivateComputeBoost(state, boostType)}
+                onClick={() => actions.activateComputeBoost(boostType)}
+                title={`Spend 1 Compute Core: ×${preset.multiplier} production for ${formatOfflineDuration(preset.durationSeconds)} — stacks up to ${COMPUTE_BOOST_MAX_STACKS}x with the same preset`}
+                type="button"
+                variant="prestige"
+              >
+                <ButtonContent>{`${COMPUTE_BOOST_LABELS[boostType]} ×${preset.multiplier}`}</ButtonContent>
+              </Button>
+            ))}
+          </MilestonesRow>
+          {intro.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
+            <StatusText aria-label="active compute boost">
+              {`${COMPUTE_BOOST_LABELS[intro.computeBoostType] ?? intro.computeBoostType} active: ×${COMPUTE_BOOST_PRESETS[intro.computeBoostType].multiplier} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left (${intro.computeBoostStacks}x stacked)`}
+            </StatusText>
+          )}
         </ComputeSection>
       )}
 
