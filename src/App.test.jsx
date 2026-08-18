@@ -532,6 +532,63 @@ test('shows no offline progress notice when there is no recorded last-save times
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
+test('catches up a real-world gap detected mid-session by the live tick loop, without a page reload', () => {
+  // Regression test: a tab/app merely backgrounded or suspended (never actually torn down) never
+  // remounts <App/>, so computeInitialGame's one-shot mount check alone would silently skip this
+  // gap entirely — the live tick loop must detect and catch it up on its own (see
+  // BACKGROUND_TICK_GAP_THRESHOLD_SECONDS in useIncrementalGame.js).
+  vi.useFakeTimers()
+  seedMainGameState({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  })
+  // No gap at mount — whatever notice appears below must come from the live tick loop, not
+  // computeInitialGame's own check.
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now()))
+
+  const { unmount } = render(<App />)
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+
+  // Jumps the clock forward 100 real seconds without advancing any pending timer (unlike
+  // vi.advanceTimersByTime, which would fire every intermediate 100ms tick along the way, exactly
+  // as an actively foregrounded tab would) — simulating the OS suspending the tab/app's timers
+  // while real time keeps passing in the background.
+  vi.setSystemTime(Date.now() + 100_000)
+  // The tick interval's own next firing sees a ~100s gap since its previous one and treats it as
+  // offline progress instead of an ordinary tick.
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+  // 100s real -> 50s simulated at 50% speed; Kilobytes' 1s tickspeed fits 50 deliveries into that
+  // window -> 5 Kilobytes x 50 deliveries = +250 money.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('250 b')
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('catches up a real-world gap as soon as the page becomes visible again, even before the tick interval next fires', () => {
+  vi.useFakeTimers()
+  seedMainGameState({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  })
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now()))
+
+  const { unmount } = render(<App />)
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+
+  vi.setSystemTime(Date.now() + 100_000)
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+  act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('250 b')
+  expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('the first time money reaches a googol, a mandatory full-screen prompt offers Prestige', async () => {
   const user = userEvent.setup()
 

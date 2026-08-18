@@ -48,9 +48,11 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "Design history & rationale",
-  "49": "dependencies",
+  "49": "ByteFoundryPage",
   "50": "formatCurrency",
-  "51": "InfoPage/index.jsx",
-  "52": "web-vitals",
-  "53": "formatBonusOrMultiplier"
+  "51": "package.json",
+  "52": "InfoPage/index.jsx",
+  "53": "formatBonusOrMultiplier",
+  "54": "formatAmount",
+  "55": "isStorageBankRedeemable"
 }

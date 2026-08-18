@@ -521,6 +521,41 @@ regardless of live tick rate. `storage.js`'s `saveGameState` stamps a separate
 returns `null` if missing (no prior save, or predates this feature) — a `null` timestamp skips offline
 progress entirely rather than guessing. `clearGameState` (via `resetGame`) removes this key too.
 
+Offline progress is detected two ways, both in `useIncrementalGame.js`, both replaying through the
+identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
+
+- **Mount-time (`computeInitialGame`).** Runs once, before the first render, comparing `Date.now()`
+  against `loadLastSaveTimestamp()`. This is the only path that can ever run when there was no prior
+  React tree at all — a real page load or PWA cold start (the app was actually closed/killed).
+- **Live tick loop (mid-session).** The `setInterval` tick effect tracks the real wall-clock time of
+  its own most recently processed tick in a local closure variable. On every firing — whether the
+  `setInterval` itself, or a `visibilitychange` listener that runs the identical check immediately
+  when `document.visibilityState` becomes `'visible'` (so a resume doesn't have to wait for the
+  interval's own next scheduled firing) — it compares `Date.now()` against that stored time. A gap
+  bigger than `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2 seconds — comfortably past ordinary
+  `setInterval` scheduling jitter, which stays within tens of ms) is replayed via
+  `computeOfflineCatchUp` instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
+  smaller runs the ordinary tick, unchanged from before. Both the interval and the visibilitychange
+  listener call the exact same function, and the tracked time is only ever restamped *after* that
+  call's own tick/catch-up work finishes, never at entry — a large catch-up replays
+  `applyOfflineProgress` one simulated second at a time (up to `MAX_OFFLINE_SECONDS` worth), which can
+  itself take real wall-clock time to compute on a slow device, and stamping at entry would let a
+  slow replay's own processing time be mistaken for a further background gap by whichever call runs
+  next. Safe specifically because this function is synchronous and JS is single-threaded — two calls
+  can never overlap, so the next one only ever starts after the previous one has fully returned and
+  already restamped the tracked time.
+
+  This second path exists because mobile browsers and installed-PWA hosts routinely throttle or fully
+  suspend a backgrounded tab's `setInterval` timer without ever tearing the page down (unlike a true
+  close/kill) — so the one-shot mount-time check above silently misses that entire gap: the app just
+  resumes ticking forward from wherever it left off once foregrounded again, with no catch-up and no
+  notice. This was a real, user-reported bug (offline progress "not working" despite being away for
+  hours) before this second detection path existed. Because of it, `offlineProgress` is **not**
+  actually one-shot per app lifetime — a single mount can produce a fresh `offlineProgress` object
+  (and re-show the "Welcome back!" notice) any number of times across a session, once per detected
+  gap; `components/OfflineProgressNotice` re-arms its own countdown/fade timing via an effect keyed
+  on the `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
+
 ### Prestige Points, autobuyer unlock, and the tickspeed multiplier
 
 Prestiging awards **Prestige Points (PP)**, a permanent, cumulative currency (`prestige.points`) that
