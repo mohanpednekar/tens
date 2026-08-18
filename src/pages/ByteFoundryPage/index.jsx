@@ -696,9 +696,9 @@ const ByteFoundryPage = ({ game, onBack }) => {
               </Button>
             ))}
           </MilestonesRow>
-          {intro.computeBoostType && (
+          {intro.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
             <StatusText aria-label="active compute boost">
-              {`${COMPUTE_BOOST_LABELS[intro.computeBoostType]} active: ×${COMPUTE_BOOST_PRESETS[intro.computeBoostType].multiplier} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left (${intro.computeBoostStacks}x stacked)`}
+              {`${COMPUTE_BOOST_LABELS[intro.computeBoostType] ?? intro.computeBoostType} active: ×${COMPUTE_BOOST_PRESETS[intro.computeBoostType].multiplier} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left (${intro.computeBoostStacks}x stacked)`}
             </StatusText>
           )}
         </ComputeSection>

@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1787034891.2228475,
-    "ast_hash": "8b06a0945a6efe1cd348e78b137e6854",
+    "mtime": 1787039495.6103065,
+    "ast_hash": "58dd7c543a5c5579004e9b268cea0279",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "src/pages/MainPage/index.jsx": {
-    "mtime": 1787034777.6028452,
-    "ast_hash": "9b4f6ce7f7eacfd2691010cf3337defb",
+    "mtime": 1787039444.2223034,
+    "ast_hash": "827605eb62ecd4e51a8e419b370dbe06",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1787034728.374844,
-    "ast_hash": "3dfaf38b65419ec02e8e7ab33f9f7ecc",
+    "mtime": 1787039431.4583027,
+    "ast_hash": "a8c2f21e7211cefe3a986a9398291ce8",
     "semantic_hash": ""
   },
   "src/components/OfflineProgressNotice/index.jsx": {

@@ -1242,9 +1242,9 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
         </HeaderMeta>
       </Header>
 
-      {state.intro?.computeBoostType && (
+      {state.intro?.computeBoostType && COMPUTE_BOOST_PRESETS[state.intro.computeBoostType] && (
         <MutedText aria-label="active compute boost">
-          {`${COMPUTE_BOOST_LABELS[state.intro.computeBoostType]} Compute Boost active: ×${COMPUTE_BOOST_PRESETS[state.intro.computeBoostType].multiplier} production, ${formatOfflineDuration(state.intro.computeBoostRemainingSeconds)} left`}
+          {`${COMPUTE_BOOST_LABELS[state.intro.computeBoostType] ?? state.intro.computeBoostType} Compute Boost active: ×${COMPUTE_BOOST_PRESETS[state.intro.computeBoostType].multiplier} production, ${formatOfflineDuration(state.intro.computeBoostRemainingSeconds)} left`}
         </MutedText>
       )}
 

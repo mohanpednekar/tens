@@ -2735,6 +2735,20 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
+
+  // Regression test: an unrecognized computeBoostType (e.g. a corrupted/hand-edited save, or a
+  // future preset rename leaving stale data behind) used to crash both pages' render by indexing
+  // COMPUTE_BOOST_PRESETS[type].multiplier without checking the preset actually exists first.
+  test('an unrecognized computeBoostType does not crash either page — the status line just stays hidden', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: 'does_not_exist', computeBoostStacks: 1 })
+    const { unmount } = render(<App />)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+    unmount()
+
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'does_not_exist', computeBoostStacks: 1 } })
+    render(<App />)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+  })
 })
 
 // --- The Byte Foundry resets and reappears after every real Prestige ---
