@@ -330,7 +330,7 @@ stays just as interactive there as on the gate itself.
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)", "Tickspeed upgrade's per-level rate is now 3% (was 1%) from 2 activations") or a "not yet
+  (Lv.1)", "+0.2% faster ticks on every tier (Lv.2)") or a "not yet
   unlocked/activated/active" status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
@@ -681,36 +681,40 @@ the Googol freeze" below).
 `lastTierUnlocked` condition (reusing the exact same `everRevealed`-flag pattern, its own
 `overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
 `speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
-match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 3%/lvl · Lv.12/20` — `actions.overclock` on click, where `{nextStep}` is
-`getGlobalTickspeedRegularStep(overclockCount + 1)` (engine.js) as a percentage — the per-level rate the
-(Money-funded) Tickspeed upgrade's own regular levels would compound at *after* this activation, reusing
-`formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting by passing it `1 + step` as if it were a
-multiplier. Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
+match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ ×{next} · Lv.{level}/{requirement}`
+— e.g. `⚡ ×1.008 · Lv.8/7` — `actions.overclock` on click, mirroring `SpeedUpButton`'s own `×{next}`
+convention rather than a percentage, since Overclock's reward is a genuine standalone multiplier now
+(see `getOverclockMultiplier` in engine.js). `{next}` is
+`getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` — what claiming right now
+would jump the multiplier to, accounting for a catch-up claim past the bare minimum requirement —
+formatted with a dedicated `formatPreciseRate` helper (3 decimal places, trimmed) rather than
+`SpeedUpButton`'s own `formatRate` (2 decimal places): Overclock's 0.1%-per-level steps
+(`OVERCLOCK_MULTIPLIER_STEP`) would otherwise round the first several claimed levels down to a bare
+"1" under 2-decimal precision, indistinguishable from no bonus at all. The same `formatPreciseRate`
+call is reused for the tier row's "Effective tickspeed" breakdown's own `overclock ×N` figure (see
+below) and the disclosure's status line, so every Overclock-specific multiplier display on the page
+uses consistent precision.
+Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
 level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
 `getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
-so the round numbers Overclock's own requirement ladder produces (10/20/30/…) show exactly as
-`engine.js` computes them, matching the same raw level number the last tier's own Details disclosure
-already shows, rather than introducing a second, differently-offset "level" reading for the same
-underlying value; see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
+so the numbers Overclock's own requirement produces show exactly as `engine.js` computes them,
+matching the same raw level number the last tier's own Details disclosure already shows, rather than
+introducing a second, differently-offset "level" reading for the same underlying value; see
+`getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
 docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Speed Up gets
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
-`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from {N}
-activation(s).`. `{currentStep}` is
-`formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate *before* the next
-Overclock (as opposed to `OverclockButton`'s own label, which always shows the *next* rate — see
-above); this is the one Overclock-specific number not otherwise visible anywhere on the Game view.
-Beyond that one figure, Overclock has no visible effect of its own to display
-separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
-per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
-`Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
-reflects Overclock's cumulative contribution once any levels are bought, with no separate "Overclock
-bonus" figure needed anywhere else in the UI besides the money-balance breakdown's own summary line
-(see below).
+`MutedText` line, `×{overclockMultiplier} faster ticks on every tier from level {N}.`, mirroring the
+money-balance breakdown's own Overclock line (see `GlobalMultipliersList` above) and the Tickspeed card's own status-line
+phrasing. Unlike an earlier version of this mechanic, this multiplier is a genuine separate factor
+from the Tickspeed card's own `Lv.N — +N% faster ticks on every tier.` status line (see "Global
+Tickspeed card" above) — the two no longer need to agree with each other to both be correct, since
+each reflects its own independent multiplier now (see each tier row's own "Effective tickspeed"
+Details line, which lists all three active multipliers, and `getEffectiveTierTickSpeedSeconds` in
+engine.js).
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
