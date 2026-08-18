@@ -1039,6 +1039,20 @@ economy is built around.
 `speedUpGame`'s reset pattern deliberately mirrors `prestigeGame`'s, matching the original framing for
 this feature: "similar to starting the first run but with automations retained and 2x the speed."
 
+**Follow-up: starting requirement raised from level 1 to level 5.** `getSpeedUpRequirement` changed
+from `speedUpCount + 2` to `speedUpCount + 6` (raw; displayed level 1 → displayed level 5 for the
+first activation), keeping the same `+1`-per-cycle escalation step — only the floor moved. This
+session attempted to re-run the `simulate-run-times` bot to get updated pacing figures the way the
+original tuning above did, but the skill's `run-simulation.mjs` bot script is currently broken
+against the live engine — it imports a `buyAutobuyerUnlock` export from `engine.js` that no longer
+exists (autobuyer unlocking moved to automatic prestige-count milestones a while back; see this
+file's own tier-autobuyer-milestone entries), so it fails before simulating anything, independent of
+this change. That's a pre-existing skill/engine drift, not something this session introduced. A
+future session updating that skill script (or re-validating pacing another way) should fold real
+numbers in here; until then, treat the +4-level shift as untested against the "no run hits the
+5,000,000-tick safety cap" bar the original tuning above was held to, though the same `+1`-per-cycle
+escalation reasoning that made the original level-1 floor work continues to apply at a level-5 floor.
+
 ### Why `speedUpCount` now resets on Prestige, reversing the original design
 
 For most of this mechanic's life, `speedUpCount` (and the `2^speedUpCount` multiplier it drives) was
@@ -1543,6 +1557,51 @@ existing global-multiplier factor removed the hidden third factor the display te
 rather than requiring a separate display fix. **Don't reintroduce a standalone Overclock multiplier** —
 if a future request sounds like "Overclock should add its own bonus," re-confirm against this file
 first, since that reading was already tried, shipped, and specifically walked back.
+
+### Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework
+
+The entry above explicitly warns against reintroducing a standalone Overclock multiplier. This entry
+records the case where that warning was shown to the maintainer directly during planning, and they
+confirmed — after two rounds of clarification — that they wanted it back anyway, alongside a broader
+rework of how Overclock is claimed. **This is not the earlier mistake repeated; it's a deliberate,
+informed reversal.** A future session should treat this entry, not the one above, as the current
+guidance for Overclock's reward shape — the entry above stays only as the historical record of *why*
+the fold-in design was chosen the first time.
+
+Three changes shipped together:
+
+1. **Reward**: back to a standalone `getOverclockMultiplier(overclockCount) = (1 +
+   OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.001`), a genuine third
+   factor in `getEffectiveTierTickSpeedSeconds` alongside the per-tier and global tickspeed
+   multipliers — exactly the shape the entry above reverted away from.
+   `getGlobalTickspeedProductionMultiplier` drops its `overclockCount` parameter entirely and goes
+   back to a plain function of `level`. The direct behavioral consequence the entry above called out
+   (Overclock has zero effect while the global tickspeed multiplier is still at level 0) is gone as a
+   side effect — Overclock's own factor now applies unconditionally, regardless of that other track's
+   state. The display bug the original revert fixed (a tier row's "Effective tickspeed" breakdown only
+   showing two of three active multipliers) had to be avoided again on this reintroduction —
+   `MainPage`'s breakdown line now explicitly lists all three factors (`tier ×N, global ×N, overclock
+   ×N`) rather than reusing the two-factor text unchanged.
+2. **Requirement**: `getOverclockRequirement` keeps its existing `(overclockCount + 1) *
+   OVERCLOCK_REQUIREMENT_STEP` formula, but `OVERCLOCK_REQUIREMENT_STEP` drops from a fixed 10 to 1 —
+   collapsing the old "much steeper, non-shrinking +10-per-activation ladder" (level 10, 20, 30, …)
+   down to the same `+1`-per-cycle shape `getSpeedUpRequirement` already uses (level 1, 2, 3, …),
+   just without Speed Up's own display offset. The maintainer's framing was "no levels concept at
+   all" beyond the last tier's own level — the intent being that the last tier's own (already steep)
+   cost curve should be what gates Overclock, not an additional artificial multiplier stacked on top
+   of it.
+3. **Claim behavior — genuinely new, not a revert of anything**: `overclockGame` used to increment
+   `overclockCount` by exactly 1 per activation. It now sets `overclockCount` to
+   `state.purchaseLevels[lastTier.id]` directly — the last tier's level *at the moment of the claim*.
+   Combined with the requirement dropping to a `+1` ladder, this means a player who falls behind (last
+   claimed at level 5, but the last tier has since reached level 8, e.g. from letting an autobuyer run
+   unattended) catches all the way up to level 8 in a single claim rather than needing three separate
+   ones. The eligibility check still guarantees the jump is always at least a +1 gain over the previous
+   `overclockCount`, so this can never move Overclock backwards.
+
+Everything else about `overclockGame` (the full soft-reset shape, which permanent flags/levels carry
+over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
+— only the reward formula, the requirement step size, and the claim's target value changed.
 
 ### The 1000-Byte Invest tier drops from two claims to one
 

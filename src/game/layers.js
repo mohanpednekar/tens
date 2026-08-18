@@ -334,29 +334,24 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
-// Per-activation boost to the (Money-funded) global tickspeed multiplier's own per-level step —
-// see engine.js's getGlobalTickspeedRegularStep/getGlobalTickspeedProductionMultiplier/
-// overclockGame — a second, much steeper Speed-Up-style soft reset. Each Overclock activation adds
-// another OVERCLOCK_PRODUCTION_STEP (1 percentage point) directly onto
-// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), permanently raising the rate every *future* regular level
-// of the global tickspeed multiplier compounds at — 1% per level with no activations, 2% after
-// the first, 3% after the second, and so on (a milestone level's own 10% step,
-// GLOBAL_TICKSPEED_MILESTONE_STEP, is unaffected). This is deliberately NOT a separate multiplier
-// stacked on top the way Speed Up's own production multiplier is — it reshapes the existing global
-// tickspeed track's own growth curve instead, so a level already bought before an Overclock
-// activation retroactively compounds at the new, higher rate from then on, same as every other
-// level. Equal in size to GLOBAL_TICKSPEED_PRODUCTION_STEP itself — Overclock's value is in how
-// permanent and stackable it is (state.overclockCount is never reset by an ordinary Speed Up,
-// unlike globalTickspeedMultiplier itself — see speedUpGame), on top of already doubling the
-// regular step's own growth rate per activation.
-export const OVERCLOCK_PRODUCTION_STEP = 0.01
-// How many more levels the last tier must reach before Overclock can activate again: a fixed
-// 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
-// steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
-// (see getSpeedUpRequirement) — reflecting that Overclock resets everything Speed Up does *and*
-// wipes Speed Up's own stacking bonus (state.speedUpCount) on top, so it needs to be substantially
-// more expensive to reach each time.
-export const OVERCLOCK_REQUIREMENT_STEP = 10
+// Per-level base for Overclock's own standalone reward multiplier — see engine.js's
+// getOverclockMultiplier/getEffectiveTierTickSpeedSeconds/overclockGame — a second, steeper
+// Speed-Up-style soft reset. Each claimed Overclock level compounds a further OVERCLOCK_MULTIPLIER_STEP
+// (0.1%) onto a genuine third tickspeed factor, applied alongside (not folded into) the per-tier and
+// global tickspeed multipliers — so it applies even before the global tickspeed multiplier has ever
+// been bought, unlike an earlier version of this mechanic that folded the bonus into that track's
+// own per-level step instead (see docs/DESIGN_HISTORY.md for why this moved back to a standalone
+// factor). state.overclockCount is never reset by an ordinary Speed Up, unlike
+// globalTickspeedMultiplier itself — see speedUpGame.
+export const OVERCLOCK_MULTIPLIER_STEP = 0.001
+// How many more levels the last tier must reach before the next Overclock level can be claimed: one
+// more than the last claimed level (see engine.js's getOverclockRequirement) — the same
+// +1-per-cycle shape Speed Up's own requirement uses (see getSpeedUpRequirement), just without its
+// display offset. There's no artificial ladder beyond the last tier's own level; that tier's already
+// steep cost curve is what makes reaching each successive level meaningfully harder. A claim jumps
+// straight to the last tier's current level (see overclockGame), so falling behind never requires
+// claiming every intermediate level one at a time.
+export const OVERCLOCK_REQUIREMENT_STEP = 1
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up

@@ -38,7 +38,7 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
-  "39": "OfflineProgressNotice/index.jsx",
+  "39": "storage.js",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -48,13 +48,13 @@
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
   "48": "clampNonNegative",
-  "49": "ByteFoundryPage",
+  "49": "InfoPage/index.jsx",
   "50": "formatCurrency",
-  "51": "InfoPage/index.jsx",
+  "51": "package.json",
   "52": "tickGame",
   "53": "formatBonusOrMultiplier",
-  "54": "formatAmount",
-  "55": "isStorageBankRedeemable",
-  "56": "dependencies",
-  "57": "run-simulation.mjs"
+  "54": "Design history & rationale",
+  "55": "getTierCost",
+  "56": "web-vitals",
+  "57": "isProductionFrozen"
 }

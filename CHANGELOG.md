@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Compute Boost**: spend 1 Compute Core to temporarily multiply both Memory's own production (Byte Foundry) and Kilobytes' production (the main game) at once — pick Burst (×16 for 10 seconds), Standard (×4 for 1 minute), or Sustain (×2 for 10 minutes) from the new buttons in the Compute section. Only one preset type can run at a time, but activating the same type again while it's active stacks up to 10 times to extend the remaining duration instead of resetting it. A status line on the Byte Foundry screen shows the active preset, multiplier, and time left; the main game page shows a matching read-only line while Kilobytes' own production is boosted.
 
 ### Changed
+- **Overclock**'s requirement and reward both reworked: instead of a fixed +10-level-per-activation
+  ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
+  claim (level 1, 2, 3, …) — and a claim jumps straight to the last tier's current level, so falling
+  behind never means claiming every intermediate level one at a time. The reward is now a standalone
+  ×1.001-per-level multiplier (compounding independently of the Money-funded Tickspeed upgrade)
+  instead of a +1-percentage-point boost to that upgrade's own per-level rate — it now applies even
+  before any Tickspeed level has been bought. Everything else (the full tiers/resources reset,
+  wiping Speed Up's own stacking bonus) is unchanged.
+- **Speed Up**'s first activation now requires the last tier to reach level 5 instead of level 1;
+  each subsequent activation still needs exactly one more level than the last.
 - Every tier's per-level cost now scales along a Fibonacci-driven exponent sequence (1, 2, 3, 5, 8, 13, … per level, versus a flatter triangular-number sequence before) — costs grow the same way through level 2, then noticeably faster from level 3 on, and skip specific round numbers along the way (e.g. a level costing exactly 1,000,000× `baseCost` never occurs — the sequence jumps straight from 100,000× to 10,000,000×).
 - **Sacrifice for 10x Capacity** is now offered only once every other currently-possible Byte Foundry action has been taken first — Combine into a Byte, Invest for Double Production, and building a Storage bank (once revealed) all block it while any of them is still affordable. Since Invest's own cost ladder tracks capacity's own growth, claiming the current Invest tier is now effectively a required click before Sacrificing again most cycles. Clicking it now also asks for confirmation first, spelling out that it's permanent and makes future Compute Cores cost more.
 - The Byte Foundry no longer disappears once the main game is unlocked — a new "⚙️ Byte Foundry" link beside the page title reopens it at any time, and it stays every bit as interactive there as it is on the mandatory gate (Tap/Sacrifice/Invest/Convert never stop working — there's no per-cycle cap on transfers), with its own "← Back to game" exit. It's still a mandatory gate whenever a fresh Kilobyte run is needed (before your very first Kilobytes, and after every Prestige), just no longer a one-time screen you can never see again once past it.

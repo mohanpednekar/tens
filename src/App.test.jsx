@@ -312,19 +312,18 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
   expect(megabytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
 })
 
-test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost to the global multiplier, not a hidden separate factor', async () => {
-  // Regression test for a real bug: an earlier version applied Overclock as its own third
-  // multiplier inside getEffectiveTierTickSpeedSeconds, but this breakdown line's "global ×N"
-  // parenthetical only ever showed two factors — silently disagreeing with the actual computed
-  // effective tickspeed once overclockCount > 0. Overclock's effect is now folded directly into
-  // the global tickspeed multiplier itself, so both figures below must agree by construction.
+test('a tier row\'s "Effective tickspeed" breakdown shows Overclock as its own separate factor, not folded into the global multiplier', async () => {
+  // Regression test for a real bug the underlying formula change reintroduces the shape of: a
+  // standalone Overclock factor inside getEffectiveTierTickSpeedSeconds must be reflected as its
+  // OWN parenthetical entry here, distinct from "global ×N" — the two figures must agree with the
+  // actual three-factor computation by construction, not silently drop the third factor.
   const user = userEvent.setup()
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
-    overclockCount: 1, // boosts the regular step from 1% to 2% per level
+    overclockCount: 10, // a standalone ×1.001^10 ≈ ×1.01 factor, unrelated to the global multiplier
   }))
 
   render(<App />)
@@ -332,10 +331,9 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
   await user.click(within(kilobytesLayer).getByRole('button', { name: /kilobytes/i }))
 
-  // 1.02^9 ≈ 1.19511 — the global figure must reflect the BOOSTED step (2%), not the
-  // pre-Overclock baseline (1.01^9 ≈ 1.0937) — the effective period below (base 1s / 1.19511)
-  // only matches the boosted value.
-  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.84s \(tier ×1, global ×1\.2\)/i)
+  // global stays at the unboosted 1.01^9 ≈ 1.09 (Overclock no longer touches this track's step);
+  // overclock is its own ×1.001^10 ≈ 1.01 factor; effective period = 1s / (1.09 * 1.01) ≈ 0.91s.
+  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.09, overclock ×1\.01\)/i)
 })
 
 test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
@@ -680,32 +678,32 @@ test('the Speed Up panel appears once the last tier unlocks, with the button dis
   render(<App />)
 
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeDisabled()
 })
 
 test('the Speed Up button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 6 },
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeEnabled()
 })
 
-test('the second Speed Up requires one more level than the first, not the same level 1', () => {
+test('the second Speed Up requires one more level than the first, not the same level 5', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 6 },
     speedUpCount: 1,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })
+  const button = screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /speed up \(requires quettabytes level 1\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /speed up \(requires quettabytes level 5\b/i })).not.toBeInTheDocument()
 })
 
 test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
@@ -717,12 +715,12 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
   })
   render(<App />)
 
-  // Third activation requires the last tier to reach level 3 (Lv.1/3) and would raise the
+  // Third activation requires the last tier to reach level 7 (Lv.1/7) and would raise the
   // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires quettabytes level 3\) — doubles production speed to ×8/i,
+    name: /speed up \(requires quettabytes level 7\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/3')
+  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/7')
 })
 
 test('the speed up and overclock panels render below the tier list, not above it', () => {
@@ -755,7 +753,7 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
 
   // The top panel's own Speed Up button is a separate element doing something else entirely
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires quettabytes level 1/i })
+  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires quettabytes level 5/i })
   expect(panelSpeedUpButton).not.toBe(rowXpButton)
 })
 
@@ -765,11 +763,11 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 6 },
   })
   render(<App />)
 
-  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })
+  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })
   expect(speedUpButton).toBeEnabled()
 
   await user.click(speedUpButton)
@@ -777,10 +775,10 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Speed Up resets owned counts too, so the last tier is no longer unlocked — but since the
   // panel was already revealed once, it stays visible (in a disabled state) rather than
-  // disappearing again until the player climbs back up to it. The next cycle now requires level 2
+  // disappearing again until the player climbs back up to it. The next cycle now requires level 6
   // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
   expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })).toBeDisabled()
 })
 
 test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
@@ -789,7 +787,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 6 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -798,7 +796,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i }))
+  await user.click(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i }))
 
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -815,7 +813,7 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeDisabled()
 })
 
 test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
@@ -842,60 +840,62 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 9 },
+    purchaseLevels: { tier09: 3, tier10: 3 },
+    overclockCount: 3,
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 4/i })).toBeDisabled()
 })
 
 test('the Overclock button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 10 },
+    purchaseLevels: { tier09: 3, tier10: 4 },
+    overclockCount: 3,
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 4/i })).toBeEnabled()
 })
 
-test('the second Overclock requires 10 more levels than the first, not the same level 10', () => {
+test('the second Overclock requires one more level than the first, not the same level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 15 },
+    purchaseLevels: { tier09: 3, tier10: 1 },
     overclockCount: 1,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 20/i })
+  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 2/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 10\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })).not.toBeInTheDocument()
 })
 
-test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
+test('the Overclock button shows the next multiplier and requirement progress on itself, using the raw (non-offset) tier level', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 12 },
-    overclockCount: 1,
+    purchaseLevels: { tier09: 3, tier10: 8 },
+    overclockCount: 5,
   })
   render(<App />)
 
-  // Second activation requires the last tier to reach raw level 20 (Lv.12/20, not Lv.11/19 —
-  // Overclock's requirement is deliberately not given Speed Up's -1 "completed blocks" display
-  // offset, see getOverclockRequirement in engine.js) and would raise the Tickspeed upgrade's own
-  // per-level rate to 3% (from the current 2%, one activation in) — both shown on the button
-  // itself, no separate status text line.
+  // Next claim requires the last tier to reach raw level 6 (Lv.8/6, not a "completed blocks"
+  // display offset — see getOverclockRequirement in engine.js) but a claim right now would jump
+  // straight to level 8 (the last tier's own current level, ahead of the bare minimum), raising
+  // the standalone Overclock multiplier to ×1.01 (1.001^8) — both shown on the button itself, no
+  // separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 3%/i,
+    name: /overclock \(requires quettabytes level 6\) — resets speed up's bonus and raises the standalone overclock multiplier to ×1\.01/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 3%/lvl · Lv.12/20')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.01 · Lv.8/6')
 })
 
-test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once activated', () => {
+test('the Overclock card\'s disclosure states the current standalone multiplier once claimed', () => {
   // The disclosure's live-state line stays in the DOM (queryable via toHaveTextContent) even
   // while collapsed by default — same convention every other live-state disclosure on this page
   // follows — so no expand click is needed here.
@@ -903,35 +903,35 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
     resources: { Ones: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 12 },
-    overclockCount: 1,
+    overclockCount: 10,
   })
 
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 2% \(was 1%\) from 1 activation\./i)
+  expect(panel).toHaveTextContent(/×1\.01 faster ticks on every tier from level 10\./i)
 })
 
-test('the Overclock card\'s disclosure shows no per-level rate line before the first activation', () => {
+test('the Overclock card\'s disclosure shows no multiplier line before the first claim', () => {
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 5 },
+    purchaseLevels: { tier09: 3, tier10: 1 },
   })
 
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).not.toHaveTextContent(/per-level rate/i)
+  expect(panel).not.toHaveTextContent(/faster ticks/i)
 })
 
-test('clicking Overclock once eligible resets resources, wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
+test('clicking Overclock once eligible jumps overclockCount straight to the last tier\'s current level (catch-up), wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier10: 10 },
+    purchaseLevels: { tier10: 8 },
     speedUpCount: 5,
   })
   render(<App />)
@@ -939,7 +939,7 @@ test('clicking Overclock once eligible resets resources, wipes the Speed Up bonu
   // speedUpCount 5 → next activation would raise the multiplier to ×64 (getSpeedUpMultiplier(6)).
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×64')
 
-  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })
+  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })
   expect(overclockButton).toBeEnabled()
 
   await user.click(overclockButton)
@@ -947,11 +947,13 @@ test('clicking Overclock once eligible resets resources, wipes the Speed Up bonu
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
-  // disappearing again. Overclock's own next cycle now requires level 20 (overclockCount
-  // incremented to 1 — see getOverclockRequirement), and Speed Up's own stacking bonus is wiped
-  // back to ×2 (speedUpCount reset to 0, so the *next* activation would only reach ×2 again).
+  // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
+  // claim time), not just to 1, so the next cycle now requires level 9 — and Speed Up's own
+  // stacking bonus is wiped back to ×2 (speedUpCount reset to 0, so the *next* activation would
+  // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 20/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 9/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from level 8\./i)
   expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×2')
 })
 
@@ -964,7 +966,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 1\b/i })).toBeDisabled()
 })
 
 test('the PP Upgrades page groups purchases into labeled categories', async () => {
@@ -1073,7 +1075,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   seedMainGameState({
     resources: { Ones: 12345 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier09: 3, tier10: 6 },
     autoSpeedUp: true,
     autoSpeedUpEnabled: false,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
@@ -1082,7 +1084,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   // Still eligible (purchaseLevels.tier10 untouched) since Auto Speed Up starts paused.
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 1/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
@@ -1091,9 +1093,9 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   fireEvent.click(screen.getByRole('tab', { name: /game/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 2.
+  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 6.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -1915,7 +1917,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 1 on quettabytes\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 5 on quettabytes\)/i)
   expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })
 
@@ -1935,7 +1937,7 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
 })
 
-test('the money balance breakdown\'s Overclock line reports the boosted per-level Tickspeed rate once active, not a standalone bonus percentage', async () => {
+test('the money balance breakdown\'s Overclock line reports its own standalone multiplier, not the Tickspeed upgrade\'s rate', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1949,7 +1951,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: tickspeed upgrade's per-level rate is now 3% \(was 1%\) from 2 activations/i
+    /overclock: \+0\.2% faster ticks on every tier \(lv\.2\)/i
   )
 })
 
