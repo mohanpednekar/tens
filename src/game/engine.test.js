@@ -2272,10 +2272,29 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(2000)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 20)
   })
 
-  it('no longer takes an overclockCount parameter — Overclock is a standalone multiplier now, not folded into this track\'s own step', () => {
-    // A second argument, if passed, is simply ignored — the regular step is always the flat 1%.
-    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo(1.01 ** 9)
+  it('defaults to no Overclock boost (the pre-Overclock 1% regular step) when overclockCount is omitted', () => {
+    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
+  })
+
+  it('multiplies the REGULAR step by getOverclockMultiplier(overclockCount) once overclockCount > 0', () => {
+    // overclockCount 5 -> getOverclockMultiplier(5) = 1.1^5 = 1.61051, so the regular step becomes
+    // 0.01 * 1.61051 = 0.0161051 (1.61051%) instead of the flat 1%.
+    const boostedRegularStep = 0.01 * 1.1 ** 5
+    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo((1 + boostedRegularStep) ** 9)
+  })
+
+  it('multiplies the MILESTONE step by the same Overclock factor, not just the regular step', () => {
+    const overclockFactor = 1.1 ** 5
+    const boostedRegularStep = 0.01 * overclockFactor
+    const boostedMilestoneStep = 0.10 * overclockFactor
+    // Level 10 = 9 regular levels (boosted) + 1 milestone level (also boosted).
+    expect(getGlobalTickspeedProductionMultiplier(10, 5))
+      .toBeCloseTo((1 + boostedRegularStep) ** 9 * (1 + boostedMilestoneStep))
+  })
+
+  it('is still 1 (no bonus) at level 0 regardless of overclockCount', () => {
     expect(getGlobalTickspeedProductionMultiplier(0, 5)).toBe(1)
+    expect(getGlobalTickspeedProductionMultiplier(null, 5)).toBe(1)
   })
 })
 
@@ -2284,10 +2303,10 @@ describe('getOverclockMultiplier', () => {
     expect(getOverclockMultiplier(0)).toBe(1)
   })
 
-  it('compounds 0.1% (OVERCLOCK_MULTIPLIER_STEP) per claimed level', () => {
-    expect(getOverclockMultiplier(1)).toBeCloseTo(1.001)
-    expect(getOverclockMultiplier(2)).toBeCloseTo(1.001 ** 2)
-    expect(getOverclockMultiplier(10)).toBeCloseTo(1.001 ** 10)
+  it('compounds ×1.1 (1 + OVERCLOCK_MULTIPLIER_STEP) per claimed level', () => {
+    expect(getOverclockMultiplier(1)).toBeCloseTo(1.1)
+    expect(getOverclockMultiplier(2)).toBeCloseTo(1.1 ** 2)
+    expect(getOverclockMultiplier(10)).toBeCloseTo(1.1 ** 10)
   })
 
   it('treats a negative count as 0', () => {
@@ -2684,21 +2703,23 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed)
   })
 
-  it('applies Overclock\'s standalone multiplier alongside an already-bought global tickspeed level', () => {
-    // 5 claimed Overclock levels compound 1.001^5 as a genuine third factor, on top of the global
-    // tickspeed multiplier's own unaffected 1% regular step.
+  it('boosts the global tickspeed multiplier\'s own regular step once claimed, when a level is already bought', () => {
+    // 5 claimed Overclock levels multiply the regular 1% step by getOverclockMultiplier(5) = 1.1^5,
+    // folded directly into the global tickspeed multiplier itself — not a separate factor.
     const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9 * 1.001 ** 5))
+    const boostedRegularStep = 0.01 * 1.1 ** 5
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1 + boostedRegularStep) ** 9)
   })
 
-  it('applies Overclock\'s standalone multiplier even while the global tickspeed multiplier is still at level 0/not yet bought', () => {
-    // Unlike the old folded-in-step design, Overclock's reward is a genuine separate factor, so it
-    // has an effect regardless of whether the global tickspeed track has ever been bought.
+  it('has no effect at all while the global tickspeed multiplier is still at level 0/not yet bought', () => {
+    // Overclock only boosts the per-level step of an existing global tickspeed level — with 0
+    // levels bought, there's nothing for that boosted step to compound over, so the effective
+    // tickspeed is unaffected regardless of overclockCount.
     const state = withOverclockCount(createInitialGameState(), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.001 ** 5))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
 
-  it('stacks Overclock\'s multiplier with both the per-tier and global tickspeed multipliers', () => {
+  it('stacks the boosted global tickspeed step multiplicatively with the per-tier tickspeed multiplier', () => {
     const state = withOverclockCount(
       withGlobalTickspeedMultiplier(
         withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
@@ -2706,8 +2727,9 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       ),
       5
     )
+    const boostedRegularStep = 0.01 * 1.1 ** 5
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id))
-      .toBeCloseTo(1 / (1.1 * 1.01 ** 9 * 1.001 ** 5))
+      .toBeCloseTo(1 / (1.1 * (1 + boostedRegularStep) ** 9))
   })
 
   it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {
