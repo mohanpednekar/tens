@@ -1,7 +1,7 @@
 {
   "0": "engine.test.js",
   "1": "MainPage/index.jsx",
-  "2": "layers.js",
+  "2": "engine.js",
   "3": "Money/index.js",
   "4": "App.jsx",
   "5": "Button/index.jsx",
@@ -38,7 +38,6 @@
   "36": "graphify reference: incremental update and cluster-only",
   "37": "simulate-run-times/SKILL.md",
   "38": "pull_request_template.md",
-  "39": "tickGame",
   "40": "graphify reference: GitHub clone and cross-repo merge",
   "41": "graphify reference: transcribe video and audio",
   "42": "Copilot Instructions",
@@ -47,16 +46,11 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
-  "48": "engine.js",
+  "48": "StoragePage/index.jsx",
   "49": "InfoPage/index.jsx",
-  "50": "formatCurrency",
   "51": "dependencies",
-  "52": "clampNonNegative",
   "53": "formatBonusOrMultiplier",
   "54": "Design history & rationale",
   "55": "OfflineProgressNotice/index.jsx",
-  "56": "web-vitals",
-  "57": "run-simulation.mjs",
-  "58": "ByteFoundryPage",
-  "61": "formatAmount"
+  "56": "web-vitals"
 }

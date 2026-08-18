@@ -1921,8 +1921,11 @@ export const isComputeBoostTurnAvailable = (state, boostType) =>
   canActivateComputeBoost(state, boostType) &&
   !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state) && !isStorageBankBuildAvailable(state)
 
-// Whether ANY Compute Boost preset currently has its turn — used to gate the Compute screen's own
-// nav entry point on ByteFoundryPage.
+// Whether ANY Compute Boost preset currently has its turn — the Compute-level analogue of the
+// other four forced-priority "turn" predicates above. NOT used to gate ComputePage's own nav
+// button on ByteFoundryPage, which stays enabled once revealed regardless of turn (see "Byte
+// Foundry" in CLAUDE.md for why) — only the individual preset buttons inside ComputePage gate on
+// isComputeBoostTurnAvailable directly, per preset.
 export const isComputeUpgradeTurnAvailable = state =>
   Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType))
 

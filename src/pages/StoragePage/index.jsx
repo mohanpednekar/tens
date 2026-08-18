@@ -177,7 +177,7 @@ const StoragePage = ({ game, onBack }) => {
             ? 'Take Bandwidth (or redeem a full Storage Bank) first'
             : storageBankRedeemableNow
               ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
-              : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost reaches it`
+              : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost matches it`
         }
         type="button"
         variant={canBuildStorageBank ? 'info' : 'neutral'}
@@ -224,7 +224,7 @@ const StoragePage = ({ game, onBack }) => {
                       isFull
                         ? (redeemable
                           ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
-                          : `Redeemable once Kilobytes' level cost reaches ${formatStorageSize(size)}`)
+                          : `Redeemable once Kilobytes' level cost matches ${formatStorageSize(size)}`)
                         : isEmpty
                           ? 'Built, waiting for Memory to auto-fill it'
                           : 'Not yet built'
