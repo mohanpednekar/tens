@@ -100,8 +100,8 @@ more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
 whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
-1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
-skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
+100,000/"100 KB", then 10,000,000/"10 MB" — skipping 1,000,000/"1 MB", since `tier01`'s own
+cost-epoch exponent sequence skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
 the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
 cost itself (parenthesized in the label, and in the button's `title`) renders via
 `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same
@@ -151,7 +151,7 @@ mechanic.
 
 Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
-`SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
+`SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
 own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
 `blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
@@ -330,7 +330,7 @@ stays just as interactive there as on the gate itself.
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)", "Tickspeed upgrade's per-level rate is now 1.2% (was 1%) from 2 activations") or a "not yet
+  (Lv.1)", "Tickspeed upgrade's per-level rate is now 3% (was 1%) from 2 activations") or a "not yet
   unlocked/activated/active" status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
@@ -682,7 +682,7 @@ the Googol freeze" below).
 `overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
 `speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
 match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 1.2%/lvl · Lv.12/20` — `actions.overclock` on click, where `{nextStep}` is
+— e.g. `⚡ 3%/lvl · Lv.12/20` — `actions.overclock` on click, where `{nextStep}` is
 `getGlobalTickspeedRegularStep(overclockCount + 1)` (engine.js) as a percentage — the per-level rate the
 (Money-funded) Tickspeed upgrade's own regular levels would compound at *after* this activation, reusing
 `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting by passing it `1 + step` as if it were a

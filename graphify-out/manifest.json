@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1786994156.8928704,
-    "ast_hash": "0287c524143f5ca2829afe1174a7ba9f",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "30af1a53d6e37197285c60a23c109abb",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
@@ -85,23 +85,23 @@
     "semantic_hash": "ac3dd0faabd148bbc7e29d97f4540faf"
   },
   "src/game/engine.js": {
-    "mtime": 1786993759.6328795,
-    "ast_hash": "716fb67d33e63135fad01f32137f7794",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "d01f7c6fa6084c06c4bb81f023d61d55",
     "semantic_hash": ""
   },
   "src/game/engine.test.js": {
-    "mtime": 1786994142.6128707,
-    "ast_hash": "716a84c05916446eb4baced4debfd2b2",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "66e01932ffeb9c047480caf453f67c2b",
     "semantic_hash": ""
   },
   "src/game/layers.js": {
-    "mtime": 1786993759.6328795,
-    "ast_hash": "a395e956168b8c9bbb21d231a212aff0",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "4d2353d9026138509e34d8355379f6ef",
     "semantic_hash": ""
   },
   "src/game/layers.test.js": {
-    "mtime": 1786993759.6328795,
-    "ast_hash": "6df53b490ec8569bab5396df7afc8ee8",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "e91d0440b4bca406604ea5ce7e2a04d8",
     "semantic_hash": ""
   },
   "src/game/storage.js": {
@@ -115,7 +115,7 @@
     "semantic_hash": ""
   },
   "src/game/useIncrementalGame.js": {
-    "mtime": 1786994858.8368542,
+    "mtime": 1786995371.1368425,
     "ast_hash": "92917801dae406c874fb3102990ec2e7",
     "semantic_hash": ""
   },
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   ".claude/skills/file-task-issue/SKILL.md": {
-    "mtime": 1786375844.9171648,
-    "ast_hash": "1d5300b13ee10914a98f670a1001dab3",
+    "mtime": 1787028824.3179083,
+    "ast_hash": "e8dbe9291d648f863e48e1fde2052910",
     "semantic_hash": ""
   },
   ".claude/skills/graphify/SKILL.md": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/autonomous-pr-followup.yml": {
-    "mtime": 1786375844.925634,
-    "ast_hash": "3cc756be2da31d8cc9d34ec037369cc5",
+    "mtime": 1787028824.3179083,
+    "ast_hash": "55ba9f08abd5783e984e73101750fc3a",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -315,13 +315,13 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1786993759.6808794,
-    "ast_hash": "c8b4d4184df6965115e8e0fc64927669",
+    "mtime": 1787028855.5219102,
+    "ast_hash": "76f203f18339882e9025132417aa0d32",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786993781.748879,
-    "ast_hash": "9076f494e26393b1803934ffe7447128",
+    "mtime": 1787028824.3219082,
+    "ast_hash": "a7b912ebe44239f96233ca3cb0c237b9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -335,23 +335,23 @@
     "semantic_hash": ""
   },
   "docs/COMPONENTS_REFERENCE.md": {
-    "mtime": 1786993759.6808794,
+    "mtime": 1786995371.1288426,
     "ast_hash": "b93a6b9adc638f96a85d5eb05f06da60",
     "semantic_hash": ""
   },
   "docs/DESIGN_HISTORY.md": {
-    "mtime": 1786993759.6208794,
-    "ast_hash": "19a47cd0182004439a69272fa0a4dca1",
+    "mtime": 1787028824.3219082,
+    "ast_hash": "74cbd3a7e6551cf0ff0279382fb8d947",
     "semantic_hash": ""
   },
   "docs/ECONOMY_REFERENCE.md": {
-    "mtime": 1786994870.456854,
-    "ast_hash": "49653611814c3d23df58d8395dc6a8c9",
+    "mtime": 1787028824.3219082,
+    "ast_hash": "304271d91860fe44fc8cdeac4172c3b7",
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1786993759.6208794,
-    "ast_hash": "3099b31cc8d95bc10897a6fa3b0b1fb6",
+    "mtime": 1787028824.3219082,
+    "ast_hash": "f6febe14ad35a58fabf1d8374dc71057",
     "semantic_hash": ""
   },
   "docs/PWA_REFERENCE.md": {
@@ -395,12 +395,12 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1786993759.6328795,
-    "ast_hash": "a3f24c37f74fd217b0ccd4b08c940f33",
+    "mtime": 1787028824.3419082,
+    "ast_hash": "9470052281e91c8da7ce4eb2db21d89d",
     "semantic_hash": ""
   },
   "src/components/OfflineProgressNotice/index.jsx": {
-    "mtime": 1786993759.6888795,
+    "mtime": 1786995371.1328425,
     "ast_hash": "4e844423d1cbe3ff15104965c0cedb43",
     "semantic_hash": ""
   }

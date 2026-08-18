@@ -80,6 +80,14 @@ an explicit workflow file.
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
+PRs are opened as drafts by default, but a draft should only stay a draft while there's real,
+known work still pending on it — a queued follow-up commit, a fix still being written, tests that
+haven't been run yet. The moment a PR reflects genuinely finished work (its own local checks pass
+and nothing further is planned), mark it ready for review — don't leave it sitting in draft once
+there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
+indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
+every PR in this repo, autonomous or interactive.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
 bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
 confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
@@ -117,6 +125,52 @@ full issue-template section-by-section guidance, size/priority labeling, the con
 grouping, the narrow cases where an issue needs no PR, and the "specs go stale" lesson learned from
 issues like #45/#138 whose bodies described UI that had since been rebuilt out from under them. Also
 useful when reviewing/tightening an existing issue's spec before it's picked back up.
+
+## Issue tracking for interactive sessions
+
+Every session that does non-trivial work — interactive sessions, not only `autonomous-maintenance.yml`
+runs — files a GitHub issue to track that work and keeps it updated as the session progresses, giving
+interactive work the same at-a-glance visibility the automation's `claude-task` backlog already has.
+File it as soon as the scope is clear (before or alongside the first commit); the `file-task-issue`
+skill's (`.claude/skills/file-task-issue/SKILL.md`) template conventions (Goal/Context/Spec sections)
+make a good tracking-issue body even when the issue isn't a backlog item. **Don't** apply the
+`claude-task` label to it — that label is reserved for items meant for `autonomous-maintenance.yml`'s
+Phase A backlog, and labeling a live interactive tracking issue that way would make the automation try
+to pick it up as unclaimed work. For that reason, don't file it from the `claude-task.yml` issue
+template either — its frontmatter auto-applies the `claude-task` label — file a blank issue and borrow
+the template's section structure by hand instead. Comment on the issue at meaningful status changes
+(PR opened, a review round landed, work blocked/descoped) and close it once the PR merges or the task
+otherwise concludes.
+
+For work that naturally splits into multiple pieces, file a parent "epic" issue and attach each piece
+as a GitHub sub-issue of it — the same convention as the `file-task-issue` skill's "Epics and
+sub-issues" section (see #87–#92, #132) — so the whole effort collapses to one row and its status is
+legible without opening every sub-issue. A trivial, one-off change (a typo fix, answering a question
+with no code change, a tiny doc-only tweak) doesn't need a tracking issue — use judgment; the point is
+visibility into real work, not process overhead on everything.
+
+For work large enough to benefit from it — roughly the existing `size:M`/`size:L` threshold from the
+`file-task-issue` skill; a `size:S`-shaped change just stays one tracking issue — split the epic's
+sub-issues along **coding / testing / documentation** phase lines rather than only by feature-slice,
+so the coding sub-issue can land and merge without waiting on the other two, while the deferred ones
+stay tracked with the epic's context instead of getting silently dropped:
+
+- **Coding** — the core implementation. This sub-issue's PR is not exempt from the repo's existing
+  hard requirements: `yarn test` must stay green, the change's core logic needs tests, a behavior
+  change gets its `CHANGELOG.md` entry, and — if it touches anything `CLAUDE.md` documents
+  (signatures, constants, state shape, conventions) — `CLAUDE.md` is updated in the *same commit*,
+  per "Documentation" below. That same-commit rule is a hard invariant and does not relax under this
+  split; only work that was never required to land with the code gets deferred.
+- **Testing** — coverage beyond what the coding sub-issue already needed for green CI: additional
+  scenarios, edge cases, regression tests, e2e specs. Tracked separately and can lag behind the
+  coding sub-issue's merge.
+- **Documentation** — narrative/rationale writing that isn't required to keep `CLAUDE.md` itself
+  accurate: `docs/DESIGN_HISTORY.md` write-ups, README updates, deep-dive `docs/*_REFERENCE.md`
+  sections. Also trackable separately and deferrable.
+
+Link each phase sub-issue back to the parent epic (and to each other where relevant) so a later
+session picking up "testing" or "documentation" has the coding sub-issue's context — what shipped,
+what was deliberately deferred and why — without re-deriving it from the diff alone.
 
 ## Automation workflows
 
@@ -196,7 +250,9 @@ separate follow-up tooling, not by every individual PR.
     code-reviewer.md          ← comprehensive read-only PR/diff review subagent (see "Pull requests" above)
   skills/
     economy-change-review/    ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
-    file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests" above)
+    file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests"
+                               above), also reused for interactive-session tracking issues (see "Issue
+                               tracking for interactive sessions" above)
     simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
                                (see "Economy model" below)
     graphify/                 ← third-party skill (see "graphify" below), tool-generated — not hand-edited
@@ -401,8 +457,9 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
-tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+current capacity) — **2 claims for the three cheapest tiers (1/10/100 Bytes), 1 claim for every tier
+from there on** (an intermediate iteration tightened this to a flat 1 claim across the board, matching
+Sacrifice's own one-shot posture, before the three-cheapest-tiers exception was reinstated — see
 `docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
@@ -491,9 +548,9 @@ decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own pe
 sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
 progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
 been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
-redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
-(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
-level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+redeeming never decrements). Because `getCostEpochExponent`'s Fibonacci exponent sequence
+(1, 2, 3, 5, 8, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can never exist.
 Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
 bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
 ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
@@ -540,8 +597,8 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
-Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
-Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 bits, "1 MB" in
+Memory's own B/KB/MB display scale — two Sacrifice stages past Storage's own reveal), Memory
 automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
 gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
 (an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB

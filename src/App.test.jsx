@@ -288,7 +288,7 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
 
   seedMainGameState({
     resources: { Ones: 10 },
-    owned: { tier01: 10, tier02: 4 }, // unlocks Megabytes (base tickspeed 3s)
+    owned: { tier01: 10, tier02: 4 }, // unlocks Megabytes (base tickspeed 2s)
   })
   render(<App />)
 
@@ -305,8 +305,8 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
   await user.click(trigger)
 
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
-  expect(megabytesLayer).toHaveTextContent(/base tickspeed: delivers every 3s/i)
-  expect(megabytesLayer).toHaveTextContent(/effective tickspeed: every 3s/i)
+  expect(megabytesLayer).toHaveTextContent(/base tickspeed: delivers every 2s/i)
+  expect(megabytesLayer).toHaveTextContent(/effective tickspeed: every 2s/i)
 })
 
 test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost to the global multiplier, not a hidden separate factor', async () => {
@@ -319,9 +319,9 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
 
   localStorage.setItem('tens_game_state', JSON.stringify({
     resources: { Ones: 10 },
-    owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 2s)
+    owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
-    overclockCount: 1, // boosts the regular step from 1% to 1.1% per level
+    overclockCount: 1, // boosts the regular step from 1% to 2% per level
   }))
 
   render(<App />)
@@ -329,10 +329,10 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   const kilobytesLayer = screen.getByLabelText(/^kilobytes layer$/i)
   await user.click(within(kilobytesLayer).getByRole('button', { name: /kilobytes/i }))
 
-  // 1.011^9 ≈ 1.10349 — the global figure must reflect the BOOSTED step (1.1%), not the
-  // pre-Overclock baseline (1.01^9 ≈ 1.0937, which would round to the same "×1.1" display by
-  // coincidence at 2 tiers, but the effective period below only matches the boosted value).
-  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 1\.81s \(tier ×1, global ×1\.1\)/i)
+  // 1.02^9 ≈ 1.19511 — the global figure must reflect the BOOSTED step (2%), not the
+  // pre-Overclock baseline (1.01^9 ≈ 1.0937) — the effective period below (base 1s / 1.19511)
+  // only matches the boosted value.
+  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.84s \(tier ×1, global ×1\.2\)/i)
 })
 
 test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
@@ -884,12 +884,12 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   // Second activation requires the last tier to reach raw level 20 (Lv.12/20, not Lv.11/19 —
   // Overclock's requirement is deliberately not given Speed Up's -1 "completed blocks" display
   // offset, see getOverclockRequirement in engine.js) and would raise the Tickspeed upgrade's own
-  // per-level rate to 1.2% (from the current 1.1%, one activation in) — both shown on the button
+  // per-level rate to 3% (from the current 2%, one activation in) — both shown on the button
   // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 1\.2%/i,
+    name: /overclock \(requires quettabytes level 20\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 3%/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.2%/lvl · Lv.12/20')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 3%/lvl · Lv.12/20')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once activated', () => {
@@ -906,7 +906,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 1\.1% \(was 1%\) from 1 activation\./i)
+  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 2% \(was 1%\) from 1 activation\./i)
 })
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first activation', () => {
@@ -995,18 +995,18 @@ test('the Production Bonuses category disappears once the speed bonus is bought 
   expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
 })
 
-test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 100 PP to enable it', async () => {
+test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  const autoSpeedUpButton = screen.getByRole('button', { name: /enable auto speed up for 100 prestige points/i })
+  const autoSpeedUpButton = screen.getByRole('button', { name: /enable auto speed up for 20 prestige points/i })
   expect(autoSpeedUpButton).toBeEnabled()
 
   await user.click(autoSpeedUpButton)
@@ -1027,18 +1027,18 @@ test('the global tickspeed panel renders above the tier list, not below it', () 
   expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
+test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 10 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { Ones: 10 },
     owned: { tier09: 10 },
-    prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
-  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 20 prestige points/i })
+  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 10 prestige points/i })
   expect(tickspeedAutobuyerButton).toBeEnabled()
 
   await user.click(tickspeedAutobuyerButton)
@@ -1242,13 +1242,13 @@ const allTiersSmartSeed = () => ({
 test.each([
   {
     name: 'Enable Tickspeed Autobuyer',
-    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 } },
-    buttonName: /enable tickspeed autobuyer for 20 prestige points/i,
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
+    buttonName: /enable tickspeed autobuyer for 10 prestige points/i,
   },
   {
     name: 'Enable Auto Speed Up',
-    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto speed up for 100 prestige points/i,
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto speed up for 20 prestige points/i,
   },
   {
     name: 'Auto-Prestige',
@@ -1492,21 +1492,21 @@ test('PP-spending buttons report how much of their cost the current balance cove
 
   seedMainGameState({
     resources: { Ones: 10 },
-    prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /upgrades/i }))
 
   // tier01's autobuyer unlocked automatically at Prestige 1 (count 1 here) — Smart costs 10 PP,
-  // and 50 PP fully covers it (valuenow caps at the cost).
+  // and 10 PP fully covers it (valuenow caps at the cost).
   const smartProgress = screen.getByRole('progressbar', { name: /kilobytes smart autobuyer prestige point progress/i })
   expect(smartProgress).toHaveAttribute('aria-valuenow', '10')
   expect(smartProgress).toHaveAttribute('aria-valuemax', '10')
 
-  // Auto Speed Up costs 100 PP — 50 PP covers half.
+  // Auto Speed Up costs 20 PP — 10 PP covers half.
   const autoSpeedUpProgress = screen.getByRole('progressbar', { name: /auto speed up prestige point progress/i })
-  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuenow', '50')
-  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '100')
+  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuenow', '10')
+  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '20')
 })
 
 test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer milestone has not been reached yet', async () => {
@@ -1946,7 +1946,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: tickspeed upgrade's per-level rate is now 1\.2% \(was 1%\) from 2 activations/i
+    /overclock: tickspeed upgrade's per-level rate is now 3% \(was 1%\) from 2 activations/i
   )
 })
 
@@ -2069,9 +2069,10 @@ test('Sacrifice for 10x Capacity shows what it will drain — the current capaci
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
-  // Invest's current-tier claim must already be used up — Sacrifice is only offered once every
-  // other currently-possible action (Combine, Invest, a Storage bank build) is no longer possible.
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 1 })
+  // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
+  // only offered once every other currently-possible action (Combine, Invest, a Storage bank
+  // build) is no longer possible.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
@@ -2122,12 +2123,13 @@ test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit leve
   render(<App />)
   fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
 
-  // tier01 is at level 2 — its own current per-unit cost is 10,000 bits ("10 KB"), not the
-  // level-1 rate (1000 bits/"1 KB") the transfer block used to be pinned to forever.
+  // tier01 is at level 2 — its own current per-unit cost is 10,000 bits; the transfer block
+  // spends BITS_PER_BYTE × that (80,000 bits, "10 KB" in Memory's own Byte-based scale), not the
+  // level-1 rate (8,000 bits/"1 KB") it used to be pinned to forever.
   const activeBlock = screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })
   expect(activeBlock).toBeDisabled()
   const progressbar = within(activeBlock).getByRole('progressbar', { name: /byte foundry convert progress/i })
-  expect(progressbar).toHaveAttribute('aria-valuemax', '10000')
+  expect(progressbar).toHaveAttribute('aria-valuemax', '80000')
 })
 
 test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', () => {
@@ -2298,22 +2300,37 @@ test('Invest for Double Production shows its cost in the nearest fitting unit on
   expect(investButton).toHaveTextContent('1 KB')
 })
 
-test('Invest for Double Production grants a single claim at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
+test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', async () => {
   const user = userEvent.setup()
 
   // capacity is deliberately way above tier 0's cost (INTRO_STARTING_CAPACITY) — Invest's own
-  // ladder is decoupled from it, so the claim below doesn't require the balance to be full.
+  // ladder is decoupled from it, so the claims below don't require the balance to be full.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
-  const mounted = render(<App />)
+  let mounted = render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
   await user.click(investButton)
 
-  // A single claim at tier 0's cost immediately advances to tier 1, whose cost (10x higher) the
-  // current balance can't cover yet, so Invest is disabled again — every tier is a one-attempt
-  // purchase now, same as Sacrifice for 10x Capacity.
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  // The first claim at tier 0's cost stays at tier 0 (tier 0 grants 2 claims, not 1) — Invest is
+  // disabled again only because the balance was spent to 0, not because the tier advanced.
+  let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.productionMilestoneTier).toBe(0)
+  expect(saved.intro.productionMilestoneTierClaims).toBe(1)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
+
+  // Refilling to the SAME tier-0 cost re-enables it for the second claim.
+  saved.intro.bits = INTRO_STARTING_CAPACITY
+  localStorage.setItem('tens_game_state', JSON.stringify(saved))
+  mounted.unmount()
+  mounted = render(<App />)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
+
+  await user.click(screen.getByRole('button', { name: /invest bits for double production/i }))
+
+  // The second claim at tier 0 uses up its last claim and advances to tier 1, whose cost (10x
+  // higher) the current balance can't cover yet, so Invest is disabled again.
+  saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.productionMilestoneTier).toBe(1)
   expect(saved.intro.productionMilestoneTierClaims).toBe(0)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
