@@ -199,8 +199,8 @@ describe('constants', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 
-  it('OVERCLOCK_MULTIPLIER_STEP is 0.001 (0.1% per claimed Overclock level, a standalone multiplier)', () => {
-    expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.001)
+  it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, a standalone multiplier)', () => {
+    expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
   it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {

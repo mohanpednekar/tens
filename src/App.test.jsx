@@ -323,7 +323,7 @@ test('a tier row\'s "Effective tickspeed" breakdown shows Overclock as its own s
     resources: { Ones: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
-    overclockCount: 10, // a standalone ×1.001^10 ≈ ×1.01 factor, unrelated to the global multiplier
+    overclockCount: 1, // a standalone ×1.1 factor, unrelated to the global multiplier
   }))
 
   render(<App />)
@@ -332,8 +332,8 @@ test('a tier row\'s "Effective tickspeed" breakdown shows Overclock as its own s
   await user.click(within(kilobytesLayer).getByRole('button', { name: /kilobytes/i }))
 
   // global stays at the unboosted 1.01^9 ≈ 1.09 (Overclock no longer touches this track's step);
-  // overclock is its own ×1.001^10 ≈ 1.01 factor; effective period = 1s / (1.09 * 1.01) ≈ 0.91s.
-  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.09, overclock ×1\.01\)/i)
+  // overclock is its own ×1.1 factor; effective period = 1s / (1.09 * 1.1) ≈ 0.83s.
+  expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.83s \(tier ×1, global ×1\.09, overclock ×1\.1\)/i)
 })
 
 test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
@@ -898,12 +898,12 @@ test('the Overclock button shows the next multiplier and requirement progress on
   // Next claim requires the last tier to reach raw level 7 (Lv.8/7, not a "completed blocks"
   // display offset — see getOverclockRequirement in engine.js) but a claim right now would jump
   // straight to level 8 (the last tier's own current level, ahead of the bare minimum), raising
-  // the standalone Overclock multiplier to ×1.008 (1.001^8) — both shown on the button itself, no
+  // the standalone Overclock multiplier to ×2.14 (1.1^8) — both shown on the button itself, no
   // separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises the standalone overclock multiplier to ×1\.008/i,
+    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises the standalone overclock multiplier to ×2\.14/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.008 · Lv.8/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×2.14 · Lv.8/7')
 })
 
 test('the Overclock card\'s disclosure states the current standalone multiplier once claimed', () => {
@@ -920,7 +920,7 @@ test('the Overclock card\'s disclosure states the current standalone multiplier 
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/×1\.01 faster ticks on every tier from level 10\./i)
+  expect(panel).toHaveTextContent(/×2\.59 faster ticks on every tier from level 10\./i)
 })
 
 test('the Overclock card\'s disclosure shows no multiplier line before the first claim', () => {
@@ -1962,7 +1962,7 @@ test('the money balance breakdown\'s Overclock line reports its own standalone m
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: \+0\.2% faster ticks on every tier \(lv\.2\)/i
+    /overclock: \+21% faster ticks on every tier \(lv\.2\)/i
   )
 })
 

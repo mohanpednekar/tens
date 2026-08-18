@@ -1,7 +1,7 @@
 {
   "0": "engine.test.js",
   "1": "MainPage/index.jsx",
-  "2": "engine.js",
+  "2": "layers.js",
   "3": "Money/index.js",
   "4": "App.jsx",
   "5": "Button/index.jsx",
@@ -47,15 +47,20 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
-  "48": "clampNonNegative",
+  "48": "engine.js",
   "49": "InfoPage/index.jsx",
   "50": "formatCurrency",
-  "51": "package.json",
+  "51": "dependencies",
   "52": "MainPage",
   "53": "formatBonusOrMultiplier",
   "54": "Design history & rationale",
   "55": "OfflineProgressNotice/index.jsx",
   "56": "web-vitals",
-  "57": "isProductionFrozen",
-  "58": "buyGlobalTickspeedMultiplier"
+  "57": "clampNonNegative",
+  "58": "ByteFoundryPage",
+  "59": "development",
+  "60": "scripts",
+  "61": "formatAmount",
+  "62": "package.json",
+  "63": "resolutions"
 }

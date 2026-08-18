@@ -4,16 +4,16 @@
   "graph": {},
   "nodes": [
     {
-      "label": "buySmartAutobuyer()",
+      "label": "buyGlobalTickspeedMultiplier()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1931",
+      "source_location": "L2027",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_buysmartautobuyer",
+      "id": "src_game_engine_buyglobaltickspeedmultiplier",
       "community": 0,
       "community_name": "engine.test.js",
-      "norm_label": "buysmartautobuyer()"
+      "norm_label": "buyglobaltickspeedmultiplier()"
     },
     {
       "label": "getAutobuyerUnlockCost()",
@@ -40,6 +40,18 @@
       "norm_label": "getcomputeboostmultiplier()"
     },
     {
+      "label": "getGlobalTickspeedMultiplierCost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L574",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getglobaltickspeedmultipliercost",
+      "community": 0,
+      "community_name": "engine.test.js",
+      "norm_label": "getglobaltickspeedmultipliercost()"
+    },
+    {
       "label": "getSmartAutobuyerCost()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -50,6 +62,18 @@
       "community": 0,
       "community_name": "engine.test.js",
       "norm_label": "getsmartautobuyercost()"
+    },
+    {
+      "label": "isGlobalTickspeedMultiplierUnlocked()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L584",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
+      "community": 0,
+      "community_name": "engine.test.js",
+      "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
       "label": "omit()",
@@ -472,30 +496,6 @@
       "norm_label": "collapsedisclosure()"
     },
     {
-      "label": "formatPreciseRate()",
-      "file_type": "code",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L806",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_pages_mainpage_index_formatpreciserate",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "norm_label": "formatpreciserate()"
-    },
-    {
-      "label": "progressPercent()",
-      "file_type": "code",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L796",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_pages_mainpage_index_progresspercent",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "norm_label": "progresspercent()"
-    },
-    {
       "label": "maskableSvg()",
       "file_type": "code",
       "source_file": "scripts/generate-pwa-icons.mjs",
@@ -554,42 +554,6 @@
       "community": 15,
       "community_name": "useIncrementalGame.js",
       "norm_label": "applyofflineprogress()"
-    },
-    {
-      "label": "buyAutoPrestigeAutobuyer()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1998",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_buyautoprestigeautobuyer",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
-      "norm_label": "buyautoprestigeautobuyer()"
-    },
-    {
-      "label": "buyAutoSpeedUp()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2318",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_buyautospeedup",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
-      "norm_label": "buyautospeedup()"
-    },
-    {
-      "label": "buyTickspeedAutobuyer()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2344",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_buytickspeedautobuyer",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
-      "norm_label": "buytickspeedautobuyer()"
     },
     {
       "label": "combineIntroByte()",
@@ -760,6 +724,42 @@
       "norm_label": "tapintrobit()"
     },
     {
+      "label": "clearGameState()",
+      "file_type": "code",
+      "source_file": "src/game/storage.js",
+      "source_location": "L252",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_storage_cleargamestate",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "cleargamestate()"
+    },
+    {
+      "label": "loadLastSaveTimestamp()",
+      "file_type": "code",
+      "source_file": "src/game/storage.js",
+      "source_location": "L241",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_storage_loadlastsavetimestamp",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "loadlastsavetimestamp()"
+    },
+    {
+      "label": "saveGameState()",
+      "file_type": "code",
+      "source_file": "src/game/storage.js",
+      "source_location": "L218",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_storage_savegamestate",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "savegamestate()"
+    },
+    {
       "label": "computeInitialGame()",
       "file_type": "code",
       "source_file": "src/game/useIncrementalGame.js",
@@ -804,7 +804,7 @@
       "_origin": "ast",
       "id": "src_app_test_alltierssmartseed",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "alltierssmartseed()"
     },
     {
@@ -816,7 +816,7 @@
       "_origin": "ast",
       "id": "src_app_test_seedintrostate",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "seedintrostate()"
     },
     {
@@ -828,56 +828,8 @@
       "_origin": "ast",
       "id": "src_app_test_seedmaingamestate",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "seedmaingamestate()"
-    },
-    {
-      "label": "allResourceIds()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_allresourceids",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "allresourceids()"
-    },
-    {
-      "label": "getTierBaseTickSpeedSeconds()",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L49",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_layers_gettierbasetickspeedseconds",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "gettierbasetickspeedseconds()"
-    },
-    {
-      "label": "applyAutobuyerMilestones()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L537",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_applyautobuyermilestones",
-      "community": 39,
-      "community_name": "storage.js",
-      "norm_label": "applyautobuyermilestones()"
-    },
-    {
-      "label": "clearGameState()",
-      "file_type": "code",
-      "source_file": "src/game/storage.js",
-      "source_location": "L252",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_storage_cleargamestate",
-      "community": 39,
-      "community_name": "storage.js",
-      "norm_label": "cleargamestate()"
     },
     {
       "label": "loadGameState()",
@@ -890,18 +842,6 @@
       "community": 39,
       "community_name": "storage.js",
       "norm_label": "loadgamestate()"
-    },
-    {
-      "label": "loadLastSaveTimestamp()",
-      "file_type": "code",
-      "source_file": "src/game/storage.js",
-      "source_location": "L241",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_storage_loadlastsavetimestamp",
-      "community": 39,
-      "community_name": "storage.js",
-      "norm_label": "loadlastsavetimestamp()"
     },
     {
       "label": "migrateState()",
@@ -926,18 +866,6 @@
       "community": 39,
       "community_name": "storage.js",
       "norm_label": "migratetierkeys()"
-    },
-    {
-      "label": "saveGameState()",
-      "file_type": "code",
-      "source_file": "src/game/storage.js",
-      "source_location": "L218",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_storage_savegamestate",
-      "community": 39,
-      "community_name": "storage.js",
-      "norm_label": "savegamestate()"
     },
     {
       "label": "shiftOldTierIds()",
@@ -1060,40 +988,52 @@
       "norm_label": "buildtheme()"
     },
     {
-      "label": "buyAutoPrestige()",
+      "label": "allResourceIds()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1966",
+      "source_location": "L34",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_buyautoprestige",
+      "id": "src_game_engine_allresourceids",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "buyautoprestige()"
+      "community_name": "engine.js",
+      "norm_label": "allresourceids()"
     },
     {
-      "label": "checkMilestones()",
+      "label": "buyTier()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L882",
+      "source_location": "L1189",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_checkmilestones",
+      "id": "src_game_engine_buytier",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "checkmilestones()"
+      "community_name": "engine.js",
+      "norm_label": "buytier()"
     },
     {
-      "label": "clampNonNegative()",
+      "label": "buyTierQuantity()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L9",
+      "source_location": "L1238",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_clampnonnegative",
+      "id": "src_game_engine_buytierquantity",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "clampnonnegative()"
+      "community_name": "engine.js",
+      "norm_label": "buytierquantity()"
+    },
+    {
+      "label": "consumeXpForLastTierTickspeed()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2382",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_consumexpforlasttiertickspeed",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "consumexpforlasttiertickspeed()"
     },
     {
       "label": "convertIntroBitsToKilobytes()",
@@ -1104,32 +1044,20 @@
       "_origin": "ast",
       "id": "src_game_engine_convertintrobitstokilobytes",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "convertintrobitstokilobytes()"
     },
     {
-      "label": "getAutoPrestigeAttemptRate()",
+      "label": "countGlobalTickspeedMilestones()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L760",
+      "source_location": "L593",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_getautoprestigeattemptrate",
+      "id": "src_game_engine_countglobaltickspeedmilestones",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getautoprestigeattemptrate()"
-    },
-    {
-      "label": "getAutoPrestigeCost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L750",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getautoprestigecost",
-      "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getautoprestigecost()"
+      "community_name": "engine.js",
+      "norm_label": "countglobaltickspeedmilestones()"
     },
     {
       "label": "getCostEpochExponent()",
@@ -1140,8 +1068,20 @@
       "_origin": "ast",
       "id": "src_game_engine_getcostepochexponent",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "getcostepochexponent()"
+    },
+    {
+      "label": "getFirstTierCost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1555",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getfirsttiercost",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "getfirsttiercost()"
     },
     {
       "label": "getIntroKilobyteConversionCost()",
@@ -1152,80 +1092,32 @@
       "_origin": "ast",
       "id": "src_game_engine_getintrokilobyteconversioncost",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "getintrokilobyteconversioncost()"
     },
     {
-      "label": "getMoneyExponent()",
+      "label": "getIntroProductionMilestoneCost()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L814",
+      "source_location": "L1374",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_getmoneyexponent",
+      "id": "src_game_engine_getintroproductionmilestonecost",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getmoneyexponent()"
+      "community_name": "engine.js",
+      "norm_label": "getintroproductionmilestonecost()"
     },
     {
-      "label": "getPrestigePointsAwarded()",
+      "label": "getLastTierXpTickspeedMinConsumption()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L877",
+      "source_location": "L651",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_getprestigepointsawarded",
+      "id": "src_game_engine_getlasttierxptickspeedminconsumption",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getprestigepointsawarded()"
-    },
-    {
-      "label": "getPrestigeProductionMultiplier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L663",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getprestigeproductionmultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getprestigeproductionmultiplier()"
-    },
-    {
-      "label": "getPrestigeProgressPercent()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L820",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getprestigeprogresspercent",
-      "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getprestigeprogresspercent()"
-    },
-    {
-      "label": "getPurchaseMilestoneMultiplier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L700",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getpurchasemilestonemultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getpurchasemilestonemultiplier()"
-    },
-    {
-      "label": "getSpeedUpMultiplier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L711",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getspeedupmultiplier",
-      "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "getspeedupmultiplier()"
+      "community_name": "engine.js",
+      "norm_label": "getlasttierxptickspeedminconsumption()"
     },
     {
       "label": "getTierAffordableQuantity()",
@@ -1236,7 +1128,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettieraffordablequantity",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "gettieraffordablequantity()"
     },
     {
@@ -1248,7 +1140,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierbulkquantity",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "gettierbulkquantity()"
     },
     {
@@ -1260,8 +1152,32 @@
       "_origin": "ast",
       "id": "src_game_engine_gettiercost",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "gettiercost()"
+    },
+    {
+      "label": "getTierProductionProgressPercent()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L860",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_gettierproductionprogresspercent",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "gettierproductionprogresspercent()"
+    },
+    {
+      "label": "getTierPurchasedCount()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1186",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_gettierpurchasedcount",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "gettierpurchasedcount()"
     },
     {
       "label": "getTierQuantityCost()",
@@ -1272,44 +1188,80 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierquantitycost",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "gettierquantitycost()"
     },
     {
-      "label": "tickComputeBoost()",
+      "label": "getTierSpendableAmount()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1847",
+      "source_location": "L1183",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_tickcomputeboost",
+      "id": "src_game_engine_gettierspendableamount",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "tickcomputeboost()"
+      "community_name": "engine.js",
+      "norm_label": "gettierspendableamount()"
     },
     {
-      "label": "tickComputeNodeConversion()",
+      "label": "grantTierUnits()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1780",
+      "source_location": "L1267",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_tickcomputenodeconversion",
+      "id": "src_game_engine_granttierunits",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "tickcomputenodeconversion()"
+      "community_name": "engine.js",
+      "norm_label": "granttierunits()"
     },
     {
-      "label": "tickGame()",
+      "label": "isStorageBankRedeemable()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L906",
+      "source_location": "L1655",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_tickgame",
+      "id": "src_game_engine_isstoragebankredeemable",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "tickgame()"
+      "community_name": "engine.js",
+      "norm_label": "isstoragebankredeemable()"
+    },
+    {
+      "label": "latchEverUnlockedTiers()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L798",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_latcheverunlockedtiers",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "latcheverunlockedtiers()"
+    },
+    {
+      "label": "pickIntroProductionMilestone()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1402",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_pickintroproductionmilestone",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "pickintroproductionmilestone()"
+    },
+    {
+      "label": "redeemStorageBank()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1665",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_redeemstoragebank",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "redeemstoragebank()"
     },
     {
       "label": "tickIntroAutoInvest()",
@@ -1320,32 +1272,32 @@
       "_origin": "ast",
       "id": "src_game_engine_tickintroautoinvest",
       "community": 48,
-      "community_name": "clampNonNegative",
+      "community_name": "engine.js",
       "norm_label": "tickintroautoinvest()"
     },
     {
-      "label": "tickStorageAutoFill()",
+      "label": "tickStorageAutoRedeem()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1622",
+      "source_location": "L1696",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_tickstorageautofill",
+      "id": "src_game_engine_tickstorageautoredeem",
       "community": 48,
-      "community_name": "clampNonNegative",
-      "norm_label": "tickstorageautofill()"
+      "community_name": "engine.js",
+      "norm_label": "tickstorageautoredeem()"
     },
     {
-      "label": "ButtonContent()",
+      "label": "applyAutobuyerMilestones()",
       "file_type": "code",
-      "source_file": "src/components/Button/index.jsx",
-      "source_location": "L170",
+      "source_file": "src/game/engine.js",
+      "source_location": "L537",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_button_index_buttoncontent",
+      "id": "src_game_engine_applyautobuyermilestones",
       "community": 49,
       "community_name": "InfoPage/index.jsx",
-      "norm_label": "buttoncontent()"
+      "norm_label": "applyautobuyermilestones()"
     },
     {
       "label": "getAutobuyerUnlockMilestone()",
@@ -1394,6 +1346,18 @@
       "community": 49,
       "community_name": "InfoPage/index.jsx",
       "norm_label": "infopage()"
+    },
+    {
+      "label": "ButtonContent()",
+      "file_type": "code",
+      "source_file": "src/components/Button/index.jsx",
+      "source_location": "L170",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_button_index_buttoncontent",
+      "community": 5,
+      "community_name": "Button/index.jsx",
+      "norm_label": "buttoncontent()"
     },
     {
       "label": "clampPercent()",
@@ -1504,40 +1468,16 @@
       "norm_label": "buytickspeedmultiplier()"
     },
     {
-      "label": "buyTier()",
+      "label": "getAutoPrestigeAttemptRate()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1189",
+      "source_location": "L760",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_buytier",
+      "id": "src_game_engine_getautoprestigeattemptrate",
       "community": 52,
       "community_name": "MainPage",
-      "norm_label": "buytier()"
-    },
-    {
-      "label": "consumeXpForLastTierTickspeed()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2382",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_consumexpforlasttiertickspeed",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "consumexpforlasttiertickspeed()"
-    },
-    {
-      "label": "countGlobalTickspeedMilestones()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L593",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_countglobaltickspeedmilestones",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "countglobaltickspeedmilestones()"
+      "norm_label": "getautoprestigeattemptrate()"
     },
     {
       "label": "getEffectiveTierTickSpeedSeconds()",
@@ -1576,18 +1516,6 @@
       "norm_label": "getlasttierid()"
     },
     {
-      "label": "getLastTierXpTickspeedMinConsumption()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L651",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getlasttierxptickspeedminconsumption",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "getlasttierxptickspeedminconsumption()"
-    },
-    {
       "label": "getLastTierXpTickspeedMultiplier()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -1612,6 +1540,30 @@
       "norm_label": "getoverclockmultiplier()"
     },
     {
+      "label": "getPrestigePointsAwarded()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L877",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getprestigepointsawarded",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "getprestigepointsawarded()"
+    },
+    {
+      "label": "getPrestigeProductionMultiplier()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L663",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getprestigeproductionmultiplier",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "getprestigeproductionmultiplier()"
+    },
+    {
       "label": "getPurchaseBlockSize()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -1622,6 +1574,30 @@
       "community": 52,
       "community_name": "MainPage",
       "norm_label": "getpurchaseblocksize()"
+    },
+    {
+      "label": "getPurchaseMilestoneMultiplier()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L700",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getpurchasemilestonemultiplier",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "getpurchasemilestonemultiplier()"
+    },
+    {
+      "label": "getSpeedUpMultiplier()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L711",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getspeedupmultiplier",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "getspeedupmultiplier()"
     },
     {
       "label": "getTickspeedMultiplierBaseCost()",
@@ -1660,54 +1636,6 @@
       "norm_label": "gettickspeedproductionmultiplier()"
     },
     {
-      "label": "getTierProductionProgressPercent()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L860",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_gettierproductionprogresspercent",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "gettierproductionprogresspercent()"
-    },
-    {
-      "label": "getTierPurchasedCount()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1186",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_gettierpurchasedcount",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "gettierpurchasedcount()"
-    },
-    {
-      "label": "getTierSpendableAmount()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1183",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_gettierspendableamount",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "gettierspendableamount()"
-    },
-    {
-      "label": "grantTierUnits()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1267",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_granttierunits",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "granttierunits()"
-    },
-    {
       "label": "isLastTierTickspeedXpUnlocked()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -1732,18 +1660,6 @@
       "norm_label": "istierunlocked()"
     },
     {
-      "label": "latchEverUnlockedTiers()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L798",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_latcheverunlockedtiers",
-      "community": 52,
-      "community_name": "MainPage",
-      "norm_label": "latcheverunlockedtiers()"
-    },
-    {
       "label": "withLastTierTickspeedXpUnlocked()",
       "file_type": "code",
       "source_file": "src/game/engine.test.js",
@@ -1756,10 +1672,70 @@
       "norm_label": "withlasttiertickspeedxpunlocked()"
     },
     {
+      "label": "tickComputeBoost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1847",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_tickcomputeboost",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "tickcomputeboost()"
+    },
+    {
+      "label": "tickComputeNodeConversion()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1780",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_tickcomputenodeconversion",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "tickcomputenodeconversion()"
+    },
+    {
+      "label": "tickGame()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L906",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_tickgame",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "tickgame()"
+    },
+    {
+      "label": "tickStorageAutoFill()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1622",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_tickstorageautofill",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "tickstorageautofill()"
+    },
+    {
+      "label": "getTierBaseTickSpeedSeconds()",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L49",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_layers_gettierbasetickspeedseconds",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "gettierbasetickspeedseconds()"
+    },
+    {
       "label": "MainPage()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L831",
+      "source_location": "L826",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_mainpage",
@@ -1768,10 +1744,22 @@
       "norm_label": "mainpage()"
     },
     {
+      "label": "progressPercent()",
+      "file_type": "code",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L796",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_pages_mainpage_index_progresspercent",
+      "community": 52,
+      "community_name": "MainPage",
+      "norm_label": "progresspercent()"
+    },
+    {
       "label": "formatBonusOrMultiplier()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L826",
+      "source_location": "L821",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -1783,7 +1771,7 @@
       "label": "formatBonusPercent()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L810",
+      "source_location": "L805",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonuspercent",
@@ -1795,7 +1783,7 @@
       "label": "formatGlobalTickspeedBonusPercent()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L818",
+      "source_location": "L813",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
@@ -1807,7 +1795,7 @@
       "label": "formatRate()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L800",
+      "source_location": "L801",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatrate",
@@ -1848,7 +1836,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_formatduration",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "formatduration()"
     },
     {
@@ -1860,8 +1848,44 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_simulaterun",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "simulaterun()"
+    },
+    {
+      "label": "buyAutoPrestige()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1966",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_buyautoprestige",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "buyautoprestige()"
+    },
+    {
+      "label": "buyAutoPrestigeAutobuyer()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1998",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_buyautoprestigeautobuyer",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "buyautoprestigeautobuyer()"
+    },
+    {
+      "label": "buyAutoSpeedUp()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2318",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_buyautospeedup",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "buyautospeedup()"
     },
     {
       "label": "buyPrestigeSpeedBonus()",
@@ -1872,20 +1896,92 @@
       "_origin": "ast",
       "id": "src_game_engine_buyprestigespeedbonus",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "buyprestigespeedbonus()"
     },
     {
-      "label": "buyTierQuantity()",
+      "label": "buySmartAutobuyer()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1238",
+      "source_location": "L1931",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_buytierquantity",
+      "id": "src_game_engine_buysmartautobuyer",
       "community": 57,
-      "community_name": "isProductionFrozen",
-      "norm_label": "buytierquantity()"
+      "community_name": "clampNonNegative",
+      "norm_label": "buysmartautobuyer()"
+    },
+    {
+      "label": "buyTickspeedAutobuyer()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2344",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_buytickspeedautobuyer",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "buytickspeedautobuyer()"
+    },
+    {
+      "label": "checkMilestones()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L882",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_checkmilestones",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "checkmilestones()"
+    },
+    {
+      "label": "clampNonNegative()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_clampnonnegative",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "clampnonnegative()"
+    },
+    {
+      "label": "getAutoPrestigeCost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L750",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getautoprestigecost",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "getautoprestigecost()"
+    },
+    {
+      "label": "getMoneyExponent()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L814",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getmoneyexponent",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "getmoneyexponent()"
+    },
+    {
+      "label": "getPrestigeProgressPercent()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L820",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getprestigeprogresspercent",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "getprestigeprogresspercent()"
     },
     {
       "label": "getSpeedUpRequirement()",
@@ -1896,7 +1992,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getspeeduprequirement",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "getspeeduprequirement()"
     },
     {
@@ -1908,7 +2004,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isproductionfrozen",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "isproductionfrozen()"
     },
     {
@@ -1920,44 +2016,8 @@
       "_origin": "ast",
       "id": "src_game_engine_speedupgame",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "speedupgame()"
-    },
-    {
-      "label": "buyGlobalTickspeedMultiplier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2027",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_buyglobaltickspeedmultiplier",
-      "community": 58,
-      "community_name": "buyGlobalTickspeedMultiplier",
-      "norm_label": "buyglobaltickspeedmultiplier()"
-    },
-    {
-      "label": "getGlobalTickspeedMultiplierCost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L574",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getglobaltickspeedmultipliercost",
-      "community": 58,
-      "community_name": "buyGlobalTickspeedMultiplier",
-      "norm_label": "getglobaltickspeedmultipliercost()"
-    },
-    {
-      "label": "isGlobalTickspeedMultiplierUnlocked()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L584",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
-      "community": 58,
-      "community_name": "buyGlobalTickspeedMultiplier",
-      "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
       "label": "buildStorageBank()",
@@ -1967,8 +2027,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buildstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "buildstoragebank()"
     },
     {
@@ -1979,57 +2039,9 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canactivatecomputeboost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "canactivatecomputeboost()"
-    },
-    {
-      "label": "formatAmount()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L372",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_formatamount",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "formatamount()"
-    },
-    {
-      "label": "formatScientific()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L370",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_formatscientific",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "formatscientific()"
-    },
-    {
-      "label": "getFirstTierCost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1555",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getfirsttiercost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "getfirsttiercost()"
-    },
-    {
-      "label": "getIntroProductionMilestoneCost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1374",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getintroproductionmilestonecost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "getintroproductionmilestonecost()"
     },
     {
       "label": "getIntroProductionMilestoneMaxClaims()",
@@ -2039,8 +2051,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionmilestonemaxclaims",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionmilestonemaxclaims()"
     },
     {
@@ -2051,8 +2063,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionrate",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getintroproductionrate()"
     },
     {
@@ -2063,8 +2075,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebankcost",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getstoragebankcost()"
     },
     {
@@ -2075,8 +2087,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragebanksize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getstoragebanksize()"
     },
     {
@@ -2087,8 +2099,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputecoreconversionunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "iscomputecoreconversionunlocked()"
     },
     {
@@ -2099,8 +2111,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isintroconversionunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "isintroconversionunlocked()"
     },
     {
@@ -2111,21 +2123,9 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_ismemorycapacityupgradeavailable",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "ismemorycapacityupgradeavailable()"
-    },
-    {
-      "label": "isStorageBankRedeemable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1655",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isstoragebankredeemable",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "isstoragebankredeemable()"
     },
     {
       "label": "isStorageUnlocked()",
@@ -2135,33 +2135,9 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstorageunlocked",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "isstorageunlocked()"
-    },
-    {
-      "label": "pickIntroProductionMilestone()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1402",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_pickintroproductionmilestone",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "pickintroproductionmilestone()"
-    },
-    {
-      "label": "redeemStorageBank()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1665",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_redeemstoragebank",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "redeemstoragebank()"
     },
     {
       "label": "tickComputeCoreConversion()",
@@ -2171,21 +2147,9 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickcomputecoreconversion",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "tickcomputecoreconversion()"
-    },
-    {
-      "label": "tickStorageAutoRedeem()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1696",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_tickstorageautoredeem",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "norm_label": "tickstorageautoredeem()"
     },
     {
       "label": "ByteFoundryPage()",
@@ -2195,8 +2159,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "bytefoundrypage()"
     },
     {
@@ -2207,9 +2171,33 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_clamppercent",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 58,
+      "community_name": "ByteFoundryPage",
       "norm_label": "clamppercent()"
+    },
+    {
+      "label": "formatAmount()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L372",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_formatamount",
+      "community": 61,
+      "community_name": "formatAmount",
+      "norm_label": "formatamount()"
+    },
+    {
+      "label": "formatScientific()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L370",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_formatscientific",
+      "community": 61,
+      "community_name": "formatAmount",
+      "norm_label": "formatscientific()"
     },
     {
       "label": "floorToDecimals()",
@@ -2219,8 +2207,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_floortodecimals",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "floortodecimals()"
     },
     {
@@ -2231,8 +2219,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatbitsinnearestunit",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "formatbitsinnearestunit()"
     },
     {
@@ -2243,8 +2231,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemoryamount",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "formatmemoryamount()"
     },
     {
@@ -2255,8 +2243,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatmemorybalance",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "formatmemorybalance()"
     },
     {
@@ -2267,8 +2255,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatstoragesize",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "formatstoragesize()"
     },
     {
@@ -2279,8 +2267,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_getmemoryunit",
-      "community": 8,
-      "community_name": "ByteFoundryPage/index.jsx",
+      "community": 61,
+      "community_name": "formatAmount",
       "norm_label": "getmemoryunit()"
     },
     {
@@ -3062,6 +3050,17 @@
       "norm_label": "seededstate"
     },
     {
+      "label": "storage.test.js",
+      "file_type": "code",
+      "source_file": "src/game/storage.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_storage_test",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "storage.test.js"
+    },
+    {
       "label": "useIncrementalGame.js",
       "file_type": "code",
       "source_file": "src/game/useIncrementalGame.js",
@@ -3234,7 +3233,7 @@
       "_origin": "ast",
       "id": "src_app_test",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "app.test.jsx"
     },
     {
@@ -3245,52 +3244,8 @@
       "_origin": "ast",
       "id": "src_app_test_all_tier_ids",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "all_tier_ids"
-    },
-    {
-      "label": "engine.js",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_game_engine",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "engine.js"
-    },
-    {
-      "label": "currencyNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L362",
-      "_origin": "ast",
-      "id": "src_game_engine_currencynumberformatter",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "currencynumberformatter"
-    },
-    {
-      "label": "plainNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L360",
-      "_origin": "ast",
-      "id": "src_game_engine_plainnumberformatter",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "plainnumberformatter"
-    },
-    {
-      "label": "scientificNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L361",
-      "_origin": "ast",
-      "id": "src_game_engine_scientificnumberformatter",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "scientificnumberformatter"
     },
     {
       "label": "layers.js",
@@ -3300,7 +3255,7 @@
       "_origin": "ast",
       "id": "src_game_layers",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "layers.js"
     },
     {
@@ -3311,7 +3266,7 @@
       "_origin": "ast",
       "id": "src_game_layers_auto_prestige_autobuyer_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "auto_prestige_autobuyer_cost"
     },
     {
@@ -3322,7 +3277,7 @@
       "_origin": "ast",
       "id": "src_game_layers_auto_prestige_base_interval_seconds",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "auto_prestige_base_interval_seconds"
     },
     {
@@ -3333,7 +3288,7 @@
       "_origin": "ast",
       "id": "src_game_layers_auto_prestige_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "auto_prestige_cost"
     },
     {
@@ -3344,7 +3299,7 @@
       "_origin": "ast",
       "id": "src_game_layers_auto_prestige_cost_multiplier",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "auto_prestige_cost_multiplier"
     },
     {
@@ -3355,7 +3310,7 @@
       "_origin": "ast",
       "id": "src_game_layers_auto_speed_up_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "auto_speed_up_cost"
     },
     {
@@ -3366,7 +3321,7 @@
       "_origin": "ast",
       "id": "src_game_layers_autobuyer_unlock_base_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "autobuyer_unlock_base_cost"
     },
     {
@@ -3377,7 +3332,7 @@
       "_origin": "ast",
       "id": "src_game_layers_autobuyer_unlock_milestone_start",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "autobuyer_unlock_milestone_start"
     },
     {
@@ -3388,7 +3343,7 @@
       "_origin": "ast",
       "id": "src_game_layers_autobuyer_unlock_milestone_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "autobuyer_unlock_milestone_step"
     },
     {
@@ -3399,7 +3354,7 @@
       "_origin": "ast",
       "id": "src_game_layers_bits_per_byte",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "bits_per_byte"
     },
     {
@@ -3410,7 +3365,7 @@
       "_origin": "ast",
       "id": "src_game_layers_compute_boost_max_stacks",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "compute_boost_max_stacks"
     },
     {
@@ -3421,7 +3376,7 @@
       "_origin": "ast",
       "id": "src_game_layers_compute_boost_presets",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "compute_boost_presets"
     },
     {
@@ -3432,7 +3387,7 @@
       "_origin": "ast",
       "id": "src_game_layers_compute_cores_per_node",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "compute_cores_per_node"
     },
     {
@@ -3443,19 +3398,8 @@
       "_origin": "ast",
       "id": "src_game_layers_compute_entity_cap",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "compute_entity_cap"
-    },
-    {
-      "label": "DEFAULT_PURCHASE_BLOCK_SIZE",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L234",
-      "_origin": "ast",
-      "id": "src_game_layers_default_purchase_block_size",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "default_purchase_block_size"
     },
     {
       "label": "GLOBAL_TICKSPEED_MILESTONE_STEP",
@@ -3465,7 +3409,7 @@
       "_origin": "ast",
       "id": "src_game_layers_global_tickspeed_milestone_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "global_tickspeed_milestone_step"
     },
     {
@@ -3476,7 +3420,7 @@
       "_origin": "ast",
       "id": "src_game_layers_global_tickspeed_production_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "global_tickspeed_production_step"
     },
     {
@@ -3487,7 +3431,7 @@
       "_origin": "ast",
       "id": "src_game_layers_googol",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "googol"
     },
     {
@@ -3498,7 +3442,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_bits_per_kilobyte_conversion",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_bits_per_kilobyte_conversion"
     },
     {
@@ -3509,7 +3453,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_byte_base_rate",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_byte_base_rate"
     },
     {
@@ -3520,19 +3464,8 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_byte_combine_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_byte_combine_cost"
-    },
-    {
-      "label": "INTRO_CAPACITY_MULTIPLIER",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L84",
-      "_origin": "ast",
-      "id": "src_game_layers_intro_capacity_multiplier",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "intro_capacity_multiplier"
     },
     {
       "label": "INTRO_COMPUTE_CORE_UNLOCK_CAPACITY",
@@ -3542,7 +3475,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_compute_core_unlock_capacity",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_compute_core_unlock_capacity"
     },
     {
@@ -3553,7 +3486,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_conversion_unlock_capacity",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_conversion_unlock_capacity"
     },
     {
@@ -3564,7 +3497,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_min_tick_speed_seconds",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_min_tick_speed_seconds"
     },
     {
@@ -3575,7 +3508,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_production_multiplier_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_production_multiplier_step"
     },
     {
@@ -3586,7 +3519,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_starting_capacity",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_starting_capacity"
     },
     {
@@ -3597,7 +3530,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_starting_tick_speed_seconds",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_starting_tick_speed_seconds"
     },
     {
@@ -3608,7 +3541,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_storage_unlock_capacity",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "intro_storage_unlock_capacity"
     },
     {
@@ -3619,7 +3552,7 @@
       "_origin": "ast",
       "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_floor",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "last_tier_xp_tickspeed_min_consumption_floor"
     },
     {
@@ -3630,7 +3563,7 @@
       "_origin": "ast",
       "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_percent",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "last_tier_xp_tickspeed_min_consumption_percent"
     },
     {
@@ -3641,7 +3574,7 @@
       "_origin": "ast",
       "id": "src_game_layers_last_tier_xp_tickspeed_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "last_tier_xp_tickspeed_step"
     },
     {
@@ -3652,19 +3585,8 @@
       "_origin": "ast",
       "id": "src_game_layers_max_offline_seconds",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "max_offline_seconds"
-    },
-    {
-      "label": "MONEY_ID",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L54",
-      "_origin": "ast",
-      "id": "src_game_layers_money_id",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "money_id"
     },
     {
       "label": "MONEY_STARTING_AMOUNT",
@@ -3674,7 +3596,7 @@
       "_origin": "ast",
       "id": "src_game_layers_money_starting_amount",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "money_starting_amount"
     },
     {
@@ -3685,7 +3607,7 @@
       "_origin": "ast",
       "id": "src_game_layers_offline_progress_speed_multiplier",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "offline_progress_speed_multiplier"
     },
     {
@@ -3696,7 +3618,7 @@
       "_origin": "ast",
       "id": "src_game_layers_overclock_multiplier_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "overclock_multiplier_step"
     },
     {
@@ -3707,7 +3629,7 @@
       "_origin": "ast",
       "id": "src_game_layers_overclock_requirement_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "overclock_requirement_step"
     },
     {
@@ -3718,7 +3640,7 @@
       "_origin": "ast",
       "id": "src_game_layers_prestige_point_speed_bonus",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "prestige_point_speed_bonus"
     },
     {
@@ -3729,7 +3651,7 @@
       "_origin": "ast",
       "id": "src_game_layers_prestige_speed_bonus_unlock_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "prestige_speed_bonus_unlock_cost"
     },
     {
@@ -3740,7 +3662,7 @@
       "_origin": "ast",
       "id": "src_game_layers_prestige_threshold",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "prestige_threshold"
     },
     {
@@ -3751,7 +3673,7 @@
       "_origin": "ast",
       "id": "src_game_layers_purchase_block_size_growth_interval_levels",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "purchase_block_size_growth_interval_levels"
     },
     {
@@ -3762,7 +3684,7 @@
       "_origin": "ast",
       "id": "src_game_layers_purchase_block_size_growth_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "purchase_block_size_growth_step"
     },
     {
@@ -3773,7 +3695,7 @@
       "_origin": "ast",
       "id": "src_game_layers_purchase_milestone_mega_multiplier_base",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "purchase_milestone_mega_multiplier_base"
     },
     {
@@ -3784,7 +3706,7 @@
       "_origin": "ast",
       "id": "src_game_layers_purchase_milestone_multiplier_base",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "purchase_milestone_multiplier_base"
     },
     {
@@ -3795,7 +3717,7 @@
       "_origin": "ast",
       "id": "src_game_layers_smart_autobuyer_cost_multiplier",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "smart_autobuyer_cost_multiplier"
     },
     {
@@ -3806,19 +3728,8 @@
       "_origin": "ast",
       "id": "src_game_layers_speed_up_multiplier_base",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "speed_up_multiplier_base"
-    },
-    {
-      "label": "STORAGE_BANK_LADDER_CAP",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L165",
-      "_origin": "ast",
-      "id": "src_game_layers_storage_bank_ladder_cap",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "storage_bank_ladder_cap"
     },
     {
       "label": "STORAGE_BUILD_COST_MULTIPLIER",
@@ -3828,7 +3739,7 @@
       "_origin": "ast",
       "id": "src_game_layers_storage_build_cost_multiplier",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "storage_build_cost_multiplier"
     },
     {
@@ -3839,7 +3750,7 @@
       "_origin": "ast",
       "id": "src_game_layers_test",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "layers.test.js"
     },
     {
@@ -3850,7 +3761,7 @@
       "_origin": "ast",
       "id": "src_game_layers_tick_rate_ms",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "tick_rate_ms"
     },
     {
@@ -3861,7 +3772,7 @@
       "_origin": "ast",
       "id": "src_game_layers_tickspeed_autobuyer_cost",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "tickspeed_autobuyer_cost"
     },
     {
@@ -3872,7 +3783,7 @@
       "_origin": "ast",
       "id": "src_game_layers_tickspeed_multiplier_base_exponent",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "tickspeed_multiplier_base_exponent"
     },
     {
@@ -3883,19 +3794,8 @@
       "_origin": "ast",
       "id": "src_game_layers_tickspeed_production_step",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "tickspeed_production_step"
-    },
-    {
-      "label": "TIER_DEFINITIONS",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L24",
-      "_origin": "ast",
-      "id": "src_game_layers_tier_definitions",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "tier_definitions"
     },
     {
       "label": "TIER_TICKSPEED_AUTOBUYER_MILESTONE_START",
@@ -3905,19 +3805,8 @@
       "_origin": "ast",
       "id": "src_game_layers_tier_tickspeed_autobuyer_milestone_start",
       "community": 2,
-      "community_name": "engine.js",
+      "community_name": "layers.js",
       "norm_label": "tier_tickspeed_autobuyer_milestone_start"
-    },
-    {
-      "label": "TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L302",
-      "_origin": "ast",
-      "id": "src_game_layers_tier_tickspeed_autobuyer_milestone_step",
-      "community": 2,
-      "community_name": "engine.js",
-      "norm_label": "tier_tickspeed_autobuyer_milestone_step"
     },
     {
       "label": "playwright.config.js",
@@ -4242,7 +4131,7 @@
       "label": "Constants (`src/game/layers.js`)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1615",
+      "source_location": "L1616",
       "_origin": "ast",
       "id": "docs_economy_reference_constants_src_game_layers_js",
       "community": 23,
@@ -4264,7 +4153,7 @@
       "label": "Game state shape",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1175",
+      "source_location": "L1176",
       "_origin": "ast",
       "id": "docs_economy_reference_game_state_shape",
       "community": 23,
@@ -4275,7 +4164,7 @@
       "label": "Key engine functions (`src/game/engine.js`)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1514",
+      "source_location": "L1515",
       "_origin": "ast",
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
       "community": 23,
@@ -4363,7 +4252,7 @@
       "label": "Prestige info is hidden until first prestige",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1147",
+      "source_location": "L1148",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
       "community": 23,
@@ -4396,7 +4285,7 @@
       "label": "Reset",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1166",
+      "source_location": "L1167",
       "_origin": "ast",
       "id": "docs_economy_reference_reset",
       "community": 23,
@@ -5889,6 +5778,17 @@
       "norm_label": "test plan"
     },
     {
+      "label": "DEFAULT_PURCHASE_BLOCK_SIZE",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L234",
+      "_origin": "ast",
+      "id": "src_game_layers_default_purchase_block_size",
+      "community": 39,
+      "community_name": "storage.js",
+      "norm_label": "default_purchase_block_size"
+    },
+    {
       "label": "storage.js",
       "file_type": "code",
       "source_file": "src/game/storage.js",
@@ -5920,17 +5820,6 @@
       "community": 39,
       "community_name": "storage.js",
       "norm_label": "legacy_tier_id_map"
-    },
-    {
-      "label": "storage.test.js",
-      "file_type": "code",
-      "source_file": "src/game/storage.test.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_game_storage_test",
-      "community": 39,
-      "community_name": "storage.js",
-      "norm_label": "storage.test.js"
     },
     {
       "label": "App.jsx",
@@ -6428,6 +6317,72 @@
       "norm_label": "theming reference"
     },
     {
+      "label": "engine.js",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_engine",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "engine.js"
+    },
+    {
+      "label": "currencyNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L362",
+      "_origin": "ast",
+      "id": "src_game_engine_currencynumberformatter",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "currencynumberformatter"
+    },
+    {
+      "label": "plainNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L360",
+      "_origin": "ast",
+      "id": "src_game_engine_plainnumberformatter",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "plainnumberformatter"
+    },
+    {
+      "label": "scientificNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L361",
+      "_origin": "ast",
+      "id": "src_game_engine_scientificnumberformatter",
+      "community": 48,
+      "community_name": "engine.js",
+      "norm_label": "scientificnumberformatter"
+    },
+    {
+      "label": "TIER_DEFINITIONS",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "src_game_layers_tier_definitions",
+      "community": 49,
+      "community_name": "InfoPage/index.jsx",
+      "norm_label": "tier_definitions"
+    },
+    {
+      "label": "TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L302",
+      "_origin": "ast",
+      "id": "src_game_layers_tier_tickspeed_autobuyer_milestone_step",
+      "community": 49,
+      "community_name": "InfoPage/index.jsx",
+      "norm_label": "tier_tickspeed_autobuyer_milestone_step"
+    },
+    {
       "label": "InfoPage/index.jsx",
       "file_type": "code",
       "source_file": "src/pages/InfoPage/index.jsx",
@@ -6560,50 +6515,6 @@
       "norm_label": "variant_token"
     },
     {
-      "label": "package.json",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "package",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "package.json"
-    },
-    {
-      "label": "browserslist",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L45",
-      "_origin": "ast",
-      "id": "package_browserslist",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "browserslist"
-    },
-    {
-      "label": "development",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L51",
-      "_origin": "ast",
-      "id": "package_browserslist_development",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "development"
-    },
-    {
-      "label": "production",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L46",
-      "_origin": "ast",
-      "id": "package_browserslist_production",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "production"
-    },
-    {
       "label": "dependencies",
       "file_type": "code",
       "source_file": "package.json",
@@ -6611,7 +6522,7 @@
       "_origin": "ast",
       "id": "package_dependencies",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "dependencies"
     },
     {
@@ -6622,7 +6533,7 @@
       "_origin": "ast",
       "id": "package_dependencies_fontsource_inter",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -6633,7 +6544,7 @@
       "_origin": "ast",
       "id": "package_dependencies_fontsource_space_grotesk",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -6644,7 +6555,7 @@
       "_origin": "ast",
       "id": "package_dependencies_react",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -6655,7 +6566,7 @@
       "_origin": "ast",
       "id": "package_dependencies_react_dom",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -6666,7 +6577,7 @@
       "_origin": "ast",
       "id": "package_dependencies_react_is",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react-is"
     },
     {
@@ -6677,7 +6588,7 @@
       "_origin": "ast",
       "id": "package_dependencies_styled_components",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -6688,217 +6599,8 @@
       "_origin": "ast",
       "id": "package_dependencies_web_vitals",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
-    },
-    {
-      "label": "name",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L2",
-      "_origin": "ast",
-      "id": "package_name",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "name"
-    },
-    {
-      "label": "packageManager",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L6",
-      "_origin": "ast",
-      "id": "package_packagemanager",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "packagemanager"
-    },
-    {
-      "label": "private",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L4",
-      "_origin": "ast",
-      "id": "package_private",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "private"
-    },
-    {
-      "label": "resolutions",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "package_resolutions",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "resolutions"
-    },
-    {
-      "label": "**/fast-uri",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L10",
-      "_origin": "ast",
-      "id": "package_resolutions_fast_uri",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "**/fast-uri"
-    },
-    {
-      "label": "**/filelist/minimatch/brace-expansion",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L9",
-      "_origin": "ast",
-      "id": "package_resolutions_filelist_minimatch_brace_expansion",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "**/filelist/minimatch/brace-expansion"
-    },
-    {
-      "label": "**/glob/minimatch/brace-expansion",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L8",
-      "_origin": "ast",
-      "id": "package_resolutions_glob_minimatch_brace_expansion",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "**/glob/minimatch/brace-expansion"
-    },
-    {
-      "label": "**/nanoid",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L11",
-      "_origin": "ast",
-      "id": "package_resolutions_nanoid",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "**/nanoid"
-    },
-    {
-      "label": "scripts",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L35",
-      "_origin": "ast",
-      "id": "package_scripts",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "scripts"
-    },
-    {
-      "label": "audit",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L42",
-      "_origin": "ast",
-      "id": "package_scripts_audit",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "audit"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L38",
-      "_origin": "ast",
-      "id": "package_scripts_build",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "build"
-    },
-    {
-      "label": "dev",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L37",
-      "_origin": "ast",
-      "id": "package_scripts_dev",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "dev"
-    },
-    {
-      "label": "gen-pwa-icons",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L43",
-      "_origin": "ast",
-      "id": "package_scripts_gen_pwa_icons",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "gen-pwa-icons"
-    },
-    {
-      "label": "start",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L36",
-      "_origin": "ast",
-      "id": "package_scripts_start",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "start"
-    },
-    {
-      "label": "test",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L39",
-      "_origin": "ast",
-      "id": "package_scripts_test",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "test"
-    },
-    {
-      "label": "test:e2e",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L41",
-      "_origin": "ast",
-      "id": "package_scripts_test_e2e",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "test:e2e"
-    },
-    {
-      "label": "test:watch",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L40",
-      "_origin": "ast",
-      "id": "package_scripts_test_watch",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "test:watch"
-    },
-    {
-      "label": "type",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L5",
-      "_origin": "ast",
-      "id": "package_type",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "type"
-    },
-    {
-      "label": "version",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L3",
-      "_origin": "ast",
-      "id": "package_version",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "version"
     },
     {
       "label": "@fontsource/inter",
@@ -6908,7 +6610,7 @@
       "_origin": "ast",
       "id": "fontsource_inter",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "@fontsource/inter"
     },
     {
@@ -6919,7 +6621,7 @@
       "_origin": "ast",
       "id": "fontsource_space_grotesk",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "@fontsource/space-grotesk"
     },
     {
@@ -6930,7 +6632,7 @@
       "_origin": "ast",
       "id": "package_json_web_vitals",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "web-vitals"
     },
     {
@@ -6941,7 +6643,7 @@
       "_origin": "ast",
       "id": "react",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react"
     },
     {
@@ -6952,7 +6654,7 @@
       "_origin": "ast",
       "id": "react_dom",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react-dom"
     },
     {
@@ -6963,74 +6665,8 @@
       "_origin": "ast",
       "id": "react_is",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "react-is"
-    },
-    {
-      "label": ">0.2%",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L46",
-      "_origin": "ast",
-      "id": "ref_0_2",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": ">0.2%"
-    },
-    {
-      "label": "last 1 chrome version",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L51",
-      "_origin": "ast",
-      "id": "ref_last_1_chrome_version",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "last 1 chrome version"
-    },
-    {
-      "label": "last 1 firefox version",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L51",
-      "_origin": "ast",
-      "id": "ref_last_1_firefox_version",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "last 1 firefox version"
-    },
-    {
-      "label": "last 1 safari version",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L51",
-      "_origin": "ast",
-      "id": "ref_last_1_safari_version",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "last 1 safari version"
-    },
-    {
-      "label": "not dead",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L46",
-      "_origin": "ast",
-      "id": "ref_not_dead",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "not dead"
-    },
-    {
-      "label": "not op_mini all",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L46",
-      "_origin": "ast",
-      "id": "ref_not_op_mini_all",
-      "community": 51,
-      "community_name": "package.json",
-      "norm_label": "not op_mini all"
     },
     {
       "label": "styled-components",
@@ -7040,7 +6676,7 @@
       "_origin": "ast",
       "id": "styled_components",
       "community": 51,
-      "community_name": "package.json",
+      "community_name": "dependencies",
       "norm_label": "styled-components"
     },
     {
@@ -7080,7 +6716,7 @@
       "label": "Distribution",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1900",
+      "source_location": "L1920",
       "_origin": "ast",
       "id": "docs_design_history_distribution",
       "community": 54,
@@ -7091,7 +6727,7 @@
       "label": "Documentation",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1916",
+      "source_location": "L1936",
       "_origin": "ast",
       "id": "docs_design_history_documentation",
       "community": 54,
@@ -7102,7 +6738,7 @@
       "label": "Testing",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1930",
+      "source_location": "L1950",
       "_origin": "ast",
       "id": "docs_design_history_testing",
       "community": 54,
@@ -7113,7 +6749,7 @@
       "label": "Why a PWA instead of Capacitor/native app-store distribution",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1902",
+      "source_location": "L1922",
       "_origin": "ast",
       "id": "docs_design_history_why_a_pwa_instead_of_capacitor_native_app_store_distribution",
       "community": 54,
@@ -7124,7 +6760,7 @@
       "label": "Why semver/changelog started at v0.5.0, not v0.1.0-from-inception",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1918",
+      "source_location": "L1938",
       "_origin": "ast",
       "id": "docs_design_history_why_semver_changelog_started_at_v0_5_0_not_v0_1_0_from_inception",
       "community": 54,
@@ -7227,7 +6863,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "run-simulation.mjs"
     },
     {
@@ -7238,7 +6874,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_clivalues",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "clivalues"
     },
     {
@@ -7249,7 +6885,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_defaultppvalues",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "defaultppvalues"
     },
     {
@@ -7260,8 +6896,118 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_simulate",
       "community": 57,
-      "community_name": "isProductionFrozen",
+      "community_name": "clampNonNegative",
       "norm_label": "simulate.mjs"
+    },
+    {
+      "label": "MONEY_ID",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "src_game_layers_money_id",
+      "community": 57,
+      "community_name": "clampNonNegative",
+      "norm_label": "money_id"
+    },
+    {
+      "label": "browserslist",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "package_browserslist",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "browserslist"
+    },
+    {
+      "label": "development",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "package_browserslist_development",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "development"
+    },
+    {
+      "label": "production",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "package_browserslist_production",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "production"
+    },
+    {
+      "label": ">0.2%",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "ref_0_2",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": ">0.2%"
+    },
+    {
+      "label": "last 1 chrome version",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "ref_last_1_chrome_version",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "last 1 chrome version"
+    },
+    {
+      "label": "last 1 firefox version",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "ref_last_1_firefox_version",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "last 1 firefox version"
+    },
+    {
+      "label": "last 1 safari version",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "ref_last_1_safari_version",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "last 1 safari version"
+    },
+    {
+      "label": "not dead",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "ref_not_dead",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "not dead"
+    },
+    {
+      "label": "not op_mini all",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "ref_not_op_mini_all",
+      "community": 59,
+      "community_name": "development",
+      "norm_label": "not op_mini all"
     },
     {
       "label": "devDependencies",
@@ -7517,10 +7263,230 @@
       "norm_label": "vitest"
     },
     {
+      "label": "scripts",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "package_scripts",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "scripts"
+    },
+    {
+      "label": "audit",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "package_scripts_audit",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "audit"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "package_scripts_build",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "build"
+    },
+    {
+      "label": "dev",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "package_scripts_dev",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "dev"
+    },
+    {
+      "label": "gen-pwa-icons",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "package_scripts_gen_pwa_icons",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "gen-pwa-icons"
+    },
+    {
+      "label": "start",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "package_scripts_start",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "start"
+    },
+    {
+      "label": "test",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "package_scripts_test",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "test"
+    },
+    {
+      "label": "test:e2e",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "package_scripts_test_e2e",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "test:e2e"
+    },
+    {
+      "label": "test:watch",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L40",
+      "_origin": "ast",
+      "id": "package_scripts_test_watch",
+      "community": 60,
+      "community_name": "scripts",
+      "norm_label": "test:watch"
+    },
+    {
+      "label": "package.json",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "package",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "package.json"
+    },
+    {
+      "label": "name",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "package_name",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "name"
+    },
+    {
+      "label": "packageManager",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "package_packagemanager",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "packagemanager"
+    },
+    {
+      "label": "private",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "package_private",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "private"
+    },
+    {
+      "label": "type",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "package_type",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "type"
+    },
+    {
+      "label": "version",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "package_version",
+      "community": 62,
+      "community_name": "package.json",
+      "norm_label": "version"
+    },
+    {
+      "label": "resolutions",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "package_resolutions",
+      "community": 63,
+      "community_name": "resolutions",
+      "norm_label": "resolutions"
+    },
+    {
+      "label": "**/fast-uri",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "package_resolutions_fast_uri",
+      "community": 63,
+      "community_name": "resolutions",
+      "norm_label": "**/fast-uri"
+    },
+    {
+      "label": "**/filelist/minimatch/brace-expansion",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "package_resolutions_filelist_minimatch_brace_expansion",
+      "community": 63,
+      "community_name": "resolutions",
+      "norm_label": "**/filelist/minimatch/brace-expansion"
+    },
+    {
+      "label": "**/glob/minimatch/brace-expansion",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "package_resolutions_glob_minimatch_brace_expansion",
+      "community": 63,
+      "community_name": "resolutions",
+      "norm_label": "**/glob/minimatch/brace-expansion"
+    },
+    {
+      "label": "**/nanoid",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "package_resolutions_nanoid",
+      "community": 63,
+      "community_name": "resolutions",
+      "norm_label": "**/nanoid"
+    },
+    {
       "label": "Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1866",
+      "source_location": "L1886",
       "_origin": "ast",
       "id": "docs_design_history_compute_boost_the_first_mechanic_to_spend_compute_cores_and_a_sacrifice_confirmation",
       "community": 7,
@@ -7531,7 +7497,7 @@
       "label": "Compute Cores/Nodes: capping the Storage ladder, and two different meanings of \"MB\" in the same feature",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1641",
+      "source_location": "L1661",
       "_origin": "ast",
       "id": "docs_design_history_compute_cores_nodes_capping_the_storage_ladder_and_two_different_meanings_of_mb_in_the_same_feature",
       "community": 7,
@@ -7542,7 +7508,7 @@
       "label": "Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1691",
+      "source_location": "L1711",
       "_origin": "ast",
       "id": "docs_design_history_compute_cores_reworked_capacity_tied_flush_cost_not_a_fixed_10_mb_storage_fullness_gate",
       "community": 7,
@@ -7564,7 +7530,7 @@
       "label": "Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1780",
+      "source_location": "L1800",
       "_origin": "ast",
       "id": "docs_design_history_fibonacci_cost_curve_and_2_claims_for_the_first_three_invest_tiers_reinstated_this_time_deliberately",
       "community": 7,
@@ -7660,6 +7626,17 @@
       "norm_label": "overclock: from a standalone multiplier to a tickspeed-upgrade step boost"
     },
     {
+      "label": "Overclock, once more: reward step bumped from 0.1% to 10% per level",
+      "file_type": "document",
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L1629",
+      "_origin": "ast",
+      "id": "docs_design_history_overclock_once_more_reward_step_bumped_from_0_1_to_10_per_level",
+      "community": 7,
+      "community_name": "Economy model",
+      "norm_label": "overclock, once more: reward step bumped from 0.1% to 10% per level"
+    },
+    {
       "label": "Prestige history: why PP replaced direct production doubling",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
@@ -7729,7 +7706,7 @@
       "label": "Sacrifice for 10x Capacity gated behind every other currently-possible action",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1746",
+      "source_location": "L1766",
       "_origin": "ast",
       "id": "docs_design_history_sacrifice_for_10x_capacity_gated_behind_every_other_currently_possible_action",
       "community": 7,
@@ -7773,7 +7750,7 @@
       "label": "The 1000-Byte Invest tier drops from two claims to one",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1629",
+      "source_location": "L1649",
       "_origin": "ast",
       "id": "docs_design_history_the_1000_byte_invest_tier_drops_from_two_claims_to_one",
       "community": 7,
@@ -8010,6 +7987,28 @@
       "community": 7,
       "community_name": "Economy model",
       "norm_label": "xp status"
+    },
+    {
+      "label": "INTRO_CAPACITY_MULTIPLIER",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L84",
+      "_origin": "ast",
+      "id": "src_game_layers_intro_capacity_multiplier",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "intro_capacity_multiplier"
+    },
+    {
+      "label": "STORAGE_BANK_LADDER_CAP",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L165",
+      "_origin": "ast",
+      "id": "src_game_layers_storage_bank_ladder_cap",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "storage_bank_ladder_cap"
     },
     {
       "label": "ByteFoundryPage/index.jsx",
@@ -11530,7 +11529,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L828",
+      "source_location": "L823",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -11542,7 +11541,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L829",
+      "source_location": "L824",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -11554,7 +11553,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L829",
+      "source_location": "L824",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -11602,7 +11601,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1014",
+      "source_location": "L1009",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11614,7 +11613,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1015",
+      "source_location": "L1010",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11626,7 +11625,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1061",
+      "source_location": "L1056",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11638,7 +11637,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1064",
+      "source_location": "L1059",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11650,7 +11649,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1094",
+      "source_location": "L1089",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11662,7 +11661,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1095",
+      "source_location": "L1090",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11674,7 +11673,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1096",
+      "source_location": "L1091",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11686,7 +11685,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1121",
+      "source_location": "L1116",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11698,7 +11697,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1186",
+      "source_location": "L1181",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11710,7 +11709,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1251",
+      "source_location": "L1246",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11722,7 +11721,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1300",
+      "source_location": "L1295",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11734,7 +11733,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1307",
+      "source_location": "L1302",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11746,7 +11745,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1434",
+      "source_location": "L1429",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11758,7 +11757,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1435",
+      "source_location": "L1430",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11770,7 +11769,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1447",
+      "source_location": "L1442",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11782,7 +11781,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1448",
+      "source_location": "L1443",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11794,7 +11793,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1464",
+      "source_location": "L1459",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11806,7 +11805,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1468",
+      "source_location": "L1463",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11818,7 +11817,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1469",
+      "source_location": "L1464",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11830,7 +11829,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1477",
+      "source_location": "L1472",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11842,7 +11841,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1504",
+      "source_location": "L1499",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11854,7 +11853,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1511",
+      "source_location": "L1506",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11866,7 +11865,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1512",
+      "source_location": "L1507",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11878,7 +11877,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1513",
+      "source_location": "L1508",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11890,7 +11889,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1519",
+      "source_location": "L1514",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11902,19 +11901,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1587",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_formatpreciserate",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1600",
+      "source_location": "L1595",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11926,7 +11913,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1773",
+      "source_location": "L1768",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11938,7 +11925,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1774",
+      "source_location": "L1769",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11950,7 +11937,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L838",
+      "source_location": "L833",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11962,7 +11949,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L843",
+      "source_location": "L838",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11974,7 +11961,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L845",
+      "source_location": "L840",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11986,7 +11973,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L846",
+      "source_location": "L841",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -11998,7 +11985,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L852",
+      "source_location": "L847",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -12010,7 +11997,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L873",
+      "source_location": "L868",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -12022,7 +12009,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L960",
+      "source_location": "L955",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -12034,7 +12021,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L966",
+      "source_location": "L961",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -12046,7 +12033,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L988",
+      "source_location": "L983",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -12058,7 +12045,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L990",
+      "source_location": "L985",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -19556,7 +19543,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1900",
+      "source_location": "L1920",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_design_history_rationale",
@@ -19567,7 +19554,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1916",
+      "source_location": "L1936",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_design_history_rationale",
@@ -19578,7 +19565,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1930",
+      "source_location": "L1950",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_design_history_rationale",
@@ -19611,7 +19598,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1902",
+      "source_location": "L1922",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_distribution",
@@ -19622,7 +19609,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1918",
+      "source_location": "L1938",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_documentation",
@@ -19901,6 +19888,17 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
+      "target": "docs_design_history_overclock_once_more_reward_step_bumped_from_0_1_to_10_per_level",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L1649",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_design_history_economy_model",
       "target": "docs_design_history_the_1000_byte_invest_tier_drops_from_two_claims_to_one",
       "confidence_score": 1.0
     },
@@ -19908,7 +19906,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1641",
+      "source_location": "L1661",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
@@ -19919,7 +19917,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1691",
+      "source_location": "L1711",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
@@ -19930,7 +19928,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1746",
+      "source_location": "L1766",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
@@ -19941,7 +19939,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1780",
+      "source_location": "L1800",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
@@ -19952,7 +19950,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1866",
+      "source_location": "L1886",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_design_history_economy_model",
@@ -20150,7 +20148,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1147",
+      "source_location": "L1148",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -20161,7 +20159,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1166",
+      "source_location": "L1167",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -20172,7 +20170,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1175",
+      "source_location": "L1176",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -20183,7 +20181,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1514",
+      "source_location": "L1515",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -20194,7 +20192,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1615",
+      "source_location": "L1616",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_economy_model_reference",
@@ -24748,7 +24746,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L800",
+      "source_location": "L801",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -24759,18 +24757,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L806",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_formatpreciserate",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L810",
+      "source_location": "L805",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -24781,7 +24768,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L818",
+      "source_location": "L813",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -24792,7 +24779,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L826",
+      "source_location": "L821",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -24803,7 +24790,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L831",
+      "source_location": "L826",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -25289,5 +25276,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "cb65b8309ee6a5293aca8fa378f43827d50b9b39"
+  "built_at_commit": "ce18ea93ee9839c746131a99bbad5b95f78c178e"
 }

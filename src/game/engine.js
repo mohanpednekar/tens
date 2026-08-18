@@ -204,7 +204,7 @@ export const createInitialGameState = () => ({
   // so falling behind doesn't require claiming every intermediate level). Grants a standalone
   // multiplier (getOverclockMultiplier — see getEffectiveTierTickSpeedSeconds), a genuine third
   // tickspeed factor alongside the per-tier and global tickspeed multipliers, compounding
-  // OVERCLOCK_MULTIPLIER_STEP (0.1%) per level. Unlike speedUpCount just above, this is NOT reset by
+  // OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per level. Unlike speedUpCount just above, this is NOT reset by
   // an ordinary Speed Up (speedUpGame explicitly carries it through unchanged) — only by a real
   // Prestige (same reasoning as speedUpCount: an unbounded permanent compounding bonus across every
   // future Prestige forever would trivialize the Prestige cost curve) or by Overclock's own claim
@@ -737,7 +737,7 @@ export const getSpeedUpRequirement = speedUpCount =>
 export const getOverclockRequirement = overclockCount =>
   clampNonNegative(overclockCount) * OVERCLOCK_REQUIREMENT_STEP + 2
 
-// Overclock's own reward: a standalone multiplier compounding OVERCLOCK_MULTIPLIER_STEP (0.1%) per
+// Overclock's own reward: a standalone multiplier compounding OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per
 // claimed level, applied as a genuine third factor in getEffectiveTierTickSpeedSeconds alongside
 // the per-tier and global tickspeed multipliers — unlike the global tickspeed multiplier, this
 // applies regardless of whether that track has been bought at all.

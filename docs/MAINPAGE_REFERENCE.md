@@ -330,7 +330,7 @@ stays just as interactive there as on the gate itself.
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)", "+0.2% faster ticks on every tier (Lv.2)") or a "not yet
+  (Lv.1)", "+21% faster ticks on every tier (Lv.2)") or a "not yet
   unlocked/activated/active" status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
@@ -682,18 +682,16 @@ the Googol freeze" below).
 `overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
 `speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
 match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ ×{next} · Lv.{level}/{requirement}`
-— e.g. `⚡ ×1.008 · Lv.8/7` — `actions.overclock` on click, mirroring `SpeedUpButton`'s own `×{next}`
+— e.g. `⚡ ×2.14 · Lv.8/7` — `actions.overclock` on click, mirroring `SpeedUpButton`'s own `×{next}`
 convention rather than a percentage, since Overclock's reward is a genuine standalone multiplier now
 (see `getOverclockMultiplier` in engine.js). `{next}` is
 `getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` — what claiming right now
 would jump the multiplier to, accounting for a catch-up claim past the bare minimum requirement —
-formatted with a dedicated `formatPreciseRate` helper (3 decimal places, trimmed) rather than
-`SpeedUpButton`'s own `formatRate` (2 decimal places): Overclock's 0.1%-per-level steps
-(`OVERCLOCK_MULTIPLIER_STEP`) would otherwise round the first several claimed levels down to a bare
-"1" under 2-decimal precision, indistinguishable from no bonus at all. The same `formatPreciseRate`
-call is reused for the tier row's "Effective tickspeed" breakdown's own `overclock ×N` figure (see
-below) and the disclosure's status line, so every Overclock-specific multiplier display on the page
-uses consistent precision.
+formatted with the same `formatRate` helper (2 decimal places, trimmed) `SpeedUpButton` uses: at
+`OVERCLOCK_MULTIPLIER_STEP`'s current ×1.1-per-level size, 2-decimal precision already reads
+distinctly from level to level (×1.1, ×1.21, ×1.33, …), unlike an earlier, much smaller per-level
+step this mechanic briefly used (see `docs/DESIGN_HISTORY.md` for why a dedicated
+higher-precision formatter was added and then removed again).
 Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
 level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
 `getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —

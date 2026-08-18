@@ -2074,10 +2074,10 @@ describe('getOverclockMultiplier', () => {
     expect(getOverclockMultiplier(0)).toBe(1)
   })
 
-  it('compounds 0.1% (OVERCLOCK_MULTIPLIER_STEP) per claimed level', () => {
-    expect(getOverclockMultiplier(1)).toBeCloseTo(1.001)
-    expect(getOverclockMultiplier(2)).toBeCloseTo(1.001 ** 2)
-    expect(getOverclockMultiplier(10)).toBeCloseTo(1.001 ** 10)
+  it('compounds ×1.1 (1 + OVERCLOCK_MULTIPLIER_STEP) per claimed level', () => {
+    expect(getOverclockMultiplier(1)).toBeCloseTo(1.1)
+    expect(getOverclockMultiplier(2)).toBeCloseTo(1.1 ** 2)
+    expect(getOverclockMultiplier(10)).toBeCloseTo(1.1 ** 10)
   })
 
   it('treats a negative count as 0', () => {
@@ -2475,17 +2475,17 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   })
 
   it('applies Overclock\'s standalone multiplier alongside an already-bought global tickspeed level', () => {
-    // 5 claimed Overclock levels compound 1.001^5 as a genuine third factor, on top of the global
+    // 5 claimed Overclock levels compound 1.1^5 as a genuine third factor, on top of the global
     // tickspeed multiplier's own unaffected 1% regular step.
     const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9 * 1.001 ** 5))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9 * 1.1 ** 5))
   })
 
   it('applies Overclock\'s standalone multiplier even while the global tickspeed multiplier is still at level 0/not yet bought', () => {
     // Unlike the old folded-in-step design, Overclock's reward is a genuine separate factor, so it
     // has an effect regardless of whether the global tickspeed track has ever been bought.
     const state = withOverclockCount(createInitialGameState(), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.001 ** 5))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.1 ** 5))
   })
 
   it('stacks Overclock\'s multiplier with both the per-tier and global tickspeed multipliers', () => {
@@ -2497,7 +2497,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       5
     )
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id))
-      .toBeCloseTo(1 / (1.1 * 1.01 ** 9 * 1.001 ** 5))
+      .toBeCloseTo(1 / (1.1 * 1.01 ** 9 * 1.1 ** 5))
   })
 
   it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {

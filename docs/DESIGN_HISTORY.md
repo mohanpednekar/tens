@@ -1626,6 +1626,26 @@ Everything else about `overclockGame` (the full soft-reset shape, which permanen
 over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
 — only the reward formula, the requirement formula, and the claim's target value changed.
 
+### Overclock, once more: reward step bumped from 0.1% to 10% per level
+
+A direct, same-session follow-up to the entry above, requested by the maintainer immediately after
+that rework shipped: `OVERCLOCK_MULTIPLIER_STEP` changed from `0.001` (×1.001 per claimed level) to
+`0.1` (×1.1 per claimed level) — a hundredfold increase in the per-level reward, with no other
+formula touched. `getOverclockMultiplier`'s shape (`(1 + OVERCLOCK_MULTIPLIER_STEP) **
+overclockCount`) and everything about `getOverclockRequirement`/`overclockGame`'s catch-up claim
+behavior from the entry above are unaffected — this is purely a constant-value change.
+
+The entry above's `formatPreciseRate` fix (a 3-decimal-place display helper, added because
+`formatRate`'s 2-decimal rounding collapsed Overclock's first several ×1.001-per-level claims down
+to a bare "×1") is now unnecessary and was removed: at ×1.1 per level, `formatRate`'s ordinary
+2-decimal precision is already fully legible (×1.1, ×1.21, ×1.33, ×1.46, …) — none of the early
+levels round away to nothing. `MainPage`'s Overclock-specific multiplier displays (the button, the
+disclosure, and the tier row's "Effective tickspeed" breakdown) went back to using `formatRate`
+directly, same as every other multiplier display on the page. If `OVERCLOCK_MULTIPLIER_STEP` is ever
+lowered again significantly, re-check whether the early claimed levels still read distinctly from
+"×1" under `formatRate`'s 2-decimal rounding before assuming it's fine — that's exactly the bug the
+removed `formatPreciseRate` helper existed to fix.
+
 ### The 1000-Byte Invest tier drops from two claims to one
 
 An earlier entry ("The same round also corrected a misreading of 'Invest for Double Production'…",

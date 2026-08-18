@@ -795,15 +795,10 @@ const formatCost = (amount, resourceId) =>
 // consumption) — how much of `denominator` the current `numerator` already covers, capped at 100.
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
 
-// "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero,
-// used for multiplier displays (Speed Up's next multiplier, the PP production speed bonus).
+// "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero, used
+// for multiplier displays (Speed Up's next multiplier, the PP production speed bonus, Overclock's
+// own ×1.1-per-level multiplier).
 const formatRate = value => (Math.round(value * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
-
-// Same trimmed-decimal convention as formatRate, but to 3 decimal places instead of 2 — needed for
-// Overclock's own multiplier (getOverclockMultiplier), which compounds in steps of 0.1%
-// (OVERCLOCK_MULTIPLIER_STEP) and would otherwise round its first several claimed levels down to a
-// bare "1" under formatRate's 2-decimal precision, reading as no bonus at all.
-const formatPreciseRate = value => (Math.round(value * 1000) / 1000).toFixed(3).replace(/\.?0+$/, '')
 
 // Whole-percent bonus a multiplier represents above baseline (×1.21 → 21) — used below +100% for
 // the tickspeed multiplier badge/labels; see formatBonusOrMultiplier below for +100% and beyond.
@@ -1001,7 +996,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
   // passes the next Overclock level — one more than the last claimed level (see
   // getOverclockRequirement/overclockGame in engine.js); no artificial ladder beyond that. Unlike
   // Speed Up, claiming it also wipes Speed Up's own stacking bonus back to zero (its speedUpCount
-  // resets to 0) in exchange for a standalone multiplier (getOverclockMultiplier), compounding 0.1%
+  // resets to 0) in exchange for a standalone multiplier (getOverclockMultiplier), compounding ×1.1
   // per level, applied as a genuine third tickspeed factor alongside the per-tier and global
   // tickspeed multipliers. A claim jumps straight to the last tier's current level, so falling
   // behind never requires claiming every intermediate level one at a time. Gated on the same
@@ -1584,7 +1579,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
                   <ul>
                     <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
                     <li>
-                      Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)}, overclock ×{formatPreciseRate(overclockMultiplier)})
+                      Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)}, overclock ×{formatRate(overclockMultiplier)})
                     </li>
                     <li>
                       Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased) — purchase
@@ -1717,23 +1712,23 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                ×{formatPreciseRate(overclockMultiplier)} faster ticks on every tier from level {overclockCount}.
+                ×{formatRate(overclockMultiplier)} faster ticks on every tier from level {overclockCount}.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the standalone Overclock multiplier to ×${formatPreciseRate(nextOverclockMultiplier)}`}
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the standalone Overclock multiplier to ×${formatRate(nextOverclockMultiplier)}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and raises the standalone Overclock multiplier to ×${formatPreciseRate(nextOverclockMultiplier)}`}
+            title={`Resets tiers (and Speed Up's bonus) and raises the standalone Overclock multiplier to ×${formatRate(nextOverclockMultiplier)}`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>×{formatPreciseRate(nextOverclockMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <ButtonLabel>×{formatRate(nextOverclockMultiplier)}{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"

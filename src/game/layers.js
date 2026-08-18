@@ -337,13 +337,13 @@ export const SPEED_UP_MULTIPLIER_BASE = 2
 // Per-level base for Overclock's own standalone reward multiplier — see engine.js's
 // getOverclockMultiplier/getEffectiveTierTickSpeedSeconds/overclockGame — a second, steeper
 // Speed-Up-style soft reset. Each claimed Overclock level compounds a further OVERCLOCK_MULTIPLIER_STEP
-// (0.1%) onto a genuine third tickspeed factor, applied alongside (not folded into) the per-tier and
-// global tickspeed multipliers — so it applies even before the global tickspeed multiplier has ever
-// been bought, unlike an earlier version of this mechanic that folded the bonus into that track's
-// own per-level step instead (see docs/DESIGN_HISTORY.md for why this moved back to a standalone
-// factor). state.overclockCount is never reset by an ordinary Speed Up, unlike
-// globalTickspeedMultiplier itself — see speedUpGame.
-export const OVERCLOCK_MULTIPLIER_STEP = 0.001
+// (10%, i.e. ×1.1 per level) onto a genuine third tickspeed factor, applied alongside (not folded
+// into) the per-tier and global tickspeed multipliers — so it applies even before the global
+// tickspeed multiplier has ever been bought, unlike an earlier version of this mechanic that folded
+// the bonus into that track's own per-level step instead (see docs/DESIGN_HISTORY.md for why this
+// moved back to a standalone factor). state.overclockCount is never reset by an ordinary Speed Up,
+// unlike globalTickspeedMultiplier itself — see speedUpGame.
+export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // The per-cycle escalation step for how many more levels the last tier must reach before the next
 // Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
 // +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never

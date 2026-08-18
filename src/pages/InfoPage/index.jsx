@@ -117,7 +117,7 @@ const InfoPage = ({ onBack }) => {
           Reach the required level on {TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name} to
           claim an Overclock level: resets your tiers and resources just like Speed Up (keeps
           unlocked autobuyers and Prestige Points) but also wipes Speed Up's own stacking bonus
-          back to zero — in exchange, it grants a standalone ×1.001 multiplier per level, stacking
+          back to zero — in exchange, it grants a standalone ×1.1 multiplier per level, stacking
           on top of the Tickspeed upgrade rather than boosting it directly. The first level needs
           level {overclockFirstRequirement}; each one after that needs one more level than the
           last. Falling behind doesn't cost you progress — claiming jumps straight to whatever

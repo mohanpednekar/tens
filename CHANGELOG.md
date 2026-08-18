@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always
   needs genuine progress) — and a claim jumps straight to the last tier's current level, so falling
   behind never means claiming every intermediate level one at a time. The reward is now a standalone
-  ×1.001-per-level multiplier (compounding independently of the Money-funded Tickspeed upgrade)
+  ×1.1-per-level multiplier (compounding independently of the Money-funded Tickspeed upgrade)
   instead of a +1-percentage-point boost to that upgrade's own per-level rate — it now applies even
   before any Tickspeed level has been bought. Everything else (the full tiers/resources reset,
   wiping Speed Up's own stacking bonus) is unchanged.
