@@ -146,17 +146,17 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
 export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
 // A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
-// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
-// bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
+// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 10,000,000-bit ("10 MB")
+// bank costs 100,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
 // conversion. This cost only ever pays for the empty container — it is NOT what fills it.
 export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
 // level) for level 1, 2, 3, …) rather than a synthetic ×10 progression — offers tier01's level-1
 // cost (1000 bits, "1 KB") until STORAGE_BANK_LADDER_CAP of them have ever been built, then
 // tier01's level-2 cost (10,000 bits, "10 KB") until another STORAGE_BANK_LADDER_CAP, and so on
-// (see getStorageBankSize in engine.js). Because getCostEpochExponent's triangular-number exponent
-// sequence (1, 2, 4, 7, 11, …) skips values as levels increase, this ladder skips sizes too — e.g.
-// tier01's level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can
+// (see getStorageBankSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
+// sequence (1, 2, 3, 5, 8, …) skips values as levels increase, this ladder skips sizes too — e.g.
+// tier01's level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can
 // never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
 // (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
 // ahead of or fall behind tier01's actual price, with isStorageBankRedeemable the only gate on

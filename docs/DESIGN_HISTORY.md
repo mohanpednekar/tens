@@ -1695,13 +1695,13 @@ own behavior, and to assert the new "blocked while Invest is still claimable" st
 that's what the test was checking instead (`engine.test.js`'s `isMemoryCapacityUpgradeAvailable`/
 `pickIntroCapacityMilestone` suites, `App.test.jsx`'s Sacrifice/Invest integration tests).
 
-### Two previously-rejected designs briefly resurfaced via un-reviewed direct commits, then reverted again
+### Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately
 
 A string of "Update engine.js"/"Update layers.js" commits, made directly through GitHub's web editor
 rather than through Claude Code, landed on `main` over a few days without going through the PR
 review/test loop this repo otherwise relies on (see "Pull requests"/economy-change-review skill in
 CLAUDE.md). Most were genuine, if informally-made, balance tweaks (see below), but two of them
-silently reintroduced designs this file already records as deliberately rejected:
+silently resurfaced designs this file already recorded as deliberately superseded:
 
 1. **`getTierCost`'s cost-epoch exponent sequence reverted from triangular back to Fibonacci.** Three
    rapid, self-correcting edits (a naive O(2^n) recursive `fib`, then a memoized-but-still-Fibonacci
@@ -1710,21 +1710,42 @@ silently reintroduced designs this file already records as deliberately rejected
    that entry says was replaced "at the maintainer's explicit request." The reintroduced version also
    had a live bug: `getTierCost(tier, 0)` / negative levels returned `undefined` instead of clamping
    to level 1 (the memoized array had no entry at a negative index), whereas the triangular formula's
-   `Math.max(0, clampNonNegative(level) - 1)` epoch clamp handled that case correctly. Caught because
-   it orphaned `getCostEpochExponent` (still exported, now unreferenced by any other code) and broke
-   dozens of tests anchored to the documented triangular values (`getTierCost(tier, 3) === baseCost *
-   10^3`, the Storage bank ladder's "100,000 is skipped" narrative, etc.) — reverted back to
-   `getCostEpochExponent`-based pricing, the buggy `fib`/`cost` helpers deleted entirely.
-2. **`getIntroProductionMilestoneMaxClaims` reverted from a flat `1` back to `tier > 2 ? 1 : 2`.**
-   This undoes "The same round also tightened 'Invest for Double Production' to a single claim per
-   tier across the board (an explicit request...)" above almost exactly (a different hardcoded
-   condition than the removed `INTRO_AUTO_INVEST_THRESHOLD` cutoff, but the same "first few tiers get
-   2 claims" shape) — reverted back to the flat `1`.
+   `Math.max(0, clampNonNegative(level) - 1)` epoch clamp handled that case correctly.
+2. **`getIntroProductionMilestoneMaxClaims` reverted from a flat `1` back to `tier > 2 ? 1 : 2`.** This
+   undoes "The same round also tightened 'Invest for Double Production' to a single claim per tier
+   across the board (an explicit request...)" above almost exactly (a different hardcoded condition
+   than the removed `INTRO_AUTO_INVEST_THRESHOLD` cutoff, but the same "first few tiers get 2 claims"
+   shape).
 
-Both were caught only because CLAUDE.md's own "check `docs/DESIGN_HISTORY.md` before changing a
-formula a past iteration already tried and rejected" instruction is exactly what a from-scratch
-review of a diff against this file would trigger — a direct web-UI edit has no such review step at
-all, which is the actual gap this incident exposes. The remaining constant tweaks in the same commit
+Both were first reverted back to the documented (triangular / flat-1-claim) designs in a same-day
+follow-up PR, on the reasoning that an un-reviewed direct commit landing on a design this file already
+records as explicitly rejected was much more likely an accident than a considered decision — this file's
+own "check `docs/DESIGN_HISTORY.md` before changing a formula a past iteration already tried and
+rejected" instruction is exactly what a from-scratch review of the diff would have triggered, and a
+direct web-UI edit has no such review step at all.
+
+The maintainer then explicitly asked to keep both changes going forward — both are the maintainer's own
+deliberate, direct instruction, not a repeat of the un-reviewed-commit gap above; this entry itself is
+that instruction being followed. Both were reinstated a second time, with the Fibonacci sequence
+implemented cleanly this time: `getCostEpochExponent` computes the sequence via a straightforward
+iterative loop (no module-level mutable cache, no recursion), and `getTierCost`'s own existing
+`Math.max(0, clampNonNegative(level) - 1)` epoch clamp (unchanged throughout all of this) means the
+level ≤ 0 bug the original buggy commit had is not present in the reinstated version — clamping happens
+in `getTierCost` itself before `getCostEpochExponent` is ever called, so the exponent function never
+sees a level-derived negative epoch to mishandle. `getIntroProductionMilestoneMaxClaims` is back to
+`tier > 2 ? 1 : 2` (2 claims for the three cheapest Invest tiers, 1 for every tier after).
+
+Because the Fibonacci exponent sequence (1, 2, 3, 5, 8, 13, … for epochs 0-5) diverges from the
+triangular one (1, 2, 4, 7, 11, 16, …) starting at epoch 2 (level 3), every piece of documentation
+describing tier01's cost-skip pattern for the Storage bank ladder changed too: under Fibonacci, level 3
+(100,000 bits, "100 KB") is NOT skipped — level 4 is the first skip, jumping straight to 10,000,000
+bits ("10 MB") and skipping 1,000,000 ("1 MB") instead. Every reference to the old "100,000 is skipped,
+a 100 KB bank can never exist" narrative (`CLAUDE.md`, `docs/ECONOMY_REFERENCE.md`, comments in
+`layers.js`/`engine.js`) was rewritten to the new "1,000,000 is skipped, a 1 MB bank can never exist"
+one, and every test asserting a specific `getTierCost`/`getStorageBankSize` value at level ≥ 3 was
+recomputed against the Fibonacci sequence.
+
+The remaining constant tweaks in the same commit
 run (`OVERCLOCK_PRODUCTION_STEP` 0.001→0.01, `AUTO_SPEED_UP_COST` 100→20, `TICKSPEED_AUTOBUYER_COST`
 20→10, `AUTO_PRESTIGE_AUTOBUYER_COST` 500→100, `INTRO_BITS_PER_KILOBYTE_CONVERSION` 1000→8000,
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` 800,000→8,000,000) don't match any previously-rejected design

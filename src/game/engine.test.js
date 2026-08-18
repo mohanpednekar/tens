@@ -472,10 +472,11 @@ describe('combineIntroByte', () => {
 
 // Every test below that expects Sacrifice to actually FIRE must also clear the other two gates
 // isMemoryCapacityUpgradeAvailable checks: byteCreated (Combine no longer possible) and the
-// current Invest tier's claim already used up (Invest's cost ladder starts at the exact same
+// current Invest tier's claims already used up (Invest's cost ladder starts at the exact same
 // INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
-// capacity both are simultaneously affordable unless Invest's claim is explicitly marked used).
-const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 1 }
+// capacity both are simultaneously affordable unless Invest's claims are explicitly marked used —
+// tier 0 needs both of its 2 claims used up, not just 1, see getIntroProductionMilestoneMaxClaims).
+const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
   it('is false below a full balance, regardless of other upgrades', () => {
@@ -580,10 +581,10 @@ describe('getIntroProductionMilestoneCost', () => {
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('always grants exactly 1 claim per tier, regardless of cost — a single-shot purchase, same as Sacrifice', () => {
-    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(1)
-    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(1)
-    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(1)
+  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/10/100 Bytes), then 1 for every tier after', () => {
+    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(3)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
@@ -630,13 +631,18 @@ describe('pickIntroProductionMilestone', () => {
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('advances to the next tier immediately after a single claim, at any tier, with a fresh claim count of 0', () => {
+  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/10/100 Bytes), but only 1 from tier 3 on', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
-    const afterTier0 = pickIntroProductionMilestone(state)
-    expect(afterTier0.intro.productionMilestoneTier).toBe(1)
-    expect(afterTier0.intro.productionMilestoneTierClaims).toBe(0)
+    const afterFirstTier0Claim = pickIntroProductionMilestone(state)
+    expect(afterFirstTier0Claim.intro.productionMilestoneTier).toBe(0)
+    expect(afterFirstTier0Claim.intro.productionMilestoneTierClaims).toBe(1)
 
-    const refilled = withIntro(afterTier0, { bits: getIntroProductionMilestoneCost(4), productionMilestoneTier: 4 })
+    const refilledForSecondClaim = withIntro(afterFirstTier0Claim, { bits: INTRO_STARTING_CAPACITY })
+    const afterSecondTier0Claim = pickIntroProductionMilestone(refilledForSecondClaim)
+    expect(afterSecondTier0Claim.intro.productionMilestoneTier).toBe(1)
+    expect(afterSecondTier0Claim.intro.productionMilestoneTierClaims).toBe(0)
+
+    const refilled = withIntro(afterSecondTier0Claim, { bits: getIntroProductionMilestoneCost(4), productionMilestoneTier: 4 })
     const afterTier4 = pickIntroProductionMilestone(refilled)
     expect(afterTier4.intro.productionMilestoneTier).toBe(5)
     expect(afterTier4.intro.productionMilestoneTierClaims).toBe(0)
@@ -644,10 +650,10 @@ describe('pickIntroProductionMilestone', () => {
 
   it('spends exactly the claimed tier\'s cost, draining bits to 0 when the balance matches it exactly', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: getIntroProductionMilestoneCost(1), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1,
+      bits: getIntroProductionMilestoneCost(3), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 3,
     })
     const after = pickIntroProductionMilestone(state)
-    expect(after.intro.productionMilestoneTier).toBe(2)
+    expect(after.intro.productionMilestoneTier).toBe(4)
     expect(after.intro.bits).toBe(0)
   })
 
@@ -656,11 +662,16 @@ describe('pickIntroProductionMilestone', () => {
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
 
-  it('is a no-op once the claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 1,
+  it('is a no-op once every claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
+    const tier0AlreadyClaimedTwice = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 2,
     })
-    expect(pickIntroProductionMilestone(state)).toBe(state)
+    expect(pickIntroProductionMilestone(tier0AlreadyClaimedTwice)).toBe(tier0AlreadyClaimedTwice)
+
+    const tier3AlreadyClaimedOnce = withIntro(createInitialGameState(), {
+      bits: getIntroProductionMilestoneCost(3), productionMilestoneTier: 3, productionMilestoneTierClaims: 1,
+    })
+    expect(pickIntroProductionMilestone(tier3AlreadyClaimedOnce)).toBe(tier3AlreadyClaimedOnce)
   })
 
   it('keeps working after mainGameUnlocked — nothing about Invest ever freezes', () => {
@@ -888,25 +899,38 @@ describe('getStorageBankSize', () => {
     expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
   })
 
-  it('skips a size tier01\'s own level-cost sequence skips (100,000) — jumps straight from 10,000 to 1,000,000', () => {
+  it('advances sequentially through level 3 — tier01\'s Fibonacci exponent sequence does not skip it', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
     })
-    // tier01's cost-epoch exponent sequence (1, 2, 4, 7, …) skips level 3's exponent straight to 4,
-    // so level 3 costs 1,000,000, never 100,000.
-    expect(getTierCost(tensTier, 3)).toBe(1000000)
-    expect(getStorageBankSize(state)).toBe(1000000)
+    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) still reads 3 at epoch 2 (level 3) —
+    // the same as the triangular sequence would — so level 3 costs 100,000, not skipped yet.
+    expect(getTierCost(tensTier, 3)).toBe(100000)
+    expect(getStorageBankSize(state)).toBe(100000)
   })
 
-  it('keeps advancing indefinitely past 1,000,000 ("1 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
+  it('skips a size tier01\'s own level-cost sequence skips (1,000,000) — jumps straight from 100,000 to 10,000,000', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: {
+        1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP,
+      },
+    })
+    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) skips level 4's exponent straight to
+    // 5, so level 4 costs 10,000,000, never 1,000,000.
+    expect(getTierCost(tensTier, 4)).toBe(10000000)
+    expect(getStorageBankSize(state)).toBe(10000000)
+  })
+
+  it('keeps advancing indefinitely past 10,000,000 ("10 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: {
         1000: STORAGE_BANK_LADDER_CAP,
         10000: STORAGE_BANK_LADDER_CAP,
-        1000000: STORAGE_BANK_LADDER_CAP,
+        100000: STORAGE_BANK_LADDER_CAP,
+        10000000: STORAGE_BANK_LADDER_CAP,
       },
     })
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 4)) // 1,000,000,000 — keeps going
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 5)) // 10,000,000,000 — keeps going
   })
 })
 
@@ -1468,13 +1492,13 @@ describe('formatCurrency', () => {
 // ─── getCostEpochExponent ────────────────────────────────────────────────────
 
 describe('getCostEpochExponent', () => {
-  it('follows the 1, 2, 4, 7, 11, 16 progression across epochs 0-5', () => {
+  it('follows the 1, 2, 3, 5, 8, 13 Fibonacci progression across epochs 0-5', () => {
     expect(getCostEpochExponent(0)).toBe(1)
     expect(getCostEpochExponent(1)).toBe(2)
-    expect(getCostEpochExponent(2)).toBe(4)
-    expect(getCostEpochExponent(3)).toBe(7)
-    expect(getCostEpochExponent(4)).toBe(11)
-    expect(getCostEpochExponent(5)).toBe(16)
+    expect(getCostEpochExponent(2)).toBe(3)
+    expect(getCostEpochExponent(3)).toBe(5)
+    expect(getCostEpochExponent(4)).toBe(8)
+    expect(getCostEpochExponent(5)).toBe(13)
   })
 
   it('clamps a negative epoch to 0', () => {
@@ -1503,25 +1527,25 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 2)).toBe(100)
   })
 
-  it('costs baseCost * 10^3 at level 3', () => {
-    expect(getTierCost(tier, 3)).toBe(10000)
+  it('costs baseCost * 10^2 at level 3', () => {
+    expect(getTierCost(tier, 3)).toBe(1000)
   })
 
-  it('costs baseCost * 10^6 at level 4', () => {
-    expect(getTierCost(tier, 4)).toBe(1e7)
+  it('costs baseCost * 10^4 at level 4', () => {
+    expect(getTierCost(tier, 4)).toBe(1e5)
   })
 
-  it('costs baseCost * 10^10 at level 5', () => {
-    expect(getTierCost(tier, 5)).toBe(1e11)
+  it('costs baseCost * 10^7 at level 5', () => {
+    expect(getTierCost(tier, 5)).toBe(1e8)
   })
 
   it('scales a larger baseCost by the same epoch-exponent multiplier, not a compounded power', () => {
     const thousands = { baseCost: 1e3 }
     expect(getTierCost(thousands, 1)).toBe(1e3)
     expect(getTierCost(thousands, 2)).toBe(1e4)
-    expect(getTierCost(thousands, 3)).toBe(1e6)
-    expect(getTierCost(thousands, 4)).toBe(1e9)
-    expect(getTierCost(thousands, 5)).toBe(1e13)
+    expect(getTierCost(thousands, 3)).toBe(1e5)
+    expect(getTierCost(thousands, 4)).toBe(1e7)
+    expect(getTierCost(thousands, 5)).toBe(1e10)
   })
 
   it('treats level 0 and negative levels as level 1', () => {

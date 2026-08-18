@@ -391,8 +391,9 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
-tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+current capacity) — **2 claims for the three cheapest tiers (1/10/100 Bytes), 1 claim for every tier
+from there on** (an intermediate iteration tightened this to a flat 1 claim across the board, matching
+Sacrifice's own one-shot posture, before the three-cheapest-tiers exception was reinstated — see
 `docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
@@ -481,9 +482,9 @@ decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own pe
 sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
 progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
 been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
-redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
-(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
-level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+redeeming never decrements). Because `getCostEpochExponent`'s Fibonacci exponent sequence
+(1, 2, 3, 5, 8, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can never exist.
 Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
 bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
 ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability

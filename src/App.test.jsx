@@ -2012,9 +2012,10 @@ test('Sacrifice for 10x Capacity shows what it will drain — the current capaci
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
-  // Invest's current-tier claim must already be used up — Sacrifice is only offered once every
-  // other currently-possible action (Combine, Invest, a Storage bank build) is no longer possible.
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 1 })
+  // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
+  // only offered once every other currently-possible action (Combine, Invest, a Storage bank
+  // build) is no longer possible.
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
@@ -2242,22 +2243,37 @@ test('Invest for Double Production shows its cost in the nearest fitting unit on
   expect(investButton).toHaveTextContent('1 KB')
 })
 
-test('Invest for Double Production grants a single claim at tier 0\'s cost, then requires the 10x-higher tier-1 cost — independent of capacity', async () => {
+test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', async () => {
   const user = userEvent.setup()
 
   // capacity is deliberately way above tier 0's cost (INTRO_STARTING_CAPACITY) — Invest's own
-  // ladder is decoupled from it, so the claim below doesn't require the balance to be full.
+  // ladder is decoupled from it, so the claims below don't require the balance to be full.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
-  const mounted = render(<App />)
+  let mounted = render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
   await user.click(investButton)
 
-  // A single claim at tier 0's cost immediately advances to tier 1, whose cost (10x higher) the
-  // current balance can't cover yet, so Invest is disabled again — every tier is a one-attempt
-  // purchase now, same as Sacrifice for 10x Capacity.
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  // The first claim at tier 0's cost stays at tier 0 (tier 0 grants 2 claims, not 1) — Invest is
+  // disabled again only because the balance was spent to 0, not because the tier advanced.
+  let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.productionMilestoneTier).toBe(0)
+  expect(saved.intro.productionMilestoneTierClaims).toBe(1)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
+
+  // Refilling to the SAME tier-0 cost re-enables it for the second claim.
+  saved.intro.bits = INTRO_STARTING_CAPACITY
+  localStorage.setItem('tens_game_state', JSON.stringify(saved))
+  mounted.unmount()
+  mounted = render(<App />)
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
+
+  await user.click(screen.getByRole('button', { name: /invest bits for double production/i }))
+
+  // The second claim at tier 0 uses up its last claim and advances to tier 1, whose cost (10x
+  // higher) the current balance can't cover yet, so Invest is disabled again.
+  saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.productionMilestoneTier).toBe(1)
   expect(saved.intro.productionMilestoneTierClaims).toBe(0)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()

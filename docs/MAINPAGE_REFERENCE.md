@@ -100,8 +100,8 @@ more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
 whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
 walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
-1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
-skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
+100,000/"100 KB", then 10,000,000/"10 MB" — skipping 1,000,000/"1 MB", since `tier01`'s own
+cost-epoch exponent sequence skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
 the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
 cost itself (parenthesized in the label, and in the button's `title`) renders via
 `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same

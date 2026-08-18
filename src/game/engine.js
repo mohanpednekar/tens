@@ -377,14 +377,24 @@ export const formatCurrency = value => {
     : `${formatScientific(safeValue)} ${symbol}`
 }
 
-// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 4, 7, 11, 16, 22, …
-// for epochs 0, 1, 2, 3, 4, 5, 6, … — each epoch adds one more than the last epoch's increment (a
-// "1 plus a triangular number" progression: exponent(e) = 1 + e*(e+1)/2). A negative epoch is
-// clamped to 0 rather than throwing. Supersedes an earlier Fibonacci-based version — see
-// docs/DESIGN_HISTORY.md.
+// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 13, 21, …
+// for epochs 0, 1, 2, 3, 4, 5, 6, … — the classic Fibonacci sequence (exponent(e) = fib(e+2) in
+// the canonical 0-indexed fib(0)=0, fib(1)=1 numbering), computed iteratively rather than via a
+// closed form (Fibonacci has no simple integer one) or naive recursion (which is exponential-time
+// for larger epochs — see docs/DESIGN_HISTORY.md for the regression that came from getting this
+// wrong). A negative epoch is clamped to 0 rather than throwing, and getTierCost below separately
+// clamps level 0/negative levels to level 1 (epoch 0) before this is ever called, so this function
+// itself never needs to handle a negative epoch from that caller.
 export const getCostEpochExponent = epoch => {
   const e = clampNonNegative(epoch)
-  return 1 + (e * (e + 1)) / 2
+  let a = 1 // exponent at epoch 0
+  let b = 2 // exponent at epoch 1
+  for (let i = 0; i < e; i++) {
+    const next = a + b
+    a = b
+    b = next
+  }
+  return a
 }
 
 // The purchase block size every tier's current level currently requires to complete — a single
@@ -407,7 +417,7 @@ export const getPurchaseBlockSize = state => {
 // The PER-UNIT price of a single purchase — fixed for a given tier+level, independent of the
 // current block size: baseCost * 10^(getCostEpochExponent(epoch) - 1); each level multiplies
 // baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. a
-// baseCost-10 tier's 4th level (epoch 3, exponent 7) costs 10^7 per unit. Every tier scales gently
+// baseCost-10 tier's 4th level (epoch 3, exponent 5) costs 10^5 per unit. Every tier scales gently
 // relative to its own baseCost (the exponent is added to baseCost's own power of ten, not
 // compounded into it), so high tiers don't become permanently out of reach within a handful of
 // levels. Deep epochs still eventually overflow to Infinity, which is safe: an infinite cost is
@@ -1341,14 +1351,12 @@ export const pickIntroCapacityMilestone = state => {
 export const getIntroProductionMilestoneCost = tier =>
   INTRO_STARTING_CAPACITY * (INTRO_CAPACITY_MULTIPLIER ** clampNonNegative(tier))
 
-// How many claims a given productionMilestoneTier grants before advancing to the next: always 1 —
-// every tier is a single-shot purchase at its own cost, the same one-attempt-per-cost posture
-// "Sacrifice for 10x Capacity" already has. An earlier version granted 2 claims for the three
-// cheapest tiers (1/10/100 Bytes) before this tightened to 1 across the board — see
-// docs/DESIGN_HISTORY.md. `tier` is unused now but kept as the parameter so callers (and
-// pickIntroProductionMilestone's own `getIntroProductionMilestoneMaxClaims(tier)` call) don't need
-// to change if a future tier-dependent claim count ever returns.
-export const getIntroProductionMilestoneMaxClaims = tier => 1
+// How many claims a given productionMilestoneTier grants before advancing to the next: 2 for the
+// three cheapest tiers (0/1/2, i.e. 1/10/100 Bytes), 1 for every tier from there on — unlike
+// "Sacrifice for 10x Capacity"'s own flat one-attempt-per-cost posture, the earliest, cheapest
+// Invest tiers get a second attempt each before advancing. A previous iteration simplified this to
+// a flat 1 across the board; see docs/DESIGN_HISTORY.md for both that change and this reinstatement.
+export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 
 // "Invest for Double Production" — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at
@@ -1516,11 +1524,11 @@ export const tickIntroAutoInvest = state => {
 // size is always `storageBanksBuiltTotal[size] - storageBanks[size]`. Consuming (redeeming) a full
 // bank empties it again, returning it to the fillable pool — banks are reusable, not single-use.
 
-// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's triangular-
-// number exponent sequence jumps 1, 2, 4, 7, 11, … — e.g. level 3 is 1,000,000, not 100,000), so
-// every size a bank is ever built or redeemed at is one of tier01's own actual per-unit level
-// costs, never an arbitrary round number in between (a 100,000-bit/"100 KB" bank can never exist,
-// since no tier01 level ever costs that).
+// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's Fibonacci
+// exponent sequence jumps 1, 2, 3, 5, 8, … — e.g. level 4 is 10,000,000, not 1,000,000), so every
+// size a bank is ever built or redeemed at is one of tier01's own actual per-unit level costs,
+// never an arbitrary round number in between (a 1,000,000-bit/"1 MB" bank can never exist, since
+// no tier01 level ever costs that).
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
 // The size (in bits) buildStorageBank currently builds: an independent ladder that walks tier01's
