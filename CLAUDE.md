@@ -634,10 +634,33 @@ built on top of this): once an entity is at the cap, further production into it 
 (Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
 than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
 lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
-generator/Storage banks — pure
-counters today, with no gameplay effect yet (a further mechanic spending them — activating a
-temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
-planned as a follow-up; see the `claude-task` backlog).
+generator/Storage banks.
+
+**Compute Cores can be spent on a temporary Compute Boost.** Each usage always costs exactly 1
+Compute Core, regardless of preset — the preset only picks the strength/duration tradeoff, not the
+cost. Three fixed presets (`COMPUTE_BOOST_PRESETS` in `layers.js`): **Burst** (×16 for 10 seconds),
+**Standard** (×4 for 1 minute), **Sustain** (×2 for 10 minutes). Activating (`activateComputeBoost`,
+gated by `canActivateComputeBoost`) multiplies "the base production tier of each screen" — Memory's
+own passive production (`tickIntroProduction`, the Byte Foundry) and `tier01`'s (Kilobytes')
+production specifically (the main game) — simultaneously, for the preset's duration
+(`getComputeBoostMultiplier`). Only one PRESET TYPE may be active at a time — a different type is
+blocked while one is running — but the SAME type may be activated again while already active,
+stacking up to `COMPUTE_BOOST_MAX_STACKS` (10) times to extend the remaining duration; the
+multiplier itself never compounds from stacking. `tickComputeBoost` counts the remaining duration
+down every tick (frozen or not) and clears the boost back to inactive once it reaches 0. Boost
+state (`intro.computeBoostType`/`computeBoostStacks`/`computeBoostRemainingSeconds`) is run-scoped —
+reset to inactive on every real Prestige, unlike `computeCores`/`computeNodes` themselves — but
+carried through untouched by Speed Up/Overclock, same as the rest of `intro`. Activation happens on
+`ByteFoundryPage`'s own "Compute" section; `MainPage` shows a read-only status line while a boost is
+active, since its effect reaches `tier01` there too. Merging Cores upward into Nodes/Clusters/
+Networks/Grids is still planned as a follow-up (see the `claude-task` backlog).
+
+**Sacrifice for 10x Capacity asks for confirmation before firing** (`window.confirm` — no modal
+component exists in the app to reuse, same rationale `MainPage`'s own Reset button confirm already
+documents), spelling out that it's permanent and raises every future Compute Core's cost. Cancelling
+leaves Memory/capacity untouched; only `pickIntroCapacityMilestone` itself still enforces the actual
+gate (`isMemoryCapacityUpgradeAvailable`) — the confirm dialog is an added UI-level checkpoint on top
+of it, not a replacement for it.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global

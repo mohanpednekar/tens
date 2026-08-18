@@ -25,17 +25,17 @@
     "semantic_hash": "a9a0aabab9023a96b4d1d8febe536739"
   },
   "e2e/autobuyer-reload.e2e.js": {
-    "mtime": 1786536387.270328,
+    "mtime": 1786539831.6288395,
     "ast_hash": "f40941d22f2eab59bc9934b827ded7bd",
     "semantic_hash": ""
   },
   "e2e/golden-path.e2e.js": {
-    "mtime": 1786536387.270328,
+    "mtime": 1786539831.6288395,
     "ast_hash": "65a58809f6a85955254788ca6fce22b3",
     "semantic_hash": ""
   },
   "e2e/prestige.e2e.js": {
-    "mtime": 1786536387.270328,
+    "mtime": 1786539831.6288395,
     "ast_hash": "21b0458f4bfb2719f7463dda30dab1d7",
     "semantic_hash": ""
   },
@@ -45,7 +45,7 @@
     "semantic_hash": "5166b6090b2ad1fa8a49d18603a5f56e"
   },
   "package.json": {
-    "mtime": 1786536387.434328,
+    "mtime": 1786539831.8128395,
     "ast_hash": "18e682133235d6d0a798cbaf242e4cd2",
     "semantic_hash": ""
   },
@@ -60,17 +60,17 @@
     "semantic_hash": "e2dd52a55b793e7822444c421e99af98"
   },
   "src/App.jsx": {
-    "mtime": 1786536387.434328,
+    "mtime": 1786539831.8128395,
     "ast_hash": "a559a74e90d107f8aae4b496e39c78c9",
     "semantic_hash": ""
   },
   "src/App.test.jsx": {
-    "mtime": 1787028824.3419082,
-    "ast_hash": "30af1a53d6e37197285c60a23c109abb",
+    "mtime": 1787034891.2228475,
+    "ast_hash": "8b06a0945a6efe1cd348e78b137e6854",
     "semantic_hash": ""
   },
   "src/components/Button/index.jsx": {
-    "mtime": 1786536387.442328,
+    "mtime": 1786539831.8208394,
     "ast_hash": "05bf59270c6d22614bca62d16fbf5368",
     "semantic_hash": ""
   },
@@ -85,38 +85,38 @@
     "semantic_hash": "ac3dd0faabd148bbc7e29d97f4540faf"
   },
   "src/game/engine.js": {
-    "mtime": 1787028824.3419082,
-    "ast_hash": "d01f7c6fa6084c06c4bb81f023d61d55",
+    "mtime": 1787034479.570839,
+    "ast_hash": "43f6b81c0bdd174778b6995ebb0beb61",
     "semantic_hash": ""
   },
   "src/game/engine.test.js": {
-    "mtime": 1787028824.3419082,
-    "ast_hash": "66e01932ffeb9c047480caf453f67c2b",
+    "mtime": 1787034592.9348412,
+    "ast_hash": "4c623e73859724aabfb47ce60b423df3",
     "semantic_hash": ""
   },
   "src/game/layers.js": {
-    "mtime": 1787028824.3419082,
-    "ast_hash": "4d2353d9026138509e34d8355379f6ef",
+    "mtime": 1787034380.702837,
+    "ast_hash": "992a3cba33476b6125b207d0695d4495",
     "semantic_hash": ""
   },
   "src/game/layers.test.js": {
-    "mtime": 1787028824.3419082,
+    "mtime": 1786995417.6669507,
     "ast_hash": "e91d0440b4bca406604ea5ce7e2a04d8",
     "semantic_hash": ""
   },
   "src/game/storage.js": {
-    "mtime": 1786536387.462328,
+    "mtime": 1786539831.8448396,
     "ast_hash": "8ed0c59455b11dec31619a60c342dfb6",
     "semantic_hash": ""
   },
   "src/game/storage.test.js": {
-    "mtime": 1786993759.6328795,
-    "ast_hash": "dcd4ea60b9866b86005b8598f4dcb668",
+    "mtime": 1787034624.394842,
+    "ast_hash": "e41d2206e5ea6e85371d280953295f10",
     "semantic_hash": ""
   },
   "src/game/useIncrementalGame.js": {
-    "mtime": 1786995371.1368425,
-    "ast_hash": "92917801dae406c874fb3102990ec2e7",
+    "mtime": 1787034653.4428425,
+    "ast_hash": "fad5a41b1ec5915614735bfee3b2d077",
     "semantic_hash": ""
   },
   "src/index.jsx": {
@@ -125,13 +125,13 @@
     "semantic_hash": "d16e31fc886ae818af89eccd9120af1b"
   },
   "src/pages/InfoPage/index.jsx": {
-    "mtime": 1786536387.470328,
+    "mtime": 1786539831.8528395,
     "ast_hash": "a8d85f6527a1744982e5376000ed8a64",
     "semantic_hash": ""
   },
   "src/pages/MainPage/index.jsx": {
-    "mtime": 1786536387.474328,
-    "ast_hash": "170abb49649d5c7067ddaea2b5bfe817",
+    "mtime": 1787034777.6028452,
+    "ast_hash": "9b4f6ce7f7eacfd2691010cf3337defb",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -200,7 +200,7 @@
     "semantic_hash": ""
   },
   ".claude/skills/file-task-issue/SKILL.md": {
-    "mtime": 1787028824.3179083,
+    "mtime": 1787034356.0908363,
     "ast_hash": "e8dbe9291d648f863e48e1fde2052910",
     "semantic_hash": ""
   },
@@ -285,12 +285,12 @@
     "semantic_hash": ""
   },
   ".github/workflows/autonomous-maintenance.yml": {
-    "mtime": 1786536387.254328,
+    "mtime": 1786539831.6088395,
     "ast_hash": "5f55fb595644b655707541bb00bd581d",
     "semantic_hash": ""
   },
   ".github/workflows/autonomous-pr-followup.yml": {
-    "mtime": 1787028824.3179083,
+    "mtime": 1787034356.0908363,
     "ast_hash": "55ba9f08abd5783e984e73101750fc3a",
     "semantic_hash": ""
   },
@@ -310,47 +310,47 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1786536387.254328,
+    "mtime": 1786539831.6088395,
     "ast_hash": "38632fe5942c34c610b677d0b92e96ee",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1787028855.5219102,
-    "ast_hash": "76f203f18339882e9025132417aa0d32",
+    "mtime": 1787035228.6708543,
+    "ast_hash": "60f428e0d7ff5fd513e2b21fa5cbfce6",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1787028824.3219082,
-    "ast_hash": "a7b912ebe44239f96233ca3cb0c237b9",
+    "mtime": 1787035061.2388508,
+    "ast_hash": "29e5ff47535c8cbfa620578bb953b28e",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1786536387.258328,
+    "mtime": 1786539831.6128395,
     "ast_hash": "1288b2d99aa177ddf828c5ea21ce8350",
     "semantic_hash": ""
   },
   "docs/AUTOMATION.md": {
-    "mtime": 1786536387.258328,
+    "mtime": 1786539831.6128395,
     "ast_hash": "de4d252c2220c42e3ca7044b9e8f7e30",
     "semantic_hash": ""
   },
   "docs/COMPONENTS_REFERENCE.md": {
-    "mtime": 1786995371.1288426,
+    "mtime": 1787034356.0908363,
     "ast_hash": "b93a6b9adc638f96a85d5eb05f06da60",
     "semantic_hash": ""
   },
   "docs/DESIGN_HISTORY.md": {
-    "mtime": 1787028824.3219082,
-    "ast_hash": "74cbd3a7e6551cf0ff0279382fb8d947",
+    "mtime": 1787035206.8588538,
+    "ast_hash": "1c0c4ffffca50061227fca1c673ecb7b",
     "semantic_hash": ""
   },
   "docs/ECONOMY_REFERENCE.md": {
-    "mtime": 1787028824.3219082,
-    "ast_hash": "304271d91860fe44fc8cdeac4172c3b7",
+    "mtime": 1787035185.3068535,
+    "ast_hash": "8311638a06dd03346cb5c669f615073e",
     "semantic_hash": ""
   },
   "docs/MAINPAGE_REFERENCE.md": {
-    "mtime": 1787028824.3219082,
+    "mtime": 1787034356.0948365,
     "ast_hash": "f6febe14ad35a58fabf1d8374dc71057",
     "semantic_hash": ""
   },
@@ -395,12 +395,12 @@
     "semantic_hash": ""
   },
   "src/pages/ByteFoundryPage/index.jsx": {
-    "mtime": 1787028824.3419082,
-    "ast_hash": "9470052281e91c8da7ce4eb2db21d89d",
+    "mtime": 1787034728.374844,
+    "ast_hash": "3dfaf38b65419ec02e8e7ab33f9f7ecc",
     "semantic_hash": ""
   },
   "src/components/OfflineProgressNotice/index.jsx": {
-    "mtime": 1786995371.1328425,
+    "mtime": 1787034356.1068363,
     "ast_hash": "4e844423d1cbe3ff15104965c0cedb43",
     "semantic_hash": ""
   }

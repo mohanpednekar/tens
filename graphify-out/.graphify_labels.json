@@ -47,12 +47,14 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
-  "48": "Design history & rationale",
+  "48": "clampNonNegative",
   "49": "ByteFoundryPage",
   "50": "formatCurrency",
-  "51": "package.json",
-  "52": "InfoPage/index.jsx",
+  "51": "InfoPage/index.jsx",
+  "52": "tickGame",
   "53": "formatBonusOrMultiplier",
   "54": "formatAmount",
-  "55": "isStorageBankRedeemable"
+  "55": "isStorageBankRedeemable",
+  "56": "dependencies",
+  "57": "run-simulation.mjs"
 }
