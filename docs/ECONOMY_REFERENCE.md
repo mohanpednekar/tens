@@ -158,13 +158,15 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    `isMemoryCapacityUpgradeAvailable(state)` is the real gate (enforced inside
    `pickIntroCapacityMilestone` itself, not just a disabled UI button — same "engine re-validates"
    posture every other action in this game has): besides being full, it also requires that Combine
-   into a Byte (`!byteCreated`, affordable), the current Invest tier (step 5 below, affordable and
-   unclaimed), and any currently-buildable Storage bank (step 8 below, once revealed) are all NOT
-   currently possible. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY`
-   and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep unless
-   the player pulls ahead on one relative to the other — in practice this makes claiming the current
-   Invest tier a prerequisite for Sacrificing again almost every cycle. `ByteFoundryPage`'s own
-   button asks for confirmation (`window.confirm`) before actually calling
+   into a Byte (`!byteCreated`, affordable), a currently-redeemable Storage Bank Fill (any built bank
+   both FULL and redeemable — see step 8), the current Invest tier/Bandwidth (step 5 below, affordable
+   and unclaimed), any currently-buildable Storage bank (step 8 below), and an activatable Compute
+   Boost (step 9 below, once unlocked) are all NOT currently possible — see "Forced priority order"
+   below for the full five-item ranking this composes. Since Invest's own cost ladder starts at the
+   same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the
+   two stay in lockstep unless the player pulls ahead on one relative to the other — in practice this
+   makes claiming the current Invest tier a prerequisite for Sacrificing again almost every cycle.
+   `ByteFoundryPage`'s own button asks for confirmation (`window.confirm`) before actually calling
    `pickIntroCapacityMilestone`, spelling out that it's permanent and raises every future Compute
    Core's cost (step 9 below); cancelling leaves Memory/capacity untouched. The engine-level gate
    above is unaffected either way — the confirm dialog is a UI-level checkpoint on top of it, not a
@@ -192,7 +194,11 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    once that would push `tickSpeedSeconds` below `INTRO_MIN_TICK_SPEED_SECONDS` (the live tick
    loop's own real-time resolution, `TICK_RATE_MS`) does it switch to multiplying
    `productionMultiplier` (growing the batch) instead, so growth never stalls once the tick loop's
-   own granularity limit is reached. Never coupled to Sacrifice's own eligibility.
+   own granularity limit is reached. Ranked second in the forced priority order (below Storage Bank
+   Fill, above Storage Bank Build/Compute/Memory — see "Forced priority order" below):
+   `isBandwidthTurnAvailable(state)` is `pickIntroProductionMilestone`'s own actual gate, a no-op
+   whenever a redeemable Storage Bank Fill is currently available even if this tier's own cost is
+   affordable.
 6. Once `capacity` reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 — first true at the `capacity =
    8000` stage, since capacity only ever takes the discrete 8/80/800/8000/… values),
    `isIntroConversionUnlocked(state)` goes true: `ByteFoundryPage` shows a row of **transfer
@@ -265,10 +271,13 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    `createInitialGameState()`'s fresh defaults for every field, generator included).
 8. **Storage** (`storageBanks: { [capacityBits]: currentlyFullCount }`, `storageBanksBuiltTotal:
    { [capacityBits]: cumulativeBuiltCount }`, `storageAutoRedeemEnabled`, `storageAutoRedeemedSizes:
-   { [capacityBits]: true }`) — its whole `ByteFoundryPage` section stays hidden until
-   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in
-   Memory's own B/KB/MB/… scale, 80,000 bits — a deliberately later, more advanced-game reveal than
-   step 6's own 1000-bit `isIntroConversionUnlocked` gate) — is a genuine storage **medium**, not a
+   { [capacityBits]: true }`) has its own dedicated screen, `StoragePage` — reached via a "🏦
+   Storage" nav button on `ByteFoundryPage`, which stays hidden until `isStorageUnlocked(state)`,
+   i.e. `intro.capacity >= INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale,
+   80,000 bits — a deliberately later, more advanced-game reveal than step 6's own 1000-bit
+   `isIntroConversionUnlocked` gate); unlike Storage's own two actions below (Fill/Build), the nav
+   button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
+   posture as MainPage's own "⚙️ Byte Foundry" link — is a genuine storage **medium**, not a
    one-shot pre-paid item: a bank
    is a permanent, reusable container that Memory auto-fills over time and redeeming empties again.
    `getStorageBankSize(state)` walks `tier01`'s (Kilobytes') own per-unit **LEVEL COST sequence** —
@@ -284,7 +293,14 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE` — 10x the block's own face value **in bytes, not
    bits** (a 1000-bit/"1 KB" bank costs 10,000 bytes = 80,000 bits) — and only increments
    `storageBanksBuiltTotal`: this is a one-time construction fee for an EMPTY container, and does
-   **not** touch `storageBanks` (the currently-full count) at all.
+   **not** touch `storageBanks` (the currently-full count) at all. Ranked third in the forced
+   priority order (below Storage Bank Fill and Bandwidth, above Compute/Memory — see "Forced
+   priority order" below): `isStorageBankBuildTurnAvailable(state)` is `buildStorageBank`'s own
+   actual gate, a no-op whenever a redeemable Storage Bank Fill or an affordable Bandwidth claim is
+   currently available even if this size's own build cost is affordable. Unlike the `isStorageUnlocked`
+   reveal gate above, `buildStorageBank` itself has never required that threshold — only the nav
+   button's own reveal does — so `isStorageBankBuildAvailable` (the base predicate, ignoring
+   priority) checks only the cost.
 
    `tickStorageAutoFill(state)` is what actually fills a bank: unconditionally (no toggle, no
    prerequisite), every tick, it cascades Memory into every currently-fillable empty bank in one
@@ -317,9 +333,13 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    time. Redeeming can be manual (a click) or automatic: `setStorageAutoRedeemEnabled(enabled)`
    toggles `storageAutoRedeemEnabled` unconditionally (no prerequisite purchase, unlike the PP-funded
    automations elsewhere in this game) — it now **defaults `true`** (see `createInitialGameState`;
-   previously `false`), and `ByteFoundryPage` currently renders no pause/resume control for it at all
+   previously `false`), and `StoragePage` currently renders no pause/resume control for it at all
    (removed for now, planned to return later — see `docs/DESIGN_HISTORY.md` — while the field/setter
-   stay fully wired), so in practice every size auto-redeems out of the box today. `tickStorageAutoRedeem`
+   stay fully wired), so in practice every size auto-redeems out of the box today. A redeem click
+   itself (`redeemStorageBank`) is unaffected by the forced priority order — Storage Bank Fill is
+   ranked highest, so it's never blocked by anything else — and so is auto-redeem
+   (`tickStorageAutoRedeem`, a background tick behavior, not gated by the priority order at all,
+   which only governs manual player-facing purchase/activation clicks). `tickStorageAutoRedeem`
    — called from every branch of `tickGame`, frozen or not (it bypasses the production freeze the same way
    `redeemStorageBank` itself does), right after `tickStorageAutoFill` each tick (so a bank filled THIS
    tick can also redeem the same tick) and after every other per-tick automation including a possible
@@ -371,10 +391,12 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    Nothing is ever lost while capped; it simply waits for the player to spend an entity down via a
    future spending mechanic.
 
-   `ByteFoundryPage` shows both counts (as `N/10`) in a small "Compute" section once
-   `isComputeCoreConversionUnlocked(state)`; merging Cores upward into Nodes/Clusters/Networks/
-   Grids is still planned as a follow-up (see issue #280) — Compute Boost below is the first
-   mechanic that actually spends them.
+   Compute has its own dedicated screen, `ComputePage` — reached via a "⚡ Compute" nav button on
+   `ByteFoundryPage`, which stays hidden until `isComputeCoreConversionUnlocked(state)`; like the
+   Storage nav button above, it's always enabled once revealed (same permanent, voluntarily-
+   revisitable posture). `ComputePage` shows both counts (as `N/10`); merging Cores upward into
+   Nodes/Clusters/Networks/Grids is still planned as a follow-up (see issue #280) — Compute Boost
+   below is the first mechanic that actually spends them.
 10. **Compute Boost** (`intro.computeBoostType`/`computeBoostStacks`/`computeBoostRemainingSeconds`,
    all run-scoped — reset to inactive on every real Prestige, unlike `computeCores`/`computeNodes`
    themselves, but carried through untouched by Speed Up/Overclock same as the rest of `intro`) — the
@@ -391,15 +413,37 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    `computeBoostRemainingSeconds` — the multiplier itself never compounds from stacking.
    `tickComputeBoost(elapsedSeconds)` counts the remaining duration down every tick, frozen or not,
    clearing the boost back to inactive (`type: null, stacks: 0, remaining: 0`) once it reaches 0.
-   Activation happens on `ByteFoundryPage`'s own "Compute" section (three preset buttons plus a live
-   status line); `MainPage` shows a matching read-only status line while a boost is active, since its
-   effect reaches `tier01` there too.
+   Activation happens on `ComputePage` (three preset buttons plus a live status line); `MainPage`
+   shows a matching read-only status line while a boost is active, since its effect reaches `tier01`
+   there too. Ranked fourth in the forced priority order (below Storage Bank Fill/Bandwidth/Storage
+   Bank Build, above Memory — see "Forced priority order" below): `isComputeBoostTurnAvailable(state,
+   boostType)` is `activateComputeBoost`'s own actual gate, a no-op whenever something ranked above
+   Compute is currently available even if `canActivateComputeBoost` itself would allow the click.
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
    Tap/Sacrifice/Invest/Storage stay just as interactive as on the mandatory gate, and the
    transfer-block row keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
+
+**Forced priority order.** The five recurring "upgrade" actions above — Storage Bank Fill (step 8) >
+Bandwidth (step 5) > Storage Bank Build (step 8) > Compute (step 10) > Memory (step 4) — are ranked
+in a fixed order: whenever ANY action ranked above a given one is currently available, that lower one
+is disabled, both in the UI (its button shows disabled, with a tooltip) and in the engine reducer
+itself (a defensive no-op — same "engine re-validates" posture as every other action). Each action's
+own plain base predicate — `isStorageBankFillAvailable`, `isBandwidthAvailable`,
+`isStorageBankBuildAvailable`, `isComputeUpgradeAvailable` (all `state → bool`, see the function
+table below) — is composed into a "turn"-suffixed predicate
+(`isBandwidthTurnAvailable`/`isStorageBankBuildTurnAvailable`/`isComputeBoostTurnAvailable`/
+`isComputeUpgradeTurnAvailable`) that folds the priority order in on top; those turn predicates are
+what the actual reducers (`pickIntroProductionMilestone`/`buildStorageBank`/`activateComputeBoost`)
+gate on, and what `ByteFoundryPage`/`StoragePage`/`ComputePage` mirror for each button's `disabled`
+prop. Combine into a Byte (a one-off bootstrap step) sits outside this forced order entirely.
+`isMemoryCapacityUpgradeAvailable` (Memory's own gate) directly composes all four base predicates
+above it (plus Combine) rather than a separate "turn" wrapper, since it's the lowest-ranked action —
+nothing ranks below it to compose against. Storage Bank Fill itself (`isStorageBankFillAvailable`,
+and the `redeemStorageBank`/`tickStorageAutoRedeem` reducers it gates) is never blocked by anything —
+top priority, unaffected by the other four.
 
 Both `convertIntroBitsToKilobytes` and `tickIntroAutoInvest` grant free tier units via an internal
 `grantTierUnits(tierId, quantity)` helper (not exported) — it mirrors `buyTier`'s
@@ -426,26 +470,27 @@ rate. The Tap button itself carries no `$progress`/hidden progressbar of its own
 above already shows the identical bits/capacity fill, so a second meter on the tap button would
 just duplicate it.
 
-Every Memory-denominated cost shown anywhere on this page — Sacrifice's cost (`intro.capacity`
-itself, since a Sacrifice always drains the current balance in full), Invest's own cost
-(`getIntroProductionMilestoneCost(tier)`), and Storage's build cost (`getStorageBankCost`) — renders
-in whichever B/KB/MB/…/QB unit best fits that specific amount (`formatBitsInNearestUnit`, a local
-helper reusing `getMemoryUnit`/`formatMemoryAmount` directly: `getMemoryUnit(bits, true)` picks the
-unit that fits `bits` itself when called this way), the same scale Memory's own balance uses, rather
-than a fixed unit that stops scaling once a cost crosses 1000 of it — e.g. Invest's tier-3 cost
-(8000 bits) reads "1 KB", not "1,000 B", and a 1 KB Storage bank's 80,000-bit build cost reads
-"10 KB", not a raw unitless "80,000". Sacrifice and Invest each render their own cost on a second
-line below the button's symbol/label/multiplier (`MilestoneButtonContent`/`MilestoneCostLine`, a
-local two-line layout — not `components/Button`'s single-row `ButtonContent`), in smaller/muted
-text, rather than crammed inline in parentheses; Storage's build cost stays parenthesized inline in
-its own label instead, since that button's label already names the bank's *size* separately (see
-`formatStorageSize` below) and the cost is the only other number on it. This is a display-only
-convention — internal state always stores raw bit counts.
+Every Memory-denominated cost shown anywhere across ByteFoundryPage/StoragePage — Sacrifice's cost
+(`intro.capacity` itself, since a Sacrifice always drains the current balance in full), Invest's own
+cost (`getIntroProductionMilestoneCost(tier)`), and Storage's build cost (`getStorageBankCost`) —
+renders in whichever B/KB/MB/…/QB unit best fits that specific amount (`formatBitsInNearestUnit`, an
+`engine.js` export — shared by both pages — reusing `getMemoryUnit`/`formatMemoryAmount` directly,
+also both `engine.js` exports: `getMemoryUnit(bits, true)` picks the unit that fits `bits` itself
+when called this way), the same scale Memory's own balance uses, rather than a fixed unit that stops
+scaling once a cost crosses 1000 of it — e.g. Invest's tier-3 cost (8000 bits) reads "1 KB", not
+"1,000 B", and a 1 KB Storage bank's 80,000-bit build cost reads "10 KB", not a raw unitless
+"80,000". Sacrifice and Invest each render their own cost on a second line below the button's
+symbol/label/multiplier (`MilestoneButtonContent`/`MilestoneCostLine`, a local two-line layout — not
+`components/Button`'s single-row `ButtonContent`), in smaller/muted text, rather than crammed inline
+in parentheses; Storage's build cost stays parenthesized inline in its own label instead, since that
+button's label already names the bank's *size* separately (see `formatStorageSize` below) and the
+cost is the only other number on it. This is a display-only convention — internal state always
+stores raw bit counts.
 
-Storage's Build button and per-size full/empty/not-built squares rows render inside their own labeled
-section (`StorageSection`, a `styled(StatCard)`) rather than flat alongside Sacrifice/Invest — see
-docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level layout. (No auto-redeem
-pause/resume control renders currently — see the "Redeeming" paragraph above.)
+Storage's Build button and per-size full/empty/not-built squares rows render on `StoragePage` (see
+"Architecture" in `CLAUDE.md`), not inline on ByteFoundryPage — see docs/MAINPAGE_REFERENCE.md's
+"Byte Foundry page" section for the render-level layout. (No auto-redeem pause/resume control renders
+currently — see the "Redeeming" paragraph above.)
 
 ### Tier production tickspeed
 
@@ -1538,31 +1583,42 @@ purchases were manual or automatic.
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `(INTRO_BYTE_BASE_RATE * productionMultiplier) / tickSpeedSeconds` — always an exact integer, since both factors are always powers of `INTRO_PRODUCTION_MULTIPLIER_STEP`. Used by `tapIntroBit` and the passive-production display |
 | `tapIntroBit` | `state → state` | Byte Foundry: adds `getIntroProductionRate(intro)` bits to `intro.bits` — "one second's worth" at the current rate, not a flat 1 — capped at `intro.capacity`. No-op once already full. Never freezes |
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
-| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 10x Capacity" can actually fire right now — `intro.bits === intro.capacity` **and** none of Combine into a Byte (`!byteCreated`, affordable), the current Invest tier (affordable, unclaimed), or a currently-buildable Storage bank (once `isStorageUnlocked`) is still possible with that same balance. Since Invest's own cost ladder (`getIntroProductionMilestoneCost`) starts at the same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep by default, so claiming the current Invest tier is effectively a prerequisite for Sacrificing again most cycles. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
+| `isStorageBankFillAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer), ranked HIGHEST: true whenever any built Storage bank, of any size, is both currently FULL and redeemable right now (`isStorageBankRedeemable`). Never itself blocked by anything below it in the order |
+| `isBandwidthAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): true whenever the current `productionMilestoneTier`'s own cost is affordable and hasn't already used up its claims — the same condition `pickIntroProductionMilestone` itself checks |
+| `isBandwidthTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isBandwidthAvailable(state) && !isStorageBankFillAvailable(state)` — `pickIntroProductionMilestone`'s own actual gate |
+| `isStorageBankBuildAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `intro.bits >= getStorageBankCost(getStorageBankSize(state))` — matches `buildStorageBank`'s own actual gate, which has never itself required `isStorageUnlocked` (that only governs the Storage nav button's own reveal) |
+| `isStorageBankBuildTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isStorageBankBuildAvailable(state) && !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state)` — `buildStorageBank`'s own actual gate |
+| `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` and at least one `COMPUTE_BOOST_PRESETS` preset is currently activatable (`canActivateComputeBoost`) |
+| `isComputeBoostTurnAvailable` | `(state, boostType) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType) && !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state) && !isStorageBankBuildAvailable(state)` — `activateComputeBoost`'s own actual gate |
+| `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isComputeBoostTurnAvailable(state, boostType)` for any preset — used to gate ComputePage's own nav entry point |
+| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 10x Capacity" can actually fire right now — `intro.bits === intro.capacity` **and** none of Combine into a Byte (`!byteCreated`, affordable), `isStorageBankFillAvailable`, `isBandwidthAvailable` (the current Invest tier affordable/unclaimed), `isStorageBankBuildAvailable` (a currently-buildable Storage bank), or `isComputeUpgradeAvailable` is still possible with that same balance — see "Forced priority order" above, the lowest-ranked action, composing all four base predicates above it. Since Invest's own cost ladder (`getIntroProductionMilestoneCost`) starts at the same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep by default, so claiming the current Invest tier is effectively a prerequisite for Sacrificing again most cycles. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
 | `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/10/100 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
-| `pickIntroProductionMilestone` | `state → state` | Byte Foundry "Invest for Double Production" — reads `cost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)`; requires `intro.bits >= cost` (NOT full capacity — cost is independent of `intro.capacity`) and `intro.productionMilestoneTierClaims < getIntroProductionMilestoneMaxClaims(tier)`; deducts exactly `cost` from `bits`, and either increments `productionMilestoneTierClaims` (same tier) or advances `productionMilestoneTier` with a fresh claim count of 0 once the tier's claim limit is reached. Doubles the overall rate: halves `tickSpeedSeconds` while that stays ≥ `INTRO_MIN_TICK_SPEED_SECONDS`, otherwise multiplies `productionMultiplier` by `INTRO_PRODUCTION_MULTIPLIER_STEP` instead. No-op below cost or once every claim at the current tier is already used. Never freezes |
+| `pickIntroProductionMilestone` | `state → state` | Byte Foundry "Invest for Double Production" — requires `isBandwidthTurnAvailable(state)` (see its own row above); reads `cost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)`; deducts exactly `cost` from `bits`, and either increments `productionMilestoneTierClaims` (same tier) or advances `productionMilestoneTier` with a fresh claim count of 0 once the tier's claim limit is reached. Doubles the overall rate: halves `tickSpeedSeconds` while that stays ≥ `INTRO_MIN_TICK_SPEED_SECONDS`, otherwise multiplies `productionMultiplier` by `INTRO_PRODUCTION_MULTIPLIER_STEP` instead. No-op below cost, once every claim at the current tier is already used, or while a Storage Bank Fill (higher priority) is currently available. Never freezes |
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
-| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_STORAGE_UNLOCK_CAPACITY` (80,000 — 10 KB in Memory's own scale) — drives whether `ByteFoundryPage` shows the whole Storage section at all, a later reveal than `isIntroConversionUnlocked`'s own |
+| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_STORAGE_UNLOCK_CAPACITY` (80,000 — 10 KB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "🏦 Storage" nav button to `StoragePage` at all, a later reveal than `isIntroConversionUnlocked`'s own |
+| `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KB/MB/…/QB unit a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits) |
+| `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null` |
+| `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Memory-denominated cost (Sacrifice/Invest/Storage build) in whichever unit best fits that specific amount |
 | `getIntroKilobyteConversionCost` | `state → number` | Byte Foundry: `BITS_PER_BYTE * getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — `BITS_PER_BYTE` times tier01's own CURRENT per-unit level cost, the exact same underlying value `getStorageBankSize`/`isStorageBankRedeemable` key off (before the `BITS_PER_BYTE` scaling). Exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) at a fresh cycle's level 1, growing in lockstep with tier01's own price from then on. An earlier version stayed flat at `INTRO_BITS_PER_KILOBYTE_CONVERSION` forever — see `docs/DESIGN_HISTORY.md` |
 | `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `getIntroKilobyteConversionCost(state)` bits (tier01's own CURRENT per-unit level cost, not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op only below cost — **no per-cycle cap**. Sets `mainGameUnlocked: true` on success. Called once per transfer-block click in `ByteFoundryPage`, and once per unit by `tickIntroAutoInvest` below |
 | `tickIntroProduction` | `elapsedSeconds → state → state` | Byte Foundry: passive production for the Byte generator — no-op immediately before `intro.byteCreated`. Delivers one batch of `INTRO_BYTE_BASE_RATE * productionMultiplier` bits every `tickSpeedSeconds` of elapsed time (the same discrete "accumulate, deliver a whole period, bank the remainder" model `tickGame`'s own per-tier production uses — see there), crediting whole bits capped at `capacity`. Never freezes once `byteCreated` |
 | `tickIntroAutoInvest` | `state → state` | Byte Foundry: auto-convert convenience — loops `convertIntroBitsToKilobytes` (so it flips `mainGameUnlocked` and behaves identically to a manual click), converting one `getIntroKilobyteConversionCost(state)`-bit unit at a time (tier01's own CURRENT per-unit cost, re-read every iteration since a completed unit can itself advance tier01's level mid-call — not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) as soon as it's affordable, live rather than waiting for a whole `getPurchaseBlockSize(state)`-sized batch (an earlier version did the latter — see `docs/DESIGN_HISTORY.md`). Capped per call at `getTierBulkQuantity(getPurchaseBlockSize(state), purchaseLevelProgress[tier01], Number.MAX_SAFE_INTEGER)` — at most one tier01 level's worth of units — the same safety bound the tier autobuyers themselves use, so an extreme balance can't loop unboundedly in one call; a bigger jump finishes on a later tick. **No per-cycle cap**, unlike an earlier design |
 | `getStorageBankSize` | `state → number` | Byte Foundry Storage: an independent ladder that walks tier01's own per-unit LEVEL COST sequence (`getTierCost(TIER_DEFINITIONS[0], level)` for level 1, 2, 3, …) rather than a synthetic ×10 progression, advancing to the next level's cost every time `STORAGE_BANK_LADDER_CAP` banks have ever been built at the current one (read from `intro.storageBanksBuiltTotal`, cumulative — never decremented by redeeming) — the size `buildStorageBank` currently builds at. Because `getCostEpochExponent`'s exponent sequence skips values, this skips sizes too (e.g. level 4 = 10,000,000, never 1,000,000). Uncapped — keeps advancing indefinitely (an earlier version of the Compute Core mechanic capped this at 1,000,000/"1 MB" so its own readiness check could enumerate a finite set of sizes; superseded, since Compute Cores no longer depend on Storage state at all — see `docs/DESIGN_HISTORY.md`). Deliberately decoupled from tier01's own CURRENT level cost; see `isStorageBankRedeemable` for the separate check on whether a built bank is spendable once full |
 | `getStorageBankCost` | `capacityBits → number` | Byte Foundry Storage: `capacityBits * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE` — 10x the bank's own face value, in BYTES not bits (a 1000-bit bank costs 80,000 bits to build). Pays only for the empty container — not what fills it |
-| `buildStorageBank` | `state → state` | Byte Foundry Storage: spends `getStorageBankCost(getStorageBankSize(state))` bits from `intro.bits`, adds one EMPTY bank of that size to `intro.storageBanksBuiltTotal` only (cumulative, drives the ladder) — deliberately does NOT touch `intro.storageBanks` (the currently-full count); a freshly built bank starts empty, filled later by `tickStorageAutoFill`. No-op below cost. Bypasses `isProductionFrozen` (separate currency pool, same posture as Combine/Sacrifice/Invest) |
+| `buildStorageBank` | `state → state` | Byte Foundry Storage: requires `isStorageBankBuildTurnAvailable(state)` (see its own row above); spends `getStorageBankCost(getStorageBankSize(state))` bits from `intro.bits`, adds one EMPTY bank of that size to `intro.storageBanksBuiltTotal` only (cumulative, drives the ladder) — deliberately does NOT touch `intro.storageBanks` (the currently-full count); a freshly built bank starts empty, filled later by `tickStorageAutoFill`. No-op below cost, or while Storage Bank Fill/Bandwidth (higher priority) is currently available. Bypasses `isProductionFrozen` (separate currency pool, same posture as Combine/Sacrifice/Invest) |
 | `tickStorageAutoFill` | `state → state` | Byte Foundry Storage: cascades Memory into every currently-fillable EMPTY bank in one pass, smallest size first — while some size has `storageBanksBuiltTotal[size] > storageBanks[size]` (an empty container) and `intro.bits >= size`, moves `size` bits from `intro.bits` into `intro.storageBanks[size]` (+1), then repeats; terminates because affordability is monotonic with size. Whatever's left over stays as Memory's own balance. Unconditional — no toggle, no prerequisite. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic. Same-reference no-op when nothing is fillable |
 | `isStorageBankRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Storage: `capacityBits === getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — a genuine one-tick-only EXACT match against tier01's CURRENT per-unit level cost (an earlier version used `<=`, "at or below," which let a bank redeem at a price higher than its own size — see `docs/DESIGN_HISTORY.md`). An autobuyer burst can still jump tier01's level, and hence its cost, straight past a bank's exact size in a single tick (see `getFirstTierCost`'s comment in `engine.js`) — such a bank just waits, still full, until a later reset regrows the price back through that value — the only gate on whether a FULL bank is spendable |
 | `redeemStorageBank` | `capacityBits → state → state` | Byte Foundry Storage: no-op if no bank of that size is currently full (`intro.storageBanks[capacityBits] <= 0`) or `isStorageBankRedeemable` is false; otherwise decrements `intro.storageBanks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.storageBanksBuiltTotal[capacityBits]` is untouched, it never decrements, so the bank re-enters the fillable pool) and grants 1 free `TIER_DEFINITIONS[0]` unit via `grantTierUnits` — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` entirely too (a bank's contents came from Memory via `tickStorageAutoFill`, not a further bit-to-Kilobyte conversion at redeem time) |
 | `tickStorageAutoRedeem` | `state → state` | Byte Foundry Storage: no-op unless there's an eligible size. A size is eligible if a bank of it is currently FULL, `isStorageBankRedeemable`, not already in `intro.storageAutoRedeemedSizes` this cycle, AND (it's tier01's own level-1 cost, "1 KB" — the smallest size `getStorageBankSize` ever offers, exempt from the toggle — OR `intro.storageAutoRedeemEnabled` is true). Redeems the smallest eligible size and marks it in `storageAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (`storageAutoRedeemedSizes` resets fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemStorageBank` itself), at the very end, after every other per-tick automation (including `tickStorageAutoFill`, which runs much earlier, right after production — see the `tickGame` row above — and a possible automatic Speed Up), so it always reacts to tier01's truly final level for the tick — a bank filled earlier the same tick can still redeem the same tick |
 | `setStorageAutoRedeemEnabled` | `enabled → state → state` | Byte Foundry Storage: unconditionally sets `intro.storageAutoRedeemEnabled` — a plain preference, no prerequisite purchase (unlike `setAutoSpeedUpEnabled`/etc., which no-op until their parent automation is bought). Doesn't gate the 1 KB denomination's auto-redeem at all — see `tickStorageAutoRedeem` |
-| `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 — 1 MB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "Compute" section at all, and whether `tickComputeCoreConversion` acts. Unrelated to Storage entirely (an earlier version gated on Storage bank fullness instead — see `docs/DESIGN_HISTORY.md`) |
+| `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 — 1 MB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "⚡ Compute" nav button to `ComputePage` at all, and whether `tickComputeCoreConversion` acts. Unrelated to Storage entirely (an earlier version gated on Storage bank fullness instead — see `docs/DESIGN_HISTORY.md`) |
 | `tickComputeCoreConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op unless `isComputeCoreConversionUnlocked`, if Memory isn't yet full (`bits < capacity`), or if `intro.computeCores` is already at `COMPUTE_ENTITY_CAP` (10 — Memory then just stays full, waiting, rather than flushing for nothing); otherwise flushes the ENTIRE current `capacity` to 0 (the same "drains the ENTIRE balance" behavior `pickIntroCapacityMilestone`/Sacrifice already has) and adds exactly 1 to `intro.computeCores` — the cost is `capacity` itself, not a fixed amount, so it grows as the player Sacrifices further. Called from `tickGame` right after `tickStorageAutoFill` and before `tickIntroAutoInvest` — the same "first claim on Memory" priority `tickStorageAutoFill` itself already has over ordinary Kilobyte conversion. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic |
 | `tickComputeNodeConversion` | `state → state` | Byte Foundry Compute Cores: same-reference no-op below `COMPUTE_CORES_PER_NODE` (8) Cores, or once `intro.computeNodes` is already at `COMPUTE_ENTITY_CAP` (10); otherwise converts complete groups of 8 into Nodes, capped at however many Nodes still fit under `COMPUTE_ENTITY_CAP` (`roomForNodes`) — a Core surplus beyond what fits is left unconverted in `intro.computeCores` rather than overflowing `computeNodes` past the cap. Called from `tickGame` right after `tickComputeCoreConversion`, so freshly-minted Cores convert the same tick they're earned |
 | `getComputeBoostMultiplier` | `intro → number` | Byte Foundry Compute Boost: `COMPUTE_BOOST_PRESETS[intro.computeBoostType]?.multiplier ?? 1` — 1 (no effect) while no boost is active. Applied to Memory's own passive production (`tickIntroProduction`) and `tier01`'s production specifically (`tickGame`) |
 | `canActivateComputeBoost` | `(state, boostType) → bool` | Byte Foundry Compute Boost predicate (not a reducer): `boostType` must be a real `COMPUTE_BOOST_PRESETS` key, `intro.computeCores >= 1`, and either no boost is active, the same type is (so it can stack), or the active type is below `COMPUTE_BOOST_MAX_STACKS`. The actual gate `activateComputeBoost` itself enforces, not just a UI-only disabled state |
-| `activateComputeBoost` | `boostType → state → state` | Byte Foundry Compute Boost: no-op below `canActivateComputeBoost`'s guard; otherwise spends exactly 1 `intro.computeCores` (regardless of preset) and either starts a fresh boost (`computeBoostStacks: 1`, `computeBoostRemainingSeconds: preset.durationSeconds`) or, if the same type is already active, stacks it (`computeBoostStacks += 1`, `computeBoostRemainingSeconds += preset.durationSeconds` — extending, not resetting, the remaining time) |
+| `activateComputeBoost` | `boostType → state → state` | Byte Foundry Compute Boost: requires `isComputeBoostTurnAvailable(state, boostType)` (see its own row above — folds `canActivateComputeBoost`'s own guard in with the forced priority order); otherwise spends exactly 1 `intro.computeCores` (regardless of preset) and either starts a fresh boost (`computeBoostStacks: 1`, `computeBoostRemainingSeconds: preset.durationSeconds`) or, if the same type is already active, stacks it (`computeBoostStacks += 1`, `computeBoostRemainingSeconds += preset.durationSeconds` — extending, not resetting, the remaining time) |
 | `tickComputeBoost` | `elapsedSeconds → state → state` | Byte Foundry Compute Boost: same-reference no-op while no boost is active; otherwise decrements `computeBoostRemainingSeconds` by `elapsedSeconds`, clearing back to inactive (`type: null`, `stacks: 0`, `remaining: 0`) once it reaches 0. Runs every tick, frozen or not — called from `tickGame` alongside the other Byte Foundry intro ticks |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
