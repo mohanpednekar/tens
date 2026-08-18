@@ -80,6 +80,14 @@ an explicit workflow file.
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
+PRs are opened as drafts by default, but a draft should only stay a draft while there's real,
+known work still pending on it — a queued follow-up commit, a fix still being written, tests that
+haven't been run yet. The moment a PR reflects genuinely finished work (its own local checks pass
+and nothing further is planned), mark it ready for review — don't leave it sitting in draft once
+there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
+indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
+every PR in this repo, autonomous or interactive.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
 bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
 confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
