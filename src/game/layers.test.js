@@ -7,9 +7,13 @@ import {
   BITS_PER_BYTE,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DISK_ARRAY_LADDER_CAP,
+  DISK_BUILD_COST_MULTIPLIER,
+  DISK_CACHE_BLOCK_COUNT,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+  INTRO_DISK_UNLOCK_CAPACITY,
   MONEY_ID,
   OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
@@ -218,5 +222,22 @@ describe('constants', () => {
 
   it('COMPUTE_ENTITY_CAP is 10', () => {
     expect(COMPUTE_ENTITY_CAP).toBe(10)
+  })
+
+  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits (10 KB in Memory\'s own B/KB/MB display scale)', () => {
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
+  })
+
+  it('DISK_BUILD_COST_MULTIPLIER is 10 (a disk costs 10x its own Byte-accurate size to build)', () => {
+    expect(DISK_BUILD_COST_MULTIPLIER).toBe(10)
+  })
+
+  it('DISK_ARRAY_LADDER_CAP is 10 (disks per size before the build ladder advances)', () => {
+    expect(DISK_ARRAY_LADDER_CAP).toBe(10)
+  })
+
+  it('DISK_CACHE_BLOCK_COUNT is 8 (a disk array\'s cache splits into 8 equal releasable blocks)', () => {
+    expect(DISK_CACHE_BLOCK_COUNT).toBe(8)
   })
 })
