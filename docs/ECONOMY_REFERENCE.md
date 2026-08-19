@@ -629,20 +629,30 @@ as read-only accessors, currently unused by `MainPage` (see `docs/DESIGN_HISTORY
 
 ### Offline progress
 
-Time away from the game is simulated at **50% speed** (`OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5`) when
-the page is reopened, capped at `MAX_OFFLINE_SECONDS` (24 hours) of real elapsed time before the
-multiplier is applied. `getOfflineEffectiveSeconds`/`applyOfflineProgress` (`engine.js`) replay
-`tickGame(1, autobuyerBatchSize)` once per *simulated* second — not one lump-sum call — so autobuyers
-get the same one-purchase-attempt-per-tick cadence they'd have had live, just at 50% speed. Since
-`tickGame` unconditionally drives `tickIntroProduction`/`tickIntroAutoInvest`/`tickStorageAutoFill`/
-`tickStorageAutoRedeem` (the Byte Foundry) alongside the main-game tiers on every call, this same 50%
-speed applies to the entire game — Byte Foundry and main game alike — with no separate wiring needed.
-This replay
-granularity is independent of `TICK_RATE_MS` — `applyOfflineProgress` always passes `elapsedSeconds = 1`
-regardless of live tick rate. `storage.js`'s `saveGameState` stamps a separate
-`tens_last_save_timestamp` localStorage key with `Date.now()` on every save; `loadLastSaveTimestamp`
-returns `null` if missing (no prior save, or predates this feature) — a `null` timestamp skips offline
-progress entirely rather than guessing. `clearGameState` (via `resetGame`) removes this key too.
+Time away from the game is simulated when the page is reopened, capped at `MAX_OFFLINE_SECONDS` (24
+hours) of real elapsed time before any speed reduction is applied. A short absence — at or below
+`OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes) — is simulated at **100% speed**, as if
+the screen had been on the whole time, and never surfaces the "Welcome back!" notice (there's nothing
+notable to report). Only once the (capped) elapsed duration exceeds that threshold does the entire
+duration get scaled down to **50% speed** (`OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5`) and the notice
+appear — see `getOfflineEffectiveSeconds` in `engine.js`. `getOfflineEffectiveSeconds`/
+`applyOfflineProgress` (`engine.js`) replay `tickGame(1, autobuyerBatchSize)` once per *simulated*
+second — not one lump-sum call — so autobuyers get the same one-purchase-attempt-per-tick cadence
+they'd have had live, at whichever speed applies. Since `tickGame` unconditionally drives
+`tickIntroProduction`/`tickIntroAutoInvest`/`tickStorageAutoFill`/`tickStorageAutoRedeem` (the Byte
+Foundry) alongside the main-game tiers on every call, the same speed and threshold apply to the entire
+game — Byte Foundry and main game alike — with no separate wiring needed. This replay granularity is
+independent of `TICK_RATE_MS` — `applyOfflineProgress` always passes `elapsedSeconds = 1` regardless of
+live tick rate. `storage.js`'s `saveGameState` stamps a separate `tens_last_save_timestamp` localStorage
+key with `Date.now()` on every save; `loadLastSaveTimestamp` returns `null` if missing (no prior save,
+or predates this feature) — a `null` timestamp skips offline progress entirely rather than guessing.
+`clearGameState` (via `resetGame`) removes this key too.
+
+`useIncrementalGame.js`'s `computeOfflineCatchUp` is the single place that decides whether to surface
+the notice: it always folds the simulated progress into `state` once `getOfflineEffectiveSeconds`
+clears a single tick, but only builds an `offlineProgress` summary object (which
+`OfflineProgressNotice` renders) when `elapsedRealSeconds` exceeds the full-speed threshold — otherwise
+it returns `offlineProgress: null`, so a short gap updates the game state silently.
 
 Offline progress is detected two ways, both in `useIncrementalGame.js`, both replaying through the
 identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
@@ -1779,7 +1789,7 @@ purchases were manual or automatic.
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing the base currency which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — used for all Money amounts, wherever they appear |
-| `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, scales by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%), floors — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
+| `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, then floors it as-is (100% speed) if at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS`, otherwise scales the entire capped duration by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%) before flooring — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'b'` (lowercase — the base currency's "Bits" symbol) fallback for `MONEY_ID`/unknown ids |
@@ -1809,7 +1819,8 @@ purchases were manual or automatic.
   value — changing it only changes update granularity/animation smoothness, not game speed.
   `TICK_ACCUMULATION_EPSILON = 1e-9` (module-scoped in `engine.js`, not exported) is a related tolerance
   constant absorbing floating-point drift from repeatedly summing a fractional `elapsedSeconds`
-- `OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5` — offline progress runs at 50% of normal speed, for the entire game (both the main-game tiers and the Byte Foundry — see "Offline progress" above)
+- `OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5` — offline progress past the full-speed threshold below runs at 50% of normal speed, for the entire game (both the main-game tiers and the Byte Foundry — see "Offline progress" above)
+- `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 600` (10 minutes) — real elapsed time at or below this runs offline progress at 100% speed with no notice shown; only beyond it does `OFFLINE_PROGRESS_SPEED_MULTIPLIER` apply
 - `MAX_OFFLINE_SECONDS = 86400` (24 hours) — cap on real elapsed time counted toward offline progress
 - `PRESTIGE_POINT_SPEED_BONUS = 0.01` — +1% production speed per unspent Prestige Point, once unlocked (see next)
 - `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000` — one-time PP cost to unlock the passive production speed bonus above (see `buyPrestigeSpeedBonus`) — inert until bought, regardless of PP balance. The priciest of the four global PP automation unlocks (see `AUTO_SPEED_UP_COST`/`TICKSPEED_AUTOBUYER_COST`/`AUTO_PRESTIGE_COST` below), since it's passive and always-on rather than a one-shot action

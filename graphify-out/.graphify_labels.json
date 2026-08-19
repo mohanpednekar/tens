@@ -51,8 +51,8 @@
   "49": "dependencies",
   "50": "ComputePage/index.jsx",
   "51": "storage.js",
-  "52": "tickGame",
-  "53": "MainPage",
+  "52": "MainPage",
+  "53": "formatBonusOrMultiplier",
   "54": "Design history & rationale",
   "55": "OfflineProgressNotice/index.jsx",
   "56": "web-vitals",
@@ -61,7 +61,6 @@
   "59": "package.json",
   "60": "development",
   "61": "scripts",
-  "62": "getTierCost",
-  "63": "getEffectiveTierTickSpeedSeconds",
-  "64": "getSmartAutobuyerCost"
+  "62": "getPurchaseBlockSize",
+  "63": "formatCurrency"
 }
