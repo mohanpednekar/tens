@@ -11,7 +11,7 @@ import {
   GOOGOL,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   MONEY_ID,
-  OVERCLOCK_PRODUCTION_STEP,
+  OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
@@ -65,9 +65,9 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('baseTickSpeedSeconds increases by 1s per tier, from 2s to 11s', () => {
+  it('baseTickSpeedSeconds increases by 1s per tier, from 1s to 10s', () => {
     TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(tier.baseTickSpeedSeconds).toBe(index + 2)
+      expect(tier.baseTickSpeedSeconds).toBe(index + 1)
     })
   })
 
@@ -122,13 +122,13 @@ describe('RESOURCE_SYMBOL', () => {
 })
 
 describe('getTierBaseTickSpeedSeconds', () => {
-  it('is 2 seconds for the first tier', () => {
-    expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(2)
+  it('is 1 second for the first tier', () => {
+    expect(getTierBaseTickSpeedSeconds(TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
-  it('matches each tier\'s own defined baseTickSpeedSeconds (2s through 11s)', () => {
+  it('matches each tier\'s own defined baseTickSpeedSeconds (1s through 10s)', () => {
     TIER_DEFINITIONS.forEach((tier, index) => {
-      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 2)
+      expect(getTierBaseTickSpeedSeconds(tier.id)).toBe(index + 1)
     })
   })
 
@@ -183,8 +183,8 @@ describe('constants', () => {
     expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
   })
 
-  it('AUTO_SPEED_UP_COST is 100', () => {
-    expect(AUTO_SPEED_UP_COST).toBe(100)
+  it('AUTO_SPEED_UP_COST is 20', () => {
+    expect(AUTO_SPEED_UP_COST).toBe(20)
   })
 
   it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
@@ -199,17 +199,17 @@ describe('constants', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 
-  it('OVERCLOCK_PRODUCTION_STEP is 0.001 (0.1 percentage points added to the global tickspeed multiplier\'s own per-level step, per activation)', () => {
-    expect(OVERCLOCK_PRODUCTION_STEP).toBe(0.001)
+  it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, folded into the Tickspeed multiplier\'s own step)', () => {
+    expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
-  it('OVERCLOCK_REQUIREMENT_STEP is 10 (a fixed 10-level jump per activation)', () => {
-    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(10)
+  it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {
+    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 800,000 bits (100 KB in Memory\'s own B/KB/MB display scale)', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(800000)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(100 * 1000 * BITS_PER_BYTE)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 8,000,000 bits (1 MB in Memory\'s own B/KB/MB display scale)', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(8000000)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(1000 * 1000 * BITS_PER_BYTE)
   })
 
   it('COMPUTE_CORES_PER_NODE is 8', () => {

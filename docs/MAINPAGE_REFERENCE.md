@@ -3,7 +3,10 @@
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
 reference for the compact tier-row grid, the sticky HUD balances, the Game/PP-Upgrades view
-toggle, and every disclosure/badge/accessibility convention `MainPage` follows. `MainPage` is
+toggle, and every disclosure/badge/accessibility convention `MainPage` follows. Also covers
+`ByteFoundryPage` and the two dedicated screens split out of it, `StoragePage`/`ComputePage` (see
+below), since all four pages are tightly coupled around the same `game` prop and Byte Foundry
+mechanic. `MainPage` is
 deliberately purely game — live controls, numbers, and status text only. Every mechanic's
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
@@ -73,85 +76,70 @@ reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capa
 Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
 capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
 `canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
-Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine/Invest/a buildable
-Storage bank must all be currently impossible too), with a `title` that names what to do first
-(`"Take every other currently-available upgrade first…"`) when the balance is full but the button
-is still disabled for that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
+Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine, a redeemable Storage
+Bank Fill, Invest, a buildable Storage bank, and an activatable Compute Boost must all be currently
+impossible too — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title` that
+names what to do first (`"Take every higher-priority upgrade first (Storage Bank Fill, Bandwidth,
+Storage Bank Build, or Compute)"`) when the balance is full but the button is still disabled for
+that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
 `capacity`) and "Invest
 for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
 this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
 keeping visible even in the shortened label; `aria-label="invest bits for double production"`
 carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
-— disabled unless `bits >=` the (bits-denominated) cost **and** `intro.productionMilestoneTierClaims
-< getIntroProductionMilestoneMaxClaims(tier)`; this cost is entirely independent of `capacity`, so
-the button is frequently enabled well before Memory is full — see docs/ECONOMY_REFERENCE.md's "Byte
+— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `bits >=` the
+(bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
+getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Storage Bank Fill
+outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md); this cost is entirely
+independent of `capacity`, so the button is frequently enabled well before Memory is full — see
+docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
 each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Once `isStorageUnlocked(state)` — Memory's own capacity has reached `INTRO_STORAGE_UNLOCK_CAPACITY`
-(10 KB in Memory's own scale, 80,000 bits; see `game/layers.js`), a later, more deliberate reveal
-than `revealed`'s own 1000-bit gate above (`storageRevealed` locally) — a separate labeled
-**Storage** section (`StorageSection`, a `styled(StatCard)`, `aria-label="byte foundry storage"`) —
-kept out of the plain button stack above so it reads as its own grouped mechanic rather than one
-more item in the same list as Sacrifice/Invest. Inside it: a "Build Storage Bank" button
-(`aria-label="build storage bank"`, calling
+Compute moved entirely to its own dedicated screen (`ComputePage` — see below) — this page only
+renders a nav button to reach it, once revealed (`computeCoreRevealed`,
+`isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`), always
+enabled regardless of what's currently actionable there — a permanent, voluntarily-revisitable
+posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — shown as a "⚡ Compute" button
+(`aria-label="open compute"`, calling `onOpenCompute`).
+
+Storage split differently: **Build Storage Bank** (`aria-label="build storage bank"`, calling
 `actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-whose visible label always tracks `getStorageBankSize(state)` — an independent ladder that
-walks tier01's own per-unit level-cost sequence (1000 bits/"1 KB", then 10,000/"10 KB", then
-1,000,000/"1 MB" — skipping 100,000/"100 KB", since `tier01`'s own cost-epoch exponent sequence
-skips it too) and only advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at
-the current size, decoupled from tier01's own CURRENT price; disabled below that cost. The build
-cost itself (parenthesized in the label, and in the button's `title`) renders via
-`formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for that specific bit amount, same
-as Invest's cost above — rather than a raw unitless bit count. Building only ever constructs an
-EMPTY container — it does not fill it (see below).
+stays on this page — its own core-loop action, alongside Sacrifice/Invest above — hidden until
+`storageRevealed` (`isStorageUnlocked(state)` — Memory's own capacity has reached
+`INTRO_STORAGE_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later, more deliberate
+reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
+`getStorageBankSize(state)` — an independent ladder that walks tier01's own per-unit level-cost
+sequence (1000 bits/"1 KB", then 10,000/"10 KB", then 100,000/"100 KB", then 10,000,000/"10 MB" —
+skipping 1,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too) and only
+advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at the current size,
+decoupled from tier01's own CURRENT price. `disabled={!canBuildStorageBank}` where
+`canBuildStorageBank = isStorageBankBuildTurnAvailable(state)` — below the build cost, OR while a
+redeemable Storage Bank Fill/an affordable Bandwidth claim (both higher priority — see "Forced
+priority order" in docs/ECONOMY_REFERENCE.md) is currently available, with a `title` naming which
+to take first in the latter case. The build cost itself (parenthesized in the label, and in the
+button's `title`) renders via `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for
+that specific bit amount — rather than a raw unitless bit count. Building only ever constructs an
+EMPTY container — it does not fill it (see "Storage page" below).
 
-For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
-visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
-`StorageSizeLabel` (`"<size> banks (<full> full, <built>/<STORAGE_BANK_LADDER_CAP> built)"`) above a
-`StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
-`STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
-bar, filling left-to-right: **full** (leftmost, holding Memory's bits — accent border,
-`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
-clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
-duller fill) — **empty** (built but not yet auto-filled — a dim muted-bordered fill,
-`aria-label="empty <size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only
-placeholder, `aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank
-doesn't remove it or leave it permanently spent — it becomes empty again, re-entering the fillable
-pool. `isStorageBankRedeemable`'s own gate is a genuine one-tick-only EXACT match against
-tier01's *current* per-unit level cost (an earlier version used "at or below" — see
-docs/DESIGN_HISTORY.md for why that undervalued a bank; see docs/ECONOMY_REFERENCE.md's "Byte
-Foundry" section for the full behavior). No pause/resume control for auto-redeem
-currently renders below the size rows — removed for now, with a UI to reintroduce it planned for
-later (see `docs/DESIGN_HISTORY.md`); `intro.storageAutoRedeemEnabled` still exists and now defaults
-`true` for every size (previously `false`), and `actions.setStorageAutoRedeemEnabled` stays fully
-wired for whenever that control returns — unlike every other automation toggle on this page, no
-prerequisite purchase gates it, and it doesn't even gate the smallest (1 KB) denomination's own
-auto-redeem at all (see docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself
-(`tickStorageAutoFill`) has no UI control at all — it's fully automatic, every tick, no toggle:
-Memory cascades into every currently-fillable empty bank, smallest size first, whenever there's
-enough of it.
+Right below Build, once anything has ever been built or is held, a brief `StorageSummaryRow`
+(`role="group"`, `aria-label="storage summary"`) shows one small `StorageSummaryChip` per size from
+`getStorageSizesToShow(state)` (ascending), each reading `"<size> <full>/<built>"` (e.g. `"10 KB
+3/8"` — 8 blocks of 10 KB ever built, 3 currently full via `Math.max(storageBanksBuiltTotal[size],
+full)`) — a compact, at-a-glance readout, deliberately not the fuller square-by-square grid
+StoragePage itself renders (see below); visiting StoragePage is still how a full bank actually gets
+redeemed.
 
-The section used to close with its own live progress row mirroring tier01's current purchase-block
-progress (a `SectionLabel` + `RateBlocksRow` pair) — removed as redundant once the transfer-block row
-below started reading that exact same value directly, making the two rows show identical information
-side by side; the transfer-block row is now the only place this progress is shown.
+Below Build/the summary, a "🏦 Storage" nav button (`aria-label="open storage"`, calling
+`onOpenStorage`, same reveal gate as Build) reaches `StoragePage` for the fuller per-size detail and
+redeeming — always enabled regardless of what's currently actionable there, same posture as the
+Compute nav button above.
 
-Below Storage, once `computeCoreRevealed` (`isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`, unrelated to Storage's own `storageRevealed` gate despite
-rendering right below it), a small **Compute** section (`ComputeSection`, a `styled(StatCard)`,
-`aria-label="byte foundry compute"`) shows the current `intro.computeCores`/`intro.computeNodes`
-counts as `N/COMPUTE_ENTITY_CAP` (10) plain status text — unlike Storage there's nothing to click
-here yet (see `tickComputeCoreConversion`/`tickComputeNodeConversion` in `game/engine.js` — both
-counters are fully automatic, and both cap at `COMPUTE_ENTITY_CAP`), so this is a status readout,
-not another action section. See docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 9 for the full
-mechanic.
-
-Below the Storage/Compute sections, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below the Storage/Compute nav buttons, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
-`SectionLabel` ("Transfer to Kilobytes (N left)"). Always renders exactly
+`SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
 own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
 `blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
@@ -160,7 +148,7 @@ value, not a separately-tracked field) to pick one of three states: **consumed**
 `title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
 `theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
 (`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
-Kilobyte"` where `<cost>` is `formatStorageSize(transferBlockCost)` and `transferBlockCost =
+Kilobyte"` where `<cost>` is `formatBitsInNearestUnit(transferBlockCost)` and `transferBlockCost =
 getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
 `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1 KB" at a fresh cycle's level 1, "10 KB" once tier01
 reaches level 2, and so on), `$progress` = the bits-toward-`transferBlockCost` fill,
@@ -183,23 +171,26 @@ completing one tier01 level per call) sets `mainGameUnlocked: true`, and `App.js
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
 
-Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file): raw
+Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file, calling into
+`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports, shared with `StoragePage`): raw
 bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
-`TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places
-(`floorToDecimals`) once converted into a Byte-scale unit — same never-overstate rationale as
-`formatCurrency` in `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick
-before it actually is — a display-only convention, internal state always stores raw
-bits. Every standalone Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via a
-further local helper, `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
+`TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places once
+converted into a Byte-scale unit — same never-overstate rationale as `formatCurrency` in
+`engine.js`, so a balance never reads as a complete unit ("1 KB") one tick before it actually is —
+a display-only convention, internal state always stores raw bits. Every standalone
+Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via
+`engine.js`'s own `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
 true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
 picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
-instead of stopping at a fixed unit. A separate `formatStorageSize` helper uses a different,
-Storage-*size*-specific scale (see "Storage" above and docs/ECONOMY_REFERENCE.md's "Byte Foundry"
-section: 1000 bits is "1 KB" there, matching tier01's own cost ladder, not 1000 Bytes) — used both for
-naming a bank's own *size* ("Build 1 KB Bank") and for the transfer block's own dynamic cost (the
-active block's `aria-label`/`title`, since `getIntroKilobyteConversionCost` is the same underlying
-value/scale as a bank size) — never for the bits actually spent to build a bank, which
-always renders via `formatBitsInNearestUnit` instead. This page's gate reappears every time a real Prestige resets Memory
+instead of stopping at a fixed unit. `engine.js`'s own `formatStorageSize` export (shared by
+ByteFoundryPage and StoragePage) uses a different, Storage-*size*-specific scale (see "Storage
+page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
+matching tier01's own cost ladder, not 1000 Bytes) — used for naming a bank's own *size* ("Build 1
+KB Bank", the per-size summary chips, StoragePage's own size labels), not for any bit amount
+actually spent, which always renders via `formatBitsInNearestUnit` instead — including the
+transfer block's own dynamic cost (the active block's `aria-label`/`title`), even though
+`getIntroKilobyteConversionCost` is the same underlying value/scale as a bank size.
+This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
 docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
@@ -213,6 +204,59 @@ first cycle, not a full replay. Once unlocked, the page also persists as a scree
 return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
 stays just as interactive there as on the gate itself.
 
+**Storage page** (`src/pages/StoragePage/index.jsx`). Storage's fuller detail screen, split out of
+ByteFoundryPage (see "Byte Foundry" section above) — reached only via ByteFoundryPage's "🏦 Storage"
+nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack
+}`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`) is
+all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
+next bank (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this
+page holds only the fuller per-size squares grid and the one Storage action that lives only here,
+redeeming.
+
+For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
+visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
+`StorageSizeLabel` (`"<size> banks (<full> full, <built>/<STORAGE_BANK_LADDER_CAP> built)"`) above a
+`StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
+`STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
+bar, filling left-to-right: **full** (leftmost, holding Memory's bits — accent border,
+`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
+clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
+duller fill — never itself blocked by the priority order, since Storage Bank Fill is ranked
+highest) — **empty** (built but not yet auto-filled — a dim muted-bordered fill, `aria-label="empty
+<size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only placeholder,
+`aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank doesn't remove it
+or leave it permanently spent — it becomes empty again, re-entering the fillable pool.
+`isStorageBankRedeemable`'s own gate is a genuine one-tick-only EXACT match against tier01's
+*current* per-unit level cost (an earlier version used "at or below" — see docs/DESIGN_HISTORY.md
+for why that undervalued a bank; see docs/ECONOMY_REFERENCE.md's "Byte Foundry" section for the
+full behavior). No pause/resume control for auto-redeem currently renders below the size rows —
+removed for now, with a UI to reintroduce it planned for later (see `docs/DESIGN_HISTORY.md`);
+`intro.storageAutoRedeemEnabled` still exists and now defaults `true` for every size (previously
+`false`), and `actions.setStorageAutoRedeemEnabled` stays fully wired for whenever that control
+returns — unlike every other automation toggle on this page, no prerequisite purchase gates it, and
+it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all (see
+docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself (`tickStorageAutoFill`) has
+no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
+currently-fillable empty bank, smallest size first, whenever there's enough of it. This page used
+to show its own live progress row mirroring tier01's current purchase-block progress — removed as
+redundant once ByteFoundryPage's transfer-block row started reading that exact same value directly;
+that transfer-block row (back on ByteFoundryPage) is the only place this progress is shown.
+
+**Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
+ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
+returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `Header` row (title
+`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`), then two `StatusText` lines —
+the current `intro.computeCores`/`intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP` (10), and a
+one-line mechanic summary — followed by a `PresetsRow` (`display: flex`, each button `flex: 1`,
+matching ByteFoundryPage's own `MilestonesRow` convention) of the 3 Compute Boost preset buttons
+(`aria-label="activate <type> compute boost"`, calling `actions.activateComputeBoost(boostType)`).
+`disabled={!isComputeBoostTurnAvailable(state, boostType)}` — folds `canActivateComputeBoost`'s own
+mechanical guard (≥1 Compute Core, no conflicting active type, below `COMPUTE_BOOST_MAX_STACKS`)
+together with the forced priority order (a no-op while Storage Bank Fill/Bandwidth/Storage Bank
+Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title`
+naming which to take first in that case. A live status line (`aria-label="active compute boost"`)
+shows below the presets whenever a boost is active, matching `MainPage`'s own read-only status line
+for the same state.
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, still incremented on every purchase for display/back-compat purposes, but no
@@ -330,7 +374,7 @@ stays just as interactive there as on the gate itself.
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)", "Tickspeed upgrade's per-level rate is now 1.2% (was 1%) from 2 activations") or a "not yet
+  (Lv.1)", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
   unlocked/activated/active" status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
@@ -682,35 +726,38 @@ the Googol freeze" below).
 `overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
 `speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
 match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 1.2%/lvl · Lv.12/20` — `actions.overclock` on click, where `{nextStep}` is
-`getGlobalTickspeedRegularStep(overclockCount + 1)` (engine.js) as a percentage — the per-level rate the
-(Money-funded) Tickspeed upgrade's own regular levels would compound at *after* this activation, reusing
-`formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting by passing it `1 + step` as if it were a
-multiplier. Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
+— e.g. `⚡ 2.14%/lvl · Lv.8/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
+percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
+getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
+claim past the bare minimum requirement, not just `overclockCount + 1`), formatted as a percentage by
+reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
+it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
+reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
+`getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier` in engine.js.
+Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
 level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
 `getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
-so the round numbers Overclock's own requirement ladder produces (10/20/30/…) show exactly as
-`engine.js` computes them, matching the same raw level number the last tier's own Details disclosure
-already shows, rather than introducing a second, differently-offset "level" reading for the same
-underlying value; see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
+so the numbers Overclock's own requirement produces show exactly as `engine.js` computes them,
+matching the same raw level number the last tier's own Details disclosure already shows, rather than
+introducing a second, differently-offset "level" reading for the same underlying value; see
+`getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
 docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Speed Up gets
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
-`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from {N}
-activation(s).`. `{currentStep}` is
-`formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate *before* the next
-Overclock (as opposed to `OverclockButton`'s own label, which always shows the *next* rate — see
-above); this is the one Overclock-specific number not otherwise visible anywhere on the Game view.
-Beyond that one figure, Overclock has no visible effect of its own to display
-separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
+`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from level {N}.`.
+`{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
+*before* the next Overclock claim (as opposed to `OverclockButton`'s own label, which always shows
+the *next* rate — see above); this is the one Overclock-specific number not otherwise visible
+anywhere on the Game view. Beyond that one figure, Overclock has no visible effect of its own to
+display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
 `Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
 reflects Overclock's cumulative contribution once any levels are bought, with no separate "Overclock
 bonus" figure needed anywhere else in the UI besides the money-balance breakdown's own summary line
-(see below).
+(see `GlobalMultipliersList` above).
 
 **Accessibility.** Each PP-spending button nests a `VisuallyHidden` `role="progressbar"` span, so the
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise

@@ -10,10 +10,11 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
-app switches between three top-level pages, `ByteFoundryPage` (the tap-to-earn pre-game bootstrap, shown
-until its one-time transition into the main game), `MainPage` (the game itself), and `InfoPage` (all the
-static "how it works" prose), via a plain `useState` toggle in `App.jsx` — not a router (see "Architecture"
-below).
+app switches between five top-level pages, `ByteFoundryPage` (the tap-to-earn pre-game bootstrap, shown
+until its one-time transition into the main game), `MainPage` (the game itself), `InfoPage` (all the
+static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens reached only
+from `ByteFoundryPage`'s own nav buttons, once each mechanic is revealed), via a plain `useState`
+toggle in `App.jsx` — not a router (see "Architecture" below).
 
 ## Tech stack
 
@@ -80,6 +81,14 @@ an explicit workflow file.
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
+PRs are opened as drafts by default, but a draft should only stay a draft while there's real,
+known work still pending on it — a queued follow-up commit, a fix still being written, tests that
+haven't been run yet. The moment a PR reflects genuinely finished work (its own local checks pass
+and nothing further is planned), mark it ready for review — don't leave it sitting in draft once
+there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
+indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
+every PR in this repo, autonomous or interactive.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
 bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
 confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
@@ -91,6 +100,21 @@ addressed — the loop isn't done until nothing new shows up.
 Keep PRs green through genuine fixes only — never `--no-verify`, never disable or delete a failing
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
+
+Once auto-merge is enabled on a PR (by anyone — human approval or `pr-auto-merge.yml`'s own
+low-risk path, see "Automation workflows" below), it silently sits inert if the PR falls out of
+sync with its base branch — GitHub won't merge a conflicted PR no matter how green its checks are,
+and won't say so loudly. Treat that mergeable state as something to actively check, not just wait
+on: whenever there's reason to look at a PR with auto-merge on (a "merge conflict" state notice, a
+push to the base branch, or just a routine check-in), fetch its current `mergeable_state` and, if
+it's conflicted, resolve it immediately rather than leaving it stalled — merge (or rebase, matching
+this repo's convention) the base branch into the PR branch, resolve the conflicts for real (never
+blindly take one side wholesale on a file with actual logic in it), rerun `yarn test` locally, and
+push. Prefer a merge over a rebase when the PR already has review comments/approvals tied to
+specific commits, since rebasing rewrites SHAs and can orphan that context. This applies whether the
+conflict is trivial (two unrelated doc/changelog bullets, `graphify-out/`'s generated files — safe
+to take the incoming side and regenerate) or substantive (overlapping logic in the same function) —
+the latter still needs a real read of both sides, not just `git checkout --theirs`.
 
 Before merging any PR that touches `TIER_DEFINITIONS` or other economy constants/formulas in
 `src/game/layers.js` (autonomous or interactive), run the `economy-change-review` skill
@@ -117,6 +141,52 @@ full issue-template section-by-section guidance, size/priority labeling, the con
 grouping, the narrow cases where an issue needs no PR, and the "specs go stale" lesson learned from
 issues like #45/#138 whose bodies described UI that had since been rebuilt out from under them. Also
 useful when reviewing/tightening an existing issue's spec before it's picked back up.
+
+## Issue tracking for interactive sessions
+
+Every session that does non-trivial work — interactive sessions, not only `autonomous-maintenance.yml`
+runs — files a GitHub issue to track that work and keeps it updated as the session progresses, giving
+interactive work the same at-a-glance visibility the automation's `claude-task` backlog already has.
+File it as soon as the scope is clear (before or alongside the first commit); the `file-task-issue`
+skill's (`.claude/skills/file-task-issue/SKILL.md`) template conventions (Goal/Context/Spec sections)
+make a good tracking-issue body even when the issue isn't a backlog item. **Don't** apply the
+`claude-task` label to it — that label is reserved for items meant for `autonomous-maintenance.yml`'s
+Phase A backlog, and labeling a live interactive tracking issue that way would make the automation try
+to pick it up as unclaimed work. For that reason, don't file it from the `claude-task.yml` issue
+template either — its frontmatter auto-applies the `claude-task` label — file a blank issue and borrow
+the template's section structure by hand instead. Comment on the issue at meaningful status changes
+(PR opened, a review round landed, work blocked/descoped) and close it once the PR merges or the task
+otherwise concludes.
+
+For work that naturally splits into multiple pieces, file a parent "epic" issue and attach each piece
+as a GitHub sub-issue of it — the same convention as the `file-task-issue` skill's "Epics and
+sub-issues" section (see #87–#92, #132) — so the whole effort collapses to one row and its status is
+legible without opening every sub-issue. A trivial, one-off change (a typo fix, answering a question
+with no code change, a tiny doc-only tweak) doesn't need a tracking issue — use judgment; the point is
+visibility into real work, not process overhead on everything.
+
+For work large enough to benefit from it — roughly the existing `size:M`/`size:L` threshold from the
+`file-task-issue` skill; a `size:S`-shaped change just stays one tracking issue — split the epic's
+sub-issues along **coding / testing / documentation** phase lines rather than only by feature-slice,
+so the coding sub-issue can land and merge without waiting on the other two, while the deferred ones
+stay tracked with the epic's context instead of getting silently dropped:
+
+- **Coding** — the core implementation. This sub-issue's PR is not exempt from the repo's existing
+  hard requirements: `yarn test` must stay green, the change's core logic needs tests, a behavior
+  change gets its `CHANGELOG.md` entry, and — if it touches anything `CLAUDE.md` documents
+  (signatures, constants, state shape, conventions) — `CLAUDE.md` is updated in the *same commit*,
+  per "Documentation" below. That same-commit rule is a hard invariant and does not relax under this
+  split; only work that was never required to land with the code gets deferred.
+- **Testing** — coverage beyond what the coding sub-issue already needed for green CI: additional
+  scenarios, edge cases, regression tests, e2e specs. Tracked separately and can lag behind the
+  coding sub-issue's merge.
+- **Documentation** — narrative/rationale writing that isn't required to keep `CLAUDE.md` itself
+  accurate: `docs/DESIGN_HISTORY.md` write-ups, README updates, deep-dive `docs/*_REFERENCE.md`
+  sections. Also trackable separately and deferrable.
+
+Link each phase sub-issue back to the parent epic (and to each other where relevant) so a later
+session picking up "testing" or "documentation" has the coding sub-issue's context — what shipped,
+what was deliberately deferred and why — without re-deriving it from the diff alone.
 
 ## Automation workflows
 
@@ -196,7 +266,9 @@ separate follow-up tooling, not by every individual PR.
     code-reviewer.md          ← comprehensive read-only PR/diff review subagent (see "Pull requests" above)
   skills/
     economy-change-review/    ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
-    file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests" above)
+    file-task-issue/          ← authors a well-formed claude-task backlog issue (see "Pull requests"
+                               above), also reused for interactive-session tracking issues (see "Issue
+                               tracking for interactive sessions" above)
     simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
                                (see "Economy model" below)
     graphify/                 ← third-party skill (see "graphify" below), tool-generated — not hand-edited
@@ -242,9 +314,29 @@ src/
                                gate itself has no way out); nothing here ever goes read-only —
                                Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
                                Convert stays live too — there is no per-cycle transfer cap at all, only
-                               tier01's own live purchase-block progress (see below). Receives
+                               tier01's own live purchase-block progress (see below). Compute moved
+                               entirely to its own dedicated screen (see ComputePage below) once
+                               revealed — this page only renders a nav button to reach it, always
+                               enabled once revealed (see "Economy model" below); its own actions
+                               stay gated by the forced priority order, same as Sacrifice/Invest
+                               here. Storage split differently: the Build button (its own core-loop
+                               action) and a brief per-size summary chip row both stay on this page;
+                               only the fuller per-size detail and redeeming live on StoragePage
+                               (see below), reached via its own nav button. Receives
                                the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
+    StoragePage/index.jsx   ← Storage's fuller detail screen, split out of ByteFoundryPage (see
+                               "Economy model" below) — one row of bank squares per size ever
+                               reached, for redeeming (Storage Bank Fill); NOT the Build button,
+                               which stays on ByteFoundryPage itself alongside its own per-size
+                               summary. Reached only via ByteFoundryPage's own "🏦 Storage" nav
+                               button; takes `{ game, onBack }`, `onBack` always returning to
+                               ByteFoundryPage (`page = 'foundry'`)
+    ComputePage/index.jsx   ← the Compute screen, split out of ByteFoundryPage (see "Economy model"
+                               below) — Compute Core/Node counters + the 3 Boost preset buttons.
+                               Reached only via ByteFoundryPage's own "⚡ Compute" nav button; takes
+                               `{ game, onBack }`, `onBack` always returning to ByteFoundryPage
+                               (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
                                TIER_DEFINITIONS — no explanatory prose, just live game state/controls
                                (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
@@ -276,23 +368,31 @@ src/
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
-                               <ByteFoundryPage/>/<MainPage/>/<InfoPage/> via a local `page` useState
-                               (`'game'`/`'info'`/`'foundry'`, default `'game'`) — not a routing library,
-                               same "local toggle, not real routing" convention MainPage's own
-                               Game/Upgrades/Milestones view tabs already use. Which screen actually
-                               renders is a derived `showingFoundry = page !== 'info' && (!intro.mainGameUnlocked
-                               || page === 'foundry')` check, not `page` directly: ByteFoundryPage is both
-                               a *mandatory gate* (whenever `intro.mainGameUnlocked` is false — no fresh
-                               Kilobytes without tapping through it, see "Economy model" below) and, once
-                               unlocked, a *permanent, voluntarily-revisitable screen* reachable at any
-                               time via MainPage's own "⚙️ Byte Foundry" link (`page = 'foundry'`) to
-                               review the current cycle's stats — it no longer disappears once passed.
-                               `'info'` is excluded from the gate override, so a Prestige/Reset firing
-                               while the Guide page is open doesn't yank the player off it — the gate
-                               picks back up the instant they click back to `'game'`. Since `page` is
-                               independent of `intro.mainGameUnlocked`, no syncing effect is needed at
-                               all: the gate resolving just reveals whatever `page` already was
-                               (typically `'game'`)
+                               <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<StoragePage/>/<ComputePage/>
+                               via a local `page` useState (`'game'`/`'info'`/`'foundry'`/`'storage'`/
+                               `'compute'`, default `'game'`) — not a routing library, same "local
+                               toggle, not real routing" convention MainPage's own Game/Upgrades/
+                               Milestones view tabs already use. Which screen actually renders is a
+                               derived `showingFoundry = page !== 'info' && page !== 'storage' && page
+                               !== 'compute' && (!intro.mainGameUnlocked || page === 'foundry')` check,
+                               not `page` directly: ByteFoundryPage is both a *mandatory gate* (whenever
+                               `intro.mainGameUnlocked` is false — no fresh Kilobytes without tapping
+                               through it, see "Economy model" below) and, once unlocked, a *permanent,
+                               voluntarily-revisitable screen* reachable at any time via MainPage's own
+                               "⚙️ Byte Foundry" link (`page = 'foundry'`) to review the current cycle's
+                               stats — it no longer disappears once passed. `'info'`/`'storage'`/
+                               `'compute'` are all excluded from the gate override: `'info'` for the
+                               original courtesy (a Prestige/Reset firing while the Guide page is open
+                               doesn't yank the player off it); `'storage'`/`'compute'` for a stronger
+                               reason — they're reached only via a button ON ByteFoundryPage itself
+                               (gate or voluntary-link phase alike), so without this exclusion the
+                               override would make them permanently unreachable during the gate phase
+                               (mainGameUnlocked flips true well before Storage/Compute's own much
+                               higher capacity thresholds could ever be revealed). Either way the gate
+                               picks back up the instant the player clicks back to `'game'`. Since
+                               `page` is independent of `intro.mainGameUnlocked`, no syncing effect is
+                               needed at all: the gate resolving just reveals whatever `page` already
+                               was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -342,9 +442,19 @@ Strict three-layer separation:
    removed player-facing ×1/×10 "Bulk" toggle — no persisted preference to manage). On mount, a
    one-time `computeInitialGame` helper loads any saved state, reads `loadLastSaveTimestamp()`, and —
    if elapsed real time registers at least one simulated second — folds in offline progress via
-   `applyOfflineProgress` before the first render, recording a one-shot `{ elapsedRealSeconds,
+   `applyOfflineProgress` before the first render, recording a `{ elapsedRealSeconds,
    effectiveSeconds }` summary as `offlineProgress`; `dismissOfflineProgress` (and `resetGame`) clear
-   it back to `null`. This happens once, before the tick timer starts.
+   it back to `null`. This mount-time check only ever covers time the app was fully torn down (a real
+   page load/PWA cold start) — it runs once, before the tick timer starts, and never again for the
+   life of that mount. Since a backgrounded/suspended tab or PWA (the far more common case on mobile —
+   the OS routinely throttles or fully pauses a background page's `setInterval` without ever tearing
+   the page down) never remounts, `offlineProgress` is **not** a one-shot value: the live tick loop
+   itself also tracks the real wall-clock time of its own most recent firing and, on any firing (from
+   `setInterval` or from a `visibilitychange` listener that fires the same check immediately on
+   resume) whose gap since the previous one exceeds `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s — far
+   past ordinary `setInterval` jitter), replays that gap through the identical `applyOfflineProgress`
+   path instead of an ordinary tick, producing a fresh `offlineProgress` object mid-session. See
+   `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section for the full detection/threshold detail.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
@@ -354,18 +464,34 @@ Strict three-layer separation:
    is live status, not a description, so it stays here). See docs/MAINPAGE_REFERENCE.md for the full
    field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
-   taking `game` (and an optional `onBack`) as props. It's the only way any Prestige cycle ever earns
-   its first Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false, with no way out. Once
-   that cycle's `intro.mainGameUnlocked` flips true (the first bits ever converted into Kilobytes
-   this cycle), it stops being a gate and becomes a permanent screen the player can voluntarily
-   reopen at any time (MainPage's "⚙️ Byte Foundry" link), with an `onBack`-driven exit back to
-   MainPage — but it stays just as interactive either way, nothing here ever goes read-only.
+   taking `game` (and an optional `onBack`, plus `onOpenStorage`/`onOpenCompute`) as props. It's the
+   only way any Prestige cycle ever earns its first Kilobytes, replacing the old, since-removed
+   self-producing Bytes tier as the game's actual bootstrap — a mandatory gate whenever
+   `intro.mainGameUnlocked` is false, with no way out. Once that cycle's `intro.mainGameUnlocked`
+   flips true (the first bits ever converted into Kilobytes this cycle), it stops being a gate and
+   becomes a permanent screen the player can voluntarily reopen at any time (MainPage's "⚙️ Byte
+   Foundry" link), with an `onBack`-driven exit back to MainPage — but it stays just as interactive
+   either way, nothing here ever goes read-only. Compute moved to its own dedicated screen (see 4b
+   below) once revealed; this page only renders a nav button to reach it, always enabled once
+   revealed. Storage split differently: Building the next bank (its own core-loop action, alongside
+   Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
+   `"10 KB 3/8"`) both stay here; only the fuller per-size detail and redeeming (Storage Bank Fill)
+   live on the dedicated `StoragePage` (see 4a below), reached via its own nav button, always
+   enabled once revealed. Every action — here or on either dedicated screen — stays gated by the
+   forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size full/empty/not-built
+    squares rows and redeeming (Storage Bank Fill) — NOT the Build button, which stays on
+    ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
+    Storage" nav button; `onBack` always returns to ByteFoundryPage (`page = 'foundry'`). A pure
+    renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
+4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
+    only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
+    (`page = 'foundry'`). Same posture as StoragePage above.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
    state at all, only pure constants/formulas from `game/engine.js`/`game/layers.js`, so nothing here
-   can drift out of sync with a live run. `App.jsx` toggles between the three pages locally; there
+   can drift out of sync with a live run. `App.jsx` toggles between these pages locally; there
    is still no routing library or backend involved.
 
 ## Economy model
@@ -391,8 +517,9 @@ produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 
 balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
 independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
 step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **a single claim per tier** (an earlier version granted 2 claims for the first three
-tiers before this tightened to 1 across the board, matching Sacrifice's own one-shot posture — see
+current capacity) — **2 claims for the three cheapest tiers (1/10/100 Bytes), 1 claim for every tier
+from there on** (an intermediate iteration tightened this to a flat 1 claim across the board, matching
+Sacrifice's own one-shot posture, before the three-cheapest-tiers exception was reinstated — see
 `docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
 doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
 Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
@@ -461,17 +588,28 @@ actually is). The Tap button carries no progress fill/hidden progressbar of its 
 tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
 nothing.
 
-**Storage** gets its own labeled section on the page (separate from Sacrifice/Invest) — hidden
-entirely until Memory's own capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own
-B/KB/MB/… scale, 80,000 bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than
-the Kilobyte-transfer row's own 1000-bit gate, since Storage is a later-game mechanic. Once revealed,
-it groups the Build button, one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size
-ever reached —
-read together as one progress bar: currently **full** (leftmost, clickable once redeemable), then
-built-but-**empty** (constructed, waiting for Memory to auto-fill), then not-yet-built placeholders
-(rightmost) — rather than one full-width button per bank size stacked flat into the same list as
-every other action. (A pause/resume auto-redeem toggle used to render here too; removed for now —
-see below — with a UI to reintroduce it planned for later.) Banks are a genuine storage **medium**, not
+**Building the next Storage bank stays on ByteFoundryPage itself**, alongside Sacrifice/Invest —
+its own core-loop action, ranked third in the forced priority order (see below) — rather than
+moving to a separate screen; a "Build \<size\> Bank (\<cost\>)" button, hidden until Memory's own
+capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale, 80,000
+bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than the Kilobyte-transfer
+row's own 1000-bit gate, since Storage is a later-game mechanic. Right below it, a brief per-size
+summary — one small chip per size ever reached, reading `"<size> <full>/<built>"` (e.g. `"10 KB
+3/8"` — 8 blocks of 10 KB ever built, 3 currently full) — gives an at-a-glance view of holdings
+without leaving this page. **Storage** also has its own dedicated screen, `StoragePage`, for the
+fuller per-size detail and for the one Storage action that lives only there, redeeming (Storage
+Bank Fill) — reached via a "🏦 Storage" nav button on ByteFoundryPage (same reveal gate as the
+Build button). Unlike Storage's/Compute's own actions (see "forced priority order" below), the nav
+button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
+posture as MainPage's own "⚙️ Byte Foundry" link — so the player can check on held/built banks even
+when nothing there is currently actionable; `onBack` always returns to ByteFoundryPage. StoragePage
+renders one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached — NOT
+the Build button, which stays on ByteFoundryPage — read together as one progress bar: currently
+**full** (leftmost, clickable once redeemable), then built-but-**empty** (constructed, waiting for
+Memory to auto-fill), then not-yet-built placeholders (rightmost) — rather than one full-width
+button per bank size stacked flat into the same list as every other action. (A pause/resume
+auto-redeem toggle used to render here too; removed for now — see below — with a UI to reintroduce
+it planned for later.) Banks are a genuine storage **medium**, not
 a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
 container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
 every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
@@ -481,9 +619,9 @@ decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own pe
 sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
 progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
 been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
-redeeming never decrements). Because `getCostEpochExponent`'s triangular-number exponent sequence
-(1, 2, 4, 7, 11, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
-level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can never exist.
+redeeming never decrements). Because `getCostEpochExponent`'s Fibonacci exponent sequence
+(1, 2, 3, 5, 8, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
+level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can never exist.
 Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
 bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
 ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
@@ -504,8 +642,8 @@ automatically, and **empties the bank again** — it's reusable, not single-use,
 fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
 **always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
 own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
-involved), which now **defaults `true` for every size** (previously `false`) — `ByteFoundryPage`
-currently renders no pause/resume button for it at all (removed for now; the toggle field,
+involved), which now **defaults `true` for every size** (previously `false`) — neither
+ByteFoundryPage nor StoragePage currently renders a pause/resume button for it at all (removed for now; the toggle field,
 `setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
 for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
 auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real
@@ -513,9 +651,9 @@ Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real P
 that refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
 lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
 ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
-Buy button/autobuyer purchase — visible on the transfer-block row described above (see "The very
-first successful transfer" paragraph), the only place this page shows that progress; the Storage
-section itself no longer duplicates it in a separate row.
+Buy button/autobuyer purchase — visible on ByteFoundryPage's own transfer-block row described above
+(see "The very first successful transfer" paragraph), the only place that shows this progress;
+StoragePage itself doesn't duplicate it in a separate row.
 
 **The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
 cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the
@@ -530,8 +668,8 @@ replay; Speed Up/Overclock leave the whole thing untouched either way, same as a
 soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
 `docs/ECONOMY_REFERENCE.md`.
 
-Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (800,000 bits, "100 KB" in
-Memory's own B/KB/MB display scale — one Sacrifice stage past Storage's own reveal), Memory
+Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 bits, "1 MB" in
+Memory's own B/KB/MB display scale — two Sacrifice stages past Storage's own reveal), Memory
 automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
 gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
 (an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB
@@ -552,10 +690,60 @@ built on top of this): once an entity is at the cap, further production into it 
 (Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
 than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
 lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
-generator/Storage banks — pure
-counters today, with no gameplay effect yet (a further mechanic spending them — activating a
-temporary game-speed boost, and merging Cores upward into Nodes/Clusters/Networks/Grids — is
-planned as a follow-up; see the `claude-task` backlog).
+generator/Storage banks.
+
+**Compute Cores can be spent on a temporary Compute Boost.** Each usage always costs exactly 1
+Compute Core, regardless of preset — the preset only picks the strength/duration tradeoff, not the
+cost. Three fixed presets (`COMPUTE_BOOST_PRESETS` in `layers.js`): **Burst** (×16 for 10 seconds),
+**Standard** (×4 for 1 minute), **Sustain** (×2 for 10 minutes). Activating (`activateComputeBoost`,
+gated by `canActivateComputeBoost`) multiplies "the base production tier of each screen" — Memory's
+own passive production (`tickIntroProduction`, the Byte Foundry) and `tier01`'s (Kilobytes')
+production specifically (the main game) — simultaneously, for the preset's duration
+(`getComputeBoostMultiplier`). Only one PRESET TYPE may be active at a time — a different type is
+blocked while one is running — but the SAME type may be activated again while already active,
+stacking up to `COMPUTE_BOOST_MAX_STACKS` (10) times to extend the remaining duration; the
+multiplier itself never compounds from stacking. `tickComputeBoost` counts the remaining duration
+down every tick (frozen or not) and clears the boost back to inactive once it reaches 0. Boost
+state (`intro.computeBoostType`/`computeBoostStacks`/`computeBoostRemainingSeconds`) is run-scoped —
+reset to inactive on every real Prestige, unlike `computeCores`/`computeNodes` themselves — but
+carried through untouched by Speed Up/Overclock, same as the rest of `intro`. Compute, like Storage,
+has its own dedicated screen, `ComputePage`, reached via a "⚡ Compute" nav button on ByteFoundryPage
+(hidden until `isComputeCoreConversionUnlocked`, always enabled once shown — same "permanent,
+voluntarily-revisitable" posture as the Storage nav button above); `onBack` always returns to
+ByteFoundryPage. Activation happens there; `MainPage` shows a read-only status line while a boost is
+active, since its effect reaches `tier01` there too. Merging Cores upward into Nodes/Clusters/
+Networks/Grids is still planned as a follow-up (see the `claude-task` backlog).
+
+**A forced priority order governs the Byte Foundry's five recurring "upgrade" actions** — Storage
+Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory (ranked highest to lowest) — so a
+player is never left free to take a lower-priority action while a higher-priority one is currently
+possible, regardless of the two actions' relative costs. Whenever ANY action ranked above a given
+one is currently available, that lower one is disabled, both in the UI (its button shows disabled,
+with a tooltip explaining why) and in the engine reducer itself (a defensive no-op — the same
+"engine re-validates, UI just mirrors it" convention every other action in this file follows, see
+"Security notes"): `isStorageBankFillAvailable` (any built bank both FULL and currently redeemable —
+see `isStorageBankRedeemable`), `isBandwidthAvailable` (the current Invest tier's cost affordable
+and unclaimed), `isStorageBankBuildAvailable` (the currently-offered bank size's build cost
+affordable — this one deliberately has no `isStorageUnlocked` gate of its own, matching
+`buildStorageBank`'s own actual reducer gate, which has never required that threshold either — only
+the Storage nav button's own reveal does), and `isComputeUpgradeAvailable` (Compute unlocked and at
+least one boost preset mechanically activatable) are each action's own plain base predicate;
+`isBandwidthTurnAvailable`/`isStorageBankBuildTurnAvailable`/`isComputeBoostTurnAvailable`/
+`isComputeUpgradeTurnAvailable` (all in `engine.js`) fold the priority order in on top, and are what
+`pickIntroProductionMilestone`/`buildStorageBank`/`activateComputeBoost` actually gate on.
+Combine into a Byte (a one-off bootstrap step) sits outside this forced order entirely and keeps its
+own simple gate, same as before. Memory's own gate, `isMemoryCapacityUpgradeAvailable`, already
+composes all four base predicates above it in the order (plus Combine) — this is the same gate that
+pre-existed this feature (Sacrifice was already only offered once Combine/Invest/a Storage bank
+build were all impossible), now extended to also block on Storage Bank Fill and Compute. Storage
+Bank Fill itself is never blocked by anything (top priority, unaffected).
+
+**Sacrifice for 10x Capacity asks for confirmation before firing** (`window.confirm` — no modal
+component exists in the app to reuse, same rationale `MainPage`'s own Reset button confirm already
+documents), spelling out that it's permanent and raises every future Compute Core's cost. Cancelling
+leaves Memory/capacity untouched; only `pickIntroCapacityMilestone` itself still enforces the actual
+gate (`isMemoryCapacityUpgradeAvailable`) — the confirm dialog is an added UI-level checkpoint on top
+of it, not a replacement for it.
 
 The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
 size and level system, Prestige Points and every PP-funded automation, the per-tier and global
@@ -648,7 +836,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (949 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -679,7 +867,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (843, see "Testing" above) is unaffected by anything under `e2e/`.
+  (949, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

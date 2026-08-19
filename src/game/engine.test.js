@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activateComputeBoost,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPrestige,
@@ -13,6 +14,7 @@ import {
   buildStorageBank,
   buyTier,
   buyTierQuantity,
+  canActivateComputeBoost,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -35,11 +37,11 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getComputeBoostMultiplier,
   getCostEpochExponent,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
-  getGlobalTickspeedRegularStep,
   getIntroKilobyteConversionCost,
   getIntroProductionMilestoneCost,
   getIntroProductionMilestoneMaxClaims,
@@ -47,6 +49,7 @@ import {
   getLastTierXpTickspeedMultiplier,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
+  getOverclockMultiplier,
   getOverclockRequirement,
   getPrestigePointsAwarded,
   getPrestigeProductionMultiplier,
@@ -69,11 +72,19 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
+  isBandwidthAvailable,
+  isBandwidthTurnAvailable,
+  isComputeBoostTurnAvailable,
   isComputeCoreConversionUnlocked,
+  isComputeUpgradeAvailable,
+  isComputeUpgradeTurnAvailable,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
+  isStorageBankBuildAvailable,
+  isStorageBankBuildTurnAvailable,
+  isStorageBankFillAvailable,
   isStorageBankRedeemable,
   isTierUnlocked,
   overclockGame,
@@ -82,6 +93,7 @@ import {
   setStorageAutoRedeemEnabled,
   speedUpGame,
   tapIntroBit,
+  tickComputeBoost,
   tickComputeCoreConversion,
   tickComputeNodeConversion,
   tickGame,
@@ -90,7 +102,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -470,12 +482,16 @@ describe('combineIntroByte', () => {
   })
 })
 
-// Every test below that expects Sacrifice to actually FIRE must also clear the other two gates
+// Every test below that expects Sacrifice to actually FIRE must also clear the other gates
 // isMemoryCapacityUpgradeAvailable checks: byteCreated (Combine no longer possible) and the
-// current Invest tier's claim already used up (Invest's cost ladder starts at the exact same
+// current Invest tier's claims already used up (Invest's cost ladder starts at the exact same
 // INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
-// capacity both are simultaneously affordable unless Invest's claim is explicitly marked used).
-const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 1 }
+// capacity both are simultaneously affordable unless Invest's claims are explicitly marked used —
+// tier 0 needs both of its 2 claims used up, not just 1, see getIntroProductionMilestoneMaxClaims).
+// Storage Bank Fill and Compute (the other two ranked above Memory in the forced priority order —
+// see isMemoryCapacityUpgradeAvailable) don't need clearing here since they default to unavailable
+// (no storageBanks, 0 computeCores) unless a test explicitly seeds them.
+const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
   it('is false below a full balance, regardless of other upgrades', () => {
@@ -514,7 +530,28 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
-  it('is true once Memory is full and neither Combine, Invest, nor Storage is currently possible', () => {
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
+      storageBanks: { 1000: 1 },
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Compute Boost (higher priority) is currently available', () => {
+    // Pushes the Storage Bank Build ladder past level 3 (800,000,000-bit build cost, well above
+    // this balance) so Storage Bank Build doesn't ALSO block Sacrifice here — isolates the new
+    // Compute check itself, the same way the "Storage is revealed" tests above isolate Storage.
+    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
+    const state = withIntro(createInitialGameState(), {
+      bits: capacity, capacity, ...noOtherUpgradesLeft,
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP },
+      computeCores: 1,
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is true once Memory is full and neither Combine, Storage Bank Fill, Invest, Storage Bank Build, nor Compute is currently possible', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
@@ -580,10 +617,10 @@ describe('getIntroProductionMilestoneCost', () => {
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('always grants exactly 1 claim per tier, regardless of cost — a single-shot purchase, same as Sacrifice', () => {
-    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(1)
-    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(1)
-    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(1)
+  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/10/100 Bytes), then 1 for every tier after', () => {
+    expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
+    expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(3)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(4)).toBe(1)
     expect(getIntroProductionMilestoneMaxClaims(5)).toBe(1)
@@ -630,13 +667,18 @@ describe('pickIntroProductionMilestone', () => {
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('advances to the next tier immediately after a single claim, at any tier, with a fresh claim count of 0', () => {
+  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/10/100 Bytes), but only 1 from tier 3 on', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
-    const afterTier0 = pickIntroProductionMilestone(state)
-    expect(afterTier0.intro.productionMilestoneTier).toBe(1)
-    expect(afterTier0.intro.productionMilestoneTierClaims).toBe(0)
+    const afterFirstTier0Claim = pickIntroProductionMilestone(state)
+    expect(afterFirstTier0Claim.intro.productionMilestoneTier).toBe(0)
+    expect(afterFirstTier0Claim.intro.productionMilestoneTierClaims).toBe(1)
 
-    const refilled = withIntro(afterTier0, { bits: getIntroProductionMilestoneCost(4), productionMilestoneTier: 4 })
+    const refilledForSecondClaim = withIntro(afterFirstTier0Claim, { bits: INTRO_STARTING_CAPACITY })
+    const afterSecondTier0Claim = pickIntroProductionMilestone(refilledForSecondClaim)
+    expect(afterSecondTier0Claim.intro.productionMilestoneTier).toBe(1)
+    expect(afterSecondTier0Claim.intro.productionMilestoneTierClaims).toBe(0)
+
+    const refilled = withIntro(afterSecondTier0Claim, { bits: getIntroProductionMilestoneCost(4), productionMilestoneTier: 4 })
     const afterTier4 = pickIntroProductionMilestone(refilled)
     expect(afterTier4.intro.productionMilestoneTier).toBe(5)
     expect(afterTier4.intro.productionMilestoneTierClaims).toBe(0)
@@ -644,10 +686,10 @@ describe('pickIntroProductionMilestone', () => {
 
   it('spends exactly the claimed tier\'s cost, draining bits to 0 when the balance matches it exactly', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: getIntroProductionMilestoneCost(1), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 1,
+      bits: getIntroProductionMilestoneCost(3), tickSpeedSeconds: 1, productionMultiplier: 1, productionMilestoneTier: 3,
     })
     const after = pickIntroProductionMilestone(state)
-    expect(after.intro.productionMilestoneTier).toBe(2)
+    expect(after.intro.productionMilestoneTier).toBe(4)
     expect(after.intro.bits).toBe(0)
   })
 
@@ -656,17 +698,160 @@ describe('pickIntroProductionMilestone', () => {
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
 
-  it('is a no-op once the claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 1,
+  it('is a no-op once every claim at the current tier has already been made (defensive — normal play never leaves state in this shape, since a completed tier auto-advances)', () => {
+    const tier0AlreadyClaimedTwice = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, productionMilestoneTier: 0, productionMilestoneTierClaims: 2,
     })
-    expect(pickIntroProductionMilestone(state)).toBe(state)
+    expect(pickIntroProductionMilestone(tier0AlreadyClaimedTwice)).toBe(tier0AlreadyClaimedTwice)
+
+    const tier3AlreadyClaimedOnce = withIntro(createInitialGameState(), {
+      bits: getIntroProductionMilestoneCost(3), productionMilestoneTier: 3, productionMilestoneTierClaims: 1,
+    })
+    expect(pickIntroProductionMilestone(tier3AlreadyClaimedOnce)).toBe(tier3AlreadyClaimedOnce)
   })
 
   it('keeps working after mainGameUnlocked — nothing about Invest ever freezes', () => {
     const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const after = pickIntroProductionMilestone(state)
     expect(after.intro).not.toBe(state.intro)
+  })
+
+  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1, storageBanks: { 1000: 1 },
+    })
+    expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+})
+
+// Base and forced-priority-turn predicates for the Byte Foundry's five recurring "upgrade"
+// actions — Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory (see CLAUDE.md's
+// "Byte Foundry" section and isMemoryCapacityUpgradeAvailable above, which composes these same
+// base predicates for Sacrifice's own gate).
+describe('isStorageBankFillAvailable', () => {
+  it('is false with no built banks', () => {
+    expect(isStorageBankFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)
+  })
+
+  it('is true with a FULL bank whose size matches tier01\'s current per-unit level cost', () => {
+    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(true)
+  })
+
+  it('is false with a FULL bank not yet redeemable (size doesn\'t match tier01\'s current cost)', () => {
+    const futureBankSize = getTierCost(tensTier, 2)
+    const state = withIntro(createInitialGameState(), { storageBanks: { [futureBankSize]: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(false)
+  })
+
+  it('is false with a built bank that is still EMPTY', () => {
+    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: 1 } })
+    expect(isStorageBankFillAvailable(state)).toBe(false)
+  })
+})
+
+describe('isBandwidthAvailable', () => {
+  it('is true once the current Invest tier\'s cost is affordable and unclaimed', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY })
+    expect(isBandwidthAvailable(state)).toBe(true)
+  })
+
+  it('is false below the current tier\'s cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1 })
+    expect(isBandwidthAvailable(state)).toBe(false)
+  })
+
+  it('is false once every claim at the current tier is used up', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, productionMilestoneTierClaims: 2 })
+    expect(isBandwidthAvailable(state)).toBe(false)
+  })
+})
+
+describe('isStorageBankBuildAvailable', () => {
+  it('is true once the currently-offered bank size\'s build cost is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
+    expect(isStorageBankBuildAvailable(state)).toBe(true)
+  })
+
+  it('is false below the build cost', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) - 1 })
+    expect(isStorageBankBuildAvailable(state)).toBe(false)
+  })
+})
+
+describe('isComputeUpgradeAvailable', () => {
+  it('is false below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY even with a Compute Core in hand', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1, computeCores: 1 })
+    expect(isComputeUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false once unlocked but with no Compute Core to spend', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 0 })
+    expect(isComputeUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is true once unlocked with at least 1 Compute Core available to spend', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 1 })
+    expect(isComputeUpgradeAvailable(state)).toBe(true)
+  })
+})
+
+describe('isBandwidthTurnAvailable', () => {
+  it('matches isBandwidthAvailable with no Storage Bank Fill pending', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY })
+    expect(isBandwidthTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available, even though Bandwidth itself is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, storageBanks: { 1000: 1 } })
+    expect(isBandwidthTurnAvailable(state)).toBe(false)
+  })
+})
+
+describe('isStorageBankBuildTurnAvailable', () => {
+  it('matches isStorageBankBuildAvailable with nothing ranked above it pending', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2 })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
+    })
+    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+  })
+})
+
+describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
+  const computeReady = { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 1, productionMilestoneTierClaims: 2 }
+
+  it('matches canActivateComputeBoost with nothing ranked above Compute pending', () => {
+    const state = withIntro(createInitialGameState(), computeReady)
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(true)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(true)
+  })
+
+  it('is false while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, bits: INTRO_STARTING_CAPACITY, productionMilestoneTierClaims: 0 })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, storageBanks: { 1000: 1 } })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
+  })
+
+  it('is false while a Storage Bank Build (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, bits: getStorageBankCost(1000) })
+    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 })
 
@@ -677,7 +862,7 @@ describe('isIntroConversionUnlocked', () => {
   })
 
   it('is true once capacity reaches INTRO_CONVERSION_UNLOCK_CAPACITY', () => {
-    const state = withIntro(createInitialGameState(), { capacity: 1000 })
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_BITS_PER_KILOBYTE_CONVERSION })
     expect(isIntroConversionUnlocked(state)).toBe(true)
   })
 })
@@ -701,15 +886,15 @@ describe('getIntroKilobyteConversionCost', () => {
 
   it('grows to tier01\'s own CURRENT per-unit level cost as it levels up, not a fixed rate', () => {
     const state = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2)
-    expect(getIntroKilobyteConversionCost(state)).toBe(getTierCost(TIER_DEFINITIONS[0], 2))
-    expect(getIntroKilobyteConversionCost(state)).toBe(10000)
+    expect(getIntroKilobyteConversionCost(state)).toBe(getTierCost(TIER_DEFINITIONS[0], 2) * BITS_PER_BYTE)
+    expect(getIntroKilobyteConversionCost(state)).toBe(80000)
   })
 })
 
 describe('convertIntroBitsToKilobytes', () => {
   const firstTierId = TIER_DEFINITIONS[0].id
-  const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) // 1000, === INTRO_BITS_PER_KILOBYTE_CONVERSION
-  const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) // 10,000
+  const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000, === INTRO_BITS_PER_KILOBYTE_CONVERSION
+  const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) * BITS_PER_BYTE // 80,000
 
   it('spends tier01\'s CURRENT per-unit cost (getIntroKilobyteConversionCost) and grants 1 free unit', () => {
     const state = withIntro(createInitialGameState(), { bits: level1Cost, capacity: level1Cost })
@@ -813,7 +998,7 @@ describe('tickIntroAutoInvest', () => {
   // time bits climbed from 1000 up toward the full batch — see docs/DESIGN_HISTORY.md. Converting a
   // single unit as soon as it's affordable is what makes the row advance live, block by block.
   it('converts a single unit as soon as one is affordable, without waiting for a whole batch', () => {
-    const state = withIntro(createInitialGameState(), { bits: 1500, capacity: 10000, byteCreated: true })
+    const state = withIntro(createInitialGameState(), { bits: INTRO_BITS_PER_KILOBYTE_CONVERSION + 500, capacity: 80000, byteCreated: true })
     const after = tickIntroAutoInvest(state)
     expect(after.owned[firstTierId]).toBe(1)
     expect(after.intro.bits).toBe(500)
@@ -832,8 +1017,8 @@ describe('tickIntroAutoInvest', () => {
   // times in a single tick; a jump spanning more than one level's worth of units completes the
   // rest on a later tick instead.
   it('caps at the current level\'s remaining block boundary, leaving the rest for a later call', () => {
-    const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) // 1000
-    const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) // 10,000
+    const level1Cost = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000
+    const level2Cost = getTierCost(TIER_DEFINITIONS[0], 2) * BITS_PER_BYTE // 80,000
     const bitsForTwoFullLevels = DEFAULT_PURCHASE_BLOCK_SIZE * level1Cost + DEFAULT_PURCHASE_BLOCK_SIZE * level2Cost
     const state = withIntro(createInitialGameState(), { bits: bitsForTwoFullLevels, capacity: bitsForTwoFullLevels, byteCreated: true })
     const after = tickIntroAutoInvest(state)
@@ -888,25 +1073,38 @@ describe('getStorageBankSize', () => {
     expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
   })
 
-  it('skips a size tier01\'s own level-cost sequence skips (100,000) — jumps straight from 10,000 to 1,000,000', () => {
+  it('advances sequentially through level 3 — tier01\'s Fibonacci exponent sequence does not skip it', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
     })
-    // tier01's cost-epoch exponent sequence (1, 2, 4, 7, …) skips level 3's exponent straight to 4,
-    // so level 3 costs 1,000,000, never 100,000.
-    expect(getTierCost(tensTier, 3)).toBe(1000000)
-    expect(getStorageBankSize(state)).toBe(1000000)
+    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) still reads 3 at epoch 2 (level 3) —
+    // the same as the triangular sequence would — so level 3 costs 100,000, not skipped yet.
+    expect(getTierCost(tensTier, 3)).toBe(100000)
+    expect(getStorageBankSize(state)).toBe(100000)
   })
 
-  it('keeps advancing indefinitely past 1,000,000 ("1 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
+  it('skips a size tier01\'s own level-cost sequence skips (1,000,000) — jumps straight from 100,000 to 10,000,000', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: {
+        1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP,
+      },
+    })
+    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) skips level 4's exponent straight to
+    // 5, so level 4 costs 10,000,000, never 1,000,000.
+    expect(getTierCost(tensTier, 4)).toBe(10000000)
+    expect(getStorageBankSize(state)).toBe(10000000)
+  })
+
+  it('keeps advancing indefinitely past 10,000,000 ("10 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: {
         1000: STORAGE_BANK_LADDER_CAP,
         10000: STORAGE_BANK_LADDER_CAP,
-        1000000: STORAGE_BANK_LADDER_CAP,
+        100000: STORAGE_BANK_LADDER_CAP,
+        10000000: STORAGE_BANK_LADDER_CAP,
       },
     })
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 4)) // 1,000,000,000 — keeps going
+    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 5)) // 10,000,000,000 — keeps going
   })
 })
 
@@ -920,9 +1118,15 @@ describe('getStorageBankCost', () => {
 })
 
 describe('buildStorageBank', () => {
+  // Storage Bank Build now ranks below Bandwidth in the Byte Foundry's forced priority order (see
+  // isStorageBankBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable
+  // at every balance these tests use, so every test that expects a build to actually FIRE must
+  // mark the current Invest tier's claims already used up (mirroring noOtherUpgradesLeft above).
+  const bandwidthExhausted = { productionMilestoneTierClaims: 2 }
+
   it('spends the build cost from Memory and constructs one EMPTY bank of the current offered size', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost })
+    const state = withIntro(createInitialGameState(), { bits: cost, ...bandwidthExhausted })
 
     const after = buildStorageBank(state)
     expect(after.intro.bits).toBe(0)
@@ -933,7 +1137,7 @@ describe('buildStorageBank', () => {
 
   it('accumulates storageBanksBuiltTotal (cumulative) when building the same size again, still empty', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost * 2 })
+    const state = withIntro(createInitialGameState(), { bits: cost * 2, ...bandwidthExhausted })
 
     const after = buildStorageBank(buildStorageBank(state))
     expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
@@ -943,7 +1147,7 @@ describe('buildStorageBank', () => {
 
   it('is a no-op below the build cost', () => {
     const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost - 1 })
+    const state = withIntro(createInitialGameState(), { bits: cost - 1, ...bandwidthExhausted })
     expect(buildStorageBank(state)).toBe(state)
   })
 
@@ -952,12 +1156,27 @@ describe('buildStorageBank', () => {
     const almostMaxed = withIntro(createInitialGameState(), {
       storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
       bits: getStorageBankCost(1000) + getStorageBankCost(nextSize),
+      ...bandwidthExhausted,
     })
     const afterLast1KB = buildStorageBank(almostMaxed)
     expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
 
     const afterNext = buildStorageBank(afterLast1KB)
     expect(afterNext.intro.storageBanksBuiltTotal[nextSize]).toBe(1)
+  })
+
+  it('is a no-op while Bandwidth (higher priority) is currently available', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), { bits: cost })
+    expect(buildStorageBank(state)).toBe(state)
+  })
+
+  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const cost = getStorageBankCost(1000)
+    const state = withIntro(createInitialGameState(), {
+      bits: cost, ...bandwidthExhausted, storageBanks: { 1000: 1 },
+    })
+    expect(buildStorageBank(state)).toBe(state)
   })
 })
 
@@ -1316,6 +1535,209 @@ describe('tickGame Compute Core/Node integration', () => {
   })
 })
 
+describe('getComputeBoostMultiplier', () => {
+  it('is 1 (no bonus) when no boost is active', () => {
+    expect(getComputeBoostMultiplier(createInitialGameState().intro)).toBe(1)
+    expect(getComputeBoostMultiplier({ computeBoostType: null })).toBe(1)
+  })
+
+  it('returns the active preset\'s own multiplier', () => {
+    expect(getComputeBoostMultiplier({ computeBoostType: 'burst' })).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'standard' })).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'sustain' })).toBe(COMPUTE_BOOST_PRESETS.sustain.multiplier)
+  })
+})
+
+describe('canActivateComputeBoost', () => {
+  it('is false below 1 Compute Core', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 0 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+  })
+
+  it('is true with at least 1 Core and no boost currently active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+  })
+
+  it('is true for the SAME type already active, below the max stack count', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+  })
+
+  it('is false for a DIFFERENT type while one is already active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(canActivateComputeBoost(state, 'standard')).toBe(false)
+  })
+
+  it('is false once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+  })
+
+  it('is false for an unrecognized preset name', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    expect(canActivateComputeBoost(state, 'does_not_exist')).toBe(false)
+  })
+})
+
+describe('activateComputeBoost', () => {
+  it('spends exactly 1 Compute Core regardless of preset', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5 })
+    const after = activateComputeBoost('sustain')(state)
+    expect(after.intro.computeCores).toBe(4)
+  })
+
+  it('starts a fresh boost at the preset\'s own multiplier/duration', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    const after = activateComputeBoost('standard')(state)
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+  })
+
+  it('stacks the SAME type, extending remaining duration without resetting it or compounding the multiplier', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2, computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
+    })
+    const after = activateComputeBoost('burst')(state)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+    expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('is a same-reference no-op below 1 Compute Core', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 0 })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op for a different type while one is already active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
+    expect(activateComputeBoost('standard')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, bits: INTRO_STARTING_CAPACITY })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while Storage Bank Build (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2,
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
+    })
+    expect(activateComputeBoost('burst')(state)).toBe(state)
+  })
+})
+
+describe('tickComputeBoost', () => {
+  it('is a same-reference no-op while no boost is active', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: null })
+    expect(tickComputeBoost(1)(state)).toBe(state)
+  })
+
+  it('counts remaining duration down by elapsedSeconds', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 10 })
+    const after = tickComputeBoost(3)(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(7)
+    expect(after.intro.computeBoostType).toBe('burst')
+  })
+
+  it('clears back to inactive once remaining duration reaches 0', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 1 })
+    const after = tickComputeBoost(1)(state)
+    expect(after.intro.computeBoostType).toBeNull()
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+  })
+
+  it('clears back to inactive when elapsedSeconds overshoots the remaining duration', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 1 })
+    const after = tickComputeBoost(5)(state)
+    expect(after.intro.computeBoostType).toBeNull()
+  })
+})
+
+describe('tickGame Compute Boost integration', () => {
+  it('multiplies Memory\'s own passive production while a boost is active', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, capacity: 1_000_000,
+      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
+    })
+    const after = tickGame(1)(state)
+    // Base rate is 1 bit/sec at the starting values; burst multiplies it ×16.
+    expect(after.intro.bits).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('multiplies tier01\'s own production while a boost is active, leaving every other tier unaffected', () => {
+    const secondTier = TIER_DEFINITIONS[1]
+    const state = withOwned(
+      withOwned(
+        withIntro(createInitialGameState(), { computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 60 }),
+        tensTier.id, 1
+      ),
+      secondTier.id, 1
+    )
+    // tier01's own baseTickSpeedSeconds is 1s, so a 1-second tick completes exactly one full period.
+    const after = tickGame(1)(state)
+    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×4, on top of the
+    // 1-money starting balance every fresh state begins with.
+    expect(after.resources[MONEY_ID]).toBe(1 + COMPUTE_BOOST_PRESETS.standard.multiplier)
+    // The second tier (produces tier01 itself) is NOT boosted — its own production this tick (if
+    // any) is unmultiplied, so tier01's owned count only ever reflects tier02's own unboosted rate,
+    // confirming the boost credit above landed solely via tier01's resource production, not owned.
+    expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('counts the boost down as part of a regular tick, alongside everything else', () => {
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'sustain', computeBoostStacks: 1, computeBoostRemainingSeconds: 5 })
+    const after = tickGame(1)(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(4)
+  })
+
+  it('carries the boost through a real Prestige as run-scoped state — resets, unlike computeCores/computeNodes', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        computeCores: 5, computeNodes: 2,
+        computeBoostType: 'burst', computeBoostStacks: 3, computeBoostRemainingSeconds: 7,
+      }),
+      PRESTIGE_THRESHOLD
+    )
+    const after = prestigeGame(state)
+    expect(after.intro.computeCores).toBe(5) // permanent, carried over
+    expect(after.intro.computeNodes).toBe(2) // permanent, carried over
+    expect(after.intro.computeBoostType).toBeNull() // run-scoped, reset
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+  })
+
+  it('carries the boost through Speed Up/Overclock untouched — an intra-cycle soft reset, not a new cycle', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withIntro(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, getSpeedUpRequirement(0)),
+      { computeBoostType: 'sustain', computeBoostStacks: 4, computeBoostRemainingSeconds: 200 }
+    )
+    const after = speedUpGame(state)
+    expect(after.intro.computeBoostType).toBe('sustain')
+    expect(after.intro.computeBoostStacks).toBe(4)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(200)
+  })
+})
+
 describe('tickGame Storage auto-redeem integration', () => {
   it('auto-redeems a matching bank as part of a regular tick', () => {
     const size = getTierCost(tensTier, 1)
@@ -1468,13 +1890,13 @@ describe('formatCurrency', () => {
 // ─── getCostEpochExponent ────────────────────────────────────────────────────
 
 describe('getCostEpochExponent', () => {
-  it('follows the 1, 2, 4, 7, 11, 16 progression across epochs 0-5', () => {
+  it('follows the 1, 2, 3, 5, 8, 13 Fibonacci progression across epochs 0-5', () => {
     expect(getCostEpochExponent(0)).toBe(1)
     expect(getCostEpochExponent(1)).toBe(2)
-    expect(getCostEpochExponent(2)).toBe(4)
-    expect(getCostEpochExponent(3)).toBe(7)
-    expect(getCostEpochExponent(4)).toBe(11)
-    expect(getCostEpochExponent(5)).toBe(16)
+    expect(getCostEpochExponent(2)).toBe(3)
+    expect(getCostEpochExponent(3)).toBe(5)
+    expect(getCostEpochExponent(4)).toBe(8)
+    expect(getCostEpochExponent(5)).toBe(13)
   })
 
   it('clamps a negative epoch to 0', () => {
@@ -1503,25 +1925,25 @@ describe('getTierCost', () => {
     expect(getTierCost(tier, 2)).toBe(100)
   })
 
-  it('costs baseCost * 10^3 at level 3', () => {
-    expect(getTierCost(tier, 3)).toBe(10000)
+  it('costs baseCost * 10^2 at level 3', () => {
+    expect(getTierCost(tier, 3)).toBe(1000)
   })
 
-  it('costs baseCost * 10^6 at level 4', () => {
-    expect(getTierCost(tier, 4)).toBe(1e7)
+  it('costs baseCost * 10^4 at level 4', () => {
+    expect(getTierCost(tier, 4)).toBe(1e5)
   })
 
-  it('costs baseCost * 10^10 at level 5', () => {
-    expect(getTierCost(tier, 5)).toBe(1e11)
+  it('costs baseCost * 10^7 at level 5', () => {
+    expect(getTierCost(tier, 5)).toBe(1e8)
   })
 
   it('scales a larger baseCost by the same epoch-exponent multiplier, not a compounded power', () => {
     const thousands = { baseCost: 1e3 }
     expect(getTierCost(thousands, 1)).toBe(1e3)
     expect(getTierCost(thousands, 2)).toBe(1e4)
-    expect(getTierCost(thousands, 3)).toBe(1e6)
-    expect(getTierCost(thousands, 4)).toBe(1e9)
-    expect(getTierCost(thousands, 5)).toBe(1e13)
+    expect(getTierCost(thousands, 3)).toBe(1e5)
+    expect(getTierCost(thousands, 4)).toBe(1e7)
+    expect(getTierCost(thousands, 5)).toBe(1e10)
   })
 
   it('treats level 0 and negative levels as level 1', () => {
@@ -1854,16 +2276,20 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
   })
 
-  it('raises the REGULAR step (not the milestone step) once overclockCount > 0', () => {
-    // Overclock raises the regular per-level step from 1% to 1.1% (overclockCount 1), but the
-    // level-10 milestone step stays at the fixed 10% — Overclock only touches regular levels.
-    expect(getGlobalTickspeedProductionMultiplier(9, 1)).toBeCloseTo(1.011 ** 9)
-    expect(getGlobalTickspeedProductionMultiplier(10, 1)).toBeCloseTo(1.011 ** 9 * 1.10)
+  it('multiplies the REGULAR step by getOverclockMultiplier(overclockCount) once overclockCount > 0', () => {
+    // overclockCount 5 -> getOverclockMultiplier(5) = 1.1^5 = 1.61051, so the regular step becomes
+    // 0.01 * 1.61051 = 0.0161051 (1.61051%) instead of the flat 1%.
+    const boostedRegularStep = 0.01 * 1.1 ** 5
+    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo((1 + boostedRegularStep) ** 9)
   })
 
-  it('stacks a further 0.1 percentage points onto the regular step per additional Overclock activation', () => {
-    expect(getGlobalTickspeedProductionMultiplier(9, 2)).toBeCloseTo(1.012 ** 9)
-    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo(1.015 ** 9)
+  it('multiplies the MILESTONE step by the same Overclock factor, not just the regular step', () => {
+    const overclockFactor = 1.1 ** 5
+    const boostedRegularStep = 0.01 * overclockFactor
+    const boostedMilestoneStep = 0.10 * overclockFactor
+    // Level 10 = 9 regular levels (boosted) + 1 milestone level (also boosted).
+    expect(getGlobalTickspeedProductionMultiplier(10, 5))
+      .toBeCloseTo((1 + boostedRegularStep) ** 9 * (1 + boostedMilestoneStep))
   })
 
   it('is still 1 (no bonus) at level 0 regardless of overclockCount', () => {
@@ -1872,19 +2298,19 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
   })
 })
 
-describe('getGlobalTickspeedRegularStep', () => {
-  it('is the baseline 1% (0.01) with no Overclock activations', () => {
-    expect(getGlobalTickspeedRegularStep(0)).toBe(0.01)
+describe('getOverclockMultiplier', () => {
+  it('is 1 (no bonus) with no Overclock levels claimed', () => {
+    expect(getOverclockMultiplier(0)).toBe(1)
   })
 
-  it('adds 0.1 percentage points (0.001) per Overclock activation', () => {
-    expect(getGlobalTickspeedRegularStep(1)).toBeCloseTo(0.011)
-    expect(getGlobalTickspeedRegularStep(2)).toBeCloseTo(0.012)
-    expect(getGlobalTickspeedRegularStep(10)).toBeCloseTo(0.02)
+  it('compounds ×1.1 (1 + OVERCLOCK_MULTIPLIER_STEP) per claimed level', () => {
+    expect(getOverclockMultiplier(1)).toBeCloseTo(1.1)
+    expect(getOverclockMultiplier(2)).toBeCloseTo(1.1 ** 2)
+    expect(getOverclockMultiplier(10)).toBeCloseTo(1.1 ** 10)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getGlobalTickspeedRegularStep(-1)).toBe(0.01)
+    expect(getOverclockMultiplier(-1)).toBe(1)
   })
 })
 
@@ -2044,34 +2470,34 @@ describe('getSpeedUpMultiplier', () => {
 // getSpeedUpRequirement now returns a LEVEL target for the last tier (not a lifetime-purchased-count
 // threshold), since how many purchases a level corresponds to depends on the current block size.
 describe('getSpeedUpRequirement', () => {
-  it('is level 2 for the first activation (speedUpCount 0)', () => {
-    expect(getSpeedUpRequirement(0)).toBe(2)
+  it('is level 6 (displayed level 5) for the first activation (speedUpCount 0)', () => {
+    expect(getSpeedUpRequirement(0)).toBe(6)
   })
 
   it('increases by one level per prior activation', () => {
-    expect(getSpeedUpRequirement(1)).toBe(3)
-    expect(getSpeedUpRequirement(2)).toBe(4)
-    expect(getSpeedUpRequirement(3)).toBe(5)
+    expect(getSpeedUpRequirement(1)).toBe(7)
+    expect(getSpeedUpRequirement(2)).toBe(8)
+    expect(getSpeedUpRequirement(3)).toBe(9)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getSpeedUpRequirement(-1)).toBe(2)
+    expect(getSpeedUpRequirement(-1)).toBe(6)
   })
 })
 
 describe('getOverclockRequirement', () => {
-  it('is level 10 for the first activation (overclockCount 0)', () => {
-    expect(getOverclockRequirement(0)).toBe(10)
+  it('is level 2 for the first claim (overclockCount 0) — not level 1, which a fresh, untouched last tier already sits at', () => {
+    expect(getOverclockRequirement(0)).toBe(2)
   })
 
-  it('increases by a fixed 10 levels per prior activation, not shrinking relative to itself like getSpeedUpRequirement', () => {
-    expect(getOverclockRequirement(1)).toBe(20)
-    expect(getOverclockRequirement(2)).toBe(30)
-    expect(getOverclockRequirement(3)).toBe(40)
+  it('increases by one more than the last claimed level, same +1-per-cycle shape as getSpeedUpRequirement', () => {
+    expect(getOverclockRequirement(1)).toBe(3)
+    expect(getOverclockRequirement(2)).toBe(4)
+    expect(getOverclockRequirement(3)).toBe(5)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getOverclockRequirement(-1)).toBe(10)
+    expect(getOverclockRequirement(-1)).toBe(2)
   })
 })
 
@@ -2204,22 +2630,22 @@ describe('getPrestigeProgressPercent', () => {
 
 describe('getEffectiveTierTickSpeedSeconds', () => {
   it('equals the tier\'s raw base tickspeed when neither multiplier is active', () => {
-    expect(getEffectiveTierTickSpeedSeconds(createInitialGameState(), tensTier.id)).toBe(2)
+    expect(getEffectiveTierTickSpeedSeconds(createInitialGameState(), tensTier.id)).toBe(1)
   })
 
   it('shrinks by the per-tier tickspeed multiplier', () => {
     const state = withTickspeedLevel(createInitialGameState(), tensTier.id, 3)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(2 / 1.21)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
   })
 
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
     // Level 10 = 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%.
     const globalMultiplier = 1.01 ** 9 * 1.10
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 10)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(2 / globalMultiplier)
-    // Megabytes' own base tickspeed is 3s (tier index 2 → tierIndex + 2), so the same global
-    // multiplier shrinks it from a different starting point than Kilobytes' 2s.
-    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(3 / globalMultiplier)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / globalMultiplier)
+    // Megabytes' own base tickspeed is 2s (tier index 1 → tierIndex + 1), so the same global
+    // multiplier shrinks it from a different starting point than Kilobytes' 1s.
+    expect(getEffectiveTierTickSpeedSeconds(state, thousandsTier.id)).toBeCloseTo(2 / globalMultiplier)
   })
 
   it('stacks both multiplicatively, not additively', () => {
@@ -2230,7 +2656,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
       10
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(2 / (1.1 * globalMultiplier))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.1 * globalMultiplier))
   })
 
   it('uses the XP-funded multiplier for the last tier once unlocked, ignoring its (stale) tickspeedLevels entry', () => {
@@ -2263,11 +2689,11 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
 
   it('leaves every other tier on the normal per-tier tickspeed ladder even once the last tier is XP-unlocked', () => {
     const state = withLastTierTickspeedXpUnlocked(createInitialGameState())
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(2)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
 
   it('falls back to baseline (level 1, no global multiplier) when tickspeedLevels/globalTickspeedMultiplier are missing from state entirely', () => {
-    expect(getEffectiveTierTickSpeedSeconds({ owned: {} }, tensTier.id)).toBe(2)
+    expect(getEffectiveTierTickSpeedSeconds({ owned: {} }, tensTier.id)).toBe(1)
   })
 
   it('falls back to 0 already-consumed XP for the last tier when lastTierXpConsumed is missing from state entirely', () => {
@@ -2277,18 +2703,20 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed)
   })
 
-  it('raises the effective tickspeed once a global tickspeed level is already bought, via Overclock\'s boosted per-level step', () => {
-    // 5 Overclock activations raise the regular step from 1% to 1.5% (5 * OVERCLOCK_PRODUCTION_STEP).
+  it('boosts the global tickspeed multiplier\'s own regular step once claimed, when a level is already bought', () => {
+    // 5 claimed Overclock levels multiply the regular 1% step by getOverclockMultiplier(5) = 1.1^5,
+    // folded directly into the global tickspeed multiplier itself — not a separate factor.
     const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(2 / (1.015 ** 9))
+    const boostedRegularStep = 0.01 * 1.1 ** 5
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1 + boostedRegularStep) ** 9)
   })
 
   it('has no effect at all while the global tickspeed multiplier is still at level 0/not yet bought', () => {
-    // Overclock only raises the per-level step of an existing global tickspeed level — with 0
-    // levels bought, there's nothing for that boosted step to compound, so the effective tickspeed
-    // is unaffected regardless of overclockCount.
+    // Overclock only boosts the per-level step of an existing global tickspeed level — with 0
+    // levels bought, there's nothing for that boosted step to compound over, so the effective
+    // tickspeed is unaffected regardless of overclockCount.
     const state = withOverclockCount(createInitialGameState(), 5)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(2)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
 
   it('stacks the boosted global tickspeed step multiplicatively with the per-tier tickspeed multiplier', () => {
@@ -2299,13 +2727,14 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       ),
       5
     )
+    const boostedRegularStep = 0.01 * 1.1 ** 5
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id))
-      .toBeCloseTo(2 / (1.1 * 1.015 ** 9))
+      .toBeCloseTo(1 / (1.1 * (1 + boostedRegularStep) ** 9))
   })
 
-  it('falls back to 0 Overclock activations (the baseline 1% step) when overclockCount is missing from state entirely', () => {
+  it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {
     const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockCount')
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(2 / (1.01 ** 9))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9))
   })
 })
 
@@ -2317,14 +2746,14 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('reflects a partial fraction of a tier\'s tickspeed', () => {
-    // Megabytes' base tickspeed is 3s — half a second's worth of elapsed time banks about a sixth
+    // Megabytes' base tickspeed is 2s — half a second's worth of elapsed time banks a quarter
     // of it.
     const state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
     const afterHalfSecond = tickGame(0.5)(state)
-    expect(getTierProductionProgressPercent(afterHalfSecond, thousandsTier.id)).toBe(17)
+    expect(getTierProductionProgressPercent(afterHalfSecond, thousandsTier.id)).toBe(25)
   })
 
   it('drops back down to the banked remainder once a batch fires', () => {
@@ -2332,44 +2761,44 @@ describe('getTierProductionProgressPercent', () => {
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
-    const afterThreeSeconds = tickGame(3)(state)
-    // Megabytes' base tickspeed is 3s: a single 3-second tick crosses the threshold and delivers
+    const afterTwoSeconds = tickGame(2)(state)
+    // Megabytes' base tickspeed is 2s: a single 2-second tick crosses the threshold and delivers
     // a batch, banking 0s of remainder.
-    expect(getTierProductionProgressPercent(afterThreeSeconds, thousandsTier.id)).toBe(0)
+    expect(getTierProductionProgressPercent(afterTwoSeconds, thousandsTier.id)).toBe(0)
   })
 
-  it('is 100% for a 2s-tickspeed tier with a full period already banked', () => {
+  it('is 100% for a 1s-tickspeed tier with a full period already banked', () => {
     expect(getTierProductionProgressPercent(
-      { tierProductionAccumulators: { [tensTier.id]: 2 } },
+      { tierProductionAccumulators: { [tensTier.id]: 1 } },
       tensTier.id
     )).toBe(100)
   })
 
   it('reports 100% instead of the wrapped remainder when the previous accumulator just crossed the threshold', () => {
-    // Kilobytes' tickspeed is 2s: a previous accumulator of 1 plus the default 1 elapsed second
-    // crosses 2s, so a delivery just happened even though the freshly-wrapped remainder is 0.
+    // Kilobytes' tickspeed is 1s: a previous accumulator of 1 plus the default 1 elapsed second
+    // crosses 1s, so a delivery just happened even though the freshly-wrapped remainder is 0.
     const state = { tierProductionAccumulators: { [tensTier.id]: 0 } }
     expect(getTierProductionProgressPercent(state, tensTier.id, 1)).toBe(100)
   })
 
   it('falls through to the normal calculation when the previous accumulator has not yet crossed the threshold', () => {
-    // previousAccumulator (0.4) + elapsedSeconds (0.1) = 0.5, below Kilobytes' 2s tickspeed
+    // previousAccumulator (0.4) + elapsedSeconds (0.1) = 0.5, below Kilobytes' 1s tickspeed
     // threshold, so this falls through to the normal accumulated/tickSpeed calculation using the
     // raw stored accumulator (0.5) instead of reporting 100.
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.5 } }
-    expect(getTierProductionProgressPercent(state, tensTier.id, 0.4, 0.1)).toBe(25)
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.4, 0.1)).toBe(50)
   })
 
-  it('reports a 2s-tickspeed tier as 100% once the previous accumulator plus the default elapsed second reaches the threshold', () => {
+  it('reports a 1s-tickspeed tier as 100% once the previous accumulator plus the default elapsed second reaches the threshold', () => {
     const state = { tierProductionAccumulators: { [tensTier.id]: 0 } }
     expect(getTierProductionProgressPercent(state, tensTier.id, 1)).toBe(100)
   })
 
   it('measures against the shrunk effective tickspeed once a tier has a tickspeed multiplier level', () => {
     // Level 2 → ×1.1 effective speed (see getEffectiveTierTickSpeedSeconds), so the period shrinks
-    // from 2s to 2/1.1s — half of that banked is 50% of the way there, not 45.45% of the raw 2s.
+    // from 1s to 1/1.1s — half of that banked is 50% of the way there, not 45.45% of the raw 1s.
     const state = withTickspeedLevel(
-      { tierProductionAccumulators: { [tensTier.id]: (2 / 1.1) / 2 } },
+      { tierProductionAccumulators: { [tensTier.id]: (1 / 1.1) / 2 } },
       tensTier.id,
       2
     )
@@ -2390,14 +2819,14 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('accepts a fractional elapsedSeconds (e.g. a 10Hz live tick) for the just-delivered check', () => {
-    // Kilobytes' tickspeed is 2s: a previous accumulator of 1.95 plus a 0.1 elapsed tick crosses 2s.
+    // Kilobytes' tickspeed is 1s: a previous accumulator of 0.95 plus a 0.1 elapsed tick crosses 1s.
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.05 } }
-    expect(getTierProductionProgressPercent(state, tensTier.id, 1.95, 0.1)).toBe(100)
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.95, 0.1)).toBe(100)
   })
 
   it('does not report 100% early when a fractional elapsedSeconds has not yet crossed the threshold', () => {
     const state = { tierProductionAccumulators: { [tensTier.id]: 0.85 } }
-    expect(getTierProductionProgressPercent(state, tensTier.id, 0.75, 0.1)).toBe(43)
+    expect(getTierProductionProgressPercent(state, tensTier.id, 0.75, 0.1)).toBe(85)
   })
 
   it('falls back to 0 accumulated when tierProductionAccumulators is missing from state entirely', () => {
@@ -2701,10 +3130,10 @@ describe('buyTierQuantity', () => {
 // ─── tickGame ────────────────────────────────────────────────────────────────
 
 describe('tickGame', () => {
-  it('produces money from Kilobytes generators over a full 2s tick', () => {
+  it('produces money from Kilobytes generators over a full 1s tick', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
-    const after = tickGame(2)(state)
-    // 5 generators × 1 full 2s tick = +5 money
+    const after = tickGame(1)(state)
+    // 5 generators × 1 full 1s tick = +5 money
     expect(after.resources[MONEY_ID]).toBe(
       state.resources[MONEY_ID] + 5
     )
@@ -2863,7 +3292,7 @@ describe('tickGame', () => {
 
   it('lets Auto Speed Up trigger automatically when autoSpeedUpEnabled is missing from state entirely (defaults to active)', () => {
     const state = omit(
-      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 6)),
       'autoSpeedUpEnabled'
     )
     const after = tickGame(1)(state)
@@ -2878,30 +3307,30 @@ describe('tickGame', () => {
 
   it('scales production with elapsed time', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 1)
-    const after = tickGame(6)(state) // 3 full 2s ticks
+    const after = tickGame(3)(state) // 3 full 1s ticks
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 3)
   })
 
-  it('still delivers a 2s-tickspeed tier\'s production on the 10th tick despite fractional elapsedSeconds floating-point drift', () => {
-    // Summing 0.2 ten times lands on 1.9999999999999998 in IEEE-754, not exactly 2 — matching a
+  it('still delivers a 1s-tickspeed tier\'s production on the 10th tick despite fractional elapsedSeconds floating-point drift', () => {
+    // Summing 0.1 ten times lands on 0.9999999999999999 in IEEE-754, not exactly 1 — matching a
     // live tick loop accumulating fractional elapsedSeconds. Without the epsilon tolerance in
     // tickGame's ticksElapsed calculation, this would delay delivery to an 11th tick instead of
     // firing on the 10th, as it does at a coarser (e.g. 1-tick-per-second) granularity.
     let state = withOwned(createInitialGameState(), tensTier.id, 1)
-    for (let i = 0; i < 10; i++) state = tickGame(0.2)(state)
+    for (let i = 0; i < 10; i++) state = tickGame(0.1)(state)
     expect(state.resources[MONEY_ID]).toBe(2) // 1 starting + 1 tick's worth of production
   })
 
   it('does not apply the Prestige Points production-speed bonus until it has been unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
     const boosted = withPrestigePoints(base, 100) // +100% → ×2, but not yet unlocked
-    expect(tickGame(2)(boosted).resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1)
+    expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1)
   })
 
   it('applies the Prestige Points production-speed bonus once unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
     const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)) // +100% → ×2
-    expect(tickGame(2)(boosted).resources[MONEY_ID]).toBe(
+    expect(tickGame(1)(boosted).resources[MONEY_ID]).toBe(
       base.resources[MONEY_ID] + 2
     )
   })
@@ -2910,14 +3339,14 @@ describe('tickGame', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
     // +50% → ×1.5, raw production 1 × 1.5 = 1.5
     const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 50))
-    const after = tickGame(2)(boosted)
+    const after = tickGame(1)(boosted)
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 1) // floor(1.5) = 1
   })
 
   it('multiplies production by the Speed Up multiplier', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 5)
     const sped = withSpeedUpCount(base, 2) // ×4
-    const after = tickGame(2)(sped)
+    const after = tickGame(1)(sped)
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 20) // 5 × 4
   })
 
@@ -2927,23 +3356,23 @@ describe('tickGame', () => {
     const state = withSpeedUpCount(
       withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)), 1
     )
-    const after = tickGame(2)(state)
+    const after = tickGame(1)(state)
     expect(after.resources[MONEY_ID]).toBe(base.resources[MONEY_ID] + 40) // 10 × 4
   })
 
-  it('Megabytes generators produce Kilobytes resource and owned generators once its 3s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
+  it('Megabytes generators produce Kilobytes resource and owned generators once its 2s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
     let state = withOwned(
       withOwned(createInitialGameState(), tensTier.id, 10),
       thousandsTier.id, 2
     )
-    // Megabytes' base tickspeed is 3s — twenty-nine 0.1s ticks (the live game's real 10Hz cadence)
+    // Megabytes' base tickspeed is 2s — nineteen 0.1s ticks (the live game's real 10Hz cadence)
     // only accumulate toward that, they don't produce yet.
-    for (let i = 0; i < 29; i++) {
+    for (let i = 0; i < 19; i++) {
       state = tickGame(0.1)(state)
       expect(state.resources[tensTier.id]).toBe(0)
     }
     expect(state.owned[tensTier.id]).toBe(10)
-    // The 30th 0.1s tick crosses the 3s threshold and delivers one tick's worth (owned × 1).
+    // The 20th 0.1s tick crosses the 2s threshold and delivers one tick's worth (owned × 1).
     state = tickGame(0.1)(state)
     expect(state.resources[tensTier.id]).toBe(2)
     expect(state.owned[tensTier.id]).toBe(12) // 10 initial + 2 produced
@@ -2955,13 +3384,13 @@ describe('tickGame', () => {
       withOwned(createInitialGameState(), thousandsTier.id, 10), // unlocks Gigabytes
       millionsTier.id, 5
     )
-    // Gigabytes' base tickspeed is 4s — the first 39 sub-second ticks only accumulate toward that
+    // Gigabytes' base tickspeed is 3s — the first 29 sub-second ticks only accumulate toward that
     // threshold, no production yet.
-    for (let i = 0; i < 39; i++) {
+    for (let i = 0; i < 29; i++) {
       state = tickGame(0.1)(state)
       expect(state.resources[thousandsTier.id]).toBe(0)
     }
-    // The 40th tick crosses the 4s threshold and delivers exactly one tick's worth (owned × 1).
+    // The 30th tick crosses the 3s threshold and delivers exactly one tick's worth (owned × 1).
     state = tickGame(0.1)(state)
     expect(state.resources[thousandsTier.id]).toBe(5)
   })
@@ -3005,9 +3434,9 @@ describe('tickGame', () => {
     // Production depends only on purchased milestones now (see getPurchaseMilestoneMultiplier) —
     // the tickspeed multiplier at level 0/1 is still ×1, no bonus yet (see
     // getTickspeedProductionMultiplier): per-unit cost at level 1, blockSize 8, is 1000 —
-    // 1000 - 1000 (cost), and tensTier's own 2s tickspeed hasn't accumulated a full period within
-    // this single 1s tick, so no production lands yet = 0.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // 1000 - 1000 (cost) = 0, and tensTier's own 1s tickspeed exactly completes one period within
+    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing $1.
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('the tickspeed multiplier level has no effect on purchase-attempt frequency — every unlocked level buys exactly 1 per tick', () => {
@@ -3083,9 +3512,9 @@ describe('tickGame', () => {
     const after = tickGame(1, 10)(state)
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.purchased[thousandsTier.id]).toBe(0)
-    // tensTier's own 2s tickspeed hasn't accumulated a full period within this single 1s tick, so
-    // its 8 owned generators don't produce yet either — the balance stays untouched at $500.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // tensTier's own 1s tickspeed exactly completes one period within this single 1s tick, so its
+    // 8 pre-owned generators already produce once — the balance rises to $500 + $8 = $508.
+    expect(after.resources[MONEY_ID]).toBe(508)
   })
 
   it('a smart tier buys one at a time (ignoring the batch size) instead of stalling on the first block', () => {
@@ -3100,9 +3529,9 @@ describe('tickGame', () => {
     expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(1)
     // Per-unit cost at level 1 is $1,000: money spent on the single unit ($1,000 → $0). tensTier's
-    // own 2s tickspeed hasn't accumulated a full period within this single 1s tick, so that unit's
-    // production doesn't land until the next tick.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // own 1s tickspeed exactly completes one period within this same 1s tick, so that unit already
+    // produces once this tick, landing $1.
+    expect(after.resources[MONEY_ID]).toBe(1)
   })
 
   it('a smart tier reverts to the normal (full-block) batch size once past its first level', () => {
@@ -3130,9 +3559,11 @@ describe('tickGame', () => {
     // 10).
     expect(after.owned[tensTier.id]).toBe(8)
     expect(after.purchased[tensTier.id]).toBe(8)
-    // Cost drains money to $1,000. tensTier's own 2s tickspeed hasn't accumulated a full period
-    // within this single 1s tick, so no production lands yet this same tick.
-    expect(after.resources[MONEY_ID]).toBe(1000)
+    // Cost drains money to $1,000. tensTier's own 1s tickspeed exactly completes one period within
+    // this same 1s tick, so the freshly-bought 8 units already produce once — and since this
+    // purchase completes the whole level-1 block, the level-2 purchase milestone doubles that
+    // delivery (see getPurchaseMilestoneMultiplier): 8 × 2 = 16, landing $1,000 + $16.
+    expect(after.resources[MONEY_ID]).toBe(1016)
   })
 
   it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
@@ -3146,9 +3577,11 @@ describe('tickGame', () => {
     // Pays for the 3 remaining units in the block at the normal rate ($1,000 each, $3,000 total) —
     // no purchase-yield bonus. $3,500 - $3,000 = $500.
     expect(after.owned[tensTier.id]).toBe(3)
-    // tensTier's own 2s tickspeed hasn't accumulated a full period within this single 1s tick, so
-    // no production lands yet — the balance is just the $500 left over from the purchase.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // tensTier's own 1s tickspeed exactly completes one period within this same 1s tick, so the
+    // freshly-bought 3 units already produce once — and since this purchase completes the whole
+    // level-1 block (purchaseLevels reaches 2, asserted above), the level-2 purchase milestone
+    // doubles that delivery (see getPurchaseMilestoneMultiplier): 3 × 2 = 6, landing $500 + $6.
+    expect(after.resources[MONEY_ID]).toBe(506)
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
@@ -3296,7 +3729,7 @@ describe('tickGame', () => {
 
   it('does not scale a single delivery\'s amount by the tickspeed multiplier — it speeds up delivery frequency instead', () => {
     // Level 3 → ×1.21 (see getTickspeedProductionMultiplier), so this tier's effective tickspeed
-    // period shrinks from the base 2s to 2/1.21s. Passing exactly that shrunk period as
+    // period shrinks from the base 1s to 1/1.21s. Passing exactly that shrunk period as
     // elapsedSeconds triggers exactly one delivery — confirming it's still just `owned` (10), not
     // owned × 1.21 (12): the multiplier no longer inflates the delivered amount, only how soon the
     // next one arrives. Zero money so the autobuyer purchase step (which would otherwise buy
@@ -3306,23 +3739,23 @@ describe('tickGame', () => {
       withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 3),
       0
     )
-    const after = tickGame(2 / tickspeedMultiplier)(state)
+    const after = tickGame(1 / tickspeedMultiplier)(state)
     expect(after.resources[MONEY_ID]).toBe(10)
   })
 
   it('fires more delivery ticks within a fixed elapsed window at a higher tickspeed level, without changing the per-tick amount', () => {
-    // Over a fixed 10-second window, the baseline (level 1, 2s period) delivers floor(10/2) = 5
-    // batches of 10 = 50 total; level 3 (×1.21 speed, ~1.653s period) delivers
-    // floor(10 × 1.21 / 2) = 6 batches of the same 10 each = 60 total — the same ×1.21 economy
+    // Over a fixed 10-second window, the baseline (level 1, 1s period) delivers floor(10/1) = 10
+    // batches of 10 = 100 total; level 3 (×1.21 speed, ~0.826s period) delivers
+    // floor(10 × 1.21 / 1) = 12 batches of the same 10 each = 120 total — the same ×1.21 economy
     // bonus as before, now arrived at via more (not bigger) deliveries.
     const baseline = withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 0)
-    expect(tickGame(10)(baseline).resources[MONEY_ID]).toBe(50)
+    expect(tickGame(10)(baseline).resources[MONEY_ID]).toBe(100)
 
     const sped = withMoney(
       withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 3),
       0
     )
-    expect(tickGame(10)(sped).resources[MONEY_ID]).toBe(60)
+    expect(tickGame(10)(sped).resources[MONEY_ID]).toBe(120)
   })
 
   it('speeds up every tier\'s delivery frequency at once via the global tickspeed multiplier, without changing the per-tick amount', () => {
@@ -3330,20 +3763,20 @@ describe('tickGame', () => {
     // instead of 1% (see getGlobalTickspeedProductionMultiplier) — 1.01^9 * 1.10 ≈ ×1.2031, the
     // same frequency-scaling effect as the per-tier multiplier above, applied uniformly to every
     // tier at once, no per-tier tickspeed level involved here at all. Over a 100-second window
-    // against tensTier's 2s base period: baseline delivers floor(100/2) = 50 batches of 10 = 500,
-    // while floor(100 × 1.2031 / 2) = 60 batches of 10 = 600.
+    // against tensTier's 1s base period: baseline delivers floor(100/1) = 100 batches of 10 = 1000,
+    // while floor(100 × 1.2031 / 1) = 120 batches of 10 = 1200.
     const state = withMoney(
       withGlobalTickspeedMultiplier(withOwned(createInitialGameState(), tensTier.id, 10), 10),
       0
     )
     const after = tickGame(100)(state)
-    expect(after.resources[MONEY_ID]).toBe(600)
+    expect(after.resources[MONEY_ID]).toBe(1200)
   })
 
   it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
     // Per-tier level 2 → ×1.1, global level 10 → 1.01^9 * 1.10 ≈ ×1.2031 → combined ≈ ×1.3234, not
-    // simply additive. Over a 100-second window against tensTier's 2s base period:
-    // floor(100 × 1.3234 / 2) = 66 batches of 10 each = 660.
+    // simply additive. Over a 100-second window against tensTier's 1s base period:
+    // floor(100 × 1.3234 / 1) = 132 batches of 10 each = 1320.
     const state = withGlobalTickspeedMultiplier(
       withMoney(
         withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
@@ -3352,13 +3785,13 @@ describe('tickGame', () => {
       10
     )
     const after = tickGame(100)(state)
-    expect(after.resources[MONEY_ID]).toBe(660)
+    expect(after.resources[MONEY_ID]).toBe(1320)
   })
 
   it('automatically triggers Speed Up when Auto Speed Up is bought and the last tier is eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUp(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 6)
     )
     const after = tickGame(1)(state)
     expect(after.speedUpCount).toBe(1)
@@ -3368,7 +3801,7 @@ describe('tickGame', () => {
   it('does not trigger Speed Up automatically when the last tier is not yet eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUp(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 5)
     )
     const after = tickGame(1)(state)
     expect(after.speedUpCount).toBe(0)
@@ -3384,7 +3817,7 @@ describe('tickGame', () => {
   it('does not trigger Speed Up automatically while Auto Speed Up is paused (autoSpeedUpEnabled false), even when eligible', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoSpeedUpEnabled(
-      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 6)),
       false
     )
     const after = tickGame(1)(state)
@@ -3394,7 +3827,7 @@ describe('tickGame', () => {
   it('resumes triggering Speed Up automatically once Auto Speed Up is re-enabled', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const paused = withAutoSpeedUpEnabled(
-      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 2)),
+      withAutoSpeedUp(withPurchaseLevel(createInitialGameState(), lastTier.id, 6)),
       false
     )
     const resumed = setAutoSpeedUpEnabled(true)(paused)
@@ -3625,9 +4058,9 @@ describe('applyOfflineProgress', () => {
   it('produces resources for 50% of the elapsed real time', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
     const after = applyOfflineProgress(100)(state) // 100s real → 50 simulated seconds
-    // tensTier's own 2s tickspeed fits 25 full periods into 50 simulated seconds: 5 generators ×
-    // 25 periods = +125 money
-    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 125)
+    // tensTier's own 1s tickspeed fits 50 full periods into 50 simulated seconds: 5 generators ×
+    // 50 periods = +250 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 250)
   })
 
   it('is a no-op for a gap too short to register a single simulated second', () => {
@@ -4379,10 +4812,10 @@ describe('prestigeGame', () => {
 
 describe('speedUpGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 6)
 
   it('does nothing when the last tier is below the required level', () => {
-    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 5)
     expect(speedUpGame(state)).toBe(state)
   })
 
@@ -4397,23 +4830,23 @@ describe('speedUpGame', () => {
   })
 
   it('requires one more level on each subsequent activation', () => {
-    // After 1 prior activation, the requirement is level 3, not the level 2 the first cycle needed.
-    const stillLevel2 = withSpeedUpCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
+    // After 1 prior activation, the requirement is level 7, not the level 6 the first cycle needed.
+    const stillLevel6 = withSpeedUpCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 6), 1
     )
-    expect(speedUpGame(stillLevel2)).toBe(stillLevel2)
+    expect(speedUpGame(stillLevel6)).toBe(stillLevel6)
 
-    const level3 = withSpeedUpCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 1
+    const level7 = withSpeedUpCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 7), 1
     )
-    const after = speedUpGame(level3)
+    const after = speedUpGame(level7)
     expect(after.speedUpCount).toBe(2)
   })
 
   it('stacks across repeated activations', () => {
-    // getSpeedUpRequirement(2) = level 4
+    // getSpeedUpRequirement(2) = level 8
     const state = withSpeedUpCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 4), 2
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 8), 2
     )
     const after = speedUpGame(state)
     expect(after.speedUpCount).toBe(3)
@@ -4624,7 +5057,7 @@ describe('speedUpGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which never meets the (≥2) requirement', () => {
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which never meets the (≥6) requirement', () => {
     const state = omit(withMoney(createInitialGameState(), 1), 'purchaseLevels')
     expect(speedUpGame(state)).toBe(state)
   })
@@ -4648,6 +5081,7 @@ describe('speedUpGame', () => {
       mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = speedUpGame(state)
@@ -4659,11 +5093,21 @@ describe('speedUpGame', () => {
 
 describe('overclockGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  // getOverclockRequirement(0) = 10
-  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 10)
+  // getOverclockRequirement(0) = 2 — a fresh state's last tier starts at level 1 by default, so it
+  // takes one real level of progress (to level 2) before the first claim of a cycle is eligible;
+  // level 1 alone is never enough (see the +2 floor in getOverclockRequirement's own comment).
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
+
+  it('does nothing when the last tier is still at its untouched default level (1) — the first claim of a cycle is never free', () => {
+    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
+    expect(overclockGame(state)).toBe(state)
+  })
 
   it('does nothing when the last tier is below the required level', () => {
-    const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 9)
+    // overclockCount 3 requires level 5; level 4 isn't there yet.
+    const state = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 4), 3
+    )
     expect(overclockGame(state)).toBe(state)
   })
 
@@ -4672,23 +5116,33 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('increments overclockCount by 1', () => {
+  it('sets overclockCount to the last tier\'s current level on a claim', () => {
     const after = overclockGame(eligibleState())
-    expect(after.overclockCount).toBe(1)
+    expect(after.overclockCount).toBe(2)
   })
 
-  it('requires 10 more levels on each subsequent activation, not the +1 ladder Speed Up uses', () => {
-    // After 1 prior activation, the requirement is level 20, not level 11.
-    const stillLevel10 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 10), 1
+  it('requires one more level than the last claim, same +1-per-cycle shape as Speed Up\'s own ladder', () => {
+    // After 1 prior claim (now at level 2), the requirement is level 3, not level 2 again.
+    const stillLevel2 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
     )
-    expect(overclockGame(stillLevel10)).toBe(stillLevel10)
+    expect(overclockGame(stillLevel2)).toBe(stillLevel2)
 
-    const level20 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 20), 1
+    const level3 = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 1
     )
-    const after = overclockGame(level20)
-    expect(after.overclockCount).toBe(2)
+    const after = overclockGame(level3)
+    expect(after.overclockCount).toBe(3)
+  })
+
+  it('jumps straight to the last tier\'s current level in one claim when behind, instead of requiring one claim per intermediate level', () => {
+    // Last claimed at level 5 (overclockCount 5, requirement 7), but the last tier has since
+    // reached level 8 — a single claim should catch all the way up to 8, not just to 7.
+    const state = withOverclockCount(
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 8), 5
+    )
+    const after = overclockGame(state)
+    expect(after.overclockCount).toBe(8)
   })
 
   it('resets speedUpCount to 0, wiping Speed Up\'s own stacking bonus', () => {
@@ -4872,15 +5326,15 @@ describe('overclockGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which never meets the (≥10) requirement', () => {
-    const state = omit(withMoney(createInitialGameState(), 1), 'purchaseLevels')
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which still falls short of the (≥2) requirement', () => {
+    const state = omit(createInitialGameState(), 'purchaseLevels')
     expect(overclockGame(state)).toBe(state)
   })
 
   it('falls back to 0 when overclockCount is missing from state entirely', () => {
     const state = omit(eligibleState(), 'overclockCount')
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(1)
+    expect(after.overclockCount).toBe(2)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
@@ -4890,6 +5344,7 @@ describe('overclockGame', () => {
       mainGameUnlocked: true,
       storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
       storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }
     const state = withIntro(eligibleState(), seededIntro)
     const after = overclockGame(state)

@@ -12,9 +12,9 @@
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
-// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=2s
-// up through tier10=11s — since a slower cadence divides that tier's real throughput (see
-// getTierBaseTickSpeedSeconds below) by up to 11x for the last tier, on top of the already-steep
+// shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
+// up through tier10=10s — since a slower cadence divides that tier's real throughput (see
+// getTierBaseTickSpeedSeconds below) by up to 10x for the last tier, on top of the already-steep
 // cost curve (see getTierCost/getCostEpochExponent in engine.js). This ladder was tried once before
 // the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could offset
 // the slowdown; now that both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier)
@@ -112,15 +112,16 @@ export const INTRO_BYTE_BASE_RATE = 1
 // bits tapping alone can hold before the Byte exists to start producing more.
 export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // Manual conversion rate: this many intro bits become 1 Kilobyte unit in the main game (see
-// convertIntroBitsToKilobytes in engine.js) — matches Kilobytes' own real baseCost (1E3 Bits) in
-// TIER_DEFINITIONS above, so the intro's bit pool and the main game's Bits share the same
-// underlying "cost of a Kilobyte" even though they're tracked as separate balances.
+// convertIntroBitsToKilobytes in engine.js) — equal to BITS_PER_BYTE (8) × Kilobytes' own real
+// baseCost (1E3 Bits) in TIER_DEFINITIONS above (see getIntroKilobyteConversionCost's own
+// BITS_PER_BYTE multiplication in engine.js), so this starting rate lines up with tier01's actual
+// starting per-unit cost once expressed in bits.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
 // the intro page can start showing a "next phase" reveal indicator (see
 // isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
-// bits at once (capacity must reach 8000 before balance can reach 1000, given the 8/80/800/8000…
-// ladder above).
+// bits at once (capacity must reach 8000, given the 8/80/800/8000… ladder above, which is also
+// exactly the balance needed for a first conversion at this starting rate).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/tickStorageAutoFill/
@@ -145,17 +146,17 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
 export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
 // A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
-// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 1,000,000-bit ("1 MB")
-// bank costs 10,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
+// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 10,000,000-bit ("10 MB")
+// bank costs 100,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
 // conversion. This cost only ever pays for the empty container — it is NOT what fills it.
 export const STORAGE_BUILD_COST_MULTIPLIER = 10
 // The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
 // level) for level 1, 2, 3, …) rather than a synthetic ×10 progression — offers tier01's level-1
 // cost (1000 bits, "1 KB") until STORAGE_BANK_LADDER_CAP of them have ever been built, then
 // tier01's level-2 cost (10,000 bits, "10 KB") until another STORAGE_BANK_LADDER_CAP, and so on
-// (see getStorageBankSize in engine.js). Because getCostEpochExponent's triangular-number exponent
-// sequence (1, 2, 4, 7, 11, …) skips values as levels increase, this ladder skips sizes too — e.g.
-// tier01's level 3 costs 1,000,000 bits ("1 MB"), not 100,000 ("100 KB"), so a 100 KB bank can
+// (see getStorageBankSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
+// sequence (1, 2, 3, 5, 8, …) skips values as levels increase, this ladder skips sizes too — e.g.
+// tier01's level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can
 // never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
 // (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
 // ahead of or fall behind tier01's actual price, with isStorageBankRedeemable the only gate on
@@ -171,8 +172,8 @@ export const STORAGE_BANK_LADDER_CAP = 10
 // all; see docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
-// below activates — 100 KB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
-// step — see getMemoryUnit in ByteFoundryPage), 800,000 bits: one Sacrifice stage past Storage's
+// below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
+// step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
 // own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
@@ -189,6 +190,26 @@ export const COMPUTE_CORES_PER_NODE = 8
 // spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
 // progress" posture Storage banks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
+
+// --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
+// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostStacks/
+// computeBoostRemainingSeconds in createInitialGameState. Each usage of a Compute Core (always
+// exactly 1 spent per activation — the preset below picks the strength/duration, not the cost)
+// grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
+// Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
+// production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
+// (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
+// decaying back to inactive (see tickComputeBoost).
+export const COMPUTE_BOOST_PRESETS = {
+  burst: { multiplier: 16, durationSeconds: 10 },
+  standard: { multiplier: 4, durationSeconds: 60 },
+  sustain: { multiplier: 2, durationSeconds: 600 },
+}
+// Only one PRESET TYPE can be active at a time — a different type can't be started while one is
+// already running (see activateComputeBoost) — but the SAME type can be activated again while
+// already active, stacking up to this many times to extend the remaining duration; the multiplier
+// itself never compounds from stacking, only durationSeconds accumulates further.
+export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
@@ -313,29 +334,27 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
-// Per-activation boost to the (Money-funded) global tickspeed multiplier's own per-level step —
-// see engine.js's getGlobalTickspeedRegularStep/getGlobalTickspeedProductionMultiplier/
-// overclockGame — a second, much steeper Speed-Up-style soft reset. Each Overclock activation adds
-// another OVERCLOCK_PRODUCTION_STEP (0.1 percentage points) directly onto
-// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), permanently raising the rate every *future* regular level
-// of the global tickspeed multiplier compounds at — 1% per level with no activations, 1.1% after
-// the first, 1.2% after the second, and so on (a milestone level's own 10% step,
-// GLOBAL_TICKSPEED_MILESTONE_STEP, is unaffected). This is deliberately NOT a separate multiplier
-// stacked on top the way Speed Up's own production multiplier is — it reshapes the existing global
-// tickspeed track's own growth curve instead, so a level already bought before an Overclock
-// activation retroactively compounds at the new, higher rate from then on, same as every other
-// level. Deliberately two orders of magnitude smaller a step than GLOBAL_TICKSPEED_PRODUCTION_STEP
-// itself — Overclock's value is in how permanent and stackable it is (state.overclockCount is
-// never reset by an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame),
-// not in the size of any single activation.
-export const OVERCLOCK_PRODUCTION_STEP = 0.01
-// How many more levels the last tier must reach before Overclock can activate again: a fixed
-// 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
-// steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
-// (see getSpeedUpRequirement) — reflecting that Overclock resets everything Speed Up does *and*
-// wipes Speed Up's own stacking bonus (state.speedUpCount) on top, so it needs to be substantially
-// more expensive to reach each time.
-export const OVERCLOCK_REQUIREMENT_STEP = 10
+// Per-level growth factor for Overclock's own reward — see engine.js's
+// getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
+// Speed-Up-style soft reset. Each claimed Overclock level multiplies BOTH the (Money-funded) global
+// tickspeed multiplier's regular and milestone per-level steps by a further (1 +
+// OVERCLOCK_MULTIPLIER_STEP) factor (×1.1 per level) — folded directly into that existing track's
+// own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
+// the history of this mechanic moving between a standalone factor and a folded-in step). A direct
+// consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
+// level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
+// an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame.
+export const OVERCLOCK_MULTIPLIER_STEP = 0.1
+// The per-cycle escalation step for how many more levels the last tier must reach before the next
+// Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
+// +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never
+// make the first claim of a cycle free) — the same +1-per-cycle shape Speed Up's own requirement
+// uses (see getSpeedUpRequirement), just without its display offset. There's no artificial ladder
+// beyond that floor; the last tier's already-steep cost curve is what makes reaching each
+// successive level meaningfully harder. A claim jumps straight to the last tier's current level
+// (see overclockGame), so falling behind never requires claiming every intermediate level one at a
+// time.
+export const OVERCLOCK_REQUIREMENT_STEP = 1
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up
