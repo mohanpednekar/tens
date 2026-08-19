@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -58,12 +58,14 @@ const BalanceText = styled.p`
 `
 
 // Tapping stays a fully live action forever (never freezes, never goes read-only — see
-// "Byte Foundry" in CLAUDE.md), but once the Byte generator exists it's a secondary/backup action
-// behind passive production, which is why it renders last on the page instead of up top — while
-// staying just as clickable (same disabled={isFull} gating either way) and always full width, the
-// same width every other action button on this page uses. No progress fill here — Memory's own
-// tile already shows the same bits/capacity fill, so a duplicate meter on the tap button itself
-// would be redundant.
+// "Byte Foundry" in CLAUDE.md); while the Byte generator exists but the main game isn't unlocked
+// yet, it's a secondary/backup action behind passive production, which is why it renders last on
+// the page instead of up top — while staying just as clickable (same disabled={isFull} gating
+// either way) and always full width, the same width every other action button on this page uses.
+// No progress fill here — Memory's own tile already shows the same bits/capacity fill, so a
+// duplicate meter on the tap button itself would be redundant. Once intro.mainGameUnlocked, this
+// button is removed entirely — Memory's own tile (FillableStatCard below) becomes the tap target
+// instead, calling the identical actions.tapIntroBit.
 const TapArea = styled.button`
   position: relative;
   width: 100%;
@@ -175,10 +177,32 @@ const TilesRow = styled.div`
 // own default is `stretch`) centers RateBlocksRow horizontally — its own `max-width` keeps it
 // narrower than the tile, so without this it would sit flush against the left edge instead of
 // centered under the balance text above it.
+// Once intro.mainGameUnlocked, this renders as a real <button> (via the `as` prop below) instead
+// of a plain <section> — Memory itself becomes the tap target, replacing the standalone TapArea
+// button below (which only renders pre-unlock). `$tappable` adds the same hover/active/disabled
+// affordance TapArea itself already has, scoped to this prop so the pre-unlock (non-interactive)
+// rendering keeps its plain, unclickable look.
 const FillableStatCard = styled(StatCard)`
   flex: 1 1 160px;
   align-items: center;
   ${progressFill}
+
+  ${props => props.$tappable && `
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.05s ease;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.2);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  `}
 `
 
 // Segmented, 8-block visual for the production rate while it's still below 1 Byte/sec (8
@@ -290,6 +314,10 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
   const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
+  // Once autoClaimCoreEnabled (see engine.js's enableAutoClaimCore, unlockable on ComputePage by
+  // sacrificing 10 Nodes), Memory → Core conversion resumes automatically and this manual button
+  // is removed entirely, not merely disabled — see "Byte Foundry" in CLAUDE.md.
+  const canClaimComputeCore = isComputeCoreClaimAvailable(state)
   const productionRate = getIntroProductionRate(intro)
 
   // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
@@ -373,7 +401,15 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
       </StatusText>
 
       <TilesRow>
-        <FillableStatCard aria-label="byte foundry balance" $progress={fullProgress}>
+        <FillableStatCard
+          as={intro.mainGameUnlocked ? 'button' : 'section'}
+          type={intro.mainGameUnlocked ? 'button' : undefined}
+          onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
+          disabled={intro.mainGameUnlocked ? isFull : undefined}
+          aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'byte foundry balance'}
+          $progress={fullProgress}
+          $tappable={intro.mainGameUnlocked}
+        >
           <SectionLabel>Memory</SectionLabel>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
@@ -542,15 +578,34 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
       )}
 
       {computeCoreRevealed && (
-        <Button
-          aria-label="open compute"
-          onClick={onOpenCompute}
-          title="Review Compute — Cores, Nodes, and Boost activation (still gated by the forced priority order)"
-          type="button"
-          variant="info"
-        >
-          <ButtonContent>⚡ Compute</ButtonContent>
-        </Button>
+        <>
+          {!intro.autoClaimCoreEnabled && (
+            <Button
+              aria-label="claim a compute core"
+              disabled={!canClaimComputeCore}
+              onClick={actions.claimComputeCore}
+              title={
+                canClaimComputeCore
+                  ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
+                  : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
+              }
+              type="button"
+              variant={canClaimComputeCore ? 'prestige' : 'neutral'}
+              $progress={fullProgress}
+            >
+              <ButtonContent>🧮 Claim Core</ButtonContent>
+            </Button>
+          )}
+          <Button
+            aria-label="open compute"
+            onClick={onOpenCompute}
+            title="Review Compute — Cores, Nodes, merging, auto-merge, and Boost activation (still gated by the forced priority order)"
+            type="button"
+            variant="info"
+          >
+            <ButtonContent>⚡ Compute</ButtonContent>
+          </Button>
+        </>
       )}
 
       {revealed && (<>
@@ -598,14 +653,16 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
         </TransferBlocksRow>
       </>)}
 
-      <TapArea
-        aria-label="tap to generate a bit"
-        disabled={isFull}
-        onClick={actions.tapIntroBit}
-        type="button"
-      >
-        👆 Tap
-      </TapArea>
+      {!intro.mainGameUnlocked && (
+        <TapArea
+          aria-label="tap to generate a bit"
+          disabled={isFull}
+          onClick={actions.tapIntroBit}
+          type="button"
+        >
+          👆 Tap
+        </TapArea>
+      )}
     </RootDiv>
   )
 }

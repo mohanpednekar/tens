@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, startDiskBuild, tapIntroBit, tickGame } from './engine'
-import { TICK_RATE_MS } from './layers'
+import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, startDiskBuild, tapIntroBit, tickGame } from './engine'
+import { OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
@@ -25,15 +25,20 @@ const BACKGROUND_TICK_GAP_THRESHOLD_SECONDS = 2
 // Shared by computeInitialGame (the one-time mount check) and the live tick loop's own gap
 // detection below — both need the identical "is this gap big enough to register as offline
 // progress, and what does catching it up produce" logic. Returns null if the gap doesn't clear
-// even a single simulated second at 50% speed (see getOfflineEffectiveSeconds/
-// OFFLINE_PROGRESS_SPEED_MULTIPLIER in layers.js).
+// even a single simulated second (see getOfflineEffectiveSeconds in engine.js). Progress is always
+// applied to `state` once that bar is cleared, but `offlineProgress` (the notice summary) comes
+// back null for a gap at or below OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS — that short an
+// absence is simulated at full speed, "as if the screen was always on," so there's nothing to
+// notify the player about.
 const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
   const effectiveSeconds = elapsedRealSeconds > 0 ? getOfflineEffectiveSeconds(elapsedRealSeconds) : 0
   if (effectiveSeconds <= 0) return null
 
   return {
     state: applyOfflineProgress(elapsedRealSeconds, BUY_QUANTITY)(state),
-    offlineProgress: { elapsedRealSeconds, effectiveSeconds },
+    offlineProgress: elapsedRealSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
+      ? { elapsedRealSeconds, effectiveSeconds }
+      : null,
   }
 }
 
@@ -41,7 +46,7 @@ const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
 // (with offline progress already folded in, if applicable) and a summary of that offline
 // progress for the UI to report — or null if there was no prior save, no recorded last-save
 // timestamp (an older save, or one that was never actually saved), or the gap was too short to
-// register even a single simulated second at 50% speed. This only ever covers time the app was
+// register even a single simulated second. This only ever covers time the app was
 // fully torn down (a real page load/PWA cold start) — see the tick-loop effect below for the
 // separate, more common case of a tab/app merely backgrounded or suspended without a remount.
 const computeInitialGame = () => {
@@ -156,6 +161,7 @@ export const useIncrementalGame = () => {
     redeemDisk: capacityBits => setState(redeemDisk(capacityBits)),
     releaseDiskCacheBlock: capacityBits => setState(releaseDiskCacheBlock(capacityBits)),
     activateComputeBoost: boostType => setState(activateComputeBoost(boostType)),
+    reclaimComputeBoost: () => setState(reclaimComputeBoost),
     mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
     mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
     mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
@@ -164,6 +170,16 @@ export const useIncrementalGame = () => {
     mergeComputeCloudsIntoDatacenter: () => setState(mergeComputeCloudsIntoDatacenter),
     mergeComputeDatacentersIntoSupercomputer: () => setState(mergeComputeDatacentersIntoSupercomputer),
     mergeComputeSupercomputersIntoMegacomputer: () => setState(mergeComputeSupercomputersIntoMegacomputer),
+    claimComputeCore: () => setState(claimComputeCore),
+    enableAutoClaimCore: () => setState(enableAutoClaimCore),
+    enableAutoMergeNodesIntoCluster: () => setState(enableAutoMergeNodesIntoCluster),
+    enableAutoMergeClustersIntoNetwork: () => setState(enableAutoMergeClustersIntoNetwork),
+    enableAutoMergeNetworksIntoGrid: () => setState(enableAutoMergeNetworksIntoGrid),
+    enableAutoMergeGridsIntoFabric: () => setState(enableAutoMergeGridsIntoFabric),
+    enableAutoMergeFabricsIntoCloud: () => setState(enableAutoMergeFabricsIntoCloud),
+    enableAutoMergeCloudsIntoDatacenter: () => setState(enableAutoMergeCloudsIntoDatacenter),
+    enableAutoMergeDatacentersIntoSupercomputer: () => setState(enableAutoMergeDatacentersIntoSupercomputer),
+    enableAutoMergeSupercomputersIntoMegacomputer: () => setState(enableAutoMergeSupercomputersIntoMegacomputer),
   }), [])
 
   const resetGame = useCallback(() => {

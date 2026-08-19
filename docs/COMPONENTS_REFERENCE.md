@@ -25,7 +25,12 @@ generator's passive production and auto-transfers up while the game was away), b
 used to only ever render inside `MainPage` — a player landing on (or still gated to)
 `ByteFoundryPage` after being away got no acknowledgment of it. Takes `{ offlineProgress,
 dismissOfflineProgress }` (the same two fields `useIncrementalGame()` returns) as props and renders
-`null` when `offlineProgress` is `null`. `offlineProgress` is not a one-shot value — a mid-session
+`null` when `offlineProgress` is `null` — which includes a short absence at or below
+`OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes): progress still applies (at 100% speed),
+but `useIncrementalGame.js`'s `computeOfflineCatchUp` deliberately withholds the summary object so this
+notice never renders for it (see `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section) — the "at
+50% speed" wording below is therefore always accurate whenever the notice does render, since that only
+happens once the reduced-speed path is the one that ran. `offlineProgress` is not a one-shot value — a mid-session
 gap detection can produce a fresh object any number of times in one mount — so the countdown/fade/
 auto-dismiss state (`OFFLINE_NOTICE_AUTO_DISMISS_MS` = 10s, `OFFLINE_NOTICE_FADE_MS` = 400ms,
 `OFFLINE_NOTICE_PROGRESS_INTERVAL_MS` = 100ms) is (re)armed by an effect keyed on the

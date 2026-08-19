@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -390,6 +390,28 @@ export const createInitialGameState = () => ({
     // merging Nodes back down, or spending Cores on a Boost (even before ever holding 8 at once),
     // must never prevent or re-hide the page once earned.
     computeMergePageUnlocked: false,
+    // PERMANENT — whether Memory → Core conversion (see tickComputeCoreConversion below) currently
+    // fires automatically on tick, or requires a manual claimComputeCore click instead. Defaults
+    // false: a fresh Core-unlock finds Memory→Core gated behind the manual "Claim Core" button on
+    // ByteFoundryPage. Permanently flips true via enableAutoClaimCore, which spends 10 Nodes — the
+    // "next tier up" from Core — the same one-time, irreversible sacrifice-to-automate shape the 8
+    // autoMerge* flags below use for every other tier boundary.
+    autoClaimCoreEnabled: false,
+    // PERMANENT — each flips true (via enableAutoMergeNodesIntoCluster etc.) once, by sacrificing
+    // ALL COMPUTE_ENTITY_CAP (10) currently-held units of the merge's OWN output entity — e.g.
+    // sacrifice 10 Clusters to enable auto-merging Nodes into Clusters. Once set, tickGame also
+    // auto-fires that specific 8-for-1 merge whenever its input entity is completely full (10, not
+    // the manual button's own 8 — automation only ever mops up an entity the player let cap out,
+    // never preempting a more efficient manual merge at 8). The manual merge button stays available
+    // either way. See tickAutoMerge/enableAutoMerge further down this file.
+    autoMergeNodesIntoCluster: false,
+    autoMergeClustersIntoNetwork: false,
+    autoMergeNetworksIntoGrid: false,
+    autoMergeGridsIntoFabric: false,
+    autoMergeFabricsIntoCloud: false,
+    autoMergeCloudsIntoDatacenter: false,
+    autoMergeDatacentersIntoSupercomputer: false,
+    autoMergeSupercomputersIntoMegacomputer: false,
     // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
     // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
     // Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
@@ -1007,9 +1029,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
   const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
   const stateAfterComputeCores = tickComputeNodeConversion(tickComputeCoreConversion(stateAfterStorage))
+  // Any auto-merge tier the player has permanently unlocked (see enableAutoMergeNodesIntoCluster
+  // etc. and issue #316) also fires here, lowest tier first so a single tick can cascade upward
+  // through every unlocked step in a row — see AUTO_MERGE_TICKERS.
+  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(tickState), stateAfterComputeCores)
   // Counts an active Compute Boost's remaining duration down, unconditionally, alongside the rest
   // of the Byte Foundry intro ticks above — see tickComputeBoost.
-  const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterComputeCores)
+  const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges)
   const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
 
   const autoPrestigeLevel = stateAfterIntro.autoPrestige ?? null
@@ -1229,18 +1255,26 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   return tickStorage(stateAfterSpeedUp)
 }
 
-// Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS, then scaled down by
-// OFFLINE_PROGRESS_SPEED_MULTIPLIER and floored — the number of 1-second ticks
-// applyOfflineProgress will simulate.
-export const getOfflineEffectiveSeconds = elapsedRealSeconds =>
-  Math.floor(Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS) * OFFLINE_PROGRESS_SPEED_MULTIPLIER)
+// Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
+// OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, simulated at 100% speed (no reduction); beyond
+// it, the entire (capped) duration is scaled down by OFFLINE_PROGRESS_SPEED_MULTIPLIER instead —
+// then floored either way to give the number of 1-second ticks applyOfflineProgress will simulate.
+export const getOfflineEffectiveSeconds = elapsedRealSeconds => {
+  const cappedSeconds = Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS)
+  const speedMultiplier = cappedSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
+    ? OFFLINE_PROGRESS_SPEED_MULTIPLIER
+    : 1
+  return Math.floor(cappedSeconds * speedMultiplier)
+}
 
 // Catches a save up on the time it was closed/backgrounded by replaying tickGame one simulated
 // second at a time (rather than a single call with a large elapsedSeconds) so autobuyers get the
-// same one-purchase-attempt-per-second cadence they'd have had if the game had stayed open —
-// only at 50% speed, and capped to MAX_OFFLINE_SECONDS of real time. tickGame unconditionally
-// drives both the main-game tiers and the Byte Foundry (tickIntroProduction/tickIntroAutoInvest/
-// tickStorage*), so this same 50% speed and cadence apply to the entire game, not just tiers.
+// same one-purchase-attempt-per-second cadence they'd have had if the game had stayed open — at
+// full speed for a short absence, 50% speed beyond OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
+// (see getOfflineEffectiveSeconds above), and capped to MAX_OFFLINE_SECONDS of real time either
+// way. tickGame unconditionally drives both the main-game tiers and the Byte Foundry
+// (tickIntroProduction/tickIntroAutoInvest/tickStorage*), so this same speed and cadence apply to
+// the entire game, not just tiers.
 export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
   const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds)
   let result = state
@@ -2093,9 +2127,12 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // (from any past tick) but whose computeCores happens to be at COMPUTE_ENTITY_CAP right now (no
 // room left to convert into) would otherwise never re-enter this function's success path at all —
 // permanently hiding the merge chain from a player who has obviously already earned it.
-export const tickComputeCoreConversion = state => {
-  if (!isComputeCoreConversionUnlocked(state)) return state
-
+// Shared by tickComputeCoreConversion (automatic, gated on intro.autoClaimCoreEnabled) and
+// claimComputeCore (manual, player-clicked "Claim Core" button on ByteFoundryPage) below — both
+// mint a Core from a full Memory balance via the exact same rule, including the
+// computeCoresEverEarned/computeMergePageUnlocked latch bookkeeping. Callers are responsible for
+// their own gating (isComputeCoreConversionUnlocked, autoClaimCoreEnabled) before calling this.
+const mintComputeCoreIfReady = state => {
   const currentCores = state.intro.computeCores ?? 0
   const currentEverEarned = state.intro.computeCoresEverEarned ?? 0
   const latchAlreadySet = state.intro.computeMergePageUnlocked ?? false
@@ -2115,6 +2152,49 @@ export const tickComputeCoreConversion = state => {
       computeCoresEverEarned,
       computeMergePageUnlocked,
     },
+  }
+}
+
+export const tickComputeCoreConversion = state => {
+  if (!isComputeCoreConversionUnlocked(state)) return state
+  if (!(state.intro.autoClaimCoreEnabled ?? false)) return state
+  return mintComputeCoreIfReady(state)
+}
+
+// Manual counterpart to tickComputeCoreConversion above — the "Claim Core" button on
+// ByteFoundryPage, live whenever isComputeCoreConversionUnlocked and Memory is full, regardless of
+// whether autoClaimCoreEnabled is set (harmless either way: with auto-claim on, the tick loop
+// already keeps Memory flushed most of the time, so a manual click here simply mints the same Core
+// a tick would have anyway — there's no double-mint, since canConvert flips false the instant one
+// is minted). The button itself is only ever rendered while !autoClaimCoreEnabled (see
+// ByteFoundryPage) — once auto-claim is unlocked it's removed, not merely disabled.
+export const claimComputeCore = state => {
+  if (!isComputeCoreConversionUnlocked(state)) return state
+  return mintComputeCoreIfReady(state)
+}
+
+// UI mirror of claimComputeCore's own gate — whether clicking "Claim Core" right now would do
+// anything (Compute unlocked, Memory full, computeCores under COMPUTE_ENTITY_CAP).
+export const isComputeCoreClaimAvailable = state =>
+  isComputeCoreConversionUnlocked(state) &&
+  state.intro.bits >= state.intro.capacity &&
+  (state.intro.computeCores ?? 0) < COMPUTE_ENTITY_CAP
+
+// Whether enableAutoClaimCore below would do anything right now: at least COMPUTE_ENTITY_CAP (10)
+// Nodes held (the "next tier up" from Core — see intro.autoClaimCoreEnabled's own comment in
+// createInitialGameState), and auto-claim isn't already enabled.
+export const isAutoClaimCoreUnlockAvailable = state =>
+  !(state.intro.autoClaimCoreEnabled ?? false) && (state.intro.computeNodes ?? 0) >= COMPUTE_ENTITY_CAP
+
+// Permanently unlocks automatic Memory → Core conversion (see tickComputeCoreConversion above) by
+// sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held Nodes — a one-time, irreversible trade,
+// same shape as Sacrifice for 10x Capacity and the 8 enableAutoMerge* actions further down this
+// file. A same-reference no-op below isAutoClaimCoreUnlockAvailable's own gate.
+export const enableAutoClaimCore = state => {
+  if (!isAutoClaimCoreUnlockAvailable(state)) return state
+  return {
+    ...state,
+    intro: { ...state.intro, computeNodes: 0, autoClaimCoreEnabled: true },
   }
 }
 
@@ -2187,6 +2267,83 @@ export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('co
 // 8 Compute Supercomputers → 1 Compute Megacomputer — the top of the merge chain today (see issue
 // #280's "Out of scope": nothing spends a Megacomputer yet). Same posture as the merges above.
 export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers')
+
+// --- Compute auto-merge automation --- see issue #316. Each of the 8 manual merges above can be
+// permanently automated, one tier boundary at a time, by sacrificing ALL COMPUTE_ENTITY_CAP (10)
+// currently-held units of that merge's own OUTPUT entity — e.g. enableAutoMergeNodesIntoCluster
+// spends 10 Clusters to flip autoMergeNodesIntoCluster on. Once enabled, tickAutoMerge fires the
+// identical mergeComputeEntities logic automatically every tick, but only once the INPUT entity is
+// completely full (COMPUTE_ENTITY_CAP, 10) — a stricter bar than the manual button's own
+// COMPUTE_MERGE_RATIO (8), so automation only ever mops up an entity the player has let cap out,
+// never preempting a more efficient manual merge at 8. The manual button stays available
+// regardless of whether auto-merge is enabled for that tier.
+
+// A same-reference no-op while the flag isn't set, the input hasn't reached COMPUTE_ENTITY_CAP
+// yet, or the output is already at COMPUTE_ENTITY_CAP itself (mergeComputeEntities' own guard).
+const tickAutoMerge = (inputField, outputField, autoFlagField) => state => {
+  if (!(state.intro?.[autoFlagField] ?? false)) return state
+  if ((state.intro?.[inputField] ?? 0) < COMPUTE_ENTITY_CAP) return state
+  return mergeComputeEntities(inputField, outputField)(state)
+}
+
+// A same-reference no-op below isAutoMergeUnlockAvailable's own gate (already enabled, or fewer
+// than COMPUTE_ENTITY_CAP of the output entity currently held).
+const enableAutoMerge = (outputField, autoFlagField) => state => {
+  if (!isAutoMergeUnlockAvailable(state, outputField, autoFlagField)) return state
+  return { ...state, intro: { ...state.intro, [outputField]: 0, [autoFlagField]: true } }
+}
+
+// UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
+// actually unlock automation for this tier pair.
+const isAutoMergeUnlockAvailable = (state, outputField, autoFlagField) =>
+  !(state.intro?.[autoFlagField] ?? false) && (state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP
+
+export const tickAutoMergeNodesIntoCluster = tickAutoMerge('computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster')
+export const enableAutoMergeNodesIntoCluster = enableAutoMerge('computeClusters', 'autoMergeNodesIntoCluster')
+export const isAutoMergeNodesIntoClusterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClusters', 'autoMergeNodesIntoCluster')
+
+export const tickAutoMergeClustersIntoNetwork = tickAutoMerge('computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork')
+export const enableAutoMergeClustersIntoNetwork = enableAutoMerge('computeNetworks', 'autoMergeClustersIntoNetwork')
+export const isAutoMergeClustersIntoNetworkUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNetworks', 'autoMergeClustersIntoNetwork')
+
+export const tickAutoMergeNetworksIntoGrid = tickAutoMerge('computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid')
+export const enableAutoMergeNetworksIntoGrid = enableAutoMerge('computeGrids', 'autoMergeNetworksIntoGrid')
+export const isAutoMergeNetworksIntoGridUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeGrids', 'autoMergeNetworksIntoGrid')
+
+export const tickAutoMergeGridsIntoFabric = tickAutoMerge('computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric')
+export const enableAutoMergeGridsIntoFabric = enableAutoMerge('computeFabrics', 'autoMergeGridsIntoFabric')
+export const isAutoMergeGridsIntoFabricUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeFabrics', 'autoMergeGridsIntoFabric')
+
+export const tickAutoMergeFabricsIntoCloud = tickAutoMerge('computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud')
+export const enableAutoMergeFabricsIntoCloud = enableAutoMerge('computeClouds', 'autoMergeFabricsIntoCloud')
+export const isAutoMergeFabricsIntoCloudUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClouds', 'autoMergeFabricsIntoCloud')
+
+export const tickAutoMergeCloudsIntoDatacenter = tickAutoMerge('computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
+export const enableAutoMergeCloudsIntoDatacenter = enableAutoMerge('computeDatacenters', 'autoMergeCloudsIntoDatacenter')
+export const isAutoMergeCloudsIntoDatacenterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
+
+export const tickAutoMergeDatacentersIntoSupercomputer = tickAutoMerge('computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
+export const enableAutoMergeDatacentersIntoSupercomputer = enableAutoMerge('computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
+export const isAutoMergeDatacentersIntoSupercomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
+
+export const tickAutoMergeSupercomputersIntoMegacomputer = tickAutoMerge('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
+export const enableAutoMergeSupercomputersIntoMegacomputer = enableAutoMerge('computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
+export const isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
+
+// Every tickAutoMerge* above, lowest tier first — tickGame reduces state through this array in
+// order so a single tick can cascade automation all the way up the chain (e.g. Nodes capping out
+// auto-merges into a Cluster, which can itself immediately cap out and auto-merge into a Network
+// the same tick, and so on) whenever the player has unlocked auto-merge at every step in a row.
+const AUTO_MERGE_TICKERS = [
+  tickAutoMergeNodesIntoCluster,
+  tickAutoMergeClustersIntoNetwork,
+  tickAutoMergeNetworksIntoGrid,
+  tickAutoMergeGridsIntoFabric,
+  tickAutoMergeFabricsIntoCloud,
+  tickAutoMergeCloudsIntoDatacenter,
+  tickAutoMergeDatacentersIntoSupercomputer,
+  tickAutoMergeSupercomputersIntoMegacomputer,
+]
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
 // no boost is active. Applied to Memory's own passive production (tickIntroProduction) and
@@ -2268,6 +2425,52 @@ export const tickComputeBoost = elapsedSeconds => state => {
       computeBoostType: null,
       computeBoostStacks: 0,
       computeBoostRemainingSeconds: 0,
+    },
+  }
+}
+
+// Whether reclaimComputeBoost below would do anything right now — any boost currently active at
+// all. Only the UNUSED quantity is ever reclaimable — a stack whose time has already fully ticked
+// away no longer exists (tickComputeBoost clears type/stacks/remaining back to inactive the
+// instant remaining hits 0), so "any boost active" and "something reclaimable" are the same check.
+export const canReclaimComputeBoost = state => (state.intro.computeBoostType ?? null) !== null
+
+// Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
+// time — the exact inverse of one activateComputeBoost call: refunds 1 Compute Core (capped at
+// COMPUTE_ENTITY_CAP, in case more were earned while the boost was running) and subtracts that
+// preset's own durationSeconds back out of computeBoostRemainingSeconds (floored at 0),
+// decrementing computeBoostStacks by 1. Clears the boost fully back to inactive (type null,
+// stacks/remaining 0) once the last stack is reclaimed, rather than leaving a 0-stack "active"
+// boost around. A same-reference no-op while no boost is active (canReclaimComputeBoost's own
+// gate).
+export const reclaimComputeBoost = state => {
+  if (!canReclaimComputeBoost(state)) return state
+
+  const boostType = state.intro.computeBoostType
+  const preset = COMPUTE_BOOST_PRESETS[boostType]
+  const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
+  const refundedCores = Math.min(COMPUTE_ENTITY_CAP, (state.intro.computeCores ?? 0) + 1)
+
+  if (nextStacks <= 0) {
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        computeCores: refundedCores,
+        computeBoostType: null,
+        computeBoostStacks: 0,
+        computeBoostRemainingSeconds: 0,
+      },
+    }
+  }
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      computeCores: refundedCores,
+      computeBoostStacks: nextStacks,
+      computeBoostRemainingSeconds: Math.max(0, (state.intro.computeBoostRemainingSeconds ?? 0) - preset.durationSeconds),
     },
   }
 }
@@ -2539,6 +2742,18 @@ export const prestigeGame = state => {
       computeSupercomputers: state.intro?.computeSupercomputers ?? initial.intro.computeSupercomputers,
       computeMegacomputers: state.intro?.computeMegacomputers ?? initial.intro.computeMegacomputers,
       computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
+      // The auto-claim/auto-merge unlock flags (see issue #316) are one-time, irreversible
+      // purchases just like the compute-ladder entities and reveal latch above — carried through a
+      // real Prestige unchanged, never re-locked.
+      autoClaimCoreEnabled: state.intro?.autoClaimCoreEnabled ?? initial.intro.autoClaimCoreEnabled,
+      autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
+      autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
+      autoMergeNetworksIntoGrid: state.intro?.autoMergeNetworksIntoGrid ?? initial.intro.autoMergeNetworksIntoGrid,
+      autoMergeGridsIntoFabric: state.intro?.autoMergeGridsIntoFabric ?? initial.intro.autoMergeGridsIntoFabric,
+      autoMergeFabricsIntoCloud: state.intro?.autoMergeFabricsIntoCloud ?? initial.intro.autoMergeFabricsIntoCloud,
+      autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
+      autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
+      autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
       // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
       // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an
       // active boost is run-scoped and resets every real Prestige, unlike the Cores/Nodes it's

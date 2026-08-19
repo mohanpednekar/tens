@@ -50,13 +50,21 @@ rate"`, one block per whole bit/sec, filled left to right) showing rate progress
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
 (`getIntroProductionRate(intro) / BITS_PER_BYTE`). There is no separate Cache tile — the same
 progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
-read directly off the active transfer block's own fill (see below).
+read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
+`FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
+element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
+`disabled={isFull}`, and `aria-label="tap to generate a bit"` replacing the plain `"byte foundry
+balance"` label — a `$tappable` prop adds the same hover/active/disabled affordance the standalone
+tap button below has. Before `mainGameUnlocked` the tile stays a plain, non-interactive `<section>`.
 
 A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
 capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
 (Actions/Storage/transfer blocks), rather than up near the Memory tile, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
-as clickable either way, and never shrinks or changes size. Deliberately carries no `$progress` fill
+as clickable either way, and never shrinks or changes size — but is removed entirely, not merely
+hidden, once `intro.mainGameUnlocked` (Memory's own tile above takes over as the tap target
+instead, see above), rather than the two controls coexisting once tapping is no longer the primary
+loop at all. Deliberately carries no `$progress` fill
 or hidden progressbar of its own — Memory's own tile above already shows the identical bits/capacity
 fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
 (`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
@@ -103,7 +111,15 @@ renders a nav button to reach it, once revealed (`computeCoreRevealed`,
 `isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`), always
 enabled regardless of what's currently actionable there — a permanent, voluntarily-revisitable
 posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — shown as a "⚡ Compute" button
-(`aria-label="open compute"`, calling `onOpenCompute`).
+(`aria-label="open compute"`, calling `onOpenCompute`). One exception to "Compute lives entirely on
+its own screen": Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label
+`🧮 Claim Core`, calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the
+Memory tile above already computes) renders on THIS page, right before the Compute nav button, once
+`computeCoreRevealed` AND `!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled)
+once auto-claim is unlocked (see issue #316). `disabled={!canClaimComputeCore}` where
+`canClaimComputeCore = isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores
+under `COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that
+Memory needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
 
 Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
@@ -303,8 +319,24 @@ the only place this progress is shown.
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
 ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
 returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `Header` row (title
-`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`), then a `StatusText` summarizing
-the automatic Memory→Core→Node conversion and the `COMPUTE_ENTITY_CAP` (10) cap.
+`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`).
+
+The whole page is deliberately terse — every string beyond a single-word entity label lives in a
+`title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
+line (see issue #316's "fit every compute tier in one line ... clever symbols ... intuitive with no
+or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
+(`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
+
+Right after the header — before anything else, deliberately at the TOP of the page — an
+`ActiveBoostRow` (`aria-label="active compute boost"`) renders whenever a Compute Boost is active:
+one line, `"<icon> ×<multiplier> · <countdown> · <stacks>×"` (e.g. `"💥 ×16 · 44s · 1×"`), with the
+full sentence ("Burst active: ×16 production, 44s left, 1x stacked") only in that span's own
+`title` — plus, whenever `canReclaimComputeBoost`, an icon-only `IconButton` (`variant="neutral"`,
+label "↩", `aria-label="reclaim one stack of the active compute boost"`) calling
+`actions.reclaimComputeBoost`, undoing the most recently added, still-unused stack (one at a time:
+refunds 1 Core, subtracts that stack's own duration). Kept at the top so an active boost stays
+visible regardless of what else is happening lower on the page; `MainPage` shows a matching
+read-only status line while a boost is active, since its effect reaches `tier01` there too.
 
 Below that, the page branches on `intro.computeMergePageUnlocked` (a permanent, one-time reveal
 latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips the first time
@@ -312,36 +344,46 @@ latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips
 reaches 8):
 
 - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
-  `intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP`.
-- **Once unlocked:** a one-line mechanic summary for the merge chain, then a `StatCard`
-  (`aria-label="compute counters"`) showing all ten compute-ladder counters, driven off a
-  `COMPUTE_ENTITIES` array (`{ field, label }` pairs) — Cores, Nodes, Clusters, Networks, Grids,
-  Fabrics, Clouds, Datacenters, Supercomputers, Megacomputers, each as `N/10` — followed by eight
-  merge buttons, one per tier boundary, driven off a `MERGE_TIERS` array, top to bottom: "Merge 8
-  Nodes → 1 Cluster", "Merge 8 Clusters → 1 Network", "Merge 8 Networks → 1 Grid", "Merge 8 Grids →
-  1 Fabric", "Merge 8 Fabrics → 1 Cloud", "Merge 8 Clouds → 1 Datacenter", "Merge 8 Datacenters → 1
-  Supercomputer", "Merge 8 Supercomputers → 1 Megacomputer" (`variant="prestige"`). Each calls its
-  matching `game.actions.mergeCompute*Into*` action (wired in `useIncrementalGame.js`, no
-  arguments) — one per `mergeComputeEntities`-built engine function (see `docs/ECONOMY_REFERENCE.md`).
-  `disabled` mirrors the engine's own gate (`canMerge(input, output)`: input ≥ `COMPUTE_MERGE_RATIO`
-  (8) and output < `COMPUTE_ENTITY_CAP`) — a UI-only mirror, not a replacement for it; `engine.js`
-  re-validates on every call regardless (see "Security notes" in CLAUDE.md). Each button's
-  `aria-label` spells out the full action (e.g. "merge 8 nodes into 1 cluster") — note no entity
-  name carries a "compute" prefix here; "Compute" names the page/feature only, per this page's own
-  title. Each button's `title` explains the cost when enabled, or why it's blocked (input balance,
-  or the output already at cap) when disabled. Nothing spends a Megacomputer yet — see issue #280's
-  "Out of scope".
+  `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
+- **Once unlocked:** one row per compute-ladder entity, each an `EntityRow` (a `StatCard`,
+  `flex-wrap: nowrap` so it can never spill onto a second line) wrapped in an `EntityRowsGroup`
+  (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries: Cores through
+  Megacomputers). Each row is `EntityLabel` (the single-word entity name, e.g. "Clusters") +
+  `EntityCount` (`N/10`), then, for every tier except the last (Megacomputer):
+  - A **Merge** control: a fixed-width, icon-only `IconButton` (`variant="prestige"`, label "⬆" —
+    no text) for every tier from Node through Supercomputer (8 total) — always rendered, enabled
+    once `COMPUTE_MERGE_RATIO` (8) of the input is held and the output is under
+    `COMPUTE_ENTITY_CAP`. `aria-label` spells out the full action (e.g. "merge 8 nodes into 1
+    cluster") — unchanged from before this row unification, so existing queries by name still
+    work; `title` carries the same sentence a player would read. Calls the matching
+    `game.actions.mergeCompute*Into*` action, one per `mergeComputeEntities`-built engine function.
+    The Cores row has no Merge control of its own — Core's manual action ("Claim Core") lives on
+    ByteFoundryPage instead (see below).
+  - An **auto-unlock** control: once the matching `intro.autoMerge*`/`autoClaimCoreEnabled` flag is
+    already set, a plain `AutoBadge` (icon "🤖" alone, no click, `theme.color.good`, `title`
+    explaining what's automated); otherwise a fixed-width `IconButton` (`variant="info"`, label
+    "🤖", `aria-label="enable auto-<merge/claim> for <…>"`) calling the matching
+    `game.actions.enableAutoMerge*`/`enableAutoClaimCore` action — enabled once
+    `COMPUTE_ENTITY_CAP` (10) of the cost tier (the merge's own OUTPUT entity, or Nodes for Cores)
+    is held. `title` explains the sacrifice cost either way. Every `disabled`/enabled state here is
+    a UI-only mirror of the matching engine predicate
+    (`isAutoMerge*UnlockAvailable`/`isAutoClaimCoreUnlockAvailable`) — `engine.js` re-validates on
+    every call regardless (see "Security notes" in CLAUDE.md).
 
-Either way, a `PresetsRow` (`display: flex`, each button `flex: 1`, matching ByteFoundryPage's own
-`MilestonesRow` convention) of the 3 Compute Boost preset buttons follows
-(`aria-label="activate <type> compute boost"`, calling `actions.activateComputeBoost(boostType)`).
+  Nothing spends a Megacomputer yet — see issue #280's "Out of scope". "Compute" names the
+  page/feature only — no entity label carries a "Compute" prefix.
+
+Either way, a `BoostRow` (`role="group"`, `aria-label="compute boost"`) follows further down the
+page: the available Core count (`CoresAvailable`, visible text `"⬡N"`, full sentence in its own
+`title`) alongside the 3 Compute Boost preset buttons, each a small `CompactButton`
+(`variant="prestige"`, `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"`
+— e.g. `"💥×16"` for Burst, `"⏱️×4"` for Standard, `"🔋×2"` for Sustain — the preset name itself
+lives only in `title`), calling `actions.activateComputeBoost(boostType)`.
 `disabled={!isComputeBoostTurnAvailable(state, boostType)}` — folds `canActivateComputeBoost`'s own
 mechanical guard (≥1 Compute Core, no conflicting active type, below `COMPUTE_BOOST_MAX_STACKS`)
 together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
 Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title`
-naming which to take first in that case. A live status line (`aria-label="active compute boost"`)
-shows below the presets whenever a boost is active, matching `MainPage`'s own read-only status line
-for the same state.
+naming which to take first in that case.
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, still incremented on every purchase for display/back-compat purposes, but no
