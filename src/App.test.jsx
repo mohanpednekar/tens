@@ -8,6 +8,8 @@ import {
   BITS_PER_BYTE,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_ENTITY_CAP,
+  COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -2036,6 +2038,46 @@ test('tapping increments the bit balance and stops once capacity is reached', as
   expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
 })
 
+test('once mainGameUnlocked, the standalone Tap button is gone and Memory itself is the tap target', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true } })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  // There is exactly one "tap to generate a bit" control — Memory's own tile, not a separate button.
+  const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+
+  await user.click(tapTarget)
+
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '1')
+})
+
+test('the Memory tile stops accepting taps once capacity is reached, same as the old standalone button', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true } })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
+  expect(tapTarget).toBeDisabled()
+
+  await user.click(tapTarget)
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
+})
+
+test('before mainGameUnlocked, Memory\'s tile is not itself a tap target — the standalone Tap button is the only one', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, mainGameUnlocked: false })
+  render(<App />)
+
+  expect(screen.getAllByRole('button', { name: /tap to generate a bit/i })).toHaveLength(1)
+  expect(screen.getByLabelText(/^byte foundry balance$/i)).toBeInTheDocument()
+})
+
 test('combining 8 bits into a Byte resets the balance and starts passive production', async () => {
   const user = userEvent.setup()
 
@@ -2805,7 +2847,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeCores).toBe(2)
     expect(saved.intro.computeBoostType).toBe('burst')
     expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
-      new RegExp(`burst active.*×${COMPUTE_BOOST_PRESETS.burst.multiplier}`, 'i')
+      new RegExp(`×${COMPUTE_BOOST_PRESETS.burst.multiplier}`)
     )
   })
 
@@ -2874,6 +2916,70 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
+
+  test('the Boost row shows the available Core count alongside the 3 small preset buttons', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 4 })
+    render(<App />)
+    openCompute()
+
+    const boostRow = screen.getByLabelText(/^compute boost$/i)
+    expect(boostRow).toHaveTextContent('4')
+    expect(screen.getByTitle(/4 cores available/i)).toBeInTheDocument()
+  })
+
+  test('the active-boost status (effect, countdown, stacks, reclaim) renders at the top of the screen, before the preset/entity sections', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1,
+      computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
+    })
+    render(<App />)
+    openCompute()
+
+    const activeStatus = screen.getByLabelText(/^active compute boost$/i)
+    const boostRow = screen.getByLabelText(/^compute boost$/i)
+    // DOCUMENT_POSITION_FOLLOWING (4) on boostRow relative to activeStatus means activeStatus
+    // comes first in document order — i.e. it renders above boostRow on the page.
+    expect(activeStatus.compareDocumentPosition(boostRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  test('no Reclaim control appears while no boost is active', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: null })
+    render(<App />)
+    openCompute()
+
+    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+  })
+
+  test('reclaiming a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
+      computeBoostType: 'standard', computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(1)
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(saved.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+  })
+
+  test('reclaiming the last remaining stack clears the boost entirely and removes the status line', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
+      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe(null)
+    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+  })
 })
 
 describe('ComputePage merge chain', () => {
@@ -2884,7 +2990,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.queryByLabelText(/^compute counters$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^compute entities$/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
   })
 
@@ -2897,9 +3003,9 @@ describe('ComputePage merge chain', () => {
     openCompute()
 
     expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/cores.*2\/10/i)
-    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/nodes.*9\/10/i)
-    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/clusters.*3\/10/i)
+    expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/cores.*2\/10/i)
+    expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/nodes.*9\/10/i)
+    expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/clusters.*3\/10/i)
 
     fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -2951,7 +3057,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    const counters = screen.getByLabelText(/^compute counters$/i)
+    const counters = screen.getByLabelText(/^compute entities$/i)
     expect(counters).toHaveTextContent(/cores.*1\/10/i)
     expect(counters).toHaveTextContent(/nodes.*2\/10/i)
     expect(counters).toHaveTextContent(/clusters.*3\/10/i)
@@ -2996,8 +3102,120 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByLabelText(/^compute counters$/i)).not.toHaveTextContent(/compute core|compute node|compute cluster/i)
+    expect(screen.getByLabelText(/^compute entities$/i)).not.toHaveTextContent(/compute core|compute node|compute cluster/i)
     expect(screen.queryByRole('button', { name: /merge 8 compute /i })).not.toBeInTheDocument()
+  })
+})
+
+describe('Claim Core (ByteFoundryPage)', () => {
+  test('the Claim Core button appears once Compute is revealed, disabled until Memory is full', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /claim a compute core/i })).toBeDisabled()
+  })
+
+  test('clicking Claim Core mints exactly 1 Core and flushes Memory', () => {
+    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: /claim a compute core/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(1)
+    expect(saved.intro.bits).toBe(0)
+  })
+
+  test('the Claim Core button is removed entirely once auto-claim is enabled', () => {
+    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, autoClaimCoreEnabled: true })
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('Compute auto-merge / auto-claim automation', () => {
+  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+
+  test('an "enable auto-merge" control is always shown for Nodes into Clusters, disabled below 10 held Clusters', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeClusters: 9,
+    })
+    render(<App />)
+    openCompute()
+
+    expect(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i })).toBeDisabled()
+  })
+
+  test('enabling auto-merge sacrifices ALL 10 held Clusters and replaces the button with an Auto badge', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeClusters: 10,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeClusters).toBe(0)
+    expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
+    expect(screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })).not.toBeInTheDocument()
+  })
+
+  test('once auto-merge is unlocked for a tier, a real tick auto-merges 8-for-1 once the input is completely full', () => {
+    vi.useFakeTimers()
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: COMPUTE_ENTITY_CAP, autoMergeNodesIntoCluster: true,
+    })
+    const { unmount } = render(<App />)
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeClusters).toBe(1)
+    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('the manual merge button stays available even once auto-merge is enabled for that tier', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 8, autoMergeNodesIntoCluster: true,
+    })
+    render(<App />)
+    openCompute()
+
+    expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeEnabled()
+  })
+
+  test('an "enable auto-claim" control for Cores is always shown on ComputePage, disabled below 10 held Nodes', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: 9,
+    })
+    render(<App />)
+    openCompute()
+
+    expect(screen.getByRole('button', { name: /enable auto-claim for cores/i })).toBeDisabled()
+  })
+
+  test('enabling auto-claim for Cores sacrifices ALL 10 held Nodes and removes the manual Claim Core button', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /enable auto-claim for cores/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeNodes).toBe(0)
+    expect(saved.intro.autoClaimCoreEnabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))
+    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
   })
 })
 

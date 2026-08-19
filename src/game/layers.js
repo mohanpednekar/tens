@@ -200,6 +200,14 @@ export const COMPUTE_ENTITY_CAP = 10
 // above, but this merge chain is only ever player-triggered (a button click), never automatic on
 // tick — the player decides whether to merge a tier upward or keep spending/holding it. Nothing
 // spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
+// Each of the 8 manual merges above can also be permanently automated (see issue #316,
+// enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing ALL COMPUTE_ENTITY_CAP (10)
+// currently-held units of that merge's own output entity — once unlocked, the same 8-for-1 merge
+// also fires on tick whenever its input entity is completely full (10, not 8), alongside the
+// manual button, which stays available either way. Core's own Memory → Core conversion has the
+// analogous "auto claim" concept instead of "auto merge" (see intro.autoClaimCoreEnabled/
+// claimComputeCore/enableAutoClaimCore in engine.js), since there's no merge input for the first
+// tier — sacrificing 10 Nodes unlocks it.
 export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
@@ -212,9 +220,9 @@ export const COMPUTE_MERGE_RATIO = 8
 // (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
 // decaying back to inactive (see tickComputeBoost).
 export const COMPUTE_BOOST_PRESETS = {
-  burst: { multiplier: 16, durationSeconds: 10 },
-  standard: { multiplier: 4, durationSeconds: 60 },
-  sustain: { multiplier: 2, durationSeconds: 600 },
+  burst: { multiplier: 16, durationSeconds: 60 },
+  standard: { multiplier: 4, durationSeconds: 600 },
+  sustain: { multiplier: 2, durationSeconds: 3600 },
 }
 // Only one PRESET TYPE can be active at a time — a different type can't be started while one is
 // already running (see activateComputeBoost) — but the SAME type can be activated again while
