@@ -1,7 +1,7 @@
 import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
-import { formatAmount } from 'game/engine'
-import { COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO } from 'game/layers'
+import { canActivateComputeBoost, formatAmount, formatOfflineDuration, isComputeBoostTurnAvailable, isStorageBankBuildAvailable, isStorageBankFillAvailable, isBandwidthAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -15,7 +15,8 @@ const RootDiv = styled.div`
   color: ${props => props.theme.color.text};
 `
 
-// Same title/nav-link placement convention ByteFoundryPage's/InfoPage's own <Header> already use.
+// Title plus the "← Back to Byte Foundry" exit share one row, the same title/nav-link placement
+// convention ByteFoundryPage's own <Header> already uses.
 const Header = styled.header`
   align-items: center;
   display: flex;
@@ -75,6 +76,23 @@ const MergeRow = styled.div`
   width: 100%;
 `
 
+// The 3 boost preset buttons read as one paired choice, matching ByteFoundryPage's own
+// MilestonesRow (Sacrifice/Invest) convention — each takes an equal share via `flex: 1`.
+const PresetsRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
+// Display labels for COMPUTE_BOOST_PRESETS' own keys (layers.js) — the preset objects themselves
+// are keyed by a plain lowercase identifier, not a display-ready name.
+const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
+
 // Whether merging COMPUTE_MERGE_RATIO of `input` into 1 more of `output` would do anything right
 // now — same "at least one full group, and room under the cap" shape the engine's own
 // mergeComputeNodesIntoCluster/mergeComputeClustersIntoNetwork/mergeComputeNetworksIntoGrid
@@ -109,78 +127,126 @@ const MERGE_TIERS = [
   },
 ]
 
-// Reachable once intro.computeMergePageUnlocked (see App.jsx) via MainPage's own header link,
-// alongside "⚙️ Byte Foundry"/"ℹ️ Guide" — Compute Cores/Nodes themselves stay shown on
-// ByteFoundryPage's own "Compute" status section (that's Phase 1's scope, see issue #279); this
-// page is only for the manual merge chain built on top of them (see issue #280), so
-// Clusters/Networks/Grids are shown here and nowhere else, to avoid the two pages duplicating the
-// same counters. Cores/Nodes are still shown here too, for context — this page's whole purpose is
-// deciding whether to merge a tier upward, which needs the input tier's own count visible right
-// next to the merge button that spends it.
+// Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
+// once revealed (isComputeCoreConversionUnlocked), reached via that page's "⚡ Compute" nav
+// button. Activation is still gated by the Byte Foundry's forced priority order — Storage Bank
+// Fill > Bandwidth > Storage Bank Build > Compute > Memory — so a preset can show disabled here
+// even while mechanically activatable (canActivateComputeBoost), if something ranked above
+// Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The manual
+// Node→Cluster→Network→Grid merge chain (see issue #280) lives here too, alongside Cores/Nodes/
+// Boost — one page for everything Compute, rather than a second dedicated screen; merging is the
+// player's own choice and never fires automatically, unlike Core→Node. The merge section itself
+// (Clusters/Networks/Grids counters + the 3 merge buttons) only renders once
+// `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
+// (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
+// hidden behind its own later, one-time latch until the player has actually held enough Cores to
+// use it (see engine.js's tickComputeCoreConversion for where that latch flips).
+// `onBack` always returns to the Byte Foundry.
 const ComputePage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
 
+  const blockedByPriority = isStorageBankFillAvailable(state) || isBandwidthAvailable(state) || isStorageBankBuildAvailable(state)
+
   return (
     <RootDiv>
       <Header>
-        <Title>🖥️ Compute</Title>
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
+        <Title>⚡ Compute</Title>
+        <Button aria-label="Back to Byte Foundry" onClick={onBack} title="Back to Byte Foundry" type="button" variant="neutral">
+          <ButtonContent>← Back</ButtonContent>
         </Button>
       </Header>
       <StatusText>
-        {`Merge ${COMPUTE_MERGE_RATIO} of one tier into 1 of the next — your choice, nothing merges automatically. Max ${COMPUTE_ENTITY_CAP} of each.`}
+        {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
       </StatusText>
 
-      <CountersSection aria-label="compute counters">
-        <CountersRow>
-          <CounterTile>
-            <CounterLabel>Cores</CounterLabel>
-            <CounterValue>{`${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-          </CounterTile>
-          <CounterTile>
-            <CounterLabel>Nodes</CounterLabel>
-            <CounterValue>{`${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-          </CounterTile>
-          <CounterTile>
-            <CounterLabel>Clusters</CounterLabel>
-            <CounterValue>{`${formatAmount(intro.computeClusters ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-          </CounterTile>
-          <CounterTile>
-            <CounterLabel>Networks</CounterLabel>
-            <CounterValue>{`${formatAmount(intro.computeNetworks ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-          </CounterTile>
-          <CounterTile>
-            <CounterLabel>Grids</CounterLabel>
-            <CounterValue>{`${formatAmount(intro.computeGrids ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-          </CounterTile>
-        </CountersRow>
-      </CountersSection>
+      {intro.computeMergePageUnlocked
+        ? (
+          <>
+            <StatusText>
+              {`Merge ${COMPUTE_MERGE_RATIO} of one tier into 1 of the next — your choice, nothing merges automatically.`}
+            </StatusText>
 
-      <MergeRow>
-        {MERGE_TIERS.map(({ key, inputLabel, outputLabel, inputField, outputField, action }) => {
-          const inputCount = intro[inputField] ?? 0
-          const outputCount = intro[outputField] ?? 0
-          return (
-            <Button
-              key={key}
-              aria-label={`merge ${COMPUTE_MERGE_RATIO} compute ${inputLabel.toLowerCase()} into 1 compute ${outputLabel.toLowerCase()}`}
-              disabled={!canMerge(inputCount, outputCount)}
-              onClick={() => actions[action]()}
-              title={
-                outputCount >= COMPUTE_ENTITY_CAP
-                  ? `${outputLabel} is already at the max of ${COMPUTE_ENTITY_CAP}`
-                  : `Spend ${COMPUTE_MERGE_RATIO} ${inputLabel} (have ${formatAmount(inputCount)}) for 1 ${outputLabel}`
-              }
-              type="button"
-              variant="prestige"
-            >
-              <ButtonContent>{`Merge ${COMPUTE_MERGE_RATIO} ${inputLabel} → 1 ${outputLabel}`}</ButtonContent>
-            </Button>
+            <CountersSection aria-label="compute counters">
+              <CountersRow>
+                <CounterTile>
+                  <CounterLabel>Cores</CounterLabel>
+                  <CounterValue>{`${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                </CounterTile>
+                <CounterTile>
+                  <CounterLabel>Nodes</CounterLabel>
+                  <CounterValue>{`${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                </CounterTile>
+                <CounterTile>
+                  <CounterLabel>Clusters</CounterLabel>
+                  <CounterValue>{`${formatAmount(intro.computeClusters ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                </CounterTile>
+                <CounterTile>
+                  <CounterLabel>Networks</CounterLabel>
+                  <CounterValue>{`${formatAmount(intro.computeNetworks ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                </CounterTile>
+                <CounterTile>
+                  <CounterLabel>Grids</CounterLabel>
+                  <CounterValue>{`${formatAmount(intro.computeGrids ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                </CounterTile>
+              </CountersRow>
+            </CountersSection>
+
+            <MergeRow>
+              {MERGE_TIERS.map(({ key, inputLabel, outputLabel, inputField, outputField, action }) => {
+                const inputCount = intro[inputField] ?? 0
+                const outputCount = intro[outputField] ?? 0
+                return (
+                  <Button
+                    key={key}
+                    aria-label={`merge ${COMPUTE_MERGE_RATIO} compute ${inputLabel.toLowerCase()} into 1 compute ${outputLabel.toLowerCase()}`}
+                    disabled={!canMerge(inputCount, outputCount)}
+                    onClick={() => actions[action]()}
+                    title={
+                      outputCount >= COMPUTE_ENTITY_CAP
+                        ? `${outputLabel} is already at the max of ${COMPUTE_ENTITY_CAP}`
+                        : `Spend ${COMPUTE_MERGE_RATIO} ${inputLabel} (have ${formatAmount(inputCount)}) for 1 ${outputLabel}`
+                    }
+                    type="button"
+                    variant="prestige"
+                  >
+                    <ButtonContent>{`Merge ${COMPUTE_MERGE_RATIO} ${inputLabel} → 1 ${outputLabel}`}</ButtonContent>
+                  </Button>
+                )
+              })}
+            </MergeRow>
+          </>
           )
-        })}
-      </MergeRow>
+        : (
+          <StatusText>
+            {`Compute Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Compute Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
+          </StatusText>
+          )}
+
+      <PresetsRow>
+        {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => (
+          <Button
+            key={boostType}
+            aria-label={`activate ${boostType} compute boost`}
+            disabled={!isComputeBoostTurnAvailable(state, boostType)}
+            onClick={() => actions.activateComputeBoost(boostType)}
+            title={
+              canActivateComputeBoost(state, boostType) && blockedByPriority
+                ? 'Take a higher-priority upgrade first (Storage Bank Fill, Bandwidth, or Storage Bank Build)'
+                : `Spend 1 Compute Core: ×${preset.multiplier} production for ${formatOfflineDuration(preset.durationSeconds)} — stacks up to ${COMPUTE_BOOST_MAX_STACKS}x with the same preset`
+            }
+            type="button"
+            variant="prestige"
+          >
+            <ButtonContent>{`${COMPUTE_BOOST_LABELS[boostType]} ×${preset.multiplier}`}</ButtonContent>
+          </Button>
+        ))}
+      </PresetsRow>
+      {intro.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
+        <StatusText aria-label="active compute boost">
+          {`${COMPUTE_BOOST_LABELS[intro.computeBoostType] ?? intro.computeBoostType} active: ×${COMPUTE_BOOST_PRESETS[intro.computeBoostType].multiplier} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left (${intro.computeBoostStacks}x stacked)`}
+        </StatusText>
+      )}
     </RootDiv>
   )
 }

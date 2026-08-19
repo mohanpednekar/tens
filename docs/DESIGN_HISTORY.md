@@ -1039,6 +1039,20 @@ economy is built around.
 `speedUpGame`'s reset pattern deliberately mirrors `prestigeGame`'s, matching the original framing for
 this feature: "similar to starting the first run but with automations retained and 2x the speed."
 
+**Follow-up: starting requirement raised from level 1 to level 5.** `getSpeedUpRequirement` changed
+from `speedUpCount + 2` to `speedUpCount + 6` (raw; displayed level 1 → displayed level 5 for the
+first activation), keeping the same `+1`-per-cycle escalation step — only the floor moved. This
+session attempted to re-run the `simulate-run-times` bot to get updated pacing figures the way the
+original tuning above did, but the skill's `run-simulation.mjs` bot script is currently broken
+against the live engine — it imports a `buyAutobuyerUnlock` export from `engine.js` that no longer
+exists (autobuyer unlocking moved to automatic prestige-count milestones a while back; see this
+file's own tier-autobuyer-milestone entries), so it fails before simulating anything, independent of
+this change. That's a pre-existing skill/engine drift, not something this session introduced. A
+future session updating that skill script (or re-validating pacing another way) should fold real
+numbers in here; until then, treat the +4-level shift as untested against the "no run hits the
+5,000,000-tick safety cap" bar the original tuning above was held to, though the same `+1`-per-cycle
+escalation reasoning that made the original level-1 floor work continues to apply at a level-5 floor.
+
 ### Why `speedUpCount` now resets on Prestige, reversing the original design
 
 For most of this mechanic's life, `speedUpCount` (and the `2^speedUpCount` multiplier it drives) was
@@ -1544,6 +1558,127 @@ rather than requiring a separate display fix. **Don't reintroduce a standalone O
 if a future request sounds like "Overclock should add its own bonus," re-confirm against this file
 first, since that reading was already tried, shipped, and specifically walked back.
 
+### Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework
+
+The entry above explicitly warns against reintroducing a standalone Overclock multiplier. This entry
+records the case where that warning was shown to the maintainer directly during planning, and they
+confirmed — after two rounds of clarification — that they wanted it back anyway, alongside a broader
+rework of how Overclock is claimed. **This is not the earlier mistake repeated; it's a deliberate,
+informed reversal.** A future session should treat this entry, not the one above, as the current
+guidance for Overclock's reward shape — the entry above stays only as the historical record of *why*
+the fold-in design was chosen the first time.
+
+Three changes shipped together:
+
+1. **Reward**: back to a standalone `getOverclockMultiplier(overclockCount) = (1 +
+   OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.001`), a genuine third
+   factor in `getEffectiveTierTickSpeedSeconds` alongside the per-tier and global tickspeed
+   multipliers — exactly the shape the entry above reverted away from.
+   `getGlobalTickspeedProductionMultiplier` drops its `overclockCount` parameter entirely and goes
+   back to a plain function of `level`. The direct behavioral consequence the entry above called out
+   (Overclock has zero effect while the global tickspeed multiplier is still at level 0) is gone as a
+   side effect — Overclock's own factor now applies unconditionally, regardless of that other track's
+   state. The display bug the original revert fixed (a tier row's "Effective tickspeed" breakdown only
+   showing two of three active multipliers) had to be avoided again on this reintroduction —
+   `MainPage`'s breakdown line now explicitly lists all three factors (`tier ×N, global ×N, overclock
+   ×N`) rather than reusing the two-factor text unchanged.
+2. **Requirement**: `getOverclockRequirement` collapses from `(overclockCount + 1) *
+   OVERCLOCK_REQUIREMENT_STEP` (the old fixed 10-per-activation ladder: level 10, 20, 30, …) to
+   `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` with `OVERCLOCK_REQUIREMENT_STEP = 1` — level 2
+   for the first claim, level 3 for the second, level 4 for the third, … the same `+1`-per-cycle shape
+   `getSpeedUpRequirement` already uses, just without Speed Up's own display offset. The maintainer's
+   framing was "no levels concept at all" beyond the last tier's own level — the intent being that the
+   last tier's own (already steep) cost curve should be what gates Overclock, not an additional
+   artificial multiplier stacked on top of it.
+
+   **The `+2` floor (not `+1`) is the result of a caught review bug, not the original design.** The
+   first version of this rework used `(overclockCount + 1) * OVERCLOCK_REQUIREMENT_STEP` unchanged
+   (i.e. a `+1` floor, requirement 1 for the first claim) — but every tier's `purchaseLevels` starts at
+   1 by default (the tier's own un-purchased state, not 0), so a requirement of exactly 1 was already
+   satisfied by a completely untouched last tier. That made the first Overclock claim of *every* cycle
+   free — click it the instant its panel appears, every time, for a permanent bonus at zero cost —
+   directly contradicting both the "last tier's own cost curve should gate this" intent above and this
+   same rework's own parallel fix to `getSpeedUpRequirement` (raising Speed Up's floor from level 1 to
+   level 5 specifically so its first activation isn't free either — see the entry on that above). A
+   `code-reviewer` pass caught this before merge by tracing the exact `purchaseLevels` default through
+   `overclockGame`'s eligibility check, not by manual testing — worth remembering if this formula is
+   ever touched again: **a `+N` floor here must always be checked against `purchaseLevels`' own
+   1-indexed starting value, not just against 0.**
+3. **Claim behavior — genuinely new, not a revert of anything**: `overclockGame` used to increment
+   `overclockCount` by exactly 1 per activation. It now sets `overclockCount` to
+   `state.purchaseLevels[lastTier.id]` directly — the last tier's level *at the moment of the claim*.
+   Combined with the requirement's `+1`-per-cycle ladder, this means a player who falls behind (last
+   claimed at level 5, but the last tier has since reached level 8, e.g. from letting an autobuyer run
+   unattended) catches all the way up to level 8 in a single claim rather than needing three separate
+   ones. The eligibility check still guarantees the jump is always at least a +1 gain over the previous
+   `overclockCount`, so this can never move Overclock backwards.
+
+A related display issue caught in the same review pass: Overclock's multiplier compounds in steps of
+just 0.1% (`OVERCLOCK_MULTIPLIER_STEP`), but `MainPage`'s existing `formatRate` helper rounds to 2
+decimal places — which rounds `×1.001` through `×1.004` (the first 4 claimed levels) all down to a
+bare `×1`, indistinguishable from no bonus at all, on the `OverclockButton` and the tier row's
+"Effective tickspeed" breakdown (the money-balance breakdown's own Overclock line was unaffected,
+since it already used a separate, more precise percent formatter). Fixed with a new `formatPreciseRate`
+helper (3 decimal places, same trimming convention as `formatRate`) used everywhere Overclock's own
+multiplier is displayed.
+
+Everything else about `overclockGame` (the full soft-reset shape, which permanent flags/levels carry
+over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
+— only the reward formula, the requirement formula, and the claim's target value changed.
+
+### Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too
+
+A direct, same-session follow-up to the entry above ("Overclock, again"), and — importantly — this
+entry supersedes that one specifically on the standalone-vs-folded question, before that PR ever
+merged. The sequence within this one session: the maintainer first confirmed (twice, across two
+rounds of clarification) that they wanted a standalone multiplier reintroduced, explicitly overriding
+the original entry's "don't reintroduce" warning — that shipped and merged. Immediately after, as a
+follow-up, they asked to raise the per-level step from `0.1%` to `1.1x`; while implementing *that* as
+a second, still-unmerged PR, the maintainer clarified: "I meant for the tickspeed multiplier which
+starts at 1%" — i.e. the `1.1x` was always meant to apply to the *existing* `GLOBAL_TICKSPEED_PRODUCTION_STEP`
+(1%) track, not a new standalone factor unrelated to it. That reopens the exact standalone-vs-folded
+question the entry above had just resolved in favor of standalone — this time resolved the other way,
+before the standalone-multiplier PR's own follow-up ever reached `main`. **The original entry's
+"don't reintroduce a standalone Overclock multiplier" warning turns out to be the durable guidance
+after all** — a future session should default to the folded design described here unless explicitly
+told otherwise, and should re-confirm carefully (as this session eventually did) before reintroducing
+a standalone factor again.
+
+What actually changed from the entry above:
+
+1. **Reward folds back into `getGlobalTickspeedProductionMultiplier`**, reverting that function's
+   signature back to `(level, overclockCount = 0)` and removing the standalone third factor from
+   `getEffectiveTierTickSpeedSeconds` (back to the original two-factor division: tier × global).
+   `getOverclockMultiplier(overclockCount) = (1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount`
+   (`OVERCLOCK_MULTIPLIER_STEP = 0.1`, i.e. ×1.1 per level — the value requested in the same
+   follow-up) is now the growth factor multiplied into that function's own regular *and* milestone
+   steps: `regularStep = GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)`,
+   `milestoneStep = GLOBAL_TICKSPEED_MILESTONE_STEP * getOverclockMultiplier(overclockCount)`. A
+   direct consequence, same as before the entry above: Overclock has zero effect while the global
+   tickspeed multiplier itself is still at level 0/not yet bought.
+2. **Multiplicative, not additive** — this is the one deliberate difference from the very original
+   pre-"Overclock, again" folded design (see the top-of-section entry), which added a flat
+   percentage-point step per activation (`GLOBAL_TICKSPEED_PRODUCTION_STEP + overclockCount *
+   OVERCLOCK_PRODUCTION_STEP`). Here the step *compounds*: 1% → 1.1% → 1.21% → 1.331% → … per
+   claimed level, matching the maintainer's original "multiplicative per level instead of additive"
+   framing from the very start of this whole thread of requests.
+3. **Applies to milestone levels too** — a genuinely new twist neither prior folded design had. The
+   original pre-"Overclock, again" design left `GLOBAL_TICKSPEED_MILESTONE_STEP` (10%, every 10th
+   level) untouched by Overclock; this one multiplies it by the same `getOverclockMultiplier` factor
+   as the regular step, per explicit maintainer choice when asked directly whether milestones should
+   be included.
+4. **`formatPreciseRate` (added, then simplified away, in the entry above) never mattered here** —
+   `MainPage`'s Overclock displays go back to the pre-"Overclock, again" percentage-rate framing
+   (`⚡ N%/lvl · Lv.X/Y`, "Tickspeed upgrade's per-level rate is now N% (was 1%) from level X")
+   instead of a `×N` standalone-multiplier framing, so the precision problem that helper existed for
+   doesn't arise in this design at all.
+
+**Unchanged from the entry above** (these were never in question): `getOverclockRequirement`'s `+2`
+floor (a completely untouched last tier can never make the first claim of a cycle free) and its
+`+1`-per-cycle escalation beyond that floor; `overclockGame`'s catch-up claim (`overclockCount` jumps
+straight to the last tier's current level, not just `+1`); the full soft-reset shape and which
+permanent flags/levels survive it; wiping `speedUpCount` to 0 on claim.
+
 ### The 1000-Byte Invest tier drops from two claims to one
 
 An earlier entry ("The same round also corrected a misreading of 'Invest for Double Production'…",
@@ -1814,6 +1949,57 @@ Also implemented alongside this: a native `window.confirm()` before Sacrifice fo
 actually fires, spelling out that it's permanent and raises every future Compute Core's cost — same
 "no modal component to reuse" rationale MainPage's own Reset button confirm already documents (see
 `handleSacrificeClick` in `ByteFoundryPage`).
+
+### Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens
+
+Requested directly: force an explicit priority order across the Byte Foundry's five recurring
+"upgrade" actions, disabling every lower-ranked one whenever a higher-ranked one is currently
+available — generalizing a pattern that already existed for exactly one pair (Sacrifice was already
+gated behind Combine/Invest/a buildable Storage bank, see "Sacrifice for 10x Capacity gated behind
+every other currently-possible action" above) into a full five-item chain, and adding two brand-new
+blocking conditions to that chain (a redeemable Storage Bank Fill, an activatable Compute Boost) that
+didn't participate in the gate at all before. Implemented as base predicates
+(`isStorageBankFillAvailable`/`isBandwidthAvailable`/`isStorageBankBuildAvailable`/
+`isComputeUpgradeAvailable`) composed into "turn"-suffixed predicates that fold the ranking in
+(`isBandwidthTurnAvailable`/`isStorageBankBuildTurnAvailable`/`isComputeBoostTurnAvailable`), each
+enforced inside its own reducer (not just a UI-disabled state) — the same "engine re-validates"
+posture the codebase already applies everywhere else. One correction made mid-implementation:
+`isStorageBankBuildAvailable` was initially written wrapped in an `isStorageUnlocked` check, mirroring
+the OLD `isMemoryCapacityUpgradeAvailable`'s own inline logic — but `buildStorageBank` itself has
+never required that threshold (only the UI reveal does), and wrapping it broke an existing
+`buildStorageBank` unit test that builds a bank below the Storage-reveal capacity. The wrapper was
+dropped; in practice this changes nothing observable through the UI, since a bank can never be
+buildable before `isStorageUnlocked` is true anyway (their thresholds coincide by construction — see
+`INTRO_STORAGE_UNLOCK_CAPACITY`'s own comment in `layers.js`).
+
+Requested alongside this: move Storage and Compute off ByteFoundryPage onto their own freshly
+designed screens (`StoragePage`/`ComputePage`), each reached via a nav button shown once revealed,
+worded as "reveal the dedicated screen on clicking that button once it is affordable." Read
+literally, this would gate the NAV BUTTON itself on the same priority chain as the actions inside
+it — but implementing that literally and testing it end-to-end surfaced a real problem: with the nav
+button disabled whenever nothing on that screen is currently actionable, a player can never open
+Storage to check on an already-built-but-not-yet-affordable-to-redeem bank, or open Compute to see
+banked Cores/Nodes, since "nothing currently actionable" is a common, ordinary state, not an edge
+case. That's a materially worse experience than the rest of the app's own established convention —
+MainPage's "⚙️ Byte Foundry" link is always enabled once unlocked, a permanent, voluntarily-
+revisitable screen regardless of what's currently affordable on it. The nav buttons were changed to
+follow that same always-enabled-once-revealed convention instead: `onOpenStorage`/`onOpenCompute` are
+plain, unconditional handlers, and only the actions INSIDE `StoragePage`/`ComputePage` (Build,
+Redeem, activate a Boost) stay gated by the priority chain. If a stricter, affordability-gated nav
+button is what was actually wanted, that's a one-line change at each nav button's own `disabled`
+prop (`disabled={!(isStorageBankFillAvailable(state) || isStorageBankBuildTurnAvailable(state))}` for
+Storage, `disabled={!isComputeUpgradeTurnAvailable(state)}` for Compute) — nothing else in the engine
+layer would need to change.
+
+This also meant fixing `App.jsx`'s own gate-override logic: `showingFoundry` previously forced
+`ByteFoundryPage` back onto the screen whenever `!intro.mainGameUnlocked`, *regardless* of `page`,
+with only `'info'` exempted (a deliberate courtesy so Auto-Prestige firing while reading the Guide
+page doesn't yank the player off it). Since `'storage'`/`'compute'` are reached only via a button ON
+`ByteFoundryPage` itself, and Storage/Compute's own reveal thresholds sit far above
+`mainGameUnlocked`'s own much-earlier flip point, the unmodified override made those two pages
+**permanently unreachable during the mandatory gate phase** — caught by an App-level test
+(`fireEvent.click` on the nav button silently landing back on the ByteFoundryPage heading instead of
+navigating). `'storage'`/`'compute'` were added to the same exclusion `'info'` already had.
 
 ## Distribution
 
