@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -431,12 +431,18 @@ export const createInitialGameState = () => ({
     computeCloudsMergeRemainingSeconds: 0,
     computeDatacentersMergeRemainingSeconds: 0,
     computeSupercomputersMergeRemainingSeconds: 0,
-    // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
-    // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
-    // Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
+    // NOT permanent — resets to null/null/0/0 on every real Prestige (unlike computeCores/
+    // computeNodes themselves), but carried through untouched by Speed Up/Overclock, same as the
+    // rest of intro. Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
     // activateComputeBoost/tickComputeBoost/getComputeBoostMultiplier below.
     computeBoostType: null,
-    // How many times the active preset has been stacked (see activateComputeBoost) — 0 while
+    // NOT permanent, same reset posture as computeBoostType. Which compute-ladder tier (1 =
+    // Core, … 10 = Megacomputer — see COMPUTE_BOOST_TIER_FIELDS in layers.js) funded the currently
+    // active boost, null while inactive — issue #326. Determines both the refund field
+    // (reclaimComputeBoost) and the multiplier/duration scale (getComputeBoostTierMultiplier/
+    // getComputeBoostTierDurationSeconds) for as long as this boost stays active.
+    computeBoostTierIndex: null,
+    // How many times the active boost has been stacked (see stackComputeBoost) — 0 while
     // computeBoostType is null. Purely informational; only computeBoostRemainingSeconds drives
     // the actual multiplier's expiry.
     computeBoostStacks: 0,
@@ -1502,12 +1508,16 @@ export const isBandwidthAvailable = state => {
 export const isDiskBuildAvailable = state =>
   !state.intro.diskBuild && state.intro.bits >= getDiskCost(getDiskSize(state))
 
-// "Compute" — true once Compute Core conversion is unlocked and at least one boost preset is
-// mechanically activatable right now (see canActivateComputeBoost, defined further down this
-// file).
+// "Compute" — true once Compute Core conversion is unlocked and either a brand new boost is
+// mechanically activatable from some compute-ladder tier, or the currently active boost (if any)
+// can be stacked further (see canActivateComputeBoost/canStackComputeBoost, defined further down
+// this file — issue #326).
 export const isComputeUpgradeAvailable = state =>
   isComputeCoreConversionUnlocked(state) &&
-  Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType))
+  (canStackComputeBoost(state) ||
+    COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
+      Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
+    ))
 
 // "Memory" (lowest priority) — Memory must be full (bits === capacity) AND every action ranked
 // above it — Combine into a Byte, Disk Fill, Bandwidth, Disk Build, Compute — must currently be
@@ -2442,71 +2452,144 @@ const AUTO_MERGE_TICKERS = [
   tickAutoMergeSupercomputersIntoMegacomputer,
 ]
 
+// --- Compute Boost tier scaling --- issue #326: a boost activated from compute-ladder tier
+// `tierIndex` (1 = Core, … COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) is
+// COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex - 1) times as powerful as that preset's own BASE (tier
+// 1) multiplier, but only tierIndex times as long — a deliberately different scaling shape
+// (exponential power, linear duration) so a higher tier trades a much bigger multiplier for a
+// proportionally, not exponentially, longer commitment. Both return 0 for an invalid
+// boostType/tierIndex, which every caller below treats the same as "not activatable."
+const isValidComputeBoostTier = tierIndex => Number.isInteger(tierIndex) && tierIndex >= 1 && tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length
+
+export const getComputeBoostTierField = tierIndex =>
+  isValidComputeBoostTier(tierIndex) ? COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1] : null
+
+export const getComputeBoostTierMultiplier = (boostType, tierIndex) => {
+  const preset = COMPUTE_BOOST_PRESETS[boostType]
+  if (!preset || !isValidComputeBoostTier(tierIndex)) return 0
+  return preset.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** (tierIndex - 1)
+}
+
+export const getComputeBoostTierDurationSeconds = (boostType, tierIndex) => {
+  const preset = COMPUTE_BOOST_PRESETS[boostType]
+  if (!preset || !isValidComputeBoostTier(tierIndex)) return 0
+  return preset.durationSeconds * tierIndex
+}
+
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
 // no boost is active. Applied to Memory's own passive production (tickIntroProduction) and
 // tier01's production specifically (see tickGame) — "the base production tier of each screen."
-// Stacking (see activateComputeBoost) only ever extends computeBoostRemainingSeconds, never
-// compounds the multiplier itself.
+// Stacking (see stackComputeBoost) only ever extends computeBoostRemainingSeconds, never
+// compounds the multiplier itself. `intro.computeBoostTierIndex ?? 1` defensively falls back to
+// tier 1 (Core) for a save from before issue #326 existed (computeBoostType already set, no
+// tierIndex field yet) — Cores was the only funding source before this feature, so that's the
+// correct reading of such a save, not an error case.
 export const getComputeBoostMultiplier = intro =>
-  COMPUTE_BOOST_PRESETS[intro?.computeBoostType]?.multiplier ?? 1
+  intro?.computeBoostType ? (getComputeBoostTierMultiplier(intro.computeBoostType, intro.computeBoostTierIndex ?? 1) || 1) : 1
 
-// Whether boostType can be activated right now: at least 1 Compute Core available, and either no
-// boost is currently active, the same type is (so it can stack), or the active type is already at
-// COMPUTE_BOOST_MAX_STACKS (blocking even a same-type restack once maxed). The actual gate
-// activateComputeBoost itself enforces, not just a UI-only disabled state — see "Security notes"
-// in CLAUDE.md.
-export const canActivateComputeBoost = (state, boostType) => {
+// Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
+// at least 1 of that tier's own token held, and — unlike before issue #326 — NO boost of any kind
+// currently active (activating a brand new boost is blocked entirely while one is running; see
+// stackComputeBoost for extending the one already active). The actual gate activateComputeBoost
+// itself enforces, not just a UI-only disabled state — see "Security notes" in CLAUDE.md.
+export const canActivateComputeBoost = (state, boostType, tierIndex) => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return false
-  if ((state.intro.computeCores ?? 0) < 1) return false
-  const currentType = state.intro.computeBoostType ?? null
-  if (currentType !== null && currentType !== boostType) return false
-  const currentStacks = state.intro.computeBoostStacks ?? 0
-  return !(currentType === boostType && currentStacks >= COMPUTE_BOOST_MAX_STACKS)
+  const field = getComputeBoostTierField(tierIndex)
+  if (!field) return false
+  if ((state.intro.computeBoostType ?? null) !== null) return false
+  return (state.intro[field] ?? 0) >= 1
 }
 
-// A specific Compute Boost preset's own forced-priority turn: mechanically activatable (see
-// canActivateComputeBoost above) AND nothing ranked above Compute (Disk Fill, Bandwidth,
-// Disk Build) currently is.
-export const isComputeBoostTurnAvailable = (state, boostType) =>
-  canActivateComputeBoost(state, boostType) &&
+// A specific (boostType, tierIndex) activation's own forced-priority turn: mechanically
+// activatable (see canActivateComputeBoost above) AND nothing ranked above Compute (Disk Fill,
+// Bandwidth, Disk Build) currently is.
+export const isComputeBoostTurnAvailable = (state, boostType, tierIndex) =>
+  canActivateComputeBoost(state, boostType, tierIndex) &&
   !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)
 
-// Whether ANY Compute Boost preset currently has its turn — the Compute-level analogue of the
-// other four forced-priority "turn" predicates above. NOT used to gate ComputePage's own nav
-// button on ByteFoundryPage, which stays enabled once revealed regardless of turn (see "Byte
-// Foundry" in CLAUDE.md for why) — only the individual preset buttons inside ComputePage gate on
-// isComputeBoostTurnAvailable directly, per preset.
+// Whether stackComputeBoost below would do anything right now: a boost IS currently active, it
+// hasn't already hit COMPUTE_BOOST_MAX_STACKS, and at least 1 more token of the ACTIVE boost's OWN
+// funding tier (intro.computeBoostTierIndex) is held — Stack always extends whichever boost is
+// currently running, regardless of any tier a player might have since selected in the UI (issue
+// #326).
+export const canStackComputeBoost = state => {
+  const boostType = state.intro.computeBoostType ?? null
+  if (boostType === null) return false
+  if ((state.intro.computeBoostStacks ?? 0) >= COMPUTE_BOOST_MAX_STACKS) return false
+  const field = getComputeBoostTierField(state.intro.computeBoostTierIndex)
+  if (!field) return false
+  return (state.intro[field] ?? 0) >= 1
+}
+
+// Stack's own forced-priority turn — same shape as isComputeBoostTurnAvailable above.
+export const isStackComputeBoostTurnAvailable = state =>
+  canStackComputeBoost(state) &&
+  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)
+
+// Whether ANY Compute Boost action currently has its turn — either starting a brand new boost from
+// some tier (canActivateComputeBoost, only possible while none is active) or stacking the one
+// already running (canStackComputeBoost) — the Compute-level analogue of the other four
+// forced-priority "turn" predicates above. NOT used to gate ComputePage's own nav button on
+// ByteFoundryPage, which stays enabled once revealed regardless of turn (see "Byte Foundry" in
+// CLAUDE.md for why) — only the individual preset/Stack buttons inside ComputePage gate on
+// isComputeBoostTurnAvailable/isStackComputeBoostTurnAvailable directly.
 export const isComputeUpgradeTurnAvailable = state =>
-  Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType))
+  isStackComputeBoostTurnAvailable(state) ||
+  COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
+    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType, index + 1))
+  )
 
-// Spends exactly 1 Compute Core (regardless of preset — see COMPUTE_BOOST_PRESETS in layers.js)
-// and either starts a fresh boost of boostType, or — if the same type is already active — stacks
-// it: computeBoostStacks += 1 and computeBoostRemainingSeconds += the preset's own durationSeconds
-// (extending the remaining time, not resetting it). No-op (same-reference) below
-// isComputeBoostTurnAvailable's guard above.
-export const activateComputeBoost = boostType => state => {
-  if (!isComputeBoostTurnAvailable(state, boostType)) return state
+// Starts a brand new boost of boostType, funded by tierIndex — spends exactly 1 token of that
+// tier's own field (getComputeBoostTierField), sets computeBoostStacks to 1, and
+// computeBoostRemainingSeconds to that tier's own getComputeBoostTierDurationSeconds. No-op
+// (same-reference) below isComputeBoostTurnAvailable's guard above — in particular, a same-
+// reference no-op while ANY boost is already active, even the same type/tier (see
+// stackComputeBoost for that case instead).
+export const activateComputeBoost = (boostType, tierIndex) => state => {
+  if (!isComputeBoostTurnAvailable(state, boostType, tierIndex)) return state
 
-  const preset = COMPUTE_BOOST_PRESETS[boostType]
-  const alreadyActive = (state.intro.computeBoostType ?? null) === boostType
+  const field = getComputeBoostTierField(tierIndex)
 
   return {
     ...state,
     intro: {
       ...state.intro,
-      computeCores: (state.intro.computeCores ?? 0) - 1,
+      [field]: (state.intro[field] ?? 0) - 1,
       computeBoostType: boostType,
-      computeBoostStacks: alreadyActive ? (state.intro.computeBoostStacks ?? 0) + 1 : 1,
-      computeBoostRemainingSeconds: alreadyActive
-        ? (state.intro.computeBoostRemainingSeconds ?? 0) + preset.durationSeconds
-        : preset.durationSeconds,
+      computeBoostTierIndex: tierIndex,
+      computeBoostStacks: 1,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex),
+    },
+  }
+}
+
+// Extends the CURRENTLY ACTIVE boost by one more stack — spends 1 more token of that boost's own
+// funding tier (intro.computeBoostTierIndex, NOT whatever tier a player might have selected in the
+// UI since activating), increments computeBoostStacks, and adds that same tier's own
+// getComputeBoostTierDurationSeconds onto computeBoostRemainingSeconds (extending the remaining
+// time, not resetting it). No-op (same-reference) below isStackComputeBoostTurnAvailable's guard
+// above.
+export const stackComputeBoost = state => {
+  if (!isStackComputeBoostTurnAvailable(state)) return state
+
+  const boostType = state.intro.computeBoostType
+  const tierIndex = state.intro.computeBoostTierIndex
+  const field = getComputeBoostTierField(tierIndex)
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [field]: (state.intro[field] ?? 0) - 1,
+      computeBoostStacks: (state.intro.computeBoostStacks ?? 0) + 1,
+      computeBoostRemainingSeconds: (state.intro.computeBoostRemainingSeconds ?? 0) + getComputeBoostTierDurationSeconds(boostType, tierIndex),
     },
   }
 }
 
 // Counts the active boost's remaining duration down every tick, frozen or not (same posture as
-// every other Byte Foundry mechanic) — clears back to inactive (type null, stacks/remaining 0)
-// once it reaches 0. A same-reference no-op while no boost is active.
+// every other Byte Foundry mechanic) — clears back to inactive (type/tierIndex null,
+// stacks/remaining 0) once it reaches 0. A same-reference no-op while no boost is active.
 export const tickComputeBoost = elapsedSeconds => state => {
   if ((state.intro.computeBoostType ?? null) === null) return state
 
@@ -2520,6 +2603,7 @@ export const tickComputeBoost = elapsedSeconds => state => {
     intro: {
       ...state.intro,
       computeBoostType: null,
+      computeBoostTierIndex: null,
       computeBoostStacks: 0,
       computeBoostRemainingSeconds: 0,
     },
@@ -2528,33 +2612,36 @@ export const tickComputeBoost = elapsedSeconds => state => {
 
 // Whether reclaimComputeBoost below would do anything right now — any boost currently active at
 // all. Only the UNUSED quantity is ever reclaimable — a stack whose time has already fully ticked
-// away no longer exists (tickComputeBoost clears type/stacks/remaining back to inactive the
-// instant remaining hits 0), so "any boost active" and "something reclaimable" are the same check.
+// away no longer exists (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive
+// the instant remaining hits 0), so "any boost active" and "something reclaimable" are the same
+// check.
 export const canReclaimComputeBoost = state => (state.intro.computeBoostType ?? null) !== null
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
-// time — the exact inverse of one activateComputeBoost call: refunds 1 Compute Core (capped at
-// COMPUTE_ENTITY_CAP, in case more were earned while the boost was running) and subtracts that
-// preset's own durationSeconds back out of computeBoostRemainingSeconds (floored at 0),
-// decrementing computeBoostStacks by 1. Clears the boost fully back to inactive (type null,
-// stacks/remaining 0) once the last stack is reclaimed, rather than leaving a 0-stack "active"
-// boost around. A same-reference no-op while no boost is active (canReclaimComputeBoost's own
-// gate).
+// time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
+// the active boost's own funding tier (capped at COMPUTE_ENTITY_CAP, in case more were earned
+// while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
+// back out of computeBoostRemainingSeconds (floored at 0), decrementing computeBoostStacks by 1.
+// Clears the boost fully back to inactive (type/tierIndex null, stacks/remaining 0) once the last
+// stack is reclaimed, rather than leaving a 0-stack "active" boost around. A same-reference no-op
+// while no boost is active (canReclaimComputeBoost's own gate).
 export const reclaimComputeBoost = state => {
   if (!canReclaimComputeBoost(state)) return state
 
   const boostType = state.intro.computeBoostType
-  const preset = COMPUTE_BOOST_PRESETS[boostType]
+  const tierIndex = state.intro.computeBoostTierIndex
+  const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  const refundedCores = Math.min(COMPUTE_ENTITY_CAP, (state.intro.computeCores ?? 0) + 1)
+  const refunded = Math.min(COMPUTE_ENTITY_CAP, (state.intro[field] ?? 0) + 1)
 
   if (nextStacks <= 0) {
     return {
       ...state,
       intro: {
         ...state.intro,
-        computeCores: refundedCores,
+        [field]: refunded,
         computeBoostType: null,
+        computeBoostTierIndex: null,
         computeBoostStacks: 0,
         computeBoostRemainingSeconds: 0,
       },
@@ -2565,9 +2652,9 @@ export const reclaimComputeBoost = state => {
     ...state,
     intro: {
       ...state.intro,
-      computeCores: refundedCores,
+      [field]: refunded,
       computeBoostStacks: nextStacks,
-      computeBoostRemainingSeconds: Math.max(0, (state.intro.computeBoostRemainingSeconds ?? 0) - preset.durationSeconds),
+      computeBoostRemainingSeconds: Math.max(0, (state.intro.computeBoostRemainingSeconds ?? 0) - getComputeBoostTierDurationSeconds(boostType, tierIndex)),
     },
   }
 }
@@ -2866,9 +2953,10 @@ export const prestigeGame = state => {
       computeCloudsMergeRemainingSeconds: state.intro?.computeCloudsMergeRemainingSeconds ?? initial.intro.computeCloudsMergeRemainingSeconds,
       computeDatacentersMergeRemainingSeconds: state.intro?.computeDatacentersMergeRemainingSeconds ?? initial.intro.computeDatacentersMergeRemainingSeconds,
       computeSupercomputersMergeRemainingSeconds: state.intro?.computeSupercomputersMergeRemainingSeconds ?? initial.intro.computeSupercomputersMergeRemainingSeconds,
-      // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
-      // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an
-      // active boost is run-scoped and resets every real Prestige, unlike the Cores/Nodes it's
+      // computeBoostType/computeBoostTierIndex/computeBoostStacks/computeBoostRemainingSeconds are
+      // deliberately NOT listed here — they fall through to initial.intro's fresh
+      // null/null/0/0 defaults above, since an active boost is run-scoped and resets every real
+      // Prestige, unlike the Cores/Nodes/etc. it's
       // spent from.
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,

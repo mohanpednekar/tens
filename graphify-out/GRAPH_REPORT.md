@@ -1,16 +1,16 @@
 # Graph Report - wt-321  (2026-08-19)
 
 ## Corpus Check
-- 68 files · ~233,650 words
+- 68 files · ~236,670 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 888 nodes · 1832 edges · 74 communities (57 shown, 17 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.74)
+- 900 nodes · 1881 edges · 72 communities (59 shown, 13 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `865741ac`
+- Built from commit: `8f8dab6d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,7 +18,7 @@
 - engine.test.js
 - MainPage/index.jsx
 - layers.js
-- engine.js
+- tickComputeMergeBoundary
 - App.jsx
 - Button/index.jsx
 - devDependencies
@@ -29,7 +29,7 @@
 - generate-pwa-icons.mjs
 - session-start.sh
 - autobuyer-reload.e2e.js
-- useIncrementalGame.js
+- engine.js
 - vite.config.js
 - Automation workflows
 - Changelog
@@ -62,8 +62,8 @@
 - dependencies
 - ComputePage/index.jsx
 - App.test.jsx
-- layers.test.js
-- isBandwidthAvailable
+- getComputeBoostTierDurationSeconds
+- ComputePage
 - Design history & rationale
 - OfflineProgressNotice/index.jsx
 - storage.js
@@ -74,60 +74,58 @@
 - ByteFoundryPage
 - formatBonusOrMultiplier
 - isComputeCoreConversionUnlocked
-- convertIntroBitsToKilobytes
-- isDiskBuildAvailable
+- isComputeMergeReserveStartAvailable
+- getDiskSize
 - resolutions
-- applyOfflineProgress
+- redeemDisk
 - buySmartAutobuyer
 - Money/index.js
-- enableAutoClaimCore
-- getIntroProductionRate
-- isDiskCacheBlockReleasable
+- buyGlobalTickspeedMultiplier
 
 ## God Nodes (most connected - your core abstractions)
 1. `Economy model` - 48 edges
 2. `clampNonNegative()` - 42 edges
 3. `MainPage()` - 42 edges
-4. `useIncrementalGame()` - 40 edges
+4. `useIncrementalGame()` - 41 edges
 5. `tickGame()` - 37 edges
 6. `ByteFoundryPage()` - 24 edges
 7. `isProductionFrozen()` - 20 edges
 8. `createInitialGameState()` - 15 edges
-9. `Economy model reference` - 15 edges
-10. `getPurchaseBlockSize()` - 14 edges
+9. `ComputePage()` - 15 edges
+10. `Economy model reference` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `simulateRun()` --calls--> `buyPrestigeSpeedBonus()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `buyTierQuantity()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
-- `simulateRun()` --calls--> `isProductionFrozen()`  [EXTRACTED]
-  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
-- `simulateRun()` --calls--> `tickGame()`  [EXTRACTED]
-  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `simulateRun()` --calls--> `createInitialGameState()`  [EXTRACTED]
+  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
+- `simulateRun()` --calls--> `getSpeedUpRequirement()`  [EXTRACTED]
+  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
+- `simulateRun()` --calls--> `isProductionFrozen()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (74 total, 17 thin omitted)
+## Communities (72 total, 13 thin omitted)
 
 ### Community 0 - "engine.test.js"
 Cohesion: 0.05
-Nodes (16): canReclaimComputeBoost(), getComputeBoostMultiplier(), isComputeCloudsMergeStartAvailable(), isComputeClustersMergeStartAvailable(), isComputeCoresMergeStartAvailable(), isComputeDatacentersMergeStartAvailable(), isComputeFabricsMergeStartAvailable(), isComputeGridsMergeStartAvailable() (+8 more)
+Nodes (14): enableAutoMerge(), isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable(), isAutoMergeDatacentersIntoSupercomputerUnlockAvailable(), isAutoMergeFabricsIntoCloudUnlockAvailable(), isAutoMergeGridsIntoFabricUnlockAvailable(), isAutoMergeNetworksIntoGridUnlockAvailable() (+6 more)
 
 ### Community 1 - "MainPage/index.jsx"
-Cohesion: 0.03
-Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, COMPUTE_BOOST_LABELS, Disclosure (+48 more)
+Cohesion: 0.04
+Nodes (55): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, CategoryHeading, CenteredCard, COMPUTE_BOOST_LABELS, Disclosure (+47 more)
 
 ### Community 2 - "layers.js"
-Cohesion: 0.09
-Nodes (21): AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_MERGE_BASE_DURATION_SECONDS, COMPUTE_MERGE_DURATIONS_SECONDS, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, INTRO_BYTE_BASE_RATE (+13 more)
+Cohesion: 0.07
+Nodes (36): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_BOOST_TIER_FIELDS (+28 more)
 
-### Community 3 - "engine.js"
-Cohesion: 0.08
-Nodes (39): AUTO_MERGE_TICKERS, currencyNumberFormatter, enableAutoMerge(), getMatchingTierForDiskSize(), getTickspeedMultiplierBaseCost(), getTierDiskRedeemCost(), getTierProductionProgressPercent(), isAutoMergeCloudsIntoDatacenterUnlockAvailable() (+31 more)
+### Community 3 - "tickComputeMergeBoundary"
+Cohesion: 0.17
+Nodes (12): startComputeMergeReserve(), tickAutoMergeCloudsIntoDatacenter(), tickAutoMergeClustersIntoNetwork(), tickAutoMergeCoresIntoNode(), tickAutoMergeDatacentersIntoSupercomputer(), tickAutoMergeFabricsIntoCloud(), tickAutoMergeGridsIntoFabric(), tickAutoMergeNetworksIntoGrid() (+4 more)
 
 ### Community 4 - "App.jsx"
 Cohesion: 0.09
@@ -157,9 +155,9 @@ Nodes (24): For /graphify add and --watch, For /graphify query, For the commit h
 Cohesion: 0.40
 Nodes (4): compilerOptions, baseUrl, include, src
 
-### Community 15 - "useIncrementalGame.js"
-Cohesion: 0.06
-Nodes (45): activateComputeBoost(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyPrestigeSpeedBonus(), buyTickspeedAutobuyer(), combineIntroByte(), enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork (+37 more)
+### Community 15 - "engine.js"
+Cohesion: 0.07
+Nodes (57): applyOfflineProgress(), AUTO_MERGE_TICKERS, buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyTickspeedAutobuyer(), combineIntroByte(), convertIntroBitsToKilobytes(), currencyNumberFormatter (+49 more)
 
 ### Community 17 - "Automation workflows"
 Cohesion: 0.20
@@ -234,8 +232,8 @@ Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
 ### Community 39 - "clampNonNegative"
-Cohesion: 0.10
-Nodes (56): applyAutobuyerMilestones(), buyAutoPrestige(), buyGlobalTickspeedMultiplier(), buyTickspeedMultiplier(), buyTier(), buyTierQuantity(), checkMilestones(), clampNonNegative() (+48 more)
+Cohesion: 0.07
+Nodes (70): cliValues, defaultPPValues, simulateRun(), allResourceIds(), applyAutobuyerMilestones(), buyAutoPrestige(), buyPrestigeSpeedBonus(), buyTickspeedMultiplier() (+62 more)
 
 ### Community 48 - "StoragePage/index.jsx"
 Cohesion: 0.15
@@ -246,20 +244,20 @@ Cohesion: 0.13
 Nodes (15): @fontsource/inter, @fontsource/space-grotesk, dependencies, @fontsource/inter, @fontsource/space-grotesk, react, react-dom, react-is (+7 more)
 
 ### Community 50 - "ComputePage/index.jsx"
-Cohesion: 0.08
-Nodes (25): COMPUTE_BOOST_MAX_STACKS, COMPUTE_MERGE_RESERVE_CAP, ActiveBoostRow, AutoBadge, BoostRow, CompactButton, COMPUTE_BOOST_DISPLAY, CoresAvailable (+17 more)
+Cohesion: 0.07
+Nodes (26): COMPUTE_MERGE_RESERVE_CAP, ActiveBoostRow, ArmedStatusText, AutoBadge, BoostRow, CompactButton, COMPUTE_BOOST_DISPLAY, ENTITY_ROWS (+18 more)
 
 ### Community 51 - "App.test.jsx"
 Cohesion: 0.13
-Nodes (11): ALL_TIER_IDS, AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_STARTING_CAPACITY (+3 more)
+Nodes (11): ALL_TIER_IDS, AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_STARTING_CAPACITY (+3 more)
 
-### Community 52 - "layers.test.js"
-Cohesion: 0.14
-Nodes (13): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, GOOGOL, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS (+5 more)
+### Community 52 - "getComputeBoostTierDurationSeconds"
+Cohesion: 0.27
+Nodes (10): activateComputeBoost(), canReclaimComputeBoost(), getComputeBoostMultiplier(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), getComputeBoostTierMultiplier(), isValidComputeBoostTier(), reclaimComputeBoost() (+2 more)
 
-### Community 53 - "isBandwidthAvailable"
-Cohesion: 0.24
-Nodes (14): canActivateComputeBoost(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isComputeBoostTurnAvailable(), isComputeUpgradeAvailable(), isComputeUpgradeTurnAvailable() (+6 more)
+### Community 53 - "ComputePage"
+Cohesion: 0.28
+Nodes (13): canActivateComputeBoost(), canStackComputeBoost(), isComputeBoostTurnAvailable(), isComputeUpgradeAvailable(), isComputeUpgradeTurnAvailable(), isDiskBuildAvailable(), isDiskBuildTurnAvailable(), isDiskFillAvailable() (+5 more)
 
 ### Community 54 - "Design history & rationale"
 Cohesion: 0.25
@@ -270,12 +268,12 @@ Cohesion: 0.28
 Nodes (7): VisuallyHidden, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), StatCard, formatOfflineDuration()
 
 ### Community 57 - "storage.js"
-Cohesion: 0.13
-Nodes (22): cliValues, defaultPPValues, simulateRun(), allResourceIds(), createInitialGameState(), getSpeedUpRequirement(), speedUpGame(), unlockedLastTierState() (+14 more)
+Cohesion: 0.21
+Nodes (13): COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS, LEGACY_REMOVED_TIER_IDS, LEGACY_TIER_ID_MAP, loadGameState(), loadLastSaveTimestamp() (+5 more)
 
 ### Community 58 - "InfoPage/index.jsx"
-Cohesion: 0.15
-Nodes (12): COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DISK_BUILD_COST_MULTIPLIER, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (+4 more)
+Cohesion: 0.14
+Nodes (13): COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DISK_BUILD_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY (+5 more)
 
 ### Community 59 - "package.json"
 Cohesion: 0.33
@@ -290,8 +288,8 @@ Cohesion: 0.22
 Nodes (9): scripts, audit, build, dev, gen-pwa-icons, start, test, test:e2e (+1 more)
 
 ### Community 62 - "ByteFoundryPage"
-Cohesion: 0.32
-Nodes (8): formatDiskSize, getDiskRedeemTierName(), getDiskSizesToShow(), isIntroConversionUnlocked(), isStorageUnlocked(), ByteFoundryPage(), clampPercent(), StoragePage()
+Cohesion: 0.26
+Nodes (12): formatDiskSize, getDiskRedeemTierName(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isIntroConversionUnlocked(), isStorageUnlocked() (+4 more)
 
 ### Community 63 - "formatBonusOrMultiplier"
 Cohesion: 0.50
@@ -301,26 +299,34 @@ Nodes (4): formatBonusOrMultiplier(), formatBonusPercent(), formatGlobalTickspee
 Cohesion: 0.50
 Nodes (5): claimComputeCore(), isComputeCoreClaimAvailable(), isComputeCoreConversionUnlocked(), mintComputeCoreIfReady(), tickComputeCoreConversion()
 
-### Community 66 - "isDiskBuildAvailable"
-Cohesion: 0.38
-Nodes (7): getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskCost(), getDiskSize(), getFirstTierCost(), isDiskBuildAvailable(), startDiskBuild()
+### Community 65 - "isComputeMergeReserveStartAvailable"
+Cohesion: 0.20
+Nodes (10): isComputeCloudsMergeStartAvailable(), isComputeClustersMergeStartAvailable(), isComputeCoresMergeStartAvailable(), isComputeDatacentersMergeStartAvailable(), isComputeFabricsMergeStartAvailable(), isComputeGridsMergeStartAvailable(), isComputeMergeReserveStartAvailable(), isComputeNetworksMergeStartAvailable() (+2 more)
+
+### Community 66 - "getDiskSize"
+Cohesion: 0.33
+Nodes (7): getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskCost(), getDiskSize(), getDiskSizesToShow(), getFirstTierCost(), startDiskBuild()
 
 ### Community 67 - "resolutions"
 Cohesion: 0.40
 Nodes (5): resolutions, **/fast-uri, **/filelist/minimatch/brace-expansion, **/glob/minimatch/brace-expansion, **/nanoid
 
-### Community 68 - "applyOfflineProgress"
-Cohesion: 1.00
-Nodes (3): applyOfflineProgress(), getOfflineEffectiveSeconds(), computeOfflineCatchUp()
+### Community 68 - "redeemDisk"
+Cohesion: 0.40
+Nodes (6): getMatchingTierForDiskSize(), getTierDiskRedeemCost(), isDiskRedeemable(), isTierAutobuyerActive(), redeemDisk(), tickDiskAutoRedeem()
 
 ### Community 69 - "buySmartAutobuyer"
 Cohesion: 0.67
 Nodes (3): buySmartAutobuyer(), getAutobuyerUnlockCost(), getSmartAutobuyerCost()
 
+### Community 71 - "buyGlobalTickspeedMultiplier"
+Cohesion: 0.67
+Nodes (3): buyGlobalTickspeedMultiplier(), getGlobalTickspeedMultiplierCost(), isGlobalTickspeedMultiplierUnlocked()
+
 ## Knowledge Gaps
-- **407 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+402 more)
+- **409 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+404 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -331,11 +337,11 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Why does `scripts` connect `scripts` to `package.json`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Are the 19 inferred relationships involving `useIncrementalGame()` (e.g. with `buyAutoPrestige()` and `buyAutoPrestigeAutobuyer()`) actually correct?**
-  _`useIncrementalGame()` has 19 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 20 inferred relationships involving `useIncrementalGame()` (e.g. with `buyAutoPrestige()` and `buyAutoPrestigeAutobuyer()`) actually correct?**
+  _`useIncrementalGame()` has 20 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `defaultPPValues`, `cliValues` to the rest of the system?**
-  _407 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _409 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `engine.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05053191489361702 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05217391304347826 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03508771929824561 - nodes in this community are weakly interconnected._

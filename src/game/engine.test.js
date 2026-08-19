@@ -15,6 +15,7 @@ import {
   buyTierQuantity,
   canActivateComputeBoost,
   canReclaimComputeBoost,
+  canStackComputeBoost,
   claimComputeCore,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
@@ -53,6 +54,8 @@ import {
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
   getComputeBoostMultiplier,
+  getComputeBoostTierDurationSeconds,
+  getComputeBoostTierMultiplier,
   getCostEpochExponent,
   getDiskCost,
   getDiskRedeemTierName,
@@ -141,6 +144,7 @@ import {
   redeemDisk,
   releaseDiskCacheBlock,
   speedUpGame,
+  stackComputeBoost,
   startComputeCloudsMerge,
   startComputeClustersMerge,
   startComputeCoresMerge,
@@ -170,7 +174,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -914,25 +918,25 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
 
   it('matches canActivateComputeBoost with nothing ranked above Compute pending', () => {
     const state = withIntro(createInitialGameState(), computeReady)
-    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(true)
+    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(true)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(true)
   })
 
   it('is false while Bandwidth (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { ...computeReady, bits: INTRO_STARTING_CAPACITY, productionMilestoneTierClaims: 0 })
-    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 
   it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { ...computeReady, disks: { [FIRST_DISK_SIZE]: 1 } })
-    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 
   it('is false while a Disk Build (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { ...computeReady, bits: getDiskCost(FIRST_DISK_SIZE) })
-    expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
+    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 })
@@ -2083,50 +2087,70 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state)).toBe(state)
   })
 
-  it('reclaims the only stack: refunds 1 Core and clears the boost fully back to inactive', () => {
+  it('reclaims the only stack: refunds 1 token of the funding tier and clears the boost fully back to inactive', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 2,
       computeBoostType: 'standard',
+      computeBoostTierIndex: 1, // Core
       computeBoostStacks: 1,
-      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('standard', 1),
     })
     expect(canReclaimComputeBoost(state)).toBe(true)
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeCores).toBe(3)
     expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostTierIndex).toBe(null)
     expect(after.intro.computeBoostStacks).toBe(0)
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
 
-  it('reclaims one of several stacks: refunds 1 Core, subtracts one duration\'s worth, decrements stacks, boost stays active', () => {
+  it('reclaims from a higher tier\'s own field, at that tier\'s own scaled duration', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeClusters: 2, // tier 3
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 3,
+      computeBoostStacks: 1,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('burst', 3),
+    })
+    const after = reclaimComputeBoost(state)
+    expect(after.intro.computeClusters).toBe(3)
+    expect(after.intro.computeCores).toBe(0) // untouched — the funding tier was Clusters, not Cores
+    expect(after.intro.computeBoostType).toBe(null)
+  })
+
+  it('reclaims one of several stacks: refunds 1 token, subtracts one duration\'s worth, decrements stacks, boost stays active', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 0,
       computeBoostType: 'standard',
+      computeBoostTierIndex: 1,
       computeBoostStacks: 3,
-      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 3,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('standard', 1) * 3,
     })
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeCores).toBe(1)
     expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostTierIndex).toBe(1)
     expect(after.intro.computeBoostStacks).toBe(2)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(getComputeBoostTierDurationSeconds('standard', 1) * 2)
   })
 
   it('is the exact inverse of activateComputeBoost — activate then reclaim returns to the pre-activation balance/duration', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 5 })
-    const activated = activateComputeBoost('burst')(state)
+    const activated = activateComputeBoost('burst', 1)(state)
     const reclaimed = reclaimComputeBoost(activated)
     expect(reclaimed.intro.computeCores).toBe(5)
     expect(reclaimed.intro.computeBoostType).toBe(null)
+    expect(reclaimed.intro.computeBoostTierIndex).toBe(null)
     expect(reclaimed.intro.computeBoostRemainingSeconds).toBe(0)
   })
 
-  it('refund never exceeds COMPUTE_ENTITY_CAP even if more Cores were earned while the boost was running', () => {
+  it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,
       computeBoostType: 'sustain',
+      computeBoostTierIndex: 1,
       computeBoostStacks: 1,
-      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.sustain.durationSeconds,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1),
     })
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
@@ -2136,8 +2160,9 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     const state = withIntro(createInitialGameState(), {
       computeCores: 0,
       computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
       computeBoostStacks: 1,
-      computeBoostRemainingSeconds: 1, // less than burst's own 10s duration
+      computeBoostRemainingSeconds: 1, // less than burst's own base 60s duration
     })
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
@@ -2385,112 +2410,191 @@ describe('tickGame Compute Core/Node integration', () => {
   })
 })
 
+describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', () => {
+  it('tier 1 (Core) returns each preset\'s own base multiplier/duration unscaled', () => {
+    expect(getComputeBoostTierMultiplier('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+    expect(getComputeBoostTierDurationSeconds('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+  })
+
+  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) and the duration linearly (tierIndex times)', () => {
+    // The spec's own worked example: tier 5 (Grid) is 5x as long and 8^4 as powerful as tier 1.
+    expect(getComputeBoostTierMultiplier('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** 4)
+    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds * 5)
+  })
+
+  it('tier 3 (Cluster) matches "clusters take 4 minutes" style scaling: 8^2 power, 3x duration', () => {
+    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * 64)
+    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * 3)
+  })
+
+  it('returns 0 for an invalid boostType or an out-of-range tierIndex', () => {
+    expect(getComputeBoostTierMultiplier('does_not_exist', 1)).toBe(0)
+    expect(getComputeBoostTierMultiplier('burst', 0)).toBe(0)
+    expect(getComputeBoostTierMultiplier('burst', 11)).toBe(0)
+    expect(getComputeBoostTierDurationSeconds('burst', 0)).toBe(0)
+  })
+})
+
 describe('getComputeBoostMultiplier', () => {
   it('is 1 (no bonus) when no boost is active', () => {
     expect(getComputeBoostMultiplier(createInitialGameState().intro)).toBe(1)
     expect(getComputeBoostMultiplier({ computeBoostType: null })).toBe(1)
   })
 
-  it('returns the active preset\'s own multiplier', () => {
-    expect(getComputeBoostMultiplier({ computeBoostType: 'burst' })).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
-    expect(getComputeBoostMultiplier({ computeBoostType: 'standard' })).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
-    expect(getComputeBoostMultiplier({ computeBoostType: 'sustain' })).toBe(COMPUTE_BOOST_PRESETS.sustain.multiplier)
+  it('returns the active preset\'s own tier-scaled multiplier', () => {
+    expect(getComputeBoostMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 1 })).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'standard', computeBoostTierIndex: 1 })).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'sustain', computeBoostTierIndex: 1 })).toBe(COMPUTE_BOOST_PRESETS.sustain.multiplier)
+    expect(getComputeBoostMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 3 })).toBe(getComputeBoostTierMultiplier('burst', 3))
   })
 })
 
 describe('canActivateComputeBoost', () => {
-  it('is false below 1 Compute Core', () => {
+  it('is false below 1 token of the selected tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 0 })
-    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+    expect(canActivateComputeBoost(state, 'burst', 1)).toBe(false)
   })
 
-  it('is true with at least 1 Core and no boost currently active', () => {
+  it('is true with at least 1 token of the selected tier and no boost currently active', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
-    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+    expect(canActivateComputeBoost(state, 'burst', 1)).toBe(true)
   })
 
-  it('is true for the SAME type already active, below the max stack count', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
-    expect(canActivateComputeBoost(state, 'burst')).toBe(true)
+  it('is true funded from a higher tier (e.g. Clusters, tier 3), checking that tier\'s own field', () => {
+    const state = withIntro(createInitialGameState(), { computeClusters: 1 })
+    expect(canActivateComputeBoost(state, 'burst', 3)).toBe(true)
+    expect(canActivateComputeBoost(state, 'burst', 2)).toBe(false) // Nodes (tier 2) not held
   })
 
-  it('is false for a DIFFERENT type while one is already active', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
-    expect(canActivateComputeBoost(state, 'standard')).toBe(false)
-  })
-
-  it('is false once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
-    })
-    expect(canActivateComputeBoost(state, 'burst')).toBe(false)
+  it('is false for ANY (type, tier) combo while a boost is already active — issue #326 blocks new activation entirely; see stackComputeBoost instead', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1 })
+    expect(canActivateComputeBoost(state, 'burst', 1)).toBe(false) // same type/tier
+    expect(canActivateComputeBoost(state, 'standard', 1)).toBe(false) // different type, same tier
+    expect(canActivateComputeBoost(state, 'burst', 2)).toBe(false) // same type, different tier
   })
 
   it('is false for an unrecognized preset name', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
-    expect(canActivateComputeBoost(state, 'does_not_exist')).toBe(false)
+    expect(canActivateComputeBoost(state, 'does_not_exist', 1)).toBe(false)
+  })
+
+  it('is false for an out-of-range tierIndex', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1 })
+    expect(canActivateComputeBoost(state, 'burst', 0)).toBe(false)
+    expect(canActivateComputeBoost(state, 'burst', 11)).toBe(false)
   })
 })
 
 describe('activateComputeBoost', () => {
-  it('spends exactly 1 Compute Core regardless of preset', () => {
+  it('spends exactly 1 token of the selected tier, regardless of preset', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 5 })
-    const after = activateComputeBoost('sustain')(state)
+    const after = activateComputeBoost('sustain', 1)(state)
     expect(after.intro.computeCores).toBe(4)
   })
 
-  it('starts a fresh boost at the preset\'s own multiplier/duration', () => {
+  it('starts a fresh boost at the tier-scaled multiplier/duration, recording the funding tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
-    const after = activateComputeBoost('standard')(state)
+    const after = activateComputeBoost('standard', 1)(state)
     expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostTierIndex).toBe(1)
     expect(after.intro.computeBoostStacks).toBe(1)
     expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  it('stacks the SAME type, extending remaining duration without resetting it or compounding the multiplier', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: 2, computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
-    })
-    const after = activateComputeBoost('burst')(state)
-    expect(after.intro.computeBoostStacks).toBe(2)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
-    expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier/duration', () => {
+    const state = withIntro(createInitialGameState(), { computeClusters: 1 })
+    const after = activateComputeBoost('burst', 3)(state)
+    expect(after.intro.computeClusters).toBe(0)
+    expect(after.intro.computeBoostTierIndex).toBe(3)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(getComputeBoostTierDurationSeconds('burst', 3))
+    expect(getComputeBoostMultiplier(after.intro)).toBe(getComputeBoostTierMultiplier('burst', 3))
   })
 
-  it('is a same-reference no-op below 1 Compute Core', () => {
+  it('is a same-reference no-op below 1 token of the selected tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 0 })
-    expect(activateComputeBoost('burst')(state)).toBe(state)
+    expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
-  it('is a same-reference no-op for a different type while one is already active', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostStacks: 1 })
-    expect(activateComputeBoost('standard')(state)).toBe(state)
-  })
-
-  it('is a same-reference no-op once the active type is already at COMPUTE_BOOST_MAX_STACKS', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: 1, computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
-    })
-    expect(activateComputeBoost('burst')(state)).toBe(state)
+  it('is a same-reference no-op while ANY boost is already active — even the same type/tier (see stackComputeBoost instead)', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1 })
+    expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
   it('is a same-reference no-op while Bandwidth (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1, bits: INTRO_STARTING_CAPACITY })
-    expect(activateComputeBoost('burst')(state)).toBe(state)
+    expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
   it('is a same-reference no-op while Disk Build (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 1, bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2,
     })
-    expect(activateComputeBoost('burst')(state)).toBe(state)
+    expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
   it('is a same-reference no-op while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 1, productionMilestoneTierClaims: 2, disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(activateComputeBoost('burst')(state)).toBe(state)
+    expect(activateComputeBoost('burst', 1)(state)).toBe(state)
+  })
+})
+
+describe('canStackComputeBoost / stackComputeBoost', () => {
+  it('canStackComputeBoost is false while no boost is active', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5 })
+    expect(canStackComputeBoost(state)).toBe(false)
+  })
+
+  it('canStackComputeBoost is true with a boost active and at least 1 more token of its OWN funding tier held', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 1, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1 })
+    expect(canStackComputeBoost(state)).toBe(true)
+  })
+
+  it('canStackComputeBoost is false below COMPUTE_BOOST_MAX_STACKS-worth already stacked', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+    })
+    expect(canStackComputeBoost(state)).toBe(false)
+  })
+
+  it('canStackComputeBoost is false with no more tokens of the ACTIVE tier held, even if a DIFFERENT tier has plenty', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1,
+    })
+    expect(canStackComputeBoost(state)).toBe(false)
+  })
+
+  it('stackComputeBoost spends 1 more of the active tier, increments stacks, and adds that tier\'s own duration — never compounding the multiplier', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
+    })
+    const after = stackComputeBoost(state)
+    expect(after.intro.computeCores).toBe(1)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+    expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('stackComputeBoost always extends the ACTIVE tier, regardless of any other tier a player might hold', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeClusters: 1, computeCores: 99, computeBoostType: 'burst', computeBoostTierIndex: 3, computeBoostStacks: 1,
+    })
+    const after = stackComputeBoost(state)
+    expect(after.intro.computeClusters).toBe(0)
+    expect(after.intro.computeCores).toBe(99) // untouched — the active boost was funded by Clusters, not Cores
+  })
+
+  it('stackComputeBoost is a same-reference no-op below canStackComputeBoost\'s own gate', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5 })
+    expect(stackComputeBoost(state)).toBe(state)
+  })
+
+  it('stackComputeBoost is a same-reference no-op while Bandwidth (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 1, bits: INTRO_STARTING_CAPACITY, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1,
+    })
+    expect(stackComputeBoost(state)).toBe(state)
   })
 })
 
@@ -2508,9 +2612,10 @@ describe('tickComputeBoost', () => {
   })
 
   it('clears back to inactive once remaining duration reaches 0', () => {
-    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 1 })
+    const state = withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 1 })
     const after = tickComputeBoost(1)(state)
     expect(after.intro.computeBoostType).toBeNull()
+    expect(after.intro.computeBoostTierIndex).toBeNull()
     expect(after.intro.computeBoostStacks).toBe(0)
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
@@ -2526,10 +2631,10 @@ describe('tickGame Compute Boost integration', () => {
   it('multiplies Memory\'s own passive production while a boost is active', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true, capacity: 1_000_000,
-      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
     })
     const after = tickGame(1)(state)
-    // Base rate is 1 bit/sec at the starting values; burst multiplies it ×16.
+    // Base rate is 1 bit/sec at the starting values; burst (tier 1 / Core) multiplies it ×32.
     expect(after.intro.bits).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
   })
 
@@ -2537,7 +2642,7 @@ describe('tickGame Compute Boost integration', () => {
     const secondTier = TIER_DEFINITIONS[1]
     const state = withOwned(
       withOwned(
-        withIntro(createInitialGameState(), { computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 60 }),
+        withIntro(createInitialGameState(), { computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 60 }),
         tensTier.id, 1
       ),
       secondTier.id, 1
@@ -2563,7 +2668,7 @@ describe('tickGame Compute Boost integration', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
         computeCores: 5, computeNodes: 2,
-        computeBoostType: 'burst', computeBoostStacks: 3, computeBoostRemainingSeconds: 7,
+        computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 3, computeBoostRemainingSeconds: 7,
       }),
       PRESTIGE_THRESHOLD
     )
@@ -2571,6 +2676,7 @@ describe('tickGame Compute Boost integration', () => {
     expect(after.intro.computeCores).toBe(5) // permanent, carried over
     expect(after.intro.computeNodes).toBe(2) // permanent, carried over
     expect(after.intro.computeBoostType).toBeNull() // run-scoped, reset
+    expect(after.intro.computeBoostTierIndex).toBeNull()
     expect(after.intro.computeBoostStacks).toBe(0)
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
@@ -2579,10 +2685,11 @@ describe('tickGame Compute Boost integration', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withIntro(
       withPurchaseLevel(createInitialGameState(), lastTier.id, getSpeedUpRequirement(0)),
-      { computeBoostType: 'sustain', computeBoostStacks: 4, computeBoostRemainingSeconds: 200 }
+      { computeBoostType: 'sustain', computeBoostTierIndex: 2, computeBoostStacks: 4, computeBoostRemainingSeconds: 200 }
     )
     const after = speedUpGame(state)
     expect(after.intro.computeBoostType).toBe('sustain')
+    expect(after.intro.computeBoostTierIndex).toBe(2)
     expect(after.intro.computeBoostStacks).toBe(4)
     expect(after.intro.computeBoostRemainingSeconds).toBe(200)
   })

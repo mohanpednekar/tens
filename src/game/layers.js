@@ -208,22 +208,27 @@ export const COMPUTE_CORES_PER_NODE = 8
 export const COMPUTE_ENTITY_CAP = 10
 // 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
 // is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
-// Megacomputer (Core → Node is automatic, see COMPUTE_CORES_PER_NODE above; every step from Node
-// upward is a manual merge — see mergeComputeNodesIntoCluster/mergeComputeClustersIntoNetwork/
-// mergeComputeNetworksIntoGrid/mergeComputeGridsIntoFabric/mergeComputeFabricsIntoCloud/
-// mergeComputeCloudsIntoDatacenter/mergeComputeDatacentersIntoSupercomputer/
-// mergeComputeSupercomputersIntoMegacomputer in engine.js). Same ratio as COMPUTE_CORES_PER_NODE
-// above, but this merge chain is only ever player-triggered (a button click), never automatic on
-// tick — the player decides whether to merge a tier upward or keep spending/holding it. Nothing
-// spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
-// Each of the 8 manual merges above can also be permanently automated (see issue #316,
-// enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing ALL COMPUTE_ENTITY_CAP (10)
-// currently-held units of that merge's own output entity — once unlocked, the same 8-for-1 merge
-// also fires on tick whenever its input entity is completely full (10, not 8), alongside the
-// manual button, which stays available either way. Core's own Memory → Core conversion has the
+// Megacomputer, ALL nine boundaries (Core → Node included, as an ordinary boundary of its own —
+// see issue #321) merged the same way: see mergeComputeCoresIntoNode/mergeComputeNodesIntoCluster/
+// mergeComputeClustersIntoNetwork/mergeComputeNetworksIntoGrid/mergeComputeGridsIntoFabric/
+// mergeComputeFabricsIntoCloud/mergeComputeCloudsIntoDatacenter/mergeComputeDatacentersIntoSupercomputer/
+// mergeComputeSupercomputersIntoMegacomputer in engine.js — each player-triggered (a button click),
+// never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). This is
+// unrelated to the separate Memory → Core "Claim Core" mechanic (COMPUTE_CORES_PER_NODE above),
+// which still has its own distinct automatic-conversion path. Nothing spends a Megacomputer yet —
+// it's the top of the chain today (see issue #280's "Out of scope").
+// Each of the 9 manual merges above can also be permanently automated (see issues #316/#321,
+// enableAutoMergeCoresIntoNode/enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing
+// ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own output entity — once
+// unlocked, that boundary's merging (both manual and automatic) fully transitions to a timed
+// RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP/
+// COMPUTE_MERGE_DURATIONS_SECONDS below). Core's own Memory → Core conversion has the
 // analogous "auto claim" concept instead of "auto merge" (see intro.autoClaimCoreEnabled/
-// claimComputeCore/enableAutoClaimCore in engine.js), since there's no merge input for the first
-// tier — sacrificing 10 Nodes unlocks it.
+// claimComputeCore/enableAutoClaimCore in engine.js), since it has no merge INPUT of its own —
+// sacrificing 10 Nodes unlocks it (enableAutoClaimCore). Note this is a genuinely SEPARATE unlock
+// from enableAutoMergeCoresIntoNode, which coincidentally also costs 10 Nodes but automates a
+// completely different step (merging Cores into Nodes, not minting Cores from Memory) — a player
+// can unlock either, both, or neither independently.
 export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute reserve-merge timers --- see issue #321. Every one of the 9 tier
@@ -257,23 +262,42 @@ export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 60
 export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
-// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostStacks/
-// computeBoostRemainingSeconds in createInitialGameState. Each usage of a Compute Core (always
-// exactly 1 spent per activation — the preset below picks the strength/duration, not the cost)
-// grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
+// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/
+// computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
+// token of whichever compute-ladder tier the player selects (see issue #326) — Core through
+// Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
+// preset strength/duration, scaled up per tier by COMPUTE_BOOST_TIER_POWER_STEP/tierIndex below.
+// Grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
 // Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
 // (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
 // decaying back to inactive (see tickComputeBoost).
 export const COMPUTE_BOOST_PRESETS = {
-  burst: { multiplier: 16, durationSeconds: 60 },
-  standard: { multiplier: 4, durationSeconds: 600 },
+  burst: { multiplier: 32, durationSeconds: 60 },
+  standard: { multiplier: 8, durationSeconds: 600 },
   sustain: { multiplier: 2, durationSeconds: 3600 },
 }
-// Only one PRESET TYPE can be active at a time — a different type can't be started while one is
-// already running (see activateComputeBoost) — but the SAME type can be activated again while
-// already active, stacking up to this many times to extend the remaining duration; the multiplier
-// itself never compounds from stacking, only durationSeconds accumulates further.
+// Issue #326: each compute-ladder tier past the first multiplies a preset's own BASE `multiplier`
+// (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
+// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. See
+// getComputeBoostTierMultiplier/getComputeBoostTierDurationSeconds in engine.js — duration instead
+// scales LINEARLY with tier index (tier 5's duration is 5x tier 1's own base duration), a
+// deliberately different scaling shape from the multiplier's exponential one.
+export const COMPUTE_BOOST_TIER_POWER_STEP = 8
+// One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
+// 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
+// activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place
+// Megacomputers (otherwise the unspent top of the merge chain — see issue #280's "Out of scope")
+// have any use at all.
+export const COMPUTE_BOOST_TIER_FIELDS = [
+  'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
+  'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
+]
+// Only one PRESET TYPE (and tier) can be active at a time — activating a NEW boost is blocked
+// entirely while one is already running (see activateComputeBoost); a separate stackComputeBoost
+// action extends the CURRENTLY ACTIVE boost's own tier/type instead, up to this many times, adding
+// that tier's own duration each time rather than resetting it — the multiplier itself never
+// compounds from stacking.
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is

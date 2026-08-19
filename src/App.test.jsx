@@ -2909,34 +2909,35 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
-  test('a different preset type stays disabled while another is active, but the SAME type can restack', () => {
+  test('every preset activation button — including the SAME type — stays disabled while a boost is already active; issue #326 replaces same-type restacking with a separate Stack button', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
     openCompute()
 
     expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
-    const burstButton = screen.getByRole('button', { name: /activate burst compute boost/i })
-    expect(burstButton).toBeEnabled()
+    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
 
-    fireEvent.click(burstButton)
+    fireEvent.click(screen.getByRole('button', { name: /stack the active compute boost/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(2)
     expect(saved.intro.computeBoostStacks).toBe(2)
     expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  test('a preset already at COMPUTE_BOOST_MAX_STACKS can no longer be activated', () => {
+  test('the Stack button is disabled once the active boost is already at COMPUTE_BOOST_MAX_STACKS', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1,
-      computeBoostType: 'burst', computeBoostStacks: COMPUTE_BOOST_MAX_STACKS, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: COMPUTE_BOOST_MAX_STACKS, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
     openCompute()
 
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /stack the active compute boost/i })).toBeDisabled()
   })
 
   test('every activation button stays disabled while a higher-priority upgrade (Bandwidth) is currently available, even with a Compute Core in hand', () => {
@@ -2948,7 +2949,7 @@ describe('Byte Foundry Compute Boost', () => {
   })
 
   test('MainPage shows a read-only active-boost status line while one is running, and hides it once inactive', () => {
-    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
+    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
     const { unmount } = render(<App />)
     expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
       new RegExp(`standard.*×${COMPUTE_BOOST_PRESETS.standard.multiplier}`, 'i')
@@ -2975,14 +2976,12 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
 
-  test('the Boost row shows the available Core count alongside the 3 small preset buttons', () => {
+  test('the armed-tier status line shows how many tokens are held for the currently armed tier (Cores by default, pre-merge-unlock)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 4 })
     render(<App />)
     openCompute()
 
-    const boostRow = screen.getByLabelText(/^compute boost$/i)
-    expect(boostRow).toHaveTextContent('4')
-    expect(screen.getByTitle(/4 cores available/i)).toBeInTheDocument()
+    expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
   })
 
   test('the active-boost status (effect, countdown, stacks, reclaim) renders at the top of the screen, before the preset/entity sections', () => {
@@ -3011,7 +3010,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('reclaiming a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'standard', computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
+      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
     })
     render(<App />)
     openCompute()
@@ -3027,7 +3026,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('reclaiming the last remaining stack clears the boost entirely and removes the status line', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
     })
     render(<App />)
     openCompute()
@@ -3093,6 +3092,54 @@ describe('ComputePage merge chain', () => {
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(1)
     expect(saved.intro.computeClusters).toBe(2)
+  })
+
+  test('Cores merges into Nodes exactly like every other boundary — the merge row that used to be exclusive to "Claim Core" (issue #321)', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 9, computeNodes: 1,
+    })
+    render(<App />)
+    openCompute()
+
+    const mergeButton = screen.getByRole('button', { name: /merge 8 cores into 1 node/i })
+    expect(mergeButton).toBeEnabled()
+    fireEvent.click(mergeButton)
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(1)
+    expect(saved.intro.computeNodes).toBe(2)
+  })
+
+  test('enabling auto-merge for Cores into Nodes sacrifices 10 Nodes and removes the manual merge button', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeNodes).toBe(0)
+    expect(saved.intro.autoMergeCoresIntoNode).toBe(true)
+    expect(screen.queryByRole('button', { name: /^merge 8 cores into 1 node$/i })).not.toBeInTheDocument()
+  })
+
+  test('once auto-merge is unlocked for Cores into Nodes, the clickable reserve-slot row starts a timed merge', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 8, autoMergeCoresIntoNode: true,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /start merging 8 cores into 1 node/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(0)
+    expect(saved.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
