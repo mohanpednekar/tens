@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatMemoryAmount, formatStorageSize, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, getStorageSizesToShow, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankBuildTurnAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -138,10 +138,10 @@ const MilestoneCostLine = styled.span`
 `
 
 // A brief, at-a-glance per-size Storage status readout — one small chip per size ever reached,
-// reading "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 blocks of 10 KB ever built, 3 currently
+// reading "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3 currently
 // full). Deliberately not the fuller square-by-square grid StoragePage itself renders — this is
 // just enough context to see holdings at a glance without leaving the Byte Foundry; visiting
-// StoragePage (via the nav button below) is still how a full bank actually gets redeemed.
+// StoragePage (via the nav button below) is still how a full disk actually gets redeemed.
 const StorageSummaryRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -268,16 +268,15 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // Prestige resets Memory fresh.
 //
 // Compute moved entirely to its own dedicated screen (ComputePage) once revealed — this page only
-// shows a nav button to reach it. Storage split differently: Building the next bank (its own core
-// loop action, same as Sacrifice/Invest) and a brief per-size summary chip row both stay here, on
-// this page — only the fuller square-by-square detail and redeeming (Storage Bank Fill) live on
+// shows a nav button to reach it. Storage split differently: starting the next disk's build (its
+// own core loop action, same as Sacrifice/Invest) and a brief per-size summary chip row both stay
+// here, on this page — only the fuller square-by-square detail and redeeming (Disk Fill) live on
 // the dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
 // enabled once revealed (same "permanent, voluntarily-revisitable screen" posture as MainPage's
 // own "⚙️ Byte Foundry" link) so the player can check on built-but-not-yet-affordable progress (a
-// held bank, banked Cores) even when nothing there is currently actionable. Every action
+// held disk, banked Cores) even when nothing there is currently actionable. Every action
 // itself — here or on either dedicated screen — stays gated by the Byte Foundry's forced priority
-// order (see "Byte Foundry" in CLAUDE.md): Storage Bank Fill > Bandwidth > Storage Bank Build >
-// Compute > Memory.
+// order (see "Byte Foundry" in CLAUDE.md): Disk Fill > Bandwidth > Disk Build > Compute > Memory.
 const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
@@ -285,7 +284,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   // Sacrifice is offered only once Memory is full AND no other currently-possible action ranked
-  // above it in the forced priority order (Storage Bank Fill, Bandwidth, Storage Bank Build,
+  // above it in the forced priority order (Disk Fill, Bandwidth, Disk Build,
   // Compute) is left to take first — see isMemoryCapacityUpgradeAvailable in engine.js.
   const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
   const revealed = isIntroConversionUnlocked(state)
@@ -310,30 +309,34 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const investCostDisplay = formatBitsInNearestUnit(investCost)
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
-  // Ranked below Storage Bank Fill in the forced priority order — see isBandwidthTurnAvailable.
+  // Ranked below Disk Fill in the forced priority order — see isBandwidthTurnAvailable.
   const canInvest = isBandwidthTurnAvailable(state)
   const investBlockedByPriority = isBandwidthAvailable(state) && !canInvest
 
-  // Building the next Storage bank stays on this page (the Byte Foundry's own core loop) even
+  // Starting the next disk's build stays on this page (the Byte Foundry's own core loop) even
   // though redeeming lives on the dedicated StoragePage — see "Byte Foundry" in CLAUDE.md. Ranked
-  // third in the forced priority order — see isStorageBankBuildTurnAvailable.
-  const storageBankSize = getStorageBankSize(state)
-  const storageBankCost = getStorageBankCost(storageBankSize)
-  const canBuildStorageBank = isStorageBankBuildTurnAvailable(state)
-  const storageBuildBlockedByPriority = intro.bits >= storageBankCost && !canBuildStorageBank
-  const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
-  const storageBankRedeemableNow = isStorageBankRedeemable(state, storageBankSize)
-  const storageBanksBuiltTotal = intro.storageBanksBuiltTotal ?? {}
-  // getStorageSizesToShow always includes the currently-offered size even at 0 built (so
+  // third in the forced priority order — see isDiskBuildTurnAvailable.
+  const diskSize = getDiskSize(state)
+  const diskCost = getDiskCost(diskSize)
+  const canStartDiskBuild = isDiskBuildTurnAvailable(state)
+  const diskBuildInProgress = intro.diskBuild
+  const diskBuildBlockedByPriority = intro.bits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildProgress = diskBuildInProgress
+    ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
+    : clampPercent((intro.bits / diskCost) * 100)
+  const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
+  const disksBuiltTotal = intro.disksBuiltTotal ?? {}
+  // getDiskSizesToShow always includes the currently-offered size even at 0 built (so
   // StoragePage's own fuller detail can preview the goal before the first one is banked) — this
   // brief summary is different: it should only ever report actual history, so a size with nothing
   // built and nothing held is filtered back out here rather than showing a confusing "1 KB 0/0"
   // chip before the player has ever built anything.
-  const storageSizesWithHistory = getStorageSizesToShow(state)
-    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0)
+  const diskSizesWithHistory = getDiskSizesToShow(state)
+    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (intro.disks?.[size] ?? 0) > 0)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
-  // from the main game's Buy button/autobuyer, redeemStorageBank, or convertIntroBitsToKilobytes/
+  // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
+  // size), or convertIntroBitsToKilobytes/
   // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
   // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
   // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
@@ -427,7 +430,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
               onClick={handleSacrificeClick}
               title={
                 isFull && !canSacrifice
-                  ? 'Take every higher-priority upgrade first (Storage Bank Fill, Bandwidth, Storage Bank Build, or Compute)'
+                  ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
                   : 'Empty Memory for 10x capacity'
               }
               type="button"
@@ -455,7 +458,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
                 investClaimsUsedUp
                   ? 'Already claimed at this tier'
                   : investBlockedByPriority
-                    ? 'Redeem a full Storage Bank first'
+                    ? 'Redeem a full Disk first'
                     : 'Doubles production rate'
               }
               type="button"
@@ -482,38 +485,44 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
       {storageRevealed && (
         <>
           <Button
-            aria-label="build storage bank"
-            disabled={!canBuildStorageBank}
-            onClick={actions.buildStorageBank}
+            aria-label={diskBuildInProgress ? 'disk array rebuilding' : 'build disk'}
+            disabled={!canStartDiskBuild || !!diskBuildInProgress}
+            onClick={actions.startDiskBuild}
             title={
-              storageBuildBlockedByPriority
-                ? 'Take Bandwidth (or redeem a full Storage Bank) first'
-                : storageBankRedeemableNow
-                  ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
-                  : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost matches it`
+              diskBuildInProgress
+                ? `Array rebuilding — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s left (every disk in this array is offline until it finishes)`
+                : diskBuildBlockedByPriority
+                  ? 'Take Bandwidth (or redeem a full Disk) first'
+                  : diskRedeemTierName
+                    ? `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                    : `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
             }
             type="button"
-            variant={canBuildStorageBank ? 'info' : 'neutral'}
-            $progress={storageBuildProgress}
+            variant={canStartDiskBuild ? 'info' : 'neutral'}
+            $progress={diskBuildProgress}
           >
-            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
+            <ButtonContent>
+              {diskBuildInProgress
+                ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+                : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatBitsInNearestUnit(diskCost)})`}
+            </ButtonContent>
             <VisuallyHidden
               role="progressbar"
-              aria-label="byte foundry storage build progress"
-              aria-valuenow={intro.bits}
+              aria-label="byte foundry disk build progress"
+              aria-valuenow={Math.round(diskBuildProgress)}
               aria-valuemin={0}
-              aria-valuemax={storageBankCost}
+              aria-valuemax={100}
             />
           </Button>
 
-          {storageSizesWithHistory.length > 0 && (
+          {diskSizesWithHistory.length > 0 && (
             <StorageSummaryRow role="group" aria-label="storage summary">
-              {storageSizesWithHistory.map(size => {
-                const full = intro.storageBanks?.[size] ?? 0
-                const builtTotal = Math.max(storageBanksBuiltTotal[size] ?? 0, full)
+              {diskSizesWithHistory.map(size => {
+                const full = intro.disks?.[size] ?? 0
+                const builtTotal = Math.max(disksBuiltTotal[size] ?? 0, full)
                 return (
                   <StorageSummaryChip key={size}>
-                    {`${formatStorageSize(size)} ${full}/${builtTotal}`}
+                    {`${formatDiskSize(size)} ${full}/${builtTotal}`}
                   </StorageSummaryChip>
                 )
               })}
@@ -523,7 +532,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
           <Button
             aria-label="open storage"
             onClick={onOpenStorage}
-            title="Review Storage in detail, and redeem full banks (still gated by the forced priority order)"
+            title="Review Storage in detail, and redeem full disks (still gated by the forced priority order)"
             type="button"
             variant="info"
           >

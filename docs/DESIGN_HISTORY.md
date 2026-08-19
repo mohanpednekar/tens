@@ -2001,6 +2001,104 @@ page doesn't yank the player off it). Since `'storage'`/`'compute'` are reached 
 (`fireEvent.click` on the nav button silently landing back on the ByteFoundryPage heading instead of
 navigating). `'storage'`/`'compute'` were added to the same exclusion `'info'` already had.
 
+### Storage Banks renamed to Disks: timed builds, a per-array cache, redemption against any tier, and the Kilobit/Kilobyte bug fix
+
+Requested directly: rename "Storage Bank(s)" to "Disk(s)" throughout, and layer several genuinely
+new mechanics on top — building now costs real time (not just Bits) and temporarily takes the whole
+array offline while it happens; each array gets a small staging cache that must fill before any disk
+in it can; and a fix to a bug the request called out explicitly: a "1 KB" disk was sized/costed in
+raw bits (1000), not real Kilobytes (1000 Bytes = 8000 bits) — "Kilobytes, Not Kilobits." A later
+message in the same thread widened the scope further: a Disk should be able to redeem into ANY
+main-game tier whose current price happens to match its size, not just tier01/Kilobytes, with ties
+broken by the main game's own tier order — "if order is later changed, it should automatically
+follow that as well."
+
+**The bug and its fix.** `getStorageBankSize` (the buildable-size ladder) and `getStorageBankCost`
+both operated on `tier01`'s raw per-unit level cost (1000, 10000, …) with no `BITS_PER_BYTE`
+conversion — so a "1 KB" bank actually needed only 1000 Byte-Foundry bits to fill, while everything
+else in the Byte Foundry (`getIntroKilobyteConversionCost`, Memory's own B/KB/MB display scale) had
+always treated "1 KB" as 8000 bits (`BITS_PER_BYTE × 1000`), the real definition of a Kilobyte. A
+code comment on the old `formatStorageSize` even flagged this explicitly at the time ("1000 bits is
+'1 KB' here ('KiloBits', not 1000 Bytes/8000 bits)") without anyone having connected it to a
+player-facing bug yet. The fix: `getDiskSize` now multiplies by `BITS_PER_BYTE` at every ladder step,
+exactly like `getIntroKilobyteConversionCost` already does — which, as a direct consequence, made the
+two functions compute an *identical* value at tier01's current level, so `isDiskRedeemable` could be
+rewritten to just reuse `getIntroKilobyteConversionCost(state)` instead of a parallel
+`getFirstTierCost(level) * BITS_PER_BYTE` call (later generalized further — see below).
+`getDiskCost` dropped its own now-redundant `* BITS_PER_BYTE` factor, since `capacityBits` is already
+Byte-accurate by the time it's called; the "10x" build-cost multiple itself was never actually wrong,
+only what it was ten times *of*. `formatStorageSize`'s whole separate "kilobit" formatting scale
+(`STORAGE_UNIT_SYMBOLS`, dividing by 1000 with no Byte conversion) was deleted outright —
+`formatDiskSize` is now simply an alias for `formatBitsInNearestUnit`, the exact scale Memory's own
+balance already renders in, so there is no longer a second, inconsistent "KB" definition anywhere in
+the Byte Foundry.
+
+**Timed builds and the array-wide lockout.** Three points here were confirmed directly before
+implementing, each because a plausible alternative reading would have produced very different code:
+(1) the build-time formula — "adding a 6th disk to a 5 disk array will take 6 seconds" against a
+1-second-per-KB base reads as either a flat per-disk time (contradicting the example) or a
+position-scaled one; confirmed **position × base** (`getDiskBuildBaseSeconds(size) * ordinal`, where
+`ordinal` is `disksBuiltTotal[size] + 1` at the moment the build starts) — a 1 KB array's 6th disk
+takes 6×1s, a 10 KB array's 6th disk takes 6×10s; (2) what the per-array "cache" actually does beyond
+being a visual subdivision — confirmed a genuine staging pool (`intro.diskCache[size]`, `size` bits,
+`DISK_CACHE_BLOCK_COUNT` (8) equal blocks) that Memory must fill completely before `tickDiskAutoFill`
+pours it into an empty container, with a full block manually releasable back into Memory
+(`releaseDiskCacheBlock`) to redirect those bits elsewhere instead — which also resolves, by ordinary
+bookkeeping rather than a special-cased guard, the request's own "transferring a disk to the same
+level cannot be possible if cache was used since it will exceed the required amount": bits a player
+manually released out of the cache are simply gone from it, so they can never *also* complete (and
+later redeem) that same disk — no double-spend is possible by construction; (3) auto-redeem's gating
+— confirmed it should key on the redeeming tier's own unit-buying autobuyer being active
+(`autobuyers[tier.id]` unlocked AND `autobuyersEnabled[tier.id]` not paused), fully REPLACING the old
+standalone, never-exposed-in-UI `storageAutoRedeemEnabled` flag (deleted, along with
+`setStorageAutoRedeemEnabled` and its dead "smallest denomination always auto-redeems regardless"
+carve-out) rather than adding a second condition alongside it.
+
+A build now spends its cost immediately (`startDiskBuild`) but only sets a countdown
+(`intro.diskBuild = { size, remainingSeconds, totalSeconds }`) — `disksBuiltTotal[size]` doesn't
+actually increment until `tickDiskBuild` counts `remainingSeconds` down to zero, wired into
+`tickGame` right alongside `tickIntroProduction`. "Temporarily disables all disks in the array …
+all IO operations to those Disks are disallowed" is enforced everywhere that size's data is touched
+during that window — `tickDiskAutoFill`/`tickDiskAutoRedeem` skip it entirely (other sizes are
+unaffected), and `redeemDisk`/`isDiskCacheBlockReleasable`/`releaseDiskCacheBlock` all no-op against
+it — rather than only disabling the UI's own buttons, the same "engine re-validates, UI just mirrors
+it" posture every other Byte Foundry mechanic already follows.
+
+**Redemption against any tier, with a live tie-break.** The follow-up widening this to every
+main-game tier turned out to fall out of the existing cost model almost for free: every tier shares
+`costResourceId: 'base'` (Bits — see `TIER_DEFINITIONS` in `layers.js`), so "a tier's current
+per-unit cost, converted to Byte-Foundry bits via `× BITS_PER_BYTE`" was never actually
+tier01-specific, just written that way. A new internal `getMatchingTierForDiskSize(state,
+capacityBits)` walks `TIER_DEFINITIONS` **in its own array order** and returns the first tier whose
+current cost matches — both "any tier can be fulfilled" and "ties break toward the main game's own
+priority order" fall out of that single `Array.prototype.find` call, and because it reads
+`TIER_DEFINITIONS` live rather than a hardcoded tier index, a future reordering of that array changes
+both behaviors automatically, exactly as requested ("if order is later changed, it should
+automatically follow that as well") with no further code change anywhere in this file.
+`isDiskRedeemable`/`redeemDisk`/`tickDiskAutoRedeem` were all rewritten in terms of this helper;
+`getDiskRedeemTierName` exposes the matched tier's display name to `StoragePage`/`ByteFoundryPage` so
+their copy ("Redeems 1 10 KB disk for 1 free Megabyte") never hardcodes "Kilobyte" again. The
+disk-*size* ladder itself (`getDiskSize`, still walking tier01's own level-cost sequence) was
+deliberately left untouched by this widening — the request's "conflict due to same cost for multiple
+tiers" language is about redemption eligibility, not about which sizes ever get offered to build, so
+generalizing the build ladder itself was out of scope.
+
+**Migration.** `intro.storageBanks`/`storageBanksBuiltTotal`/`storageAutoRedeemedSizes` are forwarded
+to their renamed `disks`/`disksBuiltTotal`/`diskAutoRedeemedSizes` fields explicitly in
+`storage.js`'s `migrateState` (same "old name → new name" shape as the `Ones → base` MONEY_ID
+forwarding) — `diskCache`/`diskBuild` are brand-new fields with no legacy equivalent, so they simply
+fall through to `createInitialGameState`'s fresh defaults on an old save. The removed
+`storageAutoRedeemEnabled` field is left unread wherever a legacy save's `saved.intro` still gets
+spread in — the same "harmless once nothing reads it" posture every other superseded field in that
+function already has.
+
+**Unrelated aside landing in the same change**: MainPage's headline balance (`MoneyHero`) now
+switches from Bits to whole Bytes once the balance reaches 8000 Bits (`formatMoneyBalance`,
+`MONEY_BYTES_DISPLAY_THRESHOLD`) — a separate, much smaller request bundled into the same PR. Every
+other `formatCurrency` call site (costs, production numbers, the Prestige-threshold overlay) was
+deliberately left alone, since those represent an actual priced/spent Bits amount rather than a
+headline balance meant to stay readable as it grows.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

@@ -1,6 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
-import { formatStorageSize, getStorageSizesToShow, isStorageBankRedeemable } from 'game/engine'
-import { STORAGE_BANK_LADDER_CAP } from 'game/layers'
+import { formatDiskSize, getDiskRedeemTierName, getDiskSizesToShow, isDiskCacheBlockReleasable } from 'game/engine'
+import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -30,13 +30,13 @@ const Title = styled.h1`
   margin: 0;
 `
 
-// One row per bank size ever reached (ascending — smallest first), each a fixed
-// STORAGE_BANK_LADDER_CAP-long strip of squares read together as one progress bar: currently FULL
-// (leftmost, clickable once redeemable), then built-but-EMPTY — constructed, waiting for Memory to
-// auto-fill them (see tickStorageAutoFill in engine.js) — then not-yet-built placeholders
-// (rightmost). A row only appears once its size has ever been built (or is the size currently
-// offered), so rows themselves read top-to-bottom smallest-to-largest too.
-const StorageSizeRow = styled.div`
+// One row per disk size ever reached (ascending — smallest first): a cache row (see CacheBlocksRow
+// below) followed by a fixed DISK_ARRAY_LADDER_CAP-long strip of squares read together as one
+// progress bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY —
+// constructed, waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then
+// not-yet-built placeholders (rightmost). A row only appears once its size has ever been built (or
+// is the size currently offered), so rows themselves read top-to-bottom smallest-to-largest too.
+const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -44,13 +44,22 @@ const StorageSizeRow = styled.div`
   width: 100%;
 `
 
-const StorageSizeLabel = styled.p`
+const DiskSizeLabel = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
 `
 
-const StorageBankSquaresRow = styled.div`
+// Shown in place of the cache/disk rows while that size's array is mid-build (see intro.diskBuild
+// in engine.js) — every IO operation against it is disallowed for the build's duration, so the
+// interactive rows are replaced by a plain status line rather than rendered disabled-but-visible.
+const RebuildingText = styled.p`
+  margin: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.accent};
+`
+
+const SquaresRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -59,13 +68,13 @@ const StorageBankSquaresRow = styled.div`
   max-width: 260px;
 `
 
-// A single discrete, all-or-nothing bank container — never partially filled, matching the
-// mechanic itself. $full (currently holding Memory's bits, awaiting redeem — accent border,
-// filled green once $redeemable, a duller raised fill otherwise, clickable only when both $full
-// and $redeemable) takes priority over $empty (built but not yet auto-filled by Memory — a dim
-// muted-bordered fill, distinct from the plain not-yet-built placeholder below it) over the plain
-// not-yet-built placeholder (transparent, outline only, disabled).
-const StorageBankSquare = styled.button`
+// A single discrete, all-or-nothing disk container — never partially filled, matching the
+// mechanic itself. $full (currently holding its cache's poured contents, awaiting redeem — accent
+// border, filled green once $redeemable, a duller raised fill otherwise, clickable only when both
+// $full and $redeemable) takes priority over $empty (built but not yet poured into by the array's
+// cache — a dim muted-bordered fill, distinct from the plain not-yet-built placeholder below it)
+// over the plain not-yet-built placeholder (transparent, outline only, disabled).
+const DiskSquare = styled.button`
   flex: 0 0 auto;
   width: 1.4rem;
   height: 1.4rem;
@@ -94,20 +103,57 @@ const StorageBankSquare = styled.button`
   }
 `
 
+// The array's own small staging-cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
+// size / DISK_CACHE_BLOCK_COUNT bits, filling left to right as Memory tops the cache up (see
+// tickDiskAutoFill in engine.js) before any of it pours into an empty disk container below. A full
+// block ($full) can be manually released back into Memory ($releasable — accent border, clickable)
+// to redirect those bits toward an ordinary Kilobyte transfer instead.
+const CacheBlocksRow = styled.div`
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  width: 100%;
+  max-width: 260px;
+`
+
+const CacheBlock = styled.button`
+  flex: 1 1 1.2rem;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.5px solid ${props => (props.$releasable ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
+  cursor: ${props => (props.$releasable ? 'pointer' : 'default')};
+  transition: filter 0.15s ease, transform 0.05s ease;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.2);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.9);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+`
+
 // Storage's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isStorageUnlocked), reached via that page's "🏦 Storage" nav button. Holds only
-// the redeem grid (Storage Bank Fill) — Building the next bank stays on ByteFoundryPage itself
-// (its own core loop), alongside a brief per-size summary; this page is for the fuller,
-// square-by-square detail and the one action that lives only here, redeeming. Redeeming is
-// unaffected by the forced priority order (Storage Bank Fill ranks highest — see
-// isStorageBankFillAvailable in engine.js), so nothing on this page is ever disabled by anything
-// elsewhere in the priority chain. `onBack` always returns to the Byte Foundry.
+// the cache/redeem grid per size (Disk Fill) — starting the next disk's build stays on
+// ByteFoundryPage itself (its own core loop), alongside a brief per-size summary; this page is for
+// the fuller, square-by-square detail and the two actions that live only here: releasing a cache
+// block and redeeming a full disk. Redeeming is unaffected by the forced priority order (Disk Fill
+// ranks highest — see isDiskFillAvailable in engine.js), so nothing on this page is ever disabled
+// by anything elsewhere in the priority chain — only by that specific size's own array being
+// mid-build (see intro.diskBuild). `onBack` always returns to the Byte Foundry.
 const StoragePage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
 
-  const storageBanksBuiltTotal = intro.storageBanksBuiltTotal ?? {}
-  const storageSizesToShow = getStorageSizesToShow(state)
+  const disksBuiltTotal = intro.disksBuiltTotal ?? {}
+  const diskSizesToShow = getDiskSizesToShow(state)
 
   return (
     <RootDiv>
@@ -118,41 +164,84 @@ const StoragePage = ({ game, onBack }) => {
         </Button>
       </Header>
 
-      {storageSizesToShow.map(size => {
-        const full = intro.storageBanks?.[size] ?? 0
-        // Falls back to `full` itself for a state whose storageBanksBuiltTotal doesn't (yet)
-        // account for every full bank — e.g. a migrated pre-fill-mechanic save — so a full
-        // bank is never rendered as if it didn't exist.
-        const builtTotal = Math.max(storageBanksBuiltTotal[size] ?? 0, full)
+      {diskSizesToShow.map(size => {
+        const full = intro.disks?.[size] ?? 0
+        // Falls back to `full` itself for a state whose disksBuiltTotal doesn't (yet) account for
+        // every full disk — e.g. a migrated pre-fill-mechanic save — so a full disk is never
+        // rendered as if it didn't exist.
+        const builtTotal = Math.max(disksBuiltTotal[size] ?? 0, full)
         const emptyCount = Math.max(0, builtTotal - full)
-        const redeemable = isStorageBankRedeemable(state, size)
+        const redeemTierName = getDiskRedeemTierName(state, size)
+        const redeemable = redeemTierName !== null
+        const rebuilding = intro.diskBuild?.size === size
+        const cached = intro.diskCache?.[size] ?? 0
+        const blockBits = size / DISK_CACHE_BLOCK_COUNT
+
         return (
-          <StorageSizeRow key={size}>
-            <StorageSizeLabel>{`${formatStorageSize(size)} banks (${full} full, ${Math.min(builtTotal, STORAGE_BANK_LADDER_CAP)}/${STORAGE_BANK_LADDER_CAP} built)`}</StorageSizeLabel>
-            <StorageBankSquaresRow role="group" aria-label={`${formatStorageSize(size)} storage banks`}>
-              {Array.from({ length: STORAGE_BANK_LADDER_CAP }, (_, index) => {
+          <DiskSizeRow key={size}>
+            <DiskSizeLabel>{`${formatDiskSize(size)} disks (${full} full, ${Math.min(builtTotal, DISK_ARRAY_LADDER_CAP)}/${DISK_ARRAY_LADDER_CAP} built)`}</DiskSizeLabel>
+
+            {rebuilding ? (
+              <RebuildingText>
+                {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (every disk in this array is offline until it finishes)`}
+              </RebuildingText>
+            ) : (
+              <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
+                {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
+                  const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
+                  const isFull = blockFilledBits >= blockBits
+                  const releasable = isFull && isDiskCacheBlockReleasable(state, size)
+                  return (
+                    <CacheBlock
+                      key={index}
+                      aria-label={
+                        releasable
+                          ? `release ${formatDiskSize(size)} cache block ${index + 1} back into Memory`
+                          : `${formatDiskSize(size)} cache block ${index + 1}`
+                      }
+                      disabled={!releasable}
+                      onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
+                      title={
+                        isFull
+                          ? `Release this block's ${formatDiskSize(blockBits)} back into Memory`
+                          : 'Filling from Memory'
+                      }
+                      type="button"
+                      $full={isFull}
+                      $releasable={releasable}
+                    />
+                  )
+                })}
+              </CacheBlocksRow>
+            )}
+
+            <SquaresRow role="group" aria-label={`${formatDiskSize(size)} disks`}>
+              {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
                 const isFull = index < full
                 const isEmpty = !isFull && index < full + emptyCount
+                const clickable = isFull && redeemable && !rebuilding
                 return (
-                  <StorageBankSquare
+                  <DiskSquare
                     key={index}
                     aria-label={
                       isFull
-                        ? `redeem ${formatStorageSize(size)} storage bank`
+                        ? `redeem ${formatDiskSize(size)} disk`
                         : isEmpty
-                          ? `empty ${formatStorageSize(size)} bank`
-                          : `not yet built ${formatStorageSize(size)} bank`
+                          ? `empty ${formatDiskSize(size)} disk`
+                          : `not yet built ${formatDiskSize(size)} disk`
                     }
-                    disabled={!isFull || !redeemable}
-                    onClick={isFull && redeemable ? () => actions.redeemStorageBank(size) : undefined}
+                    disabled={!clickable}
+                    onClick={clickable ? () => actions.redeemDisk(size) : undefined}
                     title={
-                      isFull
-                        ? (redeemable
-                          ? `Redeems 1 ${formatStorageSize(size)} bank for 1 free Kilobyte — empties it, ready to be auto-filled again`
-                          : `Redeemable once Kilobytes' level cost matches ${formatStorageSize(size)}`)
-                        : isEmpty
-                          ? 'Built, waiting for Memory to auto-fill it'
-                          : 'Not yet built'
+                      rebuilding
+                        ? 'This array is offline while it rebuilds'
+                        : isFull
+                          ? (redeemable
+                            ? `Redeems 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
+                            : `Redeemable once some tier's level cost matches ${formatDiskSize(size)}`)
+                          : isEmpty
+                            ? "Built, waiting for this array's cache to pour into it"
+                            : 'Not yet built'
                     }
                     type="button"
                     $full={isFull}
@@ -161,8 +250,8 @@ const StoragePage = ({ game, onBack }) => {
                   />
                 )
               })}
-            </StorageBankSquaresRow>
-          </StorageSizeRow>
+            </SquaresRow>
+          </DiskSizeRow>
         )
       })}
     </RootDiv>
