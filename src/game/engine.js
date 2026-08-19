@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -346,15 +346,16 @@ export const createInitialGameState = () => ({
     computeCores: 0,
     // PERMANENT — a monotonically-increasing lifetime counter, incremented by
     // tickComputeCoreConversion alongside computeCores itself but NEVER decremented by spending
-    // (activateComputeBoost) or merging (tickComputeNodeConversion) — the actual "CUMULATIVE total
-    // of Compute Cores ever earned" computeMergePageUnlocked below needs. computeCores alone can't
-    // serve this purpose: a player who spends a Boost before ever holding 8 Cores at once would
-    // otherwise never trip the latch, even after having earned well past 8 in total.
+    // (activateComputeBoost) or merging (mergeComputeCoresIntoNode/startComputeCoresMerge) — the
+    // actual "CUMULATIVE total of Compute Cores ever earned" computeMergePageUnlocked below needs.
+    // computeCores alone can't serve this purpose: a player who spends a Boost before ever holding
+    // 8 Cores at once would otherwise never trip the latch, even after having earned well past 8 in
+    // total.
     computeCoresEverEarned: 0,
-    // PERMANENT — automatically incremented by tickComputeNodeConversion every time computeCores
-    // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). Also the input
-    // to mergeComputeNodesIntoCluster below — unlike Core→Node, merging Nodes upward is a manual,
-    // player-triggered action, not automatic on tick.
+    // PERMANENT — incremented by mergeComputeCoresIntoNode (pre-unlock, instant) or by a completed
+    // Core->Node reserve merge (post-unlock — see startComputeCoresMerge/
+    // tickAutoMergeCoresIntoNode and issue #321), 8 Cores -> 1 Node either way. Also the input to
+    // mergeComputeNodesIntoCluster below.
     computeNodes: 0,
     // PERMANENT, same posture as computeCores/computeNodes above — incremented by
     // mergeComputeNodesIntoCluster (8 Nodes → 1 Cluster), and itself the input to
@@ -404,6 +405,7 @@ export const createInitialGameState = () => ({
     // the manual button's own 8 — automation only ever mops up an entity the player let cap out,
     // never preempting a more efficient manual merge at 8). The manual merge button stays available
     // either way. See tickAutoMerge/enableAutoMerge further down this file.
+    autoMergeCoresIntoNode: false,
     autoMergeNodesIntoCluster: false,
     autoMergeClustersIntoNetwork: false,
     autoMergeNetworksIntoGrid: false,
@@ -412,6 +414,23 @@ export const createInitialGameState = () => ({
     autoMergeCloudsIntoDatacenter: false,
     autoMergeDatacentersIntoSupercomputer: false,
     autoMergeSupercomputersIntoMegacomputer: false,
+    // PERMANENT — one countdown field per tier boundary (Core→Node through
+    // Supercomputer→Megacomputer), 0 while idle, counting down from that boundary's own
+    // COMPUTE_MERGE_DURATIONS_SECONDS entry while a reserve merge is in flight (see issue #321 —
+    // "Byte Foundry Compute reserve-merge timers" in layers.js). Only ever non-zero once that
+    // boundary's own autoMerge* flag above is true — merging stays the old-style instant action
+    // until then. Carried through a real Prestige unchanged, same permanence class as the entity
+    // counts these merges spend/produce — an in-progress merge simply keeps counting down
+    // seamlessly across the cycle boundary rather than losing its already-committed tokens.
+    computeCoresMergeRemainingSeconds: 0,
+    computeNodesMergeRemainingSeconds: 0,
+    computeClustersMergeRemainingSeconds: 0,
+    computeNetworksMergeRemainingSeconds: 0,
+    computeGridsMergeRemainingSeconds: 0,
+    computeFabricsMergeRemainingSeconds: 0,
+    computeCloudsMergeRemainingSeconds: 0,
+    computeDatacentersMergeRemainingSeconds: 0,
+    computeSupercomputersMergeRemainingSeconds: 0,
     // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
     // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
     // Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
@@ -1014,12 +1033,14 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // doesn't depend on tier01's level at all (unlike auto-redeem below), so running it this early
   // costs nothing.
   //
-  // Compute Core conversion (tickComputeCoreConversion, then tickComputeNodeConversion) runs next,
-  // right after auto-fill and before tickIntroAutoInvest — the same "first claim" priority
-  // auto-fill itself has over ordinary Kilobyte conversion: once capacity has reached
-  // INTRO_COMPUTE_CORE_UNLOCK_CAPACITY and Memory is full (isComputeCoreConversionUnlocked),
-  // Memory converts into Compute Cores before any of it can be converted into Kilobytes instead —
-  // unrelated to Storage state entirely. tickIntroAutoInvest then converts whatever Memory is left
+  // Compute Core conversion (tickComputeCoreConversion) runs next, right after auto-fill and
+  // before tickIntroAutoInvest — the same "first claim" priority auto-fill itself has over
+  // ordinary Kilobyte conversion: once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY and
+  // Memory is full (isComputeCoreConversionUnlocked), Memory converts into Compute Cores before any
+  // of it can be converted into Kilobytes instead — unrelated to Storage state entirely.
+  // Core -> Node is no longer automatic/unconditional (see issue #321) — it's just the first
+  // boundary in AUTO_MERGE_TICKERS below, same as every other tier boundary.
+  // tickIntroAutoInvest then converts whatever Memory is left
   // over (in practice usually nothing, once Compute Core conversion is active, since it flushes
   // the full balance). tickIntroProduction short-circuits to the
   // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits can't cover even one
@@ -1028,11 +1049,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // already follows.
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
   const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
-  const stateAfterComputeCores = tickComputeNodeConversion(tickComputeCoreConversion(stateAfterStorage))
-  // Any auto-merge tier the player has permanently unlocked (see enableAutoMergeNodesIntoCluster
-  // etc. and issue #316) also fires here, lowest tier first so a single tick can cascade upward
-  // through every unlocked step in a row — see AUTO_MERGE_TICKERS.
-  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(tickState), stateAfterComputeCores)
+  const stateAfterComputeCores = tickComputeCoreConversion(stateAfterStorage)
+  // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
+  // first so a single tick can cascade upward through every unlocked step in a row — see
+  // AUTO_MERGE_TICKERS and issue #321. Each ticker both auto-starts a reserve merge (once that
+  // boundary's input is completely full) and counts down any merge already in flight.
+  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterComputeCores)
   // Counts an active Compute Boost's remaining duration down, unconditionally, alongside the rest
   // of the Byte Foundry intro ticks above — see tickComputeBoost.
   const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges)
@@ -2098,9 +2120,10 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // Once isComputeCoreConversionUnlocked, Memory automatically converts into 1 Compute Core every
 // time it's full — a same-reference no-op once nothing about the state would change: Memory isn't
 // yet full, or intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in
-// practice Cores rarely reach this on their own, since tickComputeNodeConversion drains them into
-// a Node at 8 — this guard mainly matters once Nodes themselves are capped and stop accepting
-// more, letting Cores pile up behind that). While capped, Memory simply stays full rather than
+// practice Cores rarely reach this on their own, since merging (mergeComputeCoresIntoNode, or the
+// timed reserve merge once unlocked — see issue #321) drains them into a Node at 8 — this guard
+// mainly matters once Nodes themselves are capped and stop accepting more, letting Cores pile up
+// behind that). While capped, Memory simply stays full rather than
 // flushing for nothing — no progress is lost, it just waits for the player to spend a Core/Node
 // down. The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes
 // the entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE
@@ -2117,8 +2140,8 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // Also the only place intro.computeCoresEverEarned/intro.computeMergePageUnlocked ever change.
 // computeCoresEverEarned increments by 1 every time a conversion actually mints a Core — a true
 // lifetime counter, never decremented by spending (activateComputeBoost) or merging
-// (tickComputeNodeConversion) — unlike the live computeCores balance, which both of those do
-// drain. computeMergePageUnlocked flips true the instant that counter reaches
+// (mergeComputeCoresIntoNode/startComputeCoresMerge) — unlike the live computeCores balance, which
+// both of those do drain. computeMergePageUnlocked flips true the instant that counter reaches
 // COMPUTE_CORES_PER_NODE (8) for the first time; checking the *lifetime* counter rather than the
 // live balance is what makes this genuinely track "ever earned" — a player who spends a Boost
 // before ever holding 8 Cores at once, or whose Cores/Nodes were already capped from before this
@@ -2198,40 +2221,21 @@ export const enableAutoClaimCore = state => {
   }
 }
 
-// Converts every complete group of COMPUTE_CORES_PER_NODE (8) Compute Cores into 1 Compute Node —
-// a same-reference no-op below that threshold, or once intro.computeNodes is already at
-// COMPUTE_ENTITY_CAP (10 — see layers.js). Capped at however many Nodes there's still room for
-// (roomForNodes below), so a Core surplus beyond what fits is simply left unconverted in
-// computeCores instead of overflowing computeNodes past the cap — those leftover Cores then count
-// against tickComputeCoreConversion's own COMPUTE_ENTITY_CAP guard above, eventually pausing
-// Memory-to-Core conversion too once both are maxed. Called from tickGame right after
-// tickComputeCoreConversion, so freshly-minted Cores convert the same tick they're earned.
-export const tickComputeNodeConversion = state => {
-  const cores = state.intro?.computeCores ?? 0
-  const nodes = state.intro?.computeNodes ?? 0
-  const roomForNodes = Math.max(0, COMPUTE_ENTITY_CAP - nodes)
-  const nodesGained = Math.min(roomForNodes, Math.floor(cores / COMPUTE_CORES_PER_NODE))
-  if (nodesGained <= 0) return state
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      computeCores: cores - nodesGained * COMPUTE_CORES_PER_NODE,
-      computeNodes: nodes + nodesGained,
-    },
-  }
-}
-
-// Shared shape for the manual Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
-// Supercomputer → Megacomputer merge chain below (see ComputePage and issue #280) — unlike
-// tickComputeNodeConversion above (automatic every tick),
-// each of these only ever fires on an explicit player click, converting every complete group of
-// COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity, capped at whatever room
-// remains under COMPUTE_ENTITY_CAP on the output — the same "batch, but cap-bounded, surplus left
-// unconverted" shape tickComputeNodeConversion already uses for Core → Node. A same-reference
-// no-op below one full group of 8 of the input, or once the output is already at cap.
-const mergeComputeEntities = (inputField, outputField) => state => {
+// Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →
+// Datacenter → Supercomputer → Megacomputer merge chain below (see ComputePage and issues
+// #280/#321) — before that boundary's own auto-merge is unlocked (autoFlagField below), this is
+// the ONLY way that boundary's tokens ever move: an explicit player click, converting every
+// complete group of COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity in a
+// single, instant call, capped at whatever room remains under COMPUTE_ENTITY_CAP on the output —
+// the same "batch, but cap-bounded, surplus left unconverted" shape every tick-based conversion in
+// this file uses. A same-reference no-op below one full group of 8 of the input, once the output
+// is already at cap, OR — the key change from issue #321 — once autoFlagField has ever flipped
+// true: merging that boundary then fully transitions to the timed reserve system below
+// (startComputeMergeReserve/tickComputeMergeReserveTimer), and this plain instant path retires
+// permanently for it (an engine-level guard, not just a UI one — see "Security notes" in
+// CLAUDE.md).
+const mergeComputeEntities = (inputField, outputField, autoFlagField) => state => {
+  if (state.intro?.[autoFlagField]) return state
   const input = state.intro?.[inputField] ?? 0
   const output = state.intro?.[outputField] ?? 0
   const roomForOutput = Math.max(0, COMPUTE_ENTITY_CAP - output)
@@ -2248,43 +2252,101 @@ const mergeComputeEntities = (inputField, outputField) => state => {
   }
 }
 
-// 8 Compute Nodes → 1 Compute Cluster. Player-triggered (ComputePage's own merge button) — the
-// player decides whether to merge Nodes upward or keep spending/holding them, unlike the automatic
-// Core → Node conversion above.
-export const mergeComputeNodesIntoCluster = mergeComputeEntities('computeNodes', 'computeClusters')
-// 8 Compute Clusters → 1 Compute Network. Same posture as mergeComputeNodesIntoCluster above.
-export const mergeComputeClustersIntoNetwork = mergeComputeEntities('computeClusters', 'computeNetworks')
+// 8 Compute Cores → 1 Compute Node. Player-triggered (ComputePage's own merge button) while
+// auto-merge for this boundary isn't yet unlocked — the player decides whether to merge Cores
+// upward or keep spending/holding them (see activateComputeBoost). Formerly always-automatic
+// every tick (tickComputeNodeConversion, since removed — see issue #321); Core → Node is now just
+// the first of the 9 uniformly-shaped merge boundaries below.
+export const mergeComputeCoresIntoNode = mergeComputeEntities('computeCores', 'computeNodes', 'autoMergeCoresIntoNode')
+// 8 Compute Nodes → 1 Compute Cluster. Same posture as mergeComputeCoresIntoNode above.
+export const mergeComputeNodesIntoCluster = mergeComputeEntities('computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster')
+// 8 Compute Clusters → 1 Compute Network. Same posture as the merges above.
+export const mergeComputeClustersIntoNetwork = mergeComputeEntities('computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork')
 // 8 Compute Networks → 1 Compute Grid. Same posture as the merges above.
-export const mergeComputeNetworksIntoGrid = mergeComputeEntities('computeNetworks', 'computeGrids')
+export const mergeComputeNetworksIntoGrid = mergeComputeEntities('computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid')
 // 8 Compute Grids → 1 Compute Fabric. Same posture as the merges above.
-export const mergeComputeGridsIntoFabric = mergeComputeEntities('computeGrids', 'computeFabrics')
+export const mergeComputeGridsIntoFabric = mergeComputeEntities('computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric')
 // 8 Compute Fabrics → 1 Compute Cloud. Same posture as the merges above.
-export const mergeComputeFabricsIntoCloud = mergeComputeEntities('computeFabrics', 'computeClouds')
+export const mergeComputeFabricsIntoCloud = mergeComputeEntities('computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud')
 // 8 Compute Clouds → 1 Compute Datacenter. Same posture as the merges above.
-export const mergeComputeCloudsIntoDatacenter = mergeComputeEntities('computeClouds', 'computeDatacenters')
+export const mergeComputeCloudsIntoDatacenter = mergeComputeEntities('computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
 // 8 Compute Datacenters → 1 Compute Supercomputer. Same posture as the merges above.
-export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('computeDatacenters', 'computeSupercomputers')
+export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
 // 8 Compute Supercomputers → 1 Compute Megacomputer — the top of the merge chain today (see issue
 // #280's "Out of scope": nothing spends a Megacomputer yet). Same posture as the merges above.
-export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers')
+export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 
-// --- Compute auto-merge automation --- see issue #316. Each of the 8 manual merges above can be
-// permanently automated, one tier boundary at a time, by sacrificing ALL COMPUTE_ENTITY_CAP (10)
-// currently-held units of that merge's own OUTPUT entity — e.g. enableAutoMergeNodesIntoCluster
-// spends 10 Clusters to flip autoMergeNodesIntoCluster on. Once enabled, tickAutoMerge fires the
-// identical mergeComputeEntities logic automatically every tick, but only once the INPUT entity is
-// completely full (COMPUTE_ENTITY_CAP, 10) — a stricter bar than the manual button's own
-// COMPUTE_MERGE_RATIO (8), so automation only ever mops up an entity the player has let cap out,
-// never preempting a more efficient manual merge at 8. The manual button stays available
-// regardless of whether auto-merge is enabled for that tier.
+// --- Compute auto-merge automation & reserve-merge timers --- see issues #316/#321. Each of the 9
+// manual merges above can be permanently automated, one tier boundary at a time, by sacrificing
+// ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own OUTPUT entity — e.g.
+// enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on. Once
+// enabled, merging that boundary — auto or manual alike — transitions entirely to a timed RESERVE
+// pool (see COMPUTE_MERGE_RESERVE_CAP/COMPUTE_MERGE_DURATIONS_SECONDS in layers.js): starting a
+// merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input entity's own normal
+// COMPUTE_ENTITY_CAP (10) slots into the boundary's reserve, then counts down that boundary's own
+// fixed duration (doubling per tier, starting at 60s/1 minute for Core → Node) before granting 1
+// of the output entity (cap-checked) and clearing the reserve — at most one merge in flight per
+// boundary at a time. Auto-triggers only once the input is COMPLETELY full (10, not 8) — a
+// stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8), so automation only ever mops up
+// an entity the player has let cap out, never preempting a more efficient manual start at 8.
 
-// A same-reference no-op while the flag isn't set, the input hasn't reached COMPUTE_ENTITY_CAP
-// yet, or the output is already at COMPUTE_ENTITY_CAP itself (mergeComputeEntities' own guard).
-const tickAutoMerge = (inputField, outputField, autoFlagField) => state => {
+// Shared by both the auto-trigger (threshold COMPUTE_ENTITY_CAP) and the manual click-to-start
+// action (threshold COMPUTE_MERGE_RATIO) below — a same-reference no-op while auto-merge isn't
+// unlocked for this boundary, a merge is already in flight (timerField > 0), input is below
+// `threshold`, or output is already at COMPUTE_ENTITY_CAP. Otherwise moves exactly
+// COMPUTE_MERGE_RATIO out of the input entity and starts the timer at `durationSeconds`.
+const startComputeMergeReserve = (inputField, outputField, autoFlagField, timerField, durationSeconds, threshold) => state => {
   if (!(state.intro?.[autoFlagField] ?? false)) return state
-  if ((state.intro?.[inputField] ?? 0) < COMPUTE_ENTITY_CAP) return state
-  return mergeComputeEntities(inputField, outputField)(state)
+  if ((state.intro?.[timerField] ?? 0) > 0) return state
+  if ((state.intro?.[inputField] ?? 0) < threshold) return state
+  if ((state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP) return state
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [inputField]: (state.intro?.[inputField] ?? 0) - COMPUTE_MERGE_RATIO,
+      [timerField]: durationSeconds,
+    },
+  }
 }
+
+// Counts an in-flight reserve merge's remaining duration down by `elapsedSeconds`, frozen or not
+// (same posture as every other Byte Foundry mechanic) — a same-reference no-op while no merge is
+// in flight (timerField === 0). On completion (remaining <= 0), grants 1 of the output entity
+// (capped at COMPUTE_ENTITY_CAP, defensively — the start-time guard above already checked this,
+// but nothing prevents the output from having filled some other way in the meantime) and clears
+// the timer back to 0, freeing the reserve for the next merge.
+const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) => state => {
+  const remaining = state.intro?.[timerField] ?? 0
+  if (remaining <= 0) return state
+
+  const nextRemaining = remaining - elapsedSeconds
+  if (nextRemaining > 0) {
+    return { ...state, intro: { ...state.intro, [timerField]: nextRemaining } }
+  }
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [timerField]: 0,
+      [outputField]: Math.min(COMPUTE_ENTITY_CAP, (state.intro?.[outputField] ?? 0) + 1),
+    },
+  }
+}
+
+// Combines one boundary's auto-trigger (threshold COMPUTE_ENTITY_CAP) with its timer countdown —
+// the single per-boundary function tickGame's own COMPUTE_MERGE_BOUNDARIES-driven pipeline calls
+// every tick (see further down this file).
+const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoFlagField, timerField, durationSeconds) => state => {
+  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_CAP)(state)
+  return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
+}
+
+// UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
+// actually unlock automation for this tier boundary.
+const isAutoMergeUnlockAvailable = (state, outputField, autoFlagField) =>
+  !(state.intro?.[autoFlagField] ?? false) && (state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP
 
 // A same-reference no-op below isAutoMergeUnlockAvailable's own gate (already enabled, or fewer
 // than COMPUTE_ENTITY_CAP of the output entity currently held).
@@ -2293,48 +2355,83 @@ const enableAutoMerge = (outputField, autoFlagField) => state => {
   return { ...state, intro: { ...state.intro, [outputField]: 0, [autoFlagField]: true } }
 }
 
-// UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
-// actually unlock automation for this tier pair.
-const isAutoMergeUnlockAvailable = (state, outputField, autoFlagField) =>
-  !(state.intro?.[autoFlagField] ?? false) && (state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP
+// UI mirror of startComputeMergeReserve's own manual-click gate (threshold COMPUTE_MERGE_RATIO,
+// 8) — whether clicking this boundary's reserve-slot row right now ("the button is enabled only
+// when there are at least 8 tokens available across all the 18 slots" — issue #321) would start a
+// new merge: auto-merge unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the
+// input held, and the output isn't already at COMPUTE_ENTITY_CAP.
+const isComputeMergeReserveStartAvailable = (state, inputField, outputField, autoFlagField, timerField) =>
+  (state.intro?.[autoFlagField] ?? false) &&
+  (state.intro?.[timerField] ?? 0) === 0 &&
+  (state.intro?.[inputField] ?? 0) >= COMPUTE_MERGE_RATIO &&
+  (state.intro?.[outputField] ?? 0) < COMPUTE_ENTITY_CAP
 
-export const tickAutoMergeNodesIntoCluster = tickAutoMerge('computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster')
+// One block per tier boundary, lowest first — every export below (tickAutoMerge*/enableAutoMerge*/
+// isAutoMerge*UnlockAvailable/startCompute*Merge/isCompute*MergeStartAvailable) follows the exact
+// same 5-export shape, differing only in which intro fields/duration index it closes over, so the
+// 9 boundaries stay uniform even though ES module exports must be individually named.
+
+export const tickAutoMergeCoresIntoNode = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[0])
+export const enableAutoMergeCoresIntoNode = enableAutoMerge('computeNodes', 'autoMergeCoresIntoNode')
+export const isAutoMergeCoresIntoNodeUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNodes', 'autoMergeCoresIntoNode')
+export const startComputeCoresMerge = startComputeMergeReserve('computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[0], COMPUTE_MERGE_RATIO)
+export const isComputeCoresMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds')
+
+export const tickAutoMergeNodesIntoCluster = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[1])
 export const enableAutoMergeNodesIntoCluster = enableAutoMerge('computeClusters', 'autoMergeNodesIntoCluster')
 export const isAutoMergeNodesIntoClusterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClusters', 'autoMergeNodesIntoCluster')
+export const startComputeNodesMerge = startComputeMergeReserve('computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[1], COMPUTE_MERGE_RATIO)
+export const isComputeNodesMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds')
 
-export const tickAutoMergeClustersIntoNetwork = tickAutoMerge('computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork')
+export const tickAutoMergeClustersIntoNetwork = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[2])
 export const enableAutoMergeClustersIntoNetwork = enableAutoMerge('computeNetworks', 'autoMergeClustersIntoNetwork')
 export const isAutoMergeClustersIntoNetworkUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNetworks', 'autoMergeClustersIntoNetwork')
+export const startComputeClustersMerge = startComputeMergeReserve('computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[2], COMPUTE_MERGE_RATIO)
+export const isComputeClustersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds')
 
-export const tickAutoMergeNetworksIntoGrid = tickAutoMerge('computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid')
+export const tickAutoMergeNetworksIntoGrid = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[3])
 export const enableAutoMergeNetworksIntoGrid = enableAutoMerge('computeGrids', 'autoMergeNetworksIntoGrid')
 export const isAutoMergeNetworksIntoGridUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeGrids', 'autoMergeNetworksIntoGrid')
+export const startComputeNetworksMerge = startComputeMergeReserve('computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[3], COMPUTE_MERGE_RATIO)
+export const isComputeNetworksMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds')
 
-export const tickAutoMergeGridsIntoFabric = tickAutoMerge('computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric')
+export const tickAutoMergeGridsIntoFabric = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[4])
 export const enableAutoMergeGridsIntoFabric = enableAutoMerge('computeFabrics', 'autoMergeGridsIntoFabric')
 export const isAutoMergeGridsIntoFabricUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeFabrics', 'autoMergeGridsIntoFabric')
+export const startComputeGridsMerge = startComputeMergeReserve('computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[4], COMPUTE_MERGE_RATIO)
+export const isComputeGridsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds')
 
-export const tickAutoMergeFabricsIntoCloud = tickAutoMerge('computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud')
+export const tickAutoMergeFabricsIntoCloud = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[5])
 export const enableAutoMergeFabricsIntoCloud = enableAutoMerge('computeClouds', 'autoMergeFabricsIntoCloud')
 export const isAutoMergeFabricsIntoCloudUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClouds', 'autoMergeFabricsIntoCloud')
+export const startComputeFabricsMerge = startComputeMergeReserve('computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[5], COMPUTE_MERGE_RATIO)
+export const isComputeFabricsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds')
 
-export const tickAutoMergeCloudsIntoDatacenter = tickAutoMerge('computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
+export const tickAutoMergeCloudsIntoDatacenter = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[6])
 export const enableAutoMergeCloudsIntoDatacenter = enableAutoMerge('computeDatacenters', 'autoMergeCloudsIntoDatacenter')
 export const isAutoMergeCloudsIntoDatacenterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
+export const startComputeCloudsMerge = startComputeMergeReserve('computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[6], COMPUTE_MERGE_RATIO)
+export const isComputeCloudsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds')
 
-export const tickAutoMergeDatacentersIntoSupercomputer = tickAutoMerge('computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
+export const tickAutoMergeDatacentersIntoSupercomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[7])
 export const enableAutoMergeDatacentersIntoSupercomputer = enableAutoMerge('computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
 export const isAutoMergeDatacentersIntoSupercomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
+export const startComputeDatacentersMerge = startComputeMergeReserve('computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[7], COMPUTE_MERGE_RATIO)
+export const isComputeDatacentersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds')
 
-export const tickAutoMergeSupercomputersIntoMegacomputer = tickAutoMerge('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
+export const tickAutoMergeSupercomputersIntoMegacomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[8])
 export const enableAutoMergeSupercomputersIntoMegacomputer = enableAutoMerge('computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 export const isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
+export const startComputeSupercomputersMerge = startComputeMergeReserve('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds', COMPUTE_MERGE_DURATIONS_SECONDS[8], COMPUTE_MERGE_RATIO)
+export const isComputeSupercomputersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds')
 
-// Every tickAutoMerge* above, lowest tier first — tickGame reduces state through this array in
-// order so a single tick can cascade automation all the way up the chain (e.g. Nodes capping out
-// auto-merges into a Cluster, which can itself immediately cap out and auto-merge into a Network
-// the same tick, and so on) whenever the player has unlocked auto-merge at every step in a row.
+// Every tickAutoMerge* above, lowest tier first — tickGame reduces state through this array,
+// each called with the tick's own elapsedSeconds, in order so a single tick can cascade both
+// auto-triggering AND completion all the way up the chain (e.g. Cores capping out and starting a
+// merge into a Node, whose own reserve might simultaneously complete and immediately auto-trigger
+// the next boundary, and so on) whenever the player has unlocked auto-merge at every step in a row.
 const AUTO_MERGE_TICKERS = [
+  tickAutoMergeCoresIntoNode,
   tickAutoMergeNodesIntoCluster,
   tickAutoMergeClustersIntoNetwork,
   tickAutoMergeNetworksIntoGrid,
@@ -2746,6 +2843,7 @@ export const prestigeGame = state => {
       // purchases just like the compute-ladder entities and reveal latch above — carried through a
       // real Prestige unchanged, never re-locked.
       autoClaimCoreEnabled: state.intro?.autoClaimCoreEnabled ?? initial.intro.autoClaimCoreEnabled,
+      autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
       autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
       autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
       autoMergeNetworksIntoGrid: state.intro?.autoMergeNetworksIntoGrid ?? initial.intro.autoMergeNetworksIntoGrid,
@@ -2754,6 +2852,20 @@ export const prestigeGame = state => {
       autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
       autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
       autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
+      // Any reserve merge already in flight when Prestige fires (see issue #321) represents tokens
+      // already committed/spent out of the normal slots — carried through PERMANENT, same as the
+      // compute-ladder entities/auto-merge flags above, so it just keeps counting down seamlessly
+      // across the cycle boundary instead of losing the committed tokens. Deliberately NOT
+      // run-scoped like computeBoostRemainingSeconds below.
+      computeCoresMergeRemainingSeconds: state.intro?.computeCoresMergeRemainingSeconds ?? initial.intro.computeCoresMergeRemainingSeconds,
+      computeNodesMergeRemainingSeconds: state.intro?.computeNodesMergeRemainingSeconds ?? initial.intro.computeNodesMergeRemainingSeconds,
+      computeClustersMergeRemainingSeconds: state.intro?.computeClustersMergeRemainingSeconds ?? initial.intro.computeClustersMergeRemainingSeconds,
+      computeNetworksMergeRemainingSeconds: state.intro?.computeNetworksMergeRemainingSeconds ?? initial.intro.computeNetworksMergeRemainingSeconds,
+      computeGridsMergeRemainingSeconds: state.intro?.computeGridsMergeRemainingSeconds ?? initial.intro.computeGridsMergeRemainingSeconds,
+      computeFabricsMergeRemainingSeconds: state.intro?.computeFabricsMergeRemainingSeconds ?? initial.intro.computeFabricsMergeRemainingSeconds,
+      computeCloudsMergeRemainingSeconds: state.intro?.computeCloudsMergeRemainingSeconds ?? initial.intro.computeCloudsMergeRemainingSeconds,
+      computeDatacentersMergeRemainingSeconds: state.intro?.computeDatacentersMergeRemainingSeconds ?? initial.intro.computeDatacentersMergeRemainingSeconds,
+      computeSupercomputersMergeRemainingSeconds: state.intro?.computeSupercomputersMergeRemainingSeconds ?? initial.intro.computeSupercomputersMergeRemainingSeconds,
       // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
       // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an
       // active boost is run-scoped and resets every real Prestige, unlike the Cores/Nodes it's

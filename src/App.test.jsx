@@ -3222,7 +3222,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
     expect(screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-merge is unlocked for a tier, a real tick auto-merges 8-for-1 once the input is completely full', () => {
+  test('once auto-merge is unlocked for a tier, a real tick auto-starts a reserve merge once the input is completely full (the merge itself only completes once its own timed duration elapses — see engine.test.js)', () => {
     vi.useFakeTimers()
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
@@ -3232,14 +3232,15 @@ describe('Compute auto-merge / auto-claim automation', () => {
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeClusters).toBe(1)
+    expect(saved.intro.computeClusters).toBe(0)
     expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(saved.intro.computeNodesMergeRemainingSeconds).toBeGreaterThan(0)
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('the manual merge button stays available even once auto-merge is enabled for that tier', () => {
+  test('once auto-merge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
@@ -3247,7 +3248,8 @@ describe('Compute auto-merge / auto-claim automation', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
   })
 
   test('an "enable auto-claim" control for Cores is always shown on ComputePage, disabled below 10 held Nodes', () => {

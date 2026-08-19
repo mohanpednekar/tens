@@ -1,7 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
-import StatCard from 'components/StatCard'
 import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO } from 'game/layers'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -37,83 +36,134 @@ const StatusText = styled.p`
   text-align: center;
 `
 
-// One row per compute-ladder entity — count and its own action button(s) together, replacing the
-// old separate top counters row + separate merge-buttons section (see issue #316). Follows
-// MainPage's own per-tier-row design cue: a StatCard-based flex row, not a full grid, since a
-// compute entity's row only ever needs a label, a count, and up to two small action buttons —
-// nowhere near MainPage's own tier row's four-track layout.
-const EntityRowsGroup = styled.div`
+// One block per compute-ladder entity — two rows apiece (see TierHeaderRow/TierMergeRow below),
+// replacing the old single-row-per-tier layout now that a boundary's own reserve-merge slots (see
+// issue #321) need a dedicated second row once auto-merge is unlocked for it.
+const TierBlocksGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
 `
 
-// `flex-wrap: nowrap` is deliberate — every tier's row must fit on exactly one line (see issue
-// #316's own "fit every compute tier in one line" ask); icon-only controls below keep each row
-// narrow enough that this holds even at mobile widths, where the old wrapping row + full-word
-// buttons would otherwise spill onto a second line.
-const EntityRow = styled(StatCard)`
+const TierBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0.3rem 0.6rem;
+  border-radius: ${props => props.theme.radius.md};
+  background: ${props => props.theme.color.surface};
+  border: 1px solid ${props => props.theme.color.border};
+`
+
+// Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
+// slots ... also has Name and symbol of the tier" (issue #321).
+const TierHeaderRow = styled.div`
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: ${props => props.theme.space.xs};
   width: 100%;
-  padding: 0.3rem 0.6rem;
 `
 
-const EntityLabel = styled.span`
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+const TierLabel = styled.span`
+  flex: 0 0 auto;
   font-weight: 600;
   font-size: 0.9em;
+  white-space: nowrap;
 `
 
-const EntityCount = styled.span`
+const TierSymbol = styled.span`
   flex: 0 0 auto;
-  font-family: ${props => props.theme.font.display};
-  font-weight: 700;
-  font-size: 0.85em;
-  color: ${props => props.theme.color.textMuted};
+  font-size: 1em;
 `
 
-const EntityActions = styled.div`
+const SlotsRow = styled.div`
   display: flex;
-  flex: 0 0 auto;
-  gap: 4px;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
 `
 
-// Shared by the per-tier Merge/auto-unlock buttons and the Boost presets below — small and
-// icon-only (see IconButton), so a whole row (label + count + up to 2 controls, or 3 boost
-// presets + a Core count) reads as one compact line even at narrow widths. The full description
-// always lives in `title`/`aria-label` instead of visible text — see issue #316's "clever symbols
-// ... intuitive with no or single word labels" ask.
+// A single discrete normal-capacity slot (one of COMPUTE_ENTITY_CAP) — filled once its index is
+// below the current count, matching the same "never partially filled per-square" convention
+// StoragePage's own DiskSquare uses, just non-interactive (a plain status square, not a button).
+const NormalSlot = styled.span`
+  flex: 0 0 auto;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.2px solid ${props => (props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
+`
+
+// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
+// reserve slots themselves, clickable as the manual-start trigger — "2nd row has merge button and
+// unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
+const TierMergeRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
 const CompactButton = styled(Button)`
   font-size: 0.78em;
   padding: 0.35em 0.6em;
+  flex: 0 0 auto;
 `
 
-// A fixed-width, icon-only variant of CompactButton for the per-tier Merge/auto-unlock controls —
-// square rather than pill-shaped, so a lone glyph reads as a single tappable icon instead of a
-// button with empty padding around it.
 const IconButton = styled(CompactButton)`
-  flex: 0 0 auto;
   width: 1.9em;
   padding: 0.3em;
 `
 
-// A plain status badge for a tier whose automation is already permanently unlocked — no click, so
-// it's deliberately not a <Button>; the icon alone (colored) reads as "done" rather than another
-// action to consider.
 const AutoBadge = styled.span`
   flex: 0 0 auto;
   width: 1.9em;
   text-align: center;
   font-size: 0.85em;
   color: ${props => props.theme.color.good};
+`
+
+const ReserveSlotsRow = styled.button`
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+`
+
+// A reserve-pool slot (one of COMPUTE_MERGE_RESERVE_CAP, 8) — always either entirely empty (idle,
+// nothing committed) or entirely filled (a merge in flight, timing down to completion) since the
+// reserve only ever fills atomically, never partially — see engine.js's startComputeMergeReserve.
+const ReserveSlot = styled.span`
+  flex: 0 0 auto;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.theme.color.surfaceSunken)};
+  background: ${props => (props.$merging ? props.theme.color.warn : 'transparent')};
+`
+
+const MergeCountdown = styled.span`
+  flex: 0 0 auto;
+  font-size: 0.78em;
+  font-family: ${props => props.theme.font.display};
+  color: ${props => props.theme.color.warn};
 `
 
 // The Boost row: available Cores (the currency every preset spends) shown in the same row as the
@@ -163,33 +213,45 @@ const COMPUTE_BOOST_DISPLAY = {
   sustain: { icon: '🔋', label: 'Sustain' },
 }
 
-// The full ten-tier progression this page walks top to bottom. Core is the special first row — no
-// merge button of its own (Memory → Core has no merge INPUT in the traditional sense), and its
-// manual "Claim Core" action lives on ByteFoundryPage instead (see issue #316) — but its own
-// auto-claim unlock control still lives here, alongside every other tier's auto-merge unlock, for
-// one consistent "automation control center" rather than splitting that concept across two pages.
-// Every other row (Node through Supercomputer) always shows its Merge button once
-// intro.computeMergePageUnlocked, enabled at COMPUTE_MERGE_RATIO (8) regardless of auto-merge
-// state. Megacomputer (the last tier) has no merge/auto row at all — nothing to merge into or
-// automate past it.
+// The full ten-tier progression this page walks top to bottom. Every row past Cores through
+// Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
+// once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
+// autoMergeNodesIntoCluster/… in engine.js) — transitions from an instant manual click to
+// engine.js's timed reserve-pool system (see issue #321). Core → Node is included as an ordinary
+// boundary here, same as every other one — this is unrelated to the separate Memory → Core
+// "Claim Core"/auto-claim mechanic, whose manual action lives on ByteFoundryPage and whose
+// auto-claim unlock control renders as a small badge on Cores' own header row here (autoClaim*
+// fields below), since it doesn't fit the row-2 merge-boundary shape every other control uses.
+// Megacomputer (the last tier) has no merge row at all — nothing to merge into or automate past it
+// (see issue #280's "Out of scope").
 const ENTITY_ROWS = [
   {
     key: 'core',
     label: 'Cores',
+    symbol: '⬡',
     countField: 'computeCores',
-    autoFlagField: 'autoClaimCoreEnabled',
+    mergeOutputLabel: 'Node',
+    mergeOutputField: 'computeNodes',
+    mergeAction: 'mergeComputeCoresIntoNode',
+    autoFlagField: 'autoMergeCoresIntoNode',
     autoCostLabel: 'Nodes',
     autoCostField: 'computeNodes',
-    enableAutoAction: 'enableAutoClaimCore',
-    autoAriaLabel: 'enable auto-claim for Cores',
+    enableAutoAction: 'enableAutoMergeCoresIntoNode',
+    autoAriaLabel: 'enable auto-merge for Cores into Nodes',
+    startAction: 'startComputeCoresMerge',
+    timerField: 'computeCoresMergeRemainingSeconds',
+    // The separate, unrelated Memory -> Core auto-claim control (see comment above).
+    autoClaimFlagField: 'autoClaimCoreEnabled',
+    autoClaimCostLabel: 'Nodes',
+    autoClaimCostField: 'computeNodes',
+    enableAutoClaimAction: 'enableAutoClaimCore',
   },
   {
     key: 'nodesIntoCluster',
     label: 'Nodes',
+    symbol: '🔗',
     countField: 'computeNodes',
-    mergeInputLabel: 'Nodes',
     mergeOutputLabel: 'Cluster',
-    mergeInputField: 'computeNodes',
     mergeOutputField: 'computeClusters',
     mergeAction: 'mergeComputeNodesIntoCluster',
     autoFlagField: 'autoMergeNodesIntoCluster',
@@ -197,14 +259,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeClusters',
     enableAutoAction: 'enableAutoMergeNodesIntoCluster',
     autoAriaLabel: 'enable auto-merge for Nodes into Clusters',
+    startAction: 'startComputeNodesMerge',
+    timerField: 'computeNodesMergeRemainingSeconds',
   },
   {
     key: 'clustersIntoNetwork',
     label: 'Clusters',
+    symbol: '🧩',
     countField: 'computeClusters',
-    mergeInputLabel: 'Clusters',
     mergeOutputLabel: 'Network',
-    mergeInputField: 'computeClusters',
     mergeOutputField: 'computeNetworks',
     mergeAction: 'mergeComputeClustersIntoNetwork',
     autoFlagField: 'autoMergeClustersIntoNetwork',
@@ -212,14 +275,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeNetworks',
     enableAutoAction: 'enableAutoMergeClustersIntoNetwork',
     autoAriaLabel: 'enable auto-merge for Clusters into Networks',
+    startAction: 'startComputeClustersMerge',
+    timerField: 'computeClustersMergeRemainingSeconds',
   },
   {
     key: 'networksIntoGrid',
     label: 'Networks',
+    symbol: '🕸️',
     countField: 'computeNetworks',
-    mergeInputLabel: 'Networks',
     mergeOutputLabel: 'Grid',
-    mergeInputField: 'computeNetworks',
     mergeOutputField: 'computeGrids',
     mergeAction: 'mergeComputeNetworksIntoGrid',
     autoFlagField: 'autoMergeNetworksIntoGrid',
@@ -227,14 +291,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeGrids',
     enableAutoAction: 'enableAutoMergeNetworksIntoGrid',
     autoAriaLabel: 'enable auto-merge for Networks into Grids',
+    startAction: 'startComputeNetworksMerge',
+    timerField: 'computeNetworksMergeRemainingSeconds',
   },
   {
     key: 'gridsIntoFabric',
     label: 'Grids',
+    symbol: '▦',
     countField: 'computeGrids',
-    mergeInputLabel: 'Grids',
     mergeOutputLabel: 'Fabric',
-    mergeInputField: 'computeGrids',
     mergeOutputField: 'computeFabrics',
     mergeAction: 'mergeComputeGridsIntoFabric',
     autoFlagField: 'autoMergeGridsIntoFabric',
@@ -242,14 +307,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeFabrics',
     enableAutoAction: 'enableAutoMergeGridsIntoFabric',
     autoAriaLabel: 'enable auto-merge for Grids into Fabrics',
+    startAction: 'startComputeGridsMerge',
+    timerField: 'computeGridsMergeRemainingSeconds',
   },
   {
     key: 'fabricsIntoCloud',
     label: 'Fabrics',
+    symbol: '🧵',
     countField: 'computeFabrics',
-    mergeInputLabel: 'Fabrics',
     mergeOutputLabel: 'Cloud',
-    mergeInputField: 'computeFabrics',
     mergeOutputField: 'computeClouds',
     mergeAction: 'mergeComputeFabricsIntoCloud',
     autoFlagField: 'autoMergeFabricsIntoCloud',
@@ -257,14 +323,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeClouds',
     enableAutoAction: 'enableAutoMergeFabricsIntoCloud',
     autoAriaLabel: 'enable auto-merge for Fabrics into Clouds',
+    startAction: 'startComputeFabricsMerge',
+    timerField: 'computeFabricsMergeRemainingSeconds',
   },
   {
     key: 'cloudsIntoDatacenter',
     label: 'Clouds',
+    symbol: '☁️',
     countField: 'computeClouds',
-    mergeInputLabel: 'Clouds',
     mergeOutputLabel: 'Datacenter',
-    mergeInputField: 'computeClouds',
     mergeOutputField: 'computeDatacenters',
     mergeAction: 'mergeComputeCloudsIntoDatacenter',
     autoFlagField: 'autoMergeCloudsIntoDatacenter',
@@ -272,14 +339,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeDatacenters',
     enableAutoAction: 'enableAutoMergeCloudsIntoDatacenter',
     autoAriaLabel: 'enable auto-merge for Clouds into Datacenters',
+    startAction: 'startComputeCloudsMerge',
+    timerField: 'computeCloudsMergeRemainingSeconds',
   },
   {
     key: 'datacentersIntoSupercomputer',
     label: 'Datacenters',
+    symbol: '🏢',
     countField: 'computeDatacenters',
-    mergeInputLabel: 'Datacenters',
     mergeOutputLabel: 'Supercomputer',
-    mergeInputField: 'computeDatacenters',
     mergeOutputField: 'computeSupercomputers',
     mergeAction: 'mergeComputeDatacentersIntoSupercomputer',
     autoFlagField: 'autoMergeDatacentersIntoSupercomputer',
@@ -287,14 +355,15 @@ const ENTITY_ROWS = [
     autoCostField: 'computeSupercomputers',
     enableAutoAction: 'enableAutoMergeDatacentersIntoSupercomputer',
     autoAriaLabel: 'enable auto-merge for Datacenters into Supercomputers',
+    startAction: 'startComputeDatacentersMerge',
+    timerField: 'computeDatacentersMergeRemainingSeconds',
   },
   {
     key: 'supercomputersIntoMegacomputer',
     label: 'Supercomputers',
+    symbol: '🖥️',
     countField: 'computeSupercomputers',
-    mergeInputLabel: 'Supercomputers',
     mergeOutputLabel: 'Megacomputer',
-    mergeInputField: 'computeSupercomputers',
     mergeOutputField: 'computeMegacomputers',
     mergeAction: 'mergeComputeSupercomputersIntoMegacomputer',
     autoFlagField: 'autoMergeSupercomputersIntoMegacomputer',
@@ -302,10 +371,13 @@ const ENTITY_ROWS = [
     autoCostField: 'computeMegacomputers',
     enableAutoAction: 'enableAutoMergeSupercomputersIntoMegacomputer',
     autoAriaLabel: 'enable auto-merge for Supercomputers into Megacomputers',
+    startAction: 'startComputeSupercomputersMerge',
+    timerField: 'computeSupercomputersMergeRemainingSeconds',
   },
   {
     key: 'megacomputer',
     label: 'Megacomputers',
+    symbol: '👑',
     countField: 'computeMegacomputers',
     // The top of the chain — no merge/auto row (see issue #280's "Out of scope").
   },
@@ -322,20 +394,26 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 // button. Activation is still gated by the Byte Foundry's forced priority order — Disk
 // Fill > Bandwidth > Disk Build > Compute > Memory — so a preset can show disabled here
 // even while mechanically activatable (canActivateComputeBoost), if something ranked above
-// Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The manual
-// ten-tier merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
-// Supercomputer → Megacomputer, see issue #280) lives here too, alongside Boost — one page for
-// everything Compute, rather than a second dedicated screen; merging is the player's own choice
-// and never fires automatically UNLESS the player has separately unlocked auto-merge for that
-// specific tier boundary (see issue #316 — each of the 8 manual merges, plus Core's own auto-claim,
-// can be permanently automated by sacrificing 10 of the tier above). "Compute" names the page/
-// feature only — individual entities drop the word (Core, Node, Cluster, … not "Compute Core"/
-// "Compute Node"/…). The merge section itself (every row past Cores, plus each row's own
-// button(s)) only renders once `intro.computeMergePageUnlocked` — the page reveals as soon as
-// Compute is unlocked (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the
-// merge chain stays hidden behind its own later, one-time latch until the player has actually
-// earned enough Cores to use it (see engine.js's tickComputeCoreConversion for where that latch
-// flips). `onBack` always returns to the Byte Foundry.
+// Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The ten-tier
+// merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
+// Supercomputer → Megacomputer, see issues #280/#321) lives here too, alongside Boost — one page
+// for everything Compute, rather than a second dedicated screen. Each tier renders two rows (see
+// ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's
+// name/symbol; row 2 is, pre-unlock, an instant Merge button + an Unlock Auto-merge button, or,
+// post-unlock, the COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is
+// what manually starts a new reserve merge once isCompute*MergeStartAvailable allows it ("the
+// button is enabled only when there are at least 8 tokens available across all the 18 slots").
+// Merging only ever fires automatically once the player has separately unlocked auto-merge for
+// that specific boundary; either way, once unlocked, a start (auto or manual) commits
+// COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's own fixed
+// duration (COMPUTE_MERGE_DURATIONS_SECONDS in layers.js) before granting 1 of the output entity.
+// "Compute" names the page/feature only — individual entities drop the word (Core, Node,
+// Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
+// `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
+// (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
+// hidden behind its own later, one-time latch until the player has actually earned enough Cores to
+// use it (see engine.js's tickComputeCoreConversion for where that latch flips). `onBack` always
+// returns to the Byte Foundry.
 const ComputePage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
@@ -374,56 +452,109 @@ const ComputePage = ({ game, onBack }) => {
 
       {intro.computeMergePageUnlocked
         ? (
-          <EntityRowsGroup aria-label="compute entities">
+          <TierBlocksGroup aria-label="compute entities">
             {ENTITY_ROWS.map(row => {
               const count = intro[row.countField] ?? 0
-              const isLastTier = !row.autoFlagField
-              const autoEnabled = row.autoFlagField ? Boolean(intro[row.autoFlagField]) : false
+              const hasMergeRow = Boolean(row.autoFlagField)
+              const autoEnabled = hasMergeRow ? Boolean(intro[row.autoFlagField]) : false
               const autoCostHeld = row.autoCostField ? (intro[row.autoCostField] ?? 0) : 0
-              const canEnableAuto = !isLastTier && !autoEnabled && autoCostHeld >= COMPUTE_ENTITY_CAP
+              const canEnableAuto = hasMergeRow && !autoEnabled && autoCostHeld >= COMPUTE_ENTITY_CAP
+              const remainingSeconds = row.timerField ? (intro[row.timerField] ?? 0) : 0
+              const merging = remainingSeconds > 0
+              const startAvailable = autoEnabled && !merging && count >= COMPUTE_MERGE_RATIO && (intro[row.mergeOutputField] ?? 0) < COMPUTE_ENTITY_CAP
+
+              const autoClaimEnabled = row.autoClaimFlagField ? Boolean(intro[row.autoClaimFlagField]) : false
+              const autoClaimCostHeld = row.autoClaimCostField ? (intro[row.autoClaimCostField] ?? 0) : 0
+              const canEnableAutoClaim = Boolean(row.enableAutoClaimAction) && !autoClaimEnabled && autoClaimCostHeld >= COMPUTE_ENTITY_CAP
 
               return (
-                <EntityRow key={row.key} aria-label={`${row.label} row`}>
-                  <EntityLabel>{row.label}</EntityLabel>
-                  <EntityCount>{`${formatAmount(count)}/${COMPUTE_ENTITY_CAP}`}</EntityCount>
-                  {!isLastTier && (
-                    <EntityActions>
-                      {row.mergeAction && (
-                        <IconButton
-                          aria-label={`merge ${COMPUTE_MERGE_RATIO} ${row.mergeInputLabel.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
-                          disabled={!canMerge(intro[row.mergeInputField] ?? 0, intro[row.mergeOutputField] ?? 0)}
-                          onClick={() => actions[row.mergeAction]()}
-                          title={
-                            (intro[row.mergeOutputField] ?? 0) >= COMPUTE_ENTITY_CAP
-                              ? `${row.mergeOutputLabel} is already at the max of ${COMPUTE_ENTITY_CAP}`
-                              : `Merge: spend ${COMPUTE_MERGE_RATIO} ${row.mergeInputLabel} for 1 ${row.mergeOutputLabel}`
-                          }
-                          type="button"
-                          variant="prestige"
-                        >
-                          <ButtonContent>⬆</ButtonContent>
-                        </IconButton>
-                      )}
-                      {autoEnabled ? (
-                        <AutoBadge title={`Auto-merge enabled: ${row.label} auto-merges into ${row.mergeOutputLabel ?? '1 Node'} whenever full`}>🤖</AutoBadge>
+                <TierBlock key={row.key} aria-label={`${row.label} tier`}>
+                  <TierHeaderRow>
+                    <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
+                    <TierLabel>{`${row.label} ${formatAmount(count)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
+                    <SlotsRow role="group" aria-label={`${row.label} slots`}>
+                      {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
+                        <NormalSlot key={index} $filled={index < count} aria-hidden="true" />
+                      ))}
+                    </SlotsRow>
+                    {row.enableAutoClaimAction && (
+                      autoClaimEnabled ? (
+                        <AutoBadge title="Auto-claim enabled: Memory automatically converts into a Core whenever full">🤖</AutoBadge>
                       ) : (
                         <IconButton
-                          aria-label={row.autoAriaLabel}
-                          disabled={!canEnableAuto}
-                          onClick={() => actions[row.enableAutoAction]()}
-                          title={`Auto: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoCostLabel} (have ${formatAmount(autoCostHeld)}) to permanently automate this step whenever ${row.label} is full`}
+                          aria-label="enable auto-claim for Cores"
+                          disabled={!canEnableAutoClaim}
+                          onClick={() => actions[row.enableAutoClaimAction]()}
+                          title={`Auto-claim: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoClaimCostLabel} (have ${formatAmount(autoClaimCostHeld)}) to permanently automate Memory -> Core conversion whenever full`}
                           type="button"
                           variant="info"
                         >
                           <ButtonContent>🤖</ButtonContent>
                         </IconButton>
+                      )
+                    )}
+                  </TierHeaderRow>
+
+                  {hasMergeRow && (
+                    <TierMergeRow>
+                      {autoEnabled ? (
+                        <ReserveSlotsRow
+                          aria-label={
+                            merging
+                              ? `${row.label} reserve merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                              : `start merging ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`
+                          }
+                          disabled={!startAvailable}
+                          onClick={startAvailable ? () => actions[row.startAction]() : undefined}
+                          $clickable={startAvailable}
+                          title={
+                            merging
+                              ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
+                              : startAvailable
+                                ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a timed merge into 1 ${row.mergeOutputLabel}`
+                                : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots`
+                          }
+                          type="button"
+                        >
+                          {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
+                          {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
+                            <ReserveSlot key={index} $merging={merging} aria-hidden="true" />
+                          ))}
+                        </ReserveSlotsRow>
+                      ) : (
+                        <>
+                          <IconButton
+                            aria-label={`merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                            disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0)}
+                            onClick={() => actions[row.mergeAction]()}
+                            title={
+                              (intro[row.mergeOutputField] ?? 0) >= COMPUTE_ENTITY_CAP
+                                ? `${row.mergeOutputLabel} is already at the max of ${COMPUTE_ENTITY_CAP}`
+                                : `Merge: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
+                            }
+                            type="button"
+                            variant="prestige"
+                          >
+                            <ButtonContent>⬆</ButtonContent>
+                          </IconButton>
+                          <IconButton
+                            aria-label={row.autoAriaLabel}
+                            disabled={!canEnableAuto}
+                            onClick={() => actions[row.enableAutoAction]()}
+                            title={`Auto: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoCostLabel} (have ${formatAmount(autoCostHeld)}) to permanently automate this step whenever ${row.label} is full, via a timed reserve merge`}
+                            type="button"
+                            variant="info"
+                          >
+                            <ButtonContent>🤖</ButtonContent>
+                          </IconButton>
+                        </>
                       )}
-                    </EntityActions>
+                    </TierMergeRow>
                   )}
-                </EntityRow>
+                </TierBlock>
               )
             })}
-          </EntityRowsGroup>
+          </TierBlocksGroup>
           )
         : (
           <StatusText>

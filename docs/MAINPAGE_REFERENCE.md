@@ -345,30 +345,36 @@ reaches 8):
 
 - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
   `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-- **Once unlocked:** one row per compute-ladder entity, each an `EntityRow` (a `StatCard`,
-  `flex-wrap: nowrap` so it can never spill onto a second line) wrapped in an `EntityRowsGroup`
-  (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries: Cores through
-  Megacomputers). Each row is `EntityLabel` (the single-word entity name, e.g. "Clusters") +
-  `EntityCount` (`N/10`), then, for every tier except the last (Megacomputer):
-  - A **Merge** control: a fixed-width, icon-only `IconButton` (`variant="prestige"`, label "⬆" —
-    no text) for every tier from Node through Supercomputer (8 total) — always rendered, enabled
-    once `COMPUTE_MERGE_RATIO` (8) of the input is held and the output is under
-    `COMPUTE_ENTITY_CAP`. `aria-label` spells out the full action (e.g. "merge 8 nodes into 1
-    cluster") — unchanged from before this row unification, so existing queries by name still
-    work; `title` carries the same sentence a player would read. Calls the matching
-    `game.actions.mergeCompute*Into*` action, one per `mergeComputeEntities`-built engine function.
-    The Cores row has no Merge control of its own — Core's manual action ("Claim Core") lives on
-    ByteFoundryPage instead (see below).
-  - An **auto-unlock** control: once the matching `intro.autoMerge*`/`autoClaimCoreEnabled` flag is
-    already set, a plain `AutoBadge` (icon "🤖" alone, no click, `theme.color.good`, `title`
-    explaining what's automated); otherwise a fixed-width `IconButton` (`variant="info"`, label
-    "🤖", `aria-label="enable auto-<merge/claim> for <…>"`) calling the matching
-    `game.actions.enableAutoMerge*`/`enableAutoClaimCore` action — enabled once
-    `COMPUTE_ENTITY_CAP` (10) of the cost tier (the merge's own OUTPUT entity, or Nodes for Cores)
-    is held. `title` explains the sacrifice cost either way. Every `disabled`/enabled state here is
-    a UI-only mirror of the matching engine predicate
-    (`isAutoMerge*UnlockAvailable`/`isAutoClaimCoreUnlockAvailable`) — `engine.js` re-validates on
-    every call regardless (see "Security notes" in CLAUDE.md).
+- **Once unlocked:** TWO rows per compute-ladder entity Core through Megacomputer (issue #321), each
+  pair wrapped in a `TierBlock` inside a `TierBlocksGroup` (`aria-label="compute entities"`), driven
+  off an `ENTITY_ROWS` array (10 entries).
+  - **Row 1** (`TierHeaderRow`): the tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label
+    (`TierLabel`, e.g. `"Clusters 3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label>
+    slots"`) of `COMPUTE_ENTITY_CAP` (10) `NormalSlot` squares, filled left-to-right up to the
+    current count — the same discrete-square convention `StoragePage`'s own `DiskSquare` uses, just
+    non-interactive (a plain status square, not a button). Cores' own row 1 additionally carries the
+    separate, unrelated Memory → Core auto-claim control at the end (an `AutoBadge` once
+    `autoClaimCoreEnabled`, otherwise an `IconButton` calling `enableAutoClaimCore` — unchanged from
+    before this redesign) — it doesn't fit the row-2 merge-boundary shape every other tier uses.
+  - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all — see
+    issue #280's "Out of scope"):
+    - **Before that boundary's auto-merge is unlocked:** an instant Merge button (fixed-width,
+      icon-only `IconButton`, `variant="prestige"`, label "⬆", `aria-label` spelling out the full
+      action e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+      tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
+      `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button right next to it
+      (`IconButton`, `variant="info"`, label "🤖", `aria-label="enable auto-merge for <…> into
+      <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the
+      matching `game.actions.enableAutoMerge*` action.
+    - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
+      (8) `ReserveSlot` squares, all either entirely empty (idle) or entirely filled (a merge in
+      flight, since the reserve only ever fills atomically) — clicking it IS the manual-start
+      trigger ("slots are the button"), calling the matching `game.actions.startCompute*Merge`
+      action, enabled once `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO`
+      held across the normal + reserve slots, no merge already in flight, room under
+      `COMPUTE_ENTITY_CAP` on the output). While a merge is in flight, a `MergeCountdown` span
+      (`formatOfflineDuration` of the remaining seconds) renders inline with the filled slots;
+      `aria-label`/`title` both spell out the remaining time.
 
   Nothing spends a Megacomputer yet — see issue #280's "Out of scope". "Compute" names the
   page/feature only — no entity label carries a "Compute" prefix.

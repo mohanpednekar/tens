@@ -323,16 +323,21 @@ src/
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
     ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — an active-boost
                                status (effect/countdown/stacks/Reclaim) at the TOP of the screen
-                               whenever a boost is running, then one row per compute entity (count +
-                               its own action button(s) together, not a separate counters section),
-                               then a Boost row (Cores available + 3 small icon preset buttons —
-                               Burst/Standard/Sustain, now 1 minute/10 minutes/1 hour), plus (once
-                               `intro.computeMergePageUnlocked`) the manual ten-tier merge chain
-                               (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter
-                               → Supercomputer → Megacomputer, see issue #280) and its opt-in
-                               auto-merge/auto-claim automation (see issue #316). Reached only via
-                               ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`,
-                               `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
+                               whenever a boost is running, then (once
+                               `intro.computeMergePageUnlocked`) TWO rows per compute-ladder entity,
+                               Core through Megacomputer (issues #280/#316/#321): row 1 is the
+                               tier's name/symbol plus its 10 normal-slot squares; row 2 is, pre-
+                               unlock, an instant Merge button + an Unlock Auto-merge button, or,
+                               once that boundary's auto-merge is unlocked, the 8 reserve-slot
+                               squares themselves — clicking that row is what manually starts a
+                               timed reserve merge ("slots are the button"), with a countdown shown
+                               while one is in flight. Cores' own row 1 also carries a small badge
+                               for the separate, unrelated Memory → Core auto-claim control. Then a
+                               Boost row (Cores available + 3 small icon preset buttons —
+                               Burst/Standard/Sustain, now 1 minute/10 minutes/1 hour). Reached only
+                               via ByteFoundryPage's own "⚡ Compute" nav button; takes
+                               `{ game, onBack }`, `onBack` always returning to ByteFoundryPage
+                               (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
                                onOpenFoundry, onOpenInfo }` props — `game` is the full
                                `useIncrementalGame()` object, lifted up into App.jsx (see below) so
@@ -483,24 +488,29 @@ Strict three-layer separation:
     renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
-    (`page = 'foundry'`). Same posture as StoragePage above. Also where the manual ten-tier merge
+    (`page = 'foundry'`). Same posture as StoragePage above. Also where the nine-boundary merge
     chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
-    Megacomputer — see "Economy model" below and issue #280) lives, behind its own later, one-time
-    `intro.computeMergePageUnlocked` reveal nested inside this same page — not a separate page/nav
-    link. "Compute" names the page/feature only — individual entities drop the word (`Core`/`Node`/…,
-    never "Compute Core"/"Compute Node"/…) in every player-visible label. Deliberately terse:
-    every control is icon-only (no or single-word visible labels), the full sentence living in
-    `title`/`aria-label` instead — every entity's row fits on one line — and the prose explanation
-    of each mechanic lives in the Guide (`InfoPage`), not here. An active Compute Boost's status
-    (effect, countdown, current stack count, and a Reclaim control) renders at the TOP of the page,
-    right after the header, so it stays visible regardless of what else is on screen. Below that,
-    one row per entity (count and that entity's own action button(s) together — no separate
-    counters section, see issue #316), then a Boost row showing the available Core count alongside
-    3 small icon preset buttons (Burst/Standard/Sustain, 1 minute/10 minutes/1 hour).
-    Every merge tier except the last (Megacomputer) also offers an opt-in, permanent auto-merge
-    unlock (sacrifice all `COMPUTE_ENTITY_CAP` of the tier the merge produces); Core's own
-    analogous "auto-claim" unlock control lives here too, though its manual counterpart (Claim
-    Core) lives on ByteFoundryPage instead — see "Economy model" below. `reclaimComputeBoost`
+    Megacomputer — see "Economy model" below and issues #280/#321) lives, behind its own later,
+    one-time `intro.computeMergePageUnlocked` reveal nested inside this same page — not a separate
+    page/nav link. "Compute" names the page/feature only — individual entities drop the word
+    (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every player-visible label.
+    Deliberately terse: every control is icon-only (no or single-word visible labels), the full
+    sentence living in `title`/`aria-label` instead — and the prose explanation of each mechanic
+    lives in the Guide (`InfoPage`), not here. An active Compute Boost's status (effect, countdown,
+    current stack count, and a Reclaim control) renders at the TOP of the page, right after the
+    header, so it stays visible regardless of what else is on screen. Below that, each of the nine
+    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issue #321): row 1 is the
+    tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares; row 2 is, before
+    that boundary's auto-merge is unlocked, an instant Merge button (disabled below
+    `COMPUTE_MERGE_RATIO` held) plus an Unlock Auto-merge button (disabled below
+    `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once unlocked, the
+    `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves, clickable as the manual-start
+    trigger with no separate button ("slots are the button"), showing a countdown while a merge is
+    in flight. Megacomputer (the top of the chain) has no row 2. Cores' own row 1 also carries a
+    small badge for the separate, unrelated Memory → Core auto-claim unlock control — its manual
+    counterpart (Claim Core) still lives on ByteFoundryPage instead — see "Economy model" below.
+    Then a Boost row showing the available Core count alongside 3 small icon preset buttons
+    (Burst/Standard/Sustain, 1 minute/10 minutes/1 hour). `reclaimComputeBoost`
     (`canReclaimComputeBoost`'s own gate) reclaims the most recently added, still-unused stack of
     an active boost, one at a time, refunding 1 Core.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
@@ -667,7 +677,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1178 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1269 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
