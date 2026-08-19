@@ -124,62 +124,75 @@ export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // exactly the balance needed for a first conversion at this starting rate).
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
-// --- Byte Foundry Storage (bank blocks) --- see buildStorageBank/tickStorageAutoFill/
-// redeemStorageBank/tickStorageAutoRedeem/getStorageBankSize in engine.js and intro.storageBanks/
-// storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes in
-// createInitialGameState. Banks are a genuine storage MEDIUM, not a one-shot pre-paid item:
-// building one only constructs a permanent, EMPTY container; Memory (intro.bits) then auto-fills
-// any empty container as it accumulates, smallest size first, and whatever's left over simply
-// stays as Memory's own balance. Redeeming a FULL bank grants 1 free tier01 unit once tier01's own
-// current per-unit level cost actually reaches that size, and empties the bank again — reusable,
-// not single-use. Distinct from ordinary bit-to-Kilobyte conversion (see
-// convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a bank's contents came from
-// Memory via auto-fill, not a further transfer out of it at redeem time.
-// Storage banks are themselves PERMANENT, like the Byte generator itself (see prestigeGame) —
-// "never lost," and a full bank's contents ride through a real Prestige untouched even though
-// Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// --- Byte Foundry Storage (Disks) --- see startDiskBuild/tickDiskBuild/tickDiskAutoFill/
+// redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
+// diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
+// storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
+// container (after a real build TIME — see below); Memory (intro.bits) then auto-fills any empty
+// container as it accumulates — via that array's own cache first (see the cache comment below),
+// smallest size first — and whatever's left over simply stays as Memory's own balance. Redeeming a
+// FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
+// reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
+// bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
+// disk's contents came from Memory via auto-fill, not a further transfer out of it at redeem time.
+// Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
+// prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
+// even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
-// per step — see ByteFoundryPage's getMemoryUnit — not the 1000-bits-per-"KB" scale the bank-size
-// ladder above uses) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 → 8000 → 80000 via
-// Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed only once the
-// player has grown capacity a bit past the Kilobyte-transfer row's own, earlier 1000-bit reveal.
-export const INTRO_STORAGE_UNLOCK_CAPACITY = 80000
-// A bank of `capacity` bits costs `capacity * STORAGE_BUILD_COST_MULTIPLIER` bytes (NOT bits) to
-// build — a 1 KiloBit/1000-bit bank costs 10,000 bytes (80,000 bits), a 10,000,000-bit ("10 MB")
-// bank costs 100,000,000 bytes, and so on; see getStorageBankCost in engine.js for the bits
-// conversion. This cost only ever pays for the empty container — it is NOT what fills it.
-export const STORAGE_BUILD_COST_MULTIPLIER = 10
+// per step — see ByteFoundryPage's getMemoryUnit, the SAME real-Kilobyte scale a Disk's own size
+// now uses — see getDiskSize in engine.js) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 →
+// 8000 → 80000 via Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed
+// only once the player has grown capacity a bit past the Kilobyte-transfer row's own, earlier
+// 1000-bit reveal.
+export const INTRO_DISK_UNLOCK_CAPACITY = 80000
+// A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
+// 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
+// bits ("100 KB"), and so on; see getDiskCost in engine.js. This cost only ever pays for the empty
+// container — it is NOT what fills it. `capacity` here is already Byte-accurate (see getDiskSize's
+// own BITS_PER_BYTE factor in engine.js — a past version of this ladder priced Disks in
+// "kilobits" instead of real Kilobytes; see docs/DESIGN_HISTORY.md for that bug and its fix), so no
+// further unit conversion is needed here the way an older version of this constant once required.
+export const DISK_BUILD_COST_MULTIPLIER = 10
 // The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
-// level) for level 1, 2, 3, …) rather than a synthetic ×10 progression — offers tier01's level-1
-// cost (1000 bits, "1 KB") until STORAGE_BANK_LADDER_CAP of them have ever been built, then
-// tier01's level-2 cost (10,000 bits, "10 KB") until another STORAGE_BANK_LADDER_CAP, and so on
-// (see getStorageBankSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
+// level) for level 1, 2, 3, …), expressed in real bits via the same BITS_PER_BYTE factor
+// getIntroKilobyteConversionCost uses, rather than a synthetic ×10 progression — offers tier01's
+// level-1 cost (8000 bits, a real "1 KB") until DISK_ARRAY_LADDER_CAP of them have ever been
+// built, then tier01's level-2 cost (80,000 bits, "10 KB") until another DISK_ARRAY_LADDER_CAP,
+// and so on (see getDiskSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
 // sequence (1, 2, 3, 5, 8, …) skips values as levels increase, this ladder skips sizes too — e.g.
-// tier01's level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can
-// never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
+// tier01's level 4 costs 10,000,000,000 bits ("10 MB"), not 1,000,000,000 ("1 MB"), so a 1 MB disk
+// can never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
 // (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
-// ahead of or fall behind tier01's actual price, with isStorageBankRedeemable the only gate on
-// whether a built bank is spendable yet. The ladder only ever advances — it's driven by
-// intro.storageBanksBuiltTotal, a cumulative count that redeeming a bank never decrements.
-export const STORAGE_BANK_LADDER_CAP = 10
+// ahead of or fall behind tier01's actual price, with isDiskRedeemable the only gate on whether a
+// built disk is spendable yet. The ladder only ever advances — it's driven by
+// intro.disksBuiltTotal, a cumulative count that redeeming a disk never decrements.
+export const DISK_ARRAY_LADDER_CAP = 10
+// A disk array's cache — a small staging buffer Memory fills before any of the array's own disk
+// containers (see tickDiskAutoFill in engine.js) — is split into this many equal blocks, each
+// holding `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array's cache is 8 blocks of
+// 1000 bits each, totaling one disk's own 8000-bit capacity). A full block can be manually
+// released back into Memory (see releaseDiskCacheBlock in engine.js), letting the player redirect
+// those bits toward an ordinary Kilobyte transfer instead of waiting for the array's next disk to
+// complete.
+export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
 // tickComputeCoreConversion/tickComputeNodeConversion in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
-// costed a Compute Core at a fixed 10 MB of Memory, gated on every Storage bank size being built
+// costed a Compute Core at a fixed 10 MB of Memory, gated on every Disk size being built
 // and full first — superseded by the dynamic model below, which has no relationship to Storage at
 // all; see docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
 // below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
 // step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
-// own reveal (INTRO_STORAGE_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
+// own reveal (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
 // 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
 // intro.computeCores and intro.computeNodes are permanent counters, carried over every real
-// Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
+// Prestige exactly like the Byte generator/Disks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
@@ -188,7 +201,7 @@ export const COMPUTE_CORES_PER_NODE = 8
 // than overflowing past it or silently discarding progress — Memory (for Cores) or the input
 // entity itself (for every manual merge) simply stays put, waiting for the player to spend the
 // capped entity down via a future spending mechanic, the same "waits, doesn't lose progress"
-// posture Storage banks already have when nothing can consume them yet.
+// posture Disks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
 // 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
 // is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →

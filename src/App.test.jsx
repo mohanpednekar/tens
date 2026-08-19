@@ -11,16 +11,16 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
+  DISK_BUILD_COST_MULTIPLIER,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
+  INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
   INTRO_STARTING_TICK_SPEED_SECONDS,
-  INTRO_STORAGE_UNLOCK_CAPACITY,
   PRESTIGE_THRESHOLD,
-  STORAGE_BUILD_COST_MULTIPLIER,
   TICK_RATE_MS,
   TIER_DEFINITIONS,
 } from 'game/layers'
@@ -443,7 +443,9 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   await user.click(buyButton)
 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('92,000 b')
+  // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
+  // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -2173,7 +2175,7 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
   // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
-  // only offered once every other currently-possible action (Combine, Invest, a Storage bank
+  // only offered once every other currently-possible action (Combine, Invest, a Disk
   // build) is no longer possible.
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
@@ -2576,46 +2578,50 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 })
 
 
-// --- Byte Foundry Storage (bank blocks) ---
-// The buildable size is an independent ladder starting at 1000 bits ("1 KB") that walks tier01's
-// own per-unit LEVEL COST sequence (skipping values tier01's own costs skip), advancing to the
-// next level's cost once STORAGE_BANK_LADDER_CAP banks have ever been built at the current one —
-// decoupled from tier01's own CURRENT level (see getStorageBankSize in engine.js). Banks are a
-// storage MEDIUM, not a one-shot pre-paid item: building one only constructs an EMPTY container
-// (paying STORAGE_BUILD_COST_MULTIPLIER × BITS_PER_BYTE times its size, in bytes — see
-// getStorageBankCost); Memory then auto-fills any empty container on a later tick (see
-// tickStorageAutoFill), smallest size first. A FULL bank's redeemability is separately gated on
-// tier01's (Kilobytes') CURRENT per-unit level cost catching up to that bank's size. Every test
-// here uses fake timers (never advanced, unless a test is specifically exercising a tick boundary)
-// rather than real userEvent delays — with byteCreated true and Memory's own passive production
-// live, a real tick landing between a click and its assertions would non-deterministically shift
-// Memory's balance and could trip the Byte Foundry's own bulk transfer-budget auto-convert.
-// Storage moved to its own dedicated screen (StoragePage) once revealed — reached from
-// ByteFoundryPage's own "🏦 Storage" nav button, always enabled once revealed (a permanent,
-// voluntarily-revisitable screen, same posture as MainPage's own "⚙️ Byte Foundry" link) so the
-// player can check on held/built banks even when nothing there is currently actionable. Every test
-// below that lands on a rendered Storage element navigates there first via openStorage().
+// --- Byte Foundry Storage (Disks) ---
+// The buildable size is an independent ladder starting at 8000 bits ("1 KB", Byte-accurate) that
+// walks tier01's own per-unit LEVEL COST sequence expressed in bits (skipping values tier01's own
+// costs skip), advancing to the next level's cost once DISK_ARRAY_LADDER_CAP disks have ever been
+// built at the current one — decoupled from tier01's own CURRENT level (see getDiskSize in
+// engine.js). Disks are a storage MEDIUM, not a one-shot pre-paid item: starting a build spends
+// the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
+// getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
+// tickDiskBuild); Memory then auto-fills any empty container on a later tick through that array's
+// own cache first (see tickDiskAutoFill), smallest size first. A FULL disk's redeemability is
+// separately gated on SOME tier's CURRENT per-unit level cost catching up to that disk's size, and
+// auto-redeeming it is further gated on that matching tier's own unit-buying autobuyer being
+// unlocked and enabled (see tickDiskAutoRedeem) — there is no more "smallest size always
+// auto-redeems" carve-out. Every test here uses fake timers (never advanced, unless a test is
+// specifically exercising a tick boundary) rather than real userEvent delays — with byteCreated
+// true and Memory's own passive production live, a real tick landing between a click and its
+// assertions would non-deterministically shift Memory's balance and could trip the Byte Foundry's
+// own bulk transfer-budget auto-convert. Storage moved to its own dedicated screen (StoragePage)
+// once revealed — reached from ByteFoundryPage's own "🏦 Storage" nav button, always enabled once
+// revealed (a permanent, voluntarily-revisitable screen, same posture as MainPage's own "⚙️ Byte
+// Foundry" link) so the player can check on held/built disks even when nothing there is currently
+// actionable. Every test below that lands on a rendered Storage element navigates there first via
+// openStorage().
 describe('Byte Foundry Storage', () => {
   const tier01 = TIER_DEFINITIONS[0]
-  const currentBankSize = 1000 // the ladder's starting size
-  const currentBankCost = currentBankSize * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE
-  // A larger, not-yet-reached size — used to exercise the "held bank becomes redeemable once
-  // tier01's level catches up to it" path independent of what the Build button currently offers.
-  const futureBankSize = getTierCost(tier01, 2)
+  const currentBankSize = getTierCost(tier01, 1) * BITS_PER_BYTE // 8000 — the ladder's starting, Byte-accurate size
+  const currentBankCost = currentBankSize * DISK_BUILD_COST_MULTIPLIER
+  // A larger, not-yet-reached size — used to exercise the "held disk becomes redeemable once
+  // some tier's level catches up to it" path independent of what the Build button currently offers.
+  const futureBankSize = getTierCost(tier01, 2) * BITS_PER_BYTE
 
   const openStorage = () => fireEvent.click(screen.getByRole('button', { name: /open storage/i }))
 
-  test('Build Storage Bank stays hidden on ByteFoundryPage, and the "open storage" nav button stays hidden too, until Memory capacity reaches 10 KB (INTRO_STORAGE_UNLOCK_CAPACITY), even with the Byte generator built', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1, byteCreated: true })
+  test('Build Disk stays hidden on ByteFoundryPage, and the "open storage" nav button stays hidden too, until Memory capacity reaches 10 KB (INTRO_DISK_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY - 1, byteCreated: true })
     const { unmount } = render(<App />)
-    expect(screen.queryByRole('button', { name: /build storage bank/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /build disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /open storage/i })).not.toBeInTheDocument()
     unmount()
 
-    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
-    // Building the next bank stays on ByteFoundryPage itself — no navigation needed to reach it.
-    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeInTheDocument()
+    // Building the next disk stays on ByteFoundryPage itself — no navigation needed to reach it.
+    expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
 
     const openButton = screen.getByRole('button', { name: /open storage/i })
     expect(openButton).toBeInTheDocument()
@@ -2627,40 +2633,40 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /storage/i })).toBeInTheDocument()
   })
 
-  test('Build Storage Bank is disabled below its cost and enabled once affordable, starting at 1 KB', () => {
-    // productionMilestoneTierClaims: 2 neutralizes Bandwidth, which otherwise outranks Storage
-    // Bank Build in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable
-    // Build for a different reason than the one this test is isolating.
+  test('Build Disk is disabled below its cost, starting at 1 KB', () => {
+    // productionMilestoneTierClaims: 2 neutralizes Bandwidth, which otherwise outranks Disk Build
+    // in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable Build for a
+    // different reason than the one this test is isolating.
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
 
-    const buildButton = screen.getByRole('button', { name: /build storage bank/i })
+    const buildButton = screen.getByRole('button', { name: /build disk/i })
     expect(buildButton).toHaveTextContent('1 KB')
     expect(buildButton).toBeDisabled()
   })
 
-  test('Build Storage Bank shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
+  test('Build Disk shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
 
     // currentBankCost is 80,000 bits = 10,000 Bytes = 10 KB in Memory's own B/KB/MB/… scale — shown
     // as "10 KB", not the raw "80,000" bit count with no unit at all.
-    const buildButton = screen.getByRole('button', { name: /build storage bank/i })
+    const buildButton = screen.getByRole('button', { name: /build disk/i })
     expect(buildButton).toHaveTextContent('10 KB')
     expect(buildButton).not.toHaveTextContent('80,000')
   })
 
-  test('Build Storage Bank stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
+  test('Build Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
-    expect(screen.getByRole('button', { name: /build storage bank/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /build disk/i })).toBeDisabled()
   })
 
-  test('a brief per-size summary chip ("<size> <full>/<built>") shows on ByteFoundryPage once a bank has ever been built', () => {
+  test('a brief per-size summary chip ("<size> <full>/<built>") shows on ByteFoundryPage once a disk has ever been built', () => {
     seedIntroState({
-      bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true,
-      storageBanksBuiltTotal: { [currentBankSize]: 3 }, storageBanks: { [currentBankSize]: 1 },
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 3 }, disks: { [currentBankSize]: 1 },
     })
     render(<App />)
 
@@ -2668,108 +2674,146 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('the summary stays hidden entirely before anything has ever been built or held, rather than showing a confusing "0/0" chip for the currently-offered size', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true })
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
     expect(screen.queryByRole('group', { name: /^storage summary$/i })).not.toBeInTheDocument()
   })
 
-  test('building a bank spends the build cost from Memory and constructs an EMPTY bank, not an already-redeemable one', () => {
-    vi.useFakeTimers() // never advanced — isolates the build click itself from any auto-fill tick
+  test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {
+    vi.useFakeTimers()
 
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     const { unmount } = render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: /build storage bank/i }))
+    fireEvent.click(screen.getByRole('button', { name: /build disk/i }))
 
-    // Building spends the build cost — separate from, and not the same as, filling the bank.
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    // The cost is spent immediately, but the disk itself doesn't exist until the timed build
+    // finishes — the button itself reflects the in-progress rebuild.
+    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
-    expect(saved.intro.storageBanksBuiltTotal[currentBankSize]).toBe(1)
-    // The bank exists (built) but starts empty — no full bank yet.
-    expect(saved.intro.storageBanks?.[currentBankSize] ?? 0).toBe(0)
+    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: 1, totalSeconds: 1 })
+    expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
+    expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
+
+    // The smallest size's very first build takes exactly 1 second (1 second per real "KB" of size).
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.diskBuild).toBeNull()
+    expect(saved.intro.disksBuiltTotal[currentBankSize]).toBe(1)
+    // The disk exists (built) but starts empty — no full disk yet.
+    expect(saved.intro.disks?.[currentBankSize] ?? 0).toBe(0)
 
     // The detail (empty/full squares, redeeming) lives on StoragePage.
     openStorage()
-    expect(screen.queryByRole('button', { name: /redeem 1 kb storage bank/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('Memory auto-fills an empty bank on a later tick — the fill and the build are separate steps', () => {
+  test('Memory auto-fills an empty disk on a later tick, through the array\'s own cache first — the fill and the build are separate steps', () => {
     vi.useFakeTimers()
 
-    // A bank already built (empty) plus enough Memory to fill exactly one of it. Capacity must
-    // also clear INTRO_STORAGE_UNLOCK_CAPACITY for the Storage nav button to even render.
+    // A disk already built (empty) plus enough Memory to fill exactly one of it, all the way
+    // through its array's own cache. Capacity must also clear INTRO_DISK_UNLOCK_CAPACITY for the
+    // Storage nav button to even render.
     seedIntroState({
       bits: currentBankSize,
-      capacity: INTRO_STORAGE_UNLOCK_CAPACITY,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
-      storageBanksBuiltTotal: { [currentBankSize]: 1 },
+      disksBuiltTotal: { [currentBankSize]: 1 },
     })
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Filled and immediately auto-redeemed in the same tick (1 KB is exempt from the auto-redeem
-    // toggle) — the bank ends up empty again, ready to be refilled, with 1 free Kilobyte granted.
-    // Auto-fill/auto-redeem are unaffected by the forced priority order — that only gates manual
-    // clicks (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background automation.
-    expect(screen.getByRole('button', { name: /empty 1 kb bank/i })).toBeInTheDocument()
+    // Filled through the cache in the same tick. No autobuyer is unlocked for tier01 in this seed,
+    // so it is NOT auto-redeemed away (see the dedicated auto-redeem tests below) — it stays full,
+    // ready for a manual redeem. Auto-fill is unaffected by the forced priority order — that only
+    // gates manual clicks (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background
+    // automation.
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
-    expect(saved.owned.tier01).toBe(1)
+    expect(saved.intro.disks[currentBankSize]).toBe(1)
+    expect(saved.owned.tier01).toBe(0)
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('a 1 KB bank auto-redeems on the very next tick even with the auto-redeem toggle off', () => {
+  test('a full disk stays held (no autobuyer unlocked for the matching tier) until manually redeemed', () => {
     vi.useFakeTimers()
 
-    seedIntroState({ bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [currentBankSize]: 1 } })
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [currentBankSize]: 1 } })
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /redeem 1 kb storage bank/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    expect(screen.queryByRole('button', { name: /redeem 1 kb storage bank/i })).not.toBeInTheDocument()
+    // No autobuyer at all for the matching tier (tier01) — auto-redeem is a no-op, so the disk
+    // stays full and waits for a manual click.
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
-    expect(saved.intro.storageAutoRedeemedSizes['1000']).toBe(true)
+    expect(saved.owned.tier01).toBe(0)
+    expect(saved.intro.disks[currentBankSize]).toBe(1)
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('a held bank becomes clickable once tier01\'s level cost reaches it, and redeeming grants a free Kilobyte', () => {
-    // Bank held at a size ahead of tier01's current level (still 1) — not yet redeemable. Capacity
-    // is seeded above INTRO_STORAGE_UNLOCK_CAPACITY (well above futureBankSize too) so the Storage
-    // nav button renders at all. Redeeming is unaffected by the forced priority order (Storage Bank
-    // Fill ranks highest, so it's never itself blocked) — no neutralization needed.
+  test('a full disk auto-redeems on the very next tick once the matching tier\'s own autobuyer is unlocked and enabled', () => {
+    vi.useFakeTimers()
+
     seedIntroState(
-      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [currentBankSize]: 1 } },
+      { autobuyers: { [tier01.id]: 1 } }
+    )
+    const { unmount } = render(<App />)
+    openStorage()
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.owned.tier01).toBe(1)
+    expect(saved.intro.diskAutoRedeemedSizes[String(currentBankSize)]).toBe(true)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('a held disk becomes clickable once some tier\'s level cost reaches it, and redeeming grants a free unit', () => {
+    // Disk held at a size ahead of tier01's current level (still 1) — not yet redeemable. Capacity
+    // is seeded above INTRO_DISK_UNLOCK_CAPACITY (well above futureBankSize too) so the Storage
+    // nav button renders at all. Redeeming is unaffected by the forced priority order (Disk Fill
+    // ranks highest, so it's never itself blocked) — no neutralization needed.
+    seedIntroState(
+      { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
     )
     const { unmount } = render(<App />)
     openStorage()
 
-    expect(screen.getByRole('button', { name: /redeem 10 kb storage bank/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /redeem 10 kb disk/i })).toBeDisabled()
     unmount()
 
-    // tier01 now at level 2 — its current per-unit cost (10,000) matches the held bank.
+    // tier01 now at level 2 — its current per-unit cost (10,000 Bits = 80,000 bits) matches the
+    // held disk.
     seedIntroState(
-      { bits: 0, capacity: INTRO_STORAGE_UNLOCK_CAPACITY, byteCreated: true, storageBanks: { [futureBankSize]: 1 } },
+      { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
     render(<App />)
     openStorage()
 
-    const redeemButton = screen.getByRole('button', { name: /redeem 10 kb storage bank/i })
+    const redeemButton = screen.getByRole('button', { name: /redeem 10 kb disk/i })
     expect(redeemButton).toBeEnabled()
 
     fireEvent.click(redeemButton)
@@ -2777,10 +2821,10 @@ describe('Byte Foundry Storage', () => {
     // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — redeeming doesn't
     // touch it, unlike convertIntroBitsToKilobytes) — assert against saved state directly, same
     // convention as "the manual convert button appears..." above.
-    expect(screen.queryByRole('button', { name: /redeem 10 kb storage bank/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /redeem 10 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)
-    expect(saved.intro.storageBanks[futureBankSize]).toBeUndefined()
+    expect(saved.intro.disks[futureBankSize]).toBeUndefined()
 
     // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
     // visible on ByteFoundryPage's own transfer-block row (a live mirror of the same progress) once
@@ -2789,31 +2833,27 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
-  test('a bank above 1 KB auto-redeems by default, with no manual click needed and no pause toggle currently shown', () => {
+  test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
     vi.useFakeTimers()
 
     seedIntroState(
-      { bits: 0, capacity: futureBankSize, byteCreated: true, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, storageBanks: { [futureBankSize]: 1 } },
-      { purchaseLevels: { [tier01.id]: 2 } }
+      { bits: 0, capacity: futureBankSize, byteCreated: true, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, disks: { [futureBankSize]: 1 } },
+      { purchaseLevels: { [tier01.id]: 2 }, autobuyers: { [tier01.id]: 1 } }
     )
-    // futureBankSize (10,000) is below INTRO_STORAGE_UNLOCK_CAPACITY (80,000), so the Storage nav
-    // button/screen never actually renders here — deliberately: auto-redeem is a background tick
-    // behavior (tickStorageAutoRedeem), not UI-gated, so it fires and is asserted purely at the
-    // state level below, same as the original inline-section version of this test already did.
     const { unmount } = render(<App />)
 
-    // storageAutoRedeemEnabled defaults true (see createInitialGameState) — no toggle click
-    // needed, and there's currently no in-UI pause toggle to click even if one wanted to (planned
-    // for later — see engine.js's storageAutoRedeemEnabled comment).
+    // setStorageAutoRedeemEnabled/storageAutoRedeemEnabled no longer exist — auto-redeem is gated
+    // per-tier by that tier's own unit-buying autobuyer instead (see engine.js's
+    // tickDiskAutoRedeem), so there is no separate storage-specific pause toggle to find here.
     expect(screen.queryByRole('button', { name: /pause storage auto-redeem/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /resume storage auto-redeem/i })).not.toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Auto-redeemed without a manual click on the bank button itself.
-    expect(screen.queryByRole('button', { name: /redeem 10 kb storage bank/i })).not.toBeInTheDocument()
+    // Auto-redeemed without a manual click on the disk button itself.
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)
+    expect(saved.intro.disks?.[futureBankSize] ?? 0).toBe(0)
 
     unmount()
     vi.useRealTimers()
@@ -2824,7 +2864,7 @@ describe('Byte Foundry Storage', () => {
 // ByteFoundryPage's own "⚡ Compute" nav button, always enabled once revealed (same posture as the
 // Storage nav button above). Every test below that lands on a rendered Compute element navigates
 // there first via openCompute(). Every seed here uses bits: 0, so the forced priority order's
-// higher-ranked actions (Storage Bank Fill, Bandwidth, Storage Bank Build) stay naturally
+// higher-ranked actions (Disk Fill, Bandwidth, Disk Build) stay naturally
 // unavailable and don't need separate neutralizing — see the dedicated priority test below for
 // that interaction.
 describe('Byte Foundry Compute Boost', () => {

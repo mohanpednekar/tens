@@ -468,17 +468,17 @@ Strict three-layer separation:
    either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the standalone Tap
    button is removed entirely — Memory's own tile becomes the tap target instead (an `as="button"`
    swap on the same styled `FillableStatCard`, calling the identical `actions.tapIntroBit`), rather
-   than two separate controls doing the same thing. Compute moved to its own dedicated screen (see
-   4b below) once revealed; this page only renders a nav button to reach it, always enabled once
-   revealed. Storage split differently: Building the next bank (its own core-loop action, alongside
-   Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
-   `"10 KB 3/8"`) both stay here; only the fuller per-size detail and redeeming (Storage Bank Fill)
-   live on the dedicated `StoragePage` (see 4a below), reached via its own nav button, always
-   enabled once revealed. Every action — here or on either dedicated screen — stays gated by the
-   forced priority order (see "Economy model" below).
-4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size full/empty/not-built
-    squares rows and redeeming (Storage Bank Fill) — NOT the Build button, which stays on
-    ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
+   than two separate controls doing the same thing. Compute moved to its own dedicated screen (see 4b
+   below) once revealed; this page only renders a nav button to reach it, always enabled once
+   revealed. Storage split differently: starting the next Disk's build (its own core-loop action,
+   alongside Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
+   `"10 KB 3/8"`) both stay here; only the fuller per-size detail — each array's cache blocks and
+   redeeming (Disk Fill) — live on the dedicated `StoragePage` (see 4a below), reached via its own nav
+   button, always enabled once revealed. Every action — here or on either dedicated screen — stays
+   gated by the forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size cache-block rows, full/
+    empty/not-built disk squares rows, and redeeming (Disk Fill) — NOT the Build button, which stays
+    on ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
     Storage" nav button; `onBack` always returns to ByteFoundryPage (`page = 'foundry'`). A pure
     renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
@@ -522,26 +522,56 @@ case where cost and production resource are both the base currency. Reaching Mon
 the economy except for Prestige. `GOOGOL` (1e100) itself is still exported and used as-is by the
 exponent-based formulas (`getPrestigePointsAwarded`/`getMoneyExponent`/`getPrestigeProgressPercent`) —
 only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` value; see
-`docs/DESIGN_HISTORY.md` for why.
+`docs/DESIGN_HISTORY.md` for why. MainPage's own headline balance display (`MoneyHero`) switches
+from Bits to whole Bytes once the balance reaches 8000 Bits (`formatMoneyBalance` in `engine.js`,
+`MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call (costs, production numbers, the
+Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denomination.
 
 Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
 into a permanent, passively-producing Byte generator, then grows via Sacrifice (10x capacity) and
-Invest (double production) on independent cost ladders, plus — once far enough along — Storage banks
+Invest (double production) on independent cost ladders, plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`). Five recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Storage Bank Fill > Bandwidth/Invest >
-Storage Bank Build > Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI
-and in the engine reducer itself) whenever a higher one is currently available. Manual transfer blocks
-(plus an always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit
-cost; the first successful transfer unlocks the main game, and there's no per-cycle cap on further
-ones. The generator, Storage banks, and every compute-ladder entity — Core, Node, Cluster, Network,
-Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable
-manually, 8:1 per tier, once unlocked — "Compute" names the page/feature only, not any individual
-entity) — are all permanent across every real Prestige; only Memory itself, the main-game-unlock
-gate, and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes —
-every action stays live indefinitely, every cycle.
+actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
+Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine
+reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
+always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost;
+the first successful transfer unlocks the main game, and there's no per-cycle cap on further ones.
+The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
+tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
+permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
+own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
+live indefinitely, every cycle.
+
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` in `createInitialGameState`,
+`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/
+`isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
+`tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
+tier01-only: a size's ladder (walking tier01's own per-unit level-cost sequence, in real
+Byte-accurate bits — `getTierCost(tier01, level) * BITS_PER_BYTE`, so a "1 KB" disk needs 8000 bits,
+not a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size. Starting
+a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
+immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
+size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
+scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
+which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
+manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
+array has its own small staging **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
+`size / 8` bits each, totaling one disk's worth) that Memory must top up completely before
+`tickDiskAutoFill` pours it into an empty container; a full block can be released back into Memory by
+hand (`releaseDiskCacheBlock`) instead, at any time before it pours. A full disk redeems
+(`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
+**any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
+tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in
+`TIER_DEFINITIONS` itself (read live, not a hardcoded index — a future reordering of that array
+changes the tie-break automatically, with no code change). Auto-redeem (`tickDiskAutoRedeem`) fires
+only when the matching tier's own unit-buying autobuyer is currently unlocked and unpaused; otherwise
+a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTotal`/`diskCache`/
+`diskBuild` are all PERMANENT across every real Prestige, like the Byte generator itself; only
+`diskAutoRedeemedSizes` (which sizes have already auto-redeemed this cycle) resets each cycle.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
 Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -637,7 +667,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1139 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1178 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

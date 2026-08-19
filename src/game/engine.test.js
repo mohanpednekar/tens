@@ -11,7 +11,6 @@ import {
   buySmartAutobuyer,
   buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
-  buildStorageBank,
   buyTier,
   buyTierQuantity,
   canActivateComputeBoost,
@@ -44,15 +43,20 @@ import {
   formatAmount,
   formatBitsInNearestUnit,
   formatCurrency,
+  formatDiskSize,
   formatMemoryAmount,
+  formatMoneyBalance,
   formatOfflineDuration,
-  formatStorageSize,
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
   getComputeBoostMultiplier,
   getCostEpochExponent,
+  getDiskCost,
+  getDiskRedeemTierName,
+  getDiskSize,
+  getDiskSizesToShow,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
@@ -72,9 +76,6 @@ import {
   getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
-  getStorageBankCost,
-  getStorageBankSize,
-  getStorageSizesToShow,
   getTierTickspeedAutobuyerMilestone,
   getSpeedUpMultiplier,
   getSpeedUpRequirement,
@@ -104,14 +105,15 @@ import {
   isComputeCoreConversionUnlocked,
   isComputeUpgradeAvailable,
   isComputeUpgradeTurnAvailable,
+  isDiskBuildAvailable,
+  isDiskBuildTurnAvailable,
+  isDiskCacheBlockReleasable,
+  isDiskFillAvailable,
+  isDiskRedeemable,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
-  isStorageBankBuildAvailable,
-  isStorageBankBuildTurnAvailable,
-  isStorageBankFillAvailable,
-  isStorageBankRedeemable,
   isTierUnlocked,
   mergeComputeClustersIntoNetwork,
   mergeComputeCloudsIntoDatacenter,
@@ -124,9 +126,10 @@ import {
   overclockGame,
   reclaimComputeBoost,
   prestigeGame,
-  redeemStorageBank,
-  setStorageAutoRedeemEnabled,
+  redeemDisk,
+  releaseDiskCacheBlock,
   speedUpGame,
+  startDiskBuild,
   tapIntroBit,
   tickAutoMergeClustersIntoNetwork,
   tickAutoMergeCloudsIntoDatacenter,
@@ -139,13 +142,14 @@ import {
   tickComputeBoost,
   tickComputeCoreConversion,
   tickComputeNodeConversion,
+  tickDiskAutoFill,
+  tickDiskAutoRedeem,
+  tickDiskBuild,
   tickGame,
   tickIntroAutoInvest,
   tickIntroProduction,
-  tickStorageAutoFill,
-  tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -531,10 +535,14 @@ describe('combineIntroByte', () => {
 // INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
 // capacity both are simultaneously affordable unless Invest's claims are explicitly marked used —
 // tier 0 needs both of its 2 claims used up, not just 1, see getIntroProductionMilestoneMaxClaims).
-// Storage Bank Fill and Compute (the other two ranked above Memory in the forced priority order —
+// Disk Fill and Compute (the other two ranked above Memory in the forced priority order —
 // see isMemoryCapacityUpgradeAvailable) don't need clearing here since they default to unavailable
-// (no storageBanks, 0 computeCores) unless a test explicitly seeds them.
+// (no disks, 0 computeCores) unless a test explicitly seeds them.
 const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
+
+// getDiskSize's own real-Byte-accurate ladder — a fresh cycle's smallest disk is 8000 bits (1 KB),
+// matching tier01's own level-1 per-unit cost (1000 Bits) expressed in bits via BITS_PER_BYTE.
+const FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
   it('is false below a full balance, regardless of other upgrades', () => {
@@ -554,47 +562,49 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
 
-  it('is false while a Storage bank is currently buildable, once Storage is revealed', () => {
-    // INTRO_STORAGE_UNLOCK_CAPACITY (80,000 bits) exactly matches the freshly-offered 1 KB bank's
+  it('is false while a Disk is currently buildable, once Storage is revealed', () => {
+    // INTRO_DISK_UNLOCK_CAPACITY (80,000 bits) exactly matches the freshly-offered 1 KB disk's
     // own build cost too, so a full balance at exactly this capacity can also afford it.
-    const capacity = INTRO_STORAGE_UNLOCK_CAPACITY
+    const capacity = INTRO_DISK_UNLOCK_CAPACITY
     const state = withIntro(createInitialGameState(), { bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99 })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
 
-  it('is true once Storage is revealed but the currently-offered bank size is unaffordable at this balance', () => {
-    const capacity = INTRO_STORAGE_UNLOCK_CAPACITY
+  it('is true once Storage is revealed but the currently-offered disk size is unaffordable at this balance', () => {
+    const capacity = INTRO_DISK_UNLOCK_CAPACITY
     const state = withIntro(createInitialGameState(), {
       bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99,
-      // Pushes the offered Storage bank size up to 10,000 (800,000-bit build cost) — unaffordable
-      // at this balance, unlike the freshly-offered 1 KB size the previous test used.
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
+      // Pushes the offered Disk size up to tier01's level-2 cost (800,000-bit build cost) —
+      // unaffordable at this balance, unlike the freshly-offered 1 KB size the previous test used.
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
-  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+  it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
-      storageBanks: { 1000: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
 
   it('is false while a Compute Boost (higher priority) is currently available', () => {
-    // Pushes the Storage Bank Build ladder past level 3 (800,000,000-bit build cost, well above
-    // this balance) so Storage Bank Build doesn't ALSO block Sacrifice here — isolates the new
-    // Compute check itself, the same way the "Storage is revealed" tests above isolate Storage.
+    // Pushes the Disk Build ladder past level 3 (800,000,000-bit build cost, well above this
+    // balance) so Disk Build doesn't ALSO block Sacrifice here — isolates the new Compute check
+    // itself, the same way the "Storage is revealed" tests above isolate Storage.
     const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
       bits: capacity, capacity, ...noOtherUpgradesLeft,
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: DISK_ARRAY_LADDER_CAP },
       computeCores: 1,
     })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
 
-  it('is true once Memory is full and neither Combine, Storage Bank Fill, Invest, Storage Bank Build, nor Compute is currently possible', () => {
+  it('is true once Memory is full and neither Combine, Disk Fill, Invest, Disk Build, nor Compute is currently possible', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
@@ -759,37 +769,37 @@ describe('pickIntroProductionMilestone', () => {
     expect(after.intro).not.toBe(state.intro)
   })
 
-  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+  it('is a no-op while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1, storageBanks: { 1000: 1 },
+      bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1, disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(pickIntroProductionMilestone(state)).toBe(state)
   })
 })
 
 // Base and forced-priority-turn predicates for the Byte Foundry's five recurring "upgrade"
-// actions — Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory (see CLAUDE.md's
-// "Byte Foundry" section and isMemoryCapacityUpgradeAvailable above, which composes these same
-// base predicates for Sacrifice's own gate).
-describe('isStorageBankFillAvailable', () => {
-  it('is false with no built banks', () => {
-    expect(isStorageBankFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)
+// actions — Disk Fill > Bandwidth > Disk Build > Compute > Memory (see CLAUDE.md's "Byte Foundry"
+// section and isMemoryCapacityUpgradeAvailable above, which composes these same base predicates
+// for Sacrifice's own gate).
+describe('isDiskFillAvailable', () => {
+  it('is false with no built disks', () => {
+    expect(isDiskFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)
   })
 
-  it('is true with a FULL bank whose size matches tier01\'s current per-unit level cost', () => {
-    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 } })
-    expect(isStorageBankFillAvailable(state)).toBe(true)
+  it('is true with a FULL disk whose size matches tier01\'s current per-unit level cost', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(isDiskFillAvailable(state)).toBe(true)
   })
 
-  it('is false with a FULL bank not yet redeemable (size doesn\'t match tier01\'s current cost)', () => {
-    const futureBankSize = getTierCost(tensTier, 2)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [futureBankSize]: 1 } })
-    expect(isStorageBankFillAvailable(state)).toBe(false)
+  it('is false with a FULL disk not yet redeemable (size doesn\'t match any tier\'s current cost)', () => {
+    const futureDiskSize = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), { disks: { [futureDiskSize]: 1 } })
+    expect(isDiskFillAvailable(state)).toBe(false)
   })
 
-  it('is false with a built bank that is still EMPTY', () => {
-    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: 1 } })
-    expect(isStorageBankFillAvailable(state)).toBe(false)
+  it('is false with a built disk that is still EMPTY', () => {
+    const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+    expect(isDiskFillAvailable(state)).toBe(false)
   })
 })
 
@@ -810,15 +820,23 @@ describe('isBandwidthAvailable', () => {
   })
 })
 
-describe('isStorageBankBuildAvailable', () => {
-  it('is true once the currently-offered bank size\'s build cost is affordable', () => {
-    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
-    expect(isStorageBankBuildAvailable(state)).toBe(true)
+describe('isDiskBuildAvailable', () => {
+  it('is true once the currently-offered disk size\'s build cost is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
+    expect(isDiskBuildAvailable(state)).toBe(true)
   })
 
   it('is false below the build cost', () => {
-    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) - 1 })
-    expect(isStorageBankBuildAvailable(state)).toBe(false)
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) - 1 })
+    expect(isDiskBuildAvailable(state)).toBe(false)
+  })
+
+  it('is false while an array is already mid-build, even with the build cost affordable', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(FIRST_DISK_SIZE),
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(isDiskBuildAvailable(state)).toBe(false)
   })
 })
 
@@ -840,33 +858,33 @@ describe('isComputeUpgradeAvailable', () => {
 })
 
 describe('isBandwidthTurnAvailable', () => {
-  it('matches isBandwidthAvailable with no Storage Bank Fill pending', () => {
+  it('matches isBandwidthAvailable with no Disk Fill pending', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY })
     expect(isBandwidthTurnAvailable(state)).toBe(true)
   })
 
-  it('is false while a Storage Bank Fill (higher priority) is currently available, even though Bandwidth itself is affordable', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, storageBanks: { 1000: 1 } })
+  it('is false while a Disk Fill (higher priority) is currently available, even though Bandwidth itself is affordable', () => {
+    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, disks: { [FIRST_DISK_SIZE]: 1 } })
     expect(isBandwidthTurnAvailable(state)).toBe(false)
   })
 })
 
-describe('isStorageBankBuildTurnAvailable', () => {
-  it('matches isStorageBankBuildAvailable with nothing ranked above it pending', () => {
-    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2 })
-    expect(isStorageBankBuildTurnAvailable(state)).toBe(true)
+describe('isDiskBuildTurnAvailable', () => {
+  it('matches isDiskBuildAvailable with nothing ranked above it pending', () => {
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2 })
+    expect(isDiskBuildTurnAvailable(state)).toBe(true)
   })
 
   it('is false while Bandwidth (higher priority) is currently available', () => {
-    const state = withIntro(createInitialGameState(), { bits: getStorageBankCost(1000) })
-    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
+    expect(isDiskBuildTurnAvailable(state)).toBe(false)
   })
 
-  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
+  it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
+      bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2, disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(isStorageBankBuildTurnAvailable(state)).toBe(false)
+    expect(isDiskBuildTurnAvailable(state)).toBe(false)
   })
 })
 
@@ -885,14 +903,14 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 
-  it('is false while a Storage Bank Fill (higher priority) is currently available', () => {
-    const state = withIntro(createInitialGameState(), { ...computeReady, storageBanks: { 1000: 1 } })
+  it('is false while a Disk Fill (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, disks: { [FIRST_DISK_SIZE]: 1 } })
     expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 
-  it('is false while a Storage Bank Build (higher priority) is currently available', () => {
-    const state = withIntro(createInitialGameState(), { ...computeReady, bits: getStorageBankCost(1000) })
+  it('is false while a Disk Build (higher priority) is currently available', () => {
+    const state = withIntro(createInitialGameState(), { ...computeReady, bits: getDiskCost(FIRST_DISK_SIZE) })
     expect(isComputeBoostTurnAvailable(state, 'burst')).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
@@ -911,13 +929,13 @@ describe('isIntroConversionUnlocked', () => {
 })
 
 describe('isStorageUnlocked', () => {
-  it('is false below INTRO_STORAGE_UNLOCK_CAPACITY (10 KB in Memory\'s own scale)', () => {
-    const state = withIntro(createInitialGameState(), { capacity: INTRO_STORAGE_UNLOCK_CAPACITY - 1 })
+  it('is false below INTRO_DISK_UNLOCK_CAPACITY (10 KB in Memory\'s own scale)', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY - 1 })
     expect(isStorageUnlocked(state)).toBe(false)
   })
 
-  it('is true once capacity reaches INTRO_STORAGE_UNLOCK_CAPACITY', () => {
-    const state = withIntro(createInitialGameState(), { capacity: INTRO_STORAGE_UNLOCK_CAPACITY })
+  it('is true once capacity reaches INTRO_DISK_UNLOCK_CAPACITY', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY })
     expect(isStorageUnlocked(state)).toBe(true)
   })
 })
@@ -1135,400 +1153,606 @@ describe('tickIntroAutoInvest', () => {
 
 // ─── Byte Foundry Storage (bank blocks) ───────────────────────────────────────
 
-describe('getStorageBankSize', () => {
-  it('starts at 1000 bits (1 KB) on a fresh cycle', () => {
+describe('getDiskSize', () => {
+  it('starts at 8000 bits (1 KB, Byte-accurate) on a fresh cycle', () => {
     const state = createInitialGameState()
-    expect(getStorageBankSize(state)).toBe(1000)
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(getDiskSize(state)).toBe(8000)
   })
 
   it('is independent of tier01\'s own level cost — it does not advance just because tier01 levels up', () => {
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
-    expect(getStorageBankSize(state)).toBe(1000)
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
   })
 
-  it('advances to tier01\'s NEXT level cost once STORAGE_BANK_LADDER_CAP banks have ever been built at the current size', () => {
-    const state = withIntro(createInitialGameState(), { storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP } })
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2)) // 10,000
+  it('advances to tier01\'s NEXT level cost once DISK_ARRAY_LADDER_CAP disks have ever been built at the current size', () => {
+    const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 2) * BITS_PER_BYTE) // 80,000
   })
 
-  it('does not regress after banks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
+  it('does not regress after disks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP },
-      storageBanks: { 1000: 3 }, // some already redeemed, some still full — either way, below the cap
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+      disks: { [FIRST_DISK_SIZE]: 3 }, // some already redeemed, some still full — either way, below the cap
     })
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 2))
+    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 2) * BITS_PER_BYTE)
   })
 
   it('advances sequentially through level 3 — tier01\'s Fibonacci exponent sequence does not skip it', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP },
     })
     // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) still reads 3 at epoch 2 (level 3) —
     // the same as the triangular sequence would — so level 3 costs 100,000, not skipped yet.
     expect(getTierCost(tensTier, 3)).toBe(100000)
-    expect(getStorageBankSize(state)).toBe(100000)
+    expect(getDiskSize(state)).toBe(100000 * BITS_PER_BYTE)
   })
 
   it('skips a size tier01\'s own level-cost sequence skips (1,000,000) — jumps straight from 100,000 to 10,000,000', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: {
-        1000: STORAGE_BANK_LADDER_CAP, 10000: STORAGE_BANK_LADDER_CAP, 100000: STORAGE_BANK_LADDER_CAP,
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: DISK_ARRAY_LADDER_CAP,
       },
     })
     // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) skips level 4's exponent straight to
     // 5, so level 4 costs 10,000,000, never 1,000,000.
     expect(getTierCost(tensTier, 4)).toBe(10000000)
-    expect(getStorageBankSize(state)).toBe(10000000)
+    expect(getDiskSize(state)).toBe(10000000 * BITS_PER_BYTE)
   })
 
-  it('keeps advancing indefinitely past 10,000,000 ("10 MB") — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
+  it('keeps advancing indefinitely past level 4 — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
+    const level4Size = getTierCost(tensTier, 4) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: {
-        1000: STORAGE_BANK_LADDER_CAP,
-        10000: STORAGE_BANK_LADDER_CAP,
-        100000: STORAGE_BANK_LADDER_CAP,
-        10000000: STORAGE_BANK_LADDER_CAP,
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [level2Size]: DISK_ARRAY_LADDER_CAP,
+        [level3Size]: DISK_ARRAY_LADDER_CAP,
+        [level4Size]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getStorageBankSize(state)).toBe(getTierCost(tensTier, 5)) // 10,000,000,000 — keeps going
+    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 5) * BITS_PER_BYTE) // keeps going
   })
 })
 
-describe('getStorageBankCost', () => {
-  it('is STORAGE_BUILD_COST_MULTIPLIER times the bank\'s own size, expressed in BYTES not bits', () => {
-    // A 1000-bit ("1 KB") bank costs 10 KB*BYTES* (10,000 bytes = 80,000 bits) to build, not
-    // 10,000 bits — see the "Byte Foundry Storage" comment in layers.js.
-    expect(getStorageBankCost(1000)).toBe(1000 * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE)
-    expect(getStorageBankCost(1000)).toBe(80000)
+describe('getDiskCost', () => {
+  it('is DISK_BUILD_COST_MULTIPLIER times the disk\'s own size — no further BITS_PER_BYTE conversion needed, the size itself is already Byte-accurate', () => {
+    // A real 1 KB (8000-bit) disk costs 80,000 bits ("10 KB") to build — see the "Byte Foundry
+    // Storage" comment in layers.js for the Kilobit->Kilobyte bug this fixed.
+    expect(getDiskCost(FIRST_DISK_SIZE)).toBe(FIRST_DISK_SIZE * DISK_BUILD_COST_MULTIPLIER)
+    expect(getDiskCost(FIRST_DISK_SIZE)).toBe(80000)
   })
 })
 
-describe('formatStorageSize', () => {
-  it('renders raw bits with singular/plural grammar below the 1000-bit ("1 KB") threshold', () => {
-    expect(formatStorageSize(1)).toBe('1 bit')
-    expect(formatStorageSize(0)).toBe('0 bits')
-    expect(formatStorageSize(999)).toBe('999 bits')
+describe('formatDiskSize', () => {
+  // Disk sizes are now real, Byte-accurate bit counts (see getDiskSize above) — the exact same
+  // scale Memory's own balance/capacity renders in — so formatDiskSize is a direct alias of
+  // formatBitsInNearestUnit, not the separate "kilobit" formatting scale an earlier version of
+  // this ladder used (see docs/DESIGN_HISTORY.md for that bug and its fix).
+  it('is the same function as formatBitsInNearestUnit', () => {
+    expect(formatDiskSize).toBe(formatBitsInNearestUnit)
   })
 
-  it('scales into KB/MB/… once at or above 1000 bits, reusing TIER_DEFINITIONS\' own symbols', () => {
-    expect(formatStorageSize(1000)).toBe('1 KB')
-    expect(formatStorageSize(10000)).toBe('10 KB')
-    expect(formatStorageSize(1000000)).toBe('1 MB')
+  it('renders a fresh cycle\'s disk size (8000 bits) as "1 KB", not a raw bit count', () => {
+    expect(formatDiskSize(FIRST_DISK_SIZE)).toBe('1 KB')
   })
 
-  it('caps at the largest unit (QB) rather than running off the end of the symbol list', () => {
-    const hugeSize = 1000 ** 13
-    // Without the cap this would keep dividing past QB; capped at the last symbol, the value
-    // itself stays large (≥1000) rather than shrinking further.
-    expect(formatStorageSize(hugeSize)).toBe(`${formatAmount(1000 ** 3)} QB`)
+  it('renders a fractional Byte below the 1-Byte (8-bit) threshold, matching Memory\'s own scale', () => {
+    expect(formatDiskSize(4)).toBe('0.5 B')
+  })
+
+  it('scales into KB/MB/… reusing TIER_DEFINITIONS\' own symbols', () => {
+    expect(formatDiskSize(getTierCost(tensTier, 2) * BITS_PER_BYTE)).toBe('10 KB')
+    expect(formatDiskSize(1000000 * BITS_PER_BYTE)).toBe('1 MB')
   })
 })
 
-describe('getStorageSizesToShow', () => {
+describe('getDiskSizesToShow', () => {
   it('shows only the currently-offered size (at 0 built) on a fresh cycle', () => {
     const state = createInitialGameState()
-    expect(getStorageSizesToShow(state)).toEqual([getStorageBankSize(state)])
+    expect(getDiskSizesToShow(state)).toEqual([getDiskSize(state)])
   })
 
-  it('includes every size ever built, even after its banks have all been redeemed back to 0 full', () => {
+  it('includes every size ever built, even after its disks have all been redeemed back to 0 full', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: 3 },
-      storageBanks: { 1000: 0 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
+      disks: { [FIRST_DISK_SIZE]: 0 },
     })
-    expect(getStorageSizesToShow(state)).toContain(1000)
+    expect(getDiskSizesToShow(state)).toContain(FIRST_DISK_SIZE)
   })
 
-  it('includes a size that is currently held but has no matching storageBanksBuiltTotal entry (a migrated pre-ladder save)', () => {
+  it('includes a size that is currently held but has no matching disksBuiltTotal entry (a migrated pre-ladder save)', () => {
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: {},
-      storageBanks: { 1000: 2 },
+      disksBuiltTotal: {},
+      disks: { [FIRST_DISK_SIZE]: 2 },
     })
-    expect(getStorageSizesToShow(state)).toContain(1000)
+    expect(getDiskSizesToShow(state)).toContain(FIRST_DISK_SIZE)
   })
 
   it('excludes a size with a zero/absent entry in both maps that also is not the currently-offered size', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 100000: 0 },
-      storageBanks: { 100000: 0 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level3Size]: 0 },
+      disks: { [level3Size]: 0 },
     })
-    // Reaching STORAGE_BANK_LADDER_CAP at size 1000 advances the currently-offered size to
-    // 10000 — leaving 100000 present as a key in both maps, but at 0 in each, and not current.
-    expect(getStorageBankSize(state)).toBe(10000)
-    expect(getStorageSizesToShow(state)).not.toContain(100000)
+    // Reaching DISK_ARRAY_LADDER_CAP at the first size advances the currently-offered size to
+    // level2Size — leaving level3Size present as a key in both maps, but at 0 in each, and not current.
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getDiskSizesToShow(state)).not.toContain(level3Size)
   })
 
   it('de-duplicates a size present in both maps and sorts the result ascending', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: 4 },
-      storageBanks: { 10000: 2 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 4 },
+      disks: { [level2Size]: 2 },
     })
-    // Reaching STORAGE_BANK_LADDER_CAP at size 1000 has advanced the ladder to 10000 (the
-    // currently-offered size) — 1000 still shows because it was built, 10000 shows only once
-    // despite appearing in storageBanksBuiltTotal, storageBanks, AND as the current size.
-    expect(getStorageBankSize(state)).toBe(10000)
-    expect(getStorageSizesToShow(state)).toEqual([1000, 10000])
+    // Reaching DISK_ARRAY_LADDER_CAP at the first size has advanced the ladder to level2Size (the
+    // currently-offered size) — the first size still shows because it was built, level2Size shows
+    // only once despite appearing in disksBuiltTotal, disks, AND as the current size.
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getDiskSizesToShow(state)).toEqual([FIRST_DISK_SIZE, level2Size])
   })
 })
 
-describe('buildStorageBank', () => {
-  // Storage Bank Build now ranks below Bandwidth in the Byte Foundry's forced priority order (see
-  // isStorageBankBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable
-  // at every balance these tests use, so every test that expects a build to actually FIRE must
-  // mark the current Invest tier's claims already used up (mirroring noOtherUpgradesLeft above).
+describe('startDiskBuild', () => {
+  // Disk Build ranks below Bandwidth in the Byte Foundry's forced priority order (see
+  // isDiskBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable at
+  // every balance these tests use, so every test that expects a build to actually FIRE must mark
+  // the current Invest tier's claims already used up (mirroring noOtherUpgradesLeft above).
   const bandwidthExhausted = { productionMilestoneTierClaims: 2 }
 
-  it('spends the build cost from Memory and constructs one EMPTY bank of the current offered size', () => {
-    const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost, ...bandwidthExhausted })
+  it('spends the build cost from Memory immediately and starts a timed build — does not construct the disk yet', () => {
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted })
 
-    const after = buildStorageBank(state)
+    const after = startDiskBuild(state)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(1)
-    // Building never fills it — storageBanks (the currently-FULL count) stays untouched.
-    expect(after.intro.storageBanks[1000]).toBeUndefined()
+    // Not constructed yet — only tickDiskBuild, once the countdown finishes, increments this.
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 })
   })
 
-  it('accumulates storageBanksBuiltTotal (cumulative) when building the same size again, still empty', () => {
-    const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost * 2, ...bandwidthExhausted })
+  it('the FIRST disk ever built at the smallest size takes exactly 1 second — 1 second per real "KB" of size', () => {
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted })
+    const after = startDiskBuild(state)
+    expect(after.intro.diskBuild.totalSeconds).toBe(1)
+  })
 
-    const after = buildStorageBank(buildStorageBank(state))
-    expect(after.intro.storageBanksBuiltTotal[1000]).toBe(2)
-    expect(after.intro.storageBanks[1000]).toBeUndefined()
-    expect(after.intro.bits).toBe(0)
+  it('a 10 KB disk\'s first build takes 10 seconds — base time tracks the real-Kilobyte scale', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(level2Size), ...bandwidthExhausted,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, // advances the ladder to level2Size
+    })
+    const after = startDiskBuild(state)
+    expect(after.intro.diskBuild).toEqual({ size: level2Size, remainingSeconds: 10, totalSeconds: 10 })
+  })
+
+  it('building the 6th disk of a size takes 6x that size\'s base build time — ordinal is read from disksBuiltTotal at the moment the build starts', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 }, // 5 already built — this build is the 6th
+    })
+    const after = startDiskBuild(state)
+    expect(after.intro.diskBuild.totalSeconds).toBe(6)
   })
 
   it('is a no-op below the build cost', () => {
-    const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost - 1, ...bandwidthExhausted })
-    expect(buildStorageBank(state)).toBe(state)
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) - 1, ...bandwidthExhausted })
+    expect(startDiskBuild(state)).toBe(state)
   })
 
-  it('starts building the next size up once the current one reaches STORAGE_BANK_LADDER_CAP built', () => {
-    const nextSize = getTierCost(tensTier, 2)
-    const almostMaxed = withIntro(createInitialGameState(), {
-      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP - 1 },
-      bits: getStorageBankCost(1000) + getStorageBankCost(nextSize),
-      ...bandwidthExhausted,
+  it('is a no-op while an array is already mid-build', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted,
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    const afterLast1KB = buildStorageBank(almostMaxed)
-    expect(afterLast1KB.intro.storageBanksBuiltTotal[1000]).toBe(STORAGE_BANK_LADDER_CAP)
-
-    const afterNext = buildStorageBank(afterLast1KB)
-    expect(afterNext.intro.storageBanksBuiltTotal[nextSize]).toBe(1)
+    expect(startDiskBuild(state)).toBe(state)
   })
 
   it('is a no-op while Bandwidth (higher priority) is currently available', () => {
-    const cost = getStorageBankCost(1000)
-    const state = withIntro(createInitialGameState(), { bits: cost })
-    expect(buildStorageBank(state)).toBe(state)
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
+    expect(startDiskBuild(state)).toBe(state)
   })
 
-  it('is a no-op while a Storage Bank Fill (higher priority) is currently available', () => {
-    const cost = getStorageBankCost(1000)
+  it('is a no-op while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: cost, ...bandwidthExhausted, storageBanks: { 1000: 1 },
+      bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted, disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(buildStorageBank(state)).toBe(state)
+    expect(startDiskBuild(state)).toBe(state)
   })
 })
 
-describe('tickStorageAutoFill', () => {
-  it('is a same-reference no-op with no built banks', () => {
+describe('tickDiskBuild', () => {
+  it('is a same-reference no-op when no build is in progress', () => {
+    const state = withIntro(createInitialGameState(), { diskBuild: null })
+    expect(tickDiskBuild(1)(state)).toBe(state)
+  })
+
+  it('counts remainingSeconds down by elapsedSeconds without completing early', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 6, totalSeconds: 6 },
+    })
+    const after = tickDiskBuild(2)(state)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: 4, totalSeconds: 6 })
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBeUndefined()
+  })
+
+  it('completes the build once the countdown reaches 0 — increments disksBuiltTotal and clears diskBuild', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    const after = tickDiskBuild(1)(state)
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+  })
+
+  it('completes the build when elapsedSeconds overshoots remainingSeconds', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    const after = tickDiskBuild(5)(state)
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+  })
+
+  it('accumulates onto an existing disksBuiltTotal count for that size rather than overwriting it', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 },
+    })
+    const after = tickDiskBuild(1)(state)
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(6)
+  })
+})
+
+describe('tickGame Disk Build integration', () => {
+  it('completes a full build through tickGame itself, not just the raw reducer', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    const after = tickGame(1)(state)
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+  })
+})
+
+// While intro.diskBuild?.size === X, every operation against size-X disks is a no-op — even a full
+// disk/full cache block that would otherwise qualify — resuming the instant the build completes.
+describe('Disk array IO lockout during a build', () => {
+  it('tickDiskAutoFill skips the mid-build size entirely, while other sizes still fill normally', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE + level2Size,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    const after = tickDiskAutoFill(state)
+    // The mid-build size's cache/disks are untouched...
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    // ...but the other size still fills normally.
+    expect(after.intro.disks[level2Size]).toBe(1)
+  })
+
+  it('tickDiskAutoRedeem skips a full, otherwise-redeemable disk of the mid-build size', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+      }),
+      tensTier.id, 1
+    )
+    expect(tickDiskAutoRedeem(state)).toBe(state)
+  })
+
+  it('redeemDisk is a no-op against the mid-build size, even with a full disk in hand', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+
+  it('isDiskCacheBlockReleasable is false and releaseDiskCacheBlock is a no-op against the mid-build size, even with a full cache block', () => {
+    const blockBits = FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
+    const state = withIntro(createInitialGameState(), {
+      diskCache: { [FIRST_DISK_SIZE]: blockBits },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+
+  it('every operation against the size resumes working the instant its build completes', () => {
+    const blockBits = FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+        diskCache: { [FIRST_DISK_SIZE]: blockBits },
+        diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+      }),
+      tensTier.id, 1
+    )
+    const afterBuild = tickDiskBuild(1)(state)
+    expect(afterBuild.intro.diskBuild).toBeNull()
+    expect(isDiskCacheBlockReleasable(afterBuild, FIRST_DISK_SIZE)).toBe(true)
+    expect(tickDiskAutoRedeem(afterBuild)).not.toBe(afterBuild)
+  })
+})
+
+describe('tickDiskAutoFill', () => {
+  it('is a same-reference no-op with no built disks', () => {
     const state = withIntro(createInitialGameState(), { bits: 5000 })
-    expect(tickStorageAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(state)).toBe(state)
   })
 
-  it('is a no-op when Memory can\'t cover the smallest empty bank', () => {
-    const state = withIntro(createInitialGameState(), { bits: 999, storageBanksBuiltTotal: { 1000: 1 } })
-    expect(tickStorageAutoFill(state)).toBe(state)
+  it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
+    const state = withIntro(createInitialGameState(), { bits: 0, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+    expect(tickDiskAutoFill(state)).toBe(state)
   })
 
-  it('fills one empty bank exactly, spending its size in bits from Memory', () => {
-    const state = withIntro(createInitialGameState(), { bits: 1000, storageBanksBuiltTotal: { 1000: 1 } })
-    const after = tickStorageAutoFill(state)
-    expect(after.intro.storageBanks[1000]).toBe(1)
+  it('tops up the cache partially when Memory has fewer bits than a full cache needs — no disk created yet', () => {
+    const state = withIntro(createInitialGameState(), { bits: 3000, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(3000)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('pours an already-full cache into an empty container with no further bits needed', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 0,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE }, // already full from a prior tick
+    })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(0)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('fills one empty container exactly — topping up then pouring in one call — spending the size in bits from Memory overall', () => {
+    const state = withIntro(createInitialGameState(), { bits: FIRST_DISK_SIZE, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(0)
     expect(after.intro.bits).toBe(0)
   })
 
   it('cascades smallest to largest in one pass, leaving the remainder in Memory', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      bits: 12500,
-      storageBanksBuiltTotal: { 1000: 2, 10000: 1 },
+      bits: FIRST_DISK_SIZE * 2 + level2Size + 500,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
     })
-    const after = tickStorageAutoFill(state)
-    expect(after.intro.storageBanks[1000]).toBe(2) // both 1 KB banks filled first
-    expect(after.intro.storageBanks[10000]).toBe(1) // then the 10 KB one
-    expect(after.intro.bits).toBe(500) // 12500 - 1000 - 1000 - 10000
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2) // both 1 KB disks filled first
+    expect(after.intro.disks[level2Size]).toBe(1) // then the 10 KB one
+    expect(after.intro.bits).toBe(500)
   })
 
-  it('only fills as many banks of a size as are actually empty, even with surplus Memory', () => {
+  it('only fills as many containers of a size as are actually empty, even with surplus Memory', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1_000_000,
-      storageBanksBuiltTotal: { 1000: 2 },
-      storageBanks: { 1000: 1 }, // one already full — only one more can be filled
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      disks: { [FIRST_DISK_SIZE]: 1 }, // one already full — only one more can be filled
     })
-    const after = tickStorageAutoFill(state)
-    expect(after.intro.storageBanks[1000]).toBe(2)
-    expect(after.intro.bits).toBe(999000)
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2)
+    expect(after.intro.bits).toBe(1_000_000 - FIRST_DISK_SIZE)
   })
 
   it('leaves an already-fully-filled size untouched', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 5000,
-      storageBanksBuiltTotal: { 1000: 1 },
-      storageBanks: { 1000: 1 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(tickStorageAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(state)).toBe(state)
   })
 })
 
-describe('isStorageBankRedeemable', () => {
+describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
+  const blockBits = FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT // 1000 bits per block
+
+  it('is false below one full block', () => {
+    const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits - 1 } })
+    expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('is true once the cache holds at least one full block', () => {
+    const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } })
+    expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(true)
+  })
+
+  it('releases exactly one block\'s worth of bits back into Memory', () => {
+    const state = withIntro(createInitialGameState(), { bits: 0, diskCache: { [FIRST_DISK_SIZE]: blockBits * 3 } })
+    const after = releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)
+    expect(after.intro.bits).toBe(blockBits)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 2)
+  })
+
+  it('is a same-reference no-op below one full block', () => {
+    const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits - 1 } })
+    expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+})
+
+describe('isDiskRedeemable / getDiskRedeemTierName', () => {
   it('is true only when capacityBits EXACTLY matches tier01\'s current per-unit level cost', () => {
-    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 2))).toBe(true) // exact match
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 1))).toBe(false) // below — no longer redeemable
-    expect(isStorageBankRedeemable(state, getTierCost(tensTier, 3))).toBe(false) // above — not yet
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000 Bits
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    expect(isDiskRedeemable(state, level2Size)).toBe(true) // exact match
+    expect(isDiskRedeemable(state, FIRST_DISK_SIZE)).toBe(false) // below — no longer redeemable
+    expect(isDiskRedeemable(state, getTierCost(tensTier, 3) * BITS_PER_BYTE)).toBe(false) // above — not yet
+    expect(getDiskRedeemTierName(state, level2Size)).toBe(tensTier.name)
+    expect(getDiskRedeemTierName(state, FIRST_DISK_SIZE)).toBeNull()
   })
 
-  it('is not redeemable once tier01\'s level jumps straight past the level a bank was sized for', () => {
+  it('is not redeemable once tier01\'s level jumps straight past the level a disk was sized for', () => {
     // An autobuyer burst can complete more than one level in a single tick (see tickGame's
-    // autobuyer loop), skipping level 2 (the bank's own target) entirely on the way to level 5 —
-    // the bank stays full and held, not lost, but won't redeem again until a Speed Up/Overclock/
+    // autobuyer loop), skipping level 2 (the disk's own target) entirely on the way to level 5 —
+    // the disk stays full and held, not lost, but won't redeem again until a Speed Up/Overclock/
     // Prestige resets tier01's level back down and it regrows through that exact cost.
-    const size = getTierCost(tensTier, 2)
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
-    expect(isStorageBankRedeemable(state, size)).toBe(false)
+    expect(isDiskRedeemable(state, level2Size)).toBe(false)
+  })
+
+  it('matches ANY tier, not just tier01 — a disk sized for tier02\'s current cost redeems into tier02', () => {
+    const secondTier = TIER_DEFINITIONS[1]
+    const secondTierSize = getTierCost(secondTier, 1) * BITS_PER_BYTE
+    const state = createInitialGameState()
+    expect(isDiskRedeemable(state, secondTierSize)).toBe(true)
+    expect(getDiskRedeemTierName(state, secondTierSize)).toBe(secondTier.name)
+  })
+
+  it('a genuine tie between two tiers redeems into whichever appears EARLIER in TIER_DEFINITIONS', () => {
+    const secondTier = TIER_DEFINITIONS[1]
+    // tier01 level 4 (1000 * 10^(5-1)) and tier02 level 2 (1e6 * 10^(2-1)) both cost exactly
+    // 10,000,000 Bits per unit right now — a genuine, naturally-occurring tie.
+    const tiedCost = getTierCost(tensTier, 4)
+    expect(tiedCost).toBe(getTierCost(secondTier, 2))
+    const tiedSize = tiedCost * BITS_PER_BYTE
+
+    const state = withPurchaseLevel(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), secondTier.id, 2)
+    expect(getDiskRedeemTierName(state, tiedSize)).toBe(tensTier.name) // tier01 wins — earlier in TIER_DEFINITIONS
+
+    const withDisk = withIntro(state, { disks: { [tiedSize]: 1 } })
+    const after = redeemDisk(tiedSize)(withDisk)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[secondTier.id]).toBe(0) // tier02 untouched despite the tie
   })
 })
 
-describe('redeemStorageBank', () => {
-  it('consumes one matching bank and grants 1 free tier01 unit', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 2 } })
+describe('redeemDisk', () => {
+  it('consumes one matching disk and grants 1 free tier01 unit', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 2 } })
 
-    const after = redeemStorageBank(size)(state)
-    expect(after.intro.storageBanks[size]).toBe(1)
+    const after = redeemDisk(FIRST_DISK_SIZE)(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(1)
   })
 
   it('removes the denomination key entirely once its count reaches 0, rather than leaving a 0 entry', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } })
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
 
-    const after = redeemStorageBank(size)(state)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
+    const after = redeemDisk(FIRST_DISK_SIZE)(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 
-  it('is a no-op if no bank of that size is held', () => {
+  it('is a no-op if no disk of that size is held', () => {
     const state = createInitialGameState()
-    expect(redeemStorageBank(getTierCost(tensTier, 1))(state)).toBe(state)
+    expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
   })
 
-  it('is a no-op if a held bank exceeds tier01\'s current level cost', () => {
-    const size = getTierCost(tensTier, 2) // above tier01's level-1 cost
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } })
-    expect(redeemStorageBank(size)(state)).toBe(state)
+  it('is a no-op if a held disk matches no tier\'s current cost', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), { disks: { [level2Size]: 1 } })
+    expect(redeemDisk(level2Size)(state)).toBe(state)
   })
 
-  it('is a no-op for a bank sized for a level tier01 skipped straight past in one burst — it stays held, not lost', () => {
-    const size = getTierCost(tensTier, 2)
+  it('is a no-op for a disk sized for a level tier01 skipped straight past in one burst — it stays held, not lost', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
-      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }),
+      withIntro(createInitialGameState(), { disks: { [level2Size]: 1 } }),
       tensTier.id,
       5
     )
-    expect(redeemStorageBank(size)(state)).toBe(state)
+    expect(redeemDisk(level2Size)(state)).toBe(state)
   })
 
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withMoney(withIntro(createInitialGameState(), { storageBanks: { [size]: 1 } }), PRESTIGE_THRESHOLD)
+    const state = withMoney(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), PRESTIGE_THRESHOLD)
     expect(isProductionFrozen(state)).toBe(true)
 
-    const after = redeemStorageBank(size)(state)
+    const after = redeemDisk(FIRST_DISK_SIZE)(state)
     expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('is a no-op while the disk\'s own size is currently mid-build, even though it is otherwise full and redeemable', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
   })
 })
 
-describe('tickStorageAutoRedeem', () => {
-  it('auto-redeems a 1 KB bank even when storageAutoRedeemEnabled is false — the smallest size is exempt from the toggle', () => {
-    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 1 }, storageAutoRedeemEnabled: false })
-
-    const after = tickStorageAutoRedeem(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.intro.storageBanks[1000]).toBeUndefined()
-    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
+describe('tickDiskAutoRedeem', () => {
+  it('is a no-op when the matching tier has no autobuyer purchased at all', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(tickDiskAutoRedeem(state)).toBe(state)
   })
 
-  it('is a no-op for a size above 1 KB when storageAutoRedeemEnabled is false', () => {
-    const size = getTierCost(tensTier, 2)
+  it('is a no-op when the matching tier\'s autobuyer is purchased but paused', () => {
+    const state = withAutobuyerEnabled(
+      withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1),
+      tensTier.id,
+      false
+    )
+    expect(tickDiskAutoRedeem(state)).toBe(state)
+  })
+
+  it('fires when the matching tier\'s autobuyer is unlocked and enabled', () => {
+    const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1)
+
+    const after = tickDiskAutoRedeem(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
+  })
+
+  it('is a no-op when no held disk matches any tier\'s current cost', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [level2Size]: 1 } }), tensTier.id, 1)
+    expect(tickDiskAutoRedeem(state)).toBe(state)
+  })
+
+  it('only the exact-match size is eligible when multiple sizes are held — a smaller, no-longer-matching disk stays untouched', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
-      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: false }),
+      withAutobuyer(
+        withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 } }),
+        tensTier.id, 1
+      ),
       tensTier.id,
       2
     )
-    expect(tickStorageAutoRedeem(state)).toBe(state)
+
+    const after = tickDiskAutoRedeem(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1) // below current cost — no longer eligible
+    expect(after.intro.disks[level2Size]).toBeUndefined() // exact match — redeemed
   })
 
-  it('redeems a matching bank above 1 KB automatically once enabled', () => {
-    const size = getTierCost(tensTier, 2)
-    const state = withPurchaseLevel(
-      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
-      tensTier.id,
-      2
-    )
+  it('auto-redeems a given size at most once per real Prestige cycle, leaving a further eligible disk of that size for a manual redeem', () => {
+    const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 2 } }), tensTier.id, 1)
 
-    const after = tickStorageAutoRedeem(state)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
+    const after = tickDiskAutoRedeem(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(after.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
+
+    const secondTick = tickDiskAutoRedeem(after)
+    expect(secondTick).toBe(after) // no-op — already auto-redeemed this cycle
   })
 
-  it('is a no-op when no held bank is at or below the current cost', () => {
-    const size = getTierCost(tensTier, 2)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
-    expect(tickStorageAutoRedeem(state)).toBe(state)
-  })
-
-  it('only the exact-match size is eligible when multiple sizes are held — a smaller, no-longer-matching bank stays untouched', () => {
-    const level1Size = getTierCost(tensTier, 1)
-    const level2Size = getTierCost(tensTier, 2)
-    const state = withPurchaseLevel(
+  it('is a no-op against a size currently mid-build, even with a matching active autobuyer', () => {
+    const state = withAutobuyer(
       withIntro(createInitialGameState(), {
-        storageBanks: { [level1Size]: 1, [level2Size]: 1 },
-        storageAutoRedeemEnabled: true,
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
       }),
-      tensTier.id,
-      2
+      tensTier.id, 1
     )
-
-    const after = tickStorageAutoRedeem(state)
-    expect(after.intro.storageBanks[level1Size]).toBe(1) // below current cost — no longer eligible
-    expect(after.intro.storageBanks[level2Size]).toBeUndefined() // exact match — redeemed
-  })
-
-  it('auto-redeems a given size at most once per cycle, leaving a further eligible bank of that size for a manual redeem', () => {
-    const state = withIntro(createInitialGameState(), { storageBanks: { 1000: 2 }, storageAutoRedeemEnabled: true })
-
-    const after = tickStorageAutoRedeem(state)
-    expect(after.intro.storageBanks[1000]).toBe(1)
-    expect(after.intro.storageAutoRedeemedSizes[1000]).toBe(true)
-
-    const secondTick = tickStorageAutoRedeem(after)
-    expect(secondTick).toBe(after) // no-op — 1000 already auto-redeemed this cycle
-  })
-})
-
-describe('setStorageAutoRedeemEnabled', () => {
-  it('toggles intro.storageAutoRedeemEnabled unconditionally — no prerequisite purchase, unlike setAutoSpeedUpEnabled', () => {
-    const state = createInitialGameState()
-    // Defaults true — no in-UI pause toggle is currently rendered (see ByteFoundryPage), so every
-    // size auto-redeems out of the box until that toggle returns.
-    expect(state.intro.storageAutoRedeemEnabled).toBe(true)
-
-    const disabled = setStorageAutoRedeemEnabled(false)(state)
-    expect(disabled.intro.storageAutoRedeemEnabled).toBe(false)
-    expect(setStorageAutoRedeemEnabled(true)(disabled).intro.storageAutoRedeemEnabled).toBe(true)
+    expect(tickDiskAutoRedeem(state)).toBe(state)
   })
 })
 
@@ -1621,13 +1845,13 @@ describe('tickComputeCoreConversion', () => {
     expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
   })
 
-  it('is unrelated to Storage — fires regardless of whether any Storage bank has ever been built', () => {
+  it('is unrelated to Storage — fires regardless of whether any Disk has ever been built', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       autoClaimCoreEnabled: true,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      storageBanks: {},
-      storageBanksBuiltTotal: {},
+      disks: {},
+      disksBuiltTotal: {},
     })
     expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
   })
@@ -2211,16 +2435,16 @@ describe('activateComputeBoost', () => {
     expect(activateComputeBoost('burst')(state)).toBe(state)
   })
 
-  it('is a same-reference no-op while Storage Bank Build (higher priority) is currently available', () => {
+  it('is a same-reference no-op while Disk Build (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
-      computeCores: 1, bits: getStorageBankCost(1000), productionMilestoneTierClaims: 2,
+      computeCores: 1, bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2,
     })
     expect(activateComputeBoost('burst')(state)).toBe(state)
   })
 
-  it('is a same-reference no-op while a Storage Bank Fill (higher priority) is currently available', () => {
+  it('is a same-reference no-op while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
-      computeCores: 1, productionMilestoneTierClaims: 2, storageBanks: { 1000: 1 },
+      computeCores: 1, productionMilestoneTierClaims: 2, disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(activateComputeBoost('burst')(state)).toBe(state)
   })
@@ -2320,36 +2544,36 @@ describe('tickGame Compute Boost integration', () => {
   })
 })
 
-describe('tickGame Storage auto-redeem integration', () => {
-  it('auto-redeems a matching bank as part of a regular tick', () => {
-    const size = getTierCost(tensTier, 1)
-    const state = withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true })
+describe('tickGame Disk auto-redeem integration', () => {
+  it('auto-redeems a matching disk as part of a regular tick', () => {
+    const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1)
 
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 
-  // Regression: tickStorageAutoRedeem used to only run after tickGame's normal (non-frozen) path,
-  // so it was silently unreachable once isProductionFrozen — unlike redeemStorageBank itself,
-  // which deliberately bypasses the freeze (see redeemStorageBank's own tests above).
-  it('auto-redeems a matching bank even while production is frozen, with no Auto-Prestige bought', () => {
-    const size = getTierCost(tensTier, 1)
+  // Regression: tickDiskAutoRedeem used to only run after tickGame's normal (non-frozen) path, so
+  // it was silently unreachable once isProductionFrozen — unlike redeemDisk itself, which
+  // deliberately bypasses the freeze (see redeemDisk's own tests above).
+  it('auto-redeems a matching disk even while production is frozen, with no Auto-Prestige bought', () => {
     const state = withMoney(
-      withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }),
+      withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1),
       PRESTIGE_THRESHOLD
     )
     expect(isProductionFrozen(state)).toBe(true)
 
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 
-  it('auto-redeems a matching bank even while frozen with Auto-Prestige accumulating (attempt budget not yet full)', () => {
-    const size = getTierCost(tensTier, 1)
+  it('auto-redeems a matching disk even while frozen with Auto-Prestige accumulating (attempt budget not yet full)', () => {
     const state = withMoney(
-      withPrestigePoints(withIntro(createInitialGameState(), { storageBanks: { [size]: 1 }, storageAutoRedeemEnabled: true }), 0),
+      withPrestigePoints(
+        withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1),
+        0
+      ),
       PRESTIGE_THRESHOLD
     )
     const frozenState = { ...state, autoPrestige: 1 }
@@ -2357,14 +2581,13 @@ describe('tickGame Storage auto-redeem integration', () => {
 
     const after = tickGame(0.001)(frozenState) // tiny elapsed time — attempt budget stays well below 1
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.intro.storageBanks[size]).toBeUndefined()
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD) // still frozen — no Prestige fired yet
   })
 
   it('auto-redeems against the fresh post-Prestige tier01 level when Auto-Prestige fires the same tick', () => {
-    const level1Size = getTierCost(tensTier, 1)
     const state = withMoney(
-      withIntro(createInitialGameState(), { storageBanks: { [level1Size]: 1 }, storageAutoRedeemEnabled: true }),
+      withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1),
       PRESTIGE_THRESHOLD
     )
     const frozenState = { ...state, autoPrestige: 1, autoPrestigeAttemptBudget: 1 } // budget already full
@@ -2372,38 +2595,39 @@ describe('tickGame Storage auto-redeem integration', () => {
 
     const after = tickGame(1)(frozenState)
     expect(after.resources[MONEY_ID]).toBeLessThan(PRESTIGE_THRESHOLD) // Prestige fired, resources reset
-    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized bank is still redeemable.
+    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized disk is still redeemable.
     expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.intro.storageBanks[level1Size]).toBeUndefined()
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 })
 
 describe('prestigeGame keeps Storage permanent', () => {
-  it('carries storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled through a real Prestige unchanged, like the Byte generator itself', () => {
-    const size = getTierCost(tensTier, 1)
+  it('carries disks/disksBuiltTotal/diskCache/diskBuild through a real Prestige unchanged, like the Byte generator itself', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
-        storageBanks: { [size]: 3 },
-        storageBanksBuiltTotal: { [size]: 5 },
-        storageAutoRedeemEnabled: true,
+        disks: { [FIRST_DISK_SIZE]: 3 },
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 },
+        diskCache: { [FIRST_DISK_SIZE]: 250 },
+        diskBuild: { size: FIRST_DISK_SIZE * 10, remainingSeconds: 4, totalSeconds: 10 },
       }),
       PRESTIGE_THRESHOLD
     )
 
     const after = prestigeGame(state)
-    expect(after.intro.storageBanks[size]).toBe(3)
-    expect(after.intro.storageBanksBuiltTotal[size]).toBe(5)
-    expect(after.intro.storageAutoRedeemEnabled).toBe(true)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(3)
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(5)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(250)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE * 10, remainingSeconds: 4, totalSeconds: 10 })
   })
 
-  it('resets storageAutoRedeemedSizes fresh every real Prestige, unlike the permanent Storage fields above', () => {
+  it('resets diskAutoRedeemedSizes fresh every real Prestige, unlike the permanent Storage fields above', () => {
     const state = withMoney(
-      withIntro(createInitialGameState(), { storageAutoRedeemedSizes: { 1000: true } }),
+      withIntro(createInitialGameState(), { diskAutoRedeemedSizes: { [FIRST_DISK_SIZE]: true } }),
       PRESTIGE_THRESHOLD
     )
 
     const after = prestigeGame(state)
-    expect(after.intro.storageAutoRedeemedSizes).toEqual({})
+    expect(after.intro.diskAutoRedeemedSizes).toEqual({})
   })
 })
 
@@ -2466,6 +2690,41 @@ describe('formatCurrency', () => {
     expect(formatCurrency(1.6)).toBe('1 b')
     expect(formatCurrency(1.999)).toBe('1 b')
     expect(formatCurrency(2)).toBe('2 b')
+  })
+})
+
+// ─── formatMoneyBalance ──────────────────────────────────────────────────────
+// MainPage's own MoneyHero balance readout only — every other formatCurrency call (costs,
+// production rates, the Prestige overlay) is unaffected by this and stays in raw Bits.
+
+describe('formatMoneyBalance', () => {
+  it('is identical to formatCurrency below the 8000-bit (1000-Byte) threshold', () => {
+    expect(formatMoneyBalance(0)).toBe(formatCurrency(0))
+    expect(formatMoneyBalance(500)).toBe(formatCurrency(500))
+    expect(formatMoneyBalance(7999)).toBe(formatCurrency(7999))
+  })
+
+  it('switches to whole Bytes (floored, ÷ BITS_PER_BYTE) with a B suffix at/above the threshold', () => {
+    expect(formatMoneyBalance(8000)).toBe('1,000 B')
+    expect(formatMoneyBalance(8000)).not.toContain(' b')
+  })
+
+  it('floors rather than rounds when converting to Bytes, so it never overstates the balance', () => {
+    expect(formatMoneyBalance(8007)).toBe('1,000 B') // 1000.875 Bytes floors to 1000
+    expect(formatMoneyBalance(8008)).toBe('1,001 B')
+  })
+
+  it('reuses formatCurrency\'s own exponential-notation threshold once converted to Bytes', () => {
+    expect(formatMoneyBalance(999_999 * BITS_PER_BYTE)).toBe('999,999 B') // 999,999 Bytes — still plain
+    expect(formatMoneyBalance(1_000_000 * BITS_PER_BYTE)).toBe('1e6 B') // 1,000,000 Bytes — switches to scientific
+  })
+
+  it('renders huge balances in scientific notation, matching formatCurrency\'s own behavior', () => {
+    expect(formatMoneyBalance(8e21)).toBe('1e21 B')
+  })
+
+  it('treats negative values as 0', () => {
+    expect(formatMoneyBalance(-5)).toBe('0 b')
   })
 })
 
@@ -5676,8 +5935,8 @@ describe('speedUpGame', () => {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
       mainGameUnlocked: true,
-      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
-      storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      disks: { 8000: 2 }, disksBuiltTotal: { 8000: 5 }, diskCache: { 8000: 4000 }, diskBuild: null,
+      diskAutoRedeemedSizes: { 8000: true }, computeCores: 3, computeNodes: 1,
       computeClusters: 2, computeNetworks: 1, computeGrids: 0, computeMergePageUnlocked: true,
       computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }
@@ -5940,8 +6199,8 @@ describe('overclockGame', () => {
       bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4,
       productionMilestoneTier: 3, productionMilestoneTierClaims: 1, productionAccumulator: 2.5,
       mainGameUnlocked: true,
-      storageBanks: { 1000: 2 }, storageBanksBuiltTotal: { 1000: 5 }, storageAutoRedeemEnabled: true,
-      storageAutoRedeemedSizes: { 1000: true }, computeCores: 3, computeNodes: 1,
+      disks: { 8000: 2 }, disksBuiltTotal: { 8000: 5 }, diskCache: { 8000: 4000 }, diskBuild: null,
+      diskAutoRedeemedSizes: { 8000: true }, computeCores: 3, computeNodes: 1,
       computeClusters: 2, computeNetworks: 1, computeGrids: 0, computeMergePageUnlocked: true,
       computeBoostType: 'burst', computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     }

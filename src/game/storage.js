@@ -193,11 +193,28 @@ const migrateState = saved => {
       (legacyComputeCoresEverEarned ?? 0) >= COMPUTE_CORES_PER_NODE ||
       saved.intro.computeClusters || saved.intro.computeNetworks || saved.intro.computeGrids
     )
+  // Storage Banks were renamed to Disks — a save from before the rename stores its held/built
+  // containers and this-cycle auto-redeem history under the old field names (storageBanks/
+  // storageBanksBuiltTotal/storageAutoRedeemedSizes) instead of the current disks/disksBuiltTotal/
+  // diskAutoRedeemedSizes. Forward them explicitly, same "old name -> new name" shape as the
+  // MONEY_ID Ones -> base forwarding above, so a save with built/full banks doesn't silently lose
+  // them to fresh's empty {} defaults on its first post-rename load. diskCache/diskBuild are
+  // brand-new fields (this rename also introduced the build-time/cache mechanics) with no legacy
+  // equivalent to forward — they fall through to fresh's {}/null defaults regardless. The old
+  // storageAutoRedeemEnabled field (also removed by this rename — auto-redeem is now gated on
+  // tier01's own autobuyer instead) is simply left unread in whatever's spread from saved.intro
+  // below, same as any other superseded field elsewhere in this file.
+  const legacyStorageFields = {
+    ...(saved.intro?.storageBanks !== undefined ? { disks: saved.intro.storageBanks } : {}),
+    ...(saved.intro?.storageBanksBuiltTotal !== undefined ? { disksBuiltTotal: saved.intro.storageBanksBuiltTotal } : {}),
+    ...(saved.intro?.storageAutoRedeemedSizes !== undefined ? { diskAutoRedeemedSizes: saved.intro.storageAutoRedeemedSizes } : {}),
+  }
   const migratedIntro = isPreByteFoundrySave
     ? { ...fresh.intro, mainGameUnlocked: true }
     : {
       ...fresh.intro,
       ...saved.intro,
+      ...legacyStorageFields,
       ...(introPredatesMainGameUnlocked ? {
         mainGameUnlocked: saved.intro.completed === true,
       } : {}),

@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -304,33 +304,40 @@ export const createInitialGameState = () => ({
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
-    // PERMANENT — { [capacityBits]: count } of currently-FULL Storage banks of that size (see
-    // tickStorageAutoFill/redeemStorageBank below) — "never lost," survives Prestige/Speed Up/
-    // Overclock exactly like the Byte generator itself (a full bank's contents ride through a real
-    // Prestige untouched even though Memory itself resets, since a bank is a separate store, not
-    // part of Memory). Empty object, not per-denomination zeros, since the set of denominations
-    // ever built is open-ended. The number of currently EMPTY banks of a size is always
-    // storageBanksBuiltTotal[size] - storageBanks[size].
-    storageBanks: {},
-    // PERMANENT — { [capacityBits]: cumulative count } of every bank ever built (constructed) at
-    // that size, full or empty, including ones since redeemed — unlike storageBanks above,
-    // redeemStorageBank never decrements this. Drives getStorageBankSize's one-way ladder advance
-    // past STORAGE_BANK_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
-    storageBanksBuiltTotal: {},
-    // PERMANENT — whether tickGame auto-redeems a matching Storage bank every tick (see
-    // tickStorageAutoRedeem) instead of requiring a manual click. A plain preference, not a
-    // purchase — defaults ON for every size (no pause toggle is currently rendered — see
-    // ByteFoundryPage — so there's no in-UI way to turn it off yet; the field and
-    // setStorageAutoRedeemEnabled/tickStorageAutoRedeem plumbing all still exist for when that
-    // toggle returns). Doesn't gate the smallest (1 KB) denomination at all either way — see
-    // tickStorageAutoRedeem.
-    storageAutoRedeemEnabled: true,
+    // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
+    // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
+    // exactly like the Byte generator itself (a full disk's contents ride through a real Prestige
+    // untouched even though Memory itself resets, since a disk is a separate store, not part of
+    // Memory). Empty object, not per-denomination zeros, since the set of denominations ever built
+    // is open-ended. The number of currently EMPTY disks of a size is always
+    // disksBuiltTotal[size] - disks[size].
+    disks: {},
+    // PERMANENT — { [capacityBits]: cumulative count } of every disk ever built (constructed) at
+    // that size, full or empty, including ones since redeemed — unlike disks above, redeemDisk
+    // never decrements this. Drives getDiskSize's one-way ladder advance past
+    // DISK_ARRAY_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
+    disksBuiltTotal: {},
+    // PERMANENT — { [capacityBits]: bits currently staged } in that size array's own cache, a
+    // staging buffer Memory fills before any of the array's disk containers (see tickDiskAutoFill
+    // below) — 0..size, split conceptually into DISK_CACHE_BLOCK_COUNT equal blocks for display/
+    // manual release (see releaseDiskCacheBlock). Rides through Prestige untouched, same as disks/
+    // disksBuiltTotal above — the cache belongs to the array's own permanent hardware, not to a
+    // single Prestige cycle's Memory balance.
+    diskCache: {},
+    // PERMANENT — null when no array is currently mid-build, otherwise
+    // { size, remainingSeconds, totalSeconds } for the one disk array build in progress (see
+    // startDiskBuild/tickDiskBuild below). Only one
+    // size is ever buildable at a time (getDiskSize's own single-size ladder), so a single field
+    // suffices rather than a per-size map. While set, every IO operation (auto-fill, auto-redeem,
+    // manual cache release, manual redeem) against `size`'s own array is disallowed — "the array
+    // rebuild" — until the build completes and disksBuiltTotal[size] increments.
+    diskBuild: null,
     // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
-    // Storage field above. { [capacityBits]: true } once tickStorageAutoRedeem has auto-redeemed
-    // that size this cycle, capping auto-redeem at one bank per size per cycle — further eligible
-    // banks of an already-auto-redeemed size need a manual click for the rest of the cycle.
-    storageAutoRedeemedSizes: {},
-    // PERMANENT — like the Byte generator/Storage banks above, carried over every real Prestige
+    // Storage field above. { [capacityBits]: true } once tickDiskAutoRedeem has auto-redeemed that
+    // size this cycle, capping auto-redeem at one disk per size per cycle — further eligible disks
+    // of an already-auto-redeemed size need a manual click for the rest of the cycle.
+    diskAutoRedeemedSizes: {},
+    // PERMANENT — like the Byte generator/Disks above, carried over every real Prestige
     // (see prestigeGame). Automatically incremented by tickComputeCoreConversion every time Memory
     // is full, once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — each conversion
     // flushes the CURRENT capacity (not a fixed cost) for exactly 1 Core, so a higher capacity
@@ -453,6 +460,27 @@ export const formatCurrency = value => {
   return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
     ? `${currencyNumberFormatter.format(safeValue)} ${symbol}`
     : `${formatScientific(safeValue)} ${symbol}`
+}
+
+// Money (Bits) balance below which this switches out to formatCurrency's raw Bits display — 8000
+// bits, exactly 1000 Bytes (BITS_PER_BYTE), the same real-Byte threshold Memory's own B/KB/MB/…
+// scale considers "1 KB" (see getMemoryUnit). Below this a Bytes reading would round to 0 or read
+// as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a
+// full Byte's worth of KB to show.
+const MONEY_BYTES_DISPLAY_THRESHOLD = 8000
+
+// MainPage's own main balance readout (MoneyHero) only — every other formatCurrency call (costs,
+// production rates, the Prestige-threshold overlay) keeps showing Bits, its actual priced/spent
+// denomination. Once the balance itself reaches MONEY_BYTES_DISPLAY_THRESHOLD, the headline number
+// reads more naturally converted into whole Bytes (÷ BITS_PER_BYTE, floored — same "never overstate"
+// rounding formatCurrency itself uses) than as an ever-growing raw bit count.
+export const formatMoneyBalance = value => {
+  const safeValue = Math.floor(clampNonNegative(value))
+  if (safeValue < MONEY_BYTES_DISPLAY_THRESHOLD) return formatCurrency(safeValue)
+  const bytes = Math.floor(safeValue / BITS_PER_BYTE)
+  return bytes < EXPONENTIAL_NOTATION_THRESHOLD
+    ? `${currencyNumberFormatter.format(bytes)} B`
+    : `${formatScientific(bytes)} B`
 }
 
 // The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 13, 21, …
@@ -977,12 +1005,14 @@ const checkMilestones = (resources, prestige) => {
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
-  // The Byte Foundry intro runs first, every tick: passive production, then Storage's own
-  // auto-fill (Memory -> empty banks) gets first claim on the resulting Memory balance, ahead of
-  // tickIntroAutoInvest's own direct bit-to-Kilobyte conversion — otherwise a bank the player has
-  // already built and is waiting to fill would be starved by fresh Memory being auto-converted out
-  // from under it before it ever reached the bank. Auto-fill doesn't depend on tier01's level at
-  // all (unlike auto-redeem below), so running it this early costs nothing.
+  // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
+  // array build counts down (tickDiskBuild — unconditional, bypasses nothing), then Storage's own
+  // auto-fill (Memory -> each array's cache -> empty disks) gets first claim on the resulting
+  // Memory balance, ahead of tickIntroAutoInvest's own direct bit-to-Kilobyte conversion —
+  // otherwise a disk the player has already built and is waiting to fill would be starved by fresh
+  // Memory being auto-converted out from under it before it ever reached the disk. Auto-fill
+  // doesn't depend on tier01's level at all (unlike auto-redeem below), so running it this early
+  // costs nothing.
   //
   // Compute Core conversion (tickComputeCoreConversion, then tickComputeNodeConversion) runs next,
   // right after auto-fill and before tickIntroAutoInvest — the same "first claim" priority
@@ -996,7 +1026,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
-  const stateAfterStorage = tickStorageAutoFill(tickIntroProduction(elapsedSeconds)(state))
+  const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
+  const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
   const stateAfterComputeCores = tickComputeNodeConversion(tickComputeCoreConversion(stateAfterStorage))
   // Any auto-merge tier the player has permanently unlocked (see enableAutoMergeNodesIntoCluster
   // etc. and issue #316) also fires here, lowest tier first so a single tick can cascade upward
@@ -1014,13 +1045,15 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
   const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterIntro.autoPrestigeEnabled ?? true)
 
-  // Storage's own auto-redeem (full banks -> tier01 units) runs last, through every branch below,
-  // against this tick's FINAL tier01 level (post autobuyer/Speed Up) — isStorageBankRedeemable
-  // depends on it, so a bank whose size only just became redeemable once tier01 leveled up THIS
-  // tick still redeems the same tick. Auto-fill already ran above (see stateAfterIntro), ahead of
-  // tickIntroAutoInvest, since it has no such dependency on tier01's level. A same-reference no-op
-  // when nothing qualifies, so calling it costs nothing when Storage isn't in play at all.
-  const tickStorage = tickStorageAutoRedeem
+  // Storage's own auto-redeem (full disks -> whichever tier currently matches each one's size —
+  // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
+  // FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on them, so a disk
+  // whose size only just became redeemable once some tier leveled up THIS tick still redeems the
+  // same tick. Auto-fill already ran above (see stateAfterIntro), ahead of tickIntroAutoInvest,
+  // since it has no such dependency on any tier's level. A same-reference no-op when nothing
+  // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
+  // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
+  const tickStorage = tickDiskAutoRedeem
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
@@ -1028,10 +1061,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
   // even while otherwise frozen. Storage's own auto-fill/auto-redeem still run through every
-  // branch here — like redeemStorageBank/convertIntroBitsToKilobytes, they pay from a separate
-  // currency pool and deliberately bypass this freeze entirely, so a player who's crossed the
-  // Prestige threshold but hasn't manually prestiged yet doesn't have to wait for that click to
-  // fill/redeem a bank.
+  // branch here — like redeemDisk/convertIntroBitsToKilobytes, they pay from a separate currency
+  // pool and deliberately bypass this freeze entirely, so a player who's crossed the Prestige
+  // threshold but hasn't manually prestiged yet doesn't have to wait for that click to
+  // fill/redeem a disk.
   if (isProductionFrozen(stateAfterIntro)) {
     if (!autoPrestigeActive) return tickStorage(stateAfterIntro)
     const nextBudget = (stateAfterIntro.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
@@ -1216,7 +1249,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? speedUpGame(stateAfterAutoPrestigeAutobuyer)
     : stateAfterAutoPrestigeAutobuyer
 
-  // Runs last, against this tick's final tier01 level (post autobuyer/Speed Up), so a Storage bank
+  // Runs last, against this tick's final tier01 level (post autobuyer/Speed Up), so a Disk
   // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
   return tickStorage(stateAfterSpeedUp)
@@ -1412,24 +1445,24 @@ export const combineIntroByte = state => {
 }
 
 // Predicate, not a reducer: whether "Sacrifice for 10x Capacity" can actually fire right now.
-// Forced priority order for the Byte Foundry's five recurring "upgrade" actions — Storage Bank
-// Fill > Bandwidth > Storage Bank Build > Compute > Memory (see CLAUDE.md's "Byte Foundry"
-// section). Each base predicate below is that action's own plain availability check; whenever a
-// higher-ranked one is currently available, every lower-ranked action is disabled regardless of
-// its own cost, forcing the player to take the higher-priority upgrade first rather than letting
-// several compete for the same Memory balance at once — the "turn"-suffixed composites further
-// down this file (colocated with each action's own reducer) fold that ordering in. Combine into a
-// Byte (a one-off bootstrap step) sits outside this forced order entirely and keeps its own simple
-// gate, checked directly below.
+// Forced priority order for the Byte Foundry's five recurring "upgrade" actions — Disk Fill >
+// Bandwidth > Disk Build > Compute > Memory (see CLAUDE.md's "Byte Foundry" section). Each base
+// predicate below is that action's own plain availability check; whenever a higher-ranked one is
+// currently available, every lower-ranked action is disabled regardless of its own cost, forcing
+// the player to take the higher-priority upgrade first rather than letting several compete for the
+// same Memory balance at once — the "turn"-suffixed composites further down this file (colocated
+// with each action's own reducer) fold that ordering in. Combine into a Byte (a one-off bootstrap
+// step) sits outside this forced order entirely and keeps its own simple gate, checked directly
+// below.
 
-// "Storage Bank Fill" (highest priority) — true whenever ANY built bank, of any size, is both
-// currently FULL and redeemable right now (see isStorageBankRedeemable, defined further down this
-// file — safe, not called until this function itself is): a bank sitting full and redeemable is
-// value already earned, just waiting on a click, so nothing else is ever offered ahead of it.
-export const isStorageBankFillAvailable = state =>
-  Object.keys(state.intro?.storageBanks ?? {})
+// "Disk Fill" (highest priority) — true whenever ANY built disk, of any size, is both currently
+// FULL and redeemable right now (see isDiskRedeemable, defined further down this file — safe, not
+// called until this function itself is): a disk sitting full and redeemable is value already
+// earned, just waiting on a click, so nothing else is ever offered ahead of it.
+export const isDiskFillAvailable = state =>
+  Object.keys(state.intro?.disks ?? {})
     .map(Number)
-    .some(size => (state.intro.storageBanks[size] ?? 0) > 0 && isStorageBankRedeemable(state, size))
+    .some(size => (state.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(state, size))
 
 // "Bandwidth" ("Invest for Double Production") — true whenever the current
 // productionMilestoneTier's own cost is affordable and hasn't already used up its claims.
@@ -1439,12 +1472,13 @@ export const isBandwidthAvailable = state => {
   return state.intro.bits >= cost && !claimsUsedUp
 }
 
-// "Storage Bank Build" — true whenever the current ladder size's build cost is affordable (see
-// getStorageBankSize/getStorageBankCost, defined further down this file) — matches
-// buildStorageBank's own actual gate, which (like every other Byte Foundry reducer) has never
-// itself required isStorageUnlocked; that threshold only governs the button's own UI reveal.
-export const isStorageBankBuildAvailable = state =>
-  state.intro.bits >= getStorageBankCost(getStorageBankSize(state))
+// "Disk Build" — true whenever no array is already mid-build (intro.diskBuild — only one build
+// slot exists at a time, since only one size is ever buildable) and the current ladder size's
+// build cost is affordable (see getDiskSize/getDiskCost, defined further down this file) — matches
+// startDiskBuild's own actual gate, which (like every other Byte Foundry reducer) has never itself
+// required isStorageUnlocked; that threshold only governs the button's own UI reveal.
+export const isDiskBuildAvailable = state =>
+  !state.intro.diskBuild && state.intro.bits >= getDiskCost(getDiskSize(state))
 
 // "Compute" — true once Compute Core conversion is unlocked and at least one boost preset is
 // mechanically activatable right now (see canActivateComputeBoost, defined further down this
@@ -1454,19 +1488,19 @@ export const isComputeUpgradeAvailable = state =>
   Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType))
 
 // "Memory" (lowest priority) — Memory must be full (bits === capacity) AND every action ranked
-// above it — Combine into a Byte, Storage Bank Fill, Bandwidth, Storage Bank Build, Compute — must
-// currently be unavailable. Capacity growth is offered only once nothing else productive can be
-// done with a full balance, so a player never skips past a cheaper, immediately available upgrade
-// just because Memory happens to be full at the same moment. Used by pickIntroCapacityMilestone's
-// own guard below and directly by ByteFoundryPage to disable/hide the button the same way — the
-// same "engine re-validates, UI just mirrors it" convention every other action in this file
-// already follows (see "Security notes" in CLAUDE.md).
+// above it — Combine into a Byte, Disk Fill, Bandwidth, Disk Build, Compute — must currently be
+// unavailable. Capacity growth is offered only once nothing else productive can be done with a
+// full balance, so a player never skips past a cheaper, immediately available upgrade just because
+// Memory happens to be full at the same moment. Used by pickIntroCapacityMilestone's own guard
+// below and directly by ByteFoundryPage to disable/hide the button the same way — the same "engine
+// re-validates, UI just mirrors it" convention every other action in this file already follows
+// (see "Security notes" in CLAUDE.md).
 export const isMemoryCapacityUpgradeAvailable = state => {
   if (state.intro.bits < state.intro.capacity) return false
   if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
-  if (isStorageBankFillAvailable(state)) return false
+  if (isDiskFillAvailable(state)) return false
   if (isBandwidthAvailable(state)) return false
-  if (isStorageBankBuildAvailable(state)) return false
+  if (isDiskBuildAvailable(state)) return false
   if (isComputeUpgradeAvailable(state)) return false
   return true
 }
@@ -1518,11 +1552,11 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 // stalls once the tick loop's own granularity limit is reached.
 
 // "Bandwidth"'s own forced-priority turn (see the priority-order block above
-// isMemoryCapacityUpgradeAvailable): available AND nothing ranked above it (Storage Bank Fill)
-// currently is. Used by pickIntroProductionMilestone's own guard below and directly by
-// ByteFoundryPage to disable the button the same way.
+// isMemoryCapacityUpgradeAvailable): available AND nothing ranked above it (Disk Fill) currently
+// is. Used by pickIntroProductionMilestone's own guard below and directly by ByteFoundryPage to
+// disable the button the same way.
 export const isBandwidthTurnAvailable = state =>
-  isBandwidthAvailable(state) && !isStorageBankFillAvailable(state)
+  isBandwidthAvailable(state) && !isDiskFillAvailable(state)
 
 export const pickIntroProductionMilestone = state => {
   if (!isBandwidthTurnAvailable(state)) return state
@@ -1555,11 +1589,11 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, bank
+// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
-// INTRO_STORAGE_UNLOCK_CAPACITY (10 KB in Memory's own scale, 80,000 bits) at once. A later, more
+// INTRO_DISK_UNLOCK_CAPACITY (10 KB in Memory's own scale, 80,000 bits) at once. A later, more
 // deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
-export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_STORAGE_UNLOCK_CAPACITY
+export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_DISK_UNLOCK_CAPACITY
 
 // Byte Foundry "Memory" unit ladder shared by ByteFoundryPage/StoragePage — raw bits below 1 Byte,
 // then B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own tier symbols since
@@ -1597,14 +1631,14 @@ export const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
-// Any Memory-denominated cost (Invest, Storage build) reads in whatever B/KB/MB/…/QB unit best
+// Any Memory-denominated cost (Invest, Disk build) reads in whatever B/KB/MB/…/QB unit best
 // fits that specific amount — the same scale Memory's own balance uses. `getMemoryUnit(bits,
 // true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
 // here since every caller of this helper only renders once `byteCreated`.
 export const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
 
 // The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
-// per-unit level cost, the exact same value getStorageBankSize/isStorageBankRedeemable already key
+// per-unit level cost, the exact same value getDiskSize/isDiskRedeemable already key
 // off (see the Storage section below) — not a fixed rate. At a fresh cycle's starting level this is
 // exactly INTRO_BITS_PER_KILOBYTE_CONVERSION (8000 bits, BITS_PER_BYTE × tier01's own baseCost), but it grows in
 // lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2, and so on), so
@@ -1702,244 +1736,356 @@ export const tickIntroAutoInvest = state => {
   return result
 }
 
-// --- Byte Foundry Storage (bank blocks) --- see the "Byte Foundry Storage" comment in layers.js
-// and intro.storageBanks/storageBanksBuiltTotal/storageAutoRedeemEnabled/storageAutoRedeemedSizes
-// in createInitialGameState above. Banks are a genuine storage MEDIUM, not a one-shot pre-paid
-// item: building one (buildStorageBank) only constructs a permanent, EMPTY container of a given
-// size — Memory (intro.bits) then auto-fills any empty container as it accumulates (see
-// tickStorageAutoFill), smallest size first. `intro.storageBanks[size]` counts how many banks of
-// that size are currently FULL (this is what redeemStorageBank spends); `intro.storageBanksBuiltTotal[size]`
-// is the permanent, never-decremented total ever built — the number of currently EMPTY banks of a
-// size is always `storageBanksBuiltTotal[size] - storageBanks[size]`. Consuming (redeeming) a full
-// bank empties it again, returning it to the fillable pool — banks are reusable, not single-use.
+// --- Byte Foundry Storage (Disks) --- see the "Byte Foundry Storage" comment in layers.js and
+// intro.disks/disksBuiltTotal/diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState
+// above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
+// (startDiskBuild) takes real TIME (see tickDiskBuild) and, once complete, only constructs a
+// permanent, EMPTY container of a given size — Memory (intro.bits) then auto-fills any empty
+// container as it accumulates, via that array's own cache first (see tickDiskAutoFill), smallest
+// size first. `intro.disks[size]` counts how many disks of that size are currently FULL (this is
+// what redeemDisk spends); `intro.disksBuiltTotal[size]` is the permanent, never-decremented total
+// ever built — the number of currently EMPTY disks of a size is always
+// `disksBuiltTotal[size] - disks[size]`. Consuming (redeeming) a full disk empties it again,
+// returning it to the fillable pool — disks are reusable, not single-use.
 
 // tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's Fibonacci
 // exponent sequence jumps 1, 2, 3, 5, 8, … — e.g. level 4 is 10,000,000, not 1,000,000), so every
-// size a bank is ever built or redeemed at is one of tier01's own actual per-unit level costs,
-// never an arbitrary round number in between (a 1,000,000-bit/"1 MB" bank can never exist, since
-// no tier01 level ever costs that).
+// size a disk is ever built or redeemed at is one of tier01's own actual per-unit level costs,
+// never an arbitrary round number in between (a 1,000,000,000-bit/"1 MB" disk can never exist,
+// since no tier01 level ever costs that in bits — see the BITS_PER_BYTE factor below).
 const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
 
-// The size (in bits) buildStorageBank currently builds: an independent ladder that walks tier01's
-// own level-cost sequence (level 1, 2, 3, … via getFirstTierCost) rather than tier01's CURRENT
-// level directly, advancing to the next level's cost once STORAGE_BANK_LADDER_CAP banks have ever
-// been built at the current one — read from storageBanksBuiltTotal, a cumulative counter that
-// redeeming never decrements, so the ladder only ever advances (see the "Byte Foundry Storage"
-// comment in layers.js for why this is deliberately decoupled from tier01's own CURRENT level —
-// docs/DESIGN_HISTORY.md). A freshly offered size isn't necessarily redeemable yet — see
-// isStorageBankRedeemable below for the separate, tier01-price-driven gate on that. Uncapped —
-// keeps walking tier01's level-cost sequence indefinitely (an earlier version of the Compute Core
-// mechanic capped this ladder at 1,000,000/"1 MB" so its own readiness check could enumerate a
-// finite set of sizes; that whole approach was superseded — Compute Cores no longer depend on
-// Storage state at all, so the cap was reverted — see docs/DESIGN_HISTORY.md).
-export const getStorageBankSize = state => {
-  const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
+// The size (in bits) startDiskBuild currently builds: an independent ladder that walks tier01's
+// own level-cost sequence (level 1, 2, 3, … via getFirstTierCost), each expressed in real bits via
+// the same ×BITS_PER_BYTE conversion getIntroKilobyteConversionCost uses — a real "1 KB" disk is
+// 8000 bits, not the 1000-bit "kilobit" an earlier version of this ladder mistakenly used (see
+// docs/DESIGN_HISTORY.md for that bug and its fix) — rather than tier01's CURRENT level directly,
+// advancing to the next level's cost once DISK_ARRAY_LADDER_CAP disks have ever been built at the
+// current one — read from disksBuiltTotal, a cumulative counter that redeeming never decrements,
+// so the ladder only ever advances (see the "Byte Foundry Storage" comment in layers.js for why
+// this is deliberately decoupled from tier01's own CURRENT level — docs/DESIGN_HISTORY.md). A
+// freshly offered size isn't necessarily redeemable yet — see isDiskRedeemable below for the
+// separate, tier01-price-driven gate on that. Uncapped — keeps walking tier01's level-cost
+// sequence indefinitely (an earlier version of the Compute Core mechanic capped this ladder so its
+// own readiness check could enumerate a finite set of sizes; that whole approach was superseded —
+// Compute Cores no longer depend on Storage state at all, so the cap was reverted — see
+// docs/DESIGN_HISTORY.md).
+export const getDiskSize = state => {
+  const builtTotal = state.intro?.disksBuiltTotal ?? {}
   let level = 1
-  let size = getFirstTierCost(level)
-  while ((builtTotal[size] ?? 0) >= STORAGE_BANK_LADDER_CAP) {
+  let size = getFirstTierCost(level) * BITS_PER_BYTE
+  while ((builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
     level += 1
-    size = getFirstTierCost(level)
+    size = getFirstTierCost(level) * BITS_PER_BYTE
   }
   return size
 }
 
-// A bank's one-time build (construction) cost — STORAGE_BUILD_COST_MULTIPLIER (10) times its own
-// face value, expressed in BYTES rather than bits: a 1000-bit ("1 KB") bank costs 10 KB*BYTES*
-// (10,000 bytes = 80,000 bits), not 10,000 bits. This cost only ever pays for the empty container
-// itself — it is NOT what fills it (see tickStorageAutoFill).
-export const getStorageBankCost = capacityBits => capacityBits * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE
+// A disk's one-time build (construction) cost — DISK_BUILD_COST_MULTIPLIER (10) times its own
+// face value: a real 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), not the 10,000-bit figure
+// an earlier "kilobit"-scaled version of this ladder produced (see docs/DESIGN_HISTORY.md). No
+// further BITS_PER_BYTE conversion is needed here — capacityBits (from getDiskSize) is already
+// Byte-accurate. This cost only ever pays for the empty container itself — it is NOT what fills it
+// (see tickDiskAutoFill).
+export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIPLIER
 
-// Storage bank sizes AND the Byte Foundry's transfer block's own dynamic cost
-// (getIntroKilobyteConversionCost above) are both tier01's own per-unit level costs (see
-// getStorageBankSize above), so they share this one formatting scale — a completely separate
-// scale from Memory's Byte-based one (see formatBitsInNearestUnit above): 1000 bits is "1 KB"
-// here ("KiloBits", not 1000 Bytes/8000 bits). Reuses TIER_DEFINITIONS' KB..QB symbols for the
-// same "byte-scale themed" reason Memory's own ladder does. Every value passed in is already an
-// exact power of ten by construction (getTierCost), so this always lands on a clean, whole-number
-// label. Shared by ByteFoundryPage (Build button/summary) and StoragePage (per-size bank labels).
-const STORAGE_UNIT_SYMBOLS = TIER_DEFINITIONS.map(tier => tier.symbol)
-export const formatStorageSize = bits => {
-  if (bits < 1000) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
-  let value = bits / 1000
-  let unitIndex = 0
-  while (value >= 1000 && unitIndex < STORAGE_UNIT_SYMBOLS.length - 1) {
-    value /= 1000
-    unitIndex += 1
-  }
-  return `${formatAmount(value)} ${STORAGE_UNIT_SYMBOLS[unitIndex]}`
+// The base build TIME, in seconds, for the FIRST disk ever built at a given size — 1 second per
+// real "KB" of size (the smallest disk size, level 1, always takes exactly 1 second; "10 KB disks
+// start at 10 seconds, 100 KB at 100 seconds," and so on), derived from the level-1 disk size
+// (8000 bits = "1 KB" = the base unit) rather than a separate constant, so it always tracks
+// getDiskSize's own real-Kilobyte scale.
+const getDiskBuildBaseSeconds = capacityBits => capacityBits / (getFirstTierCost(1) * BITS_PER_BYTE)
+
+// Building the Nth disk of a given size (N = 1 for the array's very first disk, 2 for its second,
+// …) takes N × that size's own base build time — "adding another disk to the array takes [the]
+// same additional time" again, so a 1 KB array's 6th disk (its 5 predecessors already built) takes
+// 6 × 1s = 6 seconds, a 10 KB array's 6th disk takes 6 × 10s = 60 seconds, and so on. N is read
+// from disksBuiltTotal (the permanent, cumulative count) at the moment the build STARTS, not the
+// ladder's own current level.
+const getDiskBuildSeconds = (state, capacityBits) => {
+  const ordinal = (state.intro.disksBuiltTotal?.[capacityBits] ?? 0) + 1
+  return getDiskBuildBaseSeconds(capacityBits) * ordinal
 }
 
-// Every Storage bank size worth showing (ByteFoundryPage's own brief per-size summary,
-// StoragePage's full per-size squares rows): every size ever built, any size still held (a
-// save/seed could hold banks without a matching storageBanksBuiltTotal entry — e.g. a migrated
-// pre-ladder save), plus whatever's currently offered (even at 0 built, so its row/goal is
-// visible before the first one is banked) — ascending, so rows read smallest-to-largest.
-export const getStorageSizesToShow = state => {
-  const storageBanksBuiltTotal = state.intro?.storageBanksBuiltTotal ?? {}
-  const storageBanks = state.intro?.storageBanks ?? {}
-  const currentSize = getStorageBankSize(state)
+// Disk sizes are now real, Byte-accurate bit counts (see getDiskSize above) — the exact same scale
+// Memory's own balance/capacity already renders in (see formatBitsInNearestUnit) — so there's no
+// longer a separate "kilobit" formatting scale to maintain (see docs/DESIGN_HISTORY.md for the bug
+// that separate scale caused). A thin, semantically-named alias, kept so call sites read "format
+// this disk's size" rather than reaching for the more general Memory-balance helper directly.
+export const formatDiskSize = formatBitsInNearestUnit
+
+// Every Disk size worth showing (ByteFoundryPage's own brief per-size summary, StoragePage's full
+// per-size squares rows): every size ever built, any size still held (a save/seed could hold disks
+// without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's
+// currently offered (even at 0 built, so its row/goal is visible before the first one is built) —
+// ascending, so rows read smallest-to-largest.
+export const getDiskSizesToShow = state => {
+  const disksBuiltTotal = state.intro?.disksBuiltTotal ?? {}
+  const disks = state.intro?.disks ?? {}
+  const currentSize = getDiskSize(state)
   return [
     ...new Set([
-      ...Object.keys(storageBanksBuiltTotal).map(Number),
-      ...Object.keys(storageBanks).map(Number),
+      ...Object.keys(disksBuiltTotal).map(Number),
+      ...Object.keys(disks).map(Number),
       currentSize,
     ]),
   ]
-    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (storageBanks[size] ?? 0) > 0 || size === currentSize)
+    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (disks[size] ?? 0) > 0 || size === currentSize)
     .sort((a, b) => a - b)
 }
 
-// Builds one EMPTY Storage bank sized to getStorageBankSize(state), spending
-// getStorageBankCost(that size) bits from Memory (the intro's own separate currency pool — same
-// "bypasses isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this
-// touches resources.base). No-op below cost. Only advances storageBanksBuiltTotal (the permanent,
-// cumulative build ladder) — deliberately does NOT touch storageBanks (the currently-FULL count):
-// a freshly built bank starts empty and has to be filled by Memory like any other, via
-// tickStorageAutoFill. Building the same size more than once (before the ladder advances to the
-// next size) simply accumulates storageBanksBuiltTotal further.
-
-// "Storage Bank Build"'s own forced-priority turn: available AND nothing ranked above it (Storage
-// Bank Fill, Bandwidth) currently is. Used by buildStorageBank's own guard below and directly by
+// "Disk Build"'s own forced-priority turn: available AND nothing ranked above it (Disk Fill,
+// Bandwidth) currently is. Used by startDiskBuild's own guard below and directly by
 // ByteFoundryPage/StoragePage to disable the button the same way.
-export const isStorageBankBuildTurnAvailable = state =>
-  isStorageBankBuildAvailable(state) && !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state)
+export const isDiskBuildTurnAvailable = state =>
+  isDiskBuildAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)
 
-export const buildStorageBank = state => {
-  if (!isStorageBankBuildTurnAvailable(state)) return state
+// Starts building one EMPTY disk sized to getDiskSize(state): spends getDiskCost(that size) bits
+// from Memory immediately (the intro's own separate currency pool — same "bypasses
+// isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this touches
+// resources.base) and sets intro.diskBuild to a { size, remainingSeconds, totalSeconds } countdown
+// (see getDiskBuildSeconds above/tickDiskBuild below) — the array itself only actually gains the
+// new container, and starts accepting IO again, once that countdown finishes. `totalSeconds` is
+// fixed at the build's own starting duration (tickDiskBuild only ever updates remainingSeconds),
+// kept alongside remainingSeconds purely so the UI can render a "% built" progress fill without
+// having to recompute getDiskBuildSeconds itself (which depends on disksBuiltTotal at the moment
+// the build started, not the moment it's being rendered). No-op below cost, or if an array is
+// already mid-build (isDiskBuildAvailable). Only ever queues ONE build at a time — only one size
+// is ever offered on the ladder, so there's nothing to parallelize.
+export const startDiskBuild = state => {
+  if (!isDiskBuildTurnAvailable(state)) return state
 
-  const size = getStorageBankSize(state)
-  const cost = getStorageBankCost(size)
+  const size = getDiskSize(state)
+  const cost = getDiskCost(size)
+  const totalSeconds = getDiskBuildSeconds(state, size)
 
   return {
     ...state,
     intro: {
       ...state.intro,
       bits: state.intro.bits - cost,
-      storageBanksBuiltTotal: {
-        ...state.intro.storageBanksBuiltTotal,
-        [size]: (state.intro.storageBanksBuiltTotal?.[size] ?? 0) + 1,
+      diskBuild: { size, remainingSeconds: totalSeconds, totalSeconds },
+    },
+  }
+}
+
+// Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
+// progress. Once the countdown reaches (or crosses) zero, the array's rebuild is complete:
+// disksBuiltTotal[size] increments (the container itself now exists, empty, ready for
+// tickDiskAutoFill) and diskBuild clears, re-enabling every IO operation against that size's array.
+export const tickDiskBuild = elapsedSeconds => state => {
+  const build = state.intro.diskBuild
+  if (!build) return state
+
+  const remainingSeconds = build.remainingSeconds - elapsedSeconds
+  if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
+    return { ...state, intro: { ...state.intro, diskBuild: { ...build, remainingSeconds } } }
+  }
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      diskBuild: null,
+      disksBuiltTotal: {
+        ...state.intro.disksBuiltTotal,
+        [build.size]: (state.intro.disksBuiltTotal?.[build.size] ?? 0) + 1,
       },
     },
   }
 }
 
-// Cascades Memory into every currently-fillable EMPTY bank in one pass, smallest size first: while
-// there's a size with at least one empty container (storageBanksBuiltTotal[size] >
-// storageBanks[size]) that intro.bits can fully cover, moves exactly `size` bits out of Memory and
-// into that bank (storageBanks[size] += 1), then repeats — since sizes are checked smallest-first
-// and cost scales with size, once the smallest remaining empty size is unaffordable no larger one
-// can be either, so the loop always terminates. Whatever's left over when nothing more can be
-// filled simply stays as Memory's own ordinary balance — auto-filling is otherwise unconditional
-// (no toggle, no prerequisite, unlike auto-redeem below) and bypasses isProductionFrozen, the same
-// "separate currency pool" posture every other Byte Foundry mechanic already has. A same-reference
-// no-op when nothing is fillable.
-export const tickStorageAutoFill = state => {
-  const builtTotal = state.intro?.storageBanksBuiltTotal ?? {}
+// Cascades Memory into every currently-fillable EMPTY disk in one pass, smallest size first, via
+// each array's own cache: a size with an empty container (disksBuiltTotal[size] > disks[size]) —
+// and not currently mid-build, see tickDiskBuild above — first tops its cache
+// (diskCache[size], 0..size) up from Memory; only once that cache is genuinely FULL does it pour
+// (no further bits needed — the bits already left Memory when they entered the cache) into the
+// empty container, incrementing disks[size] and resetting the cache to 0 for the next one. Repeats
+// until nothing more is fillable — since sizes are checked smallest-first and cost scales with
+// size, once the smallest remaining size can't be topped up further this call, no larger one can
+// be either. Whatever's left over when nothing more can be filled simply stays as Memory's own
+// ordinary balance — auto-filling is otherwise unconditional (no toggle, no prerequisite, unlike
+// auto-redeem below) and bypasses isProductionFrozen, the same "separate currency pool" posture
+// every other Byte Foundry mechanic already has. A same-reference no-op when nothing changed.
+export const tickDiskAutoFill = state => {
+  const builtTotal = state.intro?.disksBuiltTotal ?? {}
+  const buildingSize = state.intro.diskBuild?.size
   let bits = state.intro.bits
-  let storageBanks = state.intro.storageBanks ?? {}
-  let filledAny = false
+  let disks = state.intro.disks ?? {}
+  let diskCache = state.intro.diskCache ?? {}
+  let changed = false
 
   for (;;) {
     const fillableSize = Object.keys(builtTotal)
       .map(Number)
-      .filter(size => (builtTotal[size] ?? 0) > (storageBanks[size] ?? 0))
-      .filter(size => bits >= size)
+      .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
+      .filter(size => (builtTotal[size] ?? 0) > (disks[size] ?? 0))
       .sort((a, b) => a - b)[0]
     if (fillableSize === undefined) break
 
-    bits -= fillableSize
-    storageBanks = { ...storageBanks, [fillableSize]: (storageBanks[fillableSize] ?? 0) + 1 }
-    filledAny = true
+    const cached = diskCache[fillableSize] ?? 0
+    if (cached >= fillableSize) {
+      // Cache already full from a previous pass — pour it straight into the empty container, no
+      // further Memory needed for this step.
+      disks = { ...disks, [fillableSize]: (disks[fillableSize] ?? 0) + 1 }
+      diskCache = { ...diskCache, [fillableSize]: 0 }
+      changed = true
+      continue
+    }
+
+    if (bits <= 0) break
+    const add = Math.min(fillableSize - cached, bits)
+    bits -= add
+    diskCache = { ...diskCache, [fillableSize]: cached + add }
+    changed = true
   }
 
-  if (!filledAny) return state
-  return { ...state, intro: { ...state.intro, bits, storageBanks } }
+  if (!changed) return state
+  return { ...state, intro: { ...state.intro, bits, disks, diskCache } }
 }
 
-// A bank becomes redeemable only once tier01's CURRENT per-unit level cost EXACTLY matches its own
-// face value — a full 10 KB bank redeems only while tier01's own current cost is exactly 10 KB, not
-// merely once that cost has reached or passed it (an earlier version used `<=`, letting an old,
-// smaller bank redeem for a full unit long after tier01's real price had grown past it — see
-// docs/DESIGN_HISTORY.md). Because `getFirstTierCost` only ever grows with level within a cycle,
-// tier01's own autobuyer completing more than one level in a single tick (a banked attempt budget
-// catching up after a broke/paused stretch — see tickGame's autobuyer loop) can jump the price
-// straight past a bank's size without it ever exactly matching mid-tick; such a bank simply waits,
-// still full and not lost, until the next Speed Up/Overclock/Prestige resets tier01's level back
-// down and its price grows back up through that exact value again.
-export const isStorageBankRedeemable = (state, capacityBits) =>
-  capacityBits === getFirstTierCost(state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1)
+// Whether a size's cache currently has at least one full, releasable block (see
+// DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
+// — see tickDiskBuild).
+export const isDiskCacheBlockReleasable = (state, capacityBits) =>
+  state.intro.diskBuild?.size !== capacityBits &&
+  (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
 
-// Redeems one currently-FULL bank of `capacityBits`, granting 1 free tier01 unit via
-// grantTierUnits — same "pays from a separate currency pool, bypasses
-// isProductionFrozen/isTierUnlocked/cost entirely" rationale as convertIntroBitsToKilobytes — a
-// bank's contents came from Memory via tickStorageAutoFill already, not from a further transfer.
-// The bank itself is NOT lost — it becomes empty again (storageBanksBuiltTotal is untouched),
-// re-entering the fillable pool for tickStorageAutoFill to fill again later. No-op if no bank of
-// that size is currently full, or if it isn't yet redeemable (see isStorageBankRedeemable).
-export const redeemStorageBank = capacityBits => state => {
-  const full = state.intro.storageBanks?.[capacityBits] ?? 0
-  if (full <= 0) return state
-  if (!isStorageBankRedeemable(state, capacityBits)) return state
+// Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
+// array back into Memory — a player override that redirects those bits toward an ordinary
+// Kilobyte transfer (convertIntroBitsToKilobytes/the transfer-block row) instead of waiting for
+// tickDiskAutoFill to keep growing this array's cache toward completing its next disk. Since the
+// released bits leave the cache for good, they can no longer also complete (and later redeem) a
+// disk in this array — the two paths can never double-spend the same bits. No-op if nothing
+// releasable (see isDiskCacheBlockReleasable).
+export const releaseDiskCacheBlock = capacityBits => state => {
+  if (!isDiskCacheBlockReleasable(state, capacityBits)) return state
 
-  const { [capacityBits]: _removed, ...remainingBanks } = state.intro.storageBanks
-  const nextBanks = full > 1 ? { ...state.intro.storageBanks, [capacityBits]: full - 1 } : remainingBanks
+  const blockBits = capacityBits / DISK_CACHE_BLOCK_COUNT
+  const cached = state.intro.diskCache?.[capacityBits] ?? 0
 
-  const firstTierId = TIER_DEFINITIONS[0].id
-  return grantTierUnits(firstTierId, 1)({
-    ...state,
-    intro: { ...state.intro, storageBanks: nextBanks },
-  })
-}
-
-// Auto-redeem convenience (see intro.storageAutoRedeemEnabled/setStorageAutoRedeemEnabled and
-// intro.storageAutoRedeemedSizes below) — a no-op unless there's an eligible size. The smallest
-// denomination (tier01's own level-1 cost, "1 KB" — the first size getStorageBankSize ever offers)
-// always attempts auto-redeem regardless of storageAutoRedeemEnabled — a small always-on
-// convenience; every larger size still checks the
-// toggle, which currently defaults true (see createInitialGameState) with no in-UI way to turn it
-// off yet, so in practice every size auto-redeems today. Either way, a given size auto-redeems at
-// most ONCE per real Prestige cycle (see
-// storageAutoRedeemedSizes, which resets fresh every real Prestige — prestigeGame) — a bank that
-// refills later the same cycle (see tickStorageAutoFill) needs a manual click for the rest of it.
-// Redeems only the smallest eligible size per call — redeeming can itself grant a tier01 unit and
-// advance its level/cost (via grantTierUnits), so redeeming more than one size correctly needs the
-// cost recomputed in between; rather than looping that here, this piggybacks on tickGame's own
-// ~10Hz cadence (see TICK_RATE_MS) to work through multiple eligible banks over the next several
-// ticks — imperceptibly fast in practice. Called from every branch of tickGame, frozen or not (see
-// there), so it always reacts to tier01's truly final level for the tick, not a stale mid-tick one.
-export const tickStorageAutoRedeem = state => {
-  const alreadyRedeemedThisCycle = state.intro?.storageAutoRedeemedSizes ?? {}
-  const eligibleSize = Object.keys(state.intro.storageBanks ?? {})
-    .map(Number)
-    .filter(size => (state.intro.storageBanks[size] ?? 0) > 0)
-    .filter(size => !alreadyRedeemedThisCycle[size])
-    .filter(size => size === getFirstTierCost(1) || state.intro.storageAutoRedeemEnabled)
-    .filter(size => isStorageBankRedeemable(state, size))
-    .sort((a, b) => a - b)[0]
-  if (eligibleSize === undefined) return state
-
-  const redeemed = redeemStorageBank(eligibleSize)(state)
   return {
-    ...redeemed,
+    ...state,
     intro: {
-      ...redeemed.intro,
-      storageAutoRedeemedSizes: { ...redeemed.intro.storageAutoRedeemedSizes, [eligibleSize]: true },
+      ...state.intro,
+      bits: state.intro.bits + blockBits,
+      diskCache: { ...state.intro.diskCache, [capacityBits]: cached - blockBits },
     },
   }
 }
 
-// Toggles whether tickStorageAutoRedeem currently acts — a plain, unconditional preference, not a
-// purchase (unlike setAutoSpeedUpEnabled/setAutoGlobalTickspeedEnabled below, there's no
-// prerequisite "bought" flag to gate this on; Storage itself has no unlock step).
-export const setStorageAutoRedeemEnabled = enabled => state => ({
-  ...state,
-  intro: { ...state.intro, storageAutoRedeemEnabled: !!enabled },
-})
+// A Disk's face value is a Byte Foundry currency amount, not a tier-specific one — ANY main-game
+// tier (not just tier01/Kilobytes) can be fulfilled by a disk whose size happens to match that
+// tier's own CURRENT per-unit cost right now, since every tier shares the same costResourceId
+// ('base'/Bits — see TIER_DEFINITIONS in layers.js) and the same Byte-Foundry-bits exchange rate
+// getIntroKilobyteConversionCost already applies for tier01 specifically (×BITS_PER_BYTE).
+const getTierDiskRedeemCost = (state, tier) =>
+  getTierCost(tier, state.purchaseLevels?.[tier.id] ?? 1) * BITS_PER_BYTE
+
+// Which tier, if any, a Disk of `capacityBits` can redeem into right now — the FIRST tier (in
+// TIER_DEFINITIONS' own array order, i.e. the main game's own tier ordering/priority — see
+// CLAUDE.md's "Economy model") whose current per-unit cost EXACTLY matches `capacityBits` (an
+// earlier, tier01-only version of this used `<=`, letting an old, smaller disk redeem for a full
+// unit long after that tier's real price had grown past it — see docs/DESIGN_HISTORY.md; `===`
+// avoids that here too). Reading TIER_DEFINITIONS directly rather than a hardcoded tier index
+// means BOTH the "any tier, not just the first" behavior AND its own tie-break order (when more
+// than one tier's current cost happens to coincide) automatically follow any future reordering of
+// that array, with no code change here. Because a matching tier's own cost only ever grows with
+// level within a cycle, that tier's autobuyer completing more than one level in a single tick (a
+// banked attempt budget catching up after a broke/paused stretch — see tickGame's autobuyer loop)
+// can jump its price straight past a disk's size without it ever exactly matching mid-tick; such a
+// disk simply waits, still full and not lost, until the next Speed Up/Overclock/Prestige resets
+// that tier's level back down and its price grows back up through that exact value again.
+// undefined when no tier's current cost matches `capacityBits` at all.
+const getMatchingTierForDiskSize = (state, capacityBits) =>
+  TIER_DEFINITIONS.find(tier => getTierDiskRedeemCost(state, tier) === capacityBits)
+
+export const isDiskRedeemable = (state, capacityBits) =>
+  getMatchingTierForDiskSize(state, capacityBits) !== undefined
+
+// Byte Foundry pages call this directly (rather than getMatchingTierForDiskSize, kept internal) to
+// name which tier a disk would actually redeem into right now, or null if none currently matches —
+// e.g. "Redeems 1 10 KB disk for 1 free Megabyte."
+export const getDiskRedeemTierName = (state, capacityBits) =>
+  getMatchingTierForDiskSize(state, capacityBits)?.name ?? null
+
+// Redeems one currently-FULL disk of `capacityBits`, granting 1 free unit of whichever tier
+// currently matches its size (see getMatchingTierForDiskSize above) via grantTierUnits — same
+// "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely"
+// rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
+// tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
+// empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
+// fill again later. No-op if no disk of that size is currently full, if that size's array is
+// currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
+// (see isDiskRedeemable).
+export const redeemDisk = capacityBits => state => {
+  const full = state.intro.disks?.[capacityBits] ?? 0
+  if (full <= 0) return state
+  if (state.intro.diskBuild?.size === capacityBits) return state
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  if (!tier) return state
+
+  const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
+  const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
+
+  return grantTierUnits(tier.id, 1)({
+    ...state,
+    intro: { ...state.intro, disks: nextDisks },
+  })
+}
+
+// Whether tierId's own unit-buying autobuyer is currently actually running — unlocked (purchased,
+// autobuyers[tierId] non-null) AND not paused (autobuyersEnabled[tierId], defaulting true) — the
+// same two-part check tickGame's own autobuyer loop applies inline. Used below to gate a Disk's
+// auto-redeem on whichever tier it would currently redeem into.
+const isTierAutobuyerActive = (state, tierId) =>
+  (state.autobuyers?.[tierId] ?? null) !== null && (state.autobuyersEnabled?.[tierId] ?? true)
+
+// Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
+// getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active
+// (see isTierAutobuyerActive above), or that matches no tier at all right now: "whenever there is
+// a level whose cost equals a Disk, it shall be redeemed to fulfill it if [the] autobuyer is
+// enable[d] for the corresponding tier." With no active autobuyer for the matching tier, a
+// full/redeemable disk simply waits for a manual click (see redeemDisk) instead. A given size
+// auto-redeems at most ONCE per real Prestige cycle (see diskAutoRedeemedSizes, which resets fresh
+// every real Prestige — prestigeGame) — a disk that refills later the same cycle (see
+// tickDiskAutoFill) needs a manual click for the rest of it. Redeems only the smallest eligible
+// size per call — redeeming can itself grant a unit and advance that tier's level/cost (via
+// grantTierUnits), which can in turn change which tier OTHER sizes now match, so redeeming more
+// than one size correctly needs everything recomputed in between; rather than looping that here,
+// this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
+// eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
+// branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
+// level for the tick, not a stale mid-tick one.
+export const tickDiskAutoRedeem = state => {
+  const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
+  const buildingSize = state.intro.diskBuild?.size
+  const eligibleSize = Object.keys(state.intro.disks ?? {})
+    .map(Number)
+    .filter(size => (state.intro.disks[size] ?? 0) > 0)
+    .filter(size => size !== buildingSize)
+    .filter(size => !alreadyRedeemedThisCycle[size])
+    .filter(size => {
+      const tier = getMatchingTierForDiskSize(state, size)
+      return tier !== undefined && isTierAutobuyerActive(state, tier.id)
+    })
+    .sort((a, b) => a - b)[0]
+  if (eligibleSize === undefined) return state
+
+  const redeemed = redeemDisk(eligibleSize)(state)
+  return {
+    ...redeemed,
+    intro: {
+      ...redeemed.intro,
+      diskAutoRedeemedSizes: { ...redeemed.intro.diskAutoRedeemedSizes, [eligibleSize]: true },
+    },
+  }
+}
 
 // --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
 // createInitialGameState and INTRO_COMPUTE_CORE_UNLOCK_CAPACITY/COMPUTE_CORES_PER_NODE in
 // layers.js. An earlier version costed a Compute Core at a fixed 10 MB of Memory, gated on every
-// Storage bank size being built and full — superseded (see docs/DESIGN_HISTORY.md) in favor of the
+// Disk size being built and full — superseded (see docs/DESIGN_HISTORY.md) in favor of the
 // dynamic, capacity-tied cost below, which is unrelated to Storage entirely.
 
 // Predicate, not a reducer: whether ByteFoundryPage's "Compute" section — and the automatic
@@ -1964,9 +2110,9 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // future Core cost more (a bigger flush) without changing what a Core actually grants — the player
 // decides how far to keep Sacrificing before letting this automatic conversion take over instead,
 // trading a smaller-but-more-frequent Core rate against a larger-but-slower one. Called from
-// tickGame right after tickStorageAutoFill and before tickIntroAutoInvest, so it claims Memory
+// tickGame right after tickDiskAutoFill and before tickIntroAutoInvest, so it claims Memory
 // ahead of ordinary Kilobyte conversion once unlocked and full — the same "first claim" priority
-// tickStorageAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
+// tickDiskAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
 // posture as every other Byte Foundry mechanic (a separate currency pool, not resources.base).
 // Also the only place intro.computeCoresEverEarned/intro.computeMergePageUnlocked ever change.
 // computeCoresEverEarned increments by 1 every time a conversion actually mints a Core — a true
@@ -2222,11 +2368,11 @@ export const canActivateComputeBoost = (state, boostType) => {
 }
 
 // A specific Compute Boost preset's own forced-priority turn: mechanically activatable (see
-// canActivateComputeBoost above) AND nothing ranked above Compute (Storage Bank Fill, Bandwidth,
-// Storage Bank Build) currently is.
+// canActivateComputeBoost above) AND nothing ranked above Compute (Disk Fill, Bandwidth,
+// Disk Build) currently is.
 export const isComputeBoostTurnAvailable = (state, boostType) =>
   canActivateComputeBoost(state, boostType) &&
-  !isStorageBankFillAvailable(state) && !isBandwidthAvailable(state) && !isStorageBankBuildAvailable(state)
+  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)
 
 // Whether ANY Compute Boost preset currently has its turn — the Compute-level analogue of the
 // other four forced-priority "turn" predicates above. NOT used to gate ComputePage's own nav
@@ -2569,17 +2715,18 @@ export const prestigeGame = state => {
       productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
       productionMilestoneTier: state.intro?.productionMilestoneTier ?? initial.intro.productionMilestoneTier,
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
-      // Storage banks (full or empty), the cumulative build ladder, and the auto-redeem preference
-      // are just as permanent as the Byte generator itself above — "never lost," not part of this
-      // cycle's Memory reset. A bank already FULL when Prestige fires stays full, its contents
-      // intact even though Memory itself resets to 0 — this is what lets banked-up Storage give a
-      // new cycle a head start, redeemable immediately once tier01's fresh level 1 cost matches.
-      // storageAutoRedeemedSizes is deliberately NOT carried over here — it falls through to
-      // initial.intro's fresh {} default below, since "once per run" resets every real Prestige
-      // (see tickStorageAutoRedeem).
-      storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
-      storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
-      storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
+      // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
+      // build ladder are just as permanent as the Byte generator itself above — "never lost," not
+      // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its
+      // contents intact even though Memory itself resets to 0 — this is what lets banked-up
+      // Storage give a new cycle a head start, redeemable immediately once tier01's fresh level 1
+      // cost matches. diskAutoRedeemedSizes is deliberately NOT carried over here — it falls
+      // through to initial.intro's fresh {} default below, since "once per run" resets every real
+      // Prestige (see tickDiskAutoRedeem).
+      disks: state.intro?.disks ?? initial.intro.disks,
+      disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
+      diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
+      diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
       // wiped by a real Prestige along with Memory itself.

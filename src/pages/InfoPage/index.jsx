@@ -16,9 +16,10 @@ import {
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_MULTIPLIER,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-  INTRO_STORAGE_UNLOCK_CAPACITY,
-  STORAGE_BANK_LADDER_CAP,
-  STORAGE_BUILD_COST_MULTIPLIER,
+  DISK_ARRAY_LADDER_CAP,
+  DISK_BUILD_COST_MULTIPLIER,
+  DISK_CACHE_BLOCK_COUNT,
+  INTRO_DISK_UNLOCK_CAPACITY,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
 } from 'game/layers'
@@ -103,7 +104,9 @@ const InfoPage = ({ onBack }) => {
         <p>
           Every tier is bought directly with Bits, the base currency, and once owned, produces the
           tier immediately below it — production cascades all the way down to Bits. Reaching
-          1 Googol Bytes (8×10^100 Bits) freezes production except for Prestige.
+          1 Googol Bytes (8×10^100 Bits) freezes production except for Prestige. Once your balance
+          reaches 8000 Bits (1000 Bytes), the main balance display switches over to showing whole
+          Bytes instead — every cost and production number elsewhere keeps reading in Bits.
         </p>
       </Section>
 
@@ -133,13 +136,27 @@ const InfoPage = ({ onBack }) => {
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Once Memory's capacity reaches {formatBitsInNearestUnit(INTRO_STORAGE_UNLOCK_CAPACITY)},
-          build Storage banks — a growing ladder of sizes, each costing{' '}
-          {STORAGE_BUILD_COST_MULTIPLIER}× its own size in Bytes to build. A built bank starts
-          empty; Memory automatically fills any empty bank over time, smallest size first. A full
-          bank redeems for a free Kilobyte once its size exactly matches Kilobytes' own current
-          price, then empties and refills again — nothing here is single-use. Up to{' '}
-          {STORAGE_BANK_LADDER_CAP} banks can ever be built at the ladder's current size before it
+          Once Memory's capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)},
+          build Disks — a growing ladder of sizes, each costing {DISK_BUILD_COST_MULTIPLIER}× its
+          own size to build. Building takes real time, not just Bits: the array's very first disk
+          takes 1 second per "KB" of its size (a 1 KB disk takes 1s, a 10 KB disk takes 10s, and so
+          on), and every further disk added to that same array takes that same base time again,
+          multiplied by its own position in the array — the array's 6th disk takes 6× as long as
+          its 1st. While an array rebuilds to add a disk, every disk already in it goes offline —
+          no filling, releasing, or redeeming — until the rebuild finishes.
+        </p>
+        <p>
+          A built disk starts empty. Each array has its own small staging cache —{' '}
+          {DISK_CACHE_BLOCK_COUNT} blocks together holding one disk's worth of bits — that Memory
+          tops up first; only once the cache is completely full does it pour into an empty disk
+          container, smallest array first. A full cache block can be released back into Memory by
+          hand at any time, redirecting those bits elsewhere instead of waiting for the disk. A
+          full disk redeems for 1 free unit of whichever tier's current per-unit price exactly
+          matches its size right now — any tier, not just Kilobytes — then empties and refills
+          again, ready to be reused; if more than one tier happens to match at once, the tier
+          ranked earliest in the main game's own tier order wins. Redeeming happens automatically
+          once that tier's own autobuyer is active, or by hand (cache block or disk) otherwise. Up
+          to {DISK_ARRAY_LADDER_CAP} disks can ever be built at the ladder's current size before it
           advances to the next.
         </p>
       </Section>

@@ -640,8 +640,9 @@ describe('schema migration', () => {
         bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false,
-        storageBanks: { 1000: 1 }, storageBanksBuiltTotal: { 1000: 1 }, storageAutoRedeemEnabled: true,
-        storageAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
+        disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
+        diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
+        diskAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
         computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
         computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
         computeMergePageUnlocked: false,
@@ -655,6 +656,28 @@ describe('schema migration', () => {
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.intro).toEqual(state.intro)
+  })
+
+  it('forwards a pre-rename save\'s storageBanks/storageBanksBuiltTotal/storageAutoRedeemedSizes to the new disks/disksBuiltTotal/diskAutoRedeemedSizes field names', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        mainGameUnlocked: true,
+        storageBanks: { 1000: 2 },
+        storageBanksBuiltTotal: { 1000: 3 },
+        storageAutoRedeemedSizes: { 1000: true },
+      },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.intro.disks).toEqual({ 1000: 2 })
+    expect(loaded.intro.disksBuiltTotal).toEqual({ 1000: 3 })
+    expect(loaded.intro.diskAutoRedeemedSizes).toEqual({ 1000: true })
+    // diskCache/diskBuild are brand-new fields with no legacy equivalent — they fall through to
+    // fresh's {}/null defaults rather than throwing on the old save's absence of either.
+    expect(loaded.intro.diskCache).toEqual({})
+    expect(loaded.intro.diskBuild).toBeNull()
   })
 
   it('backfills mainGameUnlocked from an old boolean intro.completed field for a save that predates the mainGameUnlocked field', () => {

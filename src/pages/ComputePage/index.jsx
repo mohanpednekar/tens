@@ -1,6 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
-import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, isComputeBoostTurnAvailable, isStorageBankBuildAvailable, isStorageBankFillAvailable, isBandwidthAvailable } from 'game/engine'
+import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO } from 'game/layers'
 import styled from 'styled-components'
 
@@ -319,8 +319,8 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isComputeCoreConversionUnlocked), reached via that page's "⚡ Compute" nav
-// button. Activation is still gated by the Byte Foundry's forced priority order — Storage Bank
-// Fill > Bandwidth > Storage Bank Build > Compute > Memory — so a preset can show disabled here
+// button. Activation is still gated by the Byte Foundry's forced priority order — Disk
+// Fill > Bandwidth > Disk Build > Compute > Memory — so a preset can show disabled here
 // even while mechanically activatable (canActivateComputeBoost), if something ranked above
 // Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The manual
 // ten-tier merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
@@ -340,7 +340,7 @@ const ComputePage = ({ game, onBack }) => {
   const { actions, state } = game
   const { intro } = state
 
-  const blockedByPriority = isStorageBankFillAvailable(state) || isBandwidthAvailable(state) || isStorageBankBuildAvailable(state)
+  const blockedByPriority = isDiskFillAvailable(state) || isBandwidthAvailable(state) || isDiskBuildAvailable(state)
 
   return (
     <RootDiv>
@@ -443,7 +443,7 @@ const ComputePage = ({ game, onBack }) => {
             onClick={() => actions.activateComputeBoost(boostType)}
             title={
               canActivateComputeBoost(state, boostType) && blockedByPriority
-                ? 'Take a higher-priority upgrade first (Storage Bank Fill, Bandwidth, or Storage Bank Build)'
+                ? 'Take a higher-priority upgrade first (Disk Fill, Bandwidth, or Disk Build)'
                 : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 Core for ×${preset.multiplier} production, ${formatOfflineDuration(preset.durationSeconds)} — stacks up to ${COMPUTE_BOOST_MAX_STACKS}x`
             }
             type="button"

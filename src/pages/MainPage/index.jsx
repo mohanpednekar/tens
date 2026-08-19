@@ -2,7 +2,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
@@ -1279,7 +1279,7 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
           tabIndex={0}
           title="Show or hide the global production multipliers currently in effect"
         >
-          <MoneyHero>{formatCurrency(state.resources[MONEY_ID])}</MoneyHero>
+          <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
           {!balancesCompressed && (
             <>
               <GoogolProgressTrack aria-hidden="true">

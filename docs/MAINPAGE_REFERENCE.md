@@ -84,11 +84,11 @@ reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capa
 Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
 capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
 `canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
-Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine, a redeemable Storage
-Bank Fill, Invest, a buildable Storage bank, and an activatable Compute Boost must all be currently
+Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine, a redeemable Disk
+Fill, Invest, a buildable Disk, and an activatable Compute Boost must all be currently
 impossible too — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title` that
-names what to do first (`"Take every higher-priority upgrade first (Storage Bank Fill, Bandwidth,
-Storage Bank Build, or Compute)"`) when the balance is full but the button is still disabled for
+names what to do first (`"Take every higher-priority upgrade first (Disk Fill, Bandwidth,
+Disk Build, or Compute)"`) when the balance is full but the button is still disabled for
 that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
 `capacity`) and "Invest
 for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
@@ -97,7 +97,7 @@ keeping visible even in the shortened label; `aria-label="invest bits for double
 carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
 — `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `bits >=` the
 (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Storage Bank Fill
+getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Disk Fill
 outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md); this cost is entirely
 independent of `capacity`, so the button is frequently enabled well before Memory is full — see
 docs/ECONOMY_REFERENCE.md's "Byte
@@ -121,32 +121,62 @@ once auto-claim is unlocked (see issue #316). `disabled={!canClaimComputeCore}` 
 under `COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that
 Memory needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
 
-Storage split differently: **Build Storage Bank** (`aria-label="build storage bank"`, calling
-`actions.buildStorageBank`, `$progress` toward `getStorageBankCost(getStorageBankSize(state))`)
-stays on this page — its own core-loop action, alongside Sacrifice/Invest above — hidden until
-`storageRevealed` (`isStorageUnlocked(state)` — Memory's own capacity has reached
-`INTRO_STORAGE_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later, more deliberate
-reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
-`getStorageBankSize(state)` — an independent ladder that walks tier01's own per-unit level-cost
-sequence (1000 bits/"1 KB", then 10,000/"10 KB", then 100,000/"100 KB", then 10,000,000/"10 MB" —
-skipping 1,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too) and only
-advances once `STORAGE_BANK_LADDER_CAP` (10) banks have ever been built at the current size,
-decoupled from tier01's own CURRENT price. `disabled={!canBuildStorageBank}` where
-`canBuildStorageBank = isStorageBankBuildTurnAvailable(state)` — below the build cost, OR while a
-redeemable Storage Bank Fill/an affordable Bandwidth claim (both higher priority — see "Forced
-priority order" in docs/ECONOMY_REFERENCE.md) is currently available, with a `title` naming which
-to take first in the latter case. The build cost itself (parenthesized in the label, and in the
-button's `title`) renders via `formatBitsInNearestUnit` — the nearest fitting B/KB/MB/…/QB unit for
-that specific bit amount — rather than a raw unitless bit count. Building only ever constructs an
-EMPTY container — it does not fill it (see "Storage page" below).
+Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
+Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
+capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
+more deliberate reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
+`getDiskSize(state)` — an independent ladder that walks tier01's own per-unit level-cost sequence,
+expressed in real, Byte-accurate bits (`getTierCost(tier01, level) * BITS_PER_BYTE`): 8000 bits/"1
+KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
+8,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too — and only advances
+once `DISK_ARRAY_LADDER_CAP` (10) disks have ever been built at the current size (`disksBuiltTotal`,
+a cumulative, never-decremented count), decoupled from tier01's own CURRENT price. The build cost
+(`getDiskCost`) is simply `capacityBits * DISK_BUILD_COST_MULTIPLIER` (10) — a real 1 KB/8000-bit
+disk still costs 80,000 bits ("10 KB"), unchanged numerically from an earlier, buggy "kilobit"-scaled
+version of this ladder at level 1, just computed without a separate `BITS_PER_BYTE` factor now that
+`capacityBits` is already Byte-accurate (see docs/DESIGN_HISTORY.md).
 
-Right below Build, once anything has ever been built or is held, a brief `StorageSummaryRow`
-(`role="group"`, `aria-label="storage summary"`) shows one small `StorageSummaryChip` per size from
-`getStorageSizesToShow(state)` (ascending), each reading `"<size> <full>/<built>"` (e.g. `"10 KB
-3/8"` — 8 blocks of 10 KB ever built, 3 currently full via `Math.max(storageBanksBuiltTotal[size],
-full)`) — a compact, at-a-glance readout, deliberately not the fuller square-by-square grid
-StoragePage itself renders (see below); visiting StoragePage is still how a full bank actually gets
-redeemed.
+Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
+immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
+(`totalSeconds` fixed at the build's own starting duration — 1 second per real "KB" of size, times
+the disk's own 1-indexed position in the array at the moment the build started, see
+`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so a 1 KB array's 6th disk takes 6
+seconds, a 10 KB array's 6th disk takes 60 seconds), ticked down every tick by `tickDiskBuild`
+(wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
+`diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
+operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
+disallowed, "the array rebuilding." The Build button renders two distinct states off
+`diskBuildInProgress = intro.diskBuild`: **idle** — `aria-label="build disk"`,
+`disabled={!canStartDiskBuild}` where `canStartDiskBuild = isDiskBuildTurnAvailable(state)` (below
+the build cost, no build already in progress, OR while a redeemable Disk Fill/an affordable
+Bandwidth claim — both higher priority, see "Forced priority order" in docs/ECONOMY_REFERENCE.md —
+is currently available), `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build
+{size} Disk ({cost})"`, `title` either naming which higher-priority action to take first
+(`"Take Bandwidth (or redeem a full Disk) first"`, when `diskBuildBlockedByPriority`) or — depending
+on whether some tier currently matches this size (`diskRedeemTierName`, from
+`getDiskRedeemTierName(state, diskSize)`) — `"Costs {cost} and takes time to build — builds an empty
+{size} container; its cache auto-fills it, redeemable right away for a free {tierName} once full"` or
+the same sentence ending `"…but it won't be redeemable until some tier's level cost matches it"`; and
+**mid-build** — `aria-label="disk array rebuilding"`, always `disabled`, visible text `"🏦 Building
+{size} Disk — {ceil(remainingSeconds)}s"`, `title="Array rebuilding — {ceil(remainingSeconds)}s left
+(every disk in this array is offline until it finishes)"`. `$progress` (`diskBuildProgress`) reads
+differently in each state: mid-build, `100 - (remainingSeconds / totalSeconds) * 100` (a genuine "%
+built" fill, using `totalSeconds` as the fixed denominator so the fill only ever climbs toward 100 as
+`remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
+build), paired with a hidden `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
+`aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
+label and `title` render the disk's size via `formatDiskSize` and the cost via
+`formatBitsInNearestUnit` (see "Numbers are formatted" below). Building only ever constructs an EMPTY
+container — it does not fill it (see "Storage page" below).
+
+Right below Build, once anything has ever been built or is held (`diskSizesWithHistory` —
+`getDiskSizesToShow(state)` filtered back down to sizes with `disksBuiltTotal[size] > 0 ||
+intro.disks[size] > 0`, since `getDiskSizesToShow` on its own always includes the currently-offered
+size even at 0 built), a brief `StorageSummaryRow` (`role="group"`, `aria-label="storage summary"`)
+shows one small `StorageSummaryChip` per size, each reading `"<size> <full>/<built>"` (e.g. `"10 KB
+3/8"` — 8 disks of 10 KB ever built, 3 currently full via `Math.max(disksBuiltTotal[size], full)`) —
+a compact, at-a-glance readout, deliberately not the fuller square-by-square grid StoragePage itself
+renders (see below); visiting StoragePage is still how a full disk actually gets redeemed.
 
 Below Build/the summary, a "🏦 Storage" nav button (`aria-label="open storage"`, calling
 `onOpenStorage`, same reveal gate as Build) reaches `StoragePage` for the fuller per-size detail and
@@ -194,29 +224,32 @@ bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemo
 converted into a Byte-scale unit — same never-overstate rationale as `formatCurrency` in
 `engine.js`, so a balance never reads as a complete unit ("1 KB") one tick before it actually is —
 a display-only convention, internal state always stores raw bits. Every standalone
-Memory-denominated cost (Sacrifice, Invest, Storage build) reuses this exact scale via
+Memory-denominated cost (Sacrifice, Invest, Disk build) reuses this exact scale via
 `engine.js`'s own `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
 true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
 picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
-instead of stopping at a fixed unit. `engine.js`'s own `formatStorageSize` export (shared by
-ByteFoundryPage and StoragePage) uses a different, Storage-*size*-specific scale (see "Storage
-page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section: 1000 bits is "1 KB" there,
-matching tier01's own cost ladder, not 1000 Bytes) — used for naming a bank's own *size* ("Build 1
-KB Bank", the per-size summary chips, StoragePage's own size labels), not for any bit amount
-actually spent, which always renders via `formatBitsInNearestUnit` instead — including the
-transfer block's own dynamic cost (the active block's `aria-label`/`title`), even though
-`getIntroKilobyteConversionCost` is the same underlying value/scale as a bank size.
+instead of stopping at a fixed unit. `engine.js`'s own `formatDiskSize` export (shared by
+ByteFoundryPage and StoragePage, used to name a disk's own *size* — "Build 1 KB Disk", the per-size
+summary chips, StoragePage's own size labels) is now literally `formatDiskSize =
+formatBitsInNearestUnit` — the exact same real-Byte scale, not a separate "1000 bits is '1 KB'"
+kilobit-scaled convention the way an earlier version of this ladder used (see
+docs/DESIGN_HISTORY.md for that bug and its fix); a disk's size and any bit amount actually spent
+(including the transfer block's own dynamic cost, the active block's `aria-label`/`title`) now
+render through the identical formatter.
 This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
 docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
 not a one-time-ever gate, it sets the pace for every run — but the
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
-productionMilestoneTier/productionMilestoneTierClaims) and Storage (`storageBanks`/
-`storageBanksBuiltTotal`/`storageAutoRedeemEnabled` — but NOT `storageAutoRedeemedSizes`, which
-resets every real Prestige) are both permanent and carry over — a bank already FULL when Prestige
-fires stays full, giving the next cycle a head start — so the gate is a fast pit-stop after the
-first cycle, not a full replay. Once unlocked, the page also persists as a screen the player can
+productionMilestoneTier/productionMilestoneTierClaims) and Storage (`disks`/`disksBuiltTotal`/
+`diskCache`/`diskBuild` — but NOT `diskAutoRedeemedSizes`, which resets every real Prestige) are
+both permanent and carry over — a disk already FULL when Prestige fires stays full, giving the next
+cycle a head start — so the gate is a fast pit-stop after the first cycle, not a full replay.
+Auto-redeem (`tickDiskAutoRedeem`) is no longer gated by any persisted per-cycle toggle at all — it
+checks whether the matched tier's own autobuyer is currently active (`autobuyers[tier.id]` non-null
+AND `autobuyersEnabled[tier.id]` not `false`), so there's no `storageAutoRedeemEnabled`-style field
+to carry over or reset in the first place. Once unlocked, the page also persists as a screen the player can
 return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
 stays just as interactive there as on the gate itself.
 
@@ -225,38 +258,63 @@ ByteFoundryPage (see "Byte Foundry" section above) — reached only via ByteFoun
 nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack
 }`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`) is
 all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
-next bank (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this
-page holds only the fuller per-size squares grid and the one Storage action that lives only here,
-redeeming.
+next disk (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this page
+holds only the fuller per-size cache/squares grid and the two Storage actions that live only here,
+releasing a full cache block back into Memory and redeeming a full disk.
 
-For every size ever built (plus whatever's currently offered, even at 0 built, so its goal is
-visible before the first one is banked — ascending, smallest first), a `StorageSizeRow` renders a
-`StorageSizeLabel` (`"<size> banks (<full> full, <built>/<STORAGE_BANK_LADDER_CAP> built)"`) above a
-`StorageBankSquaresRow` (`role="group"`, `aria-label="<size> storage banks"`) of exactly
-`STORAGE_BANK_LADDER_CAP` `StorageBankSquare`s — a fixed-length strip read together as one progress
-bar, filling left-to-right: **full** (leftmost, holding Memory's bits — accent border,
-`aria-label="redeem <size> storage bank"`, calling `actions.redeemStorageBank(size)`,
-clickable/highlighted only once `isStorageBankRedeemable(state, size)`, otherwise disabled with a
-duller fill — never itself blocked by the priority order, since Storage Bank Fill is ranked
-highest) — **empty** (built but not yet auto-filled — a dim muted-bordered fill, `aria-label="empty
-<size> bank"`, always disabled) — **not-yet-built** (rightmost, outline-only placeholder,
-`aria-label="not yet built <size> bank"`, always disabled). Redeeming a full bank doesn't remove it
-or leave it permanently spent — it becomes empty again, re-entering the fillable pool.
-`isStorageBankRedeemable`'s own gate is a genuine one-tick-only EXACT match against tier01's
-*current* per-unit level cost (an earlier version used "at or below" — see docs/DESIGN_HISTORY.md
-for why that undervalued a bank; see docs/ECONOMY_REFERENCE.md's "Byte Foundry" section for the
-full behavior). No pause/resume control for auto-redeem currently renders below the size rows —
-removed for now, with a UI to reintroduce it planned for later (see `docs/DESIGN_HISTORY.md`);
-`intro.storageAutoRedeemEnabled` still exists and now defaults `true` for every size (previously
-`false`), and `actions.setStorageAutoRedeemEnabled` stays fully wired for whenever that control
-returns — unlike every other automation toggle on this page, no prerequisite purchase gates it, and
-it doesn't even gate the smallest (1 KB) denomination's own auto-redeem at all (see
-docs/ECONOMY_REFERENCE.md's `tickStorageAutoRedeem` row). Filling itself (`tickStorageAutoFill`) has
-no UI control at all — it's fully automatic, every tick, no toggle: Memory cascades into every
-currently-fillable empty bank, smallest size first, whenever there's enough of it. This page used
-to show its own live progress row mirroring tier01's current purchase-block progress — removed as
-redundant once ByteFoundryPage's transfer-block row started reading that exact same value directly;
-that transfer-block row (back on ByteFoundryPage) is the only place this progress is shown.
+For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
+whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
+ascending, smallest first), a `DiskSizeRow` renders a `DiskSizeLabel` reading `"<size> disks (<full>
+full, <min(built, DISK_ARRAY_LADDER_CAP)>/<DISK_ARRAY_LADDER_CAP> built)"`. Below the label, the row
+branches on whether that size's array is mid-build (`rebuilding = intro.diskBuild?.size === size`):
+while rebuilding, a single `RebuildingText` line replaces both rows below —
+`"Array rebuilding — <ceil(remainingSeconds)>s left (every disk in this array is offline until it
+finishes)"` — since every IO operation against that size (cache release, redeem) is disallowed for
+the build's duration; otherwise, two rows render:
+
+- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
+  `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
+  array's own small staging buffer, filling left to right as Memory tops it up (`tickDiskAutoFill`)
+  before any of it pours into an empty disk container below. A block reads **full**
+  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and independently
+  **releasable** (`$releasable`, accent border, clickable) once `isDiskCacheBlockReleasable(state,
+  size)` — full AND that size isn't mid-build. `aria-label` is `"release <size> cache block N back
+  into Memory"` when releasable, else the plain `"<size> cache block N"`; `title` is `"Release this
+  block's <blockBits formatted> back into Memory"` once full, else `"Filling from Memory"`; clicking a
+  releasable block calls `actions.releaseDiskCacheBlock(size)`, redirecting those bits back to Memory
+  (e.g. toward an ordinary Kilobyte transfer) instead of waiting for the array's next disk to
+  complete.
+- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
+  (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
+  **full** (leftmost, holding a full cache's worth of Memory — accent border, `aria-label="redeem
+  <size> disk"`, calling `actions.redeemDisk(size)`, clickable/highlighted (`theme.color.good`) only
+  once `redeemable` — i.e. `getDiskRedeemTierName(state, size)` returns non-null, meaning *some*
+  tier in `TIER_DEFINITIONS` (not specifically tier01 any more — the first one, in array order, whose
+  current per-unit level cost matches this size exactly) — otherwise disabled with a duller fill,
+  never itself blocked by the forced priority order, since Disk Fill is ranked highest) — **empty**
+  (built but not yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always
+  disabled) — **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built
+  <size> disk"`, always disabled). A full square's `title` names which tier it would redeem into
+  right now (`"Redeems 1 <size> disk for 1 free <tierName> — empties it, ready for its cache to fill
+  again"`) or, if no tier currently matches, `"Redeemable once some tier's level cost matches
+  <size>"`; an empty square's `title` is `"Built, waiting for this array's cache to pour into it"`; a
+  not-yet-built square's is `"Not yet built"`; while rebuilding (this branch doesn't render, but the
+  squares' own `title` logic still accounts for it) it would read `"This array is offline while it
+  rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
+  empty again, re-entering the fillable pool.
+
+There is no pause/resume control for auto-redeem on this page, and no
+`storageAutoRedeemEnabled`-style toggle exists in state at all any more — `tickDiskAutoRedeem` is
+gated per-size by whichever tier currently matches that size having its own unit-buying autobuyer
+active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
+already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
+here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
+tick, no toggle: Memory cascades into every currently-fillable array's cache first, smallest size
+first, then pours a completed cache into that array's next empty disk, whenever there's enough of it
+and that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
+current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
+started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
+the only place this progress is shown.
 
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
 ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
@@ -323,7 +381,7 @@ page: the available Core count (`CoresAvailable`, visible text `"⬡N"`, full se
 lives only in `title`), calling `actions.activateComputeBoost(boostType)`.
 `disabled={!isComputeBoostTurnAvailable(state, boostType)}` — folds `canActivateComputeBoost`'s own
 mechanical guard (≥1 Compute Core, no conflicting active type, below `COMPUTE_BOOST_MAX_STACKS`)
-together with the forced priority order (a no-op while Storage Bank Fill/Bandwidth/Storage Bank
+together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
 Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title`
 naming which to take first in that case.
 
@@ -363,8 +421,10 @@ naming which to take first in that case.
   hover tooltip. Every other `tier.name` usage in this file (row `aria-label`s, button `aria-label`s/
   `title`s, disclosure prose) is unaffected — it's only these two visible-label render sites that switch
   to the symbol.
-- **Balances (top HUD).** Money via `formatCurrency` and (once `!isFirstRun`) the Prestige Point
-  balance are the only top-of-page blocks besides `Header` that use a centered `CenteredCard`
+- **Balances (top HUD).** Money (rendered via `MoneyHero` — see "Money hero + Googol progress bar"
+  below for its own `formatMoneyBalance` formatting, distinct from every other Money figure on this
+  page) and (once `!isFirstRun`) the Prestige Point balance are the only top-of-page blocks besides
+  `Header` that use a centered `CenteredCard`
   (`styled(StatCard)`). Both are wrapped in a sticky `StickyBalances` container (background
   `theme.color.page`, matching the page ground so scrolled tier rows never show through the gap
   between the two cards): once scrolled past their normal position they pin to the viewport top and
@@ -409,7 +469,17 @@ naming which to take first in that case.
   `theme.font.display` (Space Grotesk, used for the page wordmark/headings) — an earlier version used
   the display font here, but its more stylized, geometric letterforms read worse for a large numeric
   balance than Inter's tabular figures; the hero treatment is about size/elevation, not typeface.
-  Directly beneath the hero figure (suppressed
+  `MoneyHero`'s own content is `formatMoneyBalance(state.resources[MONEY_ID])` (`engine.js`), NOT
+  `formatCurrency` — the only balance readout on this page that differs: below
+  `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 Bits, exactly 1000 Bytes) it's byte-for-byte identical to
+  `formatCurrency`'s own Bits display, but at/above that threshold it floors the balance, divides by
+  `BITS_PER_BYTE`, and renders the result as whole Bytes with a trailing `" B"` (reusing
+  `formatCurrency`'s own exponential-notation threshold once converted) — a more natural headline
+  figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Every
+  other `formatCurrency` call on this page — tier costs/production, the global tickspeed cost, the
+  `FullScreenOverlay`'s "You've reached…" line, the Buy button's cost label — is unaffected and still
+  shows raw Bits, its actual priced/spent denomination; `MoneyHero` is the one exception. Directly
+  beneath the hero figure (suppressed
   while `balancesCompressed`, since the compact sticky bar has no room for it), a `GoogolProgressTrack`/
   `GoogolProgressFill` bar shows progress toward Prestige becoming available, reusing the same
   `prestigeProgressPercent` (`getPrestigeProgressPercent(state.resources[MONEY_ID])`) — no separate
