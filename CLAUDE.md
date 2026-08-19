@@ -322,19 +322,24 @@ src/
                                gate itself has no way out); nothing here ever goes read-only —
                                Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
                                Convert stays live too — there is no per-cycle transfer cap at all, only
-                               tier01's own live purchase-block progress (see below). Storage and
-                               Compute each moved to their own dedicated screen (see
-                               StoragePage/ComputePage below) once revealed — this page only renders a
-                               nav button to reach them, always enabled once revealed (see "Economy
-                               model" below); their own actions stay gated by the forced priority
-                               order, same as Sacrifice/Invest here. Receives
+                               tier01's own live purchase-block progress (see below). Compute moved
+                               entirely to its own dedicated screen (see ComputePage below) once
+                               revealed — this page only renders a nav button to reach it, always
+                               enabled once revealed (see "Economy model" below); its own actions
+                               stay gated by the forced priority order, same as Sacrifice/Invest
+                               here. Storage split differently: the Build button (its own core-loop
+                               action) and a brief per-size summary chip row both stay on this page;
+                               only the fuller per-size detail and redeeming live on StoragePage
+                               (see below), reached via its own nav button. Receives
                                the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← the Storage screen, split out of ByteFoundryPage (see "Economy model"
-                               below) — Build button + one row of bank squares per size ever reached.
-                               Reached only via ByteFoundryPage's own "🏦 Storage" nav button; takes
-                               `{ game, onBack }`, `onBack` always returning to ByteFoundryPage
-                               (`page = 'foundry'`)
+    StoragePage/index.jsx   ← Storage's fuller detail screen, split out of ByteFoundryPage (see
+                               "Economy model" below) — one row of bank squares per size ever
+                               reached, for redeeming (Storage Bank Fill); NOT the Build button,
+                               which stays on ByteFoundryPage itself alongside its own per-size
+                               summary. Reached only via ByteFoundryPage's own "🏦 Storage" nav
+                               button; takes `{ game, onBack }`, `onBack` always returning to
+                               ByteFoundryPage (`page = 'foundry'`)
     ComputePage/index.jsx   ← the Compute screen, split out of ByteFoundryPage (see "Economy model"
                                below) — Compute Core/Node counters + the 3 Boost preset buttons.
                                Reached only via ByteFoundryPage's own "⚡ Compute" nav button; takes
@@ -474,14 +479,19 @@ Strict three-layer separation:
    flips true (the first bits ever converted into Kilobytes this cycle), it stops being a gate and
    becomes a permanent screen the player can voluntarily reopen at any time (MainPage's "⚙️ Byte
    Foundry" link), with an `onBack`-driven exit back to MainPage — but it stays just as interactive
-   either way, nothing here ever goes read-only. Storage and Compute each moved to their own
-   dedicated screen (see 4a/4b below) once revealed; this page only renders a nav button to reach
-   each, always enabled once revealed (their own actions inside stay gated by the forced priority
-   order — see "Economy model" below).
-4a. **`StoragePage/index.jsx`** — Storage's own dedicated screen, taking `{ game, onBack }`. Reached
-    only via ByteFoundryPage's "🏦 Storage" nav button; `onBack` always returns to ByteFoundryPage
-    (`page = 'foundry'`). A pure renderer, same "engine re-validates, UI just mirrors it" posture as
-    every other page here.
+   either way, nothing here ever goes read-only. Compute moved to its own dedicated screen (see 4b
+   below) once revealed; this page only renders a nav button to reach it, always enabled once
+   revealed. Storage split differently: Building the next bank (its own core-loop action, alongside
+   Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
+   `"10 KB 3/8"`) both stay here; only the fuller per-size detail and redeeming (Storage Bank Fill)
+   live on the dedicated `StoragePage` (see 4a below), reached via its own nav button, always
+   enabled once revealed. Every action — here or on either dedicated screen — stays gated by the
+   forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size full/empty/not-built
+    squares rows and redeeming (Storage Bank Fill) — NOT the Build button, which stays on
+    ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
+    Storage" nav button; `onBack` always returns to ByteFoundryPage (`page = 'foundry'`). A pure
+    renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
     (`page = 'foundry'`). Same posture as StoragePage above.
@@ -615,7 +625,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (947 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (949 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -646,7 +656,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (944, see "Testing" above) is unaffected by anything under `e2e/`.
+  (949, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
