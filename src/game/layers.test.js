@@ -11,7 +11,7 @@ import {
   GOOGOL,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   MONEY_ID,
-  OVERCLOCK_PRODUCTION_STEP,
+  OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
@@ -199,12 +199,12 @@ describe('constants', () => {
     expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
   })
 
-  it('OVERCLOCK_PRODUCTION_STEP is 0.01 (1 percentage point added to the global tickspeed multiplier\'s own per-level step, per activation)', () => {
-    expect(OVERCLOCK_PRODUCTION_STEP).toBe(0.01)
+  it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, folded into the Tickspeed multiplier\'s own step)', () => {
+    expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
-  it('OVERCLOCK_REQUIREMENT_STEP is 10 (a fixed 10-level jump per activation)', () => {
-    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(10)
+  it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {
+    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
   it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 8,000,000 bits (1 MB in Memory\'s own B/KB/MB display scale)', () => {

@@ -334,29 +334,27 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // speedUpCount > 0.
 export const SPEED_UP_MULTIPLIER_BASE = 2
-// Per-activation boost to the (Money-funded) global tickspeed multiplier's own per-level step —
-// see engine.js's getGlobalTickspeedRegularStep/getGlobalTickspeedProductionMultiplier/
-// overclockGame — a second, much steeper Speed-Up-style soft reset. Each Overclock activation adds
-// another OVERCLOCK_PRODUCTION_STEP (1 percentage point) directly onto
-// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), permanently raising the rate every *future* regular level
-// of the global tickspeed multiplier compounds at — 1% per level with no activations, 2% after
-// the first, 3% after the second, and so on (a milestone level's own 10% step,
-// GLOBAL_TICKSPEED_MILESTONE_STEP, is unaffected). This is deliberately NOT a separate multiplier
-// stacked on top the way Speed Up's own production multiplier is — it reshapes the existing global
-// tickspeed track's own growth curve instead, so a level already bought before an Overclock
-// activation retroactively compounds at the new, higher rate from then on, same as every other
-// level. Equal in size to GLOBAL_TICKSPEED_PRODUCTION_STEP itself — Overclock's value is in how
-// permanent and stackable it is (state.overclockCount is never reset by an ordinary Speed Up,
-// unlike globalTickspeedMultiplier itself — see speedUpGame), on top of already doubling the
-// regular step's own growth rate per activation.
-export const OVERCLOCK_PRODUCTION_STEP = 0.01
-// How many more levels the last tier must reach before Overclock can activate again: a fixed
-// 10-level jump per activation (10, 20, 30, … — see engine.js's getOverclockRequirement), a much
-// steeper, non-escalating-by-a-smaller-step ladder than Speed Up's own +1-per-cycle requirement
-// (see getSpeedUpRequirement) — reflecting that Overclock resets everything Speed Up does *and*
-// wipes Speed Up's own stacking bonus (state.speedUpCount) on top, so it needs to be substantially
-// more expensive to reach each time.
-export const OVERCLOCK_REQUIREMENT_STEP = 10
+// Per-level growth factor for Overclock's own reward — see engine.js's
+// getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
+// Speed-Up-style soft reset. Each claimed Overclock level multiplies BOTH the (Money-funded) global
+// tickspeed multiplier's regular and milestone per-level steps by a further (1 +
+// OVERCLOCK_MULTIPLIER_STEP) factor (×1.1 per level) — folded directly into that existing track's
+// own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
+// the history of this mechanic moving between a standalone factor and a folded-in step). A direct
+// consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
+// level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
+// an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame.
+export const OVERCLOCK_MULTIPLIER_STEP = 0.1
+// The per-cycle escalation step for how many more levels the last tier must reach before the next
+// Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
+// +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never
+// make the first claim of a cycle free) — the same +1-per-cycle shape Speed Up's own requirement
+// uses (see getSpeedUpRequirement), just without its display offset. There's no artificial ladder
+// beyond that floor; the last tier's already-steep cost curve is what makes reaching each
+// successive level meaningfully harder. A claim jumps straight to the last tier's current level
+// (see overclockGame), so falling behind never requires claiming every intermediate level one at a
+// time.
+export const OVERCLOCK_REQUIREMENT_STEP = 1
 // One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
 // bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up
