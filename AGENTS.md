@@ -62,7 +62,8 @@ src/
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
     storage.js             ← localStorage save/load/clear + migration logic
   components/
-    Button/, Money/, StatCard/  ← shared styled components; see docs/COMPONENTS_REFERENCE.md
+    Button/, Money/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
+                            docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; see "Byte Foundry" below
     StoragePage/index.jsx  ← Storage's own screen, reached via ByteFoundryPage's "🏦 Storage" nav

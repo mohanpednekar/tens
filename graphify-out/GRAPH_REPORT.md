@@ -1,7 +1,7 @@
-# Graph Report - wt-321  (2026-08-19)
+# Graph Report - tens  (2026-08-19)
 
 ## Corpus Check
-- 68 files · ~233,650 words
+- 68 files · ~233,539 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `865741ac`
+- Built from commit: `e5f170cd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -258,8 +258,8 @@ Cohesion: 0.14
 Nodes (13): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, GOOGOL, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS (+5 more)
 
 ### Community 53 - "isBandwidthAvailable"
-Cohesion: 0.24
-Nodes (14): canActivateComputeBoost(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isComputeBoostTurnAvailable(), isComputeUpgradeAvailable(), isComputeUpgradeTurnAvailable() (+6 more)
+Cohesion: 0.26
+Nodes (13): canActivateComputeBoost(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isComputeBoostTurnAvailable(), isComputeUpgradeAvailable(), isComputeUpgradeTurnAvailable() (+5 more)
 
 ### Community 54 - "Design history & rationale"
 Cohesion: 0.25
@@ -302,8 +302,8 @@ Cohesion: 0.50
 Nodes (5): claimComputeCore(), isComputeCoreClaimAvailable(), isComputeCoreConversionUnlocked(), mintComputeCoreIfReady(), tickComputeCoreConversion()
 
 ### Community 66 - "isDiskBuildAvailable"
-Cohesion: 0.38
-Nodes (7): getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskCost(), getDiskSize(), getFirstTierCost(), isDiskBuildAvailable(), startDiskBuild()
+Cohesion: 0.36
+Nodes (8): getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskCost(), getDiskSize(), getFirstTierCost(), isDiskBuildAvailable(), isDiskBuildTurnAvailable(), startDiskBuild()
 
 ### Community 67 - "resolutions"
 Cohesion: 0.40
