@@ -321,11 +321,16 @@ src/
                                Build button, which stays on ByteFoundryPage. Reached only via
                                ByteFoundryPage's own "🏦 Storage" nav button; takes `{ game, onBack }`,
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
-    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — Core/Node counters
-                               + the 3 Boost preset buttons, plus (once
+    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — an active-boost
+                               status (effect/countdown/stacks/Reclaim) at the TOP of the screen
+                               whenever a boost is running, then one row per compute entity (count +
+                               its own action button(s) together, not a separate counters section),
+                               then a Boost row (Cores available + 3 small icon preset buttons —
+                               Burst/Standard/Sustain, now 1 minute/10 minutes/1 hour), plus (once
                                `intro.computeMergePageUnlocked`) the manual ten-tier merge chain
                                (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter
-                               → Supercomputer → Megacomputer, see issue #280). Reached only via
+                               → Supercomputer → Megacomputer, see issue #280) and its opt-in
+                               auto-merge/auto-claim automation (see issue #316). Reached only via
                                ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`,
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
@@ -460,8 +465,11 @@ Strict three-layer separation:
    flips true (the first bits ever converted into Kilobytes this cycle), it stops being a gate and
    becomes a permanent screen the player can voluntarily reopen at any time (MainPage's "⚙️ Byte
    Foundry" link), with an `onBack`-driven exit back to MainPage — but it stays just as interactive
-   either way, nothing here ever goes read-only. Compute moved to its own dedicated screen (see 4b
-   below) once revealed; this page only renders a nav button to reach it, always enabled once
+   either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the standalone Tap
+   button is removed entirely — Memory's own tile becomes the tap target instead (an `as="button"`
+   swap on the same styled `FillableStatCard`, calling the identical `actions.tapIntroBit`), rather
+   than two separate controls doing the same thing. Compute moved to its own dedicated screen (see
+   4b below) once revealed; this page only renders a nav button to reach it, always enabled once
    revealed. Storage split differently: Building the next bank (its own core-loop action, alongside
    Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
    `"10 KB 3/8"`) both stay here; only the fuller per-size detail and redeeming (Storage Bank Fill)
@@ -480,7 +488,21 @@ Strict three-layer separation:
     Megacomputer — see "Economy model" below and issue #280) lives, behind its own later, one-time
     `intro.computeMergePageUnlocked` reveal nested inside this same page — not a separate page/nav
     link. "Compute" names the page/feature only — individual entities drop the word (`Core`/`Node`/…,
-    never "Compute Core"/"Compute Node"/…) in every player-visible label.
+    never "Compute Core"/"Compute Node"/…) in every player-visible label. Deliberately terse:
+    every control is icon-only (no or single-word visible labels), the full sentence living in
+    `title`/`aria-label` instead — every entity's row fits on one line — and the prose explanation
+    of each mechanic lives in the Guide (`InfoPage`), not here. An active Compute Boost's status
+    (effect, countdown, current stack count, and a Reclaim control) renders at the TOP of the page,
+    right after the header, so it stays visible regardless of what else is on screen. Below that,
+    one row per entity (count and that entity's own action button(s) together — no separate
+    counters section, see issue #316), then a Boost row showing the available Core count alongside
+    3 small icon preset buttons (Burst/Standard/Sustain, 1 minute/10 minutes/1 hour).
+    Every merge tier except the last (Megacomputer) also offers an opt-in, permanent auto-merge
+    unlock (sacrifice all `COMPUTE_ENTITY_CAP` of the tier the merge produces); Core's own
+    analogous "auto-claim" unlock control lives here too, though its manual counterpart (Claim
+    Core) lives on ByteFoundryPage instead — see "Economy model" below. `reclaimComputeBoost`
+    (`canReclaimComputeBoost`'s own gate) reclaims the most recently added, still-unused stack of
+    an active boost, one at a time, refunding 1 Core.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Byte Foundry, Storage,
    Compute, Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones, plus the app's tagline).
@@ -615,7 +637,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1041 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1139 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -646,7 +668,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (1041, see "Testing" above) is unaffected by anything under `e2e/`.
+  (1139, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

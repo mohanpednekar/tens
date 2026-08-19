@@ -2,6 +2,7 @@ import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatBitsInNearestUnit,
+  formatOfflineDuration,
   getAutobuyerUnlockMilestone,
   getOverclockRequirement,
   getSpeedUpRequirement,
@@ -111,7 +112,9 @@ const InfoPage = ({ onBack }) => {
         <p>
           Every fresh save — and every real Prestige after that — starts here, before Kilobytes
           exist. Tap to fill Memory with bits, then combine the first {INTRO_BYTE_COMBINE_COST} into
-          a permanent Byte generator that produces passively from then on. Sacrifice drains Memory
+          a permanent Byte generator that produces passively from then on. Once Kilobytes are
+          reached, the standalone Tap button is gone — Memory's own tile becomes the tap target
+          instead, with the identical effect. Sacrifice drains Memory
           for ×{INTRO_CAPACITY_MULTIPLIER} more capacity; Invest drains it instead for permanently
           double production. A row of transfer blocks converts Memory into free Kilobytes — the
           first conversion unlocks the main game, with no limit on further transfers after that.
@@ -145,23 +148,35 @@ const InfoPage = ({ onBack }) => {
         <h2>Compute</h2>
         <p>
           Once Memory's capacity reaches{' '}
-          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}, a full Memory automatically
-          converts into 1 Core instead of idling — the cost is your entire current capacity, so a
-          bigger capacity buys fewer but pricier Cores. Every {COMPUTE_CORES_PER_NODE} Cores
-          automatically convert into 1 Node. From there, merging is entirely your own choice:
-          {' '}{COMPUTE_MERGE_RATIO} of one tier merges into 1 of the next, all the way up
-          Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
-          Megacomputer. Every tier caps at {COMPUTE_ENTITY_CAP} held.
+          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}, a full Memory can convert
+          into 1 Core — the cost is your entire current capacity, so a bigger capacity buys fewer
+          but pricier Cores. Claiming a Core is a manual "Claim Core" click on the Byte Foundry
+          screen by default; sacrificing {COMPUTE_ENTITY_CAP} held Nodes permanently automates it,
+          after which Memory converts on its own and the manual button disappears. Every{' '}
+          {COMPUTE_CORES_PER_NODE} Cores automatically convert into 1 Node either way.
+        </p>
+        <p>
+          From Node onward, merging is your own choice: a Merge button (always available once
+          reached, enabled at {COMPUTE_MERGE_RATIO} held) converts {COMPUTE_MERGE_RATIO} of one
+          tier into 1 of the next, all the way up Node → Cluster → Network → Grid → Fabric → Cloud
+          → Datacenter → Supercomputer → Megacomputer. Every tier caps at {COMPUTE_ENTITY_CAP} held.
+          Sacrificing {COMPUTE_ENTITY_CAP} held units of the tier a merge produces permanently
+          unlocks auto-merge for that step — once unlocked, the same {COMPUTE_MERGE_RATIO}-for-1
+          merge also fires on its own whenever the input tier is completely full
+          ({COMPUTE_ENTITY_CAP}, not {COMPUTE_MERGE_RATIO}), leaving the manual button just as
+          usable alongside it.
         </p>
         <p>
           Spend 1 Core on a Compute Boost — Burst (×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
-          {COMPUTE_BOOST_PRESETS.burst.durationSeconds}s), Standard
+          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}), Standard
           (×{COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
-          {COMPUTE_BOOST_PRESETS.standard.durationSeconds}s), or Sustain
+          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.standard.durationSeconds)}), or Sustain
           (×{COMPUTE_BOOST_PRESETS.sustain.multiplier} for{' '}
-          {COMPUTE_BOOST_PRESETS.sustain.durationSeconds}s) — for a temporary production multiplier
-          on both Memory and Kilobytes at once. Activating the same preset again while it's already
-          running extends the remaining time instead of resetting it.
+          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}) — for a temporary
+          production multiplier on both Memory and Kilobytes at once, shown at the top of the
+          Compute screen while active. Activating the same preset again while it's already running
+          stacks it instead, extending the remaining time additively; the most recent unused stack
+          can also be reclaimed, one at a time, refunding 1 Core.
         </p>
       </Section>
 

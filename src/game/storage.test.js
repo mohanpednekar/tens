@@ -645,6 +645,10 @@ describe('schema migration', () => {
         computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
         computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
         computeMergePageUnlocked: false,
+        autoClaimCoreEnabled: false, autoMergeNodesIntoCluster: false, autoMergeClustersIntoNetwork: false,
+        autoMergeNetworksIntoGrid: false, autoMergeGridsIntoFabric: false, autoMergeFabricsIntoCloud: false,
+        autoMergeCloudsIntoDatacenter: false, autoMergeDatacentersIntoSupercomputer: false,
+        autoMergeSupercomputersIntoMegacomputer: false,
         computeBoostType: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
       },
     }
