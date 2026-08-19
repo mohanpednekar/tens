@@ -236,6 +236,14 @@ behavior should never ship together. If a change is significant enough to need a
 (a superseded formula, a rejected alternative, an incident write-up), add it to
 `docs/DESIGN_HISTORY.md` in the same commit rather than folding narrative into this file.
 
+**`AGENTS.md`** (repo root) is a condensed mirror of this file for non-Claude AI tools (Codex,
+Cursor, etc. — Claude Code itself only reads `CLAUDE.md`). It explicitly declares itself non-
+authoritative and says to fix drift in the same change rather than let the two diverge — whenever a
+change to this file touches something `AGENTS.md` also states (page count/names, field names,
+mechanic summaries, architecture description), update `AGENTS.md`'s condensed version too, in the
+same commit. It had drifted significantly (stale page count, a renamed field, a long-superseded Byte
+Foundry mechanic) before being resynced; don't let that recur.
+
 ### Changelog convention
 
 `CHANGELOG.md` (repo root, [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format) tracks
@@ -480,252 +488,33 @@ exponent-based formulas (`getPrestigePointsAwarded`/`getMoneyExponent`/`getPrest
 only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` value; see
 `docs/DESIGN_HISTORY.md` for why.
 
-Bytes are no longer a purchasable tier — they were pulled out of `TIER_DEFINITIONS` entirely in favor of
-the **Byte Foundry**, a separate tap-to-earn screen (`ByteFoundryPage`, see "Architecture" above) that
-every fresh save — and every real Prestige cycle after that — must pass through before the main game
-(`tier01` = Kilobytes onward) is reachable. The player taps to accumulate bits into "Memory" (capped at a
-capacity, starting at 8 bits = 1 Byte), combines their first 8 into a permanent Byte generator (which then
-produces bits passively, on an explicit tickspeed — starting at 1 bit every 1 second, like a tier's own
-`baseTickSpeedSeconds`), and grows two independent tracks each time Memory fills: sacrificing the full
-balance for 10x capacity (repeatable), or investing in "double production" via its own separate,
-independent cost ladder (1 Byte, 10 Bytes, 100 Bytes, 1000 Bytes, 10000 Bytes, … — the same "×10 per
-step" shape the capacity ladder happens to share, but tracked entirely separately, unrelated to Memory's
-current capacity) — **2 claims for the three cheapest tiers (1/10/100 Bytes), 1 claim for every tier
-from there on** (an intermediate iteration tightened this to a flat 1 claim across the board, matching
-Sacrifice's own one-shot posture, before the three-cheapest-tiers exception was reinstated — see
-`docs/DESIGN_HISTORY.md`), spending only that tier's own cost (not a full balance — a claim frequently
-doesn't require Memory to be full at all, once Sacrifice has grown capacity ahead of this ladder).
-Doubling first halves the delivery period (like a tier's own tickspeed multiplier) until the live tick
-loop's own real-time resolution, then switches to doubling the per-tick amount instead. A manual tap
-always credits "one second's worth" at the Byte's current rate (`getIntroProductionRate`), not a flat 1.
+Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
+(`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
+every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
+onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
+into a permanent, passively-producing Byte generator, then grows via Sacrifice (10x capacity) and
+Invest (double production) on independent cost ladders, plus — once far enough along — Storage banks
+(`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`). Five recurring "upgrade"
+actions are ranked in a fixed **forced priority order** — Storage Bank Fill > Bandwidth/Invest >
+Storage Bank Build > Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI
+and in the engine reducer itself) whenever a higher one is currently available. Manual transfer blocks
+(plus an always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit
+cost; the first successful transfer unlocks the main game, and there's no per-cycle cap on further
+ones. The generator, Storage banks, and Compute Cores/Nodes are all permanent across every real
+Prestige; only Memory itself, the main-game-unlock gate, and tier01's own purchase-block progress
+reset each cycle. Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
 
-**Sacrifice for 10x Capacity is offered only once nothing else currently possible has been done
-first.** `isMemoryCapacityUpgradeAvailable(state)` — the actual gate `pickIntroCapacityMilestone`
-itself enforces, not just a UI-only disabled state — requires Memory to be full (`bits === capacity`)
-**and** that none of Combine into a Byte (`!byteCreated` and affordable), the current Invest tier
-(affordable and unclaimed), or a currently-buildable Storage bank is still possible with that same
-balance. Since Invest's own cost ladder starts at the same `INTRO_STARTING_CAPACITY` value and grows
-by the same `INTRO_CAPACITY_MULTIPLIER` Sacrifice's own capacity does, the two stay in lockstep by
-default — in practice this means claiming the current Invest tier is a prerequisite for Sacrificing
-again, every cycle, unless the player has pulled ahead on one ladder relative to the other. This
-doesn't change what Sacrifice itself does (still drains the entire balance to 0, still multiplies
-`capacity` by `INTRO_CAPACITY_MULTIPLIER`) — only when it's allowed to fire.
-
-Once capacity reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (1000 bits — `isIntroConversionUnlocked` gates
-on capacity, not the current balance, so conversion becomes available well before Memory itself is
-ever full), Memory can be manually converted into Kilobytes via a row of **transfer blocks** at the
-bottom of the screen — always `getPurchaseBlockSize(state)` of them, one per unit of tier01's
-(Kilobytes') own current purchase block. Each block's own cost is `getIntroKilobyteConversionCost(state)`
-— tier01's own **current** real per-unit level cost (`getTierCost(TIER_DEFINITIONS[0], level)`), not a
-flat rate: exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (1000 bits) at a fresh cycle's starting level,
-but it steps up in lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2,
-and so on) — an earlier version stayed pinned at the flat 1000-bit rate forever, undervaluing a
-transfer once tier01's real price had grown past it; see `docs/DESIGN_HISTORY.md`. Only the leftmost
-not-yet-transferred (active) block is ever clickable, and clicking it transfers just that block,
-revealing the next as active (any surplus Memory left over carries straight into it, so a large enough
-balance lets you click through several blocks in a row) — the one just spent stays in place too, now
-greyed out/fully filled to show it's consumed. Read left-to-right, the row's already-consumed (filled),
-one active (partially filled), and still-upcoming (empty) blocks together read as one continuous
-progress bar rather than a shrinking list. The very first successful transfer (clicking a block, or via
-`tickIntroAutoInvest`'s own auto-convert convenience, which fires every tick a single unit is
-affordable at its current cost — live, block by block, the same as a manual click, not just once a
-whole block's worth accumulates at once; an earlier version waited for the latter, which made the row
-look permanently stuck on block 1 for the entire time bits climbed toward that full batch — see
-`docs/DESIGN_HISTORY.md`) unlocks the main game immediately — no need to wait for a full balance.
-**There is no per-cycle cap on further transfers** — `convertIntroBitsToKilobytes`/
-`tickIntroAutoInvest` keep firing indefinitely, every time Memory reaches another unit's worth at
-whatever tier01's current per-unit cost is, forever (capped only at completing one tier01 level per
-tick — the same "at most one level's worth per call" bound the tier autobuyers themselves use — so an
-extreme balance can't loop unboundedly in a single tick; a jump spanning more than one level finishes on
-the next tick instead). Storage's own auto-fill (see below) gets first claim on fresh Memory ahead
-of this conversion, so a bank the player has already built isn't starved of Memory it's waiting to
-be filled with. The row is simply a live mirror of
-`purchaseLevelProgress[tier01]` — the only place `ByteFoundryPage` shows this progress (the Storage
-section used to show a redundant separate copy of the identical value and no longer does) — so the
-instant a level completes (`getPurchaseBlockSize(state)` blocks transferred), the whole row rolls
-over to a fresh, empty set of blocks tracking the *next* level
-rather than sitting permanently "consumed." (A real Prestige still resets every tier's
-`purchaseLevels`/`purchaseLevelProgress` — including tier01's — back to a fresh level 1 (see
-`prestigeGame` in `engine.js`), so the row does still start over each cycle in practice, just as a
-side effect of that general reset, not because of any transfer-specific budget field.)
-Nothing about the Byte Foundry itself ever fully freezes: Tap/Sacrifice/Invest/Storage/Convert all
-stay live indefinitely, every cycle.
-
-The page renders a single, button-style filling tile, **Memory** (the balance itself, `bits /
-capacity`, both scaled into the largest appropriate unit — raw bits before the Byte generator exists
-(capacity is always exactly 8 bits/1 Byte until then, so there's nothing to meaningfully denominate
-in yet), then B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier
-symbols; the unit conversion floors rather than rounds, same never-overstate rationale as
-`formatCurrency`, so a balance never reads as a complete unit — e.g. "1 KB" — one tick before it
-actually is). The Tap button carries no progress fill/hidden progressbar of its own — Memory's own
-tile already shows the same bits/capacity fill, so a duplicate meter on the tap button would add
-nothing.
-
-**Building the next Storage bank stays on ByteFoundryPage itself**, alongside Sacrifice/Invest —
-its own core-loop action, ranked third in the forced priority order (see below) — rather than
-moving to a separate screen; a "Build \<size\> Bank (\<cost\>)" button, hidden until Memory's own
-capacity reaches `INTRO_STORAGE_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale, 80,000
-bits — `isStorageUnlocked` in `engine.js`), a deliberately later reveal than the Kilobyte-transfer
-row's own 1000-bit gate, since Storage is a later-game mechanic. Right below it, a brief per-size
-summary — one small chip per size ever reached, reading `"<size> <full>/<built>"` (e.g. `"10 KB
-3/8"` — 8 blocks of 10 KB ever built, 3 currently full) — gives an at-a-glance view of holdings
-without leaving this page. **Storage** also has its own dedicated screen, `StoragePage`, for the
-fuller per-size detail and for the one Storage action that lives only there, redeeming (Storage
-Bank Fill) — reached via a "🏦 Storage" nav button on ByteFoundryPage (same reveal gate as the
-Build button). Unlike Storage's/Compute's own actions (see "forced priority order" below), the nav
-button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
-posture as MainPage's own "⚙️ Byte Foundry" link — so the player can check on held/built banks even
-when nothing there is currently actionable; `onBack` always returns to ByteFoundryPage. StoragePage
-renders one row of up to `STORAGE_BANK_LADDER_CAP` (10) squares per bank size ever reached — NOT
-the Build button, which stays on ByteFoundryPage — read together as one progress bar: currently
-**full** (leftmost, clickable once redeemable), then built-but-**empty** (constructed, waiting for
-Memory to auto-fill), then not-yet-built placeholders (rightmost) — rather than one full-width
-button per bank size stacked flat into the same list as every other action. (A pause/resume
-auto-redeem toggle used to render here too; removed for now — see below — with a UI to reintroduce
-it planned for later.) Banks are a genuine storage **medium**, not
-a one-shot pre-paid item: **building** (`buildStorageBank`) only constructs a permanent, *empty*
-container — it does **not** fill it. Memory (`intro.bits`) then **auto-fills** any empty container
-every tick (`tickStorageAutoFill`), unconditionally (no toggle), smallest size first, cascading
-through every currently-fillable size in one pass before whatever's left over simply stays as
-Memory's own balance. The buildable size is its own **independent ladder** (`getStorageBankSize`),
-decoupled from `tier01`'s (Kilobytes') current price: it walks `tier01`'s own per-unit **level cost
-sequence** (`getTierCost(tier01, level)` for level 1, 2, 3, …) rather than a synthetic ×10
-progression, advancing to the next level's cost once `STORAGE_BANK_LADDER_CAP` banks have *ever*
-been built at the current one (tracked by `intro.storageBanksBuiltTotal`, a cumulative counter
-redeeming never decrements). Because `getCostEpochExponent`'s Fibonacci exponent sequence
-(1, 2, 3, 5, 8, …) skips values as `tier01` levels up, this ladder skips sizes too — e.g. `tier01`
-level 4 costs 10,000,000 bits ("10 MB"), not 1,000,000 ("1 MB"), so a 1 MB bank can never exist.
-Building a bank spends `STORAGE_BUILD_COST_MULTIPLIER` (10x) the block's own face value **in
-bytes**, not bits (a 1 KB/1000-bit bank costs 10,000 bytes = 80,000 bits to build); every size the
-ladder ever offers is one of `tier01`'s own real per-unit level costs. A *full* bank's redeemability
-is a separate check (`isStorageBankRedeemable`): it's redeemable (clickable) only when its size
-**exactly matches** `tier01`'s *current* per-unit level cost — a genuine one-tick-only exact match,
-not "at or below" (an earlier version used `<=`; see `docs/DESIGN_HISTORY.md` for why that
-undervalued a bank once tier01's real price had grown past its size, the same problem the transfer
-block's own dynamic cost above fixes). Because `tier01`'s own autobuyer can complete more than one
-level in a single tick (an attempt budget catching up after a broke/paused stretch), a burst can jump
-the level straight past the one a bank was sized for without its price ever exactly equaling that
-size mid-tick — such a bank simply waits, still full and not lost, since `tier01`'s per-unit cost only
-ever grows *within* a cycle; the next Speed Up/Overclock/Prestige resets its level back down and its
-price grows back up through that exact value again, making the bank redeemable once more. This lets a
-player bank ahead of a purchase burst (building — and letting Memory fill — at today's ladder size
-before `tier01`'s price catches up) and redeem the queued banks the moment the price matches, or right
-away if it already does. Redeeming grants 1 free Kilobyte unit, either by a manual click or
-automatically, and **empties the bank again** — it's reusable, not single-use, re-entering the
-fillable pool for `tickStorageAutoFill` to fill again later. The smallest, 1 KB denomination
-**always** attempts auto-redeem, regardless of the toggle — every larger size still checks Storage's
-own auto-redeem preference (`intro.storageAutoRedeemEnabled`, no PP or prerequisite purchase
-involved), which now **defaults `true` for every size** (previously `false`) — neither
-ByteFoundryPage nor StoragePage currently renders a pause/resume button for it at all (removed for now; the toggle field,
-`setStorageAutoRedeemEnabled`, and `tickStorageAutoRedeem`'s own check against it all still exist
-for when that control returns — see `docs/DESIGN_HISTORY.md`), so in practice every size
-auto-redeems out of the box today. Either way, a given size auto-redeems **at most once per real
-Prestige cycle** (`intro.storageAutoRedeemedSizes`, resetting fresh every real Prestige) — a bank
-that refills later the same cycle needs a manual click for the rest of it. Storage banks are **never
-lost** — nothing here ever expires or spends implicitly, only an explicit redeem (manual or auto)
-ever empties one. Redeeming advances `tier01`'s own current purchase-block progress identically to a
-Buy button/autobuyer purchase — visible on ByteFoundryPage's own transfer-block row described above
-(see "The very first successful transfer" paragraph), the only place that shows this progress;
-StoragePage itself doesn't duplicate it in a separate row.
-
-**The generator itself (capacity/whether it exists/its tickspeed/its rate/its independent Invest
-cost-ladder progress) and Storage (every bank — full or empty — the cumulative build ladder, and the
-auto-redeem preference — but NOT `storageAutoRedeemedSizes`, which resets every real Prestige) are
-permanent, carried over by every real Prestige** — a bank already full when Prestige fires stays
-full, its contents intact even though Memory itself resets, giving a fresh cycle a head start
-(immediately redeemable once `tier01`'s fresh level 1 cost matches). Only Memory (the current bit
-balance), the main-game-unlock gate, and tier01's own purchase-block progress (which the transfer row
-mirrors — see above) reset each cycle, so returning cycles
-are a fast pit-stop, not a full
-replay; Speed Up/Overclock leave the whole thing untouched either way, same as any other intra-cycle
-soft reset. Full state shape, engine functions, and constants: see the "Byte Foundry" section of
-`docs/ECONOMY_REFERENCE.md`.
-
-Once `intro.capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 bits, "1 MB" in
-Memory's own B/KB/MB display scale — two Sacrifice stages past Storage's own reveal), Memory
-automatically converts into **Compute Cores** every time it's full (`tickComputeCoreConversion`,
-gated on `isComputeCoreConversionUnlocked`) instead of idling — entirely unrelated to Storage
-(an earlier version gated this on every Storage bank size being built and full at a fixed 10 MB
-cost; superseded, see `docs/DESIGN_HISTORY.md`). The cost is always the **current capacity itself**,
-not a fixed amount: a conversion flushes the entire balance to 0, exactly like Sacrifice for 10x
-Capacity's own full-balance drain, and always grants exactly 1 Core per flush (`bits` can never
-exceed `capacity`, so there's never a multi-Core batch in one event). Since capacity only grows via
-the player's own Sacrifice clicks, a higher capacity makes each future Core cost more (a bigger
-flush) without changing what a Core grants — the player decides how far to keep Sacrificing before
-letting automatic Core conversion take over instead, trading a smaller-but-more-frequent Core rate
-against a larger-but-slower one. This runs every tick right after Storage's own auto-fill and before
-`tickIntroAutoInvest`, so it claims Memory ahead of ordinary Kilobyte conversion once unlocked and
-full, the same "first claim" priority auto-fill itself already has. Every `COMPUTE_CORES_PER_NODE`
-(8) Compute Cores then auto-convert into 1 **Compute Node** the same tick
-(`tickComputeNodeConversion`). Both `intro.computeCores` and `intro.computeNodes` are capped at
-`COMPUTE_ENTITY_CAP` (10 — see `layers.js`, meant to apply the same way to any future merge tier
-built on top of this): once an entity is at the cap, further production into it simply pauses
-(Memory stays full rather than flushing for nothing, and a Core surplus is left unconverted rather
-than overflowing Nodes past the cap) until the player spends it back down — no progress is ever
-lost. Both are permanent counters, carried over every real Prestige exactly like the Byte
-generator/Storage banks.
-
-**Compute Cores can be spent on a temporary Compute Boost.** Each usage always costs exactly 1
-Compute Core, regardless of preset — the preset only picks the strength/duration tradeoff, not the
-cost. Three fixed presets (`COMPUTE_BOOST_PRESETS` in `layers.js`): **Burst** (×16 for 10 seconds),
-**Standard** (×4 for 1 minute), **Sustain** (×2 for 10 minutes). Activating (`activateComputeBoost`,
-gated by `canActivateComputeBoost`) multiplies "the base production tier of each screen" — Memory's
-own passive production (`tickIntroProduction`, the Byte Foundry) and `tier01`'s (Kilobytes')
-production specifically (the main game) — simultaneously, for the preset's duration
-(`getComputeBoostMultiplier`). Only one PRESET TYPE may be active at a time — a different type is
-blocked while one is running — but the SAME type may be activated again while already active,
-stacking up to `COMPUTE_BOOST_MAX_STACKS` (10) times to extend the remaining duration; the
-multiplier itself never compounds from stacking. `tickComputeBoost` counts the remaining duration
-down every tick (frozen or not) and clears the boost back to inactive once it reaches 0. Boost
-state (`intro.computeBoostType`/`computeBoostStacks`/`computeBoostRemainingSeconds`) is run-scoped —
-reset to inactive on every real Prestige, unlike `computeCores`/`computeNodes` themselves — but
-carried through untouched by Speed Up/Overclock, same as the rest of `intro`. Compute, like Storage,
-has its own dedicated screen, `ComputePage`, reached via a "⚡ Compute" nav button on ByteFoundryPage
-(hidden until `isComputeCoreConversionUnlocked`, always enabled once shown — same "permanent,
-voluntarily-revisitable" posture as the Storage nav button above); `onBack` always returns to
-ByteFoundryPage. Activation happens there; `MainPage` shows a read-only status line while a boost is
-active, since its effect reaches `tier01` there too. Merging Cores upward into Nodes/Clusters/
-Networks/Grids is still planned as a follow-up (see the `claude-task` backlog).
-
-**A forced priority order governs the Byte Foundry's five recurring "upgrade" actions** — Storage
-Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory (ranked highest to lowest) — so a
-player is never left free to take a lower-priority action while a higher-priority one is currently
-possible, regardless of the two actions' relative costs. Whenever ANY action ranked above a given
-one is currently available, that lower one is disabled, both in the UI (its button shows disabled,
-with a tooltip explaining why) and in the engine reducer itself (a defensive no-op — the same
-"engine re-validates, UI just mirrors it" convention every other action in this file follows, see
-"Security notes"): `isStorageBankFillAvailable` (any built bank both FULL and currently redeemable —
-see `isStorageBankRedeemable`), `isBandwidthAvailable` (the current Invest tier's cost affordable
-and unclaimed), `isStorageBankBuildAvailable` (the currently-offered bank size's build cost
-affordable — this one deliberately has no `isStorageUnlocked` gate of its own, matching
-`buildStorageBank`'s own actual reducer gate, which has never required that threshold either — only
-the Storage nav button's own reveal does), and `isComputeUpgradeAvailable` (Compute unlocked and at
-least one boost preset mechanically activatable) are each action's own plain base predicate;
-`isBandwidthTurnAvailable`/`isStorageBankBuildTurnAvailable`/`isComputeBoostTurnAvailable`/
-`isComputeUpgradeTurnAvailable` (all in `engine.js`) fold the priority order in on top, and are what
-`pickIntroProductionMilestone`/`buildStorageBank`/`activateComputeBoost` actually gate on.
-Combine into a Byte (a one-off bootstrap step) sits outside this forced order entirely and keeps its
-own simple gate, same as before. Memory's own gate, `isMemoryCapacityUpgradeAvailable`, already
-composes all four base predicates above it in the order (plus Combine) — this is the same gate that
-pre-existed this feature (Sacrifice was already only offered once Combine/Invest/a Storage bank
-build were all impossible), now extended to also block on Storage Bank Fill and Compute. Storage
-Bank Fill itself is never blocked by anything (top priority, unaffected).
-
-**Sacrifice for 10x Capacity asks for confirmation before firing** (`window.confirm` — no modal
-component exists in the app to reuse, same rationale `MainPage`'s own Reset button confirm already
-documents), spelling out that it's permanent and raises every future Compute Core's cost. Cancelling
-leaves Memory/capacity untouched; only `pickIntroCapacityMilestone` itself still enforces the actual
-gate (`isMemoryCapacityUpgradeAvailable`) — the confirm dialog is an added UI-level checkpoint on top
-of it, not a replacement for it.
-
-The full mechanic reference — cost/production formulas, the (configurable, growing) purchase block
-size and level system, Prestige Points and every PP-funded automation, the per-tier and global
-tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the Byte
-Foundry pre-game screen, the complete game state shape, and the engine function/constants tables —
-lives in `docs/ECONOMY_REFERENCE.md`. Read it before touching `src/game/engine.js`,
-`src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed constant or formula — and
-check `docs/DESIGN_HISTORY.md` first if you're about to change a formula a past iteration may already
-have tried and rejected.
+**The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
+Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
+Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
+growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
+per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
+Reset, the complete game state shape, and the engine function/constants tables — lives in
+`docs/ECONOMY_REFERENCE.md`. Read it before touching `src/game/engine.js`, `src/game/layers.js`,
+`TIER_DEFINITIONS`, `ByteFoundryPage`/`StoragePage`/`ComputePage`, or any economy/prestige/tickspeed
+constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to change a
+formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
+bank-redeemability check, the flat vs. dynamic transfer cost).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
