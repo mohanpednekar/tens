@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatMemoryAmount, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatMemoryAmount, formatStorageSize, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getStorageBankCost, getStorageBankSize, getStorageSizesToShow, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageBankBuildTurnAvailable, isStorageBankRedeemable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -137,6 +137,27 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
+// A brief, at-a-glance per-size Storage status readout — one small chip per size ever reached,
+// reading "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 blocks of 10 KB ever built, 3 currently
+// full). Deliberately not the fuller square-by-square grid StoragePage itself renders — this is
+// just enough context to see holdings at a glance without leaving the Byte Foundry; visiting
+// StoragePage (via the nav button below) is still how a full bank actually gets redeemed.
+const StorageSummaryRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
+const StorageSummaryChip = styled.span`
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.textMuted};
+  background: ${props => props.theme.color.surfaceSunken};
+  border-radius: ${props => props.theme.radius.sm};
+  padding: 2px 8px;
+`
+
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
 // straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
 // as a row item (grow to fill available width) instead of a column item (which would instead try
@@ -246,13 +267,17 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
 // Prestige resets Memory fresh.
 //
-// Storage and Compute each moved to their own dedicated screen (StoragePage/ComputePage) once
-// revealed — this page only shows a nav button to reach them, always enabled once revealed (same
-// "permanent, voluntarily-revisitable screen" posture as MainPage's own "⚙️ Byte Foundry" link) so
-// the player can check on built-but-not-yet-affordable progress (a held bank, banked Compute
-// Cores) even when nothing there is currently actionable. The individual actions on those pages
-// stay gated by the Byte Foundry's forced priority order (see "Byte Foundry" in CLAUDE.md):
-// Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory.
+// Compute moved entirely to its own dedicated screen (ComputePage) once revealed — this page only
+// shows a nav button to reach it. Storage split differently: Building the next bank (its own core
+// loop action, same as Sacrifice/Invest) and a brief per-size summary chip row both stay here, on
+// this page — only the fuller square-by-square detail and redeeming (Storage Bank Fill) live on
+// the dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
+// enabled once revealed (same "permanent, voluntarily-revisitable screen" posture as MainPage's
+// own "⚙️ Byte Foundry" link) so the player can check on built-but-not-yet-affordable progress (a
+// held bank, banked Compute Cores) even when nothing there is currently actionable. Every action
+// itself — here or on either dedicated screen — stays gated by the Byte Foundry's forced priority
+// order (see "Byte Foundry" in CLAUDE.md): Storage Bank Fill > Bandwidth > Storage Bank Build >
+// Compute > Memory.
 const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
@@ -288,6 +313,24 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   // Ranked below Storage Bank Fill in the forced priority order — see isBandwidthTurnAvailable.
   const canInvest = isBandwidthTurnAvailable(state)
   const investBlockedByPriority = isBandwidthAvailable(state) && !canInvest
+
+  // Building the next Storage bank stays on this page (the Byte Foundry's own core loop) even
+  // though redeeming lives on the dedicated StoragePage — see "Byte Foundry" in CLAUDE.md. Ranked
+  // third in the forced priority order — see isStorageBankBuildTurnAvailable.
+  const storageBankSize = getStorageBankSize(state)
+  const storageBankCost = getStorageBankCost(storageBankSize)
+  const canBuildStorageBank = isStorageBankBuildTurnAvailable(state)
+  const storageBuildBlockedByPriority = intro.bits >= storageBankCost && !canBuildStorageBank
+  const storageBuildProgress = clampPercent((intro.bits / storageBankCost) * 100)
+  const storageBankRedeemableNow = isStorageBankRedeemable(state, storageBankSize)
+  const storageBanksBuiltTotal = intro.storageBanksBuiltTotal ?? {}
+  // getStorageSizesToShow always includes the currently-offered size even at 0 built (so
+  // StoragePage's own fuller detail can preview the goal before the first one is banked) — this
+  // brief summary is different: it should only ever report actual history, so a size with nothing
+  // built and nothing held is filtered back out here rather than showing a confusing "1 KB 0/0"
+  // chip before the player has ever built anything.
+  const storageSizesWithHistory = getStorageSizesToShow(state)
+    .filter(size => (storageBanksBuiltTotal[size] ?? 0) > 0 || (intro.storageBanks?.[size] ?? 0) > 0)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemStorageBank, or convertIntroBitsToKilobytes/
@@ -437,15 +480,56 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
       </ActionsRow>
 
       {storageRevealed && (
-        <Button
-          aria-label="open storage"
-          onClick={onOpenStorage}
-          title="Review Storage — banks, building, and redeeming (still gated by the forced priority order)"
-          type="button"
-          variant="info"
-        >
-          <ButtonContent>🏦 Storage</ButtonContent>
-        </Button>
+        <>
+          <Button
+            aria-label="build storage bank"
+            disabled={!canBuildStorageBank}
+            onClick={actions.buildStorageBank}
+            title={
+              storageBuildBlockedByPriority
+                ? 'Take Bandwidth (or redeem a full Storage Bank) first'
+                : storageBankRedeemableNow
+                  ? `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, redeemable right away once full`
+                  : `Costs ${formatBitsInNearestUnit(storageBankCost)} (10x the block's own size, in bytes) — builds an empty ${formatStorageSize(storageBankSize)} container; Memory auto-fills it, but it won't be redeemable until Kilobytes' level cost matches it`
+            }
+            type="button"
+            variant={canBuildStorageBank ? 'info' : 'neutral'}
+            $progress={storageBuildProgress}
+          >
+            <ButtonContent>{`🏦 Build ${formatStorageSize(storageBankSize)} Bank (${formatBitsInNearestUnit(storageBankCost)})`}</ButtonContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="byte foundry storage build progress"
+              aria-valuenow={intro.bits}
+              aria-valuemin={0}
+              aria-valuemax={storageBankCost}
+            />
+          </Button>
+
+          {storageSizesWithHistory.length > 0 && (
+            <StorageSummaryRow role="group" aria-label="storage summary">
+              {storageSizesWithHistory.map(size => {
+                const full = intro.storageBanks?.[size] ?? 0
+                const builtTotal = Math.max(storageBanksBuiltTotal[size] ?? 0, full)
+                return (
+                  <StorageSummaryChip key={size}>
+                    {`${formatStorageSize(size)} ${full}/${builtTotal}`}
+                  </StorageSummaryChip>
+                )
+              })}
+            </StorageSummaryRow>
+          )}
+
+          <Button
+            aria-label="open storage"
+            onClick={onOpenStorage}
+            title="Review Storage in detail, and redeem full banks (still gated by the forced priority order)"
+            type="button"
+            variant="info"
+          >
+            <ButtonContent>🏦 Storage</ButtonContent>
+          </Button>
+        </>
       )}
 
       {computeCoreRevealed && (
