@@ -7,11 +7,13 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 ## Project
 
-**Tens** — a React incremental game. Every mechanic uses powers of ten. Three top-level pages —
+**Tens** — a React incremental game. Every mechanic uses powers of ten. Five top-level pages —
 `ByteFoundryPage` (a tap-to-earn pre-game bootstrap, mandatory before each Prestige cycle's first
-Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the game itself), and
-`InfoPage` (static "how it works" prose) — switched via a plain `useState` in `App.jsx`, not a
-routing library; no backend — state lives in React and persists to `localStorage`.
+Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the game itself), `InfoPage`
+(static "how it works" prose), and `StoragePage`/`ComputePage` (dedicated sub-screens reached only
+from `ByteFoundryPage`'s own nav buttons once each mechanic is revealed) — switched via a plain
+`useState` in `App.jsx`, not a routing library; no backend — state lives in React and persists to
+`localStorage`.
 
 ## Tech stack
 
@@ -63,6 +65,8 @@ src/
     Button/, Money/, StatCard/  ← shared styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; see "Byte Foundry" below
+    StoragePage/index.jsx  ← Storage's own screen, reached via ByteFoundryPage's "🏦 Storage" nav
+    ComputePage/index.jsx  ← Compute's own screen, reached via ByteFoundryPage's "⚡ Compute" nav
     MainPage/index.jsx     ← the game; renders all tiers data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← static mechanic explanations; reads no game state
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
@@ -75,14 +79,15 @@ vite.config.js             ← path aliases (below) + dev/test server config + V
 
 **All game logic is pure** (`src/game/engine.js`) — functions of `(args) => state => newState`, no
 React, no side effects. `useIncrementalGame.js` is the only place holding React state (tick timer,
-localStorage persistence), called once in `App.jsx` and shared by both `ByteFoundryPage` and
-`MainPage` via a `game` prop. `MainPage/index.jsx` is a pure renderer driven entirely by
-`TIER_DEFINITIONS` and hook state; `InfoPage/index.jsx` is a separate static page (evergreen
-mechanic explanations only, reads no game state). `App.jsx` switches between all three via a local
-`page` `useState`, with `ByteFoundryPage` additionally forced onto screen — overriding whatever
-`page` says, except when `page === 'info'` — whenever the current Prestige cycle's `intro.completed`
-is still false (see "Byte Foundry" below); once `intro.completed`, it's just a normal page reachable
-via MainPage's own "⚙️ Byte Foundry" link.
+localStorage persistence), called once in `App.jsx` and shared by every page via a `game` prop.
+`MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
+`InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
+state); `StoragePage`/`ComputePage` are pure renderers reached only via nav buttons on
+`ByteFoundryPage`. `App.jsx` switches between all five via a local `page` `useState`, with
+`ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says, except on
+`'info'`/`'storage'`/`'compute'` — whenever the current Prestige cycle's `intro.mainGameUnlocked` is
+still false (see "Byte Foundry" below); once true, it's just a normal page reachable via MainPage's
+own "⚙️ Byte Foundry" link.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
@@ -96,15 +101,19 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 ### Byte Foundry
 
-`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save must complete before
-`MainPage` (`tier01`/Kilobytes onward) is reachable at all — it replaced an older, removed
-self-producing Bytes tier as the game's actual bootstrap. The player taps to accumulate bits (capped
-at a capacity, starting at 8), combines their first 8 into a permanent Byte generator, and grows two
-independent tracks on every full balance: sacrificing it all for 10x capacity, or spending the
-current capacity's worth of bits to double the generator's production rate. Once capacity reaches
-1000, bits convert to Kilobytes (manually at 1000:1, or automatically and exactly once at a balance
-of 8000, for 8 Kilobytes) — that one-time auto-conversion is the transition into the main game. Full
-state shape and constants: `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section.
+`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
+cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
+player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
+passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
+production) on independent cost ladders, plus — once far enough along — Storage banks (`StoragePage`)
+and Compute Cores/Nodes/Compute Boost (`ComputePage`). Manual transfer blocks (plus an always-on
+auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
+per-cycle cap**; the first successful transfer unlocks the main game. The generator, Storage banks,
+and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
+main-game-unlock gate reset each cycle. **This summary is intentionally thin — do not extrapolate
+specific numbers/gates from it.** Full mechanics, the forced-priority-order ranking recurring upgrade
+actions, and every constant: `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section (or `CLAUDE.md`'s
+condensed version, which this file mirrors).
 
 ### Adding a new tier
 

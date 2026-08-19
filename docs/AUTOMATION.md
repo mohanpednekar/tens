@@ -110,6 +110,21 @@ identical dead-end analysis every single run indefinitely — issue #101 did thi
 being closed manually — instead of self-locking after the second occurrence the way an
 environment/permission blocker already did from the first.
 
+**Deploy-failure detection (`deploy.yml`, GitHub Pages) is a deterministic step, not part of the
+Claude prompt** (see #256). The guard step's `main_deploy_broken`/`main_deploy_run_url` outputs
+mirror `main_ci_broken` (`gh run list --workflow=deploy.yml --branch=main --status=completed
+--limit=1`), but a separate `Surface a broken deploy.yml run` step — plain bash, no Claude
+invocation — acts on it directly: per this repo's determinism-first automation-design principle (see
+`AGENTS.md`), a broken deploy needs no judgment call, only a comment/issue post, so a script suffices.
+This step runs unconditionally, independent of the guard step's `skip` output and of whether the
+Claude step itself runs or is tolerated-skipped — a check folded into the Claude prompt instead would
+silently never fire on a run that hit the 5-PR ceiling or a transient Claude-side failure, exactly the
+"never remains invisible" guarantee this exists to provide. It comments on the most recently *merged*
+PR (ordered by `mergedAt`, not `gh pr list`'s default ordering) linking the failed run, or opens a
+small issue if no merged PR exists; either way it dedupes against a prior run's post for that exact
+run URL before posting again. `deploy.yml` itself is never touched — it's on the protected/denied
+file list below — so surfacing the failure to a human is the full extent of what this step does.
+
 **Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
 }` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
 `workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)
