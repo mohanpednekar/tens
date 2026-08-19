@@ -100,6 +100,22 @@ const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'S
 // engine re-validates on every call regardless (see "Security notes" in CLAUDE.md).
 const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COMPUTE_ENTITY_CAP
 
+// The full ten-tier progression this page's counters row shows, top to bottom: Core is auto-mined
+// from Memory (see the StatusText above), every tier from Node onward only ever grows via the
+// matching manual merge in MERGE_TIERS below.
+const COMPUTE_ENTITIES = [
+  { field: 'computeCores', label: 'Cores' },
+  { field: 'computeNodes', label: 'Nodes' },
+  { field: 'computeClusters', label: 'Clusters' },
+  { field: 'computeNetworks', label: 'Networks' },
+  { field: 'computeGrids', label: 'Grids' },
+  { field: 'computeFabrics', label: 'Fabrics' },
+  { field: 'computeClouds', label: 'Clouds' },
+  { field: 'computeDatacenters', label: 'Datacenters' },
+  { field: 'computeSupercomputers', label: 'Supercomputers' },
+  { field: 'computeMegacomputers', label: 'Megacomputers' },
+]
+
 const MERGE_TIERS = [
   {
     key: 'nodesIntoCluster',
@@ -125,6 +141,46 @@ const MERGE_TIERS = [
     outputField: 'computeGrids',
     action: 'mergeComputeNetworksIntoGrid',
   },
+  {
+    key: 'gridsIntoFabric',
+    inputLabel: 'Grids',
+    outputLabel: 'Fabric',
+    inputField: 'computeGrids',
+    outputField: 'computeFabrics',
+    action: 'mergeComputeGridsIntoFabric',
+  },
+  {
+    key: 'fabricsIntoCloud',
+    inputLabel: 'Fabrics',
+    outputLabel: 'Cloud',
+    inputField: 'computeFabrics',
+    outputField: 'computeClouds',
+    action: 'mergeComputeFabricsIntoCloud',
+  },
+  {
+    key: 'cloudsIntoDatacenter',
+    inputLabel: 'Clouds',
+    outputLabel: 'Datacenter',
+    inputField: 'computeClouds',
+    outputField: 'computeDatacenters',
+    action: 'mergeComputeCloudsIntoDatacenter',
+  },
+  {
+    key: 'datacentersIntoSupercomputer',
+    inputLabel: 'Datacenters',
+    outputLabel: 'Supercomputer',
+    inputField: 'computeDatacenters',
+    outputField: 'computeSupercomputers',
+    action: 'mergeComputeDatacentersIntoSupercomputer',
+  },
+  {
+    key: 'supercomputersIntoMegacomputer',
+    inputLabel: 'Supercomputers',
+    outputLabel: 'Megacomputer',
+    inputField: 'computeSupercomputers',
+    outputField: 'computeMegacomputers',
+    action: 'mergeComputeSupercomputersIntoMegacomputer',
+  },
 ]
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
@@ -133,13 +189,15 @@ const MERGE_TIERS = [
 // Fill > Bandwidth > Storage Bank Build > Compute > Memory — so a preset can show disabled here
 // even while mechanically activatable (canActivateComputeBoost), if something ranked above
 // Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The manual
-// Node→Cluster→Network→Grid merge chain (see issue #280) lives here too, alongside Cores/Nodes/
-// Boost — one page for everything Compute, rather than a second dedicated screen; merging is the
-// player's own choice and never fires automatically, unlike Core→Node. The merge section itself
-// (Clusters/Networks/Grids counters + the 3 merge buttons) only renders once
+// ten-tier merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
+// Supercomputer → Megacomputer, see issue #280) lives here too, alongside Boost — one page for
+// everything Compute, rather than a second dedicated screen; merging is the player's own choice
+// and never fires automatically, unlike Core→Node. "Compute" names the page/feature only —
+// individual entities drop the word (Core, Node, Cluster, … not "Compute Core"/"Compute Node"/…).
+// The merge section itself (every counter past Nodes, plus the 8 merge buttons) only renders once
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
 // (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
-// hidden behind its own later, one-time latch until the player has actually held enough Cores to
+// hidden behind its own later, one-time latch until the player has actually earned enough Cores to
 // use it (see engine.js's tickComputeCoreConversion for where that latch flips).
 // `onBack` always returns to the Byte Foundry.
 const ComputePage = ({ game, onBack }) => {
@@ -157,7 +215,7 @@ const ComputePage = ({ game, onBack }) => {
         </Button>
       </Header>
       <StatusText>
-        {`Memory auto-converts into 1 Compute Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
+        {`Memory auto-converts into 1 Core every time it fills, flushing your current capacity · ${COMPUTE_CORES_PER_NODE} Cores → 1 Node · max ${COMPUTE_ENTITY_CAP} of each`}
       </StatusText>
 
       {intro.computeMergePageUnlocked
@@ -169,26 +227,12 @@ const ComputePage = ({ game, onBack }) => {
 
             <CountersSection aria-label="compute counters">
               <CountersRow>
-                <CounterTile>
-                  <CounterLabel>Cores</CounterLabel>
-                  <CounterValue>{`${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-                </CounterTile>
-                <CounterTile>
-                  <CounterLabel>Nodes</CounterLabel>
-                  <CounterValue>{`${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-                </CounterTile>
-                <CounterTile>
-                  <CounterLabel>Clusters</CounterLabel>
-                  <CounterValue>{`${formatAmount(intro.computeClusters ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-                </CounterTile>
-                <CounterTile>
-                  <CounterLabel>Networks</CounterLabel>
-                  <CounterValue>{`${formatAmount(intro.computeNetworks ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-                </CounterTile>
-                <CounterTile>
-                  <CounterLabel>Grids</CounterLabel>
-                  <CounterValue>{`${formatAmount(intro.computeGrids ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
-                </CounterTile>
+                {COMPUTE_ENTITIES.map(({ field, label }) => (
+                  <CounterTile key={field}>
+                    <CounterLabel>{label}</CounterLabel>
+                    <CounterValue>{`${formatAmount(intro[field] ?? 0)}/${COMPUTE_ENTITY_CAP}`}</CounterValue>
+                  </CounterTile>
+                ))}
               </CountersRow>
             </CountersSection>
 
@@ -199,7 +243,7 @@ const ComputePage = ({ game, onBack }) => {
                 return (
                   <Button
                     key={key}
-                    aria-label={`merge ${COMPUTE_MERGE_RATIO} compute ${inputLabel.toLowerCase()} into 1 compute ${outputLabel.toLowerCase()}`}
+                    aria-label={`merge ${COMPUTE_MERGE_RATIO} ${inputLabel.toLowerCase()} into 1 ${outputLabel.toLowerCase()}`}
                     disabled={!canMerge(inputCount, outputCount)}
                     onClick={() => actions[action]()}
                     title={
@@ -219,7 +263,7 @@ const ComputePage = ({ game, onBack }) => {
           )
         : (
           <StatusText>
-            {`Compute Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Compute Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
+            {`Cores: ${formatAmount(intro.computeCores ?? 0)}/${COMPUTE_ENTITY_CAP} · Nodes: ${formatAmount(intro.computeNodes ?? 0)}/${COMPUTE_ENTITY_CAP}`}
           </StatusText>
           )}
 
@@ -233,7 +277,7 @@ const ComputePage = ({ game, onBack }) => {
             title={
               canActivateComputeBoost(state, boostType) && blockedByPriority
                 ? 'Take a higher-priority upgrade first (Storage Bank Fill, Bandwidth, or Storage Bank Build)'
-                : `Spend 1 Compute Core: ×${preset.multiplier} production for ${formatOfflineDuration(preset.durationSeconds)} — stacks up to ${COMPUTE_BOOST_MAX_STACKS}x with the same preset`
+                : `Spend 1 Core: ×${preset.multiplier} production for ${formatOfflineDuration(preset.durationSeconds)} — stacks up to ${COMPUTE_BOOST_MAX_STACKS}x with the same preset`
             }
             type="button"
             variant="prestige"

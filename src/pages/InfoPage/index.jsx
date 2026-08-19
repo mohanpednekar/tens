@@ -1,12 +1,26 @@
 import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
+  formatBitsInNearestUnit,
   getAutobuyerUnlockMilestone,
   getOverclockRequirement,
   getSpeedUpRequirement,
   getTierTickspeedAutobuyerMilestone,
 } from 'game/engine'
-import { TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import {
+  COMPUTE_BOOST_PRESETS,
+  COMPUTE_CORES_PER_NODE,
+  COMPUTE_ENTITY_CAP,
+  COMPUTE_MERGE_RATIO,
+  INTRO_BYTE_COMBINE_COST,
+  INTRO_CAPACITY_MULTIPLIER,
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+  INTRO_STORAGE_UNLOCK_CAPACITY,
+  STORAGE_BANK_LADDER_CAP,
+  STORAGE_BUILD_COST_MULTIPLIER,
+  TIER_DEFINITIONS,
+  TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
+} from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
 
@@ -89,6 +103,65 @@ const InfoPage = ({ onBack }) => {
           Every tier is bought directly with Bits, the base currency, and once owned, produces the
           tier immediately below it — production cascades all the way down to Bits. Reaching
           1 Googol Bytes (8×10^100 Bits) freezes production except for Prestige.
+        </p>
+      </Section>
+
+      <Section aria-label="byte foundry section">
+        <h2>Byte Foundry</h2>
+        <p>
+          Every fresh save — and every real Prestige after that — starts here, before Kilobytes
+          exist. Tap to fill Memory with bits, then combine the first {INTRO_BYTE_COMBINE_COST} into
+          a permanent Byte generator that produces passively from then on. Sacrifice drains Memory
+          for ×{INTRO_CAPACITY_MULTIPLIER} more capacity; Invest drains it instead for permanently
+          double production. A row of transfer blocks converts Memory into free Kilobytes — the
+          first conversion unlocks the main game, with no limit on further transfers after that.
+          A fixed priority order governs which of these (plus Storage and Compute below) you can
+          take at any moment: whichever ranks highest that's currently affordable is the only one
+          on offer.
+        </p>
+        <p>
+          The Byte generator itself, and everything in Storage/Compute below, is permanent — carried
+          over by every real Prestige. Only Memory's own balance and the main-game-unlock gate reset
+          each cycle, so returning cycles are a fast pit-stop, not a full replay. Revisit this screen
+          any time via MainPage's "⚙️ Byte Foundry" link.
+        </p>
+      </Section>
+
+      <Section aria-label="storage section">
+        <h2>Storage</h2>
+        <p>
+          Once Memory's capacity reaches {formatBitsInNearestUnit(INTRO_STORAGE_UNLOCK_CAPACITY)},
+          build Storage banks — a growing ladder of sizes, each costing{' '}
+          {STORAGE_BUILD_COST_MULTIPLIER}× its own size in Bytes to build. A built bank starts
+          empty; Memory automatically fills any empty bank over time, smallest size first. A full
+          bank redeems for a free Kilobyte once its size exactly matches Kilobytes' own current
+          price, then empties and refills again — nothing here is single-use. Up to{' '}
+          {STORAGE_BANK_LADDER_CAP} banks can ever be built at the ladder's current size before it
+          advances to the next.
+        </p>
+      </Section>
+
+      <Section aria-label="compute section">
+        <h2>Compute</h2>
+        <p>
+          Once Memory's capacity reaches{' '}
+          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}, a full Memory automatically
+          converts into 1 Core instead of idling — the cost is your entire current capacity, so a
+          bigger capacity buys fewer but pricier Cores. Every {COMPUTE_CORES_PER_NODE} Cores
+          automatically convert into 1 Node. From there, merging is entirely your own choice:
+          {' '}{COMPUTE_MERGE_RATIO} of one tier merges into 1 of the next, all the way up
+          Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
+          Megacomputer. Every tier caps at {COMPUTE_ENTITY_CAP} held.
+        </p>
+        <p>
+          Spend 1 Core on a Compute Boost — Burst (×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
+          {COMPUTE_BOOST_PRESETS.burst.durationSeconds}s), Standard
+          (×{COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
+          {COMPUTE_BOOST_PRESETS.standard.durationSeconds}s), or Sustain
+          (×{COMPUTE_BOOST_PRESETS.sustain.multiplier} for{' '}
+          {COMPUTE_BOOST_PRESETS.sustain.durationSeconds}s) — for a temporary production multiplier
+          on both Memory and Kilobytes at once. Activating the same preset again while it's already
+          running extends the remaining time instead of resetting it.
         </p>
       </Section>
 

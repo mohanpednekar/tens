@@ -44,27 +44,27 @@ const Header = styled.header`
   }
 `
 
-// The app version + a link to the Guide page (InfoPage — all the static "how it works" prose
-// that used to live inline here as click-to-expand disclosures, see CLAUDE.md's Architecture
-// section) sit directly beneath the title, always visible — no InfoDetails/summary wrapper
-// needed anymore, since there's no longer any collapsed body to reveal.
+// The app version + the Byte Foundry/Guide nav buttons sit directly beneath the title, always
+// visible. The Guide page (InfoPage — all the static "how it works" prose that used to live
+// inline here as click-to-expand disclosures, see CLAUDE.md's Architecture section) no longer
+// needs an InfoDetails/summary wrapper, since there's no longer any collapsed body to reveal.
 const HeaderMeta = styled.div`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   justify-content: center;
-  margin-top: 0.25rem;
+  margin-top: 0.4rem;
 `
 
-const GuideLink = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.color.textMuted};
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.75rem;
-  padding: 0;
-  text-decoration: underline;
+// Both nav buttons here use the same real Button + variant="info" convention every other
+// page-to-page link in the app already uses (ByteFoundryPage's own "🏦 Storage"/"⚡ Compute" nav
+// buttons) — a plain underlined text link (this page's own previous GuideLink styled-component)
+// read as far less obviously clickable/discoverable than that established pattern, particularly
+// for "⚙️ Byte Foundry", the more functionally important of the two links.
+const NavButton = styled(Button)`
+  font-size: 0.8rem;
+  padding: 0.4em 0.7em;
 `
 
 const TierList = styled.div`
@@ -1240,12 +1240,12 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
         <h1>Tens</h1>
         <HeaderMeta>
           <VersionText>v{version}</VersionText>
-          <GuideLink onClick={onOpenFoundry} title="Review this run's Byte Foundry" type="button">
-            ⚙️ Byte Foundry
-          </GuideLink>
-          <GuideLink onClick={onOpenInfo} title="How this game works" type="button">
-            ℹ️ Guide
-          </GuideLink>
+          <NavButton aria-label="open byte foundry" onClick={onOpenFoundry} title="Review this run's Byte Foundry" type="button" variant="info">
+            <ButtonContent>⚙️ Byte Foundry</ButtonContent>
+          </NavButton>
+          <NavButton aria-label="open guide" onClick={onOpenInfo} title="How this game works" type="button" variant="info">
+            <ButtonContent>ℹ️ Guide</ButtonContent>
+          </NavButton>
         </HeaderMeta>
       </Header>
 

@@ -274,7 +274,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // the dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
 // enabled once revealed (same "permanent, voluntarily-revisitable screen" posture as MainPage's
 // own "⚙️ Byte Foundry" link) so the player can check on built-but-not-yet-affordable progress (a
-// held bank, banked Compute Cores) even when nothing there is currently actionable. Every action
+// held bank, banked Cores) even when nothing there is currently actionable. Every action
 // itself — here or on either dedicated screen — stays gated by the Byte Foundry's forced priority
 // order (see "Byte Foundry" in CLAUDE.md): Storage Bank Fill > Bandwidth > Storage Bank Build >
 // Compute > Memory.
@@ -293,14 +293,14 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Compute Core
-  // conversion costs more once capacity is higher) — same "no modal component to reuse, use
-  // window.confirm" rationale MainPage's own Reset button confirm already documents.
+  // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
+  // costs more once capacity is higher) — same "no modal component to reuse, use window.confirm"
+  // rationale MainPage's own Reset button confirm already documents.
   const handleSacrificeClick = () => {
     const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
     if (window.confirm(
       `Sacrifice all of Memory to multiply capacity ×10, from ${formatBitsInNearestUnit(intro.capacity)} to ${formatBitsInNearestUnit(nextCapacity)}? ` +
-      'This is permanent and makes every future Compute Core cost more.'
+      'This is permanent and makes every future Core cost more.'
     )) {
       actions.pickIntroCapacityMilestone()
     }

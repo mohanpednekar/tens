@@ -256,19 +256,23 @@ reaches 8):
 - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
   `intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP`.
 - **Once unlocked:** a one-line mechanic summary for the merge chain, then a `StatCard`
-  (`aria-label="compute counters"`) showing all five compute-ladder counters — Cores, Nodes,
-  Clusters, Networks, Grids, each as `N/10` — followed by three merge buttons, one per tier
-  boundary, top to bottom: "Merge 8 Nodes → 1 Cluster", "Merge 8 Clusters → 1 Network", "Merge 8
-  Networks → 1 Grid" (`variant="prestige"`). Each calls its matching
-  `game.actions.mergeComputeNodesIntoCluster`/`mergeComputeClustersIntoNetwork`/
-  `mergeComputeNetworksIntoGrid` (wired in `useIncrementalGame.js`, no arguments). `disabled`
-  mirrors the engine's own gate (`canMerge(input, output)`: input ≥ `COMPUTE_MERGE_RATIO` (8) and
-  output < `COMPUTE_ENTITY_CAP`) — a UI-only mirror, not a replacement for it; `engine.js`
+  (`aria-label="compute counters"`) showing all ten compute-ladder counters, driven off a
+  `COMPUTE_ENTITIES` array (`{ field, label }` pairs) — Cores, Nodes, Clusters, Networks, Grids,
+  Fabrics, Clouds, Datacenters, Supercomputers, Megacomputers, each as `N/10` — followed by eight
+  merge buttons, one per tier boundary, driven off a `MERGE_TIERS` array, top to bottom: "Merge 8
+  Nodes → 1 Cluster", "Merge 8 Clusters → 1 Network", "Merge 8 Networks → 1 Grid", "Merge 8 Grids →
+  1 Fabric", "Merge 8 Fabrics → 1 Cloud", "Merge 8 Clouds → 1 Datacenter", "Merge 8 Datacenters → 1
+  Supercomputer", "Merge 8 Supercomputers → 1 Megacomputer" (`variant="prestige"`). Each calls its
+  matching `game.actions.mergeCompute*Into*` action (wired in `useIncrementalGame.js`, no
+  arguments) — one per `mergeComputeEntities`-built engine function (see `docs/ECONOMY_REFERENCE.md`).
+  `disabled` mirrors the engine's own gate (`canMerge(input, output)`: input ≥ `COMPUTE_MERGE_RATIO`
+  (8) and output < `COMPUTE_ENTITY_CAP`) — a UI-only mirror, not a replacement for it; `engine.js`
   re-validates on every call regardless (see "Security notes" in CLAUDE.md). Each button's
-  `aria-label` spells out the full action (e.g. "merge 8 compute nodes into 1 compute cluster");
-  its `title` explains the cost when enabled, or why it's blocked (input balance, or the output
-  already at cap) when disabled. Nothing spends a Compute Grid yet — see issue #280's "Out of
-  scope".
+  `aria-label` spells out the full action (e.g. "merge 8 nodes into 1 cluster") — note no entity
+  name carries a "compute" prefix here; "Compute" names the page/feature only, per this page's own
+  title. Each button's `title` explains the cost when enabled, or why it's blocked (input balance,
+  or the output already at cap) when disabled. Nothing spends a Megacomputer yet — see issue #280's
+  "Out of scope".
 
 Either way, a `PresetsRow` (`display: flex`, each button `flex: 1`, matching ByteFoundryPage's own
 `MilestonesRow` convention) of the 3 Compute Boost preset buttons follows
@@ -430,11 +434,16 @@ for the same state.
   *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
-  `<h1>Tens</h1>`, beside the "⚙️ Byte Foundry" link (a plain `GuideLink`-styled button calling the
-  `onOpenFoundry` prop) and the `ℹ️ Guide` link (calling `onOpenInfo`) — all three always visible,
-  no disclosure involved. Sourced from `package.json`'s `"version"` field via a build-time JSON
-  import (`import { version } from '../../../package.json'`) — the single source of truth; no
-  separate constant duplicates it.
+  `<h1>Tens</h1>`, beside the "⚙️ Byte Foundry" nav button (`aria-label="open byte foundry"`,
+  calling the `onOpenFoundry` prop) and the "ℹ️ Guide" nav button (`aria-label="open guide"`,
+  calling `onOpenInfo`) — all three always visible, no disclosure involved. Both nav buttons are a
+  real `Button`/`ButtonContent` pair (`variant="info"`, styled via a small `NavButton = styled(Button)`
+  override for header-scale sizing), the same convention `ByteFoundryPage`'s own "🏦 Storage"/"⚡
+  Compute" nav buttons already use — not the plain underlined `GuideLink` text-button this page used
+  before, which read as far less obviously clickable than the rest of the app's own navigation.
+  Sourced from `package.json`'s `"version"` field via a build-time JSON import
+  (`import { version } from '../../../package.json'`) — the single source of truth; no separate
+  constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an

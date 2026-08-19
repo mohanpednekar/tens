@@ -66,6 +66,24 @@ test('renders the current app version beside the title', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
+// Regression test: both nav links used to be a plain underlined <button> with no aria-label
+// (GuideLink), styled far less obviously as clickable than every other page-to-page link in the
+// app (e.g. ByteFoundryPage's own "🏦 Storage"/"⚡ Compute" buttons). They're now real Button
+// components on the same variant="info" convention — this only asserts the accessible surface
+// (role + aria-label), since jsdom doesn't render CSS for a visual check.
+test('the Byte Foundry and Guide header links are real, accessibly-labeled buttons', () => {
+  seedMainGameState()
+  render(<App />)
+
+  const foundryButton = screen.getByRole('button', { name: /open byte foundry/i })
+  expect(foundryButton).toHaveTextContent('⚙️ Byte Foundry')
+  expect(foundryButton).toHaveAttribute('title', "Review this run's Byte Foundry")
+
+  const guideButton = screen.getByRole('button', { name: /open guide/i })
+  expect(guideButton).toHaveTextContent('ℹ️ Guide')
+  expect(guideButton).toHaveAttribute('title', 'How this game works')
+})
+
 test('the Guide link navigates to the Info page and Back to game returns, preserving game state', async () => {
   const user = userEvent.setup()
 
@@ -76,8 +94,14 @@ test('the Guide link navigates to the Info page and Back to game returns, preser
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
-  await user.click(screen.getByText('ℹ️ Guide'))
+  await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  // Guide sections covering the Byte Foundry pre-game (Memory/tapping/Sacrifice/Invest, Storage,
+  // and Compute — including the full merge chain) render alongside the pre-existing main-game
+  // sections (Tickspeed, Speed Up, …).
+  expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))
@@ -2156,7 +2180,7 @@ test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit leve
     purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
   })
   render(<App />)
-  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   // tier01 is at level 2 — its own current per-unit cost is 10,000 bits; the transfer block
   // spends BITS_PER_BYTE × that (80,000 bits, "10 KB" in Memory's own Byte-based scale), not the
@@ -2189,7 +2213,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
     },
   })
   const { unmount } = render(<App />)
-  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
   const activeBlock = screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })
@@ -2248,7 +2272,7 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   // just keeps mirroring tier01's own live purchase-block progress, which reset to 0 once the level
   // completed. tier01 is now at level 2, so each block's own cost has stepped up to 10 KB
   // (getIntroKilobyteConversionCost), not the level-1 1 KB rate.
-  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(7)
   expect(screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })).toBeDisabled()
@@ -2861,7 +2885,7 @@ describe('ComputePage merge chain', () => {
     openCompute()
 
     expect(screen.queryByLabelText(/^compute counters$/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /merge 8 compute nodes into 1 compute cluster/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
   })
 
   test('the merge chain section shows once unlocked, with a Back to Byte Foundry exit', () => {
@@ -2889,7 +2913,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('button', { name: /merge 8 compute nodes into 1 compute cluster/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
   })
 
   test('merging spends 8 of the input entity for 1 of the output entity', () => {
@@ -2900,7 +2924,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    fireEvent.click(screen.getByRole('button', { name: /merge 8 compute nodes into 1 compute cluster/i }))
+    fireEvent.click(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(1)
@@ -2915,7 +2939,65 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('button', { name: /merge 8 compute clusters into 1 compute network/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /merge 8 clusters into 1 network/i })).toBeDisabled()
+  })
+
+  test('the full ten-tier progression renders, Cores through Megacomputers, once unlocked', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 1, computeNodes: 2, computeClusters: 3, computeNetworks: 4, computeGrids: 5,
+      computeFabrics: 6, computeClouds: 7, computeDatacenters: 8, computeSupercomputers: 9, computeMegacomputers: 1,
+    })
+    render(<App />)
+    openCompute()
+
+    const counters = screen.getByLabelText(/^compute counters$/i)
+    expect(counters).toHaveTextContent(/cores.*1\/10/i)
+    expect(counters).toHaveTextContent(/nodes.*2\/10/i)
+    expect(counters).toHaveTextContent(/clusters.*3\/10/i)
+    expect(counters).toHaveTextContent(/networks.*4\/10/i)
+    expect(counters).toHaveTextContent(/grids.*5\/10/i)
+    expect(counters).toHaveTextContent(/fabrics.*6\/10/i)
+    expect(counters).toHaveTextContent(/clouds.*7\/10/i)
+    expect(counters).toHaveTextContent(/datacenters.*8\/10/i)
+    expect(counters).toHaveTextContent(/supercomputers.*9\/10/i)
+    expect(counters).toHaveTextContent(/megacomputers.*1\/10/i)
+
+    expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 clusters into 1 network/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 networks into 1 grid/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 grids into 1 fabric/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 fabrics into 1 cloud/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 clouds into 1 datacenter/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 datacenters into 1 supercomputer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /merge 8 supercomputers into 1 megacomputer/i })).toBeInTheDocument()
+  })
+
+  test('merging at the top of the chain (Supercomputers into a Megacomputer) spends 8 for 1, same as every other tier', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeSupercomputers: 9, computeMegacomputers: 1,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /merge 8 supercomputers into 1 megacomputer/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeSupercomputers).toBe(1)
+    expect(saved.intro.computeMegacomputers).toBe(2)
+  })
+
+  test('no entity name in the merge chain UI carries a redundant "Compute" prefix', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 9, computeClusters: 1,
+    })
+    render(<App />)
+    openCompute()
+
+    expect(screen.getByLabelText(/^compute counters$/i)).not.toHaveTextContent(/compute core|compute node|compute cluster/i)
+    expect(screen.queryByRole('button', { name: /merge 8 compute /i })).not.toBeInTheDocument()
   })
 })
 
@@ -2996,7 +3078,7 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   })
   const { unmount } = render(<App />)
 
-  fireEvent.click(screen.getByText('ℹ️ Guide'))
+  fireEvent.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
   // Auto-Prestige fires in the background and resets intro.mainGameUnlocked to false, but the
@@ -3035,7 +3117,7 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   })
   render(<App />)
 
-  await user.click(screen.getByText('⚙️ Byte Foundry'))
+  await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
@@ -3077,7 +3159,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   })
   const { unmount } = render(<App />)
 
-  fireEvent.click(screen.getByText('⚙️ Byte Foundry'))
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   // Reached voluntarily — Tap was already live before the Prestige, same as after (see test above).
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
