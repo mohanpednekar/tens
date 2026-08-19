@@ -31,7 +31,9 @@ import {
   setAutoSpeedUpEnabled,
   setTierTickspeedAutobuyerEnabled,
   formatAmount,
+  formatBitsInNearestUnit,
   formatCurrency,
+  formatMemoryAmount,
   formatOfflineDuration,
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
@@ -47,6 +49,7 @@ import {
   getIntroProductionMilestoneMaxClaims,
   getLastTierXpTickspeedMinConsumption,
   getLastTierXpTickspeedMultiplier,
+  getMemoryUnit,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
   getOverclockMultiplier,
@@ -882,6 +885,44 @@ describe('isStorageUnlocked', () => {
   })
 })
 
+describe('getMemoryUnit', () => {
+  it('is null before byteCreated — nothing to denominate in yet', () => {
+    expect(getMemoryUnit(INTRO_STARTING_CAPACITY, false)).toBeNull()
+  })
+
+  it('stays in raw Bytes (divisor BITS_PER_BYTE) below the KB threshold', () => {
+    expect(getMemoryUnit(INTRO_STARTING_CAPACITY, true)).toEqual({ symbol: 'B', divisor: BITS_PER_BYTE })
+  })
+
+  it('steps up through multiple units as capacity grows, matching tier symbols', () => {
+    // 8,000,000 bits = 1 MB in Memory's own scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).
+    expect(getMemoryUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, true)).toEqual({ symbol: 'MB', divisor: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
+  })
+
+  it('caps at the largest unit (QB) rather than running off the end of the symbol list', () => {
+    const hugeCapacity = BITS_PER_BYTE * 1000 ** 11
+    expect(getMemoryUnit(hugeCapacity, true)).toEqual({ symbol: 'QB', divisor: BITS_PER_BYTE * 1000 ** 10 })
+  })
+})
+
+describe('formatMemoryAmount', () => {
+  it('renders raw bits with singular/plural grammar when there is no unit yet', () => {
+    expect(formatMemoryAmount(1, null)).toBe('1 bit')
+    expect(formatMemoryAmount(2, null)).toBe('2 bits')
+  })
+
+  it('renders in the given unit, flooring rather than rounding so a balance never overstates', () => {
+    const unit = { symbol: 'KB', divisor: 1000 }
+    expect(formatMemoryAmount(1999, unit)).toBe('1.999 KB')
+  })
+})
+
+describe('formatBitsInNearestUnit', () => {
+  it('picks the unit that best fits the given amount itself', () => {
+    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('1 MB')
+  })
+})
+
 describe('getIntroKilobyteConversionCost', () => {
   it('is tier01\'s own starting per-unit cost (1000, matching INTRO_BITS_PER_KILOBYTE_CONVERSION) on a fresh cycle', () => {
     expect(getIntroKilobyteConversionCost(createInitialGameState())).toBe(INTRO_BITS_PER_KILOBYTE_CONVERSION)
@@ -957,6 +998,11 @@ describe('tickIntroProduction', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, tickSpeedSeconds: 1, productionMultiplier: 1, capacity: 100 })
     const after = tickIntroProduction(1)(state)
     expect(after.intro.bits).toBe(1)
+  })
+
+  it('returns the same state reference for a true zero-delta tick, not just an equal-valued one', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1, capacity: 100 })
+    expect(tickIntroProduction(0)(state)).toBe(state)
   })
 
   it('delivers nothing before a full tickSpeedSeconds period has accumulated, banking the partial progress', () => {
