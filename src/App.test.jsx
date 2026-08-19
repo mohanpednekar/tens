@@ -2867,14 +2867,14 @@ describe('ComputePage merge chain', () => {
   test('the merge chain section shows once unlocked, with a Back to Byte Foundry exit', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
-      computeCores: 2, computeNodes: 16, computeClusters: 3, computeNetworks: 0, computeGrids: 0,
+      computeCores: 2, computeNodes: 9, computeClusters: 3, computeNetworks: 0, computeGrids: 0,
     })
     render(<App />)
     openCompute()
 
     expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/cores.*2\/10/i)
-    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/nodes.*16\/10/i)
+    expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/nodes.*9\/10/i)
     expect(screen.getByLabelText(/^compute counters$/i)).toHaveTextContent(/clusters.*3\/10/i)
 
     fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))

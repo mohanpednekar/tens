@@ -249,8 +249,9 @@ returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `
 the automatic Memory→Core→Node conversion and the `COMPUTE_ENTITY_CAP` (10) cap.
 
 Below that, the page branches on `intro.computeMergePageUnlocked` (a permanent, one-time reveal
-latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips the first time the
-player's *cumulative* Compute Core total ever reaches 8, independent of same-tick Node conversion):
+latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips the first time
+`intro.computeCoresEverEarned`, a lifetime counter never decremented by spending or merging, ever
+reaches 8):
 
 - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
   `intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP`.

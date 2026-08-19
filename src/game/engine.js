@@ -337,6 +337,13 @@ export const createInitialGameState = () => ({
     // makes each future Core more expensive. Spent 1 at a time by activateComputeBoost below —
     // see the "Byte Foundry Compute Boost" section of layers.js.
     computeCores: 0,
+    // PERMANENT — a monotonically-increasing lifetime counter, incremented by
+    // tickComputeCoreConversion alongside computeCores itself but NEVER decremented by spending
+    // (activateComputeBoost) or merging (tickComputeNodeConversion) — the actual "CUMULATIVE total
+    // of Compute Cores ever earned" computeMergePageUnlocked below needs. computeCores alone can't
+    // serve this purpose: a player who spends a Boost before ever holding 8 Cores at once would
+    // otherwise never trip the latch, even after having earned well past 8 in total.
+    computeCoresEverEarned: 0,
     // PERMANENT — automatically incremented by tickComputeNodeConversion every time computeCores
     // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). Also the input
     // to mergeComputeNodesIntoCluster below — unlike Core→Node, merging Nodes upward is a manual,
@@ -355,10 +362,10 @@ export const createInitialGameState = () => ({
     computeGrids: 0,
     // PERMANENT, one-time reveal latch for ComputePage — analogous in spirit to
     // intro.mainGameUnlocked's own "first time" latch, but never re-checked once true (see
-    // tickComputeCoreConversion, the only place this ever flips). Tracks the CUMULATIVE total of
-    // Compute Cores ever earned reaching COMPUTE_CORES_PER_NODE (8), not the current live balance —
-    // merging Nodes back down (or spending Cores on a Boost) must never re-hide the page once
-    // revealed.
+    // tickComputeCoreConversion, the only place this ever flips). Gated on computeCoresEverEarned
+    // (above) reaching COMPUTE_CORES_PER_NODE (8), not the current live computeCores balance —
+    // merging Nodes back down, or spending Cores on a Boost (even before ever holding 8 at once),
+    // must never prevent or re-hide the page once earned.
     computeMergePageUnlocked: false,
     // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
     // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
@@ -1911,26 +1918,29 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // ahead of ordinary Kilobyte conversion once unlocked and full — the same "first claim" priority
 // tickStorageAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
 // posture as every other Byte Foundry mechanic (a separate currency pool, not resources.base).
-// Also the only place intro.computeMergePageUnlocked ever flips — normally the instant a
-// conversion brings the cumulative Core count to COMPUTE_CORES_PER_NODE (8) for the first time,
-// which is exactly the moment the very first Node would ever be minted (see
-// tickComputeNodeConversion, called right after this in tickGame) — so checking the
-// post-conversion total here, before that conversion consumes it back down, is what makes the
-// latch track the CUMULATIVE total rather than the live balance. The latch check is deliberately
-// evaluated independently of whether a conversion actually happens this tick, though: a save whose
-// computeCores was already >= 8 (e.g. from before this latch existed, or simply sitting at the
-// COMPUTE_ENTITY_CAP with no room left to convert into) would otherwise never trip the
-// post-conversion check at all — computeCores >= COMPUTE_ENTITY_CAP short-circuits above before
-// the increment ever runs — permanently hiding the merge chain from a player who has obviously
-// already earned it.
+// Also the only place intro.computeCoresEverEarned/intro.computeMergePageUnlocked ever change.
+// computeCoresEverEarned increments by 1 every time a conversion actually mints a Core — a true
+// lifetime counter, never decremented by spending (activateComputeBoost) or merging
+// (tickComputeNodeConversion) — unlike the live computeCores balance, which both of those do
+// drain. computeMergePageUnlocked flips true the instant that counter reaches
+// COMPUTE_CORES_PER_NODE (8) for the first time; checking the *lifetime* counter rather than the
+// live balance is what makes this genuinely track "ever earned" — a player who spends a Boost
+// before ever holding 8 Cores at once, or whose Cores/Nodes were already capped from before this
+// latch existed, still trips it correctly. The latch check is deliberately evaluated independently
+// of whether a conversion happens THIS tick: a save whose computeCoresEverEarned is already >= 8
+// (from any past tick) but whose computeCores happens to be at COMPUTE_ENTITY_CAP right now (no
+// room left to convert into) would otherwise never re-enter this function's success path at all —
+// permanently hiding the merge chain from a player who has obviously already earned it.
 export const tickComputeCoreConversion = state => {
   if (!isComputeCoreConversionUnlocked(state)) return state
 
   const currentCores = state.intro.computeCores ?? 0
+  const currentEverEarned = state.intro.computeCoresEverEarned ?? 0
   const latchAlreadySet = state.intro.computeMergePageUnlocked ?? false
   const canConvert = state.intro.bits >= state.intro.capacity && currentCores < COMPUTE_ENTITY_CAP
   const computeCores = canConvert ? currentCores + 1 : currentCores
-  const computeMergePageUnlocked = latchAlreadySet || computeCores >= COMPUTE_CORES_PER_NODE
+  const computeCoresEverEarned = canConvert ? currentEverEarned + 1 : currentEverEarned
+  const computeMergePageUnlocked = latchAlreadySet || computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
 
   if (!canConvert && computeMergePageUnlocked === latchAlreadySet) return state
 
@@ -1940,6 +1950,7 @@ export const tickComputeCoreConversion = state => {
       ...state.intro,
       bits: canConvert ? 0 : state.intro.bits,
       computeCores,
+      computeCoresEverEarned,
       computeMergePageUnlocked,
     },
   }
@@ -2343,6 +2354,7 @@ export const prestigeGame = state => {
       // permanent as the Byte generator/Storage above — carried over unchanged, never wiped by a
       // real Prestige along with Memory itself.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
+      computeCoresEverEarned: state.intro?.computeCoresEverEarned ?? initial.intro.computeCoresEverEarned,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
       computeClusters: state.intro?.computeClusters ?? initial.intro.computeClusters,
       computeNetworks: state.intro?.computeNetworks ?? initial.intro.computeNetworks,

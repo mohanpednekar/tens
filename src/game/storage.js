@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, createInitialGameState } from './engine'
-import { DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
+import { COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
 
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
@@ -169,6 +169,30 @@ const migrateState = saved => {
   // nothing reads it, same as any other superseded field elsewhere in this file). A save that
   // already has `mainGameUnlocked` (post-this-change) needs no such backfill and merges normally.
   const introPredatesMainGameUnlocked = saved.intro !== undefined && saved.intro.mainGameUnlocked === undefined
+  // computeCoresEverEarned is a new lifetime counter (see engine.js's tickComputeCoreConversion)
+  // that intro.computeMergePageUnlocked now gates on instead of the live computeCores balance. A
+  // save from before this counter existed but already has computeCores/computeNodes (Compute
+  // Cores/Nodes themselves shipped one PR earlier) would otherwise merge in fresh's `0` default and
+  // have to earn a further 8 Cores from scratch before ever seeing the merge chain, even if it
+  // obviously already qualifies. Backfill a lower-bound reconstruction from what's still held:
+  // every currently-held Node represents COMPUTE_CORES_PER_NODE Cores that were once minted to
+  // create it, plus whatever's sitting in the live computeCores balance right now. This
+  // undercounts a save that already merged Nodes upward into Clusters/Networks/Grids, but that's
+  // fine — reaching a Cluster at all already implies plenty more than 8 were ever earned, so
+  // computeMergePageUnlocked gets backfilled to true directly for that case instead (see below).
+  const legacyComputeCoresEverEarned = saved.intro === undefined || saved.intro.computeCoresEverEarned !== undefined
+    ? undefined
+    : (saved.intro.computeNodes ?? 0) * COMPUTE_CORES_PER_NODE + (saved.intro.computeCores ?? 0)
+  // Backfilling the latch itself needs a second signal beyond legacyComputeCoresEverEarned: a save
+  // that already merged every held Node upward into a Cluster/Network/Grid has 0 Nodes left to
+  // reconstruct from (the undercount legacyComputeCoresEverEarned's own comment above notes), but
+  // holding any of those three at all already proves well past 8 were earned historically.
+  const legacyComputeMergePageUnlocked = saved.intro === undefined || saved.intro.computeMergePageUnlocked !== undefined
+    ? undefined
+    : Boolean(
+      (legacyComputeCoresEverEarned ?? 0) >= COMPUTE_CORES_PER_NODE ||
+      saved.intro.computeClusters || saved.intro.computeNetworks || saved.intro.computeGrids
+    )
   const migratedIntro = isPreByteFoundrySave
     ? { ...fresh.intro, mainGameUnlocked: true }
     : {
@@ -177,6 +201,8 @@ const migrateState = saved => {
       ...(introPredatesMainGameUnlocked ? {
         mainGameUnlocked: saved.intro.completed === true,
       } : {}),
+      ...(legacyComputeCoresEverEarned !== undefined ? { computeCoresEverEarned: legacyComputeCoresEverEarned } : {}),
+      ...(legacyComputeMergePageUnlocked ? { computeMergePageUnlocked: true } : {}),
     }
 
   // applyAutobuyerMilestones (see engine.js) retroactively unlocks any tier autobuyer/tier-

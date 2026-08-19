@@ -1630,31 +1630,73 @@ describe('tickComputeNodeConversion', () => {
   })
 })
 
-describe('tickComputeCoreConversion computeMergePageUnlocked latch', () => {
-  it('stays false while the cumulative Core total is still below COMPUTE_CORES_PER_NODE', () => {
+describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnlocked latch', () => {
+  it('increments computeCoresEverEarned on every successful conversion, independently of the live computeCores balance', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      computeCores: 3,
+      computeCoresEverEarned: 5,
+    })
+    const after = tickComputeCoreConversion(state)
+    expect(after.intro.computeCores).toBe(4)
+    expect(after.intro.computeCoresEverEarned).toBe(6)
+  })
+
+  it('stays false while the lifetime-earned total is still below COMPUTE_CORES_PER_NODE', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: COMPUTE_CORES_PER_NODE - 2,
+      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 2,
     })
     expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(false)
   })
 
-  it('flips true the instant the cumulative Core total reaches COMPUTE_CORES_PER_NODE, even though tickComputeNodeConversion immediately spends it back down the same tick', () => {
+  it('flips true the instant the lifetime-earned total reaches COMPUTE_CORES_PER_NODE, even though tickComputeNodeConversion immediately spends the live balance back down the same tick', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: COMPUTE_CORES_PER_NODE - 1,
+      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 1,
       byteCreated: true,
     })
     expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(true)
     // The full tickGame pipeline converts the freshly-minted 8th Core into a Node the very same
-    // tick — the latch must still have flipped, since it tracks the cumulative total, not the
-    // live balance left behind afterward.
+    // tick — the latch must still have flipped, since it tracks the lifetime-earned total, not
+    // the live balance left behind afterward.
     const after = tickGame(1)(state)
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.computeNodes).toBe(1)
     expect(after.intro.computeMergePageUnlocked).toBe(true)
+  })
+
+  // Regression test for the scenario a human/bot reviewer flagged: computeCores alone can't
+  // represent "ever earned" since activateComputeBoost spends it. A player who never holds 8 at
+  // once — earning a few, spending a Boost, earning a few more — must still unlock the merge
+  // chain once their lifetime total crosses 8, exactly like a player who never spends at all.
+  it('flips true from repeated small earn/spend cycles that never reach 8 Cores live at once', () => {
+    let state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      computeCores: 0,
+      computeCoresEverEarned: 0,
+    })
+    // Earn 3, "spend" 3 (simulating activateComputeBoost, which only touches computeCores).
+    for (let i = 0; i < 3; i++) {
+      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
+      state = tickComputeCoreConversion(state)
+    }
+    expect(state.intro.computeCoresEverEarned).toBe(3)
+    state = withIntro(state, { computeCores: 0 }) // spent via a Boost, never held 8 at once
+    expect(state.intro.computeMergePageUnlocked).toBe(false)
+    // Earn 5 more — lifetime total now 8, even though the live balance never exceeded 3.
+    for (let i = 0; i < 5; i++) {
+      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
+      state = tickComputeCoreConversion(state)
+    }
+    expect(state.intro.computeCoresEverEarned).toBe(8)
+    expect(state.intro.computeMergePageUnlocked).toBe(true)
   })
 
   it('never re-clears once set, even once Cores/Nodes are later spent back down to 0', () => {
@@ -1672,6 +1714,7 @@ describe('tickComputeCoreConversion computeMergePageUnlocked latch', () => {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: COMPUTE_ENTITY_CAP,
+      computeCoresEverEarned: COMPUTE_ENTITY_CAP,
       computeNodes: COMPUTE_ENTITY_CAP,
       computeMergePageUnlocked: false,
     })
@@ -1682,11 +1725,12 @@ describe('tickComputeCoreConversion computeMergePageUnlocked latch', () => {
     expect(after.intro.bits).toBe(state.intro.bits)
   })
 
-  it('stays a same-reference no-op when Cores are below COMPUTE_CORES_PER_NODE and Memory is not full', () => {
+  it('stays a same-reference no-op when the lifetime-earned total is below COMPUTE_CORES_PER_NODE and Memory is not full', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: 0,
       computeCores: 2,
+      computeCoresEverEarned: 2,
       computeMergePageUnlocked: false,
     })
     expect(tickComputeCoreConversion(state)).toBe(state)
@@ -1767,13 +1811,16 @@ describe('tickGame Compute Core/Node integration', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('carries computeCores/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
+  it('carries computeCores/computeCoresEverEarned/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
     const state = withMoney(
-      withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 2, byteCreated: true, capacity: 800 }),
+      withIntro(createInitialGameState(), {
+        computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800,
+      }),
       PRESTIGE_THRESHOLD
     )
     const after = prestigeGame(state)
     expect(after.intro.computeCores).toBe(5)
+    expect(after.intro.computeCoresEverEarned).toBe(13)
     expect(after.intro.computeNodes).toBe(2)
     // Memory itself still resets fresh, unlike the permanent Compute counters above.
     expect(after.intro.bits).toBe(0)
