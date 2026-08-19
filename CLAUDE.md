@@ -303,54 +303,27 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
-    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen — a mandatory gate before each
-                               Prestige cycle's transition into the main game (see "Economy
-                               model" below and `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section),
-                               and, once that cycle's `intro.mainGameUnlocked` is true (the first bits
-                               ever converted into Kilobytes this cycle — well before the transfer
-                               budget is exhausted), a permanent screen the player can voluntarily
-                               revisit at any time via MainPage's own "⚙️ Byte Foundry" link. Takes an
-                               `onBack` prop (only passed once `intro.mainGameUnlocked` — the mandatory
-                               gate itself has no way out); nothing here ever goes read-only —
-                               Tap/Combine/Sacrifice/Invest stay live indefinitely every cycle, and
-                               Convert stays live too — there is no per-cycle transfer cap at all, only
-                               tier01's own live purchase-block progress (see below). Compute moved
-                               entirely to its own dedicated screen (see ComputePage below) once
-                               revealed — this page only renders a nav button to reach it, always
-                               enabled once revealed (see "Economy model" below); its own actions
-                               stay gated by the forced priority order, same as Sacrifice/Invest
-                               here. Storage split differently: the Build button (its own core-loop
-                               action) and a brief per-size summary chip row both stay on this page;
-                               only the fuller per-size detail and redeeming live on StoragePage
-                               (see below), reached via its own nav button. Receives
-                               the full `game` object (`{ state, actions, ... }` from
+    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (see "Architecture" 4 and "Economy
+                               model" below). Takes an `onBack` prop (only passed once
+                               `intro.mainGameUnlocked` — the mandatory gate itself has no way out).
+                               Receives the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← Storage's fuller detail screen, split out of ByteFoundryPage (see
-                               "Economy model" below) — one row of bank squares per size ever
-                               reached, for redeeming (Storage Bank Fill); NOT the Build button,
-                               which stays on ByteFoundryPage itself alongside its own per-size
-                               summary. Reached only via ByteFoundryPage's own "🏦 Storage" nav
-                               button; takes `{ game, onBack }`, `onBack` always returning to
-                               ByteFoundryPage (`page = 'foundry'`)
-    ComputePage/index.jsx   ← the Compute screen, split out of ByteFoundryPage (see "Economy model"
-                               below) — Compute Core/Node counters + the 3 Boost preset buttons.
-                               Reached only via ByteFoundryPage's own "⚡ Compute" nav button; takes
-                               `{ game, onBack }`, `onBack` always returning to ByteFoundryPage
-                               (`page = 'foundry'`)
-    MainPage/index.jsx      ← the game itself; compact one-line-per-tier layout, data-driven from
-                               TIER_DEFINITIONS — no explanatory prose, just live game state/controls
-                               (see "Architecture" below). Takes `{ game, onOpenFoundry, onOpenInfo }`
-                               props — `game` is the full `useIncrementalGame()` object, lifted up into
-                               App.jsx (see below) so ByteFoundryPage and MainPage can share one
-                               save/tick loop. Full field-by-field reference:
-                               `docs/MAINPAGE_REFERENCE.md`
-    InfoPage/index.jsx      ← the Guide page: static, evergreen explanations of every mechanic
-                               (Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones) that used
-                               to live inline on MainPage as click-to-expand disclosures. Reads no game
-                               state — the handful of numbers it shows (milestone/requirement
-                               thresholds) are derived from the same engine.js/layers.js constants the
-                               game itself uses, not hardcoded. Reachable via MainPage's "ℹ️ Guide"
-                               link; its own "← Back to game" button returns to MainPage
+    StoragePage/index.jsx   ← Storage's fuller detail screen (see "Architecture" 4a below) — one
+                               row of bank squares per size ever reached, for redeeming; NOT the
+                               Build button, which stays on ByteFoundryPage. Reached only via
+                               ByteFoundryPage's own "🏦 Storage" nav button; takes `{ game, onBack }`,
+                               `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
+    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — Compute Core/Node
+                               counters + the 3 Boost preset buttons. Reached only via
+                               ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`,
+                               `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
+    MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
+                               onOpenFoundry, onOpenInfo }` props — `game` is the full
+                               `useIncrementalGame()` object, lifted up into App.jsx (see below) so
+                               ByteFoundryPage and MainPage can share one save/tick loop. Full
+                               field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
+    InfoPage/index.jsx      ← the Guide page (see "Architecture" below). Reachable via MainPage's
+                               "ℹ️ Guide" link; its own "← Back to game" button returns to MainPage
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -836,7 +809,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (949 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (957 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -867,7 +840,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (949, see "Testing" above) is unaffected by anything under `e2e/`.
+  (957, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
