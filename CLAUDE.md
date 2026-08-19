@@ -432,18 +432,22 @@ Strict three-layer separation:
    removed player-facing ×1/×10 "Bulk" toggle — no persisted preference to manage). On mount, a
    one-time `computeInitialGame` helper loads any saved state, reads `loadLastSaveTimestamp()`, and —
    if elapsed real time registers at least one simulated second — folds in offline progress via
-   `applyOfflineProgress` before the first render, recording a `{ elapsedRealSeconds,
-   effectiveSeconds }` summary as `offlineProgress`; `dismissOfflineProgress` (and `resetGame`) clear
-   it back to `null`. This mount-time check only ever covers time the app was fully torn down (a real
-   page load/PWA cold start) — it runs once, before the tick timer starts, and never again for the
-   life of that mount. Since a backgrounded/suspended tab or PWA (the far more common case on mobile —
-   the OS routinely throttles or fully pauses a background page's `setInterval` without ever tearing
-   the page down) never remounts, `offlineProgress` is **not** a one-shot value: the live tick loop
-   itself also tracks the real wall-clock time of its own most recent firing and, on any firing (from
-   `setInterval` or from a `visibilitychange` listener that fires the same check immediately on
+   `applyOfflineProgress` before the first render, always applied to `state` at whichever speed
+   applies (100% at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` — 10 minutes — 50% beyond
+   it). Only past that same threshold does it also record a `{ elapsedRealSeconds, effectiveSeconds }`
+   summary as `offlineProgress` for the "Welcome back!" notice to render — a short absence updates the
+   game silently, with `offlineProgress` staying `null`; `dismissOfflineProgress` (and `resetGame`)
+   clear it back to `null` too. This mount-time check only ever covers time the app was fully torn down
+   (a real page load/PWA cold start) — it runs once, before the tick timer starts, and never again for
+   the life of that mount. Since a backgrounded/suspended tab or PWA (the far more common case on
+   mobile — the OS routinely throttles or fully pauses a background page's `setInterval` without ever
+   tearing the page down) never remounts, `offlineProgress` is **not** a one-shot value: the live tick
+   loop itself also tracks the real wall-clock time of its own most recent firing and, on any firing
+   (from `setInterval` or from a `visibilitychange` listener that fires the same check immediately on
    resume) whose gap since the previous one exceeds `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s — far
    past ordinary `setInterval` jitter), replays that gap through the identical `applyOfflineProgress`
-   path instead of an ordinary tick, producing a fresh `offlineProgress` object mid-session. See
+   path instead of an ordinary tick, producing a fresh `offlineProgress` object mid-session (subject to
+   the same full-speed-threshold notice suppression as the mount-time check). See
    `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section for the full detection/threshold detail.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders

@@ -145,7 +145,7 @@ import {
   tickStorageAutoFill,
   tickStorageAutoRedeem,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -4615,12 +4615,19 @@ describe('tickGame', () => {
 // ─── getOfflineEffectiveSeconds ──────────────────────────────────────────────
 
 describe('getOfflineEffectiveSeconds', () => {
-  it('scales elapsed real seconds down to 50%', () => {
-    expect(getOfflineEffectiveSeconds(100)).toBe(50)
+  it('runs at 100% speed at or below the full-speed threshold', () => {
+    expect(getOfflineEffectiveSeconds(300)).toBe(300)
+    expect(getOfflineEffectiveSeconds(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)).toBe(
+      OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
+    )
   })
 
-  it('floors a fractional result', () => {
-    expect(getOfflineEffectiveSeconds(15)).toBe(7) // 7.5 → 7
+  it('scales the entire elapsed duration down to 50% once past the full-speed threshold', () => {
+    expect(getOfflineEffectiveSeconds(1000)).toBe(500)
+  })
+
+  it('floors a fractional result once past the threshold', () => {
+    expect(getOfflineEffectiveSeconds(1001)).toBe(500) // 500.5 → 500
   })
 
   it('caps real elapsed time at MAX_OFFLINE_SECONDS before scaling', () => {
@@ -4637,27 +4644,35 @@ describe('getOfflineEffectiveSeconds', () => {
 // ─── applyOfflineProgress ─────────────────────────────────────────────────────
 
 describe('applyOfflineProgress', () => {
-  it('produces resources for 50% of the elapsed real time', () => {
+  it('produces resources at 100% speed for a gap at or below the full-speed threshold', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
-    const after = applyOfflineProgress(100)(state) // 100s real → 50 simulated seconds
-    // tensTier's own 1s tickspeed fits 50 full periods into 50 simulated seconds: 5 generators ×
-    // 50 periods = +250 money
-    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 250)
+    const after = applyOfflineProgress(100)(state) // 100s real, below threshold → 100 simulated seconds
+    // tensTier's own 1s tickspeed fits 100 full periods into 100 simulated seconds: 5 generators ×
+    // 100 periods = +500 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 500)
+  })
+
+  it('produces resources for 50% of the elapsed real time once past the full-speed threshold', () => {
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const after = applyOfflineProgress(1000)(state) // 1000s real, past threshold → 500 simulated seconds
+    // tensTier's own 1s tickspeed fits 500 full periods into 500 simulated seconds: 5 generators ×
+    // 500 periods = +2500 money
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 2500)
   })
 
   it('is a no-op for a gap too short to register a single simulated second', () => {
     const state = withOwned(createInitialGameState(), tensTier.id, 5)
-    const after = applyOfflineProgress(1)(state) // 0.5 simulated seconds → floors to 0
+    const after = applyOfflineProgress(0.5)(state) // below threshold, at 100% speed → floors to 0
     expect(after).toBe(state)
   })
 
   it('runs an active autobuyer across each simulated second, not just once', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 100000), tensTier.id, 2)
-    const after = applyOfflineProgress(20)(state) // 20s real → 10 simulated seconds/ticks
+    const state = withAutobuyer(withMoney(createInitialGameState(), 1000000), tensTier.id, 2)
+    const after = applyOfflineProgress(20)(state) // 20s real, below threshold → 20 simulated seconds/ticks
     // The autobuyer attempt rate is flat (1/tick) regardless of tickspeed level (see tickGame) —
-    // 10 simulated ticks fire exactly 10 purchases, one per tick, rather than bought in one lump
+    // 20 simulated ticks fire exactly 20 purchases, one per tick, rather than bought in one lump
     // sum.
-    expect(after.purchased[tensTier.id]).toBe(10)
+    expect(after.purchased[tensTier.id]).toBe(20)
   })
 })
 

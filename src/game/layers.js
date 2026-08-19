@@ -233,8 +233,16 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
 // alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short
-// absences, not a way to make the autobuyer loop outrun active play.
+// absences, not a way to make the autobuyer loop outrun active play. This multiplier only kicks in
+// once the absence exceeds OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS below — a shorter absence
+// is simulated at 100% speed instead, as if the screen had been on the whole time.
 export const OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5
+// Real-world elapsed time at or below this threshold is simulated at 100% speed (no reduction)
+// and never surfaces the offline-progress notice — short enough that the player wouldn't notice
+// the absence anyway. Only once elapsed time exceeds this does OFFLINE_PROGRESS_SPEED_MULTIPLIER
+// apply (to the entire elapsed duration, not just the portion past the threshold) and the notice
+// appear. See getOfflineEffectiveSeconds in engine.js.
+export const OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 10 * 60
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60

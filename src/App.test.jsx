@@ -470,18 +470,35 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
   expect(screen.getByRole('heading', { level: 3, name: /^kilobytes$/i })).toBeInTheDocument()
 })
 
-test('applies offline progress at 50% speed based on elapsed time since the last save', () => {
+test('applies offline progress at 100% speed and shows no notice for an absence under the full-speed threshold', () => {
   seedMainGameState({
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  // 100 real seconds ago → 50 simulated seconds at 50% speed → Kilobytes delivers every 1s, so 50
-  // deliveries land in that window → 5 Kilobytes × 50 deliveries = +250 money
+  // 100 real seconds ago, well under the 10-minute full-speed threshold → 100 simulated seconds at
+  // 100% speed (as if the screen was always on) → Kilobytes delivers every 1s, so 100 deliveries
+  // land in that window → 5 Kilobytes × 100 deliveries = +500 money, with no notice shown.
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('250 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('500 b')
+  expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
+})
+
+test('applies offline progress at 50% speed and shows a notice for an absence past the full-speed threshold', () => {
+  seedMainGameState({
+    resources: { Ones: 0 },
+    owned: { tier01: 5 },
+  })
+  // 1000 real seconds ago, past the 10-minute full-speed threshold → 500 simulated seconds at 50%
+  // speed → Kilobytes delivers every 1s, so 500 deliveries land in that window → 5 Kilobytes × 500
+  // deliveries = +2500 money
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
+
+  render(<App />)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -492,7 +509,7 @@ test('dismissing the offline progress notice hides it', async () => {
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   render(<App />)
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
@@ -508,7 +525,7 @@ test('the offline progress notice shows a countdown on its Dismiss button and fa
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   const { unmount } = render(<App />)
 
@@ -539,7 +556,7 @@ test('clicking Dismiss removes the offline progress notice immediately, without 
     resources: { Ones: 0 },
     owned: { tier01: 5 },
   })
-  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   const { unmount } = render(<App />)
 
@@ -578,18 +595,19 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
   const { unmount } = render(<App />)
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 
-  // Jumps the clock forward 100 real seconds without advancing any pending timer (unlike
-  // vi.advanceTimersByTime, which would fire every intermediate 100ms tick along the way, exactly
-  // as an actively foregrounded tab would) — simulating the OS suspending the tab/app's timers
-  // while real time keeps passing in the background.
-  vi.setSystemTime(Date.now() + 100_000)
-  // The tick interval's own next firing sees a ~100s gap since its previous one and treats it as
+  // Jumps the clock forward 1000 real seconds (past the 10-minute full-speed threshold) without
+  // advancing any pending timer (unlike vi.advanceTimersByTime, which would fire every
+  // intermediate 100ms tick along the way, exactly as an actively foregrounded tab would) —
+  // simulating the OS suspending the tab/app's timers while real time keeps passing in the
+  // background.
+  vi.setSystemTime(Date.now() + 1_000_000)
+  // The tick interval's own next firing sees a ~1000s gap since its previous one and treats it as
   // offline progress instead of an ordinary tick.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // 100s real -> 50s simulated at 50% speed; Kilobytes' 1s tickspeed fits 50 deliveries into that
-  // window -> 5 Kilobytes x 50 deliveries = +250 money.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('250 b')
+  // 1000s real -> 500s simulated at 50% speed; Kilobytes' 1s tickspeed fits 500 deliveries into
+  // that window -> 5 Kilobytes x 500 deliveries = +2500 money.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -607,11 +625,11 @@ test('catches up a real-world gap as soon as the page becomes visible again, eve
   const { unmount } = render(<App />)
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 
-  vi.setSystemTime(Date.now() + 100_000)
+  vi.setSystemTime(Date.now() + 1_000_000)
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   act(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('250 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -2346,7 +2364,7 @@ test('shows the offline-progress notice on the Byte Foundry screen too, not just
   // acknowledgment of it. mainGameUnlocked stays false here (bits stay far below capacity), so <App
   // /> gates onto ByteFoundryPage — the notice should show there too.
   seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1 })
-  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
+  localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   render(<App />)
 
