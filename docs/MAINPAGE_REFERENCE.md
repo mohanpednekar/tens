@@ -245,10 +245,33 @@ that transfer-block row (back on ByteFoundryPage) is the only place this progres
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
 ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
 returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `Header` row (title
-`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`), then two `StatusText` lines —
-the current `intro.computeCores`/`intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP` (10), and a
-one-line mechanic summary — followed by a `PresetsRow` (`display: flex`, each button `flex: 1`,
-matching ByteFoundryPage's own `MilestonesRow` convention) of the 3 Compute Boost preset buttons
+`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`), then a `StatusText` summarizing
+the automatic Memory→Core→Node conversion and the `COMPUTE_ENTITY_CAP` (10) cap.
+
+Below that, the page branches on `intro.computeMergePageUnlocked` (a permanent, one-time reveal
+latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips the first time
+`intro.computeCoresEverEarned`, a lifetime counter never decremented by spending or merging, ever
+reaches 8):
+
+- **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
+  `intro.computeNodes` counts as `N/COMPUTE_ENTITY_CAP`.
+- **Once unlocked:** a one-line mechanic summary for the merge chain, then a `StatCard`
+  (`aria-label="compute counters"`) showing all five compute-ladder counters — Cores, Nodes,
+  Clusters, Networks, Grids, each as `N/10` — followed by three merge buttons, one per tier
+  boundary, top to bottom: "Merge 8 Nodes → 1 Cluster", "Merge 8 Clusters → 1 Network", "Merge 8
+  Networks → 1 Grid" (`variant="prestige"`). Each calls its matching
+  `game.actions.mergeComputeNodesIntoCluster`/`mergeComputeClustersIntoNetwork`/
+  `mergeComputeNetworksIntoGrid` (wired in `useIncrementalGame.js`, no arguments). `disabled`
+  mirrors the engine's own gate (`canMerge(input, output)`: input ≥ `COMPUTE_MERGE_RATIO` (8) and
+  output < `COMPUTE_ENTITY_CAP`) — a UI-only mirror, not a replacement for it; `engine.js`
+  re-validates on every call regardless (see "Security notes" in CLAUDE.md). Each button's
+  `aria-label` spells out the full action (e.g. "merge 8 compute nodes into 1 compute cluster");
+  its `title` explains the cost when enabled, or why it's blocked (input balance, or the output
+  already at cap) when disabled. Nothing spends a Compute Grid yet — see issue #280's "Out of
+  scope".
+
+Either way, a `PresetsRow` (`display: flex`, each button `flex: 1`, matching ByteFoundryPage's own
+`MilestonesRow` convention) of the 3 Compute Boost preset buttons follows
 (`aria-label="activate <type> compute boost"`, calling `actions.activateComputeBoost(boostType)`).
 `disabled={!isComputeBoostTurnAvailable(state, boostType)}` — folds `canActivateComputeBoost`'s own
 mechanical guard (≥1 Compute Core, no conflicting active type, below `COMPUTE_BOOST_MAX_STACKS`)

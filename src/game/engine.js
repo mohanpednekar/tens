@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, INTRO_STORAGE_UNLOCK_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, STORAGE_BANK_LADDER_CAP, STORAGE_BUILD_COST_MULTIPLIER, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -337,10 +337,36 @@ export const createInitialGameState = () => ({
     // makes each future Core more expensive. Spent 1 at a time by activateComputeBoost below —
     // see the "Byte Foundry Compute Boost" section of layers.js.
     computeCores: 0,
+    // PERMANENT — a monotonically-increasing lifetime counter, incremented by
+    // tickComputeCoreConversion alongside computeCores itself but NEVER decremented by spending
+    // (activateComputeBoost) or merging (tickComputeNodeConversion) — the actual "CUMULATIVE total
+    // of Compute Cores ever earned" computeMergePageUnlocked below needs. computeCores alone can't
+    // serve this purpose: a player who spends a Boost before ever holding 8 Cores at once would
+    // otherwise never trip the latch, even after having earned well past 8 in total.
+    computeCoresEverEarned: 0,
     // PERMANENT — automatically incremented by tickComputeNodeConversion every time computeCores
-    // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). A pure counter
-    // today — merging Nodes upward into a further tier is still planned as a follow-up.
+    // reaches COMPUTE_CORES_PER_NODE (8), which are then spent (computeCores -= 8). Also the input
+    // to mergeComputeNodesIntoCluster below — unlike Core→Node, merging Nodes upward is a manual,
+    // player-triggered action, not automatic on tick.
     computeNodes: 0,
+    // PERMANENT, same posture as computeCores/computeNodes above — incremented by
+    // mergeComputeNodesIntoCluster (8 Nodes → 1 Cluster), and itself the input to
+    // mergeComputeClustersIntoNetwork below. Capped at COMPUTE_ENTITY_CAP like every other
+    // compute-ladder entity.
+    computeClusters: 0,
+    // PERMANENT — incremented by mergeComputeClustersIntoNetwork (8 Clusters → 1 Network), and
+    // itself the input to mergeComputeNetworksIntoGrid below.
+    computeNetworks: 0,
+    // PERMANENT — incremented by mergeComputeNetworksIntoGrid (8 Networks → 1 Grid). The top of the
+    // merge chain today; nothing consumes a Grid yet (see issue #280's "Out of scope").
+    computeGrids: 0,
+    // PERMANENT, one-time reveal latch for ComputePage — analogous in spirit to
+    // intro.mainGameUnlocked's own "first time" latch, but never re-checked once true (see
+    // tickComputeCoreConversion, the only place this ever flips). Gated on computeCoresEverEarned
+    // (above) reaching COMPUTE_CORES_PER_NODE (8), not the current live computeCores balance —
+    // merging Nodes back down, or spending Cores on a Boost (even before ever holding 8 at once),
+    // must never prevent or re-hide the page once earned.
+    computeMergePageUnlocked: false,
     // NOT permanent — resets to null/0/0 on every real Prestige (unlike computeCores/computeNodes
     // themselves), but carried through untouched by Speed Up/Overclock, same as the rest of intro.
     // Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
@@ -1874,35 +1900,58 @@ export const setStorageAutoRedeemEnabled = enabled => state => ({
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Once isComputeCoreConversionUnlocked, Memory automatically converts into 1 Compute Core every
-// time it's full — a same-reference no-op before that capacity, while Memory isn't yet full, or
-// once intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in practice Cores
-// rarely reach this on their own, since tickComputeNodeConversion drains them into a Node at 8 —
-// this guard mainly matters once Nodes themselves are capped and stop accepting more, letting
-// Cores pile up behind that). While capped, Memory simply stays full rather than flushing for
-// nothing — no progress is lost, it just waits for the player to spend a Core/Node down. The cost
-// is always the CURRENT capacity itself (not a fixed amount): converting flushes the entire
-// balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE balance"
-// behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so there's
-// never a multi-Core batch in one event). This is deliberate, not incidental: since capacity only
-// ever grows via the player's own Sacrifice clicks, a higher capacity makes each future Core cost
-// more (a bigger flush) without changing what a Core actually grants — the player decides how far
-// to keep Sacrificing before letting this automatic conversion take over instead, trading a
-// smaller-but-more-frequent Core rate against a larger-but-slower one. Called from tickGame right
-// after tickStorageAutoFill and before tickIntroAutoInvest, so it claims Memory ahead of ordinary
-// Kilobyte conversion once unlocked and full — the same "first claim" priority tickStorageAutoFill
-// itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same posture as every other
-// Byte Foundry mechanic (a separate currency pool, not resources.base).
+// time it's full — a same-reference no-op once nothing about the state would change: Memory isn't
+// yet full, or intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in
+// practice Cores rarely reach this on their own, since tickComputeNodeConversion drains them into
+// a Node at 8 — this guard mainly matters once Nodes themselves are capped and stop accepting
+// more, letting Cores pile up behind that). While capped, Memory simply stays full rather than
+// flushing for nothing — no progress is lost, it just waits for the player to spend a Core/Node
+// down. The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes
+// the entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE
+// balance" behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so
+// there's never a multi-Core batch in one event). This is deliberate, not incidental: since
+// capacity only ever grows via the player's own Sacrifice clicks, a higher capacity makes each
+// future Core cost more (a bigger flush) without changing what a Core actually grants — the player
+// decides how far to keep Sacrificing before letting this automatic conversion take over instead,
+// trading a smaller-but-more-frequent Core rate against a larger-but-slower one. Called from
+// tickGame right after tickStorageAutoFill and before tickIntroAutoInvest, so it claims Memory
+// ahead of ordinary Kilobyte conversion once unlocked and full — the same "first claim" priority
+// tickStorageAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
+// posture as every other Byte Foundry mechanic (a separate currency pool, not resources.base).
+// Also the only place intro.computeCoresEverEarned/intro.computeMergePageUnlocked ever change.
+// computeCoresEverEarned increments by 1 every time a conversion actually mints a Core — a true
+// lifetime counter, never decremented by spending (activateComputeBoost) or merging
+// (tickComputeNodeConversion) — unlike the live computeCores balance, which both of those do
+// drain. computeMergePageUnlocked flips true the instant that counter reaches
+// COMPUTE_CORES_PER_NODE (8) for the first time; checking the *lifetime* counter rather than the
+// live balance is what makes this genuinely track "ever earned" — a player who spends a Boost
+// before ever holding 8 Cores at once, or whose Cores/Nodes were already capped from before this
+// latch existed, still trips it correctly. The latch check is deliberately evaluated independently
+// of whether a conversion happens THIS tick: a save whose computeCoresEverEarned is already >= 8
+// (from any past tick) but whose computeCores happens to be at COMPUTE_ENTITY_CAP right now (no
+// room left to convert into) would otherwise never re-enter this function's success path at all —
+// permanently hiding the merge chain from a player who has obviously already earned it.
 export const tickComputeCoreConversion = state => {
   if (!isComputeCoreConversionUnlocked(state)) return state
-  if (state.intro.bits < state.intro.capacity) return state
-  if ((state.intro.computeCores ?? 0) >= COMPUTE_ENTITY_CAP) return state
+
+  const currentCores = state.intro.computeCores ?? 0
+  const currentEverEarned = state.intro.computeCoresEverEarned ?? 0
+  const latchAlreadySet = state.intro.computeMergePageUnlocked ?? false
+  const canConvert = state.intro.bits >= state.intro.capacity && currentCores < COMPUTE_ENTITY_CAP
+  const computeCores = canConvert ? currentCores + 1 : currentCores
+  const computeCoresEverEarned = canConvert ? currentEverEarned + 1 : currentEverEarned
+  const computeMergePageUnlocked = latchAlreadySet || computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
+
+  if (!canConvert && computeMergePageUnlocked === latchAlreadySet) return state
 
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: 0,
-      computeCores: (state.intro.computeCores ?? 0) + 1,
+      bits: canConvert ? 0 : state.intro.bits,
+      computeCores,
+      computeCoresEverEarned,
+      computeMergePageUnlocked,
     },
   }
 }
@@ -1931,6 +1980,40 @@ export const tickComputeNodeConversion = state => {
     },
   }
 }
+
+// Shared shape for the manual Node → Cluster → Network → Grid merge chain below (see ComputePage
+// and issue #280) — unlike tickComputeNodeConversion above (automatic every tick),
+// each of these only ever fires on an explicit player click, converting every complete group of
+// COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity, capped at whatever room
+// remains under COMPUTE_ENTITY_CAP on the output — the same "batch, but cap-bounded, surplus left
+// unconverted" shape tickComputeNodeConversion already uses for Core → Node. A same-reference
+// no-op below one full group of 8 of the input, or once the output is already at cap.
+const mergeComputeEntities = (inputField, outputField) => state => {
+  const input = state.intro?.[inputField] ?? 0
+  const output = state.intro?.[outputField] ?? 0
+  const roomForOutput = Math.max(0, COMPUTE_ENTITY_CAP - output)
+  const outputGained = Math.min(roomForOutput, Math.floor(input / COMPUTE_MERGE_RATIO))
+  if (outputGained <= 0) return state
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [inputField]: input - outputGained * COMPUTE_MERGE_RATIO,
+      [outputField]: output + outputGained,
+    },
+  }
+}
+
+// 8 Compute Nodes → 1 Compute Cluster. Player-triggered (ComputePage's own merge button) — the
+// player decides whether to merge Nodes upward or keep spending/holding them, unlike the automatic
+// Core → Node conversion above.
+export const mergeComputeNodesIntoCluster = mergeComputeEntities('computeNodes', 'computeClusters')
+// 8 Compute Clusters → 1 Compute Network. Same posture as mergeComputeNodesIntoCluster above.
+export const mergeComputeClustersIntoNetwork = mergeComputeEntities('computeClusters', 'computeNetworks')
+// 8 Compute Networks → 1 Compute Grid — the top of the merge chain today (see issue #280's "Out of
+// scope": nothing spends a Grid yet). Same posture as the two merges above.
+export const mergeComputeNetworksIntoGrid = mergeComputeEntities('computeNetworks', 'computeGrids')
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
 // no boost is active. Applied to Memory's own passive production (tickIntroProduction) and
@@ -2267,10 +2350,16 @@ export const prestigeGame = state => {
       storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
       storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
       storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
-      // Compute Cores/Nodes are just as permanent as the Byte generator/Storage above — carried
-      // over unchanged, never wiped by a real Prestige along with Memory itself.
+      // Compute Cores/Nodes/Clusters/Networks/Grids, and the ComputePage reveal latch, are just as
+      // permanent as the Byte generator/Storage above — carried over unchanged, never wiped by a
+      // real Prestige along with Memory itself.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
+      computeCoresEverEarned: state.intro?.computeCoresEverEarned ?? initial.intro.computeCoresEverEarned,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
+      computeClusters: state.intro?.computeClusters ?? initial.intro.computeClusters,
+      computeNetworks: state.intro?.computeNetworks ?? initial.intro.computeNetworks,
+      computeGrids: state.intro?.computeGrids ?? initial.intro.computeGrids,
+      computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
       // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
       // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an
       // active boost is run-scoped and resets every real Prestige, unlike the Cores/Nodes it's

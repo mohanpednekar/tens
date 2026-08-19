@@ -286,7 +286,7 @@ docs/
                                past iteration may already have tried
   AUTOMATION.md                ← full Automation workflows reference (see above)
   ECONOMY_REFERENCE.md         ← full Economy model reference (see below)
-  MAINPAGE_REFERENCE.md        ← full MainPage reference (see Architecture below)
+  MAINPAGE_REFERENCE.md        ← full MainPage reference, including ComputePage — see Architecture below
   COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference (see below)
   THEMING_REFERENCE.md         ← full design-token/font/ThemeProvider reference (see Theming below)
   PWA_REFERENCE.md             ← full installable-PWA reference (see PWA support below)
@@ -322,7 +322,9 @@ src/
                                ByteFoundryPage's own "🏦 Storage" nav button; takes `{ game, onBack }`,
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
     ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — Compute Core/Node
-                               counters + the 3 Boost preset buttons. Reached only via
+                               counters + the 3 Boost preset buttons, plus (once
+                               `intro.computeMergePageUnlocked`) the manual Compute Cores merge chain
+                               (Node → Cluster → Network → Grid, see issue #280). Reached only via
                                ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`,
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
@@ -467,7 +469,10 @@ Strict three-layer separation:
     renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
-    (`page = 'foundry'`). Same posture as StoragePage above.
+    (`page = 'foundry'`). Same posture as StoragePage above. Also where the manual Compute Cores
+    merge chain (Node → Cluster → Network → Grid, see "Economy model" below and issue #280) lives,
+    behind its own later, one-time `intro.computeMergePageUnlocked` reveal nested inside this same
+    page — not a separate page/nav link.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, plus the app's tagline). Reads no `useIncrementalGame`
@@ -500,9 +505,10 @@ Storage Bank Build > Compute > Memory/Sacrifice — so a lower-ranked action is 
 and in the engine reducer itself) whenever a higher one is currently available. Manual transfer blocks
 (plus an always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit
 cost; the first successful transfer unlocks the main game, and there's no per-cycle cap on further
-ones. The generator, Storage banks, and Compute Cores/Nodes are all permanent across every real
-Prestige; only Memory itself, the main-game-unlock gate, and tier01's own purchase-block progress
-reset each cycle. Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
+ones. The generator, Storage banks, and Compute Cores/Nodes/Clusters/Networks/Grids (the last three
+mergeable manually, 8:1 per tier, once unlocked) are all permanent across every real Prestige; only
+Memory itself, the main-game-unlock gate, and tier01's own purchase-block progress reset each cycle.
+Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
 Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -598,7 +604,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (965 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (996 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -629,7 +635,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (957, see "Testing" above) is unaffected by anything under `e2e/`.
+  (996, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

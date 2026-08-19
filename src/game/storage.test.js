@@ -641,7 +641,8 @@ describe('schema migration', () => {
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false,
         storageBanks: { 1000: 1 }, storageBanksBuiltTotal: { 1000: 1 }, storageAutoRedeemEnabled: true,
-        storageAutoRedeemedSizes: {}, computeCores: 0, computeNodes: 0,
+        storageAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
+        computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeMergePageUnlocked: false,
         computeBoostType: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
       },
     }
@@ -666,6 +667,51 @@ describe('schema migration', () => {
     localStorage.setItem('tens_game_state', JSON.stringify(midGateOldSave))
     const loadedMidGate = loadGameState()
     expect(loadedMidGate.intro.mainGameUnlocked).toBe(false)
+  })
+
+  it('backfills computeCoresEverEarned for a save that predates it but already has computeCores/computeNodes, so it does not have to re-earn Cores from scratch to unlock the merge chain', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      intro: {
+        bits: 0, capacity: 8000000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
+        mainGameUnlocked: true, computeCores: 3, computeNodes: 2,
+      },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    // 2 Nodes implies 16 Cores were once minted to create them, plus the 3 still held live.
+    expect(loaded.intro.computeCoresEverEarned).toBe(2 * 8 + 3)
+    expect(loaded.intro.computeMergePageUnlocked).toBe(true)
+  })
+
+  it('backfills computeMergePageUnlocked to true for a save that already holds a Cluster/Network/Grid, even with no Nodes currently held', () => {
+    const oldSave = {
+      ...createInitialGameState(),
+      intro: {
+        bits: 0, capacity: 8000000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
+        mainGameUnlocked: true, computeCores: 0, computeNodes: 0, computeClusters: 1,
+      },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.intro.computeMergePageUnlocked).toBe(true)
+  })
+
+  it('does not backfill computeCoresEverEarned/computeMergePageUnlocked for a save that already has its own values (post-migration save)', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        bits: 0, capacity: 8000000, byteCreated: true, mainGameUnlocked: true,
+        computeCores: 3, computeNodes: 2, computeCoresEverEarned: 5, computeMergePageUnlocked: false,
+      },
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    // Would backfill to 19/true if the migration ran again — it must not, since the save already
+    // has its own (lower, still-locked) values.
+    expect(loaded.intro.computeCoresEverEarned).toBe(5)
+    expect(loaded.intro.computeMergePageUnlocked).toBe(false)
   })
 
   it('resets the removed productionMilestoneClaimedAtCapacity marker to a fresh tier 0 rather than misreading it', () => {
