@@ -5,6 +5,7 @@ import {
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
+  COMPUTE_BOOST_PRESETS,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   getTierBaseTickSpeedSeconds,
@@ -218,5 +219,11 @@ describe('constants', () => {
 
   it('COMPUTE_ENTITY_CAP is 10', () => {
     expect(COMPUTE_ENTITY_CAP).toBe(10)
+  })
+
+  it('COMPUTE_BOOST_PRESETS durations are 1 minute (Burst), 10 minutes (Standard), 1 hour (Sustain)', () => {
+    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 16, durationSeconds: 60 })
+    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 4, durationSeconds: 600 })
+    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
   })
 })
