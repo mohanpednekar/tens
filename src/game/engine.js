@@ -357,9 +357,25 @@ export const createInitialGameState = () => ({
     // PERMANENT — incremented by mergeComputeClustersIntoNetwork (8 Clusters → 1 Network), and
     // itself the input to mergeComputeNetworksIntoGrid below.
     computeNetworks: 0,
-    // PERMANENT — incremented by mergeComputeNetworksIntoGrid (8 Networks → 1 Grid). The top of the
-    // merge chain today; nothing consumes a Grid yet (see issue #280's "Out of scope").
+    // PERMANENT — incremented by mergeComputeNetworksIntoGrid (8 Networks → 1 Grid), and itself the
+    // input to mergeComputeGridsIntoFabric below.
     computeGrids: 0,
+    // PERMANENT — incremented by mergeComputeGridsIntoFabric (8 Grids → 1 Fabric), and itself the
+    // input to mergeComputeFabricsIntoCloud below.
+    computeFabrics: 0,
+    // PERMANENT — incremented by mergeComputeFabricsIntoCloud (8 Fabrics → 1 Cloud), and itself the
+    // input to mergeComputeCloudsIntoDatacenter below.
+    computeClouds: 0,
+    // PERMANENT — incremented by mergeComputeCloudsIntoDatacenter (8 Clouds → 1 Datacenter), and
+    // itself the input to mergeComputeDatacentersIntoSupercomputer below.
+    computeDatacenters: 0,
+    // PERMANENT — incremented by mergeComputeDatacentersIntoSupercomputer (8 Datacenters → 1
+    // Supercomputer), and itself the input to mergeComputeSupercomputersIntoMegacomputer below.
+    computeSupercomputers: 0,
+    // PERMANENT — incremented by mergeComputeSupercomputersIntoMegacomputer (8 Supercomputers → 1
+    // Megacomputer). The top of the merge chain today; nothing consumes a Megacomputer yet (see
+    // issue #280's "Out of scope").
+    computeMegacomputers: 0,
     // PERMANENT, one-time reveal latch for ComputePage — analogous in spirit to
     // intro.mainGameUnlocked's own "first time" latch, but never re-checked once true (see
     // tickComputeCoreConversion, the only place this ever flips). Gated on computeCoresEverEarned
@@ -1981,8 +1997,9 @@ export const tickComputeNodeConversion = state => {
   }
 }
 
-// Shared shape for the manual Node → Cluster → Network → Grid merge chain below (see ComputePage
-// and issue #280) — unlike tickComputeNodeConversion above (automatic every tick),
+// Shared shape for the manual Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
+// Supercomputer → Megacomputer merge chain below (see ComputePage and issue #280) — unlike
+// tickComputeNodeConversion above (automatic every tick),
 // each of these only ever fires on an explicit player click, converting every complete group of
 // COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity, capped at whatever room
 // remains under COMPUTE_ENTITY_CAP on the output — the same "batch, but cap-bounded, surplus left
@@ -2011,9 +2028,19 @@ const mergeComputeEntities = (inputField, outputField) => state => {
 export const mergeComputeNodesIntoCluster = mergeComputeEntities('computeNodes', 'computeClusters')
 // 8 Compute Clusters → 1 Compute Network. Same posture as mergeComputeNodesIntoCluster above.
 export const mergeComputeClustersIntoNetwork = mergeComputeEntities('computeClusters', 'computeNetworks')
-// 8 Compute Networks → 1 Compute Grid — the top of the merge chain today (see issue #280's "Out of
-// scope": nothing spends a Grid yet). Same posture as the two merges above.
+// 8 Compute Networks → 1 Compute Grid. Same posture as the merges above.
 export const mergeComputeNetworksIntoGrid = mergeComputeEntities('computeNetworks', 'computeGrids')
+// 8 Compute Grids → 1 Compute Fabric. Same posture as the merges above.
+export const mergeComputeGridsIntoFabric = mergeComputeEntities('computeGrids', 'computeFabrics')
+// 8 Compute Fabrics → 1 Compute Cloud. Same posture as the merges above.
+export const mergeComputeFabricsIntoCloud = mergeComputeEntities('computeFabrics', 'computeClouds')
+// 8 Compute Clouds → 1 Compute Datacenter. Same posture as the merges above.
+export const mergeComputeCloudsIntoDatacenter = mergeComputeEntities('computeClouds', 'computeDatacenters')
+// 8 Compute Datacenters → 1 Compute Supercomputer. Same posture as the merges above.
+export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('computeDatacenters', 'computeSupercomputers')
+// 8 Compute Supercomputers → 1 Compute Megacomputer — the top of the merge chain today (see issue
+// #280's "Out of scope": nothing spends a Megacomputer yet). Same posture as the merges above.
+export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers')
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
 // no boost is active. Applied to Memory's own passive production (tickIntroProduction) and
@@ -2350,15 +2377,20 @@ export const prestigeGame = state => {
       storageBanks: state.intro?.storageBanks ?? initial.intro.storageBanks,
       storageBanksBuiltTotal: state.intro?.storageBanksBuiltTotal ?? initial.intro.storageBanksBuiltTotal,
       storageAutoRedeemEnabled: state.intro?.storageAutoRedeemEnabled ?? initial.intro.storageAutoRedeemEnabled,
-      // Compute Cores/Nodes/Clusters/Networks/Grids, and the ComputePage reveal latch, are just as
-      // permanent as the Byte generator/Storage above — carried over unchanged, never wiped by a
-      // real Prestige along with Memory itself.
+      // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
+      // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
+      // wiped by a real Prestige along with Memory itself.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
       computeCoresEverEarned: state.intro?.computeCoresEverEarned ?? initial.intro.computeCoresEverEarned,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
       computeClusters: state.intro?.computeClusters ?? initial.intro.computeClusters,
       computeNetworks: state.intro?.computeNetworks ?? initial.intro.computeNetworks,
       computeGrids: state.intro?.computeGrids ?? initial.intro.computeGrids,
+      computeFabrics: state.intro?.computeFabrics ?? initial.intro.computeFabrics,
+      computeClouds: state.intro?.computeClouds ?? initial.intro.computeClouds,
+      computeDatacenters: state.intro?.computeDatacenters ?? initial.intro.computeDatacenters,
+      computeSupercomputers: state.intro?.computeSupercomputers ?? initial.intro.computeSupercomputers,
+      computeMegacomputers: state.intro?.computeMegacomputers ?? initial.intro.computeMegacomputers,
       computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
       // computeBoostType/computeBoostStacks/computeBoostRemainingSeconds are deliberately NOT
       // listed here — they fall through to initial.intro's fresh null/0/0 defaults above, since an

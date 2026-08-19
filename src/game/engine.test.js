@@ -93,8 +93,13 @@ import {
   isStorageBankRedeemable,
   isTierUnlocked,
   mergeComputeClustersIntoNetwork,
+  mergeComputeCloudsIntoDatacenter,
+  mergeComputeDatacentersIntoSupercomputer,
+  mergeComputeFabricsIntoCloud,
+  mergeComputeGridsIntoFabric,
   mergeComputeNetworksIntoGrid,
   mergeComputeNodesIntoCluster,
+  mergeComputeSupercomputersIntoMegacomputer,
   overclockGame,
   prestigeGame,
   redeemStorageBank,
@@ -1741,6 +1746,11 @@ describe.each([
   { merge: mergeComputeNodesIntoCluster, inputField: 'computeNodes', outputField: 'computeClusters', label: 'mergeComputeNodesIntoCluster' },
   { merge: mergeComputeClustersIntoNetwork, inputField: 'computeClusters', outputField: 'computeNetworks', label: 'mergeComputeClustersIntoNetwork' },
   { merge: mergeComputeNetworksIntoGrid, inputField: 'computeNetworks', outputField: 'computeGrids', label: 'mergeComputeNetworksIntoGrid' },
+  { merge: mergeComputeGridsIntoFabric, inputField: 'computeGrids', outputField: 'computeFabrics', label: 'mergeComputeGridsIntoFabric' },
+  { merge: mergeComputeFabricsIntoCloud, inputField: 'computeFabrics', outputField: 'computeClouds', label: 'mergeComputeFabricsIntoCloud' },
+  { merge: mergeComputeCloudsIntoDatacenter, inputField: 'computeClouds', outputField: 'computeDatacenters', label: 'mergeComputeCloudsIntoDatacenter' },
+  { merge: mergeComputeDatacentersIntoSupercomputer, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', label: 'mergeComputeDatacentersIntoSupercomputer' },
+  { merge: mergeComputeSupercomputersIntoMegacomputer, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', label: 'mergeComputeSupercomputersIntoMegacomputer' },
 ])('$label', ({ merge, inputField, outputField }) => {
   it('is a same-reference no-op below COMPUTE_MERGE_RATIO of the input entity', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1 })
@@ -1824,6 +1834,27 @@ describe('tickGame Compute Core/Node integration', () => {
     expect(after.intro.computeNodes).toBe(2)
     // Memory itself still resets fresh, unlike the permanent Compute counters above.
     expect(after.intro.bits).toBe(0)
+  })
+
+  it('carries every merge-chain entity (Clusters through Megacomputers) through a real Prestige unchanged', () => {
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        computeClusters: 3, computeNetworks: 2, computeGrids: 1, computeFabrics: 4,
+        computeClouds: 1, computeDatacenters: 1, computeSupercomputers: 1, computeMegacomputers: 1,
+        computeMergePageUnlocked: true, byteCreated: true, capacity: 800,
+      }),
+      PRESTIGE_THRESHOLD
+    )
+    const after = prestigeGame(state)
+    expect(after.intro.computeClusters).toBe(3)
+    expect(after.intro.computeNetworks).toBe(2)
+    expect(after.intro.computeGrids).toBe(1)
+    expect(after.intro.computeFabrics).toBe(4)
+    expect(after.intro.computeClouds).toBe(1)
+    expect(after.intro.computeDatacenters).toBe(1)
+    expect(after.intro.computeSupercomputers).toBe(1)
+    expect(after.intro.computeMegacomputers).toBe(1)
+    expect(after.intro.computeMergePageUnlocked).toBe(true)
   })
 })
 

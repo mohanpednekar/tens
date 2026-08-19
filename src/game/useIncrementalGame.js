@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
+import { activateComputeBoost, applyOfflineProgress, buildStorageBank, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, redeemStorageBank, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setStorageAutoRedeemEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, tapIntroBit, tickGame } from './engine'
 import { TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -159,6 +159,11 @@ export const useIncrementalGame = () => {
     mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
     mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
     mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
+    mergeComputeGridsIntoFabric: () => setState(mergeComputeGridsIntoFabric),
+    mergeComputeFabricsIntoCloud: () => setState(mergeComputeFabricsIntoCloud),
+    mergeComputeCloudsIntoDatacenter: () => setState(mergeComputeCloudsIntoDatacenter),
+    mergeComputeDatacentersIntoSupercomputer: () => setState(mergeComputeDatacentersIntoSupercomputer),
+    mergeComputeSupercomputersIntoMegacomputer: () => setState(mergeComputeSupercomputersIntoMegacomputer),
   }), [])
 
   const resetGame = useCallback(() => {

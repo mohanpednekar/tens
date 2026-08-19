@@ -181,20 +181,25 @@ export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
 // intro.computeCores and intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Storage banks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
-// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — applies to
-// intro.computeCores/computeNodes today, and is meant to apply the same way to a future
-// computeClusters/computeNetworks/computeGrids once a later merge tier adds them (see issue #280).
-// Once an entity is at this cap, further production into it pauses entirely (see
-// tickComputeCoreConversion/tickComputeNodeConversion in engine.js) rather than overflowing past
-// it or silently discarding progress — Memory itself simply stays full, waiting for the player to
-// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
-// progress" posture Storage banks already have when nothing can consume them yet.
+// Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
+// Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
+// entity is at this cap, further production into it pauses entirely (see
+// tickComputeCoreConversion/tickComputeNodeConversion/mergeComputeEntities in engine.js) rather
+// than overflowing past it or silently discarding progress — Memory (for Cores) or the input
+// entity itself (for every manual merge) simply stays put, waiting for the player to spend the
+// capped entity down via a future spending mechanic, the same "waits, doesn't lose progress"
+// posture Storage banks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
-// 8 of one compute-ladder entity merges into 1 of the next tier up — Node → Cluster → Network →
-// Grid (see mergeComputeNodesIntoCluster/mergeComputeClustersIntoNetwork/
-// mergeComputeNetworksIntoGrid in engine.js). Same ratio as COMPUTE_CORES_PER_NODE above, but this
-// merge chain is only ever player-triggered (a button click), never automatic on tick — the player
-// decides whether to merge a tier upward or keep spending/holding it.
+// 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
+// is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
+// Megacomputer (Core → Node is automatic, see COMPUTE_CORES_PER_NODE above; every step from Node
+// upward is a manual merge — see mergeComputeNodesIntoCluster/mergeComputeClustersIntoNetwork/
+// mergeComputeNetworksIntoGrid/mergeComputeGridsIntoFabric/mergeComputeFabricsIntoCloud/
+// mergeComputeCloudsIntoDatacenter/mergeComputeDatacentersIntoSupercomputer/
+// mergeComputeSupercomputersIntoMegacomputer in engine.js). Same ratio as COMPUTE_CORES_PER_NODE
+// above, but this merge chain is only ever player-triggered (a button click), never automatic on
+// tick — the player decides whether to merge a tier upward or keep spending/holding it. Nothing
+// spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
 export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/

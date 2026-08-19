@@ -642,7 +642,9 @@ describe('schema migration', () => {
         mainGameUnlocked: false,
         storageBanks: { 1000: 1 }, storageBanksBuiltTotal: { 1000: 1 }, storageAutoRedeemEnabled: true,
         storageAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
-        computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeMergePageUnlocked: false,
+        computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
+        computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
+        computeMergePageUnlocked: false,
         computeBoostType: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
       },
     }
