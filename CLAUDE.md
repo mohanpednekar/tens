@@ -278,8 +278,7 @@ docs/
                                past iteration may already have tried
   AUTOMATION.md                ← full Automation workflows reference (see above)
   ECONOMY_REFERENCE.md         ← full Economy model reference (see below)
-  MAINPAGE_REFERENCE.md        ← full MainPage reference (see Architecture below)
-  COMPUTEPAGE_REFERENCE.md     ← full ComputePage (Compute merge chain) reference (see Architecture below)
+  MAINPAGE_REFERENCE.md        ← full MainPage reference, including ComputePage — see Architecture below
   COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference (see below)
   THEMING_REFERENCE.md         ← full design-token/font/ThemeProvider reference (see Theming below)
   PWA_REFERENCE.md             ← full installable-PWA reference (see PWA support below)
@@ -734,7 +733,12 @@ own simple gate, same as before. Memory's own gate, `isMemoryCapacityUpgradeAvai
 composes all four base predicates above it in the order (plus Combine) — this is the same gate that
 pre-existed this feature (Sacrifice was already only offered once Combine/Invest/a Storage bank
 build were all impossible), now extended to also block on Storage Bank Fill and Compute. Storage
-Bank Fill itself is never blocked by anything (top priority, unaffected).
+Bank Fill itself is never blocked by anything (top priority, unaffected). The Compute Cores merge
+chain (Node → Cluster → Network → Grid, see below) also sits outside this forced order entirely,
+same as Combine — `mergeComputeNodesIntoCluster`/`mergeComputeClustersIntoNetwork`/
+`mergeComputeNetworksIntoGrid` gate only on `canMerge` (enough of the input entity, room under
+`COMPUTE_ENTITY_CAP` on the output), never on whether a higher-ranked action is currently
+available.
 
 **Sacrifice for 10x Capacity asks for confirmation before firing** (`window.confirm` — no modal
 component exists in the app to reuse, same rationale `MainPage`'s own Reset button confirm already
@@ -834,7 +838,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (986 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (988 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -865,7 +869,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (986, see "Testing" above) is unaffected by anything under `e2e/`.
+  (988, see "Testing" above) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded

@@ -1893,43 +1893,54 @@ export const setStorageAutoRedeemEnabled = enabled => state => ({
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Once isComputeCoreConversionUnlocked, Memory automatically converts into 1 Compute Core every
-// time it's full — a same-reference no-op before that capacity, while Memory isn't yet full, or
-// once intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in practice Cores
-// rarely reach this on their own, since tickComputeNodeConversion drains them into a Node at 8 —
-// this guard mainly matters once Nodes themselves are capped and stop accepting more, letting
-// Cores pile up behind that). While capped, Memory simply stays full rather than flushing for
-// nothing — no progress is lost, it just waits for the player to spend a Core/Node down. The cost
-// is always the CURRENT capacity itself (not a fixed amount): converting flushes the entire
-// balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE balance"
-// behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so there's
-// never a multi-Core batch in one event). This is deliberate, not incidental: since capacity only
-// ever grows via the player's own Sacrifice clicks, a higher capacity makes each future Core cost
-// more (a bigger flush) without changing what a Core actually grants — the player decides how far
-// to keep Sacrificing before letting this automatic conversion take over instead, trading a
-// smaller-but-more-frequent Core rate against a larger-but-slower one. Called from tickGame right
-// after tickStorageAutoFill and before tickIntroAutoInvest, so it claims Memory ahead of ordinary
-// Kilobyte conversion once unlocked and full — the same "first claim" priority tickStorageAutoFill
-// itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same posture as every other
-// Byte Foundry mechanic (a separate currency pool, not resources.base). Also the only place
-// intro.computeMergePageUnlocked ever flips — the instant this increment brings the cumulative
-// Core count to COMPUTE_CORES_PER_NODE (8) for the first time, which is exactly the moment the
-// very first Node would ever be minted (see tickComputeNodeConversion, called right after this in
-// tickGame) — so checking the post-increment total here, before that conversion consumes it back
-// down, is what makes the latch track the CUMULATIVE total rather than the live balance.
+// time it's full — a same-reference no-op once nothing about the state would change: Memory isn't
+// yet full, or intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in
+// practice Cores rarely reach this on their own, since tickComputeNodeConversion drains them into
+// a Node at 8 — this guard mainly matters once Nodes themselves are capped and stop accepting
+// more, letting Cores pile up behind that). While capped, Memory simply stays full rather than
+// flushing for nothing — no progress is lost, it just waits for the player to spend a Core/Node
+// down. The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes
+// the entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE
+// balance" behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so
+// there's never a multi-Core batch in one event). This is deliberate, not incidental: since
+// capacity only ever grows via the player's own Sacrifice clicks, a higher capacity makes each
+// future Core cost more (a bigger flush) without changing what a Core actually grants — the player
+// decides how far to keep Sacrificing before letting this automatic conversion take over instead,
+// trading a smaller-but-more-frequent Core rate against a larger-but-slower one. Called from
+// tickGame right after tickStorageAutoFill and before tickIntroAutoInvest, so it claims Memory
+// ahead of ordinary Kilobyte conversion once unlocked and full — the same "first claim" priority
+// tickStorageAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
+// posture as every other Byte Foundry mechanic (a separate currency pool, not resources.base).
+// Also the only place intro.computeMergePageUnlocked ever flips — normally the instant a
+// conversion brings the cumulative Core count to COMPUTE_CORES_PER_NODE (8) for the first time,
+// which is exactly the moment the very first Node would ever be minted (see
+// tickComputeNodeConversion, called right after this in tickGame) — so checking the
+// post-conversion total here, before that conversion consumes it back down, is what makes the
+// latch track the CUMULATIVE total rather than the live balance. The latch check is deliberately
+// evaluated independently of whether a conversion actually happens this tick, though: a save whose
+// computeCores was already >= 8 (e.g. from before this latch existed, or simply sitting at the
+// COMPUTE_ENTITY_CAP with no room left to convert into) would otherwise never trip the
+// post-conversion check at all — computeCores >= COMPUTE_ENTITY_CAP short-circuits above before
+// the increment ever runs — permanently hiding the merge chain from a player who has obviously
+// already earned it.
 export const tickComputeCoreConversion = state => {
   if (!isComputeCoreConversionUnlocked(state)) return state
-  if (state.intro.bits < state.intro.capacity) return state
-  if ((state.intro.computeCores ?? 0) >= COMPUTE_ENTITY_CAP) return state
 
-  const computeCores = (state.intro.computeCores ?? 0) + 1
+  const currentCores = state.intro.computeCores ?? 0
+  const latchAlreadySet = state.intro.computeMergePageUnlocked ?? false
+  const canConvert = state.intro.bits >= state.intro.capacity && currentCores < COMPUTE_ENTITY_CAP
+  const computeCores = canConvert ? currentCores + 1 : currentCores
+  const computeMergePageUnlocked = latchAlreadySet || computeCores >= COMPUTE_CORES_PER_NODE
+
+  if (!canConvert && computeMergePageUnlocked === latchAlreadySet) return state
 
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: 0,
+      bits: canConvert ? 0 : state.intro.bits,
       computeCores,
-      computeMergePageUnlocked: (state.intro.computeMergePageUnlocked ?? false) || computeCores >= COMPUTE_CORES_PER_NODE,
+      computeMergePageUnlocked,
     },
   }
 }

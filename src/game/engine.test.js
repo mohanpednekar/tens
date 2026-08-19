@@ -1485,14 +1485,20 @@ describe('tickComputeCoreConversion', () => {
     expect(after.intro.computeCores).toBe(5)
   })
 
-  it('is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP, even with Memory full and unlocked', () => {
+  it('is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP and the merge-page latch is already set, even with Memory full and unlocked', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       computeCores: COMPUTE_ENTITY_CAP,
+      computeMergePageUnlocked: true,
     })
     expect(tickComputeCoreConversion(state)).toBe(state)
   })
+
+  // Regression test for a real bug: computeCores at COMPUTE_ENTITY_CAP with the latch still
+  // unset used to be a same-reference no-op forever (the cap guard short-circuited before the
+  // latch check ever ran) — see the "flips true even when Cores are already at
+  // COMPUTE_ENTITY_CAP" test in the computeMergePageUnlocked latch describe block below.
 
   it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
     const state = withMoney(
@@ -1590,6 +1596,31 @@ describe('tickComputeCoreConversion computeMergePageUnlocked latch', () => {
       computeMergePageUnlocked: true,
     })
     expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(true)
+  })
+
+  it('flips true even when Cores are already at COMPUTE_ENTITY_CAP with no room to convert into (a save with Cores AND Nodes both maxed, unable to self-heal via a normal conversion)', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeNodes: COMPUTE_ENTITY_CAP,
+      computeMergePageUnlocked: false,
+    })
+    const after = tickComputeCoreConversion(state)
+    expect(after.intro.computeMergePageUnlocked).toBe(true)
+    // Cores never actually convert (already at cap) — only the latch changes.
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.bits).toBe(state.intro.bits)
+  })
+
+  it('stays a same-reference no-op when Cores are below COMPUTE_CORES_PER_NODE and Memory is not full', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      computeCores: 2,
+      computeMergePageUnlocked: false,
+    })
+    expect(tickComputeCoreConversion(state)).toBe(state)
   })
 })
 
