@@ -35,6 +35,7 @@ import {
   formatCurrency,
   formatMemoryAmount,
   formatOfflineDuration,
+  formatStorageSize,
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
@@ -62,6 +63,7 @@ import {
   getSmartAutobuyerCost,
   getStorageBankCost,
   getStorageBankSize,
+  getStorageSizesToShow,
   getTierTickspeedAutobuyerMilestone,
   getSpeedUpMultiplier,
   getSpeedUpRequirement,
@@ -1160,6 +1162,73 @@ describe('getStorageBankCost', () => {
     // 10,000 bits — see the "Byte Foundry Storage" comment in layers.js.
     expect(getStorageBankCost(1000)).toBe(1000 * STORAGE_BUILD_COST_MULTIPLIER * BITS_PER_BYTE)
     expect(getStorageBankCost(1000)).toBe(80000)
+  })
+})
+
+describe('formatStorageSize', () => {
+  it('renders raw bits with singular/plural grammar below the 1000-bit ("1 KB") threshold', () => {
+    expect(formatStorageSize(1)).toBe('1 bit')
+    expect(formatStorageSize(0)).toBe('0 bits')
+    expect(formatStorageSize(999)).toBe('999 bits')
+  })
+
+  it('scales into KB/MB/… once at or above 1000 bits, reusing TIER_DEFINITIONS\' own symbols', () => {
+    expect(formatStorageSize(1000)).toBe('1 KB')
+    expect(formatStorageSize(10000)).toBe('10 KB')
+    expect(formatStorageSize(1000000)).toBe('1 MB')
+  })
+
+  it('caps at the largest unit (QB) rather than running off the end of the symbol list', () => {
+    const hugeSize = 1000 ** 13
+    // Without the cap this would keep dividing past QB; capped at the last symbol, the value
+    // itself stays large (≥1000) rather than shrinking further.
+    expect(formatStorageSize(hugeSize)).toBe(`${formatAmount(1000 ** 3)} QB`)
+  })
+})
+
+describe('getStorageSizesToShow', () => {
+  it('shows only the currently-offered size (at 0 built) on a fresh cycle', () => {
+    const state = createInitialGameState()
+    expect(getStorageSizesToShow(state)).toEqual([getStorageBankSize(state)])
+  })
+
+  it('includes every size ever built, even after its banks have all been redeemed back to 0 full', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: 3 },
+      storageBanks: { 1000: 0 },
+    })
+    expect(getStorageSizesToShow(state)).toContain(1000)
+  })
+
+  it('includes a size that is currently held but has no matching storageBanksBuiltTotal entry (a migrated pre-ladder save)', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: {},
+      storageBanks: { 1000: 2 },
+    })
+    expect(getStorageSizesToShow(state)).toContain(1000)
+  })
+
+  it('excludes a size with a zero/absent entry in both maps that also is not the currently-offered size', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 100000: 0 },
+      storageBanks: { 100000: 0 },
+    })
+    // Reaching STORAGE_BANK_LADDER_CAP at size 1000 advances the currently-offered size to
+    // 10000 — leaving 100000 present as a key in both maps, but at 0 in each, and not current.
+    expect(getStorageBankSize(state)).toBe(10000)
+    expect(getStorageSizesToShow(state)).not.toContain(100000)
+  })
+
+  it('de-duplicates a size present in both maps and sorts the result ascending', () => {
+    const state = withIntro(createInitialGameState(), {
+      storageBanksBuiltTotal: { 1000: STORAGE_BANK_LADDER_CAP, 10000: 4 },
+      storageBanks: { 10000: 2 },
+    })
+    // Reaching STORAGE_BANK_LADDER_CAP at size 1000 has advanced the ladder to 10000 (the
+    // currently-offered size) — 1000 still shows because it was built, 10000 shows only once
+    // despite appearing in storageBanksBuiltTotal, storageBanks, AND as the current size.
+    expect(getStorageBankSize(state)).toBe(10000)
+    expect(getStorageSizesToShow(state)).toEqual([1000, 10000])
   })
 })
 
