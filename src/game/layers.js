@@ -178,7 +178,7 @@ export const DISK_ARRAY_LADDER_CAP = 10
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
-// tickComputeCoreConversion/tickComputeNodeConversion in engine.js and
+// tickComputeCoreConversion in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
 // costed a Compute Core at a fixed 10 MB of Memory, gated on every Disk size being built
 // and full first — superseded by the dynamic model below, which has no relationship to Storage at
@@ -190,14 +190,17 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // own reveal (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
-// 1 Compute Node costs this many Compute Cores (see tickComputeNodeConversion in engine.js). Both
-// intro.computeCores and intro.computeNodes are permanent counters, carried over every real
+// How many Compute Cores the separate, unrelated Memory -> Core lifetime-counter latch
+// (computeCoresEverEarned/computeMergePageUnlocked — see mintComputeCoreIfReady in engine.js) uses
+// as its own threshold — NOT the Core -> Node merge boundary itself, which reuses the same ratio
+// via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores and
+// intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Disks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
 // entity is at this cap, further production into it pauses entirely (see
-// tickComputeCoreConversion/tickComputeNodeConversion/mergeComputeEntities in engine.js) rather
+// tickComputeCoreConversion/every mergeCompute*Into*/the reserve-timer system below) rather
 // than overflowing past it or silently discarding progress — Memory (for Cores) or the input
 // entity itself (for every manual merge) simply stays put, waiting for the player to spend the
 // capped entity down via a future spending mechanic, the same "waits, doesn't lose progress"
@@ -222,6 +225,36 @@ export const COMPUTE_ENTITY_CAP = 10
 // claimComputeCore/enableAutoClaimCore in engine.js), since there's no merge input for the first
 // tier — sacrificing 10 Nodes unlocks it.
 export const COMPUTE_MERGE_RATIO = 8
+
+// --- Byte Foundry Compute reserve-merge timers --- see issue #321. Every one of the 9 tier
+// boundaries (Core→Node through Supercomputer→Megacomputer) now merges through a timed RESERVE
+// pool once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
+// autoMergeNodesIntoCluster/… below) — a same-sized second pool of COMPUTE_MERGE_RESERVE_CAP (8,
+// same value as COMPUTE_MERGE_RATIO — a merge always consumes exactly one full group) slots
+// alongside the entity's own COMPUTE_ENTITY_CAP (10) normal slots, "18 slots" total. The reserve
+// only ever holds tokens already committed to an in-progress merge — filling it (always in one
+// instant, all-8-at-once move, never gradually) and starting its timer are the same action,
+// whether triggered automatically (input entity completely full, 10 held) or manually (player
+// click, needs only COMPUTE_MERGE_RATIO, 8, held — see startComputeCoresMerge/
+// startComputeNodesMerge/… in engine.js). At most one merge is ever in flight per boundary at a
+// time — the reserve is binary in practice (0 or a full COMPUTE_MERGE_RESERVE_CAP), tracked by a
+// single countdown field (e.g. intro.computeCoresMergeRemainingSeconds) rather than a separate
+// fill-count, since nothing else can partially fill it. Before a boundary's auto-merge is
+// unlocked, merging that tier is still the old-style instant, untimed action (see
+// mergeComputeCoresIntoNode/mergeComputeNodesIntoCluster/… — each becomes a same-reference no-op
+// once its own auto-merge flag flips true, since merging fully transitions to the timed reserve
+// system from then on).
+export const COMPUTE_MERGE_RESERVE_CAP = 8
+// The base duration a reserve merge takes to complete once started, at the very first boundary
+// (Core→Node) — doubling at every successive boundary (COMPUTE_MERGE_DURATIONS_SECONDS below), so
+// a higher tier's own merge is a proportionally bigger commitment. Only meaningful once a
+// boundary's auto-merge is unlocked — see COMPUTE_MERGE_RESERVE_CAP above.
+export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 60
+// One duration per tier boundary, lowest tier first (index 0 = Core→Node, … index 8 =
+// Supercomputer→Megacomputer) — each COMPUTE_MERGE_BASE_DURATION_SECONDS (60s/1 minute) doubled
+// once per boundary: 1/2/4/8/16/32/64/128/256 minutes. E.g. index 2 (Cluster→Network) is 240s (4
+// minutes).
+export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
 // tickComputeBoost in engine.js and intro.computeBoostType/computeBoostStacks/

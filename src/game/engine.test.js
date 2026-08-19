@@ -23,6 +23,7 @@ import {
   enableAutoClaimCore,
   enableAutoMergeClustersIntoNetwork,
   enableAutoMergeCloudsIntoDatacenter,
+  enableAutoMergeCoresIntoNode,
   enableAutoMergeDatacentersIntoSupercomputer,
   enableAutoMergeFabricsIntoCloud,
   enableAutoMergeGridsIntoFabric,
@@ -92,6 +93,7 @@ import {
   isAutoClaimCoreUnlockAvailable,
   isAutoMergeClustersIntoNetworkUnlockAvailable,
   isAutoMergeCloudsIntoDatacenterUnlockAvailable,
+  isAutoMergeCoresIntoNodeUnlockAvailable,
   isAutoMergeDatacentersIntoSupercomputerUnlockAvailable,
   isAutoMergeFabricsIntoCloudUnlockAvailable,
   isAutoMergeGridsIntoFabricUnlockAvailable,
@@ -101,8 +103,17 @@ import {
   isBandwidthAvailable,
   isBandwidthTurnAvailable,
   isComputeBoostTurnAvailable,
+  isComputeCloudsMergeStartAvailable,
+  isComputeClustersMergeStartAvailable,
   isComputeCoreClaimAvailable,
   isComputeCoreConversionUnlocked,
+  isComputeCoresMergeStartAvailable,
+  isComputeDatacentersMergeStartAvailable,
+  isComputeFabricsMergeStartAvailable,
+  isComputeGridsMergeStartAvailable,
+  isComputeNetworksMergeStartAvailable,
+  isComputeNodesMergeStartAvailable,
+  isComputeSupercomputersMergeStartAvailable,
   isComputeUpgradeAvailable,
   isComputeUpgradeTurnAvailable,
   isDiskBuildAvailable,
@@ -117,6 +128,7 @@ import {
   isTierUnlocked,
   mergeComputeClustersIntoNetwork,
   mergeComputeCloudsIntoDatacenter,
+  mergeComputeCoresIntoNode,
   mergeComputeDatacentersIntoSupercomputer,
   mergeComputeFabricsIntoCloud,
   mergeComputeGridsIntoFabric,
@@ -129,10 +141,20 @@ import {
   redeemDisk,
   releaseDiskCacheBlock,
   speedUpGame,
+  startComputeCloudsMerge,
+  startComputeClustersMerge,
+  startComputeCoresMerge,
+  startComputeDatacentersMerge,
+  startComputeFabricsMerge,
+  startComputeGridsMerge,
+  startComputeNetworksMerge,
+  startComputeNodesMerge,
+  startComputeSupercomputersMerge,
   startDiskBuild,
   tapIntroBit,
   tickAutoMergeClustersIntoNetwork,
   tickAutoMergeCloudsIntoDatacenter,
+  tickAutoMergeCoresIntoNode,
   tickAutoMergeDatacentersIntoSupercomputer,
   tickAutoMergeFabricsIntoCloud,
   tickAutoMergeGridsIntoFabric,
@@ -141,7 +163,6 @@ import {
   tickAutoMergeSupercomputersIntoMegacomputer,
   tickComputeBoost,
   tickComputeCoreConversion,
-  tickComputeNodeConversion,
   tickDiskAutoFill,
   tickDiskAutoRedeem,
   tickDiskBuild,
@@ -149,7 +170,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1857,44 +1878,6 @@ describe('tickComputeCoreConversion', () => {
   })
 })
 
-describe('tickComputeNodeConversion', () => {
-  it('is a same-reference no-op below COMPUTE_CORES_PER_NODE Compute Cores', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_CORES_PER_NODE - 1 })
-    expect(tickComputeNodeConversion(state)).toBe(state)
-  })
-
-  it('converts every complete group of COMPUTE_CORES_PER_NODE Cores into 1 Node, banking the remainder', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_CORES_PER_NODE * 2 + 3 })
-    const after = tickComputeNodeConversion(state)
-    expect(after.intro.computeNodes).toBe(2)
-    expect(after.intro.computeCores).toBe(3)
-  })
-
-  it('accumulates onto any already-permanent Compute Node balance rather than overwriting it', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_CORES_PER_NODE, computeNodes: 7 })
-    const after = tickComputeNodeConversion(state)
-    expect(after.intro.computeNodes).toBe(8)
-  })
-
-  it('is a same-reference no-op once computeNodes is already at COMPUTE_ENTITY_CAP, even with enough Cores to merge', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: COMPUTE_CORES_PER_NODE * 3,
-      computeNodes: COMPUTE_ENTITY_CAP,
-    })
-    expect(tickComputeNodeConversion(state)).toBe(state)
-  })
-
-  it('caps nodesGained at the remaining room under COMPUTE_ENTITY_CAP, leaving surplus Cores unconverted rather than overflowing Nodes past the cap', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: COMPUTE_CORES_PER_NODE * 3, // enough for 3 more Nodes
-      computeNodes: COMPUTE_ENTITY_CAP - 1, // only room for 1 more
-    })
-    const after = tickComputeNodeConversion(state)
-    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP)
-    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE * 2) // only 1 group of 8 spent
-  })
-})
-
 describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnlocked latch', () => {
   it('increments computeCoresEverEarned on every successful conversion, independently of the live computeCores balance', () => {
     const state = withIntro(createInitialGameState(), {
@@ -1920,7 +1903,7 @@ describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnl
     expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(false)
   })
 
-  it('flips true the instant the lifetime-earned total reaches COMPUTE_CORES_PER_NODE, even though tickComputeNodeConversion immediately spends the live balance back down the same tick', () => {
+  it('flips true the instant the lifetime-earned total reaches COMPUTE_CORES_PER_NODE, independently of whether the player has ever merged a Core into a Node', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       autoClaimCoreEnabled: true,
@@ -1929,14 +1912,12 @@ describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnl
       computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 1,
       byteCreated: true,
     })
-    expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(true)
-    // The full tickGame pipeline converts the freshly-minted 8th Core into a Node the very same
-    // tick — the latch must still have flipped, since it tracks the lifetime-earned total, not
-    // the live balance left behind afterward.
-    const after = tickGame(1)(state)
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeNodes).toBe(1)
+    const after = tickComputeCoreConversion(state)
     expect(after.intro.computeMergePageUnlocked).toBe(true)
+    // Core -> Node is no longer automatic (see issue #321) — the freshly-minted 8th Core stays
+    // held until the player (or an unlocked auto-merge) explicitly merges it.
+    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
+    expect(after.intro.computeNodes).toBe(0)
   })
 
   // Regression test for the scenario a human/bot reviewer flagged: computeCores alone can't
@@ -2165,30 +2146,74 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
 })
 
 describe.each([
-  { tick: tickAutoMergeNodesIntoCluster, enable: enableAutoMergeNodesIntoCluster, isUnlockAvailable: isAutoMergeNodesIntoClusterUnlockAvailable, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', label: 'nodesIntoCluster' },
-  { tick: tickAutoMergeClustersIntoNetwork, enable: enableAutoMergeClustersIntoNetwork, isUnlockAvailable: isAutoMergeClustersIntoNetworkUnlockAvailable, inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', label: 'clustersIntoNetwork' },
-  { tick: tickAutoMergeNetworksIntoGrid, enable: enableAutoMergeNetworksIntoGrid, isUnlockAvailable: isAutoMergeNetworksIntoGridUnlockAvailable, inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', label: 'networksIntoGrid' },
-  { tick: tickAutoMergeGridsIntoFabric, enable: enableAutoMergeGridsIntoFabric, isUnlockAvailable: isAutoMergeGridsIntoFabricUnlockAvailable, inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', label: 'gridsIntoFabric' },
-  { tick: tickAutoMergeFabricsIntoCloud, enable: enableAutoMergeFabricsIntoCloud, isUnlockAvailable: isAutoMergeFabricsIntoCloudUnlockAvailable, inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', label: 'fabricsIntoCloud' },
-  { tick: tickAutoMergeCloudsIntoDatacenter, enable: enableAutoMergeCloudsIntoDatacenter, isUnlockAvailable: isAutoMergeCloudsIntoDatacenterUnlockAvailable, inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', label: 'cloudsIntoDatacenter' },
-  { tick: tickAutoMergeDatacentersIntoSupercomputer, enable: enableAutoMergeDatacentersIntoSupercomputer, isUnlockAvailable: isAutoMergeDatacentersIntoSupercomputerUnlockAvailable, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', label: 'datacentersIntoSupercomputer' },
-  { tick: tickAutoMergeSupercomputersIntoMegacomputer, enable: enableAutoMergeSupercomputersIntoMegacomputer, isUnlockAvailable: isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', label: 'supercomputersIntoMegacomputer' },
-])('auto-merge: $label', ({ tick, enable, isUnlockAvailable, inputField, outputField, autoFlagField }) => {
+  { tick: tickAutoMergeCoresIntoNode, enable: enableAutoMergeCoresIntoNode, isUnlockAvailable: isAutoMergeCoresIntoNodeUnlockAvailable, start: startComputeCoresMerge, isStartAvailable: isComputeCoresMergeStartAvailable, inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[0], label: 'coresIntoNode' },
+  { tick: tickAutoMergeNodesIntoCluster, enable: enableAutoMergeNodesIntoCluster, isUnlockAvailable: isAutoMergeNodesIntoClusterUnlockAvailable, start: startComputeNodesMerge, isStartAvailable: isComputeNodesMergeStartAvailable, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[1], label: 'nodesIntoCluster' },
+  { tick: tickAutoMergeClustersIntoNetwork, enable: enableAutoMergeClustersIntoNetwork, isUnlockAvailable: isAutoMergeClustersIntoNetworkUnlockAvailable, start: startComputeClustersMerge, isStartAvailable: isComputeClustersMergeStartAvailable, inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[2], label: 'clustersIntoNetwork' },
+  { tick: tickAutoMergeNetworksIntoGrid, enable: enableAutoMergeNetworksIntoGrid, isUnlockAvailable: isAutoMergeNetworksIntoGridUnlockAvailable, start: startComputeNetworksMerge, isStartAvailable: isComputeNetworksMergeStartAvailable, inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[3], label: 'networksIntoGrid' },
+  { tick: tickAutoMergeGridsIntoFabric, enable: enableAutoMergeGridsIntoFabric, isUnlockAvailable: isAutoMergeGridsIntoFabricUnlockAvailable, start: startComputeGridsMerge, isStartAvailable: isComputeGridsMergeStartAvailable, inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[4], label: 'gridsIntoFabric' },
+  { tick: tickAutoMergeFabricsIntoCloud, enable: enableAutoMergeFabricsIntoCloud, isUnlockAvailable: isAutoMergeFabricsIntoCloudUnlockAvailable, start: startComputeFabricsMerge, isStartAvailable: isComputeFabricsMergeStartAvailable, inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[5], label: 'fabricsIntoCloud' },
+  { tick: tickAutoMergeCloudsIntoDatacenter, enable: enableAutoMergeCloudsIntoDatacenter, isUnlockAvailable: isAutoMergeCloudsIntoDatacenterUnlockAvailable, start: startComputeCloudsMerge, isStartAvailable: isComputeCloudsMergeStartAvailable, inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[6], label: 'cloudsIntoDatacenter' },
+  { tick: tickAutoMergeDatacentersIntoSupercomputer, enable: enableAutoMergeDatacentersIntoSupercomputer, isUnlockAvailable: isAutoMergeDatacentersIntoSupercomputerUnlockAvailable, start: startComputeDatacentersMerge, isStartAvailable: isComputeDatacentersMergeStartAvailable, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[7], label: 'datacentersIntoSupercomputer' },
+  { tick: tickAutoMergeSupercomputersIntoMegacomputer, enable: enableAutoMergeSupercomputersIntoMegacomputer, isUnlockAvailable: isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable, start: startComputeSupercomputersMerge, isStartAvailable: isComputeSupercomputersMergeStartAvailable, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[8], label: 'supercomputersIntoMegacomputer' },
+])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, duration }) => {
   it('tick is a same-reference no-op while the auto flag is unset, even with the input entity completely full', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP })
-    expect(tick(state)).toBe(state)
+    expect(tick(1)(state)).toBe(state)
   })
 
-  it('tick is a same-reference no-op once enabled but the input entity is below COMPUTE_ENTITY_CAP (the manual button\'s own COMPUTE_MERGE_RATIO threshold is not enough)', () => {
+  it('tick is a same-reference no-op once enabled but the input entity is below COMPUTE_ENTITY_CAP (the auto-trigger threshold is stricter than the manual button\'s own COMPUTE_MERGE_RATIO)', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
-    expect(tick(state)).toBe(state)
+    expect(tick(1)(state)).toBe(state)
   })
 
-  it('tick fires the same 8-for-1 merge once enabled and the input entity is completely full, leaving the remainder behind', () => {
+  it('tick auto-starts a reserve merge once enabled and the input entity is completely full — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
-    const after = tick(state)
-    expect(after.intro[outputField]).toBe(1)
+    const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[outputField]).toBe(0)
+    expect(after.intro[timerField]).toBe(duration - 1) // the same tick's elapsedSeconds also counts down
+  })
+
+  it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled back to COMPUTE_ENTITY_CAP', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, [timerField]: duration })
+    const after = tick(1)(state)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP) // untouched — no second merge started
+    expect(after.intro[timerField]).toBe(duration - 1) // only the in-flight merge's own timer ticks down
+  })
+
+  it('tick completes an in-flight merge once its full duration has elapsed, granting 1 of the output and clearing the timer', () => {
+    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: 1 })
+    const after = tick(1)(state)
+    expect(after.intro[outputField]).toBe(1)
+    expect(after.intro[timerField]).toBe(0)
+  })
+
+  it('tick caps the completed output at COMPUTE_ENTITY_CAP defensively, even if the output somehow filled up while the merge was in flight', () => {
+    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: 1, [outputField]: COMPUTE_ENTITY_CAP })
+    const after = tick(1)(state)
+    expect(after.intro[outputField]).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro[timerField]).toBe(0)
+  })
+
+  it('isStartAvailable requires the auto flag unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output', () => {
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: duration }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
+  })
+
+  it('start (manual click) is a same-reference no-op below isStartAvailable\'s own gate', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true })
+    expect(start(state)).toBe(state)
+  })
+
+  it('start (manual click) fires at the lower COMPUTE_MERGE_RATIO (8) threshold — "the button is enabled only when there are at least 8 tokens available"', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
+    const after = start(state)
+    expect(after.intro[inputField]).toBe(0)
+    expect(after.intro[timerField]).toBe(duration)
+    expect(after.intro[outputField]).toBe(0)
   })
 
   it('isUnlockAvailable requires COMPUTE_ENTITY_CAP of the OUTPUT entity held and not already enabled', () => {
@@ -2217,23 +2242,42 @@ describe.each([
     expect(prestigeGame(state).intro[autoFlagField]).toBe(true)
   })
 
-  it('is wired into tickGame — a real tick auto-merges once enabled and the input is full', () => {
+  it('an in-flight merge timer is permanent — carried over unchanged by a real Prestige rather than being cancelled', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: duration - 5 }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro[timerField]).toBe(duration - 5)
+  })
+
+  it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input is full', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[timerField]).toBeGreaterThan(0)
+  })
+
+  it('is wired into tickGame — a real tick completes an in-flight merge once its duration fully elapses', () => {
+    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: duration, byteCreated: true })
+    const after = tickGame(duration)(state)
     expect(after.intro[outputField]).toBe(1)
+    expect(after.intro[timerField]).toBe(0)
   })
 })
 
 describe.each([
-  { merge: mergeComputeNodesIntoCluster, inputField: 'computeNodes', outputField: 'computeClusters', label: 'mergeComputeNodesIntoCluster' },
-  { merge: mergeComputeClustersIntoNetwork, inputField: 'computeClusters', outputField: 'computeNetworks', label: 'mergeComputeClustersIntoNetwork' },
-  { merge: mergeComputeNetworksIntoGrid, inputField: 'computeNetworks', outputField: 'computeGrids', label: 'mergeComputeNetworksIntoGrid' },
-  { merge: mergeComputeGridsIntoFabric, inputField: 'computeGrids', outputField: 'computeFabrics', label: 'mergeComputeGridsIntoFabric' },
-  { merge: mergeComputeFabricsIntoCloud, inputField: 'computeFabrics', outputField: 'computeClouds', label: 'mergeComputeFabricsIntoCloud' },
-  { merge: mergeComputeCloudsIntoDatacenter, inputField: 'computeClouds', outputField: 'computeDatacenters', label: 'mergeComputeCloudsIntoDatacenter' },
-  { merge: mergeComputeDatacentersIntoSupercomputer, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', label: 'mergeComputeDatacentersIntoSupercomputer' },
-  { merge: mergeComputeSupercomputersIntoMegacomputer, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', label: 'mergeComputeSupercomputersIntoMegacomputer' },
-])('$label', ({ merge, inputField, outputField }) => {
+  { merge: mergeComputeCoresIntoNode, inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', label: 'mergeComputeCoresIntoNode' },
+  { merge: mergeComputeNodesIntoCluster, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', label: 'mergeComputeNodesIntoCluster' },
+  { merge: mergeComputeClustersIntoNetwork, inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', label: 'mergeComputeClustersIntoNetwork' },
+  { merge: mergeComputeNetworksIntoGrid, inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', label: 'mergeComputeNetworksIntoGrid' },
+  { merge: mergeComputeGridsIntoFabric, inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', label: 'mergeComputeGridsIntoFabric' },
+  { merge: mergeComputeFabricsIntoCloud, inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', label: 'mergeComputeFabricsIntoCloud' },
+  { merge: mergeComputeCloudsIntoDatacenter, inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', label: 'mergeComputeCloudsIntoDatacenter' },
+  { merge: mergeComputeDatacentersIntoSupercomputer, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', label: 'mergeComputeDatacentersIntoSupercomputer' },
+  { merge: mergeComputeSupercomputersIntoMegacomputer, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', label: 'mergeComputeSupercomputersIntoMegacomputer' },
+])('$label', ({ merge, inputField, outputField, autoFlagField }) => {
+  it('is a same-reference no-op once the auto flag has ever been unlocked — merging fully transitions to the timed reserve system (issue #321)', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
+    expect(merge(state)).toBe(state)
+  })
+
   it('is a same-reference no-op below COMPUTE_MERGE_RATIO of the input entity', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1 })
     expect(merge(state)).toBe(state)
@@ -2288,17 +2332,17 @@ describe.each([
 })
 
 describe('tickGame Compute Core/Node integration', () => {
-  it('converts Memory into Compute Cores and Nodes as part of a regular tick, claiming Memory before tickIntroAutoInvest can convert it to Kilobytes', () => {
+  it('converts Memory into Compute Cores as part of a regular tick, claiming Memory before tickIntroAutoInvest can convert it to Kilobytes — Core -> Node itself stays held, not automatic, unless autoMergeCoresIntoNode is unlocked (issue #321)', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       autoClaimCoreEnabled: true,
       bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 1, // one more Core completes a Node the same tick
+      computeCores: COMPUTE_CORES_PER_NODE - 1,
       byteCreated: true,
     })
     const after = tickGame(1)(state)
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeNodes).toBe(1)
+    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
+    expect(after.intro.computeNodes).toBe(0)
     // Memory was claimed entirely by Compute Core conversion, leaving nothing for
     // tickIntroAutoInvest's own bit-to-Kilobyte conversion to spend this same tick.
     expect(after.intro.bits).toBe(0)

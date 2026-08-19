@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, startDiskBuild, tapIntroBit, tickGame } from './engine'
+import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame } from './engine'
 import { OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, TICK_RATE_MS } from './layers'
 import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
 
@@ -162,6 +162,7 @@ export const useIncrementalGame = () => {
     releaseDiskCacheBlock: capacityBits => setState(releaseDiskCacheBlock(capacityBits)),
     activateComputeBoost: boostType => setState(activateComputeBoost(boostType)),
     reclaimComputeBoost: () => setState(reclaimComputeBoost),
+    mergeComputeCoresIntoNode: () => setState(mergeComputeCoresIntoNode),
     mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
     mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
     mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
@@ -172,6 +173,7 @@ export const useIncrementalGame = () => {
     mergeComputeSupercomputersIntoMegacomputer: () => setState(mergeComputeSupercomputersIntoMegacomputer),
     claimComputeCore: () => setState(claimComputeCore),
     enableAutoClaimCore: () => setState(enableAutoClaimCore),
+    enableAutoMergeCoresIntoNode: () => setState(enableAutoMergeCoresIntoNode),
     enableAutoMergeNodesIntoCluster: () => setState(enableAutoMergeNodesIntoCluster),
     enableAutoMergeClustersIntoNetwork: () => setState(enableAutoMergeClustersIntoNetwork),
     enableAutoMergeNetworksIntoGrid: () => setState(enableAutoMergeNetworksIntoGrid),
@@ -180,6 +182,15 @@ export const useIncrementalGame = () => {
     enableAutoMergeCloudsIntoDatacenter: () => setState(enableAutoMergeCloudsIntoDatacenter),
     enableAutoMergeDatacentersIntoSupercomputer: () => setState(enableAutoMergeDatacentersIntoSupercomputer),
     enableAutoMergeSupercomputersIntoMegacomputer: () => setState(enableAutoMergeSupercomputersIntoMegacomputer),
+    startComputeCoresMerge: () => setState(startComputeCoresMerge),
+    startComputeNodesMerge: () => setState(startComputeNodesMerge),
+    startComputeClustersMerge: () => setState(startComputeClustersMerge),
+    startComputeNetworksMerge: () => setState(startComputeNetworksMerge),
+    startComputeGridsMerge: () => setState(startComputeGridsMerge),
+    startComputeFabricsMerge: () => setState(startComputeFabricsMerge),
+    startComputeCloudsMerge: () => setState(startComputeCloudsMerge),
+    startComputeDatacentersMerge: () => setState(startComputeDatacentersMerge),
+    startComputeSupercomputersMerge: () => setState(startComputeSupercomputersMerge),
   }), [])
 
   const resetGame = useCallback(() => {
