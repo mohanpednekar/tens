@@ -63,3 +63,28 @@ graphify-out/.graphify_root
 # date) on any machine that runs an update — so it's excluded the same way cost.json is, rather
 # than committed and re-deleted by hand each time
 graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
+# graphify-out/cache/ is a pure incremental-rebuild performance cache (per-file AST/semantic hits,
+# keyed by graphify's own installed version — graphify-out/cache/ast/vX.Y.Z/) — fully regenerable
+# via `graphify update .`, not needed to "start from the same map" (graph.json alone provides
+# that), and non-deterministic across machines: every session in this repo so far has had a
+# different graphify version installed, so committing this directory produced a rename/rename or
+# add/add conflict on nearly every merge touching it. manifest.json is the same story — a raw
+# per-file mtime/hash cache for incremental change-detection, not meaningful content.
+graphify-out/cache/
+graphify-out/manifest.json
+
+# graphify's own pipeline treats .graphify_analysis.json (and its sibling .graphify_detect.json/
+# .graphify_extract.json/.graphify_ast.json/.graphify_semantic.json/.graphify_cached.json/
+# .graphify_uncached.txt) as intermediate scratch state, explicitly deleted (`rm -f`) at the end
+# of a normal run — see the skill's own cleanup step. A leftover copy in this repo predated this
+# gitignore entry (a run that didn't clean up after itself); it's ephemeral working state, not a
+# project artifact, so it's excluded the same way the rest of graphify's own temp files are.
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_extract.json
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_semantic_new.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_uncached.txt

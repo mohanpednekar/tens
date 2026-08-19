@@ -21,8 +21,14 @@ reimplementation — so results automatically reflect any balance changes made t
   chosen for this simulation — not literally matching the real Buy button, which batches up to the
   current cost-block boundary, a value that can grow past 10 over a run; see
   `docs/ECONOMY_REFERENCE.md`'s purchase-block-size section).
-- Every tick, "clicks Unlock" on any tier whose autobuyer isn't active yet, the moment it's
-  affordable (`buyAutobuyerUnlock`, `null` → unlocked).
+- Tier autobuyers are never unlocked during a run. Unlocking is no longer a PP purchase — the old
+  `buyAutobuyerUnlock` is gone — it's a free, automatic unlock keyed to lifetime prestige count
+  (`applyAutobuyerMilestones`, gated on `state.prestige.count` reaching
+  `getAutobuyerUnlockMilestone(tier.id)`, 1 prestige for tier01). Every simulated run starts a fresh
+  state (`prestige.count = 0`) and never calls `prestigeGame` mid-run (the loop exits the instant
+  `isProductionFrozen` becomes true), so under the current rules no tier's autobuyer can ever reach
+  its milestone within a single simulated run — the bot models manual-Buy-only tier purchases
+  throughout, for every starting PP balance.
 - Autobuyer levels are never manually Upgraded past 1, and no PP is spent on Auto-upgrade
   automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
   bonus (`getPrestigeProductionMultiplier`) on run length, holding every other lever fixed. If the
@@ -39,10 +45,14 @@ reimplementation — so results automatically reflect any balance changes made t
 - Every tick, the instant the last tier's current LEVEL reaches that cycle's requirement
   (`state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)`: level 2 for the
   first activation, level 3 for the second, level 4 for the third, …), "clicks Speed Up"
-  (`speedUpGame`) immediately. Unlike Auto-upgrade automation/Smart above, this isn't an optional
-  PP-gated lever being deliberately held fixed for isolation — it's a core, always-on, no-cost
-  mechanic, so always accepting it the moment it's available is the natural "attentive player"
-  behavior, matching how the bot already treats autobuyer unlocks.
+  (`speedUpGame`) immediately. This is a core, always-on, no-cost mechanic (not a PP-gated lever
+  being deliberately held fixed for isolation), so always accepting it the moment it's available is
+  the natural "attentive player" behavior.
+- Because autobuyers can never unlock within a single simulated run (see above), a run without
+  manual, moment-to-moment tier purchases would stall — this bot's every-tick manual Buy loop is
+  therefore load-bearing for reaching Googol at all, not just an optimization. Expect most runs,
+  especially at low starting PP, to hit the script's `MAX_TICKS` safety cap rather than finish; call
+  that out to the user per the capped-run note below rather than treating it as a bug.
 
 ## Usage
 

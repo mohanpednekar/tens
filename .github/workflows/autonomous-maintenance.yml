@@ -67,6 +67,29 @@ jobs:
           fi
           echo "main_ci_run_url=$main_ci_url" >> "$GITHUB_OUTPUT"
 
+          # Deploy-failure detection (see #256): is the latest push to main's deploy.yml (GitHub
+          # Pages) run currently red? Independent of ci.yml — deploy.yml triggers on every push to
+          # main without gating on ci.yml passing first, so a broken live-site deploy could
+          # otherwise sit red indefinitely with nothing in the automation ever noticing. Handled by
+          # the deterministic "Surface a broken deploy.yml run" step below, not by the Claude
+          # prompt — deploy.yml itself is on the protected/denied file list (this workflow can never
+          # fix it directly), so no judgment call is actually needed here, only a plain
+          # comment/issue post; per this repo's determinism-first automation-design principle (see
+          # AGENTS.md), that means a plain script, not an LLM invocation. This also means the check
+          # runs and gets surfaced every time regardless of the 5-PR skip ceiling or a tolerated
+          # Claude-side failure — unlike a check embedded in the prompt, which would silently never
+          # fire whenever skip=true or the Claude step fails.
+          main_deploy=$(gh run list --workflow=deploy.yml --branch=main --status=completed --limit=1 \
+            --json conclusion,url)
+          main_deploy_conclusion=$(jq -r '.[0].conclusion // "unknown"' <<<"$main_deploy")
+          main_deploy_url=$(jq -r '.[0].url // ""' <<<"$main_deploy")
+          if [ "$main_deploy_conclusion" = "failure" ]; then
+            echo "main_deploy_broken=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main_deploy_broken=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "main_deploy_run_url=$main_deploy_url" >> "$GITHUB_OUTPUT"
+
           # Phase 0 check: open PRs with a failing check, excluding claude/auto-* (already
           # owned by autonomous-pr-followup.yml's webhook-driven fixes) and fork PRs (never
           # ours to touch). In practice this mostly surfaces Dependabot PRs that have gone
@@ -177,6 +200,41 @@ jobs:
             echo "$open_gap_issues"
             echo "GAP_EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Surface a broken deploy.yml run
+        # Deterministic (no Claude invocation) and unconditional — runs even when the guard step
+        # sets skip=true (5-PR ceiling) or the "Run autonomous maintenance task" step below is
+        # tolerated-skipped for a transient error, so a broken deploy is never silently missed on a
+        # run that otherwise did nothing. deploy.yml itself is never touched — only an informational
+        # comment/issue, deduped against a prior run's post for this exact failed run.
+        if: steps.guard.outputs.main_deploy_broken == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ steps.guard.outputs.main_deploy_run_url }}
+        run: |
+          # Ordered by mergedAt (not gh pr list's default, which is unrelated to merge time) so
+          # this is genuinely the most recently merged PR, not just one recently updated.
+          merged_pr=$(gh pr list --state merged --limit 5 --json number,mergedAt \
+            --jq 'sort_by(.mergedAt) | reverse | .[0].number // empty')
+          if [ -n "$merged_pr" ]; then
+            already_commented=$(gh pr view "$merged_pr" --json comments \
+              --jq --arg url "$RUN_URL" '[.comments[].body | select(contains($url))] | length > 0')
+            if [ "$already_commented" = "true" ]; then
+              echo "Already commented on #$merged_pr for this failed run ($RUN_URL); skipping."
+            else
+              printf -v comment_body 'The latest `deploy.yml` (GitHub Pages) run on `main` failed: %s\n\n`deploy.yml` is on this workflow'"'"'s protected/denied file list, so `autonomous-maintenance.yml` can'"'"'t fix it directly — flagging for a human to look at.' "$RUN_URL"
+              gh pr comment "$merged_pr" --body "$comment_body"
+            fi
+          else
+            open_issue=$(gh issue list --state open --search "in:body \"$RUN_URL\"" --limit 1 \
+              --json number --jq '.[0].number // empty')
+            if [ -n "$open_issue" ]; then
+              echo "Already filed #$open_issue for this failed run ($RUN_URL); skipping."
+            else
+              printf -v issue_body 'The latest `deploy.yml` run on `main` failed: %s\n\nNo recently merged PR was found to comment on instead. `deploy.yml` is on `autonomous-maintenance.yml`'"'"'s protected/denied file list, so this can'"'"'t be fixed directly by that workflow — needs a human.' "$RUN_URL"
+              gh issue create --title "deploy.yml (GitHub Pages) failed on main" --body "$issue_body"
+            fi
+          fi
 
       - name: Enable Corepack
         if: steps.guard.outputs.skip != 'true'

@@ -6,8 +6,14 @@
 // only thing varying between rows is the starting Prestige Point balance):
 //   - Every tick, "click Buy" on every unlocked tier (buyTierQuantity, same 10-unit batch the real
 //     Buy button uses).
-//   - Every tick, "click Unlock" on any tier whose autobuyer isn't active yet, the instant it's
-//     affordable (buyAutobuyerUnlock, null -> unlocked).
+//   - Tier autobuyers are never unlocked during a run: unlocking is no longer a PP purchase (the
+//     old buyAutobuyerUnlock is gone) — it's a free, automatic unlock keyed to lifetime prestige
+//     count (applyAutobuyerMilestones, gated on state.prestige.count starting at
+//     getAutobuyerUnlockMilestone(tier.id), 1 prestige for tier01). Every simulated run starts a
+//     fresh state (prestige.count = 0) and never calls prestigeGame mid-run (the loop exits the
+//     instant isProductionFrozen becomes true), so under the current rules no tier's autobuyer can
+//     ever reach its milestone within a single simulated run — this bot models manual-Buy-only tier
+//     purchases throughout.
 //   - Autobuyer levels are never manually Upgraded past 1, and no PP is ever spent on Auto-upgrade
 //     automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
 //     bonus (getPrestigeProductionMultiplier) on run length, holding every other lever fixed.
@@ -29,7 +35,6 @@
 //   node run-simulation.mjs 0 100 1000 10000      # custom PP balances (space-separated integers)
 
 import {
-  buyAutobuyerUnlock,
   buyPrestigeSpeedBonus,
   buyTierQuantity,
   createInitialGameState,
@@ -61,11 +66,6 @@ function simulateRun(startingPP) {
 
     for (const tier of TIER_DEFINITIONS) {
       state = buyTierQuantity(tier.id, BUY_QUANTITY)(state)
-    }
-    for (const tier of TIER_DEFINITIONS) {
-      if (state.autobuyers[tier.id] === null) {
-        state = buyAutobuyerUnlock(tier.id)(state)
-      }
     }
     if (!state.prestigeSpeedBonusUnlocked) {
       state = buyPrestigeSpeedBonus(state)

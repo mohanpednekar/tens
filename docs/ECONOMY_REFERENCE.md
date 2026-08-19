@@ -469,7 +469,11 @@ table below) — is composed into a "turn"-suffixed predicate
 `isComputeUpgradeTurnAvailable`) that folds the priority order in on top; those turn predicates are
 what the actual reducers (`pickIntroProductionMilestone`/`buildStorageBank`/`activateComputeBoost`)
 gate on, and what `ByteFoundryPage`/`StoragePage`/`ComputePage` mirror for each button's `disabled`
-prop. Combine into a Byte (a one-off bootstrap step) sits outside this forced order entirely.
+prop. Combine into a Byte (a one-off bootstrap step) sits outside this forced order entirely, and so
+does the Compute Cores merge chain (Node → Cluster → Network → Grid) — `mergeComputeNodesIntoCluster`/
+`mergeComputeClustersIntoNetwork`/`mergeComputeNetworksIntoGrid` gate only on `canMerge` (enough of
+the input entity, room under `COMPUTE_ENTITY_CAP` on the output), never on whether a higher-ranked
+action is currently available.
 `isMemoryCapacityUpgradeAvailable` (Memory's own gate) directly composes all four base predicates
 above it (plus Combine) rather than a separate "turn" wrapper, since it's the lowest-ranked action —
 nothing ranks below it to compose against. Storage Bank Fill itself (`isStorageBankFillAvailable`,
