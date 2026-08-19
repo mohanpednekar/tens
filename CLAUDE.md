@@ -316,31 +316,18 @@ src/
                                `intro.mainGameUnlocked` — the mandatory gate itself has no way out).
                                Receives the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← Storage's fuller detail screen (see "Architecture" 4a below) — one
-                               row of bank squares per size ever reached, for redeeming; NOT the
-                               Build button, which stays on ByteFoundryPage. Reached only via
-                               ByteFoundryPage's own "🏦 Storage" nav button; takes `{ game, onBack }`,
-                               `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
-    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — top to bottom: an
-                               active-boost status (effect/countdown/stacks) whenever a boost is
-                               running, then the Boost EFFECTS section itself (issue #326 — "the
-                               effects section is at the top of the Compute page, not at the
-                               bottom"): an armed-tier status line, the 3 small icon preset buttons
-                               (Burst/Standard/Sustain), then — only while a boost is active — a
-                               Stack + Reclaim row. THEN, below all of that (once
-                               `intro.computeMergePageUnlocked`), TWO rows per compute-ladder
-                               entity, Core through Megacomputer (issues #280/#316/#321/#326): row 1
-                               is the tier's name/symbol plus its 10 normal-slot squares, ALSO its
-                               own clickable `TierSelectButton` that arms the 3 Boost preset buttons
-                               ABOVE (issue #326 — "click any tier row"); row 2 is, pre-unlock, an
-                               instant Merge button + an Unlock Auto-merge button, or, once that
-                               boundary's auto-merge is unlocked, the 8 reserve-slot squares
-                               themselves — clicking that row is what manually starts a timed
-                               reserve merge ("slots are the button"), with a countdown shown while
-                               one is in flight. Cores' own row 1 also carries a small badge for the
-                               separate, unrelated Memory → Core auto-claim control. Reached only via
-                               ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`, `onBack`
-                               always returning to ByteFoundryPage (`page = 'foundry'`)
+    StoragePage/index.jsx   ← Storage's fuller detail screen — NOT the Build button, which stays on
+                               ByteFoundryPage (see "Architecture" 4a below for the full field
+                               breakdown). Reached only via ByteFoundryPage's own "🏦 Storage" nav
+                               button; takes `{ game, onBack }`, `onBack` always returning to
+                               ByteFoundryPage (`page = 'foundry'`)
+    ComputePage/index.jsx   ← the Compute screen, including the nine-boundary merge chain and the
+                               Boost effects section — issue #326 put the Boost effects (armed-tier
+                               status/presets/Stack+Reclaim) at the TOP of the page, tier rows below
+                               (see "Architecture" 4b below for the full field breakdown — row
+                               layout, squares, issue citations). Reached only via ByteFoundryPage's
+                               own "⚡ Compute" nav button; takes `{ game, onBack }`, `onBack` always
+                               returning to ByteFoundryPage (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
                                onOpenFoundry, onOpenInfo }` props — `game` is the full
                                `useIncrementalGame()` object, lifted up into App.jsx (see below) so
@@ -493,7 +480,7 @@ Strict three-layer separation:
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
     (`page = 'foundry'`). Same posture as StoragePage above. Also where the nine-boundary merge
     chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
-    Megacomputer — see "Economy model" below and issues #280/#321) lives, behind its own later,
+    Megacomputer — see "Economy model" below and issues #280/#316/#321) lives, behind its own later,
     one-time `intro.computeMergePageUnlocked` reveal nested inside this same page — not a separate
     page/nav link. "Compute" names the page/feature only — individual entities drop the word
     (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every player-visible label.
@@ -724,7 +711,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   `ubuntu-latest` runner. Chromium-only; this repo doesn't need cross-browser coverage.
 - Specs live under `e2e/` (a sibling of `src/`, not inside it), named `*.e2e.js` — deliberately not
   `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s reported test count
-  (1139, see "Testing" above) is unaffected by anything under `e2e/`.
+  (see "Testing" above for the current count) is unaffected by anything under `e2e/`.
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
