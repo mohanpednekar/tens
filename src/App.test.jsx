@@ -2984,19 +2984,25 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
   })
 
-  test('the active-boost status (effect, countdown, stacks, reclaim) renders at the top of the screen, before the preset/entity sections', () => {
+  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Compute page, not at the bottom"', () => {
     seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1,
-      computeBoostType: 'standard', computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 1, computeNodes: 9,
+      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
     })
     render(<App />)
     openCompute()
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
     const boostRow = screen.getByLabelText(/^compute boost$/i)
-    // DOCUMENT_POSITION_FOLLOWING (4) on boostRow relative to activeStatus means activeStatus
-    // comes first in document order — i.e. it renders above boostRow on the page.
+    const stackReclaimRow = screen.getByLabelText(/^stack or reclaim the active compute boost$/i)
+    const entities = screen.getByLabelText(/^compute entities$/i)
+    // DOCUMENT_POSITION_FOLLOWING (4) means the first argument comes before the second in document
+    // order — i.e. activeStatus renders above boostRow, which renders above stackReclaimRow, which
+    // renders above the tier entity rows.
     expect(activeStatus.compareDocumentPosition(boostRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(boostRow.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(stackReclaimRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   test('no Reclaim control appears while no boost is active', () => {

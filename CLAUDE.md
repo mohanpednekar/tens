@@ -321,24 +321,25 @@ src/
                                Build button, which stays on ByteFoundryPage. Reached only via
                                ByteFoundryPage's own "🏦 Storage" nav button; takes `{ game, onBack }`,
                                `onBack` always returning to ByteFoundryPage (`page = 'foundry'`)
-    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — an active-boost
-                               status (effect/countdown/stacks) at the TOP of the screen whenever a
-                               boost is running, then (once `intro.computeMergePageUnlocked`) TWO
-                               rows per compute-ladder entity, Core through Megacomputer (issues
-                               #280/#316/#321/#326): row 1 is the tier's name/symbol plus its 10
-                               normal-slot squares, ALSO its own clickable `TierSelectButton` that
-                               arms the 3 Boost preset buttons below at that tier's own scaled
-                               power/duration (issue #326 — "click any tier row"); row 2 is, pre-
-                               unlock, an instant Merge button + an Unlock Auto-merge button, or,
-                               once that boundary's auto-merge is unlocked, the 8 reserve-slot
-                               squares themselves — clicking that row is what manually starts a
-                               timed reserve merge ("slots are the button"), with a countdown shown
-                               while one is in flight. Cores' own row 1 also carries a small badge
-                               for the separate, unrelated Memory → Core auto-claim control. Below
-                               the tier rows: an armed-tier status line, then the 3 small icon
-                               preset buttons (Burst/Standard/Sustain), then — only while a boost is
-                               active — a Stack + Reclaim row. Reached only via ByteFoundryPage's
-                               own "⚡ Compute" nav button; takes `{ game, onBack }`, `onBack`
+    ComputePage/index.jsx   ← the Compute screen (see "Architecture" 4b below) — top to bottom: an
+                               active-boost status (effect/countdown/stacks) whenever a boost is
+                               running, then the Boost EFFECTS section itself (issue #326 — "the
+                               effects section is at the top of the Compute page, not at the
+                               bottom"): an armed-tier status line, the 3 small icon preset buttons
+                               (Burst/Standard/Sustain), then — only while a boost is active — a
+                               Stack + Reclaim row. THEN, below all of that (once
+                               `intro.computeMergePageUnlocked`), TWO rows per compute-ladder
+                               entity, Core through Megacomputer (issues #280/#316/#321/#326): row 1
+                               is the tier's name/symbol plus its 10 normal-slot squares, ALSO its
+                               own clickable `TierSelectButton` that arms the 3 Boost preset buttons
+                               ABOVE (issue #326 — "click any tier row"); row 2 is, pre-unlock, an
+                               instant Merge button + an Unlock Auto-merge button, or, once that
+                               boundary's auto-merge is unlocked, the 8 reserve-slot squares
+                               themselves — clicking that row is what manually starts a timed
+                               reserve merge ("slots are the button"), with a countdown shown while
+                               one is in flight. Cores' own row 1 also carries a small badge for the
+                               separate, unrelated Memory → Core auto-claim control. Reached only via
+                               ByteFoundryPage's own "⚡ Compute" nav button; takes `{ game, onBack }`, `onBack`
                                always returning to ByteFoundryPage (`page = 'foundry'`)
     MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
                                onOpenFoundry, onOpenInfo }` props — `game` is the full
@@ -498,33 +499,36 @@ Strict three-layer separation:
     (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every player-visible label.
     Deliberately terse: every control is icon-only (no or single-word visible labels), the full
     sentence living in `title`/`aria-label` instead — and the prose explanation of each mechanic
-    lives in the Guide (`InfoPage`), not here. An active Compute Boost's status (effect, countdown,
-    current stack count) renders at the TOP of the page, right after the header, so it stays
-    visible regardless of what else is on screen. Below that, each of the nine merge-boundary tiers
-    (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is the tier's
-    name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue #326, its
-    own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate from
-    Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`) that
-    arms the 3 Boost preset buttons further down at that tier's own scaled power/duration ("click
-    any tier row"), highlighted while selected; row 2 is, before that boundary's auto-merge is
-    unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock
-    Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once
-    unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves, clickable as the
-    manual-start trigger with no separate button ("slots are the button"), showing a countdown
-    while a merge is in flight. Megacomputer (the top of the chain) has no row 2, but its row 1 is
-    still Boost-selectable — the only place a Megacomputer has any use at all. Cores' own row 1
-    also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock control
-    — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see "Economy
-    model" below. Below the tier rows: an `ArmedStatusText` line naming the currently armed tier
-    and how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain,
-    base 1 minute/10 minutes/1 hour at tier 1/Core, scaling per tier — see "Economy model" below),
-    disabled until a tier is armed. While a boost is active, activating any NEW boost is blocked
-    entirely (any type/tier) — a Stack + Reclaim row appears below the presets instead:
+    lives in the Guide (`InfoPage`), not here. Render order top to bottom: an active Compute
+    Boost's status (effect, countdown, current stack count) renders at the TOP of the page, right
+    after the header, so it stays visible regardless of what else is on screen; right below that is
+    the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
+    Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
+    how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
+    minute/10 minutes/1 hour at tier 1/Core, scaling per tier — see "Economy model" below), disabled
+    until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
+    (any type/tier) — a Stack + Reclaim row appears right below the presets instead:
     `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
     spending another token of ITS OWN funding tier (never whatever tier a player might have since
     selected), and `reclaimComputeBoost` (`canReclaimComputeBoost`'s own gate) reclaims the most
-    recently added, still-unused stack of the active boost, one at a time, refunding 1 token into
-    that same funding tier.
+    recently added, still-unused stack of an active boost, one at a time, refunding 1 token into
+    that same funding tier. THEN, below the whole Boost effects section, each of the nine
+    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
+    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
+    #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
+    from Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`)
+    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power/duration ("click
+    any tier row" — the effects section renders first specifically so it's visible without
+    scrolling once a tier below it is clicked), highlighted while selected; row 2 is, before that
+    boundary's auto-merge is unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO`
+    held) plus an Unlock Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the produced tier
+    held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves,
+    clickable as the manual-start trigger with no separate button ("slots are the button"), showing
+    a countdown while a merge is in flight. Megacomputer (the bottom of the chain) has no row 2, but
+    its row 1 is still Boost-selectable — the only place a Megacomputer has any use at all. Cores'
+    own row 1 also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock
+    control — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see
+    "Economy model" below.
 5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
    (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Byte Foundry, Storage,
    Compute, Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones, plus the app's tagline).

@@ -630,15 +630,18 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    the boost fully back to inactive once the last stack is reclaimed, rather than leaving a 0-stack
    "active" boost around.
 
-   On `ComputePage`: the active-boost status itself (effect, countdown, stack count — no longer a
-   Reclaim control, moved below, see next) renders at the TOP of the page, right after the header, so
-   it stays visible regardless of what else is on screen; `MainPage` shows a matching read-only
-   status line while a boost is active, since its effect reaches `tier01` there too. Below the tier
-   rows, an armed-tier status line names the currently armed tier and how many tokens it holds, then
-   the 3 small icon preset buttons — disabled entirely until a tier is armed, and (per the "no boost
-   of any kind currently active" gate above) disabled again the instant any boost starts, regardless
-   of type/tier. Only while a boost IS active, a Stack + Reclaim row appears below the presets ("Stack
-   and reclaim buttons shall be shown on the next row"). Ranked fourth in the forced priority order
+   On `ComputePage`, render order top to bottom: the active-boost status itself (effect, countdown,
+   stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
+   page, right after the header, so it stays visible regardless of what else is on screen; `MainPage`
+   shows a matching read-only status line while a boost is active, since its effect reaches `tier01`
+   there too. Right below that is the Boost EFFECTS section itself ("the effects section is at the
+   top of the Compute page, not at the bottom"): an armed-tier status line names the currently armed
+   tier and how many tokens it holds, then the 3 small icon preset buttons — disabled entirely until
+   a tier is armed, and (per the "no boost of any kind currently active" gate above) disabled again
+   the instant any boost starts, regardless of type/tier. Only while a boost IS active, a Stack +
+   Reclaim row appears right below the presets ("Stack and reclaim buttons shall be shown on the next
+   row"). THEN, below the whole effects section, come the tier rows themselves — clicking one arms
+   the presets above it. Ranked fourth in the forced priority order
    (below Disk Fill/Bandwidth/Disk Build, above Memory — see "Forced priority order" below):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
    are `activateComputeBoost`/`stackComputeBoost`'s own actual gates, a no-op whenever something
