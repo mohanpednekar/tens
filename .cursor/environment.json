@@ -1,0 +1,5 @@
+{
+  "name": "Tens",
+  "install": "export NVM_DIR=\"$HOME/.nvm\"\n. \"$NVM_DIR/nvm.sh\"\nnvm use 22 >/dev/null\nexport PATH=\"$(dirname \"$(nvm which 22)\"):$PATH\"\ncorepack enable\nyarn install --frozen-lockfile\nyarn playwright install --with-deps chromium",
+  "start": "export NVM_DIR=\"$HOME/.nvm\"\n. \"$NVM_DIR/nvm.sh\"\nnvm use 22 >/dev/null\nexport PATH=\"$(dirname \"$(nvm which 22)\"):$PATH\"\nyarn dev"
+}
