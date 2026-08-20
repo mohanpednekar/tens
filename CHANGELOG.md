@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- **App navigation** is a shared fixed bottom bar (`components/AppNav`): **Tiers** / **Foundry** /
+  **Storage** / **Compute** / **Guide**, with the active destination marked via `aria-current`.
+  Storage and Compute appear once each mechanic is revealed; during the mandatory Byte Foundry
+  gate, Tiers and Guide stay hidden so there's still no escape hatch. Nested Back buttons and
+  page-local open-* links are removed — jump directly between unlocked destinations. The main
+  ladder screen is labeled **Tiers** (not "Game") so it doesn't collide with MainPage's own
+  Game/Upgrades/Milestones view tabs.
 - The in-game **Guide** is rewritten for readability: short bullets and sub-headings instead of
   dense paragraphs, fuller coverage (forced priority, Storage release/redeem rules, tier-funded
   Compute Boost with Stack/Reclaim, Prestige), and numbers kept in sync with live `layers.js` /

@@ -9,33 +9,30 @@ below), since all four pages are tightly coupled around the same `game` prop and
 mechanic. `MainPage` is
 deliberately purely game — live controls, numbers, and status text only. Every mechanic's
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
-now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
-link beside the page title; see CLAUDE.md's Architecture section for the split and
-`onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered while the Byte Foundry gate isn't
-active — i.e. `state.intro.mainGameUnlocked` is true and the player hasn't voluntarily navigated to
-`ByteFoundryPage` via its own "⚙️ Byte Foundry" link (`onOpenFoundry` prop) — see "Byte Foundry
-page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
+now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
+item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
+`App.jsx`'s shared `components/AppNav` (Tiers / Foundry / Storage / Compute / Guide) — pages
+themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
+ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
+true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
+see "Byte Foundry page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
 
 **Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The tap screen — a separate, much
 simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
-renders identically whether reached as the mandatory gate or voluntarily; `onBack` (present only
-once `state.intro.mainGameUnlocked` is true) is the only thing that differs.
+renders identically whether reached as the mandatory gate or voluntarily; AppNav is hidden (or
+omits Tiers/Guide) during the gate so there is still no escape hatch.
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
-the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a `Header` row
-(`display: flex`, `justify-content: space-between`, the same title/nav-link placement convention
-`MainPage`'s own `<Header>` and `InfoPage`'s own `<Header>` already use) pairing the page title with
-a "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
-button, calling `onBack`) — shown only once `onBack` is passed, i.e. only when reached voluntarily
-post-`mainGameUnlocked`, since the mandatory gate has no way out — rather than the exit sitting alone
-at the bottom of the page; a one-line status explainer below that (two variants — pre-unlock
-instructions, or a post-unlock acknowledgment that transfers keep working indefinitely, with no
-per-cycle cap to run into); a `TilesRow` (flex row) holding a single `FillableStatCard`
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
+`Header` with the page title (top-level navigation lives in AppNav, not here); a one-line status
+explainer below that (two variants — pre-unlock instructions, or a post-unlock acknowledgment that
+transfers keep working indefinitely, with no per-cycle cap to run into); a `TilesRow` (flex row)
+holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
@@ -580,13 +577,8 @@ not at the bottom"):
   *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
-  `<h1>Tens</h1>`, beside the "⚙️ Byte Foundry" nav button (`aria-label="open byte foundry"`,
-  calling the `onOpenFoundry` prop) and the "ℹ️ Guide" nav button (`aria-label="open guide"`,
-  calling `onOpenInfo`) — all three always visible, no disclosure involved. Both nav buttons are a
-  real `Button`/`ButtonContent` pair (`variant="info"`, styled via a small `NavButton = styled(Button)`
-  override for header-scale sizing), the same convention `ByteFoundryPage`'s own "🏦 Storage"/"⚡
-  Compute" nav buttons already use — not the plain underlined `GuideLink` text-button this page used
-  before, which read as far less obviously clickable than the rest of the app's own navigation.
+  `<h1>Tens</h1>` — always visible, no disclosure involved. Top-level destinations (Tiers / Foundry /
+  Storage / Compute / Guide) live in `App.jsx`'s shared `AppNav`, not as header buttons here.
   Sourced from `package.json`'s `"version"` field via a build-time JSON import
   (`import { version } from '../../../package.json'`) — the single source of truth; no separate
   constant duplicates it.

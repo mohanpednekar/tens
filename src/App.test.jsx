@@ -69,25 +69,28 @@ test('renders the current app version beside the title', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
-// Regression test: both nav links used to be a plain underlined <button> with no aria-label
-// (GuideLink), styled far less obviously as clickable than every other page-to-page link in the
-// app (e.g. ByteFoundryPage's own "🏦 Storage"/"⚡ Compute" buttons). They're now real Button
-// components on the same variant="info" convention — this only asserts the accessible surface
+// Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
+// buttons once the main game is unlocked — this only asserts the accessible surface
 // (role + aria-label), since jsdom doesn't render CSS for a visual check.
-test('the Byte Foundry and Guide header links are real, accessibly-labeled buttons', () => {
+test('AppNav exposes accessibly-labeled Foundry and Guide destinations once unlocked', () => {
   seedMainGameState()
   render(<App />)
 
+  expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
+
   const foundryButton = screen.getByRole('button', { name: /open byte foundry/i })
-  expect(foundryButton).toHaveTextContent('⚙️ Byte Foundry')
-  expect(foundryButton).toHaveAttribute('title', "Review this run's Byte Foundry")
+  expect(foundryButton).toHaveTextContent(/foundry/i)
+  expect(foundryButton).toHaveAttribute('title', 'Byte Foundry')
+
+  const tiersButton = screen.getByRole('button', { name: /open tiers/i })
+  expect(tiersButton).toHaveTextContent(/tiers/i)
 
   const guideButton = screen.getByRole('button', { name: /open guide/i })
-  expect(guideButton).toHaveTextContent('ℹ️ Guide')
+  expect(guideButton).toHaveTextContent(/guide/i)
   expect(guideButton).toHaveAttribute('title', 'How this game works')
 })
 
-test('the Guide link navigates to the Info page and Back to game returns, preserving game state', async () => {
+test('the Guide nav item opens the Info page and Tiers returns, preserving game state', async () => {
   const user = userEvent.setup()
 
   // Kilobytes now costs 1,000/unit (baseCost) — seed enough Money for exactly 1 unit.
@@ -111,7 +114,7 @@ test('the Guide link navigates to the Info page and Back to game returns, preser
   expect(screen.getByLabelText(/compute section/i)).toHaveTextContent(/stack/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
   // Navigating away and back doesn't touch game state — the previous purchase is still there.
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
@@ -2885,8 +2888,8 @@ describe('Byte Foundry Storage', () => {
 
     // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
     // visible on ByteFoundryPage's own transfer-block row (a live mirror of the same progress) once
-    // navigated back there via "← Back".
-    fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))
+    // navigated back there via AppNav.
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
     expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
@@ -3114,7 +3117,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
   })
 
-  test('the merge chain section shows once unlocked, with a Back to Byte Foundry exit', () => {
+  test('the merge chain section shows once unlocked; AppNav returns to Byte Foundry', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 2, computeNodes: 9, computeClusters: 3, computeNetworks: 0, computeGrids: 0,
@@ -3127,7 +3130,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/nodes.*9\/10/i)
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/clusters.*3\/10/i)
 
-    fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
@@ -3384,7 +3387,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(0)
     expect(saved.intro.autoClaimCoreEnabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: /back to byte foundry/i }))
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
     expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
   })
 })
@@ -3477,8 +3480,9 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.mainGameUnlocked).toBe(false)
 
-  // Backing out lands on the Byte Foundry, not MainPage, the instant intro.mainGameUnlocked is false.
-  fireEvent.click(screen.getByRole('button', { name: /back to game/i }))
+  // Leaving Guide via AppNav's Foundry item lands on the Byte Foundry gate — Tiers is hidden
+  // while mainGameUnlocked is false, so Foundry is the way out.
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   unmount()
@@ -3486,14 +3490,13 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
 })
 
 // --- The Byte Foundry persists as a voluntarily-revisitable, always-interactive screen ---
-// Once intro.mainGameUnlocked is true, the Byte Foundry no longer disappears — MainPage's own
-// "⚙️ Byte Foundry" link reopens it at any time, with its own "← Back to game" exit. Unlike the
-// old completed-gated design, nothing here ever goes read-only: Tap/Sacrifice/Invest stay live
-// indefinitely, and Convert stays live too as long as this cycle's shared transfer budget isn't
-// exhausted. Before mainGameUnlocked, it's still the same mandatory gate as always — no Back
-// button, no way to reach MainPage/InfoPage around it.
+// Once intro.mainGameUnlocked is true, the Byte Foundry no longer disappears — AppNav's Foundry
+// item reopens it at any time. Unlike the old completed-gated design, nothing here ever goes
+// read-only: Tap/Sacrifice/Invest stay live indefinitely, and Convert stays live too as long as
+// this cycle's shared transfer budget isn't exhausted. Before mainGameUnlocked, it's still the
+// same mandatory gate as always — AppNav omits Tiers/Guide, so there's no way onto MainPage.
 
-test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, with a Back to game exit', async () => {
+test('AppNav\'s Foundry item navigates to the always-interactive screen; Tiers returns to MainPage', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -3521,18 +3524,21 @@ test('MainPage\'s Byte Foundry link navigates to the always-interactive screen, 
   expect(screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).toBeDisabled()
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(4)
 
-  await user.click(screen.getByRole('button', { name: /back to game/i }))
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
 })
 
-test('the mandatory Byte Foundry gate (before mainGameUnlocked) has no Back to game exit', () => {
+test('the mandatory Byte Foundry gate (before mainGameUnlocked) has no Tiers/Guide escape', () => {
   render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('navigation', { name: /main navigation/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
 
-test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, dropping the Back button', () => {
+test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, hiding Tiers/Guide', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -3551,15 +3557,18 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   // Reached voluntarily — Tap was already live before the Prestige, same as after (see test above).
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /back to game/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open tiers/i })).toBeInTheDocument()
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Still on the same screen — no navigation jump — but now it's the mandatory gate: the Back
-  // button is gone, since mainGameUnlocked just flipped false.
+  // Still on the same screen — no navigation jump — but now it's the mandatory gate: Tiers/Guide
+  // are gone, since mainGameUnlocked just flipped false (and Storage/Compute aren't revealed at
+  // this capacity, so the whole AppNav hides).
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('navigation', { name: /main navigation/i })).not.toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()

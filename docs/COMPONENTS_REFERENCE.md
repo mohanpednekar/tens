@@ -1,8 +1,24 @@
 # Shared components reference
 
 Referenced from `CLAUDE.md`'s Repo layout section. Read this before touching
-`src/components/Button`, `src/components/Money`, or `src/components/StatCard` — the full prop/
-styling contract for each, including the token-migration state each is currently in.
+`src/components/Button`, `src/components/Money`, `src/components/StatCard`, or
+`src/components/AppNav` — the full prop/styling contract for each, including the token-migration
+state each is currently in.
+
+## `AppNav/index.jsx`
+
+Fixed bottom navigation bar (`.jsx`) switching the five top-level destinations: **Tiers**
+(`aria-label="open tiers"`, internal page id `'game'`), **Foundry** (`open byte foundry`),
+**Storage** (`open storage`, only once `isStorageUnlocked`), **Compute** (`open compute`, only
+once `isComputeCoreConversionUnlocked`), and **Guide** (`open guide`). Rendered by `App.jsx`
+once the main game is unlocked, and also during the mandatory Byte Foundry gate whenever
+Storage/Compute are already revealed (or the player is parked on Guide/Storage/Compute after a
+Prestige) so those screens stay reachable / exit-able. During the gate, Tiers and Guide are
+omitted so there is still no escape hatch onto MainPage. Active item uses `aria-current="page"`
+plus accent/surface styling from theme tokens. Exports `APP_NAV_BOTTOM_PAD` so `App.jsx`'s
+`PageShell` can reserve the same clearance the fixed bar occupies (including
+`env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, showTiers, showStorage,
+showCompute, showGuide }`.
 
 ## `Button/index.jsx`
 
