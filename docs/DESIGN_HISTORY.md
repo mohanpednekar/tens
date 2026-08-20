@@ -10,6 +10,19 @@ structure so you can jump to the matching topic.
 
 ## Automation workflows
 
+### Stale `blocked` labels after Workflows: write landed — 2026-08-20
+
+`GH_AUTOMATION_PAT` missing `Workflows: write` was a real Phase A killer through mid-July 2026:
+any push whose reachable history touched `.github/workflows/**` was rejected, so a large
+`claude-task` chain (#35–#37, #51–#52, #53/#55/…, #75, …) got the `blocked` label. A 2026-07-29
+re-test after a claimed grant still failed (see #69), #69 was landed interactively (#209), and
+the dependent issues kept their labels. By 2026-08-20 the maintainer confirmed the scope is on
+the PAT, but Phase A was still empty of implementable work: the guard excludes `blocked`-labeled
+issues, and the three remaining unlabeled candidates (#52/#139/#140) soft-skip on open
+`Blocked by #N` parents (#51 still `blocked`; #138 `blocked` for a separate subjective UI
+judgment). Clearing the PAT-era labels (keeping #138) and fixing the docs that still said the
+PAT lacked the scope is what unsticks the backlog — not another settings-page change.
+
 ### Schedule retune (Cursor IST slots + Claude twice-daily) — 2026-08-20
 
 Cursor's maintenance twin originally ran on a UTC cron offset ~2.5h from Claude's every-5-hours
