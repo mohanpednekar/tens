@@ -2125,6 +2125,40 @@ size with an empty cache that can never finish this tick (not enough bits) along
 whose cache is already fully staged, and asserts the larger one still pours — this failed under the
 old code (the larger size's `disks` count stayed at 0) and passes under the fix.
 
+### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
+
+Requested directly, in three related lines: "Storage need not be shown in Foundry if main game
+costs of all tiers already exceed its capacity"; "Only the transferrable size should be shown or
+none"; "Transfer to main is redundant section." Two genuinely different UI elements, each with a
+real risk of over-hiding something load-bearing, so both were confirmed via follow-up questions
+before touching code.
+
+**The Disk/Cache detail row.** The obvious reading — hide the whole Storage section, Build button
+included, whenever the current size isn't currently redeemable — would have broken a documented,
+intentional strategy: "a player can build ahead of or fall behind tier01's actual price" (see
+"Economy model"). Confirmed narrower: only `components/DiskArrayRow`'s own cache-blocks/disk-
+squares detail hides when `getDiskRedeemTierName(state, diskSize) === null`; the Build button stays
+visible and usable regardless, since building ahead of the curve is still exactly the point. The
+row's full history remains reviewable on StoragePage either way, so nothing is actually lost by
+hiding it here — only the redundant, non-actionable detail on the Foundry screen itself.
+
+**The Transfer-to-Main-Game row.** "Transfer to main is redundant section" reads, taken literally,
+as removing the ONLY guaranteed way a fresh cycle ever unlocks the main game — `redeemDisk` never
+sets `intro.mainGameUnlocked`, only `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` do, and the
+always-on auto-convert has no manual UI of its own to fall back on if this row simply vanished.
+Confirmed the condition directly: hide the row once Storage unlocks (`isStorageUnlocked`), since
+Disk redemption becomes an alternative path to tier units at that point. But Storage's own reveal
+threshold (`INTRO_DISK_UNLOCK_CAPACITY`, reached purely via capacity, itself grown only by repeated
+Sacrifice) is completely independent of ever having transferred at all — so a player could in
+principle reach it without ever unlocking the main game. Rather than implement the literal
+condition and strand that edge case behind a permanently-hidden-but-still-mandatory gate, the final
+gate is `isStorageUnlocked(state) && intro.mainGameUnlocked` — identical player-visible behavior in
+every ordinary run (the main game is almost always unlocked well before Storage's much higher
+threshold), but the row never disappears while it's still the only way out of the mandatory gate.
+The always-on auto-convert (`tickIntroAutoInvest`) is completely unaffected either way — it never
+depended on the manual row being rendered, so once auto-convert and Disk redemption are both doing
+the job, the manual row really is the redundant piece being described.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

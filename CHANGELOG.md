@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- The Byte Foundry's Disk/Cache detail row now hides once the current size isn't redeemable by
+  any tier right now — no more inert cache/disk squares with nothing to release or redeem toward.
+  The Build button stays visible/usable regardless (building ahead of the curve is still a
+  deliberate strategy); StoragePage's own full history is unaffected.
+- The Transfer-to-Main-Game block row now hides once Storage unlocks and the main game is already
+  unlocked, since Disk redemption offers an alternative path to tier units at that point — it
+  still stays visible through the mandatory pre-unlock gate regardless of Storage's own reveal
+  state, since it's the only guaranteed way to ever unlock the main game.
 - Disk array rows (Byte Foundry and Storage alike) now visually distinguish the Cache row from
   the Disks row: a "Cache — <n> each"/"Disks — <n> each (...)" caption above each, each in its own
   correct unit scale (bit-scale `Kb`/`Mb`/… for Cache, Byte-scale `KB`/`MB`/… for Disks — e.g.
