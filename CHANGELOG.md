@@ -102,6 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - MainPage's main balance display now switches from Bits to whole Bytes once it reaches 8000 Bits (1000 Bytes) — every other Bits figure on the page (costs, production rates, the Prestige-threshold progress text) is unaffected and keeps reading in Bits.
 
 ### Fixed
+- A Disk array's cache could get stuck fully staged, never converting into its disk, if a
+  *smaller* size's cache was still mid-fill and exhausted that tick's available Memory first —
+  `tickDiskAutoFill` picked one global smallest-still-needs-bits size each pass, so a larger size's
+  already-complete cache (pouring needs no further bits at all) never got its turn once a smaller,
+  unrelated size claimed the tick. It now visits every size in one ascending pass and always pours
+  an already-full cache regardless of other sizes' bit contention — a completed cache converts to
+  its disk (and starts refilling again) the instant it's ready, matching the cache's whole purpose.
 - The Global Tickspeed/Speed Up card pair wrapped to stacked on ordinary phone widths (e.g. a 393px-wide iPhone 14) instead of staying side by side as intended — their shared row's per-card floor width (`flex-basis: 14rem`) was too high for real mobile viewports. Lowered to `8rem`, which keeps the pair side by side down to roughly 300px of page content width (below any real phone) while still wrapping on genuinely tiny viewports.
 - On iOS home-screen installs (the app's `black-translucent` status bar draws content edge-to-edge), the page's scrollable area didn't clear the home-indicator safe zone at the bottom, so on a tall tier list the last row's Buy button could be scrolled to but never fully into reach — not just visually clipped, unclickable. `index.html`'s viewport meta now sets `viewport-fit=cover`, and the page content plus every fixed/sticky overlay (offline-progress notice, sticky balances bar, the full-screen and top Prestige banners) now pad for `env(safe-area-inset-*)` so scrolling reaches the full page and none of that chrome sits under the status bar or home indicator.
 - Light theme's `good` token (`#12a150`) only reached 3.37:1 contrast against the `surface`/`surfaceSunken` backgrounds it renders text on — below WCAG AA's 4.5:1 threshold — caught by a new automated contrast audit (`src/theme/tokens.contrast.test.js`). Darkened to `#0a6b30` (6.65:1 / 5.87:1). No visible effect yet since light mode isn't activated until #140.

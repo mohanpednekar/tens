@@ -47,7 +47,7 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
-  "48": "enableAutoClaimCore",
+  "48": "useIncrementalGame",
   "49": "dependencies",
   "50": "ComputePage/index.jsx",
   "51": "App.test.jsx",
@@ -62,14 +62,10 @@
   "60": "getPurchaseBlockSize",
   "61": "DiskArrayRow/index.jsx",
   "62": "engine.js",
-  "63": "StoragePage/index.jsx",
   "64": "isComputeCoreConversionUnlocked",
   "65": "development",
   "66": "scripts",
-  "67": "run-simulation.mjs",
-  "68": "redeemDisk",
+  "67": "isProductionFrozen",
   "69": "package.json",
-  "70": "getDiskSize",
-  "71": "resolutions",
-  "72": "getIntroProductionRate"
+  "71": "resolutions"
 }

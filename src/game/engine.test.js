@@ -1583,6 +1583,25 @@ describe('tickDiskAutoFill', () => {
     })
     expect(tickDiskAutoFill(state)).toBe(state)
   })
+
+  it('pours a larger size\'s already-fully-staged cache even when a smaller size is still bit-starved this same tick — a completed cache is never blocked from pouring by an unrelated size\'s ongoing top-up', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    // The smaller size (FIRST_DISK_SIZE) has an empty container and an EMPTY cache that will eat
+    // every available bit without ever completing; the larger size (level2Size) has an empty
+    // container too, but its cache is ALREADY fully staged from a previous tick — pouring it needs
+    // no further bits at all, so it must not get starved out just because the smaller size sorts
+    // first.
+    const state = withIntro(createInitialGameState(), {
+      bits: 100, // far short of what FIRST_DISK_SIZE's cache needs to complete
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
+      diskCache: { [level2Size]: level2Size },
+    })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[level2Size]).toBe(1)
+    expect(after.intro.diskCache[level2Size]).toBe(0)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(100)
+    expect(after.intro.bits).toBe(0)
+  })
 })
 
 describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
