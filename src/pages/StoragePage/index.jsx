@@ -179,10 +179,20 @@ const StoragePage = ({ game, onBack }) => {
         const rebuilding = intro.diskBuild?.size === size
         const cached = intro.diskCache?.[size] ?? 0
         const blockBits = size / DISK_CACHE_BLOCK_COUNT
+        const builtCapped = Math.min(builtTotal, DISK_ARRAY_LADDER_CAP)
+        // Once an array has finished building out (builtCapped reaches DISK_ARRAY_LADDER_CAP), the
+        // "X/10 built" clause never changes again — it's permanently "10/10" for every size the
+        // ladder has since moved past. Drop it entirely at that point in favor of just "n/10 full",
+        // the only number that still moves.
+        const isFullyBuilt = builtCapped >= DISK_ARRAY_LADDER_CAP
 
         return (
           <DiskSizeRow key={size}>
-            <DiskSizeLabel>{`${formatDiskSize(size)} disks (${full} full, ${Math.min(builtTotal, DISK_ARRAY_LADDER_CAP)}/${DISK_ARRAY_LADDER_CAP} built)`}</DiskSizeLabel>
+            <DiskSizeLabel>
+              {isFullyBuilt
+                ? `${formatDiskSize(size)} disks (${full}/${DISK_ARRAY_LADDER_CAP} full)`
+                : `${formatDiskSize(size)} disks (${full} full, ${builtCapped}/${DISK_ARRAY_LADDER_CAP} built)`}
+            </DiskSizeLabel>
 
             {rebuilding ? (
               <RebuildingText>

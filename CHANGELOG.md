@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- StoragePage's per-size label drops the "X/10 built" clause once an array has finished building
+  out (permanently stuck at "10/10" from then on) and shows just "n/10 full" instead — the only
+  number that still moves for a size the ladder has already moved past.
 - **Disk Cache**: manually releasing a full cache block now credits its bits straight into your
   Bits balance (spendable toward any unlocked tier), instead of back into Byte Foundry Memory —
   and it's only available while some tier's current per-unit cost actually matches that array's
