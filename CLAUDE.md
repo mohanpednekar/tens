@@ -201,7 +201,7 @@ status).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
-`autonomous-maintenance.yml`, which runs every 5 hours and does exactly one unit of work per run,
+`autonomous-maintenance.yml`, which runs twice daily (9:00am and 9:00pm IST) and does exactly one unit of work per run,
 picked in three phases — Phase 0 (CI/CD failures, plus any unaddressed critical/high-severity
 Dependabot security alert, severity-sorted the same way Phase A sorts priority labels) always
 outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low`), which
@@ -224,7 +224,9 @@ repo secret. Every agent step is gated on that secret existing, so the files are
 maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes no behavior until then.
 While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
 `cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
-the two never double-pick; its schedule is offset from the Claude cron. See `docs/AUTOMATION.md`'s
+the two never double-pick; its schedule is five IST wall-clock slots (four development + one
+dedicated 1:30am IST housekeeping run for conflicted PRs / backlog planning / process improvement),
+offset from the Claude twice-daily cron. See `docs/AUTOMATION.md`'s
 "Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
 setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
 Claude workflows).
