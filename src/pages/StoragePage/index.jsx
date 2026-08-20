@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { formatDiskSize, getDiskRedeemTierName, getDiskSizesToShow, isDiskCacheBlockReleasable } from 'game/engine'
+import { formatCacheSize, formatDiskSize, getDiskRedeemTierName, getDiskSizesToShow, isDiskCacheBlockReleasable } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
@@ -104,10 +104,13 @@ const DiskSquare = styled.button`
 `
 
 // The array's own small staging-cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
-// size / DISK_CACHE_BLOCK_COUNT bits, filling left to right as Memory tops the cache up (see
-// tickDiskAutoFill in engine.js) before any of it pours into an empty disk container below. A full
-// block ($full) can be manually released back into Memory ($releasable — accent border, clickable)
-// to redirect those bits toward an ordinary Kilobyte transfer instead.
+// size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
+// formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"), filling left to right as
+// Memory tops the cache up (see tickDiskAutoFill in engine.js) before any of it pours into an empty
+// disk container below. A full block ($full) can be manually released ($releasable — accent
+// border, clickable) only while some tier's current per-unit cost matches this array's size,
+// crediting that block's bits straight into resources.base (the shared Bits currency) rather than
+// generic Memory.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -196,14 +199,16 @@ const StoragePage = ({ game, onBack }) => {
                       key={index}
                       aria-label={
                         releasable
-                          ? `release ${formatDiskSize(size)} cache block ${index + 1} back into Memory`
+                          ? `release ${formatDiskSize(size)} cache block ${index + 1} into Bits`
                           : `${formatDiskSize(size)} cache block ${index + 1}`
                       }
                       disabled={!releasable}
                       onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
                       title={
                         isFull
-                          ? `Release this block's ${formatDiskSize(blockBits)} back into Memory`
+                          ? (releasable
+                            ? `Release this block's ${formatCacheSize(blockBits)} into your Bits balance (credits toward ${redeemTierName})`
+                            : `Redeemable only once some tier's level cost matches ${formatDiskSize(size)}`)
                           : 'Filling from Memory'
                       }
                       type="button"

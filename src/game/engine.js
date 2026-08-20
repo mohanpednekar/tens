@@ -1633,6 +1633,23 @@ export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_
 const MEMORY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
 const MEMORY_UNIT_SCALE = 1000
 
+// A parallel, BIT-scale unit ladder for Disk Cache blocks specifically — lowercase 'b'/'Kb'/'Mb'/…
+// (vs. Disks/Memory's own uppercase 'B'/'KB'/'MB'/… above), scaling by MEMORY_UNIT_SCALE directly
+// off the raw bit count with no BITS_PER_BYTE divisor (unlike getMemoryUnit) — a cache block's own
+// bit count already IS the value to denominate, e.g. a 1 KB (8000-bit) disk's cache block is 1000
+// bits = "1 Kb", not "125 B". See formatCacheSize below.
+const BIT_UNIT_SYMBOLS = ['b', ...MEMORY_UNIT_SYMBOLS.slice(1).map(symbol => symbol.replace(/B$/, 'b'))]
+
+const getBitUnit = bits => {
+  let divisor = 1
+  let unitIndex = 0
+  while (bits / divisor >= MEMORY_UNIT_SCALE && unitIndex < BIT_UNIT_SYMBOLS.length - 1) {
+    divisor *= MEMORY_UNIT_SCALE
+    unitIndex += 1
+  }
+  return { symbol: BIT_UNIT_SYMBOLS[unitIndex], divisor }
+}
+
 // The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
 // larger of the two, when comparing a balance against its own capacity) so a balance never shows
 // in a coarser unit than its own capacity — e.g. never "512 B / 1 KB". `byteCreated` gates whether
@@ -1846,6 +1863,12 @@ const getDiskBuildSeconds = (state, capacityBits) => {
 // this disk's size" rather than reaching for the more general Memory-balance helper directly.
 export const formatDiskSize = formatBitsInNearestUnit
 
+// Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
+// unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
+// Byte-scale one — StoragePage uses this for cache amounts specifically, keeping formatDiskSize
+// for the disks themselves.
+export const formatCacheSize = bits => formatMemoryAmount(bits, getBitUnit(bits))
+
 // Every Disk size worth showing (ByteFoundryPage's own brief per-size summary, StoragePage's full
 // per-size squares rows): every size ever built, any size still held (a save/seed could hold disks
 // without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's
@@ -1978,16 +2001,22 @@ export const tickDiskAutoFill = state => {
 
 // Whether a size's cache currently has at least one full, releasable block (see
 // DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickDiskBuild).
+// — see tickDiskBuild), or while no tier's current per-unit cost matches capacityBits at all (see
+// isDiskRedeemable below — a released block is only ever spendable toward an eligible tier's own
+// level, so with none eligible there's nothing for it to fund).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits) &&
   (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
 
 // Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
-// array back into Memory — a player override that redirects those bits toward an ordinary
-// Kilobyte transfer (convertIntroBitsToKilobytes/the transfer-block row) instead of waiting for
-// tickDiskAutoFill to keep growing this array's cache toward completing its next disk. Since the
-// released bits leave the cache for good, they can no longer also complete (and later redeem) a
+// array — a player override that credits those bits straight into resources.base (the main game's
+// shared Bits currency, spendable toward any unlocked tier) instead of waiting for tickDiskAutoFill
+// to keep growing this array's cache toward completing its next disk. Only ever available while an
+// eligible tier currently exists for this size (see isDiskCacheBlockReleasable) — unlike Memory
+// itself (a Byte Foundry-only pool), resources.base is the level currency an eligible tier's own
+// purchase is actually paid in, so a release only ever "counts" against a tier it could fund. Since
+// the released bits leave the cache for good, they can no longer also complete (and later redeem) a
 // disk in this array — the two paths can never double-spend the same bits. No-op if nothing
 // releasable (see isDiskCacheBlockReleasable).
 export const releaseDiskCacheBlock = capacityBits => state => {
@@ -1998,9 +2027,12 @@ export const releaseDiskCacheBlock = capacityBits => state => {
 
   return {
     ...state,
+    resources: {
+      ...state.resources,
+      [MONEY_ID]: (state.resources[MONEY_ID] ?? 0) + blockBits,
+    },
     intro: {
       ...state.intro,
-      bits: state.intro.bits + blockBits,
       diskCache: { ...state.intro.diskCache, [capacityBits]: cached - blockBits },
     },
   }

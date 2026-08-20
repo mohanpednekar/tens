@@ -25,6 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- **Disk Cache**: manually releasing a full cache block now credits its bits straight into your
+  Bits balance (spendable toward any unlocked tier), instead of back into Byte Foundry Memory —
+  and it's only available while some tier's current per-unit cost actually matches that array's
+  size (the same eligibility a full Disk's own redeem already requires), so a release always
+  counts toward a tier it could actually fund. Cache amounts also now display in their own
+  bit-scale unit (`Kb`/`Mb`/`Gb`/…, lowercase "b" for bits) instead of the Disk's own Byte-scale
+  one (`KB`/`MB`/… uppercase "B" for Bytes) — e.g. a 1 KB disk's cache block reads "1 Kb", not
+  "125 B".
+- The Byte Foundry's per-size Storage summary chip now shows only the single currently-active/
+  buildable disk size, not every size the ladder has ever reached — StoragePage's own fuller
+  detail view still lists every size's full history.
 - **Overclock**'s requirement and reward both reworked: instead of a fixed +10-level-per-activation
   ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always

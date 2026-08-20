@@ -1593,15 +1593,26 @@ describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
     expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
   })
 
-  it('is true once the cache holds at least one full block', () => {
+  it('is true once the cache holds at least one full block, with an eligible tier still matching this size', () => {
     const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } })
     expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(true)
   })
 
-  it('releases exactly one block\'s worth of bits back into Memory', () => {
+  it('is false — and releaseDiskCacheBlock is a same-reference no-op — once no tier\'s current cost matches this size any more', () => {
+    // tier01 leveled past FIRST_DISK_SIZE — same "no longer redeemable" case isDiskRedeemable's own
+    // tests exercise, but for the cache's manual release instead of a full disk's redeem.
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      diskCache: { [FIRST_DISK_SIZE]: blockBits },
+    })
+    expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+
+  it('releases exactly one block\'s worth of bits into resources.base (Bits), leaving Memory itself untouched', () => {
     const state = withIntro(createInitialGameState(), { bits: 0, diskCache: { [FIRST_DISK_SIZE]: blockBits * 3 } })
     const after = releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)
-    expect(after.intro.bits).toBe(blockBits)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + blockBits)
+    expect(after.intro.bits).toBe(0)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 2)
   })
 

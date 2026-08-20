@@ -466,8 +466,10 @@ Strict three-layer separation:
    than two separate controls doing the same thing. Compute moved to its own dedicated screen (see 4b
    below) once revealed; this page only renders a nav button to reach it, always enabled once
    revealed. Storage split differently: starting the next Disk's build (its own core-loop action,
-   alongside Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
-   `"10 KB 3/8"`) both stay here; only the fuller per-size detail — each array's cache blocks and
+   alongside Sacrifice/Invest) and a brief summary chip for the single currently-active/buildable
+   size only (`"<size> <full>/<built>"`, e.g. `"10 KB 3/8"` — only one Disk/Cache array is ever
+   shown here at a time, unlike StoragePage's own multi-size history below) both stay here; only
+   the fuller per-size detail — each array's cache blocks and
    redeeming (Disk Fill) — live on the dedicated `StoragePage` (see 4a below), reached via its own nav
    button, always enabled once revealed. Every action — here or on either dedicated screen — stays
    gated by the forced priority order (see "Economy model" below).
@@ -573,9 +575,14 @@ scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st 
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
 array has its own small staging **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
-`size / 8` bits each, totaling one disk's worth) that Memory must top up completely before
-`tickDiskAutoFill` pours it into an empty container; a full block can be released back into Memory by
-hand (`releaseDiskCacheBlock`) instead, at any time before it pours. A full disk redeems
+`size / 8` bits each, totaling one disk's worth — displayed in the bit-scale `Kb`/`Mb`/…/`Qb` unit
+via `formatCacheSize`, lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/…
+via `formatDiskSize`, uppercase `B` for Bytes) that Memory must top up completely before
+`tickDiskAutoFill` pours it into an empty container; a full block can be released by hand
+(`releaseDiskCacheBlock`) instead, at any time before it pours — but only while some tier's current
+per-unit cost matches this array's size (same eligibility `isDiskRedeemable` already gates a full
+disk's own redeem on), crediting the block's bits directly into `resources.base` (the shared Bits
+currency any unlocked tier is bought with) rather than into Memory itself. A full disk redeems
 (`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
 **any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
 tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in

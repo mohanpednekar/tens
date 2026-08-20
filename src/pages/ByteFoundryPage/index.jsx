@@ -1,7 +1,7 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -139,11 +139,14 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
-// A brief, at-a-glance per-size Storage status readout — one small chip per size ever reached,
-// reading "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3 currently
-// full). Deliberately not the fuller square-by-square grid StoragePage itself renders — this is
-// just enough context to see holdings at a glance without leaving the Byte Foundry; visiting
-// StoragePage (via the nav button below) is still how a full disk actually gets redeemed.
+// A brief, at-a-glance Storage status readout for the single currently-active/buildable disk size
+// (getDiskSize(state)) — "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3
+// currently full). Only one Disk/Cache array is ever shown here at a time (see "Economy model" in
+// CLAUDE.md) — older sizes the ladder has since moved past stay visible on StoragePage's own
+// fuller, multi-size detail view instead. Deliberately not the fuller square-by-square grid
+// StoragePage itself renders — this is just enough context to see holdings at a glance without
+// leaving the Byte Foundry; visiting StoragePage (via the nav button below) is still how a full
+// disk actually gets redeemed.
 const StorageSummaryRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -354,13 +357,14 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const disksBuiltTotal = intro.disksBuiltTotal ?? {}
-  // getDiskSizesToShow always includes the currently-offered size even at 0 built (so
-  // StoragePage's own fuller detail can preview the goal before the first one is banked) — this
-  // brief summary is different: it should only ever report actual history, so a size with nothing
-  // built and nothing held is filtered back out here rather than showing a confusing "1 KB 0/0"
-  // chip before the player has ever built anything.
-  const diskSizesWithHistory = getDiskSizesToShow(state)
-    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (intro.disks?.[size] ?? 0) > 0)
+  // Only the single currently-active/buildable size (diskSize) is ever summarized here — not
+  // every size the ladder has ever reached (see the StorageSummaryRow comment above). It should
+  // only ever report actual history for that size, so a size with nothing built and nothing held
+  // yet is filtered back out here rather than showing a confusing "1 KB 0/0" chip before the
+  // player has ever built anything.
+  const currentDiskFull = intro.disks?.[diskSize] ?? 0
+  const currentDiskBuiltTotal = Math.max(disksBuiltTotal[diskSize] ?? 0, currentDiskFull)
+  const showDiskSummary = currentDiskBuiltTotal > 0
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -551,17 +555,11 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
             />
           </Button>
 
-          {diskSizesWithHistory.length > 0 && (
+          {showDiskSummary && (
             <StorageSummaryRow role="group" aria-label="storage summary">
-              {diskSizesWithHistory.map(size => {
-                const full = intro.disks?.[size] ?? 0
-                const builtTotal = Math.max(disksBuiltTotal[size] ?? 0, full)
-                return (
-                  <StorageSummaryChip key={size}>
-                    {`${formatDiskSize(size)} ${full}/${builtTotal}`}
-                  </StorageSummaryChip>
-                )
-              })}
+              <StorageSummaryChip>
+                {`${formatDiskSize(diskSize)} ${currentDiskFull}/${currentDiskBuiltTotal}`}
+              </StorageSummaryChip>
             </StorageSummaryRow>
           )}
 
