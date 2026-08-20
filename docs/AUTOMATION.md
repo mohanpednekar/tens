@@ -256,7 +256,8 @@ auto-merge:
 **Three one-time manual prerequisites** (not settable through tools available to a Claude Code
 session):
 - The `GH_AUTOMATION_PAT` repo secret (fine-grained PAT scoped to this repo, Contents: read/write,
-  Pull requests: read/write, Issues: read/write), alongside `CLAUDE_CODE_OAUTH_TOKEN`.
+  Pull requests: read/write, Issues: read/write, Workflows: write), alongside
+  `CLAUDE_CODE_OAUTH_TOKEN`.
 - "Allow auto-merge" enabled in repo Settings → General, and branch protection on `main` requiring
   the `test` check from `ci.yml`.
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
@@ -323,9 +324,10 @@ clean skip: merging these workflows spends nothing and changes no behavior until
    from colliding. Watch a few Cursor `workflow_dispatch` runs and their PRs to confirm parity.
 3. **Retire Claude:** once satisfied, disable the Claude engine — comment out (or remove) the
    `schedule:` in `autonomous-maintenance.yml` and, when fully confident, delete
-   `autonomous-maintenance.yml` + `autonomous-pr-followup.yml`. Editing/removing those files needs an
-   interactive session (the `GH_AUTOMATION_PAT` lacks `Workflows: write`) and owner review via
-   `.github/CODEOWNERS`. After Claude is gone, the coexistence coordination in the Cursor guard step
-   becomes a harmless no-op (no `claude/auto-*` PRs will exist), so it can be simplified out later if
-   desired but doesn't have to be.
+   `autonomous-maintenance.yml` + `autonomous-pr-followup.yml`. Editing/removing those files still
+   needs owner review via `.github/CODEOWNERS` (once branch protection requires it — see #62); the
+   automation PAT itself has `Workflows: write` and can push workflow-touching commits. After Claude
+   is gone, the coexistence coordination in the Cursor guard step becomes a harmless no-op (no
+   `claude/auto-*` PRs will exist), so it can be simplified out later if desired but doesn't have to
+   be.
 

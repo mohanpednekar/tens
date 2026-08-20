@@ -194,10 +194,11 @@ Three workflows under `.github/workflows/` run Claude Code and GitHub automation
 fixing up, and merging PRs with no human in the loop — except a narrow, conservative class of low-risk
 bot-authored PRs that merge on green checks alone. All three authenticate via the `GH_AUTOMATION_PAT`
 repo secret rather than the default `GITHUB_TOKEN` (whose commits/pushes/merges can't trigger other
-workflows). That PAT is deliberately narrowly-scoped and currently lacks `Workflows: write`, so it
-can't push any commit touching `.github/workflows/**` — such changes need an interactive session
-instead (see issue #62/#69 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites for the up-to-date
-status).
+workflows). That PAT is deliberately narrowly-scoped and includes `Workflows: write`, so autonomous
+runs can push commits that touch `.github/workflows/**` when a task authorizes it (e.g. Phase B
+self-improvement on `autonomous-maintenance.yml`, or a new workflow file from a Phase A issue).
+Owner review via `.github/CODEOWNERS` still applies once branch protection requires it (see issue
+#62 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
