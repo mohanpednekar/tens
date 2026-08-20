@@ -58,8 +58,10 @@ transparency, conflict-avoidance sequencing) that have guided this model.
 
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
-Runs every 5 hours (cron `0 */5 * * *`, plus manual `workflow_dispatch`) via
-`anthropics/claude-code-action@v1`. Each run does exactly one unit of work, chosen in three phases —
+Runs twice daily at **9:00am and 9:00pm IST** (cron `30 3,15 * * *` UTC — IST is UTC+5:30;
+plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. The twice-daily cadence
+is deliberately offset from `cursor-autonomous-maintenance.yml`'s IST slots so the two engines
+never wake at the same instant. Each run does exactly one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a transient
@@ -133,7 +135,7 @@ cancelling an in-progress run mid-task would itself produce an orphaned `claude/
 exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
 avoids causing that unnecessarily rather than trading one race for another failure mode.
 
-**Budget discipline.** Wall-clock time is not a constraint (one task every 5 hours is fine), but Claude
+**Budget discipline.** Wall-clock time is not a constraint (one task per scheduled run is fine), but Claude
 usage quota is. There's no fixed `--max-turns` cap on this workflow (see "Cost implications" above) —
 instead, before starting whatever task it picks, Claude self-estimates how much of the current rolling
 5-hour usage window is likely still available and roughly sizes the task against a soft ~50% target,
@@ -272,8 +274,16 @@ designed to coexist safely with the Claude ones during the transition:
   Phase 0/A/B orchestration, same `claude-task` backlog, same hard constraints — its guard step and
   prompt are deliberately thin, pointing the agent at `CLAUDE.md` and this file as the authoritative
   spec (with a single `claude/` → `cursor/` branch-prefix substitution) rather than restating the whole
-  phase machine, so it can't drift out of sync with the Claude copy. Runs on a cron offset ~2.5h from
-  the Claude one (`30 2,7,12,17,22 * * *`) plus `workflow_dispatch`.
+  phase machine, so it can't drift out of sync with the Claude copy. Schedule is five IST wall-clock
+  slots (GitHub Actions cron is UTC; IST = UTC+5:30), plus `workflow_dispatch` with a `mode` input:
+  - **Development** (Phase 0/A/B, same as Claude): 6:30am / 11:30am / 4:30pm / 9:30pm IST
+    (`0 1,6,11,16 * * *` UTC).
+  - **Housekeeping** (1:30am IST, `0 20 * * *` UTC): meta only — unblocking conflicted PRs
+    (auto-merge-enabled first), planning/replanning the `claude-task` backlog, and process
+    improvement (self-edit of this workflow, or filing one gap-analysis issue). Does **not**
+    implement Phase A feature tasks. Does **not** skip for the 5-PR ceiling (unblocking is the
+    point of the overnight slot). The two crons must stay separate so `github.event.schedule`
+    can select the mode; folding them into one cron would silently drop the split.
 - **`cursor-pr-followup.yml`** — the Cursor twin of `autonomous-pr-followup.yml`, with identical event
   handling and security posture (pwn-request actor gating, fork refusal, SHA-pinned checkout), scoped to
   `cursor/auto-*` branches only. The Claude follow-up stays scoped to `claude/auto-*`, so the two never

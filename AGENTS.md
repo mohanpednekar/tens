@@ -173,8 +173,10 @@ immediately: both coexist for now. The Cursor twins share the `claude-task` back
 `CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches, authenticate with a
 `CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert until that secret is
 added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
-double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Full design + staged cutover:
-`docs/AUTOMATION.md`'s "Cursor-powered successor engine" section (authoritative: `CLAUDE.md`).
+double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
+slots/day (including a 1:30am housekeeping run); Claude runs twice daily at 9:00am/9:00pm IST.
+Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
+(authoritative: `CLAUDE.md`).
 
 ## Reliability: cron dormancy
 

@@ -2,7 +2,10 @@ name: Autonomous maintenance
 
 on:
   schedule:
-    - cron: "0 */5 * * *"
+    # Twice daily, IST wall-clock (GitHub Actions cron is UTC; IST = UTC+5:30):
+    # 9:00am and 9:00pm IST. Offset from cursor-autonomous-maintenance.yml's IST slots
+    # so the two engines never wake at the same instant. See docs/AUTOMATION.md.
+    - cron: "30 3,15 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -121,7 +124,7 @@ jobs:
           # the prompt's comment-history check below) a confirmed repeat: two consecutive
           # runs independently concluded the issue can't be implemented as written (e.g. a
           # stale spec targeting a mechanism the codebase no longer has) with nothing new in
-          # between. Either way, re-attempting every 5 hours just burns quota re-deriving the
+          # between. Either way, re-attempting on every scheduled run just burns quota re-deriving the
           # same conclusion — a human unblocks (after closing, rewriting, or otherwise
           # resolving the issue) and removes the label to make it eligible again.
           #
@@ -336,7 +339,7 @@ jobs:
           checks pass) already has it covered:
           $DEPENDABOT_PRS
 
-          This is a side project — time is not a constraint (one task every 5 hours is fine), but
+          This is a side project — time is not a constraint (one task per scheduled run is fine), but
           your self-estimated usage-window budget per run is (see above). Before you start
           implementing whatever task you pick below, roughly size it against that budget, reserving
           a buffer of roughly the last 15-20% of it for test + commit + push + PR-open overhead, so
@@ -667,7 +670,7 @@ jobs:
         # a run that died before doing any work because of a transient, Claude-side error —
         # the subscription's usage quota was exhausted (429 "session limit"), or the API
         # itself was briefly overloaded (5xx, e.g. 529 "Overloaded") — as a skipped run: it
-        # made no changes, cost no quota, and the next scheduled run (every 5 hours) retries
+        # made no changes, cost no quota, and the next scheduled run retries
         # automatically. Confirmed via a real run (2026-07-29) that exhausted the SDK's own
         # 10-attempt retry budget against a 529 and then hard-failed under the old
         # 429-only check, which would otherwise have looked like a real break to Phase 0 of

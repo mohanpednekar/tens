@@ -10,6 +10,28 @@ structure so you can jump to the matching topic.
 
 ## Automation workflows
 
+### Schedule retune (Cursor IST slots + Claude twice-daily) — 2026-08-20
+
+Cursor's maintenance twin originally ran on a UTC cron offset ~2.5h from Claude's every-5-hours
+`0 */5 * * *` (`30 2,7,12,17,22 * * *`). That kept the two engines from colliding but tied both
+cadences to UTC arithmetic rather than the maintainer's IST wall clock, and treated every Cursor
+wake identically (Phase 0/A/B).
+
+The retune (issue #339):
+
+- **Cursor** — five fixed IST slots: 6:30am / 11:30am / 4:30pm / 9:30pm for development, plus a
+  dedicated **1:30am housekeeping** run. Housekeeping is meta only (conflicted PRs, backlog
+  planning, process improvement) and deliberately does **not** skip for the 5-PR ceiling — a full
+  ceiling is when unblocking conflicted auto-merge PRs matters most. The two crons stay separate
+  so `github.event.schedule` can select the mode; folding them into one expression would silently
+  drop the split.
+- **Claude** — cut from every 5 hours to **twice daily** at 9:00am / 9:00pm IST (`30 3,15 * * *`
+  UTC). Exact clock times were a judgment call (the request specified count only); 9am/9pm IST sit
+  clear of every Cursor slot so the engines still never wake together.
+
+IST = UTC+5:30, so IST `:30` maps to UTC `:00` for Cursor and IST `:00` maps to UTC `:30` for
+Claude — do not "simplify" the minute fields without re-checking that mapping.
+
 ### Why a PAT instead of the default `GITHUB_TOKEN`
 
 All three workflows authenticate with `GH_AUTOMATION_PAT` instead of `GITHUB_TOKEN`. This isn't
