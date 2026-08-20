@@ -238,8 +238,10 @@ branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 
 ### Auto-merge (`pr-auto-merge.yml`)
 
-Two independent paths, either of which calls `gh pr merge --auto --squash` to enable GitHub's native
-auto-merge:
+Two independent paths, either of which calls `gh pr merge --auto --merge` to enable GitHub's native
+auto-merge (merge commit — must match the Main ruleset's `allowed_merge_methods`, which is
+`merge` + `rebase` only; `--squash` is rejected and makes every PR look unmergeable to anything
+that defaults to squash, including Cursor's merge UI — see issue #343):
 
 1. **On human approval** (`pull_request_review: submitted`) — if the review is an approval from the
    repo owner or a collaborator/member, auto-merge is enabled unconditionally, any PR, any size.

@@ -264,6 +264,15 @@ the script staying correct: a `.github/CODEOWNERS` entry maps `.github/workflows
 owner, and once branch protection requires Code Owner review, GitHub itself blocks any workflow-file
 PR from merging without that review — defense in depth, not a replacement for the script-level check.
 
+### Auto-merge merge method must match the Main ruleset (2026-08-20)
+
+The repository ruleset **Main** (`allowed_merge_methods: merge + rebase` only — squash disabled as
+of its 2026-08-15 update) rejects `gh pr merge --auto --squash`. That made every PR look
+unmergeable to anything that defaults to squash (Cursor’s merge UI; the old `pr-auto-merge.yml`
+flag), even when the same PR was clean and merged fine from the GitHub app via “Create a merge
+commit.” Fix: switch automation to `--merge`, document the alignment in `docs/AUTOMATION.md`, and
+optionally re-enable Squash in the ruleset if Cursor’s UI should keep using squash (tracking #343).
+
 ## Architecture / MainPage UI decisions
 
 The following records *why* specific MainPage/component behaviors were built the way they were —
