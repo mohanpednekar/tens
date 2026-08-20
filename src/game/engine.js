@@ -1633,6 +1633,23 @@ export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_
 const MEMORY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
 const MEMORY_UNIT_SCALE = 1000
 
+// A parallel, BIT-scale unit ladder for Disk Cache blocks specifically — lowercase 'b'/'Kb'/'Mb'/…
+// (vs. Disks/Memory's own uppercase 'B'/'KB'/'MB'/… above), scaling by MEMORY_UNIT_SCALE directly
+// off the raw bit count with no BITS_PER_BYTE divisor (unlike getMemoryUnit) — a cache block's own
+// bit count already IS the value to denominate, e.g. a 1 KB (8000-bit) disk's cache block is 1000
+// bits = "1 Kb", not "125 B". See formatCacheSize below.
+const BIT_UNIT_SYMBOLS = ['b', ...MEMORY_UNIT_SYMBOLS.slice(1).map(symbol => symbol.replace(/B$/, 'b'))]
+
+const getBitUnit = bits => {
+  let divisor = 1
+  let unitIndex = 0
+  while (bits / divisor >= MEMORY_UNIT_SCALE && unitIndex < BIT_UNIT_SYMBOLS.length - 1) {
+    divisor *= MEMORY_UNIT_SCALE
+    unitIndex += 1
+  }
+  return { symbol: BIT_UNIT_SYMBOLS[unitIndex], divisor }
+}
+
 // The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
 // larger of the two, when comparing a balance against its own capacity) so a balance never shows
 // in a coarser unit than its own capacity — e.g. never "512 B / 1 KB". `byteCreated` gates whether
@@ -1846,6 +1863,12 @@ const getDiskBuildSeconds = (state, capacityBits) => {
 // this disk's size" rather than reaching for the more general Memory-balance helper directly.
 export const formatDiskSize = formatBitsInNearestUnit
 
+// Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
+// unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
+// Byte-scale one — StoragePage uses this for cache amounts specifically, keeping formatDiskSize
+// for the disks themselves.
+export const formatCacheSize = bits => formatMemoryAmount(bits, getBitUnit(bits))
+
 // Every Disk size worth showing (ByteFoundryPage's own brief per-size summary, StoragePage's full
 // per-size squares rows): every size ever built, any size still held (a save/seed could hold disks
 // without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's
@@ -1932,13 +1955,21 @@ export const tickDiskBuild = elapsedSeconds => state => {
 // and not currently mid-build, see tickDiskBuild above — first tops its cache
 // (diskCache[size], 0..size) up from Memory; only once that cache is genuinely FULL does it pour
 // (no further bits needed — the bits already left Memory when they entered the cache) into the
-// empty container, incrementing disks[size] and resetting the cache to 0 for the next one. Repeats
-// until nothing more is fillable — since sizes are checked smallest-first and cost scales with
-// size, once the smallest remaining size can't be topped up further this call, no larger one can
-// be either. Whatever's left over when nothing more can be filled simply stays as Memory's own
-// ordinary balance — auto-filling is otherwise unconditional (no toggle, no prerequisite, unlike
-// auto-redeem below) and bypasses isProductionFrozen, the same "separate currency pool" posture
-// every other Byte Foundry mechanic already has. A same-reference no-op when nothing changed.
+// empty container, incrementing disks[size] and resetting the cache to 0 — immediately re-eligible
+// to top up again toward this same size's NEXT empty container, if it has one (cascades through
+// every empty container of one size before moving on) — that's the whole point of staging bits in
+// a cache at all: a completed cache converts into its disk (and starts refilling again) the
+// instant it's ready, never sitting idle just because a DIFFERENT, smaller size still has an
+// unfulfilled top-up need this tick. Processes sizes smallest-first — but, unlike an earlier
+// version of this (see docs/DESIGN_HISTORY.md), a size already sitting fully staged from a
+// previous tick still pours here even after a smaller size has exhausted this tick's Memory, since
+// pouring itself spends no further bits; only topping up a not-yet-full cache needs bits (and, like
+// before, only ever happens toward a size that actually still has an empty container to pour into —
+// there's no point pre-staging bits for a container that doesn't exist). Whatever's left over once
+// every size has been visited simply stays as Memory's own ordinary balance — auto-filling is
+// otherwise unconditional (no toggle, no prerequisite, unlike auto-redeem below) and bypasses
+// isProductionFrozen, the same "separate currency pool" posture every other Byte Foundry mechanic
+// already has. A same-reference no-op when nothing changed.
 export const tickDiskAutoFill = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
@@ -1947,29 +1978,31 @@ export const tickDiskAutoFill = state => {
   let diskCache = state.intro.diskCache ?? {}
   let changed = false
 
-  for (;;) {
-    const fillableSize = Object.keys(builtTotal)
-      .map(Number)
-      .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
-      .filter(size => (builtTotal[size] ?? 0) > (disks[size] ?? 0))
-      .sort((a, b) => a - b)[0]
-    if (fillableSize === undefined) break
+  const sizes = Object.keys(builtTotal)
+    .map(Number)
+    .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
+    .sort((a, b) => a - b)
 
-    const cached = diskCache[fillableSize] ?? 0
-    if (cached >= fillableSize) {
-      // Cache already full from a previous pass — pour it straight into the empty container, no
-      // further Memory needed for this step.
-      disks = { ...disks, [fillableSize]: (disks[fillableSize] ?? 0) + 1 }
-      diskCache = { ...diskCache, [fillableSize]: 0 }
+  for (const size of sizes) {
+    for (;;) {
+      const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
+      const cached = diskCache[size] ?? 0
+
+      if (cached >= size) {
+        if (!hasEmptyContainer) break // fully staged, but nowhere to pour right now — done here
+        // Pour straight into the empty container, no further Memory needed for this step.
+        disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+        diskCache = { ...diskCache, [size]: 0 }
+        changed = true
+        continue // this size may have another empty container to top up toward next
+      }
+
+      if (!hasEmptyContainer || bits <= 0) break
+      const add = Math.min(size - cached, bits)
+      bits -= add
+      diskCache = { ...diskCache, [size]: cached + add }
       changed = true
-      continue
     }
-
-    if (bits <= 0) break
-    const add = Math.min(fillableSize - cached, bits)
-    bits -= add
-    diskCache = { ...diskCache, [fillableSize]: cached + add }
-    changed = true
   }
 
   if (!changed) return state
@@ -1978,16 +2011,22 @@ export const tickDiskAutoFill = state => {
 
 // Whether a size's cache currently has at least one full, releasable block (see
 // DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickDiskBuild).
+// — see tickDiskBuild), or while no tier's current per-unit cost matches capacityBits at all (see
+// isDiskRedeemable below — a released block is only ever spendable toward an eligible tier's own
+// level, so with none eligible there's nothing for it to fund).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits) &&
   (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
 
 // Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
-// array back into Memory — a player override that redirects those bits toward an ordinary
-// Kilobyte transfer (convertIntroBitsToKilobytes/the transfer-block row) instead of waiting for
-// tickDiskAutoFill to keep growing this array's cache toward completing its next disk. Since the
-// released bits leave the cache for good, they can no longer also complete (and later redeem) a
+// array — a player override that credits those bits straight into resources.base (the main game's
+// shared Bits currency, spendable toward any unlocked tier) instead of waiting for tickDiskAutoFill
+// to keep growing this array's cache toward completing its next disk. Only ever available while an
+// eligible tier currently exists for this size (see isDiskCacheBlockReleasable) — unlike Memory
+// itself (a Byte Foundry-only pool), resources.base is the level currency an eligible tier's own
+// purchase is actually paid in, so a release only ever "counts" against a tier it could fund. Since
+// the released bits leave the cache for good, they can no longer also complete (and later redeem) a
 // disk in this array — the two paths can never double-spend the same bits. No-op if nothing
 // releasable (see isDiskCacheBlockReleasable).
 export const releaseDiskCacheBlock = capacityBits => state => {
@@ -1998,9 +2037,12 @@ export const releaseDiskCacheBlock = capacityBits => state => {
 
   return {
     ...state,
+    resources: {
+      ...state.resources,
+      [MONEY_ID]: (state.resources[MONEY_ID] ?? 0) + blockBits,
+    },
     intro: {
       ...state.intro,
-      bits: state.intro.bits + blockBits,
       diskCache: { ...state.intro.diskCache, [capacityBits]: cached - blockBits },
     },
   }

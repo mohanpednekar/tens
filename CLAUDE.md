@@ -301,6 +301,13 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
+    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (cache blocks, disk squares,
+                               releasing, redeeming) for a single size, taking `{ actions, size,
+                               state }`; extracted so both ByteFoundryPage (the single currently-
+                               active/buildable size only) and StoragePage (every size ever reached)
+                               render identical, fully interactive detail rather than StoragePage
+                               alone owning it and ByteFoundryPage settling for a text summary.
+                               Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
@@ -316,11 +323,12 @@ src/
                                `intro.mainGameUnlocked` — the mandatory gate itself has no way out).
                                Receives the full `game` object (`{ state, actions, ... }` from
                                `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← Storage's fuller detail screen — NOT the Build button, which stays on
-                               ByteFoundryPage (see "Architecture" 4a below for the full field
-                               breakdown). Reached only via ByteFoundryPage's own "🏦 Storage" nav
-                               button; takes `{ game, onBack }`, `onBack` always returning to
-                               ByteFoundryPage (`page = 'foundry'`)
+    StoragePage/index.jsx   ← Storage's fuller, every-size detail screen — a thin wrapper rendering
+                               one `components/DiskArrayRow` per size ever reached — NOT the Build
+                               button, which stays on ByteFoundryPage (see "Architecture" 4a below
+                               for the full field breakdown). Reached only via ByteFoundryPage's own
+                               "🏦 Storage" nav button; takes `{ game, onBack }`, `onBack` always
+                               returning to ByteFoundryPage (`page = 'foundry'`)
     ComputePage/index.jsx   ← the Compute screen, including the nine-boundary merge chain and the
                                Boost effects section — issue #326 put the Boost effects (armed-tier
                                status/presets/Stack+Reclaim) at the TOP of the page, tier rows below
@@ -466,16 +474,26 @@ Strict three-layer separation:
    than two separate controls doing the same thing. Compute moved to its own dedicated screen (see 4b
    below) once revealed; this page only renders a nav button to reach it, always enabled once
    revealed. Storage split differently: starting the next Disk's build (its own core-loop action,
-   alongside Sacrifice/Invest) and a brief per-size summary chip row (`"<size> <full>/<built>"`, e.g.
-   `"10 KB 3/8"`) both stay here; only the fuller per-size detail — each array's cache blocks and
-   redeeming (Disk Fill) — live on the dedicated `StoragePage` (see 4a below), reached via its own nav
-   button, always enabled once revealed. Every action — here or on either dedicated screen — stays
-   gated by the forced priority order (see "Economy model" below).
-4a. **`StoragePage/index.jsx`** — Storage's fuller detail screen: per-size cache-block rows, full/
-    empty/not-built disk squares rows, and redeeming (Disk Fill) — NOT the Build button, which stays
-    on ByteFoundryPage itself. Takes `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦
-    Storage" nav button; `onBack` always returns to ByteFoundryPage (`page = 'foundry'`). A pure
-    renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
+   alongside Sacrifice/Invest) and the single currently-active/buildable size's own full
+   interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half),
+   and redeeming (Disk Fill itself) — both stay here, rendered via the shared
+   `components/DiskArrayRow` (see "Repo layout" above). The Build button always stays visible/
+   usable regardless of eligibility (building ahead of every tier's current cost is a deliberate
+   strategy — see "Economy model" below), but the `DiskArrayRow` detail itself only renders while
+   the current size is actually redeemable by some tier right now (`getDiskRedeemTierName(state,
+   diskSize) !== null`) — once every tier's cost has grown past it with nothing left to redeem or
+   release toward, the row is just inert clutter here (its full history stays reviewable on
+   StoragePage regardless). Only one Disk/Cache array is ever shown here at a time; only every
+   OTHER size the ladder has since moved past — full multi-size history, via that same shared
+   component — lives on the dedicated `StoragePage` (see 4a below), reached via its own nav button,
+   always enabled once revealed. Every action — here or on either dedicated screen — stays gated by
+   the forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
+    rendering one `components/DiskArrayRow` per size ever reached (ascending, via
+    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
+    `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦 Storage" nav button; `onBack` always
+    returns to ByteFoundryPage (`page = 'foundry'`). A pure renderer, same "engine re-validates, UI
+    just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
     only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
     (`page = 'foundry'`). Same posture as StoragePage above. Also where the nine-boundary merge
@@ -552,6 +570,14 @@ Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
 always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost;
 the first successful transfer unlocks the main game, and there's no per-cycle cap on further ones.
+ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the main game is
+already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point Disk
+redemption offers an alternative path to tier units, making the manual row redundant; the
+always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
+through the mandatory pre-unlock gate even past Storage's own reveal threshold, since capacity
+alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
+been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
+never hidden while it's still the only way out of the gate.
 The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
@@ -573,9 +599,14 @@ scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st 
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
 array has its own small staging **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
-`size / 8` bits each, totaling one disk's worth) that Memory must top up completely before
-`tickDiskAutoFill` pours it into an empty container; a full block can be released back into Memory by
-hand (`releaseDiskCacheBlock`) instead, at any time before it pours. A full disk redeems
+`size / 8` bits each, totaling one disk's worth — displayed in the bit-scale `Kb`/`Mb`/…/`Qb` unit
+via `formatCacheSize`, lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/…
+via `formatDiskSize`, uppercase `B` for Bytes) that Memory must top up completely before
+`tickDiskAutoFill` pours it into an empty container; a full block can be released by hand
+(`releaseDiskCacheBlock`) instead, at any time before it pours — but only while some tier's current
+per-unit cost matches this array's size (same eligibility `isDiskRedeemable` already gates a full
+disk's own redeem on), crediting the block's bits directly into `resources.base` (the shared Bits
+currency any unlocked tier is bought with) rather than into Memory itself. A full disk redeems
 (`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
 **any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
 tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in

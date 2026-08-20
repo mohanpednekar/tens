@@ -25,6 +25,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- The Byte Foundry's Disk/Cache detail row now hides once the current size isn't redeemable by
+  any tier right now — no more inert cache/disk squares with nothing to release or redeem toward.
+  The Build button stays visible/usable regardless (building ahead of the curve is still a
+  deliberate strategy); StoragePage's own full history is unaffected.
+- The Transfer-to-Main-Game block row now hides once Storage unlocks and the main game is already
+  unlocked, since Disk redemption offers an alternative path to tier units at that point — it
+  still stays visible through the mandatory pre-unlock gate regardless of Storage's own reveal
+  state, since it's the only guaranteed way to ever unlock the main game.
+- Disk array rows (Byte Foundry and Storage alike) now visually distinguish the Cache row from
+  the Disks row: a "Cache — <n> each"/"Disks — <n> each (...)" caption above each, each in its own
+  correct unit scale (bit-scale `Kb`/`Mb`/… for Cache, Byte-scale `KB`/`MB`/… for Disks — e.g.
+  "Cache — 1 Kb each" next to "Disks — 1 KB each"), and disks now render as round circles instead
+  of squares (a physical disk is round; a cache/memory block stays square), so which row is which
+  reads at a glance.
+- The Byte Foundry screen now shows the current disk size's full interactive array detail —
+  cache blocks (releasable) and disk squares (redeemable), the same `DiskArrayRow` StoragePage
+  itself renders — instead of a plain "<size> <full>/<built>" text chip.
+- StoragePage's per-size label drops the "X/10 built" clause once an array has finished building
+  out (permanently stuck at "10/10" from then on) and shows just "n/10 full" instead — the only
+  number that still moves for a size the ladder has already moved past.
+- **Disk Cache**: manually releasing a full cache block now credits its bits straight into your
+  Bits balance (spendable toward any unlocked tier), instead of back into Byte Foundry Memory —
+  and it's only available while some tier's current per-unit cost actually matches that array's
+  size (the same eligibility a full Disk's own redeem already requires), so a release always
+  counts toward a tier it could actually fund. Cache amounts also now display in their own
+  bit-scale unit (`Kb`/`Mb`/`Gb`/…, lowercase "b" for bits) instead of the Disk's own Byte-scale
+  one (`KB`/`MB`/… uppercase "B" for Bytes) — e.g. a 1 KB disk's cache block reads "1 Kb", not
+  "125 B".
+- The Byte Foundry's per-size Storage summary chip now shows only the single currently-active/
+  buildable disk size, not every size the ladder has ever reached — StoragePage's own fuller
+  detail view still lists every size's full history.
 - **Overclock**'s requirement and reward both reworked: instead of a fixed +10-level-per-activation
   ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always
@@ -79,6 +110,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - MainPage's main balance display now switches from Bits to whole Bytes once it reaches 8000 Bits (1000 Bytes) — every other Bits figure on the page (costs, production rates, the Prestige-threshold progress text) is unaffected and keeps reading in Bits.
 
 ### Fixed
+- A Disk array's cache could get stuck fully staged, never converting into its disk, if a
+  *smaller* size's cache was still mid-fill and exhausted that tick's available Memory first —
+  `tickDiskAutoFill` picked one global smallest-still-needs-bits size each pass, so a larger size's
+  already-complete cache (pouring needs no further bits at all) never got its turn once a smaller,
+  unrelated size claimed the tick. It now visits every size in one ascending pass and always pours
+  an already-full cache regardless of other sizes' bit contention — a completed cache converts to
+  its disk (and starts refilling again) the instant it's ready, matching the cache's whole purpose.
 - The Global Tickspeed/Speed Up card pair wrapped to stacked on ordinary phone widths (e.g. a 393px-wide iPhone 14) instead of staying side by side as intended — their shared row's per-card floor width (`flex-basis: 14rem`) was too high for real mobile viewports. Lowered to `8rem`, which keeps the pair side by side down to roughly 300px of page content width (below any real phone) while still wrapping on genuinely tiny viewports.
 - On iOS home-screen installs (the app's `black-translucent` status bar draws content edge-to-edge), the page's scrollable area didn't clear the home-indicator safe zone at the bottom, so on a tall tier list the last row's Buy button could be scrolled to but never fully into reach — not just visually clipped, unclickable. `index.html`'s viewport meta now sets `viewport-fit=cover`, and the page content plus every fixed/sticky overlay (offline-progress notice, sticky balances bar, the full-screen and top Prestige banners) now pad for `env(safe-area-inset-*)` so scrolling reaches the full page and none of that chrome sits under the status bar or home indicator.
 - Light theme's `good` token (`#12a150`) only reached 3.37:1 contrast against the `surface`/`surfaceSunken` backgrounds it renders text on — below WCAG AA's 4.5:1 threshold — caught by a new automated contrast audit (`src/theme/tokens.contrast.test.js`). Darkened to `#0a6b30` (6.65:1 / 5.87:1). No visible effect yet since light mode isn't activated until #140.

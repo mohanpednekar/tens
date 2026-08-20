@@ -171,10 +171,11 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // A disk array's cache — a small staging buffer Memory fills before any of the array's own disk
 // containers (see tickDiskAutoFill in engine.js) — is split into this many equal blocks, each
 // holding `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array's cache is 8 blocks of
-// 1000 bits each, totaling one disk's own 8000-bit capacity). A full block can be manually
-// released back into Memory (see releaseDiskCacheBlock in engine.js), letting the player redirect
-// those bits toward an ordinary Kilobyte transfer instead of waiting for the array's next disk to
-// complete.
+// 1000 bits each, totaling one disk's own 8000-bit capacity, displayed as "1 Kb" per block —
+// lowercase 'b', a bit-scale unit distinct from a Disk's own uppercase 'B'/Byte-scale one, see
+// formatCacheSize in engine.js). A full block can be manually released (see releaseDiskCacheBlock
+// in engine.js) — but only while some tier's current per-unit cost matches this array's size —
+// crediting resources.base directly instead of waiting for the array's next disk to complete.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
