@@ -107,9 +107,17 @@ jobs:
           # excluding `blocked`. Sorted priority:high -> normal -> priority:low, each tier by
           # ascending issue number, capped for display (matching autonomous-maintenance.yml).
           TASK_DISPLAY_CAP=30
-          open_tasks_json=$(gh issue list --label claude-task --state open --limit 200 \
+          # Filter by label CLIENT-SIDE from the unfiltered open-issue list rather than via
+          # `gh issue list --label claude-task`. The server-side --label filter routes through
+          # GitHub's issue search index, which was observed (2026-08-20) returning an empty set
+          # while 24 open claude-task issues actually existed — verified by direct `gh issue
+          # view` and by client-side filtering of the unfiltered list — silently starving Phase
+          # A and forcing a fall-through to Phase B. Listing issues unfiltered and matching the
+          # label in jq reads live label data and is immune to that search-index lag.
+          open_tasks_json=$(gh issue list --state open --limit 300 \
             --json number,title,labels \
-            --jq '[.[] | select([.labels[].name] | index("blocked") | not)]')
+            --jq '[.[] | select([.labels[].name] | index("claude-task"))
+                       | select([.labels[].name] | index("blocked") | not)]')
           open_tasks_count=$(jq 'length' <<<"$open_tasks_json")
           open_tasks=$(jq -r --argjson cap "$TASK_DISPLAY_CAP" '
             def prio: if ([.labels[].name] | index("priority:high")) then 0
@@ -155,9 +163,11 @@ jobs:
             echo "DEPPR_EOF"
           } >> "$GITHUB_OUTPUT"
 
-          # Already-open gap-analysis proposals, so Phase B item 6 doesn't re-propose.
-          open_gap_issues=$(gh issue list --label gap-analysis --state open --limit 100 \
-            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+          # Already-open gap-analysis proposals, so Phase B item 6 doesn't re-propose. Same
+          # client-side-filter rationale as the claude-task backlog above (search-index lag).
+          open_gap_issues=$(gh issue list --state open --limit 300 \
+            --json number,title,labels \
+            --jq '.[] | select([.labels[].name] | index("gap-analysis")) | "- #\(.number): \(.title)"')
           {
             echo "open_gap_issues<<GAP_EOF"
             echo "$open_gap_issues"
