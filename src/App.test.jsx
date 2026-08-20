@@ -11,6 +11,7 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
+  DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -2236,9 +2237,33 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   expect(screen.queryByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
-test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
+test('the transfer section hides once Storage unlocks, once the main game is already unlocked', () => {
   seedMainGameState({
-    intro: { mainGameUnlocked: true, bits: 0, capacity: 100000, byteCreated: true },
+    intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/transfer to main game/i)).not.toBeInTheDocument()
+})
+
+test('the transfer section stays visible through the mandatory gate even past Storage\'s own reveal threshold, since it\'s still the only way to ever unlock the main game', () => {
+  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — capacity alone
+  // (grown via repeated Sacrifice, independent of ever transferring) can reach Storage's own
+  // reveal threshold without the main game ever having been unlocked, since redeemDisk never sets
+  // mainGameUnlocked — only convertIntroBitsToKilobytes/tickIntroAutoInvest do.
+  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  expect(screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).toBeInTheDocument()
+})
+
+test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
+  // capacity stays below INTRO_DISK_UNLOCK_CAPACITY (80,000 bits) so the Transfer section itself
+  // stays visible — see "the transfer section hides once Storage unlocks" below for that gate.
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, bits: 0, capacity: 20000, byteCreated: true },
     purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
   })
   render(<App />)
@@ -2690,6 +2715,22 @@ describe('Byte Foundry Storage', () => {
     // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB).
     expect(screen.getByText('Cache — 1 Kb each')).toBeInTheDocument()
     expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
+  })
+
+  test('the Cache/Disks detail row hides on ByteFoundryPage once the current size isn\'t redeemable by any tier — the Build button stays visible/usable regardless', () => {
+    // The ladder has advanced past currentBankSize (10 built), so the currently-offered size is
+    // now futureBankSize (tier01 level 2's cost) — but tier01 (and every other tier) is still at
+    // its default level 1, well below that cost, so nothing currently matches it.
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /disk array cache/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Cache —/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Disks —/)).not.toBeInTheDocument()
   })
 
   test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {

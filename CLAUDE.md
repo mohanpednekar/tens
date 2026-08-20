@@ -477,11 +477,17 @@ Strict three-layer separation:
    alongside Sacrifice/Invest) and the single currently-active/buildable size's own full
    interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half),
    and redeeming (Disk Fill itself) — both stay here, rendered via the shared
-   `components/DiskArrayRow` (see "Repo layout" above). Only one Disk/Cache array is ever shown here
-   at a time; only every OTHER size the ladder has since moved past — full multi-size history, via
-   that same shared component — lives on the dedicated `StoragePage` (see 4a below), reached via its
-   own nav button, always enabled once revealed. Every action — here or on either dedicated
-   screen — stays gated by the forced priority order (see "Economy model" below).
+   `components/DiskArrayRow` (see "Repo layout" above). The Build button always stays visible/
+   usable regardless of eligibility (building ahead of every tier's current cost is a deliberate
+   strategy — see "Economy model" below), but the `DiskArrayRow` detail itself only renders while
+   the current size is actually redeemable by some tier right now (`getDiskRedeemTierName(state,
+   diskSize) !== null`) — once every tier's cost has grown past it with nothing left to redeem or
+   release toward, the row is just inert clutter here (its full history stays reviewable on
+   StoragePage regardless). Only one Disk/Cache array is ever shown here at a time; only every
+   OTHER size the ladder has since moved past — full multi-size history, via that same shared
+   component — lives on the dedicated `StoragePage` (see 4a below), reached via its own nav button,
+   always enabled once revealed. Every action — here or on either dedicated screen — stays gated by
+   the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
     rendering one `components/DiskArrayRow` per size ever reached (ascending, via
     `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
@@ -564,6 +570,14 @@ Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
 always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost;
 the first successful transfer unlocks the main game, and there's no per-cycle cap on further ones.
+ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the main game is
+already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point Disk
+redemption offers an alternative path to tier units, making the manual row redundant; the
+always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
+through the mandatory pre-unlock gate even past Storage's own reveal threshold, since capacity
+alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
+been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
+never hidden while it's still the only way out of the gate.
 The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all

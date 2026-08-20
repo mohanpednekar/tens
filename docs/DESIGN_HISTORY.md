@@ -2099,6 +2099,66 @@ other `formatCurrency` call site (costs, production numbers, the Prestige-thresh
 deliberately left alone, since those represent an actual priced/spent Bits amount rather than a
 headline balance meant to stay readable as it grows.
 
+### `tickDiskAutoFill`: a fully-staged cache could get starved out by an unrelated smaller size
+
+Requested directly ("Cache should be refilled ASAP upon use — that is the purpose of cache"),
+prompting a closer look at `tickDiskAutoFill` rather than a UI change. The original loop picked one
+global "smallest still-fillable size" each iteration and re-evaluated fresh next iteration — so if
+that smallest size's cache wasn't yet full and Memory ran out of bits, the loop broke immediately,
+`if (bits <= 0) break`, without ever revisiting a *larger* size whose cache had already been fully
+staged (from an earlier tick) and was just waiting to pour into its own empty container. Pouring a
+complete cache costs no further bits at all — only topping up an incomplete one does — but the
+smallest-size-first re-selection never gave that larger size another turn once a smaller one had
+first claim on this tick's Memory and couldn't finish. A fully-staged cache could sit converted-but-
+unpoured indefinitely, purely because of contention from an unrelated, smaller array, directly
+undermining the cache's whole purpose: converting to a disk (and becoming refillable again) the
+instant it's ready, not "whenever the smallest size in the ladder happens to also be satisfied."
+
+The fix processes every size in one ascending pass instead, each to its own local fixed point
+before moving on: for a given size, first check whether its cache is already full (`cached >= size`)
+— if so, pour when an empty container exists, otherwise stop touching that size for this tick; only
+once genuinely below `size` does the bits-availability check even apply, and only when an empty
+container exists at all (never pre-staging bits for a container that doesn't exist, which is what
+the original code already got right and this fix preserves — see the "cascades smallest to largest…
+leaving the remainder in Memory" test, which pins exactly this). A regression test seeds a smaller
+size with an empty cache that can never finish this tick (not enough bits) alongside a larger size
+whose cache is already fully staged, and asserts the larger one still pours — this failed under the
+old code (the larger size's `disks` count stayed at 0) and passes under the fix.
+
+### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
+
+Requested directly, in three related lines: "Storage need not be shown in Foundry if main game
+costs of all tiers already exceed its capacity"; "Only the transferrable size should be shown or
+none"; "Transfer to main is redundant section." Two genuinely different UI elements, each with a
+real risk of over-hiding something load-bearing, so both were confirmed via follow-up questions
+before touching code.
+
+**The Disk/Cache detail row.** The obvious reading — hide the whole Storage section, Build button
+included, whenever the current size isn't currently redeemable — would have broken a documented,
+intentional strategy: "a player can build ahead of or fall behind tier01's actual price" (see
+"Economy model"). Confirmed narrower: only `components/DiskArrayRow`'s own cache-blocks/disk-
+squares detail hides when `getDiskRedeemTierName(state, diskSize) === null`; the Build button stays
+visible and usable regardless, since building ahead of the curve is still exactly the point. The
+row's full history remains reviewable on StoragePage either way, so nothing is actually lost by
+hiding it here — only the redundant, non-actionable detail on the Foundry screen itself.
+
+**The Transfer-to-Main-Game row.** "Transfer to main is redundant section" reads, taken literally,
+as removing the ONLY guaranteed way a fresh cycle ever unlocks the main game — `redeemDisk` never
+sets `intro.mainGameUnlocked`, only `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` do, and the
+always-on auto-convert has no manual UI of its own to fall back on if this row simply vanished.
+Confirmed the condition directly: hide the row once Storage unlocks (`isStorageUnlocked`), since
+Disk redemption becomes an alternative path to tier units at that point. But Storage's own reveal
+threshold (`INTRO_DISK_UNLOCK_CAPACITY`, reached purely via capacity, itself grown only by repeated
+Sacrifice) is completely independent of ever having transferred at all — so a player could in
+principle reach it without ever unlocking the main game. Rather than implement the literal
+condition and strand that edge case behind a permanently-hidden-but-still-mandatory gate, the final
+gate is `isStorageUnlocked(state) && intro.mainGameUnlocked` — identical player-visible behavior in
+every ordinary run (the main game is almost always unlocked well before Storage's much higher
+threshold), but the row never disappears while it's still the only way out of the mandatory gate.
+The always-on auto-convert (`tickIntroAutoInvest`) is completely unaffected either way — it never
+depended on the manual row being rendered, so once auto-convert and Disk redemption are both doing
+the job, the manual row really is the redundant piece being described.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution

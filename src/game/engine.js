@@ -1955,13 +1955,21 @@ export const tickDiskBuild = elapsedSeconds => state => {
 // and not currently mid-build, see tickDiskBuild above — first tops its cache
 // (diskCache[size], 0..size) up from Memory; only once that cache is genuinely FULL does it pour
 // (no further bits needed — the bits already left Memory when they entered the cache) into the
-// empty container, incrementing disks[size] and resetting the cache to 0 for the next one. Repeats
-// until nothing more is fillable — since sizes are checked smallest-first and cost scales with
-// size, once the smallest remaining size can't be topped up further this call, no larger one can
-// be either. Whatever's left over when nothing more can be filled simply stays as Memory's own
-// ordinary balance — auto-filling is otherwise unconditional (no toggle, no prerequisite, unlike
-// auto-redeem below) and bypasses isProductionFrozen, the same "separate currency pool" posture
-// every other Byte Foundry mechanic already has. A same-reference no-op when nothing changed.
+// empty container, incrementing disks[size] and resetting the cache to 0 — immediately re-eligible
+// to top up again toward this same size's NEXT empty container, if it has one (cascades through
+// every empty container of one size before moving on) — that's the whole point of staging bits in
+// a cache at all: a completed cache converts into its disk (and starts refilling again) the
+// instant it's ready, never sitting idle just because a DIFFERENT, smaller size still has an
+// unfulfilled top-up need this tick. Processes sizes smallest-first — but, unlike an earlier
+// version of this (see docs/DESIGN_HISTORY.md), a size already sitting fully staged from a
+// previous tick still pours here even after a smaller size has exhausted this tick's Memory, since
+// pouring itself spends no further bits; only topping up a not-yet-full cache needs bits (and, like
+// before, only ever happens toward a size that actually still has an empty container to pour into —
+// there's no point pre-staging bits for a container that doesn't exist). Whatever's left over once
+// every size has been visited simply stays as Memory's own ordinary balance — auto-filling is
+// otherwise unconditional (no toggle, no prerequisite, unlike auto-redeem below) and bypasses
+// isProductionFrozen, the same "separate currency pool" posture every other Byte Foundry mechanic
+// already has. A same-reference no-op when nothing changed.
 export const tickDiskAutoFill = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
@@ -1970,29 +1978,31 @@ export const tickDiskAutoFill = state => {
   let diskCache = state.intro.diskCache ?? {}
   let changed = false
 
-  for (;;) {
-    const fillableSize = Object.keys(builtTotal)
-      .map(Number)
-      .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
-      .filter(size => (builtTotal[size] ?? 0) > (disks[size] ?? 0))
-      .sort((a, b) => a - b)[0]
-    if (fillableSize === undefined) break
+  const sizes = Object.keys(builtTotal)
+    .map(Number)
+    .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
+    .sort((a, b) => a - b)
 
-    const cached = diskCache[fillableSize] ?? 0
-    if (cached >= fillableSize) {
-      // Cache already full from a previous pass — pour it straight into the empty container, no
-      // further Memory needed for this step.
-      disks = { ...disks, [fillableSize]: (disks[fillableSize] ?? 0) + 1 }
-      diskCache = { ...diskCache, [fillableSize]: 0 }
+  for (const size of sizes) {
+    for (;;) {
+      const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
+      const cached = diskCache[size] ?? 0
+
+      if (cached >= size) {
+        if (!hasEmptyContainer) break // fully staged, but nowhere to pour right now — done here
+        // Pour straight into the empty container, no further Memory needed for this step.
+        disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+        diskCache = { ...diskCache, [size]: 0 }
+        changed = true
+        continue // this size may have another empty container to top up toward next
+      }
+
+      if (!hasEmptyContainer || bits <= 0) break
+      const add = Math.min(size - cached, bits)
+      bits -= add
+      diskCache = { ...diskCache, [size]: cached + add }
       changed = true
-      continue
     }
-
-    if (bits <= 0) break
-    const add = Math.min(fillableSize - cached, bits)
-    bits -= add
-    diskCache = { ...diskCache, [fillableSize]: cached + add }
-    changed = true
   }
 
   if (!changed) return state

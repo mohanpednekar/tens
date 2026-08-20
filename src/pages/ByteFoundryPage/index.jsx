@@ -335,6 +335,14 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
+  // The interactive cache/disk detail (DiskArrayRow) only earns its place here while the current
+  // size is actually transferrable right now — some tier's current cost matches it. The Build
+  // button itself stays visible/usable regardless (building ahead of the curve, before any tier
+  // has caught up to this size, is a deliberate strategy — see "Economy model" in CLAUDE.md), but
+  // once every tier's cost has grown past this size with nothing left to redeem or release toward,
+  // the detail row is just inert clutter; StoragePage's own full history remains the place to
+  // review a size like that.
+  const showDiskArrayRow = diskRedeemTierName !== null
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -351,6 +359,16 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
   // fixed rate (see getIntroKilobyteConversionCost in engine.js).
   const transferBlockCost = getIntroKilobyteConversionCost(state)
   const canTransferBlock = intro.bits >= transferBlockCost
+
+  // Once Storage unlocks, Disk redemption offers an alternative path to tier units, making this
+  // block-row redundant for a player who's already past the mandatory gate — hidden from then on.
+  // The `|| !intro.mainGameUnlocked` fallback exists only for a narrow edge case: Storage's own
+  // reveal threshold (capacity, grown via repeated Sacrifice) is independent of ever having
+  // transferred at all, so a player could in principle reach it without ever unlocking the main
+  // game — redeemDisk never flips mainGameUnlocked, only this section's own convert action does
+  // (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js), so this stays visible
+  // through the mandatory gate regardless of Storage's own reveal state.
+  const showTransferSection = revealed && (!storageRevealed || !intro.mainGameUnlocked)
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
@@ -525,7 +543,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
             />
           </Button>
 
-          <DiskArrayRow actions={actions} size={diskSize} state={state} />
+          {showDiskArrayRow && <DiskArrayRow actions={actions} size={diskSize} state={state} />}
 
           <Button
             aria-label="open storage"
@@ -570,7 +588,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
         </>
       )}
 
-      {revealed && (<>
+      {showTransferSection && (<>
         <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
         <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
           {Array.from({ length: purchaseBlockSize }, (_, index) => {
