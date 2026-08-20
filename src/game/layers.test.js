@@ -6,6 +6,8 @@ import {
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_BOOST_TIER_FIELDS,
+  COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   DISK_ARRAY_LADDER_CAP,
@@ -242,9 +244,20 @@ describe('constants', () => {
     expect(DISK_CACHE_BLOCK_COUNT).toBe(8)
   })
 
-  it('COMPUTE_BOOST_PRESETS durations are 1 minute (Burst), 10 minutes (Standard), 1 hour (Sustain)', () => {
-    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 16, durationSeconds: 60 })
-    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 4, durationSeconds: 600 })
+  it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 1 minute (Burst x32), 10 minutes (Standard x8), 1 hour (Sustain x2)', () => {
+    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 32, durationSeconds: 60 })
+    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 8, durationSeconds: 600 })
     expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
+  })
+
+  it('COMPUTE_BOOST_TIER_POWER_STEP is 8 (each compute-ladder tier is 8x as powerful as the previous one)', () => {
+    expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(8)
+  })
+
+  it('COMPUTE_BOOST_TIER_FIELDS lists all 10 compute-ladder entities, lowest tier (Core) first', () => {
+    expect(COMPUTE_BOOST_TIER_FIELDS).toEqual([
+      'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
+      'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
+    ])
   })
 })

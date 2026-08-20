@@ -327,69 +327,96 @@ line (see issue #316's "fit every compute tier in one line ... clever symbols ..
 or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
 (`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
 
-Right after the header — before anything else, deliberately at the TOP of the page — an
-`ActiveBoostRow` (`aria-label="active compute boost"`) renders whenever a Compute Boost is active:
-one line, `"<icon> ×<multiplier> · <countdown> · <stacks>×"` (e.g. `"💥 ×16 · 44s · 1×"`), with the
-full sentence ("Burst active: ×16 production, 44s left, 1x stacked") only in that span's own
-`title` — plus, whenever `canReclaimComputeBoost`, an icon-only `IconButton` (`variant="neutral"`,
-label "↩", `aria-label="reclaim one stack of the active compute boost"`) calling
-`actions.reclaimComputeBoost`, undoing the most recently added, still-unused stack (one at a time:
-refunds 1 Core, subtracts that stack's own duration). Kept at the top so an active boost stays
-visible regardless of what else is happening lower on the page; `MainPage` shows a matching
-read-only status line while a boost is active, since its effect reaches `tier01` there too.
+Render order top to bottom (issue #326 — "the effects section is at the top of the Compute page,
+not at the bottom"):
 
-Below that, the page branches on `intro.computeMergePageUnlocked` (a permanent, one-time reveal
-latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 — that flips the first time
-`intro.computeCoresEverEarned`, a lifetime counter never decremented by spending or merging, ever
-reaches 8):
+1. Right after the header — before anything else, deliberately at the TOP of the page — an
+   `ActiveBoostRow` (`aria-label="active compute boost"`) renders whenever a Compute Boost is
+   active: one line, `"<icon> ×<multiplier> · <countdown> · <stacks>×"` (e.g. `"💥 ×2048 · 2m59s ·
+   1×"`), with the full sentence (e.g. "burst (Clusters) active: ×2048 production, 2m59s left, 1x
+   stacked") only in that span's own `title`. Kept at the top so an active boost stays visible
+   regardless of what else is happening lower on the page; `MainPage` shows a matching read-only
+   status line while a boost is active, since its effect reaches `tier01` there too. No Reclaim
+   control here any more — it moved to the Stack + Reclaim row below (see 2c).
+2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
+   active or the merge chain has unlocked yet:
+   a. An `ArmedStatusText` line (`"Armed: <symbol> <Label> (<N> held)"`, or a prompt to click a tier
+      row if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
+      `intro.computeBoostTierIndex` while a boost is active (the boost's own funding tier — a
+      player can't re-arm mid-boost), otherwise local component state (`selectedBoostTierIndex`, set
+      by clicking a tier row below — see 3), defaulting to Cores (tier 1) before
+      `intro.computeMergePageUnlocked` since it's the only tier that can hold a balance that early.
+   b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
+      buttons, each a small `CompactButton` (`variant="prestige"`,
+      `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"` computed
+      for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
+      e.g. `"💥×2048"` for Burst at tier 3 (Clusters) — the preset name itself lives only in
+      `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
+      `disabled={!turnAvailable}` where `turnAvailable = armedTierIndex !== null &&
+      isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
+      `canActivateComputeBoost`'s own mechanical guard (a tier must be armed, ≥1 token of it held,
+      AND no boost of any kind already active — issue #326 removed same-type restacking through
+      this button) together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
+      Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a
+      `title` naming which to take first in that case, or prompting tier selection if none is armed.
+   c. A `StackReclaimRow` (`role="group"`, `aria-label="stack or reclaim the active compute boost"`)
+      — rendered only while a boost is active (`boostActive`) — two `CompactButton`s: **Stack**
+      (`aria-label="stack the active compute boost"`, visible label `"+ Stack"`,
+      `disabled={!isStackComputeBoostTurnAvailable(state)}`) calling `actions.stackComputeBoost`,
+      which always extends the ACTIVE boost's own funding tier (`intro.computeBoostTierIndex`),
+      never whatever tier is currently armed if the player has since clicked a different row; and
+      **Reclaim** (`aria-label="reclaim one stack of the active compute boost"`, visible label
+      `"↩ Reclaim"`, `disabled={!canReclaimComputeBoost(state)}`) calling
+      `actions.reclaimComputeBoost`, undoing the most recently added, still-unused stack one at a
+      time (refunds 1 token of the active funding tier, subtracts that stack's own duration).
+3. THEN, below the whole effects section, the page branches on `intro.computeMergePageUnlocked` (a
+   permanent, one-time reveal latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 —
+   that flips the first time `intro.computeCoresEverEarned`, a lifetime counter never decremented by
+   spending or merging, ever reaches 8):
 
-- **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
-  `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-- **Once unlocked:** TWO rows per compute-ladder entity Core through Megacomputer (issue #321), each
-  pair wrapped in a `TierBlock` inside a `TierBlocksGroup` (`aria-label="compute entities"`), driven
-  off an `ENTITY_ROWS` array (10 entries).
-  - **Row 1** (`TierHeaderRow`): the tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label
-    (`TierLabel`, e.g. `"Clusters 3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label>
-    slots"`) of `COMPUTE_ENTITY_CAP` (10) `NormalSlot` squares, filled left-to-right up to the
-    current count — the same discrete-square convention `StoragePage`'s own `DiskSquare` uses, just
-    non-interactive (a plain status square, not a button). Cores' own row 1 additionally carries the
-    separate, unrelated Memory → Core auto-claim control at the end (an `AutoBadge` once
-    `autoClaimCoreEnabled`, otherwise an `IconButton` calling `enableAutoClaimCore` — unchanged from
-    before this redesign) — it doesn't fit the row-2 merge-boundary shape every other tier uses.
-  - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all — see
-    issue #280's "Out of scope"):
-    - **Before that boundary's auto-merge is unlocked:** an instant Merge button (fixed-width,
-      icon-only `IconButton`, `variant="prestige"`, label "⬆", `aria-label` spelling out the full
-      action e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
-      tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
-      `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button right next to it
-      (`IconButton`, `variant="info"`, label "🤖", `aria-label="enable auto-merge for <…> into
-      <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the
-      matching `game.actions.enableAutoMerge*` action.
-    - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
-      (8) `ReserveSlot` squares, all either entirely empty (idle) or entirely filled (a merge in
-      flight, since the reserve only ever fills atomically) — clicking it IS the manual-start
-      trigger ("slots are the button"), calling the matching `game.actions.startCompute*Merge`
-      action, enabled once `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO`
-      held across the normal + reserve slots, no merge already in flight, room under
-      `COMPUTE_ENTITY_CAP` on the output). While a merge is in flight, a `MergeCountdown` span
-      (`formatOfflineDuration` of the remaining seconds) renders inline with the filled slots;
-      `aria-label`/`title` both spell out the remaining time.
+   - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
+     `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
+   - **Once unlocked:** TWO rows per compute-ladder entity Core through Megacomputer (issues
+     #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
+     (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
+     Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
+     array index + 1 IS its Boost `tierIndex`).
+     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`, kept
+       separate from Cores' sibling auto-claim button below to avoid nesting a `<button>` inside a
+       `<button>`) wrapping the tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label
+       (`TierLabel`, e.g. `"Clusters 3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label>
+       slots"`) of `COMPUTE_ENTITY_CAP` (10) `NormalSlot` squares, filled left-to-right up to the
+       current count — the same discrete-square convention `StoragePage`'s own `DiskSquare` uses,
+       just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
+       toggles `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the
+       Boost effects section above (issue #326 — "click any tier row"), highlighted
+       (`$selected`/`aria-pressed`) while armed. Cores' own row 1 additionally carries the separate,
+       unrelated Memory → Core auto-claim control at the end (an `AutoBadge` once
+       `autoClaimCoreEnabled`, otherwise an `IconButton` calling `enableAutoClaimCore`) — it doesn't
+       fit the row-2 merge-boundary shape every other tier uses.
+     - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all —
+       see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
+       a Megacomputer has any use at all):
+       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (fixed-width,
+         icon-only `IconButton`, `variant="prestige"`, label "⬆", `aria-label` spelling out the full
+         action e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+         tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
+         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button right next to it
+         (`IconButton`, `variant="info"`, label "🤖", `aria-label="enable auto-merge for <…> into
+         <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the
+         matching `game.actions.enableAutoMerge*` action.
+       - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
+         (8) `ReserveSlot` squares, all either entirely empty (idle) or entirely filled (a merge in
+         flight, since the reserve only ever fills atomically) — clicking it IS the manual-start
+         trigger ("slots are the button"), calling the matching `game.actions.startCompute*Merge`
+         action, enabled once `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO`
+         held across the normal + reserve slots, no merge already in flight, room under
+         `COMPUTE_ENTITY_CAP` on the output). While a merge is in flight, a `MergeCountdown` span
+         (`formatOfflineDuration` of the remaining seconds) renders inline with the filled slots;
+         `aria-label`/`title` both spell out the remaining time.
 
-  Nothing spends a Megacomputer yet — see issue #280's "Out of scope". "Compute" names the
-  page/feature only — no entity label carries a "Compute" prefix.
-
-Either way, a `BoostRow` (`role="group"`, `aria-label="compute boost"`) follows further down the
-page: the available Core count (`CoresAvailable`, visible text `"⬡N"`, full sentence in its own
-`title`) alongside the 3 Compute Boost preset buttons, each a small `CompactButton`
-(`variant="prestige"`, `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"`
-— e.g. `"💥×16"` for Burst, `"⏱️×4"` for Standard, `"🔋×2"` for Sustain — the preset name itself
-lives only in `title`), calling `actions.activateComputeBoost(boostType)`.
-`disabled={!isComputeBoostTurnAvailable(state, boostType)}` — folds `canActivateComputeBoost`'s own
-mechanical guard (≥1 Compute Core, no conflicting active type, below `COMPUTE_BOOST_MAX_STACKS`)
-together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
-Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title`
-naming which to take first in that case.
+     Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".
+     "Compute" names the page/feature only — no entity label carries a "Compute" prefix.
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, still incremented on every purchase for display/back-compat purposes, but no

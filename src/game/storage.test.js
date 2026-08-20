@@ -656,7 +656,7 @@ describe('schema migration', () => {
         computeGridsMergeRemainingSeconds: 0, computeFabricsMergeRemainingSeconds: 0,
         computeCloudsMergeRemainingSeconds: 0, computeDatacentersMergeRemainingSeconds: 0,
         computeSupercomputersMergeRemainingSeconds: 0,
-        computeBoostType: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
+        computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
       },
     }
     saveGameState(state)
