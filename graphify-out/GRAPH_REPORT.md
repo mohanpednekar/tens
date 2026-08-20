@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-08-20)
 
 ## Corpus Check
-- 69 files · ~238,587 words
+- 69 files · ~238,598 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 904 nodes · 1892 edges · 73 communities (61 shown, 12 thin omitted)
+- 904 nodes · 1892 edges · 73 communities (59 shown, 14 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cb5181ec`
+- Built from commit: `5e67539b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,7 +29,7 @@
 - generate-pwa-icons.mjs
 - session-start.sh
 - autobuyer-reload.e2e.js
-- engine.js
+- useIncrementalGame.js
 - vite.config.js
 - Automation workflows
 - Changelog
@@ -58,7 +58,7 @@
 - MAINPAGE_REFERENCE.md
 - PWA_REFERENCE.md
 - THEMING_REFERENCE.md
-- isAutoMergeUnlockAvailable
+- enableAutoClaimCore
 - dependencies
 - ComputePage/index.jsx
 - App.test.jsx
@@ -71,7 +71,7 @@
 - MainPage
 - getPurchaseBlockSize
 - DiskArrayRow/index.jsx
-- tickComputeMergeBoundary
+- engine.js
 - StoragePage/index.jsx
 - isComputeCoreConversionUnlocked
 - development
@@ -81,7 +81,7 @@
 - package.json
 - getDiskSize
 - resolutions
-- applyOfflineProgress
+- getIntroProductionRate
 
 ## God Nodes (most connected - your core abstractions)
 1. `Economy model` - 48 edges
@@ -110,7 +110,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (73 total, 12 thin omitted)
+## Communities (73 total, 14 thin omitted)
 
 ### Community 0 - "layers.test.js"
 Cohesion: 0.12
@@ -156,9 +156,9 @@ Nodes (24): For /graphify add and --watch, For /graphify query, For the commit h
 Cohesion: 0.40
 Nodes (4): compilerOptions, baseUrl, include, src
 
-### Community 15 - "engine.js"
-Cohesion: 0.08
-Nodes (50): AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyTickspeedAutobuyer(), combineIntroByte(), currencyNumberFormatter, enableAutoClaimCore() (+42 more)
+### Community 15 - "useIncrementalGame.js"
+Cohesion: 0.07
+Nodes (41): applyOfflineProgress(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyTickspeedAutobuyer(), combineIntroByte(), enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode (+33 more)
 
 ### Community 17 - "Automation workflows"
 Cohesion: 0.20
@@ -236,10 +236,6 @@ Nodes (3): Documentation, Summary, Test plan
 Cohesion: 0.14
 Nodes (30): simulateRun(), buyAutoPrestige(), buyPrestigeSpeedBonus(), buySmartAutobuyer(), buyTickspeedMultiplier(), checkMilestones(), clampNonNegative(), consumeXpForLastTierTickspeed() (+22 more)
 
-### Community 48 - "isAutoMergeUnlockAvailable"
-Cohesion: 0.18
-Nodes (11): enableAutoMerge(), isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable(), isAutoMergeDatacentersIntoSupercomputerUnlockAvailable(), isAutoMergeFabricsIntoCloudUnlockAvailable(), isAutoMergeGridsIntoFabricUnlockAvailable(), isAutoMergeNetworksIntoGridUnlockAvailable() (+3 more)
-
 ### Community 49 - "dependencies"
 Cohesion: 0.13
 Nodes (15): @fontsource/inter, @fontsource/space-grotesk, dependencies, @fontsource/inter, @fontsource/space-grotesk, react, react-dom, react-is (+7 more)
@@ -288,9 +284,9 @@ Nodes (18): buyTier(), buyTierQuantity(), convertIntroBitsToKilobytes(), getCost
 Cohesion: 0.16
 Nodes (14): CacheBlock, CacheBlocksRow, DiskArrayRow(), DiskSizeRow, DiskSquare, RebuildingText, RowLabel, SquaresRow (+6 more)
 
-### Community 62 - "tickComputeMergeBoundary"
-Cohesion: 0.17
-Nodes (12): startComputeMergeReserve(), tickAutoMergeCloudsIntoDatacenter(), tickAutoMergeClustersIntoNetwork(), tickAutoMergeCoresIntoNode(), tickAutoMergeDatacentersIntoSupercomputer(), tickAutoMergeFabricsIntoCloud(), tickAutoMergeGridsIntoFabric(), tickAutoMergeNetworksIntoGrid() (+4 more)
+### Community 62 - "engine.js"
+Cohesion: 0.10
+Nodes (31): AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, currencyNumberFormatter, enableAutoMerge(), enableAutoMergeGridsIntoFabric, enableAutoMergeSupercomputersIntoMegacomputer, isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable() (+23 more)
 
 ### Community 63 - "StoragePage/index.jsx"
 Cohesion: 0.33
@@ -328,14 +324,10 @@ Nodes (6): getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskCost(), getD
 Cohesion: 0.40
 Nodes (5): resolutions, **/fast-uri, **/filelist/minimatch/brace-expansion, **/glob/minimatch/brace-expansion, **/nanoid
 
-### Community 72 - "applyOfflineProgress"
-Cohesion: 1.00
-Nodes (3): applyOfflineProgress(), getOfflineEffectiveSeconds(), computeOfflineCatchUp()
-
 ## Knowledge Gaps
 - **409 isolated node(s):** `session-start.sh script`, `defaultPPValues`, `cliValues`, `seededState`, `baseUrl` (+404 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

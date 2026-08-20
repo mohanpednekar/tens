@@ -2686,9 +2686,9 @@ describe('Byte Foundry Storage', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    // currentBankSize is 8000 bits (a real "1 KB" disk) — its cache totals the same 8000 bits, but
-    // shown in the bit-scale unit (8 Kb), not the disk's own Byte-scale one (1 KB).
-    expect(screen.getByText('Cache — 8 Kb total')).toBeInTheDocument()
+    // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
+    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB).
+    expect(screen.getByText('Cache — 1 Kb each')).toBeInTheDocument()
     expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
   })
 

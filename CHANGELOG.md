@@ -26,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Disk array rows (Byte Foundry and Storage alike) now visually distinguish the Cache row from
-  the Disks row: a "Cache — <n> total"/"Disks — <n> each (...)" caption above each, each in its
-  own correct unit scale (bit-scale `Kb`/`Mb`/… for Cache, Byte-scale `KB`/`MB`/… for Disks — e.g.
-  "Cache — 8 Kb total" next to "Disks — 1 KB each"), and disks now render as round circles instead
+  the Disks row: a "Cache — <n> each"/"Disks — <n> each (...)" caption above each, each in its own
+  correct unit scale (bit-scale `Kb`/`Mb`/… for Cache, Byte-scale `KB`/`MB`/… for Disks — e.g.
+  "Cache — 1 Kb each" next to "Disks — 1 KB each"), and disks now render as round circles instead
   of squares (a physical disk is round; a cache/memory block stays square), so which row is which
   reads at a glance.
 - The Byte Foundry screen now shows the current disk size's full interactive array detail —

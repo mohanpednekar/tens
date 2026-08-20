@@ -7,7 +7,7 @@ import styled from 'styled-components'
 // progress bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY —
 // constructed, waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then
 // not-yet-built placeholders (rightmost). Each row carries its own RowLabel caption naming its
-// total/per-item size in its own correct unit scale (see RowLabel below), and the two shapes
+// own per-item size, in its own correct unit scale (see RowLabel below), and the two shapes
 // deliberately differ (round disks vs. square cache blocks — see DiskSquare/CacheBlock below), so
 // which row is which reads at a glance rather than as one undifferentiated strip of squares.
 const DiskSizeRow = styled.div`
@@ -18,10 +18,11 @@ const DiskSizeRow = styled.div`
   width: 100%;
 `
 
-// A small caption above each row — "Cache — <total, bit-scale>"/"Disks — <each, Byte-scale> (...)"
-// — the two rows otherwise read as one undifferentiated strip of squares, with nothing marking
-// where the cache ends and the disks begin, or which unit scale either one is even in. Sits flush
-// left (rather than centered) so it reads as a row heading, not another centered status line.
+// A small caption above each row — "Cache — <block size, bit-scale> each"/"Disks — <disk size,
+// Byte-scale> each (...)" — the two rows otherwise read as one undifferentiated strip of squares,
+// with nothing marking where the cache ends and the disks begin, or which unit scale either one is
+// even in. Sits flush left (rather than centered) so it reads as a row heading, not another
+// centered status line.
 // Deliberately NOT text-transform: uppercase — that would visually collapse the size text's own
 // lowercase "b" (bits) into uppercase "B" (Bytes), destroying the exact distinction this caption
 // exists to show (see formatCacheSize/formatDiskSize in engine.js and CLAUDE.md's "Economy model").
@@ -163,7 +164,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
         </RebuildingText>
       ) : (
         <>
-          <RowLabel>{`Cache — ${formatCacheSize(size)} total`}</RowLabel>
+          <RowLabel>{`Cache — ${formatCacheSize(blockBits)} each`}</RowLabel>
           <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
             {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
               const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))

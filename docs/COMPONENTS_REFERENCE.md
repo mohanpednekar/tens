@@ -11,10 +11,11 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 ## `DiskArrayRow/index.jsx`
 
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <total> total"` with the array's
-*total* cache capacity in `formatCacheSize`'s bit-scale `Kb`/`Mb`/… unit (each block itself also
-shown in that unit, clickable/releasable via `actions.releaseDiskCacheBlock` once full and
-`isDiskCacheBlockReleasable`), followed by a fixed `DISK_ARRAY_LADDER_CAP`-square disk row,
+`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <block size> each"` with one cache
+block's own size (`size / DISK_CACHE_BLOCK_COUNT`) in `formatCacheSize`'s bit-scale `Kb`/`Mb`/…
+unit (each block itself also shown in that unit, clickable/releasable via
+`actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable`), followed by a fixed
+`DISK_ARRAY_LADDER_CAP`-square disk row,
 captioned `"Disks — <size> each (<full> full, <built>/10 built)"` with the disk size in
 `formatDiskSize`'s Byte-scale `KB`/`MB`/… unit (dropping the built clause for `"Disks — <size>
 each (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`, since that clause

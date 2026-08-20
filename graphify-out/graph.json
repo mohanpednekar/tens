@@ -52,6 +52,18 @@
       "norm_label": "resolve()"
     },
     {
+      "label": "applyOfflineProgress()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1306",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_applyofflineprogress",
+      "community": 15,
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "applyofflineprogress()"
+    },
+    {
       "label": "buyAutoPrestigeAutobuyer()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -60,7 +72,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestigeautobuyer",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buyautoprestigeautobuyer()"
     },
     {
@@ -72,7 +84,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buyautospeedup",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buyautospeedup()"
     },
     {
@@ -84,7 +96,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedautobuyer",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "buytickspeedautobuyer()"
     },
     {
@@ -96,56 +108,20 @@
       "_origin": "ast",
       "id": "src_game_engine_combineintrobyte",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "combineintrobyte()"
     },
     {
-      "label": "enableAutoClaimCore()",
+      "label": "getOfflineEffectiveSeconds()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L2258",
+      "source_location": "L1290",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_enableautoclaimcore",
+      "id": "src_game_engine_getofflineeffectiveseconds",
       "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "enableautoclaimcore()"
-    },
-    {
-      "label": "getIntroProductionRate()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1444",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getintroproductionrate",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "getintroproductionrate()"
-    },
-    {
-      "label": "isAutoClaimCoreUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2251",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautoclaimcoreunlockavailable",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "isautoclaimcoreunlockavailable()"
-    },
-    {
-      "label": "mergeComputeEntities()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2279",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_mergecomputeentities",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "mergecomputeentities()"
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "getofflineeffectiveseconds()"
     },
     {
       "label": "pickIntroCapacityMilestone()",
@@ -156,7 +132,7 @@
       "_origin": "ast",
       "id": "src_game_engine_pickintrocapacitymilestone",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "pickintrocapacitymilestone()"
     },
     {
@@ -168,7 +144,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautobuyerenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautobuyerenabled()"
     },
     {
@@ -180,7 +156,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoglobaltickspeedenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoglobaltickspeedenabled()"
     },
     {
@@ -192,7 +168,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeautobuyerenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoprestigeautobuyerenabled()"
     },
     {
@@ -204,7 +180,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautoprestigeenabled()"
     },
     {
@@ -216,7 +192,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautospeedupenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "setautospeedupenabled()"
     },
     {
@@ -228,20 +204,20 @@
       "_origin": "ast",
       "id": "src_game_engine_settiertickspeedautobuyerenabled",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "settiertickspeedautobuyerenabled()"
     },
     {
-      "label": "tapIntroBit()",
+      "label": "computeOfflineCatchUp()",
       "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1453",
+      "source_file": "src/game/useIncrementalGame.js",
+      "source_location": "L33",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_tapintrobit",
+      "id": "src_game_useincrementalgame_computeofflinecatchup",
       "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "tapintrobit()"
+      "community_name": "useIncrementalGame.js",
+      "norm_label": "computeofflinecatchup()"
     },
     {
       "label": "useIncrementalGame()",
@@ -252,7 +228,7 @@
       "_origin": "ast",
       "id": "src_game_useincrementalgame_useincrementalgame",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "useincrementalgame()"
     },
     {
@@ -1228,136 +1204,28 @@
       "norm_label": "buildtheme()"
     },
     {
-      "label": "enableAutoMerge()",
+      "label": "enableAutoClaimCore()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L2395",
+      "source_location": "L2258",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_enableautomerge",
+      "id": "src_game_engine_enableautoclaimcore",
       "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "enableautomerge()"
+      "community_name": "enableAutoClaimCore",
+      "norm_label": "enableautoclaimcore()"
     },
     {
-      "label": "isAutoMergeCloudsIntoDatacenterUnlockAvailable()",
+      "label": "isAutoClaimCoreUnlockAvailable()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L2454",
+      "source_location": "L2251",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_isautomergecloudsintodatacenterunlockavailable",
+      "id": "src_game_engine_isautoclaimcoreunlockavailable",
       "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergecloudsintodatacenterunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeClustersIntoNetworkUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2430",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergeclustersintonetworkunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergeclustersintonetworkunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeCoresIntoNodeUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2418",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergecoresintonodeunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergecoresintonodeunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeDatacentersIntoSupercomputerUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2460",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergedatacentersintosupercomputerunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergedatacentersintosupercomputerunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeFabricsIntoCloudUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2448",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergefabricsintocloudunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergefabricsintocloudunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeGridsIntoFabricUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2442",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergegridsintofabricunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergegridsintofabricunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeNetworksIntoGridUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2436",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergenetworksintogridunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergenetworksintogridunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeNodesIntoClusterUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2424",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergenodesintoclusterunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergenodesintoclusterunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2466",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergesupercomputersintomegacomputerunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergesupercomputersintomegacomputerunlockavailable()"
-    },
-    {
-      "label": "isAutoMergeUnlockAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2390",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isautomergeunlockavailable",
-      "community": 48,
-      "community_name": "isAutoMergeUnlockAvailable",
-      "norm_label": "isautomergeunlockavailable()"
+      "community_name": "enableAutoClaimCore",
+      "norm_label": "isautoclaimcoreunlockavailable()"
     },
     {
       "label": "clampPercent()",
@@ -2635,7 +2503,7 @@
       "label": "DiskArrayRow()",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L137",
+      "source_location": "L138",
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_diskarrayrow",
@@ -2680,6 +2548,150 @@
       "norm_label": "getdiskredeemtiername()"
     },
     {
+      "label": "enableAutoMerge()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2395",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_enableautomerge",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "enableautomerge()"
+    },
+    {
+      "label": "isAutoMergeCloudsIntoDatacenterUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2454",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergecloudsintodatacenterunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergecloudsintodatacenterunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeClustersIntoNetworkUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2430",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergeclustersintonetworkunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergeclustersintonetworkunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeCoresIntoNodeUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2418",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergecoresintonodeunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergecoresintonodeunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeDatacentersIntoSupercomputerUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2460",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergedatacentersintosupercomputerunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergedatacentersintosupercomputerunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeFabricsIntoCloudUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2448",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergefabricsintocloudunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergefabricsintocloudunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeGridsIntoFabricUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2442",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergegridsintofabricunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergegridsintofabricunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeNetworksIntoGridUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2436",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergenetworksintogridunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergenetworksintogridunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeNodesIntoClusterUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2424",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergenodesintoclusterunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergenodesintoclusterunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2466",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergesupercomputersintomegacomputerunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergesupercomputersintomegacomputerunlockavailable()"
+    },
+    {
+      "label": "isAutoMergeUnlockAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2390",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isautomergeunlockavailable",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "isautomergeunlockavailable()"
+    },
+    {
+      "label": "mergeComputeEntities()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2279",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_mergecomputeentities",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "mergecomputeentities()"
+    },
+    {
       "label": "startComputeMergeReserve()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -2688,7 +2700,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputemergereserve",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "startcomputemergereserve()"
     },
     {
@@ -2700,7 +2712,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergecloudsintodatacenter",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergecloudsintodatacenter()"
     },
     {
@@ -2712,7 +2724,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergeclustersintonetwork",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergeclustersintonetwork()"
     },
     {
@@ -2724,7 +2736,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergecoresintonode",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergecoresintonode()"
     },
     {
@@ -2736,7 +2748,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergedatacentersintosupercomputer",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergedatacentersintosupercomputer()"
     },
     {
@@ -2748,7 +2760,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergefabricsintocloud",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergefabricsintocloud()"
     },
     {
@@ -2760,7 +2772,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergegridsintofabric",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergegridsintofabric()"
     },
     {
@@ -2772,7 +2784,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergenetworksintogrid",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergenetworksintogrid()"
     },
     {
@@ -2784,7 +2796,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergenodesintocluster",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergenodesintocluster()"
     },
     {
@@ -2796,7 +2808,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickautomergesupercomputersintomegacomputer",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickautomergesupercomputersintomegacomputer()"
     },
     {
@@ -2808,7 +2820,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickcomputemergeboundary",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickcomputemergeboundary()"
     },
     {
@@ -2820,7 +2832,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickcomputemergereservetimer",
       "community": 62,
-      "community_name": "tickComputeMergeBoundary",
+      "community_name": "engine.js",
       "norm_label": "tickcomputemergereservetimer()"
     },
     {
@@ -3088,40 +3100,28 @@
       "norm_label": "startdiskbuild()"
     },
     {
-      "label": "applyOfflineProgress()",
+      "label": "getIntroProductionRate()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1306",
+      "source_location": "L1444",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_applyofflineprogress",
+      "id": "src_game_engine_getintroproductionrate",
       "community": 72,
-      "community_name": "applyOfflineProgress",
-      "norm_label": "applyofflineprogress()"
+      "community_name": "getIntroProductionRate",
+      "norm_label": "getintroproductionrate()"
     },
     {
-      "label": "getOfflineEffectiveSeconds()",
+      "label": "tapIntroBit()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L1290",
+      "source_location": "L1453",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_getofflineeffectiveseconds",
+      "id": "src_game_engine_tapintrobit",
       "community": 72,
-      "community_name": "applyOfflineProgress",
-      "norm_label": "getofflineeffectiveseconds()"
-    },
-    {
-      "label": "computeOfflineCatchUp()",
-      "file_type": "code",
-      "source_file": "src/game/useIncrementalGame.js",
-      "source_location": "L33",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_useincrementalgame_computeofflinecatchup",
-      "community": 72,
-      "community_name": "applyOfflineProgress",
-      "norm_label": "computeofflinecatchup()"
+      "community_name": "getIntroProductionRate",
+      "norm_label": "tapintrobit()"
     },
     {
       "label": "AUTO_PRESTIGE_BASE_INTERVAL_SECONDS",
@@ -4078,50 +4078,6 @@
       "norm_label": "seededstate"
     },
     {
-      "label": "engine.js",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_game_engine",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "engine.js"
-    },
-    {
-      "label": "AUTO_MERGE_TICKERS",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2475",
-      "_origin": "ast",
-      "id": "src_game_engine_auto_merge_tickers",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "auto_merge_tickers"
-    },
-    {
-      "label": "BIT_UNIT_SYMBOLS",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1641",
-      "_origin": "ast",
-      "id": "src_game_engine_bit_unit_symbols",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "bit_unit_symbols"
-    },
-    {
-      "label": "currencyNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L459",
-      "_origin": "ast",
-      "id": "src_game_engine_currencynumberformatter",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "currencynumberformatter"
-    },
-    {
       "label": "enableAutoMergeCloudsIntoDatacenter",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -4129,7 +4085,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergecloudsintodatacenter",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergecloudsintodatacenter"
     },
     {
@@ -4140,7 +4096,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergeclustersintonetwork",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergeclustersintonetwork"
     },
     {
@@ -4151,7 +4107,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergecoresintonode",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergecoresintonode"
     },
     {
@@ -4162,7 +4118,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergedatacentersintosupercomputer",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergedatacentersintosupercomputer"
     },
     {
@@ -4173,19 +4129,8 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergefabricsintocloud",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergefabricsintocloud"
-    },
-    {
-      "label": "enableAutoMergeGridsIntoFabric",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2441",
-      "_origin": "ast",
-      "id": "src_game_engine_enableautomergegridsintofabric",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "enableautomergegridsintofabric"
     },
     {
       "label": "enableAutoMergeNetworksIntoGrid",
@@ -4195,7 +4140,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergenetworksintogrid",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergenetworksintogrid"
     },
     {
@@ -4206,30 +4151,8 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergenodesintocluster",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "enableautomergenodesintocluster"
-    },
-    {
-      "label": "enableAutoMergeSupercomputersIntoMegacomputer",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2465",
-      "_origin": "ast",
-      "id": "src_game_engine_enableautomergesupercomputersintomegacomputer",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "enableautomergesupercomputersintomegacomputer"
-    },
-    {
-      "label": "MEMORY_UNIT_SYMBOLS",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1633",
-      "_origin": "ast",
-      "id": "src_game_engine_memory_unit_symbols",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "memory_unit_symbols"
     },
     {
       "label": "mergeComputeCloudsIntoDatacenter",
@@ -4239,7 +4162,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputecloudsintodatacenter",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputecloudsintodatacenter"
     },
     {
@@ -4250,7 +4173,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputeclustersintonetwork",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputeclustersintonetwork"
     },
     {
@@ -4261,7 +4184,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputecoresintonode",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputecoresintonode"
     },
     {
@@ -4272,7 +4195,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputedatacentersintosupercomputer",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputedatacentersintosupercomputer"
     },
     {
@@ -4283,7 +4206,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputefabricsintocloud",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputefabricsintocloud"
     },
     {
@@ -4294,7 +4217,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputegridsintofabric",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputegridsintofabric"
     },
     {
@@ -4305,7 +4228,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputenetworksintogrid",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputenetworksintogrid"
     },
     {
@@ -4316,7 +4239,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputenodesintocluster",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputenodesintocluster"
     },
     {
@@ -4327,30 +4250,8 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputesupercomputersintomegacomputer",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "mergecomputesupercomputersintomegacomputer"
-    },
-    {
-      "label": "plainNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L457",
-      "_origin": "ast",
-      "id": "src_game_engine_plainnumberformatter",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "plainnumberformatter"
-    },
-    {
-      "label": "scientificNumberFormatter",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L458",
-      "_origin": "ast",
-      "id": "src_game_engine_scientificnumberformatter",
-      "community": 15,
-      "community_name": "engine.js",
-      "norm_label": "scientificnumberformatter"
     },
     {
       "label": "startComputeCloudsMerge",
@@ -4360,7 +4261,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputecloudsmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputecloudsmerge"
     },
     {
@@ -4371,7 +4272,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputeclustersmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputeclustersmerge"
     },
     {
@@ -4382,7 +4283,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputecoresmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputecoresmerge"
     },
     {
@@ -4393,7 +4294,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputedatacentersmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputedatacentersmerge"
     },
     {
@@ -4404,7 +4305,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputefabricsmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputefabricsmerge"
     },
     {
@@ -4415,7 +4316,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputegridsmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputegridsmerge"
     },
     {
@@ -4426,7 +4327,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputenetworksmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputenetworksmerge"
     },
     {
@@ -4437,7 +4338,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputenodesmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputenodesmerge"
     },
     {
@@ -4448,7 +4349,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputesupercomputersmerge",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "startcomputesupercomputersmerge"
     },
     {
@@ -4459,7 +4360,7 @@
       "_origin": "ast",
       "id": "src_game_layers_offline_progress_full_speed_threshold_seconds",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "offline_progress_full_speed_threshold_seconds"
     },
     {
@@ -4470,7 +4371,7 @@
       "_origin": "ast",
       "id": "src_game_useincrementalgame",
       "community": 15,
-      "community_name": "engine.js",
+      "community_name": "useIncrementalGame.js",
       "norm_label": "useincrementalgame.js"
     },
     {
@@ -6589,7 +6490,7 @@
       "label": "`Money/index.js`",
       "file_type": "document",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L38",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "docs_components_reference_money_index_js",
       "community": 33,
@@ -6600,7 +6501,7 @@
       "label": "`OfflineProgressNotice/index.jsx`",
       "file_type": "document",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L42",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "docs_components_reference_offlineprogressnotice_index_jsx",
       "community": 33,
@@ -6622,7 +6523,7 @@
       "label": "`StatCard/index.js`",
       "file_type": "document",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L72",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "docs_components_reference_statcard_index_js",
       "community": 33,
@@ -8668,7 +8569,7 @@
       "label": "CacheBlock",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L106",
+      "source_location": "L107",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_cacheblock",
       "community": 61,
@@ -8679,7 +8580,7 @@
       "label": "CacheBlocksRow",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L99",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_cacheblocksrow",
       "community": 61,
@@ -8701,7 +8602,7 @@
       "label": "DiskSquare",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_disksquare",
       "community": 61,
@@ -8712,7 +8613,7 @@
       "label": "RebuildingText",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L38",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_rebuildingtext",
       "community": 61,
@@ -8723,7 +8624,7 @@
       "label": "RowLabel",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_rowlabel",
       "community": 61,
@@ -8734,7 +8635,7 @@
       "label": "SquaresRow",
       "file_type": "code",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "src_components_diskarrayrow_index_squaresrow",
       "community": 61,
@@ -8773,6 +8674,105 @@
       "community": 61,
       "community_name": "DiskArrayRow/index.jsx",
       "norm_label": "disk_cache_block_count"
+    },
+    {
+      "label": "engine.js",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_engine",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "engine.js"
+    },
+    {
+      "label": "AUTO_MERGE_TICKERS",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2475",
+      "_origin": "ast",
+      "id": "src_game_engine_auto_merge_tickers",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "auto_merge_tickers"
+    },
+    {
+      "label": "BIT_UNIT_SYMBOLS",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1641",
+      "_origin": "ast",
+      "id": "src_game_engine_bit_unit_symbols",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "bit_unit_symbols"
+    },
+    {
+      "label": "currencyNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L459",
+      "_origin": "ast",
+      "id": "src_game_engine_currencynumberformatter",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "currencynumberformatter"
+    },
+    {
+      "label": "enableAutoMergeGridsIntoFabric",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2441",
+      "_origin": "ast",
+      "id": "src_game_engine_enableautomergegridsintofabric",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "enableautomergegridsintofabric"
+    },
+    {
+      "label": "enableAutoMergeSupercomputersIntoMegacomputer",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2465",
+      "_origin": "ast",
+      "id": "src_game_engine_enableautomergesupercomputersintomegacomputer",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "enableautomergesupercomputersintomegacomputer"
+    },
+    {
+      "label": "MEMORY_UNIT_SYMBOLS",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1633",
+      "_origin": "ast",
+      "id": "src_game_engine_memory_unit_symbols",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "memory_unit_symbols"
+    },
+    {
+      "label": "plainNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L457",
+      "_origin": "ast",
+      "id": "src_game_engine_plainnumberformatter",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "plainnumberformatter"
+    },
+    {
+      "label": "scientificNumberFormatter",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L458",
+      "_origin": "ast",
+      "id": "src_game_engine_scientificnumberformatter",
+      "community": 62,
+      "community_name": "engine.js",
+      "norm_label": "scientificnumberformatter"
     },
     {
       "label": "StoragePage/index.jsx",
@@ -10366,7 +10366,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L146",
+      "source_location": "L147",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index_diskarrayrow",
@@ -10378,7 +10378,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L166",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index_diskarrayrow",
@@ -10390,7 +10390,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L167",
+      "source_location": "L168",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index_diskarrayrow",
@@ -10402,7 +10402,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L171",
+      "source_location": "L172",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index_diskarrayrow",
@@ -24322,7 +24322,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_components_reference_shared_components_reference",
@@ -24333,7 +24333,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_components_reference_shared_components_reference",
@@ -24355,7 +24355,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_components_reference_shared_components_reference",
@@ -26269,7 +26269,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L106",
+      "source_location": "L100",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_components_diskarrayrow_index",
+      "target": "src_components_diskarrayrow_index_cacheblocksrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DiskArrayRow/index.jsx",
+      "source_location": "L107",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
@@ -26291,7 +26302,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L137",
+      "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
@@ -26302,7 +26313,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
@@ -26313,7 +26324,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
@@ -26324,7 +26335,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
@@ -26335,22 +26346,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_diskarrayrow_index",
       "target": "src_components_diskarrayrow_index_disksquare",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/DiskArrayRow/index.jsx",
-      "source_location": "L99",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_components_diskarrayrow_index",
-      "target": "src_components_diskarrayrow_index_cacheblocksrow",
       "confidence_score": 1.0
     },
     {
@@ -32119,5 +32119,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "cb5181ece8461fb65b7a032a9b4d6b5198cad571"
+  "built_at_commit": "5e67539b271fe087a0d7463152885e6843e47b5d"
 }
