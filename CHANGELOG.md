@@ -25,6 +25,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- Disk array rows (Byte Foundry and Storage alike) now visually distinguish the Cache row from
+  the Disks row: a "Cache — <n> each"/"Disks — <n> each (...)" caption above each, each in its own
+  correct unit scale (bit-scale `Kb`/`Mb`/… for Cache, Byte-scale `KB`/`MB`/… for Disks — e.g.
+  "Cache — 1 Kb each" next to "Disks — 1 KB each"), and disks now render as round circles instead
+  of squares (a physical disk is round; a cache/memory block stays square), so which row is which
+  reads at a glance.
+- The Byte Foundry screen now shows the current disk size's full interactive array detail —
+  cache blocks (releasable) and disk squares (redeemable), the same `DiskArrayRow` StoragePage
+  itself renders — instead of a plain "<size> <full>/<built>" text chip.
+- StoragePage's per-size label drops the "X/10 built" clause once an array has finished building
+  out (permanently stuck at "10/10" from then on) and shows just "n/10 full" instead — the only
+  number that still moves for a size the ladder has already moved past.
+- **Disk Cache**: manually releasing a full cache block now credits its bits straight into your
+  Bits balance (spendable toward any unlocked tier), instead of back into Byte Foundry Memory —
+  and it's only available while some tier's current per-unit cost actually matches that array's
+  size (the same eligibility a full Disk's own redeem already requires), so a release always
+  counts toward a tier it could actually fund. Cache amounts also now display in their own
+  bit-scale unit (`Kb`/`Mb`/`Gb`/…, lowercase "b" for bits) instead of the Disk's own Byte-scale
+  one (`KB`/`MB`/… uppercase "B" for Bytes) — e.g. a 1 KB disk's cache block reads "1 Kb", not
+  "125 B".
+- The Byte Foundry's per-size Storage summary chip now shows only the single currently-active/
+  buildable disk size, not every size the ladder has ever reached — StoragePage's own fuller
+  detail view still lists every size's full history.
 - **Overclock**'s requirement and reward both reworked: instead of a fixed +10-level-per-activation
   ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always

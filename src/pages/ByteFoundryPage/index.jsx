@@ -1,7 +1,8 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
+import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
@@ -139,27 +140,6 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
-// A brief, at-a-glance per-size Storage status readout — one small chip per size ever reached,
-// reading "<size> <full>/<built>" (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3 currently
-// full). Deliberately not the fuller square-by-square grid StoragePage itself renders — this is
-// just enough context to see holdings at a glance without leaving the Byte Foundry; visiting
-// StoragePage (via the nav button below) is still how a full disk actually gets redeemed.
-const StorageSummaryRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: ${props => props.theme.space.xs};
-  width: 100%;
-`
-
-const StorageSummaryChip = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-  background: ${props => props.theme.color.surfaceSunken};
-  border-radius: ${props => props.theme.radius.sm};
-  padding: 2px 8px;
-`
-
 // A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
 // straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
 // as a row item (grow to fill available width) instead of a column item (which would instead try
@@ -293,9 +273,11 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 //
 // Compute moved entirely to its own dedicated screen (ComputePage) once revealed — this page only
 // shows a nav button to reach it. Storage split differently: starting the next disk's build (its
-// own core loop action, same as Sacrifice/Invest) and a brief per-size summary chip row both stay
-// here, on this page — only the fuller square-by-square detail and redeeming (Disk Fill) live on
-// the dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
+// own core loop action, same as Sacrifice/Invest) and the single currently-active/buildable size's
+// own full interactive detail — cache blocks, disk squares, releasing, redeeming (see
+// components/DiskArrayRow, shared with StoragePage below) — both stay here, on this page. Only
+// every OTHER size the ladder has since moved past — full multi-size history — lives on the
+// dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
 // enabled once revealed (same "permanent, voluntarily-revisitable screen" posture as MainPage's
 // own "⚙️ Byte Foundry" link) so the player can check on built-but-not-yet-affordable progress (a
 // held disk, banked Cores) even when nothing there is currently actionable. Every action
@@ -353,14 +335,6 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  const disksBuiltTotal = intro.disksBuiltTotal ?? {}
-  // getDiskSizesToShow always includes the currently-offered size even at 0 built (so
-  // StoragePage's own fuller detail can preview the goal before the first one is banked) — this
-  // brief summary is different: it should only ever report actual history, so a size with nothing
-  // built and nothing held is filtered back out here rather than showing a confusing "1 KB 0/0"
-  // chip before the player has ever built anything.
-  const diskSizesWithHistory = getDiskSizesToShow(state)
-    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (intro.disks?.[size] ?? 0) > 0)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -551,19 +525,7 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
             />
           </Button>
 
-          {diskSizesWithHistory.length > 0 && (
-            <StorageSummaryRow role="group" aria-label="storage summary">
-              {diskSizesWithHistory.map(size => {
-                const full = intro.disks?.[size] ?? 0
-                const builtTotal = Math.max(disksBuiltTotal[size] ?? 0, full)
-                return (
-                  <StorageSummaryChip key={size}>
-                    {`${formatDiskSize(size)} ${full}/${builtTotal}`}
-                  </StorageSummaryChip>
-                )
-              })}
-            </StorageSummaryRow>
-          )}
+          <DiskArrayRow actions={actions} size={diskSize} state={state} />
 
           <Button
             aria-label="open storage"
