@@ -210,7 +210,24 @@ medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code qua
 workflow self-improvement, gap analysis).
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` PRs.
 `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR) or on green
-checks alone for our own automation's branches when the diff meets a conservative low-risk bar.
+checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the diff meets a
+conservative low-risk bar.
+
+**Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
+`cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones
+above but run the **Cursor CLI** (`cursor-agent -p`) instead of `anthropics/claude-code-action`. The
+plan is for Cursor to eventually replace the Claude engine, but not immediately: for now both coexist,
+and the Claude workflows remain the active default. The Cursor twins share the same `claude-task`
+backlog, the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, and the same `GH_AUTOMATION_PAT`, but open
+their work on `cursor/*` branches (never `claude/*`) and authenticate the agent with a `CURSOR_API_KEY`
+repo secret. Every agent step is gated on that secret existing, so the files are **inert until a
+maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes no behavior until then.
+While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
+`cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
+the two never double-pick; its schedule is offset from the Claude cron. See `docs/AUTOMATION.md`'s
+"Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
+setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
+Claude workflows).
 
 **Budget discipline applies to every session, not just automation.** There's no fixed turn cap — self-
 estimate how much of the rolling 5-hour Claude usage window is likely still available and aim to keep
