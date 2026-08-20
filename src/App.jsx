@@ -1,73 +1,71 @@
+import AppMenu from 'components/AppMenu'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputePage from 'pages/ComputePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
+import MilestonesPage from 'pages/MilestonesPage'
+import SettingsPage from 'pages/SettingsPage'
 import StoragePage from 'pages/StoragePage'
-import { isComputeCoreConversionUnlocked, isStorageUnlocked } from 'game/engine'
+import { isComputeCoreConversionUnlocked, isProductionFrozen, isStorageUnlocked } from 'game/engine'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { GlobalStyle, ThemeProvider } from 'theme'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-// Reserves space under every page so the fixed AppNav never covers the bottom-most controls.
+// Pages that must stay reachable even while the Byte Foundry gate is active — utilities and
+// progress-revealed sub-screens. Visiting any of these must not yank the player back onto Foundry.
+const GATE_EXEMPT_PAGES = new Set(['info', 'storage', 'compute', 'milestones', 'settings'])
+
 const PageShell = styled.div`
-  padding-bottom: ${props => (props.$withNav ? APP_NAV_BOTTOM_PAD : '0')};
+  padding-bottom: ${APP_NAV_BOTTOM_PAD};
 `
 
 function App() {
-  // Owned here (rather than inside MainPage) so it can also drive ByteFoundryPage — the Byte
-  // Foundry screen and the main game share one save/tick loop, just two different views onto it.
   const game = useIncrementalGame()
 
-  // Which top-level page the player has navigated to — a local toggle, not real routing (this
-  // stays a single-page app, see CLAUDE.md). Defaults to 'game'; irrelevant while the mandatory
-  // Byte Foundry gate below is active, since that overrides whatever `page` is. Storage/Compute
-  // are reachable from the shared AppNav once each mechanic is revealed (and still return via
-  // that same bar rather than a nested Back button).
+  // Local page toggle — not a router. Defaults to 'game'; the gate override below forces Foundry
+  // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
+  const [menuOpen, setMenuOpen] = useState(false)
 
-  // The Byte Foundry (ByteFoundryPage) is BOTH a mandatory gate (intro.mainGameUnlocked === false
-  // blocks the rest of the app entirely — no fresh Kilobytes without tapping through it, see
-  // engine.js's convertIntroBitsToKilobytes/tickIntroAutoInvest/prestigeGame) AND, once unlocked, a
-  // permanent screen the player can voluntarily revisit at any time via AppNav's Foundry item
-  // (page === 'foundry') to review this cycle's stats — it no longer disappears once passed.
-  // Excluding 'info'/'storage'/'compute' keeps the gate courtesy: Auto-Prestige firing while the
-  // player is on Guide/Storage/Compute doesn't yank them off mid-read, and Storage/Compute stay
-  // reachable during the gate itself (capacity can reveal them before the first transfer ever
-  // flips mainGameUnlocked — without this exclusion the override would make them unreachable).
   const mainGameUnlocked = game.state.intro.mainGameUnlocked
-  const showingFoundry = page !== 'info' && page !== 'storage' && page !== 'compute' &&
+  const showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
     (!mainGameUnlocked || page === 'foundry')
 
   const currentNavPage = showingFoundry ? 'foundry' : page
 
   const showStorage = isStorageUnlocked(game.state)
   const showCompute = isComputeCoreConversionUnlocked(game.state)
-
-  // Full nav once unlocked. During the gate, still show nav when Storage/Compute are revealed
-  // (so those screens stay reachable) or when already on a courtesy page (Guide/Storage/Compute)
-  // so Prestige can't strand the player without an exit back to Foundry.
-  const showNav = mainGameUnlocked ||
-    showStorage ||
-    showCompute ||
-    page === 'info' ||
-    page === 'storage' ||
-    page === 'compute'
-
-  // Tiers/Guide are main-game destinations — omit them during the mandatory gate so there's no
-  // escape hatch. If the player is already on Guide when Prestige flips the gate, keep Guide in
-  // the bar (aria-current) and show Foundry as the way out.
+  // Tiers is the only progress-gated primary destination — utilities (Guide / More → Milestones /
+  // Settings / Reset) stay available from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
-  const showGuide = mainGameUnlocked || page === 'info'
 
   const navigate = nextPage => {
     if (nextPage === 'storage' && !showStorage) return
     if (nextPage === 'compute' && !showCompute) return
     if (nextPage === 'game' && !mainGameUnlocked) return
-    if (nextPage === 'info' && !showGuide) return
+    setMenuOpen(false)
     setPage(nextPage)
   }
+
+  const handleReset = () => {
+    if (isProductionFrozen(game.state)) return
+    if (!window.confirm('Erase all progress and start over? This cannot be undone.')) return
+    game.resetGame()
+    setPage('game')
+    setMenuOpen(false)
+  }
+
+  // Close the More sheet on Escape from anywhere.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onKey = event => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
 
   let content
   if (showingFoundry) {
@@ -78,26 +76,43 @@ function App() {
     content = <StoragePage game={game} />
   } else if (page === 'compute') {
     content = <ComputePage game={game} />
+  } else if (page === 'milestones') {
+    content = <MilestonesPage game={game} />
+  } else if (page === 'settings') {
+    content = <SettingsPage game={game} onReset={handleReset} />
   } else {
     content = <MainPage game={game} />
   }
 
+  const resetDisabled = isProductionFrozen(game.state)
+
   return (
     <ThemeProvider>
       <GlobalStyle />
-      <PageShell $withNav={showNav}>
+      <PageShell>
         {content}
       </PageShell>
-      {showNav && (
-        <AppNav
-          currentPage={currentNavPage}
-          onNavigate={navigate}
-          showCompute={showCompute}
-          showGuide={showGuide}
-          showStorage={showStorage}
-          showTiers={showTiers}
-        />
-      )}
+      <AppNav
+        currentPage={currentNavPage}
+        moreOpen={menuOpen}
+        onNavigate={navigate}
+        onOpenMore={() => setMenuOpen(open => !open)}
+        showCompute={showCompute}
+        showStorage={showStorage}
+        showTiers={showTiers}
+      />
+      <AppMenu
+        onClose={() => setMenuOpen(false)}
+        onNavigate={navigate}
+        onReset={handleReset}
+        open={menuOpen}
+        resetDisabled={resetDisabled}
+        resetTitle={
+          resetDisabled
+            ? 'Prestige first — production is frozen at 1 Googol Bytes'
+            : 'Erases all progress and starts over (asks for confirmation)'
+        }
+      />
     </ThemeProvider>
   )
 }

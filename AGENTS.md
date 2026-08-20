@@ -12,7 +12,9 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the tier ladder), `InfoPage`
 (static "how it works" prose), and `StoragePage`/`ComputePage` (dedicated sub-screens once each
 mechanic is revealed) — switched via a plain `useState` in `App.jsx` plus a shared bottom `AppNav`
-(Tiers / Foundry / Storage / Compute / Guide); no backend — state lives in React and persists to
+(Tiers / Foundry / Storage / Compute / Guide / More); Guide and More (Milestones, Settings, Reset)
+are always available — even during the Byte Foundry gate — so utilities never require progress;
+no backend — state lives in React and persists to
 `localStorage`.
 
 ## Tech stack

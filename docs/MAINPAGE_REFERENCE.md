@@ -103,20 +103,17 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Compute moved entirely to its own dedicated screen (`ComputePage` — see below) — this page only
-renders a nav button to reach it, once revealed (`computeCoreRevealed`,
-`isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`), always
-enabled regardless of what's currently actionable there — a permanent, voluntarily-revisitable
-posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — shown as a "⚡ Compute" button
-(`aria-label="open compute"`, calling `onOpenCompute`). One exception to "Compute lives entirely on
-its own screen": Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label
-`🧮 Claim Core`, calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the
-Memory tile above already computes) renders on THIS page, right before the Compute nav button, once
-`computeCoreRevealed` AND `!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled)
-once auto-claim is unlocked (see issue #316). `disabled={!canClaimComputeCore}` where
-`canClaimComputeCore = isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores
-under `COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that
-Memory needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
+Compute lives on its own dedicated screen (`ComputePage` — see below), reached via AppNav once
+revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). One exception to "Compute lives entirely on its own screen":
+Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label `🧮 Claim Core`,
+calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the Memory tile
+above already computes) renders on THIS page once `computeCoreRevealed` AND
+`!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled) once auto-claim is unlocked
+(see issue #316). `disabled={!canClaimComputeCore}` where `canClaimComputeCore =
+isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores under
+`COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that Memory
+needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
 
 Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
@@ -175,12 +172,10 @@ shows one small `StorageSummaryChip` per size, each reading `"<size> <full>/<bui
 a compact, at-a-glance readout, deliberately not the fuller square-by-square grid StoragePage itself
 renders (see below); visiting StoragePage is still how a full disk actually gets redeemed.
 
-Below Build/the summary, a "🏦 Storage" nav button (`aria-label="open storage"`, calling
-`onOpenStorage`, same reveal gate as Build) reaches `StoragePage` for the fuller per-size detail and
-redeeming — always enabled regardless of what's currently actionable there, same posture as the
-Compute nav button above.
+`StoragePage` (reached via AppNav once Storage is revealed) holds the fuller per-size detail and
+redeeming for every size ever reached; Build stays on ByteFoundryPage.
 
-Below the Storage/Compute nav buttons, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below Build / Claim Core, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
@@ -246,18 +241,17 @@ cycle a head start — so the gate is a fast pit-stop after the first cycle, not
 Auto-redeem (`tickDiskAutoRedeem`) is no longer gated by any persisted per-cycle toggle at all — it
 checks whether the matched tier's own autobuyer is currently active (`autobuyers[tier.id]` non-null
 AND `autobuyersEnabled[tier.id]` not `false`), so there's no `storageAutoRedeemEnabled`-style field
-to carry over or reset in the first place. Once unlocked, the page also persists as a screen the player can
-return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
-stays just as interactive there as on the gate itself.
+to carry over or reset in the first place. Once unlocked, the page also persists as a screen the
+player can return to at any time via AppNav's Foundry item rather than disappearing for the rest of
+the cycle — and stays just as interactive there as on the gate itself.
 
 **Storage page** (`src/pages/StoragePage/index.jsx`). Storage's fuller detail screen, split out of
-ByteFoundryPage (see "Byte Foundry" section above) — reached only via ByteFoundryPage's "🏦 Storage"
-nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack
-}`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`) is
-all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
-next disk (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this page
-holds only the fuller per-size cache/squares grid and the two Storage actions that live only here,
-releasing a full cache block into the Bits balance (`resources.base`) and redeeming a full disk.
+ByteFoundryPage (see "Byte Foundry" section above) — reached via AppNav once Storage is revealed.
+Takes `{ game }`. A centered title `🏦 Storage` is all the page-chrome it has — **no Build button
+and no Memory balance readout here**: building the next disk stays on ByteFoundryPage itself (see
+above); this page holds only the fuller per-size cache/squares grid and the two Storage actions that
+live only here, releasing a full cache block into the Bits balance (`resources.base`) and redeeming
+a full disk.
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
@@ -315,9 +309,8 @@ started reading that exact same value directly; that transfer-block row (back on
 the only place this progress is shown.
 
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
-ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
-returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `Header` row (title
-`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`).
+ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title
+`⚡ Compute` is the page chrome (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one

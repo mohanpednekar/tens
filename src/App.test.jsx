@@ -72,7 +72,7 @@ test('renders the current app version beside the title', () => {
 // Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
 // buttons once the main game is unlocked — this only asserts the accessible surface
 // (role + aria-label), since jsdom doesn't render CSS for a visual check.
-test('AppNav exposes accessibly-labeled Foundry and Guide destinations once unlocked', () => {
+test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked', () => {
   seedMainGameState()
   render(<App />)
 
@@ -88,6 +88,31 @@ test('AppNav exposes accessibly-labeled Foundry and Guide destinations once unlo
   const guideButton = screen.getByRole('button', { name: /open guide/i })
   expect(guideButton).toHaveTextContent(/guide/i)
   expect(guideButton).toHaveAttribute('title', 'How this game works')
+
+  expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
+})
+
+test('More menu reaches Milestones, Settings, and Reset from any screen without progress gates', async () => {
+  const user = userEvent.setup()
+  render(<App />) // fresh gate — no mainGameUnlocked yet
+
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  expect(screen.getByRole('dialog', { name: /more menu/i })).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/chapters category/i)).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open guide/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 })
 
 test('the Guide nav item opens the Info page and Tiers returns, preserving game state', async () => {
@@ -3528,17 +3553,19 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Tiers r
   expect(screen.getByRole('heading', { level: 1, name: /^tens$/i })).toBeInTheDocument()
 })
 
-test('the mandatory Byte Foundry gate (before mainGameUnlocked) has no Tiers/Guide escape', () => {
+test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Tiers but keeps Guide and More reachable', () => {
   render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.queryByRole('navigation', { name: /main navigation/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
+  // Utilities must not require progress — Guide + More (Milestones / Settings / Reset) stay available.
+  expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
 
-test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, hiding Tiers/Guide', () => {
+test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, hiding Tiers but keeping Guide/More', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -3561,14 +3588,14 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Still on the same screen — no navigation jump — but now it's the mandatory gate: Tiers/Guide
-  // are gone, since mainGameUnlocked just flipped false (and Storage/Compute aren't revealed at
-  // this capacity, so the whole AppNav hides).
+  // Still on the same screen — no navigation jump — but now it's the mandatory gate: Tiers is
+  // gone, while Guide/More stay so utilities never depend on re-unlocking the main game.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('navigation', { name: /main navigation/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
+  expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()

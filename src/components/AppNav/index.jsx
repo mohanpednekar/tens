@@ -1,13 +1,11 @@
 import styled from 'styled-components'
 
-// Persistent top-level page switcher — one chrome for Tiers / Foundry / Storage / Compute / Guide
-// so players don't have to discover nested Back buttons or page-local open-* links. Rendered by
-// App.jsx only once intro.mainGameUnlocked (the mandatory Byte Foundry gate has no escape hatch).
-// Storage/Compute items appear only after each mechanic's own reveal predicate flips true.
-// The MainPage destination is labeled "Tiers" (not "Game") so it doesn't collide with MainPage's
-// own Game/Upgrades/Milestones view tabs, and so it reads as a place name like the other items.
-// Accessible names (`open tiers`, `open byte foundry`, `open guide`, `open storage`,
-// `open compute`) are stable for tests and assistive tech; visible labels stay short for the bar.
+// Persistent top-level page switcher. Primary destinations (Tiers / Foundry / Storage / Compute)
+// sit alongside always-available Guide + More. More opens AppMenu (Guide / Milestones / Reset /
+// Settings) so utilities never require unlocking Tiers or any other progress gate — including
+// during the mandatory Byte Foundry gate (Tiers stays hidden then; Guide/More stay).
+// Accessible names stay stable for tests: open tiers / open byte foundry / open storage /
+// open compute / open guide / open more menu.
 
 const NAV_HEIGHT = '3.25rem'
 
@@ -75,21 +73,24 @@ const Label = styled.span`
 const AppNav = ({
   currentPage,
   onNavigate,
+  onOpenMore,
   showTiers = true,
   showStorage = false,
   showCompute = false,
-  showGuide = true,
+  moreOpen = false,
 }) => {
   const items = [
     showTiers && { id: 'game', ariaLabel: 'open tiers', icon: '📶', label: 'Tiers', title: 'Tier ladder — buy and produce' },
     { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry' },
     showStorage && { id: 'storage', ariaLabel: 'open storage', icon: '🏦', label: 'Storage', title: 'Storage' },
     showCompute && { id: 'compute', ariaLabel: 'open compute', icon: '⚡', label: 'Compute', title: 'Compute' },
-    showGuide && { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
+    { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
   ].filter(Boolean)
 
+  const utilityActive = currentPage === 'milestones' || currentPage === 'settings' || moreOpen
+
   return (
-    <Bar aria-label="main navigation" style={{ '--app-nav-height': NAV_HEIGHT }}>
+    <Bar aria-label="main navigation">
       {items.map(item => {
         const active = currentPage === item.id
         return (
@@ -107,12 +108,22 @@ const AppNav = ({
           </NavItem>
         )
       })}
+      <NavItem
+        aria-expanded={moreOpen}
+        aria-haspopup="dialog"
+        aria-label="open more menu"
+        $active={utilityActive}
+        onClick={onOpenMore}
+        title="Guide, Milestones, Settings, Reset"
+        type="button"
+      >
+        <Icon aria-hidden="true">⋯</Icon>
+        <Label>More</Label>
+      </NavItem>
     </Bar>
   )
 }
 
-// Exported so page roots can reserve the same bottom clearance the fixed bar occupies
-// (bar content + safe-area inset), without hardcoding a second magic number.
 export const APP_NAV_BOTTOM_PAD = `calc(${NAV_HEIGHT} + env(safe-area-inset-bottom))`
 
 export default AppNav

@@ -7,18 +7,21 @@ state each is currently in.
 
 ## `AppNav/index.jsx`
 
-Fixed bottom navigation bar (`.jsx`) switching the five top-level destinations: **Tiers**
-(`aria-label="open tiers"`, internal page id `'game'`), **Foundry** (`open byte foundry`),
-**Storage** (`open storage`, only once `isStorageUnlocked`), **Compute** (`open compute`, only
-once `isComputeCoreConversionUnlocked`), and **Guide** (`open guide`). Rendered by `App.jsx`
-once the main game is unlocked, and also during the mandatory Byte Foundry gate whenever
-Storage/Compute are already revealed (or the player is parked on Guide/Storage/Compute after a
-Prestige) so those screens stay reachable / exit-able. During the gate, Tiers and Guide are
-omitted so there is still no escape hatch onto MainPage. Active item uses `aria-current="page"`
-plus accent/surface styling from theme tokens. Exports `APP_NAV_BOTTOM_PAD` so `App.jsx`'s
-`PageShell` can reserve the same clearance the fixed bar occupies (including
-`env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, showTiers, showStorage,
-showCompute, showGuide }`.
+Fixed bottom navigation bar (`.jsx`) switching primary destinations plus always-on utilities:
+**Tiers** (`aria-label="open tiers"`, internal page id `'game'`, only once `mainGameUnlocked`),
+**Foundry** (`open byte foundry`), **Storage** / **Compute** (once each mechanic is revealed),
+**Guide** (`open guide`, always), and **More** (`open more menu`, always — opens `AppMenu`).
+Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
+`APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
+occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
+showTiers, showStorage, showCompute, moreOpen }`.
+
+## `AppMenu/index.jsx`
+
+Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
+must not depend on unlocking Tiers: **Milestones**, **Settings**, and **Reset save…** (same
+`window.confirm` + `resetGame` path as MainPage's Reset). Closes on backdrop click, Escape, or
+any action. Takes `{ open, onClose, onNavigate, onReset, resetDisabled, resetTitle }`.
 
 ## `Button/index.jsx`
 
