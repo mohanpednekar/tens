@@ -101,10 +101,14 @@ test('the Guide link navigates to the Info page and Back to game returns, preser
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
   // Guide sections covering the Byte Foundry pre-game (Memory/tapping/Sacrifice/Invest, Storage,
   // and Compute — including the full merge chain) render alongside the pre-existing main-game
-  // sections (Tickspeed, Speed Up, …).
+  // sections (Tickspeed, Speed Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
+  expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/bits balance/i)
+  expect(screen.getByLabelText(/compute section/i)).toHaveTextContent(/stack/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /back to game/i }))

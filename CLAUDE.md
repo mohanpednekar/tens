@@ -554,13 +554,14 @@ Strict three-layer separation:
     own row 1 also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock
     control — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see
     "Economy model" below.
-5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
-   (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Byte Foundry, Storage,
-   Compute, Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones, plus the app's tagline).
-   Reads no `useIncrementalGame` state at all, only pure constants/formulas from
-   `game/engine.js`/`game/layers.js`, so nothing here can drift out of sync with a live run.
-   `App.jsx` toggles between these pages locally; there is still no routing library or backend
-   involved.
+5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
+   explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,
+   Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
+   `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
+   Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
+   can drift out of sync with a live run. `App.jsx` toggles between these pages locally; there is
+   still no routing library or backend involved.
 
 ## Economy model
 
@@ -731,7 +732,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1269 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1292 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

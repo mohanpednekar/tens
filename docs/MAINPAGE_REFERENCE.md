@@ -49,7 +49,7 @@ paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte 
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
 (`getIntroProductionRate(intro) / BITS_PER_BYTE`). There is no separate Cache tile — the same
-progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
+progress the old Cache tile showed (progress toward the next convertible Memory→Kilobyte unit) is now
 read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
 element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
@@ -124,7 +124,7 @@ Memory needs to fill (or auto-claim be unlocked on `ComputePage` instead) when d
 Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
 capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
-more deliberate reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
+more deliberate reveal than `revealed`'s own 8000-bit gate above). Its visible label always tracks
 `getDiskSize(state)` — an independent ladder that walks tier01's own per-unit level-cost sequence,
 expressed in real, Byte-accurate bits (`getTierCost(tier01, level) * BITS_PER_BYTE`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
@@ -260,7 +260,7 @@ nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). T
 all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
 next disk (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this page
 holds only the fuller per-size cache/squares grid and the two Storage actions that live only here,
-releasing a full cache block back into Memory and redeeming a full disk.
+releasing a full cache block into the Bits balance (`resources.base`) and redeeming a full disk.
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
@@ -278,12 +278,13 @@ the build's duration; otherwise, two rows render:
   before any of it pours into an empty disk container below. A block reads **full**
   (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and independently
   **releasable** (`$releasable`, accent border, clickable) once `isDiskCacheBlockReleasable(state,
-  size)` — full AND that size isn't mid-build. `aria-label` is `"release <size> cache block N back
-  into Memory"` when releasable, else the plain `"<size> cache block N"`; `title` is `"Release this
-  block's <blockBits formatted> back into Memory"` once full, else `"Filling from Memory"`; clicking a
-  releasable block calls `actions.releaseDiskCacheBlock(size)`, redirecting those bits back to Memory
-  (e.g. toward an ordinary Kilobyte transfer) instead of waiting for the array's next disk to
-  complete.
+  size)` — full, that size isn't mid-build, **and** some tier's current per-unit cost matches this
+  size (`isDiskRedeemable`). `aria-label` is `"release <size> cache block N into Bits"` when
+  releasable, else the plain `"<size> cache block N"`; `title` is `"Release this block's <blockBits
+  formatted> into your Bits balance (credits toward <tier>)"` once releasable, a non-matching-tier
+  hint once full but not releasable, else `"Filling from Memory"`; clicking a releasable block calls
+  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits) toward
+  the matching tier instead of waiting for the array's next disk to complete.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
   **full** (leftmost, holding a full cache's worth of Memory — accent border, `aria-label="redeem
