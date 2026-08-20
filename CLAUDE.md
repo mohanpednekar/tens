@@ -28,8 +28,8 @@ toggle in `App.jsx` — not a router (see "Architecture" below).
 | @fontsource/inter, @fontsource/space-grotesk | 5 | Locally-bundled font faces (see `theme/fonts.js`, "Theming" below) — no runtime CDN fetch |
 | Yarn | 1 (Classic) | `packageManager: yarn@1.22.22` via Corepack; lockfile is v1 format |
 
-A stray `package-lock.json` is committed alongside `yarn.lock` (yarn warns about this on install) — use Yarn
-for all dependency work, not npm.
+Use Yarn for all dependency work, not npm. `package-lock.json` is gitignored so an accidental
+`npm install` cannot reintroduce a second lockfile alongside `yarn.lock`.
 
 ## Commands
 
