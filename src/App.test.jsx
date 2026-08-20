@@ -2663,21 +2663,23 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /build disk/i })).toBeDisabled()
   })
 
-  test('a brief per-size summary chip ("<size> <full>/<built>") shows on ByteFoundryPage once a disk has ever been built', () => {
+  test('ByteFoundryPage renders the current size\'s full interactive Disk array detail inline (cache blocks and disk squares), not just a text summary', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: 3 }, disks: { [currentBankSize]: 1 },
     })
     render(<App />)
 
-    expect(screen.getByRole('group', { name: /^storage summary$/i })).toHaveTextContent('1 KB 1/3')
+    expect(screen.getByText('1 KB disks (1 full, 3/10 built)')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
   })
 
-  test('the summary stays hidden entirely before anything has ever been built or held, rather than showing a confusing "0/0" chip for the currently-offered size', () => {
+  test('the current size\'s array preview shows even before anything has ever been built or held, rather than staying hidden', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    expect(screen.queryByRole('group', { name: /^storage summary$/i })).not.toBeInTheDocument()
+    expect(screen.getByText('1 KB disks (0 full, 0/10 built)')).toBeInTheDocument()
   })
 
   test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {
