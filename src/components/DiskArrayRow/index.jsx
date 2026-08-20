@@ -32,23 +32,24 @@ const RebuildingText = styled.p`
 
 const SquaresRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-wrap: nowrap;
   gap: 3px;
   width: 100%;
-  max-width: 260px;
 `
 
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
-// mechanic itself. $full (currently holding its cache's poured contents, awaiting redeem — accent
-// border, filled green once $redeemable, a duller raised fill otherwise, clickable only when both
-// $full and $redeemable) takes priority over $empty (built but not yet poured into by the array's
-// cache — a dim muted-bordered fill, distinct from the plain not-yet-built placeholder below it)
-// over the plain not-yet-built placeholder (transparent, outline only, disabled).
+// mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
+// squares always stretches to fill the full row rather than staying small and centered with
+// leftover space around it. $full (currently holding its cache's poured contents, awaiting
+// redeem — accent border, filled green once $redeemable, a duller raised fill otherwise, clickable
+// only when both $full and $redeemable) takes priority over $empty (built but not yet poured into
+// by the array's cache — a dim muted-bordered fill, distinct from the plain not-yet-built
+// placeholder below it) over the plain not-yet-built placeholder (transparent, outline only,
+// disabled).
 const DiskSquare = styled.button`
-  flex: 0 0 auto;
-  width: 1.4rem;
-  height: 1.4rem;
+  flex: 1 1 1.2rem;
+  min-width: 0;
+  aspect-ratio: 1;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
     props.$full ? props.theme.color.accent : props.$empty ? props.theme.color.textMuted : props.theme.color.surfaceSunken};
@@ -87,7 +88,6 @@ const CacheBlocksRow = styled.div`
   flex-wrap: nowrap;
   gap: 3px;
   width: 100%;
-  max-width: 260px;
 `
 
 const CacheBlock = styled.button`
