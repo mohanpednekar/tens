@@ -14,7 +14,9 @@ app switches between five top-level pages, `ByteFoundryPage` (the tap-to-earn pr
 until its one-time transition into the main game), `MainPage` (the tier ladder), `InfoPage` (all the
 static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens once each
 mechanic is revealed), via a plain `useState` toggle in `App.jsx` plus a shared bottom `AppNav`
-(Tiers / Foundry / Storage / Compute / Guide) — not a router (see "Architecture" below).
+(Tiers / Foundry / Storage / Compute / Guide / More) — not a router (see "Architecture" below).
+Guide and More (Milestones / Settings / Reset) are always available, including during the
+mandatory Byte Foundry gate; only Tiers stays progress-gated.
 
 ## Tech stack
 

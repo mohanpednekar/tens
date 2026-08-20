@@ -86,10 +86,13 @@ localStorage persistence), called once in `App.jsx` and shared by every page via
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
 state); `StoragePage`/`ComputePage` are pure renderers. `App.jsx` switches between all five via a
-local `page` `useState` and a shared bottom `AppNav` (Tiers / Foundry / Storage / Compute / Guide),
-with `ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says, except on
-`'info'`/`'storage'`/`'compute'` — whenever the current Prestige cycle's `intro.mainGameUnlocked` is
-still false (see "Byte Foundry" below); once true, Foundry is just another AppNav destination.
+local `page` `useState` and a shared bottom `AppNav` (Tiers / Foundry / Storage / Compute / Guide /
+More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says,
+except on gate-exempt utility/progress pages (`'info'`/`'storage'`/`'compute'`/`'milestones'`/
+`'settings'`) — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false
+(see "Byte Foundry" below). Tiers stays hidden during the gate; Guide and More stay reachable so
+utilities never require unlocking the main game. Once unlocked, Foundry is just another AppNav
+destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
