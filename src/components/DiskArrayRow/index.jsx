@@ -2,11 +2,14 @@ import { formatCacheSize, formatDiskSize, getDiskRedeemTierName, isDiskCacheBloc
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
-// One size's own cache-blocks-plus-disk-squares detail: a cache row (see CacheBlocksRow below)
-// followed by a fixed DISK_ARRAY_LADDER_CAP-long strip of squares read together as one progress
-// bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY — constructed,
-// waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then not-yet-built
-// placeholders (rightmost).
+// One size's own cache-blocks-plus-disk-squares detail: a "Cache" row (see CacheBlocksRow below)
+// followed by a "Disks" row — a fixed DISK_ARRAY_LADDER_CAP-long strip read together as one
+// progress bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY —
+// constructed, waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then
+// not-yet-built placeholders (rightmost). Each row carries its own uppercase RowLabel caption, and
+// the two shapes deliberately differ (round disks vs. square cache blocks — see DiskSquare/
+// CacheBlock below), so which row is which reads at a glance rather than as one undifferentiated
+// strip of squares.
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -19,6 +22,19 @@ const DiskSizeLabel = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
+`
+
+// A small uppercase caption ("CACHE"/"DISKS") above each row — the two rows otherwise read as one
+// undifferentiated strip of squares, with nothing marking where the cache ends and the disks
+// begin. Sits flush left (rather than centered, like DiskSizeLabel above) so it reads as a row
+// heading, not another centered status line.
+const RowLabel = styled.p`
+  align-self: flex-start;
+  margin: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 `
 
 // Shown in place of the cache/disk rows while this size's array is mid-build (see intro.diskBuild
@@ -40,17 +56,19 @@ const SquaresRow = styled.div`
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
 // mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
 // squares always stretches to fill the full row rather than staying small and centered with
-// leftover space around it. $full (currently holding its cache's poured contents, awaiting
-// redeem — accent border, filled green once $redeemable, a duller raised fill otherwise, clickable
-// only when both $full and $redeemable) takes priority over $empty (built but not yet poured into
-// by the array's cache — a dim muted-bordered fill, distinct from the plain not-yet-built
-// placeholder below it) over the plain not-yet-built placeholder (transparent, outline only,
-// disabled).
+// leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
+// CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
+// disk is round; a cache/memory block is square) rather than as one undifferentiated strip. $full
+// (currently holding its cache's poured contents, awaiting redeem — accent border, filled green
+// once $redeemable, a duller raised fill otherwise, clickable only when both $full and
+// $redeemable) takes priority over $empty (built but not yet poured into by the array's cache — a
+// dim muted-bordered fill, distinct from the plain not-yet-built placeholder below it) over the
+// plain not-yet-built placeholder (transparent, outline only, disabled).
 const DiskSquare = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
-  border-radius: ${props => props.theme.radius.sm};
+  border-radius: 50%;
   border: 1.5px solid ${props =>
     props.$full ? props.theme.color.accent : props.$empty ? props.theme.color.textMuted : props.theme.color.surfaceSunken};
   background: ${props =>
@@ -155,36 +173,41 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (every disk in this array is offline until it finishes)`}
         </RebuildingText>
       ) : (
-        <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
-          {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
-            const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
-            const isFull = blockFilledBits >= blockBits
-            const releasable = isFull && isDiskCacheBlockReleasable(state, size)
-            return (
-              <CacheBlock
-                key={index}
-                aria-label={
-                  releasable
-                    ? `release ${formatDiskSize(size)} cache block ${index + 1} into Bits`
-                    : `${formatDiskSize(size)} cache block ${index + 1}`
-                }
-                disabled={!releasable}
-                onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
-                title={
-                  isFull
-                    ? (releasable
-                      ? `Release this block's ${formatCacheSize(blockBits)} into your Bits balance (credits toward ${redeemTierName})`
-                      : `Redeemable only once some tier's level cost matches ${formatDiskSize(size)}`)
-                    : 'Filling from Memory'
-                }
-                type="button"
-                $full={isFull}
-                $releasable={releasable}
-              />
-            )
-          })}
-        </CacheBlocksRow>
+        <>
+          <RowLabel>Cache</RowLabel>
+          <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
+            {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
+              const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
+              const isFull = blockFilledBits >= blockBits
+              const releasable = isFull && isDiskCacheBlockReleasable(state, size)
+              return (
+                <CacheBlock
+                  key={index}
+                  aria-label={
+                    releasable
+                      ? `release ${formatDiskSize(size)} cache block ${index + 1} into Bits`
+                      : `${formatDiskSize(size)} cache block ${index + 1}`
+                  }
+                  disabled={!releasable}
+                  onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
+                  title={
+                    isFull
+                      ? (releasable
+                        ? `Release this block's ${formatCacheSize(blockBits)} into your Bits balance (credits toward ${redeemTierName})`
+                        : `Redeemable only once some tier's level cost matches ${formatDiskSize(size)}`)
+                      : 'Filling from Memory'
+                  }
+                  type="button"
+                  $full={isFull}
+                  $releasable={releasable}
+                />
+              )
+            })}
+          </CacheBlocksRow>
+        </>
       )}
+
+      <RowLabel>Disks</RowLabel>
 
       <SquaresRow role="group" aria-label={`${formatDiskSize(size)} disks`}>
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
