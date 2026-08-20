@@ -2670,7 +2670,7 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    expect(screen.getByText('1 KB disks (1 full, 3/10 built)')).toBeInTheDocument()
+    expect(screen.getByText('Disks — 1 KB each (1 full, 3/10 built)')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
   })
@@ -2679,7 +2679,17 @@ describe('Byte Foundry Storage', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    expect(screen.getByText('1 KB disks (0 full, 0/10 built)')).toBeInTheDocument()
+    expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
+  })
+
+  test('the Cache and Disks rows each show their own size in their own correct unit scale — bits for Cache, Bytes for Disks', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+
+    // currentBankSize is 8000 bits (a real "1 KB" disk) — its cache totals the same 8000 bits, but
+    // shown in the bit-scale unit (8 Kb), not the disk's own Byte-scale one (1 KB).
+    expect(screen.getByText('Cache — 8 Kb total')).toBeInTheDocument()
+    expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
   })
 
   test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {

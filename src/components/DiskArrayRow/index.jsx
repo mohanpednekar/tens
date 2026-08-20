@@ -6,10 +6,10 @@ import styled from 'styled-components'
 // followed by a "Disks" row — a fixed DISK_ARRAY_LADDER_CAP-long strip read together as one
 // progress bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY —
 // constructed, waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then
-// not-yet-built placeholders (rightmost). Each row carries its own uppercase RowLabel caption, and
-// the two shapes deliberately differ (round disks vs. square cache blocks — see DiskSquare/
-// CacheBlock below), so which row is which reads at a glance rather than as one undifferentiated
-// strip of squares.
+// not-yet-built placeholders (rightmost). Each row carries its own RowLabel caption naming its
+// total/per-item size in its own correct unit scale (see RowLabel below), and the two shapes
+// deliberately differ (round disks vs. square cache blocks — see DiskSquare/CacheBlock below), so
+// which row is which reads at a glance rather than as one undifferentiated strip of squares.
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -18,23 +18,18 @@ const DiskSizeRow = styled.div`
   width: 100%;
 `
 
-const DiskSizeLabel = styled.p`
-  margin: 0;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-`
-
-// A small uppercase caption ("CACHE"/"DISKS") above each row — the two rows otherwise read as one
-// undifferentiated strip of squares, with nothing marking where the cache ends and the disks
-// begin. Sits flush left (rather than centered, like DiskSizeLabel above) so it reads as a row
-// heading, not another centered status line.
+// A small caption above each row — "Cache — <total, bit-scale>"/"Disks — <each, Byte-scale> (...)"
+// — the two rows otherwise read as one undifferentiated strip of squares, with nothing marking
+// where the cache ends and the disks begin, or which unit scale either one is even in. Sits flush
+// left (rather than centered) so it reads as a row heading, not another centered status line.
+// Deliberately NOT text-transform: uppercase — that would visually collapse the size text's own
+// lowercase "b" (bits) into uppercase "B" (Bytes), destroying the exact distinction this caption
+// exists to show (see formatCacheSize/formatDiskSize in engine.js and CLAUDE.md's "Economy model").
 const RowLabel = styled.p`
   align-self: flex-start;
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 `
 
 // Shown in place of the cache/disk rows while this size's array is mid-build (see intro.diskBuild
@@ -162,19 +157,13 @@ const DiskArrayRow = ({ actions, size, state }) => {
 
   return (
     <DiskSizeRow>
-      <DiskSizeLabel>
-        {isFullyBuilt
-          ? `${formatDiskSize(size)} disks (${full}/${DISK_ARRAY_LADDER_CAP} full)`
-          : `${formatDiskSize(size)} disks (${full} full, ${builtCapped}/${DISK_ARRAY_LADDER_CAP} built)`}
-      </DiskSizeLabel>
-
       {rebuilding ? (
         <RebuildingText>
           {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (every disk in this array is offline until it finishes)`}
         </RebuildingText>
       ) : (
         <>
-          <RowLabel>Cache</RowLabel>
+          <RowLabel>{`Cache — ${formatCacheSize(size)} total`}</RowLabel>
           <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
             {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
               const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
@@ -207,7 +196,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
         </>
       )}
 
-      <RowLabel>Disks</RowLabel>
+      <RowLabel>
+        {isFullyBuilt
+          ? `Disks — ${formatDiskSize(size)} each (${full}/${DISK_ARRAY_LADDER_CAP} full)`
+          : `Disks — ${formatDiskSize(size)} each (${full} full, ${builtCapped}/${DISK_ARRAY_LADDER_CAP} built)`}
+      </RowLabel>
 
       <SquaresRow role="group" aria-label={`${formatDiskSize(size)} disks`}>
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {

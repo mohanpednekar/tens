@@ -10,15 +10,21 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a label
-line (`"<size> disks (<full> full, <built>/10 built)"`, dropping the built clause for
-`"<size> disks (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`, since
-that clause is then permanently stuck at "10/10"), a `DISK_CACHE_BLOCK_COUNT`-block cache row
-(each block shown in `formatCacheSize`'s bit-scale `Kb`/`Mb`/… unit, clickable/releasable via
-`actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable`), and a fixed
-`DISK_ARRAY_LADDER_CAP`-square disk row (full/empty/not-yet-built states, clickable/redeemable via
+styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
+`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <total> total"` with the array's
+*total* cache capacity in `formatCacheSize`'s bit-scale `Kb`/`Mb`/… unit (each block itself also
+shown in that unit, clickable/releasable via `actions.releaseDiskCacheBlock` once full and
+`isDiskCacheBlockReleasable`), followed by a fixed `DISK_ARRAY_LADDER_CAP`-square disk row,
+captioned `"Disks — <size> each (<full> full, <built>/10 built)"` with the disk size in
+`formatDiskSize`'s Byte-scale `KB`/`MB`/… unit (dropping the built clause for `"Disks — <size>
+each (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`, since that clause
+is then permanently stuck at "10/10"; full/empty/not-yet-built states, clickable/redeemable via
 `actions.redeemDisk` once full and `isDiskRedeemable`) — or, while `intro.diskBuild?.size` matches
-this size, a plain "Array rebuilding — Ns left" status line in place of both interactive rows.
+this size, a plain "Array rebuilding — Ns left" status line in place of both interactive rows (and
+their captions). Disks render as circles, cache blocks as squares, and neither row's caption uses
+`text-transform: uppercase` — deliberately, so the size text's own lowercase `b` (bits, Cache)
+never visually collapses into uppercase `B` (Bytes, Disks); see CLAUDE.md's "Economy model" for the
+`Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
 Extracted so both `ByteFoundryPage` (the single currently-active/buildable size only) and
