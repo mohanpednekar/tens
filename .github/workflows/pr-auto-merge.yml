@@ -43,9 +43,10 @@ jobs:
       - name: Merge if the PR on this branch meets the low-risk bar
         run: |
           # Only our own automation's branches are eligible for approval-free merge —
-          # never a human contributor's branch, bot or not.
+          # never a human contributor's branch, bot or not. Both engines' prefixes qualify:
+          # claude/* (autonomous-maintenance.yml) and cursor/* (cursor-autonomous-maintenance.yml).
           case "$CHECK_SUITE_BRANCH" in
-            claude/auto-*|claude/self-heal-*|claude/heal-main-*|dependabot/*) ;;
+            claude/auto-*|claude/self-heal-*|claude/heal-main-*|cursor/auto-*|cursor/heal-main-*|dependabot/*) ;;
             *)
               echo "Not a bot-authored branch ($CHECK_SUITE_BRANCH), skipping."
               exit 0

@@ -1,0 +1,352 @@
+name: Cursor autonomous maintenance
+
+# Cursor-CLI-powered twin of autonomous-maintenance.yml. Same orchestration model
+# (the claude-task backlog + Phase 0/A/B, all documented authoritatively in CLAUDE.md and
+# docs/AUTOMATION.md), but the engine is the Cursor CLI (`cursor-agent -p`) instead of
+# anthropics/claude-code-action. It opens its work on `cursor/*` branches so the two
+# engines never collide on a branch name, and its guard step counts BOTH `claude/auto-*`
+# and `cursor/auto-*` PRs as "in flight" so they never double-pick the same task.
+#
+# Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
+# existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
+# maintainer adds CURSOR_API_KEY. See docs/AUTOMATION.md's "Cursor-powered twin" section.
+
+on:
+  schedule:
+    # Every 5 hours, offset ~2.5h from autonomous-maintenance.yml's "0 */5 * * *" so the
+    # two scheduled engines don't wake at the same instant. Coordination against
+    # double-picking a task is handled by the guard step below regardless of timing.
+    - cron: "30 2,7,12,17,22 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cursor-autonomous-maintenance
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  security-events: read
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check secret, open autonomous PRs, and task backlog
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Can't reference secrets in an `if:` directly; surface presence as a boolean here.
+          HAS_CURSOR_KEY: ${{ secrets.CURSOR_API_KEY != '' && 'true' || 'false' }}
+        run: |
+          # If the opt-in secret isn't set, skip the whole run cleanly — this makes the
+          # workflow inert-by-default so merging it spends nothing until a maintainer adds
+          # CURSOR_API_KEY.
+          if [ "$HAS_CURSOR_KEY" != "true" ]; then
+            echo "CURSOR_API_KEY not set — skipping (this workflow is inert until it is added)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # In-flight autonomous PRs from EITHER engine (claude/auto-* is the Claude
+          # workflow's, cursor/auto-* is ours). Both count toward the shared ceiling and
+          # both mark a task as already covered, so the two engines never double-pick.
+          # --limit is explicit everywhere (the gh CLI default of 30 silently truncates).
+          open_prs=$(gh pr list --state open --limit 100 --json headRefName,title \
+            --jq '[.[] | select((.headRefName | startswith("claude/auto-")) or (.headRefName | startswith("cursor/auto-")))]')
+          count=$(jq 'length' <<<"$open_prs")
+          summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")
+          {
+            echo "open_prs<<PR_EOF"
+            echo "$summary"
+            echo "PR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Phase 0: is the latest completed ci.yml run on main red? Allowed to bypass the
+          # 5-PR ceiling (a broken main blocks every merge via the required check).
+          main_ci=$(gh run list --workflow=ci.yml --branch=main --status=completed --limit=1 \
+            --json conclusion,url)
+          main_ci_conclusion=$(jq -r '.[0].conclusion // "unknown"' <<<"$main_ci")
+          main_ci_url=$(jq -r '.[0].url // ""' <<<"$main_ci")
+          if [ "$main_ci_conclusion" = "failure" ]; then
+            echo "main_ci_broken=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main_ci_broken=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "main_ci_run_url=$main_ci_url" >> "$GITHUB_OUTPUT"
+
+          # Phase 0: open PRs with a failing check, excluding both engines' own auto branches
+          # (each engine's follow-up workflow owns its own) and fork PRs.
+          failing_prs=$(gh pr list --state open --limit 100 \
+            --json number,headRefName,title,isCrossRepository,statusCheckRollup \
+            --jq '[.[] | select(.isCrossRepository == false)
+                        | select(.headRefName | startswith("claude/auto-") | not)
+                        | select(.headRefName | startswith("cursor/auto-") | not)
+                        | select([.statusCheckRollup[]?.conclusion] | any(. == "FAILURE"))]
+                  | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
+          {
+            echo "failing_prs<<FAIL_EOF"
+            echo "$failing_prs"
+            echo "FAIL_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
+            echo "5 autonomous PRs already open across both engines — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Human-curated backlog: open claude-task issues (shared with the Claude engine),
+          # excluding `blocked`. Sorted priority:high -> normal -> priority:low, each tier by
+          # ascending issue number, capped for display (matching autonomous-maintenance.yml).
+          TASK_DISPLAY_CAP=30
+          open_tasks_json=$(gh issue list --label claude-task --state open --limit 200 \
+            --json number,title,labels \
+            --jq '[.[] | select([.labels[].name] | index("blocked") | not)]')
+          open_tasks_count=$(jq 'length' <<<"$open_tasks_json")
+          open_tasks=$(jq -r --argjson cap "$TASK_DISPLAY_CAP" '
+            def prio: if ([.labels[].name] | index("priority:high")) then 0
+                      elif ([.labels[].name] | index("priority:low")) then 2
+                      else 1 end;
+            (sort_by(prio, .number))[0:$cap][]
+            | "- #\(.number): \(.title)"
+          ' <<<"$open_tasks_json")
+          if [ "$open_tasks_count" -gt "$TASK_DISPLAY_CAP" ]; then
+            hidden=$((open_tasks_count - TASK_DISPLAY_CAP))
+            open_tasks="$open_tasks
+            - (+$hidden more open claude-task issue(s) not shown — see \`gh issue list --label claude-task --state open\`)"
+          fi
+          {
+            echo "open_tasks<<TASK_EOF"
+            echo "$open_tasks"
+            echo "TASK_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Phase 0(c): open Dependabot security alerts, severity-sorted.
+          dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts" \
+            --paginate -f state=open --jq '
+              def sevrank: if .security_advisory.severity == "critical" then 0
+                           elif .security_advisory.severity == "high" then 1
+                           elif .security_advisory.severity == "medium" then 2
+                           else 3 end;
+              sort_by(sevrank)[]
+              | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
+            ' 2>/dev/null || true)
+          {
+            echo "dependabot_alerts<<DEPALERT_EOF"
+            echo "$dependabot_alerts"
+            echo "DEPALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Open Dependabot dependency-update PRs, so a fix already in flight isn't duplicated.
+          dependabot_prs=$(gh pr list --state open --limit 100 --json number,headRefName,title \
+            --jq '[.[] | select(.headRefName | startswith("dependabot/"))]
+                  | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
+          {
+            echo "dependabot_prs<<DEPPR_EOF"
+            echo "$dependabot_prs"
+            echo "DEPPR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Already-open gap-analysis proposals, so Phase B item 6 doesn't re-propose.
+          open_gap_issues=$(gh issue list --label gap-analysis --state open --limit 100 \
+            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+          {
+            echo "open_gap_issues<<GAP_EOF"
+            echo "$open_gap_issues"
+            echo "GAP_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Enable Corepack
+        if: steps.guard.outputs.skip != 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install Cursor CLI
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          # The installer drops symlinks in ~/.local/bin (older docs said ~/.cursor/bin);
+          # add both so the `cursor-agent` binary is on PATH regardless.
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: Configure Cursor CLI permissions
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          # Deny rules take precedence over --force, so this protects every workflow file
+          # this run must never touch — it may only ever edit ITSELF
+          # (cursor-autonomous-maintenance.yml), mirroring the Claude engine's
+          # settings.permissions.deny list.
+          mkdir -p "$HOME/.cursor"
+          cat > "$HOME/.cursor/cli-config.json" <<'CLI_CONFIG_EOF'
+          {
+            "permissions": {
+              "deny": [
+                "Write(.github/workflows/ci.yml)",
+                "Write(.github/workflows/deploy.yml)",
+                "Write(.github/workflows/autonomous-maintenance.yml)",
+                "Write(.github/workflows/autonomous-pr-followup.yml)",
+                "Write(.github/workflows/pr-auto-merge.yml)",
+                "Write(.github/workflows/cursor-pr-followup.yml)"
+              ]
+            }
+          }
+          CLI_CONFIG_EOF
+
+      - name: Compose prompt
+        id: compose-prompt
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          REPO: ${{ github.repository }}
+          OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
+          OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
+          OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
+          MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
+          MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
+          FAILING_PRS: ${{ steps.guard.outputs.failing_prs }}
+          DEPENDABOT_ALERTS: ${{ steps.guard.outputs.dependabot_alerts }}
+          DEPENDABOT_PRS: ${{ steps.guard.outputs.dependabot_prs }}
+        run: |
+          # Dynamic values are passed via env and substituted with bash parameter expansion
+          # (not inline GitHub expressions) to stay clear of the Actions 21k combined-scalar
+          # compile limit — the same technique autonomous-maintenance.yml uses. The prompt
+          # itself is deliberately thin: it points at CLAUDE.md and docs/AUTOMATION.md as the
+          # authoritative spec instead of restating the whole phase machine, so this file
+          # can't drift out of sync with the Claude engine's copy.
+          : "${OPEN_PRS:=(none)}"
+          : "${OPEN_TASKS:=(none)}"
+          : "${OPEN_GAP_ISSUES:=(none)}"
+          : "${FAILING_PRS:=(none)}"
+          : "${DEPENDABOT_ALERTS:=(none)}"
+          : "${DEPENDABOT_PRS:=(none)}"
+          if [ "$MAIN_CI_BROKEN" = "true" ]; then
+            MAIN_CI_STATUS_LINE="FAILED: $MAIN_CI_RUN_URL"
+          else
+            MAIN_CI_STATUS_LINE="is green."
+          fi
+          cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
+          You are running as a scheduled, unattended maintenance job on this repository
+          (REPO: $REPO), powered by the Cursor CLI. Nobody is watching this run, so only make
+          changes you are confident are safe, small, and correct.
+
+          READ THESE FIRST AND FOLLOW THEM EXACTLY — they are the authoritative spec for this
+          job, and this prompt only summarizes them plus supplies today's dynamic context:
+          - CLAUDE.md — repo architecture, conventions, testing, and the Pull requests /
+            Automation workflows sections.
+          - docs/AUTOMATION.md — the full Phase 0 / Phase A / Phase B orchestration model,
+            the guard/budget/blocked-label rules, and the auto-merge low-risk bar.
+
+          You are the Cursor-powered twin of the autonomous-maintenance.yml workflow described
+          there. Everything that spec says about that workflow applies to you IDENTICALLY, with
+          exactly one substitution: use `cursor/` branch prefixes where it says `claude/`
+          (Phase A task -> `cursor/auto-task-<number>-<short-slug>`, Phase 0(a) heal ->
+          `cursor/heal-main-<short-slug>`, Phase 0(c) dep bump ->
+          `cursor/auto-dep-alert-<number>-<short-slug>`, Phase B menu ->
+          `cursor/auto-<short-task-slug>`). The `claude/auto-*` PRs listed below belong to the
+          Claude engine — treat a task already covered by EITHER a `claude/auto-*` or a
+          `cursor/auto-*` PR as in flight and do not duplicate it.
+
+          Budget: there is no fixed turn cap. Before picking or sizing a task, estimate how much
+          of the current rolling 5-hour Cursor usage window is likely still available and keep
+          this run's planned work at or under roughly 50% of a full window, reserving ~15-20% for
+          test + commit + push + PR-open overhead. Land the largest coherent, test-covered slice
+          (`Part of #<number>`) rather than a rushed whole. Open the PR as soon as there's a
+          meaningful, test-passing first commit and push each subsequent commit as it lands.
+
+          Today's dynamic context:
+
+          Currently-open autonomous PRs across BOTH engines (branch: title):
+          $OPEN_PRS
+
+          Open task backlog (issues labeled claude-task, shared with the Claude engine):
+          $OPEN_TASKS
+
+          Currently-open gap-analysis proposals (number: title):
+          $OPEN_GAP_ISSUES
+
+          Main branch CI status: the latest completed run of ci.yml on main
+          $MAIN_CI_STATUS_LINE
+
+          Open PRs with a failing check (excludes both engines' auto branches and fork PRs):
+          $FAILING_PRS
+
+          Currently-open Dependabot security alerts, most severe first:
+          $DEPENDABOT_ALERTS
+
+          Currently-open Dependabot dependency-update PRs (branch: title):
+          $DEPENDABOT_PRS
+
+          Do exactly ONE unit of work per run, chosen in phase order: Phase 0 (CI/CD failures and
+          unaddressed critical/high Dependabot alerts) outranks Phase A (the task backlog above)
+          which outranks Phase B (the maintenance menu: test coverage, dependency/security, code
+          quality, CLAUDE.md doc sync, workflow self-improvement, gap analysis). Follow the exact
+          per-phase steps, ordering, and the `blocked`-label / comment-history rules in
+          docs/AUTOMATION.md.
+
+          Hard constraints, no exceptions (see docs/AUTOMATION.md for the full list):
+          - Never add/remove/reorder TIER_DEFINITIONS (src/game/layers.js) or make economy/game-rule
+            changes UNLESS a Phase A task issue's "Explicit authorizations" section permits that
+            specific change. Banned outright during Phase B and Phase 0.
+          - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-maintenance.yml,
+            autonomous-pr-followup.yml, pr-auto-merge.yml, or cursor-pr-followup.yml. For the
+            Phase B self-improvement task you may edit ONLY this file
+            (.github/workflows/cursor-autonomous-maintenance.yml), and may not weaken its guard,
+            budget, never-self-merge, always-open-a-PR, or Phase-A-priority rules.
+          - Never change the dev/test server host binding away from 127.0.0.1.
+          - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
+            force-push, never push directly to main, and never merge or approve your own PR.
+          - Never push your own commits to a `dependabot/*` branch (only the `@dependabot rebase`
+            comment is allowed). Never call the Dependabot alerts API to dismiss an alert.
+          - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same commit.
+          - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm green before
+            opening or updating a PR.
+
+          Use `gh` for all GitHub operations (a GH_AUTOMATION_PAT-authenticated GH_TOKEN is in your
+          environment). Open PRs against main with `gh pr create`, structuring the body to match
+          .github/pull_request_template.md, and include `Closes #<number>` (or `Part of #<number>`
+          for a slice) for a Phase A task. If, after all three phases, there is nothing safe and
+          meaningful to do, make no changes and end without a branch or PR.
+          TEMPLATE_EOF
+          prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
+          prompt_text=${prompt_text//'$REPO'/$REPO}
+          prompt_text=${prompt_text//'$OPEN_PRS'/$OPEN_PRS}
+          prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
+          prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
+          prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
+          prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
+          prompt_text=${prompt_text//'$DEPENDABOT_PRS'/$DEPENDABOT_PRS}
+          prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}
+          # Hand the composed prompt to the run step via a file (avoids any interpolation limits).
+          printf '%s\n' "$prompt_text" > "$RUNNER_TEMP/cursor-prompt.txt"
+
+      - name: Run autonomous maintenance task
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          # Model is configurable via the CURSOR_MODEL repo/org variable; falls back to the
+          # account default when unset (an empty --model is simply omitted below).
+          CURSOR_MODEL: ${{ vars.CURSOR_MODEL }}
+        run: |
+          prompt="$(cat "$RUNNER_TEMP/cursor-prompt.txt")"
+          model_args=()
+          if [ -n "$CURSOR_MODEL" ]; then
+            model_args=(--model "$CURSOR_MODEL")
+          fi
+          # --force: run non-interactively (deny rules from cli-config.json still apply).
+          # --output-format text: clean final summary in the (public) run logs.
+          cursor-agent -p "$prompt" --force --output-format text "${model_args[@]}"

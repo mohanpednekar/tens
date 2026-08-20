@@ -1,0 +1,210 @@
+name: Cursor PR follow-up
+
+# Cursor-CLI-powered twin of autonomous-pr-followup.yml. Identical event handling and
+# security posture (pwn-request gating, fork refusal, SHA-pinned checkout), but scoped to
+# `cursor/auto-*` branches and driven by `cursor-agent -p` instead of claude-code-action.
+# The Claude follow-up workflow only touches `claude/auto-*` branches, so the two never
+# act on the same PR. Inert until CURSOR_API_KEY is set (the run step is gated on it).
+
+on:
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cursor-pr-followup-${{ github.event.pull_request.number || github.event.issue.number || github.event.check_suite.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  followup:
+    # On a public repo anyone can comment/review without write access — the classic
+    # "pwn request" surface. Only a comment/review from someone with write access reaches
+    # the checkout-and-execute steps (check_suite has no actor; it's constrained by the
+    # same-repo + branch-prefix checks in "Resolve target PR").
+    if: >
+      (github.event_name != 'issue_comment' ||
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association)) &&
+      (github.event_name != 'pull_request_review' ||
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Resolve target PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAS_CURSOR_KEY: ${{ secrets.CURSOR_API_KEY != '' && 'true' || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
+          REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_IS_PR: ${{ github.event.issue.pull_request.url }}
+          CHECK_SUITE_CONCLUSION: ${{ github.event.check_suite.conclusion }}
+          CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
+        run: |
+          # Inert until opted into.
+          if [ "$HAS_CURSOR_KEY" != "true" ]; then
+            echo "CURSOR_API_KEY not set — skipping (inert until it is added)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # All untrusted github.event.* values arrive via env vars, never spliced into the
+          # script, so a crafted branch/comment can't inject shell.
+          case "$EVENT_NAME" in
+            pull_request_review)
+              number="$REVIEW_PR_NUMBER"
+              ;;
+            issue_comment)
+              if [ -z "$ISSUE_IS_PR" ]; then
+                echo "Not a PR comment, skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              number="$ISSUE_NUMBER"
+              ;;
+            check_suite)
+              if [ "$CHECK_SUITE_CONCLUSION" != "failure" ]; then
+                echo "Check suite did not fail, nothing to do."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$CHECK_SUITE_BRANCH" --state open --json number --jq '.[0].number // empty')
+              if [ -z "$number" ]; then
+                echo "No open PR for this branch, skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              ;;
+          esac
+
+          # Re-resolve branch + fork status from the API rather than trusting event payload
+          # fields: a fork branch can be named anything, including something that looks like
+          # cursor/auto-*. Only ever check out a branch that lives in THIS repository.
+          # --repo is required (this step runs before checkout, so there's no local git repo).
+          pr_json=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json headRefName,headRefOid,isCrossRepository)
+          branch=$(jq -r '.headRefName' <<<"$pr_json")
+          sha=$(jq -r '.headRefOid' <<<"$pr_json")
+          is_cross_repo=$(jq -r '.isCrossRepository' <<<"$pr_json")
+
+          if [ "$is_cross_repo" = "true" ]; then
+            echo "PR head is in a fork, not this repository — refusing to check it out. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$branch" != cursor/auto-* ]]; then
+            echo "Not a Cursor autonomous PR (branch: $branch), skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          # Pin to the exact resolved commit, not the mutable branch name, to close the
+          # TOCTOU window between the authorization check above and the code we run.
+          ref: ${{ steps.pr.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        if: steps.pr.outputs.skip != 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install Cursor CLI
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: Configure Cursor CLI permissions
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          # Follow-up never edits any workflow file; deny them all (deny beats --force).
+          mkdir -p "$HOME/.cursor"
+          cat > "$HOME/.cursor/cli-config.json" <<'CLI_CONFIG_EOF'
+          {
+            "permissions": {
+              "deny": [
+                "Write(.github/workflows/**)"
+              ]
+            }
+          }
+          CLI_CONFIG_EOF
+
+      - name: Compose prompt
+        id: compose-prompt
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_BRANCH: ${{ steps.pr.outputs.branch }}
+        run: |
+          cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
+          You are following up, unattended, on PR #$PR_NUMBER (branch $PR_BRANCH) in $REPO,
+          powered by the Cursor CLI. This PR was opened by the Cursor autonomous maintenance
+          workflow, and this run was triggered by new review activity, a new comment, or a
+          failing check on it. Work efficiently.
+
+          Read CLAUDE.md first and follow it exactly (especially its Pull requests section).
+
+          Use `gh pr view $PR_NUMBER --comments` and `gh pr view $PR_NUMBER --json reviews` to see
+          the latest review comments, and check recent CI runs, to figure out what actually needs
+          fixing right now.
+
+          - If there's actionable review feedback (human or bot — Bugbot, Copilot, Codex, etc.),
+            address it directly if you're confident, matching CLAUDE.md's Pull requests section.
+          - If CI is failing, fix the real underlying cause.
+          - The checkout is pinned to a specific commit, so you're on a detached HEAD. Before
+            committing, run `git checkout -B $PR_BRANCH` to attach to the real branch, then commit
+            and push normally to the EXISTING branch ($PR_BRANCH) — never create a new branch or a
+            new PR for this. If the push is rejected as non-fast-forward, someone else changed the
+            branch since this run started — stop rather than force-pushing over it.
+          - Never use `--no-verify`, never skip or delete a failing test to make it pass, never
+            disable a check to route around it — fixes must be genuine.
+          - Never force-push, never push to main, never modify anything under .github/workflows/.
+          - Run `yarn test` (and `yarn build` if relevant) and confirm it is green before pushing.
+          - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same commit.
+          - Never merge or approve this PR yourself.
+
+          If nothing here is actually actionable (e.g. a comment is just a question, or CI is
+          already green), make no changes.
+          TEMPLATE_EOF
+          prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
+          prompt_text=${prompt_text//'$REPO'/$REPO}
+          prompt_text=${prompt_text//'$PR_NUMBER'/$PR_NUMBER}
+          prompt_text=${prompt_text//'$PR_BRANCH'/$PR_BRANCH}
+          printf '%s\n' "$prompt_text" > "$RUNNER_TEMP/cursor-prompt.txt"
+
+      - name: Address feedback / fix CI on the PR
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          CURSOR_MODEL: ${{ vars.CURSOR_MODEL }}
+        run: |
+          prompt="$(cat "$RUNNER_TEMP/cursor-prompt.txt")"
+          model_args=()
+          if [ -n "$CURSOR_MODEL" ]; then
+            model_args=(--model "$CURSOR_MODEL")
+          fi
+          cursor-agent -p "$prompt" --force --output-format text "${model_args[@]}"

@@ -261,3 +261,61 @@ session):
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
 
+### Cursor-powered successor engine
+
+The three workflows above run the **Claude** engine (`anthropics/claude-code-action` + a
+`CLAUDE_CODE_OAUTH_TOKEN`). The plan is for the **Cursor CLI** (`cursor-agent -p`) to eventually
+replace that engine — but not immediately. Two additional workflows implement the Cursor side and are
+designed to coexist safely with the Claude ones during the transition:
+
+- **`cursor-autonomous-maintenance.yml`** — the Cursor twin of `autonomous-maintenance.yml`. Same
+  Phase 0/A/B orchestration, same `claude-task` backlog, same hard constraints — its guard step and
+  prompt are deliberately thin, pointing the agent at `CLAUDE.md` and this file as the authoritative
+  spec (with a single `claude/` → `cursor/` branch-prefix substitution) rather than restating the whole
+  phase machine, so it can't drift out of sync with the Claude copy. Runs on a cron offset ~2.5h from
+  the Claude one (`30 2,7,12,17,22 * * *`) plus `workflow_dispatch`.
+- **`cursor-pr-followup.yml`** — the Cursor twin of `autonomous-pr-followup.yml`, with identical event
+  handling and security posture (pwn-request actor gating, fork refusal, SHA-pinned checkout), scoped to
+  `cursor/auto-*` branches only. The Claude follow-up stays scoped to `claude/auto-*`, so the two never
+  act on the same PR.
+
+**Engine differences.** The Cursor CLI has no `--allowedTools` flag; tool permissions come from a
+`~/.cursor/cli-config.json` written at the start of each run, whose `deny` list (deny beats `--force`)
+protects every workflow file the run must not touch — the maintenance twin may edit only *itself* during
+the Phase B self-improvement task; the follow-up twin denies all of `.github/workflows/**`. The agent
+runs `cursor-agent -p "<prompt>" --force --output-format text`; `--force` runs non-interactively while
+the deny list still blocks the protected paths. Model selection is via the optional `CURSOR_MODEL`
+repo/org **variable** (not a secret) — unset means the account default.
+
+**Coexistence (current state).** While both engines are live, the Cursor maintenance guard step counts
+both `claude/auto-*` and `cursor/auto-*` open PRs toward the shared 5-PR ceiling and treats a task
+covered by either prefix as in flight, so the two engines never double-pick the same `claude-task`.
+`pr-auto-merge.yml`'s approval-free low-risk path recognizes `cursor/auto-*` and `cursor/heal-main-*`
+alongside the `claude/*` prefixes; its human-approval path was already repo-wide. The Cursor
+maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
+Claude workflow already owns that, and duplicating it would double-post.
+
+**Inert until opted into.** Every agent step in both Cursor workflows is gated on the `CURSOR_API_KEY`
+repo secret being present (surfaced into an `if:`-usable boolean via a `secrets.CURSOR_API_KEY != ''`
+env expression, since `if:` can't read secrets directly). With no secret set, each run resolves to a
+clean skip: merging these workflows spends nothing and changes no behavior until a maintainer opts in.
+
+**One additional one-time prerequisite** (beyond the three above):
+- The `CURSOR_API_KEY` repo secret — a Cursor API key (ideally from a **service account**, so the
+  automation isn't tied to a personal login), generated from the Cursor dashboard and added via
+  `gh secret set CURSOR_API_KEY --repo <owner>/<repo>` or repo Settings → Secrets and variables →
+  Actions. Optionally also set a `CURSOR_MODEL` **variable** to pin a model.
+
+**Staged cutover (Cursor replaces Claude).** The intended path, in order:
+1. **Coexist (now):** merge the Cursor workflows. They stay inert until `CURSOR_API_KEY` is added; the
+   Claude engine remains the active default.
+2. **Enable + verify:** add `CURSOR_API_KEY`. Both engines now run; the coordination above keeps them
+   from colliding. Watch a few Cursor `workflow_dispatch` runs and their PRs to confirm parity.
+3. **Retire Claude:** once satisfied, disable the Claude engine — comment out (or remove) the
+   `schedule:` in `autonomous-maintenance.yml` and, when fully confident, delete
+   `autonomous-maintenance.yml` + `autonomous-pr-followup.yml`. Editing/removing those files needs an
+   interactive session (the `GH_AUTOMATION_PAT` lacks `Workflows: write`) and owner review via
+   `.github/CODEOWNERS`. After Claude is gone, the coexistence coordination in the Cursor guard step
+   becomes a harmless no-op (no `claude/auto-*` PRs will exist), so it can be simplified out later if
+   desired but doesn't have to be.
+

@@ -163,6 +163,19 @@ and target roughly half of it per session. See `CLAUDE.md`'s "Budget discipline"
 Automation workflows) for the full soft-target/overshoot/partial-slice policy — not restated here to
 avoid drift between the two copies.
 
+## Automation engines (Claude now, Cursor successor)
+
+The unattended pipeline currently runs the **Claude** engine (`autonomous-maintenance.yml` +
+`autonomous-pr-followup.yml`, via `anthropics/claude-code-action`). Two twin workflows —
+`cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same orchestration on the
+**Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the Claude engine, but not
+immediately: both coexist for now. The Cursor twins share the `claude-task` backlog and the same
+`CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches, authenticate with a
+`CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert until that secret is
+added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
+double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Full design + staged cutover:
+`docs/AUTOMATION.md`'s "Cursor-powered successor engine" section (authoritative: `CLAUDE.md`).
+
 ## Reliability: cron dormancy
 
 GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository
