@@ -11,8 +11,9 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 shared bottom `AppNav` in progression order: **Foundry → Compute → Tiers → Guide → More**. Storage
 is under Foundry as **Memory | Disks** (not its own AppNav item). Tiers uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
-during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Foundry / Storage /
-Compute only — Tiers + Prestige kept) live under Settings → Danger zone. No backend — state
+during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
+Compute wiped; Combine + Invest auto-restored up to pre-reset highs; Tiers + Prestige kept) live
+under Settings → Danger zone. No backend — state
 lives in React and persists to `localStorage`.
 
 ## Tech stack

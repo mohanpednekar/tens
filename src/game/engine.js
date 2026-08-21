@@ -3061,22 +3061,37 @@ export const buyGlobalTickspeedMultiplier = state => {
 // this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
 // tiers, not to change what Prestige/Speed Up themselves do.
 
-// Settings → Danger zone "Reset Byte Foundry" — wipes EVERYTHING under `intro` (Memory, Byte
-// generator + its permanent upgrades, Disks/Storage, the entire Compute ladder + boosts +
-// auto-claim/auto-merge unlocks + reveal latches) back to createInitialGameState()'s fresh
-// values, while leaving every non-intro field untouched (Tiers resources/owned/purchase levels,
-// Prestige Points/count/XP/museum, autobuyers, PP upgrades, Speed Up/Overclock counters, …).
-// Unlike a full `resetGame`, this is not a new save — only Foundry/Storage/Compute progress is
-// lost. Preserves `intro.mainGameUnlocked` when already true so Tiers stays reachable without
-// forcing another transfer through the gate; if the gate was still closed, it stays closed.
+// Settings → Danger zone "Reset Byte Foundry" — for when Capacity (and the Storage/Compute that
+// came with it) was pushed too far. Wipes Memory, Capacity (back to INTRO_STARTING_CAPACITY), the
+// Capacity-upgrade queue, Disks/Storage, and the entire Compute ladder + boosts + auto-claim/
+// auto-merge unlocks + reveal latches. Leaves every non-intro field untouched (Tiers, Prestige,
+// automations, …).
+//
+// Non-Capacity Foundry upgrades are auto-restored free of Memory cost, capped at whatever the
+// player had already earned before this reset: Combine (`byteCreated`) and Invest / Bandwidth
+// (`tickSpeedSeconds` / `productionMultiplier` / `productionMilestoneTier` /
+// `productionMilestoneTierClaims`). Capacity itself is never restored — that is the point of the
+// action. Preserves `intro.mainGameUnlocked` when already true so Tiers stays reachable.
 export const resetByteFoundry = state => {
   const initialIntro = createInitialGameState().intro
-  const keepMainUnlocked = state.intro?.mainGameUnlocked === true
+  const prev = state.intro ?? {}
+  const keepMainUnlocked = prev.mainGameUnlocked === true
+
   return {
     ...state,
     intro: {
       ...initialIntro,
       mainGameUnlocked: keepMainUnlocked,
+      // Auto-replay Combine + Invest up to the pre-reset high-water marks (Capacity excluded).
+      byteCreated: prev.byteCreated === true,
+      tickSpeedSeconds: Number.isFinite(prev.tickSpeedSeconds) && prev.tickSpeedSeconds > 0
+        ? prev.tickSpeedSeconds
+        : initialIntro.tickSpeedSeconds,
+      productionMultiplier: Number.isFinite(prev.productionMultiplier) && prev.productionMultiplier >= 1
+        ? prev.productionMultiplier
+        : initialIntro.productionMultiplier,
+      productionMilestoneTier: Math.max(0, Math.floor(clampNonNegative(prev.productionMilestoneTier ?? 0))),
+      productionMilestoneTierClaims: Math.max(0, Math.floor(clampNonNegative(prev.productionMilestoneTierClaims ?? 0))),
     },
   }
 }
