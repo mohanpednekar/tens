@@ -1,64 +1,118 @@
+import AppMenu from 'components/AppMenu'
+import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputePage from 'pages/ComputePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
+import MilestonesPage from 'pages/MilestonesPage'
+import SettingsPage from 'pages/SettingsPage'
 import StoragePage from 'pages/StoragePage'
+import { isComputeCoreConversionUnlocked, isProductionFrozen, isStorageUnlocked } from 'game/engine'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { GlobalStyle, ThemeProvider } from 'theme'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import styled from 'styled-components'
+
+// Pages that must stay reachable even while the Byte Foundry gate is active — utilities and
+// progress-revealed sub-screens. Visiting any of these must not yank the player back onto Foundry.
+const GATE_EXEMPT_PAGES = new Set(['info', 'storage', 'compute', 'milestones', 'settings'])
+
+const PageShell = styled.div`
+  padding-bottom: ${APP_NAV_BOTTOM_PAD};
+`
 
 function App() {
-  // Owned here (rather than inside MainPage) so it can also drive ByteFoundryPage — the Byte
-  // Foundry screen and the main game share one save/tick loop, just two different views onto it.
   const game = useIncrementalGame()
 
-  // Which top-level page the player has navigated to — a local toggle, not real routing (this
-  // stays a single-page app, see CLAUDE.md). Defaults to 'game'; irrelevant while the mandatory
-  // Byte Foundry gate below is active, since that overrides whatever `page` is. 'storage'/'compute'
-  // are reached only from ByteFoundryPage's own nav buttons (once each mechanic is revealed and
-  // worth visiting — see CLAUDE.md's "Byte Foundry" section) and always return to 'foundry'.
+  // Local page toggle — not a router. Defaults to 'game'; the gate override below forces Foundry
+  // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
+  const [menuOpen, setMenuOpen] = useState(false)
 
-  // The Byte Foundry (ByteFoundryPage) is BOTH a mandatory gate (intro.mainGameUnlocked === false
-  // blocks the rest of the app entirely — no fresh Kilobytes without tapping through it, see
-  // engine.js's convertIntroBitsToKilobytes/tickIntroAutoInvest/prestigeGame) AND, once unlocked, a
-  // permanent screen the player can voluntarily revisit at any time via MainPage's "⚙️ Byte
-  // Foundry" link (page === 'foundry') to review this cycle's stats — it no longer disappears once
-  // passed. Unlike the old intro.completed flag this superseded, mainGameUnlocked flips true early
-  // (the first bits ever converted into Kilobytes this cycle) and nothing about the Byte Foundry
-  // itself ever freezes afterward — Tap/Sacrifice/Invest and further Convert transfers (up to this
-  // cycle's shared budget) all keep working whether reached via the gate or the voluntary link.
-  // Excluding 'info' keeps the same courtesy the gate has always had: Auto-Prestige firing in the
-  // background while the player is reading the static Guide page doesn't yank them off it — the
-  // moment they click back to 'game' via onBack, this same check picks the gate back up on the
-  // very next render. 'storage'/'compute' get the same courtesy, for a stronger reason than
-  // courtesy alone: they're reached only via a button ON ByteFoundryPage itself (mandatory-gate or
-  // voluntary-link phase alike — see CLAUDE.md's "Byte Foundry" section), so forcing the override
-  // back onto ByteFoundryPage the instant `page` becomes 'storage'/'compute' would make those
-  // screens permanently unreachable during the gate phase (mainGameUnlocked only flips true well
-  // after Storage/Compute's own much-higher capacity thresholds could already be revealed).
-  const showingFoundry = page !== 'info' && page !== 'storage' && page !== 'compute' &&
-    (!game.state.intro.mainGameUnlocked || page === 'foundry')
+  const mainGameUnlocked = game.state.intro.mainGameUnlocked
+  const showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
+    (!mainGameUnlocked || page === 'foundry')
+
+  const currentNavPage = showingFoundry ? 'foundry' : page
+
+  const showStorage = isStorageUnlocked(game.state)
+  const showCompute = isComputeCoreConversionUnlocked(game.state)
+  // Tiers is the only progress-gated primary destination — utilities (Guide / More → Milestones /
+  // Settings / Reset) stay available from the first launch, including during the mandatory gate.
+  const showTiers = mainGameUnlocked
+
+  const navigate = nextPage => {
+    if (nextPage === 'storage' && !showStorage) return
+    if (nextPage === 'compute' && !showCompute) return
+    if (nextPage === 'game' && !mainGameUnlocked) return
+    setMenuOpen(false)
+    setPage(nextPage)
+  }
+
+  const handleReset = () => {
+    if (isProductionFrozen(game.state)) return
+    if (!window.confirm('Erase all progress and start over? This cannot be undone.')) return
+    game.resetGame()
+    setPage('game')
+    setMenuOpen(false)
+  }
+
+  // Close the More sheet on Escape from anywhere.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onKey = event => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
+  let content
+  if (showingFoundry) {
+    content = <ByteFoundryPage game={game} />
+  } else if (page === 'info') {
+    content = <InfoPage />
+  } else if (page === 'storage') {
+    content = <StoragePage game={game} />
+  } else if (page === 'compute') {
+    content = <ComputePage game={game} />
+  } else if (page === 'milestones') {
+    content = <MilestonesPage game={game} />
+  } else if (page === 'settings') {
+    content = <SettingsPage game={game} onReset={handleReset} />
+  } else {
+    content = <MainPage game={game} />
+  }
+
+  const resetDisabled = isProductionFrozen(game.state)
 
   return (
     <ThemeProvider>
       <GlobalStyle />
-      {showingFoundry
-        ? (
-          <ByteFoundryPage
-            game={game}
-            onBack={game.state.intro.mainGameUnlocked ? () => setPage('game') : undefined}
-            onOpenCompute={() => setPage('compute')}
-            onOpenStorage={() => setPage('storage')}
-          />
-        )
-        : page === 'info'
-          ? <InfoPage onBack={() => setPage('game')} />
-          : page === 'storage'
-            ? <StoragePage game={game} onBack={() => setPage('foundry')} />
-            : page === 'compute'
-              ? <ComputePage game={game} onBack={() => setPage('foundry')} />
-              : <MainPage game={game} onOpenFoundry={() => setPage('foundry')} onOpenInfo={() => setPage('info')} />}
+      <PageShell>
+        {content}
+      </PageShell>
+      <AppNav
+        currentPage={currentNavPage}
+        moreOpen={menuOpen}
+        onNavigate={navigate}
+        onOpenMore={() => setMenuOpen(open => !open)}
+        showCompute={showCompute}
+        showStorage={showStorage}
+        showTiers={showTiers}
+      />
+      <AppMenu
+        onClose={() => setMenuOpen(false)}
+        onNavigate={navigate}
+        onReset={handleReset}
+        open={menuOpen}
+        resetDisabled={resetDisabled}
+        resetTitle={
+          resetDisabled
+            ? 'Prestige first — production is frozen at 1 Googol Bytes'
+            : 'Erases all progress and starts over (asks for confirmation)'
+        }
+      />
     </ThemeProvider>
   )
 }

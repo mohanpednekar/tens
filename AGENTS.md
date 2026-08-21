@@ -9,10 +9,12 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Five top-level pages —
 `ByteFoundryPage` (a tap-to-earn pre-game bootstrap, mandatory before each Prestige cycle's first
-Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the game itself), `InfoPage`
-(static "how it works" prose), and `StoragePage`/`ComputePage` (dedicated sub-screens reached only
-from `ByteFoundryPage`'s own nav buttons once each mechanic is revealed) — switched via a plain
-`useState` in `App.jsx`, not a routing library; no backend — state lives in React and persists to
+Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the tier ladder), `InfoPage`
+(static "how it works" prose), and `StoragePage`/`ComputePage` (dedicated sub-screens once each
+mechanic is revealed) — switched via a plain `useState` in `App.jsx` plus a shared bottom `AppNav`
+(Tiers / Foundry / Storage / Compute / Guide / More); Guide and More (Milestones, Settings, Reset)
+are always available — even during the Byte Foundry gate — so utilities never require progress;
+no backend — state lives in React and persists to
 `localStorage`.
 
 ## Tech stack
@@ -83,12 +85,14 @@ React, no side effects. `useIncrementalGame.js` is the only place holding React 
 localStorage persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
-state); `StoragePage`/`ComputePage` are pure renderers reached only via nav buttons on
-`ByteFoundryPage`. `App.jsx` switches between all five via a local `page` `useState`, with
-`ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says, except on
-`'info'`/`'storage'`/`'compute'` — whenever the current Prestige cycle's `intro.mainGameUnlocked` is
-still false (see "Byte Foundry" below); once true, it's just a normal page reachable via MainPage's
-own "⚙️ Byte Foundry" link.
+state); `StoragePage`/`ComputePage` are pure renderers. `App.jsx` switches between all five via a
+local `page` `useState` and a shared bottom `AppNav` (Tiers / Foundry / Storage / Compute / Guide /
+More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says,
+except on gate-exempt utility/progress pages (`'info'`/`'storage'`/`'compute'`/`'milestones'`/
+`'settings'`) — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false
+(see "Byte Foundry" below). Tiers stays hidden during the gate; Guide and More stay reachable so
+utilities never require unlocking the main game. Once unlocked, Foundry is just another AppNav
+destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and

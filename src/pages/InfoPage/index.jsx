@@ -1,4 +1,3 @@
-import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatBitsInNearestUnit,
@@ -47,11 +46,8 @@ const RootDiv = styled.main`
 `
 
 const Header = styled.header`
-  align-items: center;
   color: ${props => props.theme.color.text};
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
+  text-align: center;
 
   h1 {
     font-family: ${props => props.theme.font.display};
@@ -113,7 +109,7 @@ const Section = styled(StatCard)`
   }
 `
 
-const InfoPage = ({ onBack }) => {
+const InfoPage = () => {
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
@@ -128,13 +124,8 @@ const InfoPage = ({ onBack }) => {
   return (
     <RootDiv>
       <Header>
-        <div>
-          <h1>Tens — Guide</h1>
-          <VersionText>v{version}</VersionText>
-        </div>
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
-        </Button>
+        <h1>Tens — Guide</h1>
+        <VersionText>v{version}</VersionText>
       </Header>
 
       <Section aria-label="overview section">
@@ -157,7 +148,7 @@ const InfoPage = ({ onBack }) => {
         <h2>Byte Foundry</h2>
         <p>
           Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from MainPage via “⚙️ Byte Foundry.”
+          Reopen any time from the bottom nav’s Foundry item.
         </p>
 
         <h3>The loop</h3>
@@ -210,7 +201,7 @@ const InfoPage = ({ onBack }) => {
         <h2>Storage</h2>
         <p>
           Unlocks once Memory capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
-          Open it from Byte Foundry via “🏦 Storage.”
+          Open it from the bottom nav’s Storage item.
         </p>
 
         <h3>Building Disks</h3>
@@ -263,8 +254,8 @@ const InfoPage = ({ onBack }) => {
         <h2>Compute</h2>
         <p>
           Unlocks once Memory capacity reaches{' '}
-          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from Byte Foundry
-          via “⚡ Compute.”
+          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
+          nav’s Compute item.
         </p>
 
         <h3>Cores</h3>
