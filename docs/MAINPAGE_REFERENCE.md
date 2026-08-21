@@ -266,31 +266,28 @@ the build's duration; otherwise, two rows render:
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's own small staging buffer, filling left to right as Memory tops it up (`tickDiskAutoFill`)
-  before any of it pours into an empty disk container below. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and independently
-  **releasable** (`$releasable`, accent border, clickable) once `isDiskCacheBlockReleasable(state,
-  size)` — full, that size isn't mid-build, **and** some tier's current per-unit cost matches this
-  size (`isDiskRedeemable`). `aria-label` is `"release <size> cache block N into Bits"` when
-  releasable, else the plain `"<size> cache block N"`; `title` is `"Release this block's <blockBits
-  formatted> into your Bits balance (credits toward <tier>)"` once releasable, a non-matching-tier
-  hint once full but not releasable, else `"Filling from Memory"`; clicking a releasable block calls
-  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits) toward
-  the matching tier instead of waiting for the array's next disk to complete.
+  before any of it pours into an empty disk container below. Caption reads `"Cache — <block> each
+  (tap full → Tiers Bits)"`. A block reads **full** (`$full` — a raised fill) once its own share of
+  `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`, accent border,
+  clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and**
+  some tier's current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
+  `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain `"<size> cache
+  block N"`; `title` names the manual-only Tiers Bits transfer once releasable; clicking a
+  releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
+  `resources.base` (Bits) — Cache never auto-transfers.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
-  **full** (leftmost, holding a full cache's worth of Memory — accent border, `aria-label="redeem
-  <size> disk"`, calling `actions.redeemDisk(size)`, clickable/highlighted (`theme.color.good`) only
-  once `redeemable` — i.e. `getDiskRedeemTierName(state, size)` returns non-null, meaning *some*
-  tier in `TIER_DEFINITIONS` (not specifically tier01 any more — the first one, in array order, whose
-  current per-unit level cost matches this size exactly) — otherwise disabled with a duller fill,
-  never itself blocked by the forced priority order, since Disk Fill is ranked highest) — **empty**
-  (built but not yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always
-  disabled) — **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built
-  <size> disk"`, always disabled). A full square's `title` names which tier it would redeem into
-  right now (`"Redeems 1 <size> disk for 1 free <tierName> — empties it, ready for its cache to fill
-  again"`) or, if no tier currently matches, `"Redeemable once some tier's level cost matches
-  <size>"`; an empty square's `title` is `"Built, waiting for this array's cache to pour into it"`; a
-  not-yet-built square's is `"Not yet built"`; while rebuilding (this branch doesn't render, but the
+  **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
+  `aria-label="auto-redeem <size> disk for <tier>"`, hint `"Auto-redeem → <tier> (autobuyer on)"`;
+  `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for
+  <tier>"`, hint `"Tap a full disk → 1 free <tier>"`; both call `actions.redeemDisk(size)` and are
+  never blocked by the forced priority order (Disk Fill ranks highest) — **empty** (built but not
+  yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
+  **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
+  always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
+  `"Redeemable once some tier's level cost matches <size>"` when not yet matching; an empty square's
+  `title` is `"Built, waiting for this array's cache to pour into it"`; a not-yet-built square's is
+  `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
   rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
   empty again, re-entering the fillable pool.
