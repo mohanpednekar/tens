@@ -151,6 +151,7 @@ import {
   prestigeGame,
   redeemDisk,
   releaseDiskCacheBlock,
+  resetByteFoundry,
   speedUpGame,
   stackComputeBoost,
   startComputeCloudsMerge,
@@ -785,6 +786,78 @@ describe('eraseAllComputeTokens', () => {
     expect(after.intro.autoClaimCoreEnabled).toBe(true)
     expect(after.intro.autoMergeCoresIntoNode).toBe(true)
     expect(after.intro.computeCoresEverEarned).toBe(20)
+  })
+})
+
+describe('resetByteFoundry', () => {
+  it('wipes Memory, Byte generator, Disks, and Compute while keeping Tiers and Prestige', () => {
+    const initial = createInitialGameState()
+    const state = {
+      ...initial,
+      resources: { ...initial.resources, base: 50_000, tier01: 3 },
+      owned: { ...initial.owned, tier01: 12, tier02: 2 },
+      purchased: { ...initial.purchased, tier01: 12 },
+      purchaseLevels: { ...initial.purchaseLevels, tier01: 2 },
+      prestige: { ...initial.prestige, points: 42, count: 3, xp: 10 },
+      autobuyers: { ...initial.autobuyers, tier01: true },
+      intro: {
+        ...initial.intro,
+        bits: 500,
+        capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+        byteCreated: true,
+        tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+        productionMultiplier: 8,
+        productionMilestoneTier: 4,
+        productionMilestoneTierClaims: 1,
+        mainGameUnlocked: true,
+        capacityUpgradeQueued: true,
+        disks: { [INTRO_STARTING_CAPACITY * 8000]: 2 },
+        disksBuiltTotal: { [INTRO_STARTING_CAPACITY * 8000]: 5 },
+        diskCache: { [INTRO_STARTING_CAPACITY * 8000]: 100 },
+        diskBuild: { size: INTRO_STARTING_CAPACITY * 8000, remainingSeconds: 3, totalSeconds: 10 },
+        diskAutoRedeemedSizes: { [INTRO_STARTING_CAPACITY * 8000]: true },
+        computeCores: 7,
+        computeCoresEverEarned: 20,
+        computeNodes: 3,
+        computeClusters: 1,
+        computeMergePageUnlocked: true,
+        autoClaimCoreEnabled: true,
+        autoMergeCoresIntoNode: true,
+        computeCoresMergeRemainingSeconds: 12,
+        computeBoostType: 'standard',
+        computeBoostTierIndex: 0,
+        computeBoostStacks: 2,
+        computeBoostRemainingSeconds: 40,
+      },
+    }
+
+    const after = resetByteFoundry(state)
+    const freshIntro = createInitialGameState().intro
+
+    expect(after.intro).toEqual({ ...freshIntro, mainGameUnlocked: true })
+    expect(after.resources).toEqual(state.resources)
+    expect(after.owned).toEqual(state.owned)
+    expect(after.purchased).toEqual(state.purchased)
+    expect(after.purchaseLevels).toEqual(state.purchaseLevels)
+    expect(after.prestige).toEqual(state.prestige)
+    expect(after.autobuyers).toEqual(state.autobuyers)
+  })
+
+  it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 8,
+      byteCreated: true,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      mainGameUnlocked: false,
+      disks: { 8000: 1 },
+      computeCores: 2,
+    })
+    const after = resetByteFoundry(state)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.byteCreated).toBe(false)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.disks).toEqual({})
+    expect(after.intro.computeCores).toBe(0)
   })
 })
 

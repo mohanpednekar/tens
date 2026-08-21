@@ -3060,6 +3060,27 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
 // this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
 // tiers, not to change what Prestige/Speed Up themselves do.
+
+// Settings → Danger zone "Reset Byte Foundry" — wipes EVERYTHING under `intro` (Memory, Byte
+// generator + its permanent upgrades, Disks/Storage, the entire Compute ladder + boosts +
+// auto-claim/auto-merge unlocks + reveal latches) back to createInitialGameState()'s fresh
+// values, while leaving every non-intro field untouched (Tiers resources/owned/purchase levels,
+// Prestige Points/count/XP/museum, autobuyers, PP upgrades, Speed Up/Overclock counters, …).
+// Unlike a full `resetGame`, this is not a new save — only Foundry/Storage/Compute progress is
+// lost. Preserves `intro.mainGameUnlocked` when already true so Tiers stays reachable without
+// forcing another transfer through the gate; if the gate was still closed, it stays closed.
+export const resetByteFoundry = state => {
+  const initialIntro = createInitialGameState().intro
+  const keepMainUnlocked = state.intro?.mainGameUnlocked === true
+  return {
+    ...state,
+    intro: {
+      ...initialIntro,
+      mainGameUnlocked: keepMainUnlocked,
+    },
+  }
+}
+
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < PRESTIGE_THRESHOLD) return state
 

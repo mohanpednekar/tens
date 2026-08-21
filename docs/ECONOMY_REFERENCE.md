@@ -1485,12 +1485,21 @@ identically regardless of `prestige.count`.
 
 ### Reset
 
-The "↺ Reset" button (`resetGame`, wipes the save and starts a fresh game) is always rendered.
-`ResetButton` (`styled(Button)`, smaller) gates the actual `resetGame()` call behind a native
-`window.confirm(...)` prompt. Cancelling leaves state untouched. On acceptance, alongside `resetGame()`,
-the handler resets `MainPage`'s local view-state to `'game'` and clears the
-`speedUpEverRevealed`/`globalTickspeedCardEverRevealed` flags (plain component state, not part of
-engine state).
+The "↺ Reset active save…" button (`resetGame`, wipes the active save and starts a fresh game) is
+always rendered in Settings → Danger zone. It gates the actual `resetGame()` call behind a native
+`window.confirm(...)` prompt (`buildResetActiveSlotConfirmMessage`). Cancelling leaves state
+untouched. On acceptance, alongside `resetGame()`, the App handler navigates back toward the default
+page (`'game'`, which the Foundry gate then overrides until `mainGameUnlocked`).
+
+A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteFoundry` (also behind
+`window.confirm` via `buildResetByteFoundryConfirmMessage`). It replaces `state.intro` with
+`createInitialGameState().intro` while preserving `intro.mainGameUnlocked` when it was already
+true — so Memory, the Byte generator (capacity / Invest progress / etc.), Disks/Storage, and every
+Compute ladder entity / boost / auto-claim / auto-merge unlock / reveal latch are wiped, but every
+non-`intro` field (Tiers resources/owned/purchase levels, Prestige Points/count/XP/museum,
+autobuyers, PP upgrades, Speed Up/Overclock counters, …) is left unchanged. Unlike full Reset, it
+does not clear the save slot or restart the whole game. Both Danger-zone actions stay disabled while
+production is frozen at the Prestige threshold.
 
 ### Game state shape
 
