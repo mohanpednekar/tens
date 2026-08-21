@@ -10,8 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - **Reset Byte Foundry** (Settings → Danger zone): wipe only Memory, the Byte generator, Disks /
   Storage, and all Compute on the active save — Tiers progress, Prestige Points / count / upgrades,
-  and (if already unlocked) main-game access this cycle stay. Separate from full Reset / Erase all;
-  still asks for confirmation and stays disabled while production is frozen at Prestige.
+  and (if already unlocked) main-game access this cycle stay. Intended for when Capacity (or
+  Storage / Compute) was pushed too far and you want to rebuild Foundry without losing Prestige /
+  Tiers. Separate from full Reset / Erase all; still asks for confirmation and stays disabled while
+  production is frozen at Prestige.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
   available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active

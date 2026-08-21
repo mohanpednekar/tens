@@ -239,7 +239,8 @@ export const buildResetByteFoundryConfirmMessage = () => {
   const name = getActiveSlotDisplayName()
   return (
     `Reset Byte Foundry on "${name}"?\n\n` +
-    `Erased: Memory, the Byte generator, all Disks/Storage, and all Compute progress.\n\n` +
+    `Use this if Capacity (or Storage / Compute) went too far and you want to rebuild Foundry from scratch.\n\n` +
+    `Erased: Memory, Capacity / Invest progress, the Byte generator, all Disks/Storage, and all Compute progress.\n\n` +
     `Kept: Tiers ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`

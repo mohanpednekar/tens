@@ -462,8 +462,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           </VisuallyHidden>
         </Button>
         <p>
-          Wipe only the Byte Foundry on the active save — Memory, the Byte generator, all Disks /
-          Storage, and all Compute. Tiers progress and Prestige stay.
+          Wipe only the Byte Foundry on the active save — useful if Capacity (or Storage /
+          Compute) was pushed too far and you want to rebuild from scratch. Erases Memory, the
+          Byte generator, all Disks / Storage, and all Compute. Tiers progress and Prestige stay.
         </p>
         <Button
           aria-describedby="settings-reset-foundry-description"

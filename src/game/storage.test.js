@@ -962,6 +962,7 @@ describe('supporter unlock + save slots', () => {
     renameSaveSlot('0', 'Foundry wipe')
     const message = buildResetByteFoundryConfirmMessage()
     expect(message).toContain('Foundry wipe')
+    expect(message).toMatch(/capacity/i)
     expect(message).toMatch(/memory/i)
     expect(message).toMatch(/disks\/storage/i)
     expect(message).toMatch(/compute/i)
