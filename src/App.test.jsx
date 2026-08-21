@@ -315,11 +315,12 @@ test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prest
   seedMainGameState({
     resources: { base: 25_000 },
     owned: { tier01: 5 },
+    // count ≥ 1 unlocks the Kilobytes autobuyer on load — pause it so live ticks cannot
+    // spend Bits into extra owned while this test clicks through Settings.
     prestige: { xp: 0, points: 7, count: 2, highestMilestone: 1 },
+    autobuyersEnabled: { tier01: false },
     intro: {
       mainGameUnlocked: true,
-      // Keep Memory empty and production effectively paused so live ticks cannot
-      // auto-convert Foundry bits into extra tier01 while this test clicks through Settings.
       bits: 0,
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
