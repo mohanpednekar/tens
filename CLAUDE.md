@@ -319,8 +319,10 @@ src/
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
                                Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
-                               keyed last-save timestamp used to compute offline progress
+    storage.js              ← localStorage save/load/clear + save-schema migration, multi-slot
+                               saves + Supporter entitlement (unlock code / dummy checkout),
+                               plus the separately keyed last-save timestamp used to compute
+                               offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
                                (progression order); Tiers omits during the Foundry gate
@@ -443,7 +445,8 @@ Strict three-layer separation:
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (not in
    MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
-   offlineProgress, dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+   offlineProgress, dismissOfflineProgress, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   redeemUnlockCode, purchaseSupporterDummy, opsSamples }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown
@@ -725,7 +728,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1305 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1314 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

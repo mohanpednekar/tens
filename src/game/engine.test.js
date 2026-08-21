@@ -139,6 +139,7 @@ import {
   mergeComputeNodesIntoCluster,
   mergeComputeSupercomputersIntoMegacomputer,
   overclockGame,
+  pinMuseumEntry,
   reclaimComputeBoost,
   prestigeGame,
   redeemDisk,
@@ -157,6 +158,7 @@ import {
   startDiskBuild,
   tapIntroBit,
   tickAutoMergeClustersIntoNetwork,
+  unpinMuseumEntry,
   tickAutoMergeCloudsIntoDatacenter,
   tickAutoMergeCoresIntoNode,
   tickAutoMergeDatacentersIntoSupercomputer,
@@ -5505,6 +5507,41 @@ describe('prestigeGame', () => {
     const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
     const after = prestigeGame(state)
     expect(after.prestige.count).toBe(1)
+  })
+
+  it('appends a Prestige museum history entry and carries it across Speed Up', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+    const after = prestigeGame(state)
+    expect(after.prestigeMuseum.history).toHaveLength(1)
+    expect(after.prestigeMuseum.history[0].prestigeNumber).toBe(1)
+    expect(after.prestigeMuseum.history[0].pointsAwarded).toBe(1)
+
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const readyToSpeedUp = {
+      ...after,
+      purchaseLevels: { ...after.purchaseLevels, [lastTier.id]: getSpeedUpRequirement(0) },
+      owned: { ...after.owned, [lastTier.id]: DEFAULT_PURCHASE_BLOCK_SIZE },
+    }
+    const sped = speedUpGame(readyToSpeedUp)
+    expect(sped.prestigeMuseum.history).toHaveLength(1)
+    expect(sped.prestigeMuseum.history[0].id).toBe(after.prestigeMuseum.history[0].id)
+  })
+
+  it('pins and unpins museum entries up to the pin cap', () => {
+    const withHistory = {
+      ...createInitialGameState(),
+      prestigeMuseum: {
+        history: [
+          { id: 'a', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 },
+          { id: 'b', at: 2, prestigeNumber: 2, pointsAwarded: 1, moneyBits: 1 },
+        ],
+        pinnedIds: [],
+      },
+    }
+    const pinned = pinMuseumEntry('a')(withHistory)
+    expect(pinned.prestigeMuseum.pinnedIds).toEqual(['a'])
+    expect(unpinMuseumEntry('a')(pinned).prestigeMuseum.pinnedIds).toEqual([])
+    expect(pinMuseumEntry('missing')(withHistory)).toBe(withHistory)
   })
 
   it('awards 1 Prestige Point at exactly PRESTIGE_THRESHOLD', () => {

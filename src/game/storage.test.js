@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
+import { clearGameState, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
@@ -846,5 +846,68 @@ describe('saveGameState / loadLastSaveTimestamp', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadLastSaveTimestamp()).toBeNull()
+  })
+})
+
+describe('supporter unlock + save slots', () => {
+  it('starts with one unlocked slot and no supporter flag', () => {
+    const meta = loadSavesMeta()
+    expect(meta.unlockedSlotCount).toBe(FREE_SLOT_COUNT)
+    expect(meta.supporterUnlocked).toBe(false)
+    expect(listSaveSlots().filter(s => s.unlocked)).toHaveLength(FREE_SLOT_COUNT)
+  })
+
+  it('rejects an invalid unlock code', () => {
+    expect(redeemSupporterUnlockCode('nope').ok).toBe(false)
+    expect(isSupporterUnlocked()).toBe(false)
+  })
+
+  it('redeems TENS-SUPPORT (case-insensitive) and unlocks three slots', () => {
+    const result = redeemSupporterUnlockCode('tens support')
+    expect(result.ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(loadSavesMeta().unlockedSlotCount).toBe(SUPPORTER_SLOT_COUNT)
+    expect(listSaveSlots().every(s => s.unlocked)).toBe(true)
+  })
+
+  it('dummy purchase grants the same entitlement', () => {
+    expect(completeDummySupporterPurchase().ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(completeDummySupporterPurchase().already).toBe(true)
+  })
+
+  it('keeps slot 0 on the legacy tens_game_state key and isolates other slots', () => {
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 },
+    })
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).resources[MONEY_ID]).toBe(111)
+
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    expect(setActiveSaveSlot('1').ok).toBe(true)
+    expect(loadGameState()).toBeNull()
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 },
+    })
+    expect(localStorage.getItem('tens_slot_1_state')).toBeTruthy()
+
+    expect(setActiveSaveSlot('0').ok).toBe(true)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+
+    clearGameState()
+    expect(loadGameState()).toBeNull()
+    expect(setActiveSaveSlot('1').ok).toBe(true)
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+  })
+
+  it('refuses switching to a locked slot', () => {
+    expect(setActiveSaveSlot('2').ok).toBe(false)
+  })
+
+  it('renames an unlocked slot', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
+    expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
   })
 })

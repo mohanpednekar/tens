@@ -64,7 +64,7 @@ function App() {
 
   const handleReset = () => {
     if (isProductionFrozen(game.state)) return
-    if (!window.confirm('Erase all progress and start over? This cannot be undone.')) return
+    if (!window.confirm('Erase the active save slot and start over? Other slots are kept. This cannot be undone.')) return
     game.resetGame()
     setPage('game')
     setMenuOpen(false)

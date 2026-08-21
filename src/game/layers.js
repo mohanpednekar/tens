@@ -318,6 +318,14 @@ export const OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 10 * 60
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
 
+// Supporter Prestige museum (meta QoL — no economy effect). Every prestige appends one history
+// entry; pinned entries are a player-curated subset. Caps keep localStorage bounded.
+export const MUSEUM_HISTORY_CAP = 20
+export const MUSEUM_PIN_CAP = 10
+// Ops dashboard in-session sparkline sample cap (hook-owned ring buffer, not persisted).
+export const OPS_SAMPLE_CAP = 60
+export const OPS_SAMPLE_INTERVAL_MS = 2000
+
 // The purchase block size a tier's level 1 (the very start of a run) requires to complete: buying
 // this many pieces of it advances a tier from level 1 to level 2. This is only the *default/
 // starting* value, not a fixed constant used throughout the game — the effective, current block

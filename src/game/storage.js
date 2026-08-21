@@ -1,8 +1,215 @@
 import { applyAutobuyerMilestones, createInitialGameState } from './engine'
 import { COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
 
+// Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
+// ever wrote a single save keep working without a forced rewrite of every consumer.
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
+const SAVES_META_KEY = 'tens_saves_meta'
+
+/** Free players get one slot; a redeemed supporter unlock code raises this to SUPPORTER_SLOT_COUNT. */
+export const FREE_SLOT_COUNT = 1
+/** Total slots available after redeeming the placeholder supporter unlock code (payment later). */
+export const SUPPORTER_SLOT_COUNT = 3
+/**
+ * Placeholder unlock code until real checkout ships. Case-insensitive; hyphens optional.
+ * Not a secret — it gates meta QoL only (extra local save slots), not economy power.
+ */
+export const SUPPORTER_UNLOCK_CODE = 'TENS-SUPPORT'
+
+const slotStateKey = slotId => (slotId === '0' ? STORAGE_KEY : `tens_slot_${slotId}_state`)
+const slotTimestampKey = slotId =>
+  slotId === '0' ? LAST_SAVE_TIMESTAMP_KEY : `tens_slot_${slotId}_timestamp`
+
+const defaultSlotName = index => `Save ${index + 1}`
+
+const buildDefaultMeta = () => ({
+  activeSlotId: '0',
+  unlockedSlotCount: FREE_SLOT_COUNT,
+  supporterUnlocked: false,
+  supporterSource: null,
+  slots: [{ id: '0', name: defaultSlotName(0) }],
+})
+
+const normalizeUnlockCode = code =>
+  String(code ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+
+const readRawMeta = () => {
+  try {
+    const raw = localStorage.getItem(SAVES_META_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+const writeMeta = meta => {
+  try {
+    localStorage.setItem(SAVES_META_KEY, JSON.stringify(meta))
+  } catch {
+    // Silently ignore (quota / private browsing)
+  }
+}
+
+const withSupporterSlots = meta => {
+  const unlockedSlotCount = meta.supporterUnlocked ? SUPPORTER_SLOT_COUNT : FREE_SLOT_COUNT
+  const slots = []
+  for (let i = 0; i < unlockedSlotCount; i += 1) {
+    const id = String(i)
+    slots.push(meta.slots?.find(s => s.id === id) ?? { id, name: defaultSlotName(i) })
+  }
+  const activeSlotId = slots.some(s => s.id === meta.activeSlotId) ? meta.activeSlotId : '0'
+  return {
+    ...meta,
+    unlockedSlotCount,
+    activeSlotId,
+    slots,
+    supporterUnlocked: Boolean(meta.supporterUnlocked),
+    supporterSource: meta.supporterSource ?? null,
+  }
+}
+
+const coerceMeta = raw => {
+  const base = buildDefaultMeta()
+  if (!raw || typeof raw !== 'object') return base
+  // Legacy: unlockedSlotCount alone (from an earlier slots-only draft) implies supporter.
+  const supporterUnlocked =
+    Boolean(raw.supporterUnlocked) ||
+    (Number(raw.unlockedSlotCount) || FREE_SLOT_COUNT) >= SUPPORTER_SLOT_COUNT
+  const slotsById = new Map()
+  if (Array.isArray(raw.slots)) {
+    for (const entry of raw.slots) {
+      if (!entry || typeof entry !== 'object') continue
+      const id = String(entry.id ?? '')
+      if (!/^\d+$/.test(id)) continue
+      const index = Number(id)
+      if (index < 0 || index >= SUPPORTER_SLOT_COUNT) continue
+      slotsById.set(id, {
+        id,
+        name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : defaultSlotName(index),
+      })
+    }
+  }
+  return withSupporterSlots({
+    ...base,
+    supporterUnlocked,
+    supporterSource: raw.supporterSource === 'code' || raw.supporterSource === 'dummy_purchase'
+      ? raw.supporterSource
+      : supporterUnlocked
+        ? 'code'
+        : null,
+    activeSlotId: String(raw.activeSlotId ?? '0'),
+    slots: Array.from(slotsById.values()),
+  })
+}
+
+/** Ensures meta exists (migrating a pre-slots single save into slot 0) and returns it. */
+export const loadSavesMeta = () => {
+  const coerced = coerceMeta(readRawMeta())
+  writeMeta(coerced)
+  return coerced
+}
+
+export const getActiveSlotId = () => loadSavesMeta().activeSlotId
+
+export const isSupporterUnlocked = () => Boolean(loadSavesMeta().supporterUnlocked)
+
+/** Permanently unlocks the Supporter pack (slots + museum + ops). Idempotent. */
+export const grantSupporterUnlock = (source = 'code') => {
+  const meta = loadSavesMeta()
+  if (meta.supporterUnlocked) {
+    return { ok: true, already: true, meta }
+  }
+  const next = withSupporterSlots({
+    ...meta,
+    supporterUnlocked: true,
+    supporterSource: source === 'dummy_purchase' ? 'dummy_purchase' : 'code',
+  })
+  writeMeta(next)
+  return { ok: true, meta: next }
+}
+
+const hasStoredStateForSlot = slotId => {
+  try {
+    return localStorage.getItem(slotStateKey(slotId)) != null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Player-facing slot list: always SUPPORTER_SLOT_COUNT rows so locked extras are visible,
+ * with `unlocked` false beyond unlockedSlotCount.
+ */
+export const listSaveSlots = () => {
+  const meta = loadSavesMeta()
+  const rows = []
+  for (let i = 0; i < SUPPORTER_SLOT_COUNT; i += 1) {
+    const id = String(i)
+    const unlocked = i < meta.unlockedSlotCount
+    const named = meta.slots.find(s => s.id === id)
+    rows.push({
+      id,
+      name: named?.name ?? defaultSlotName(i),
+      unlocked,
+      isActive: meta.activeSlotId === id,
+      isEmpty: unlocked ? !hasStoredStateForSlot(id) : true,
+    })
+  }
+  return rows
+}
+
+/**
+ * Points save/load/clear at a different slot. Does not load state itself — callers
+ * (useIncrementalGame) must load after switching. Rejects locked / unknown ids.
+ */
+export const setActiveSaveSlot = slotId => {
+  const id = String(slotId)
+  const meta = loadSavesMeta()
+  const index = Number(id)
+  if (!Number.isInteger(index) || index < 0 || index >= meta.unlockedSlotCount) {
+    return { ok: false, reason: 'locked' }
+  }
+  if (meta.activeSlotId === id) return { ok: true, already: true, meta }
+  const next = { ...meta, activeSlotId: id }
+  writeMeta(next)
+  return { ok: true, meta: next }
+}
+
+export const renameSaveSlot = (slotId, name) => {
+  const id = String(slotId)
+  const meta = loadSavesMeta()
+  const trimmed = String(name ?? '').trim()
+  if (!trimmed) return { ok: false, reason: 'empty' }
+  const index = meta.slots.findIndex(s => s.id === id)
+  if (index < 0) return { ok: false, reason: 'missing' }
+  const slots = meta.slots.map((s, i) => (i === index ? { ...s, name: trimmed.slice(0, 40) } : s))
+  const next = { ...meta, slots }
+  writeMeta(next)
+  return { ok: true, meta: next }
+}
+
+/**
+ * Redeems the placeholder supporter unlock code. Unlocks the full Supporter pack
+ * (extra save slots, Prestige museum, Ops dashboard). Real payment replaces this later.
+ */
+export const redeemSupporterUnlockCode = code => {
+  if (normalizeUnlockCode(code) !== SUPPORTER_UNLOCK_CODE) {
+    return { ok: false, reason: 'invalid' }
+  }
+  return grantSupporterUnlock('code')
+}
+
+/**
+ * Dummy checkout stand-in until real payment ships. Always "succeeds" and grants the same
+ * entitlement as a valid unlock code — no money moves, no network call.
+ */
+export const completeDummySupporterPurchase = () => grantSupporterUnlock('dummy_purchase')
 
 // Legacy name-based tier ids (pre-tier0N rename) mapped to their new naming-agnostic id.
 // Nonillions/Decillions have no new id — they were dropped when the tier count went 12 → 10,
@@ -251,25 +458,32 @@ const migrateState = saved => {
     everUnlockedTierIds: { ...fresh.everUnlockedTierIds, ...shiftOldTierIds(saved.everUnlockedTierIds, isPreByteFoundrySave) },
     autoPrestige: migratedAutoPrestige === undefined ? fresh.autoPrestige : migratedAutoPrestige,
     prestige:  { ...fresh.prestige,  ...migratedPrestige },
+    prestigeMuseum: {
+      history: Array.isArray(saved.prestigeMuseum?.history) ? saved.prestigeMuseum.history : fresh.prestigeMuseum.history,
+      pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
+    },
     intro: migratedIntro,
   })
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't
 // part of the game-state shape itself) — read back by loadLastSaveTimestamp on the next load to
-// figure out how long the game was closed for, to drive offline progress.
+// figure out how long the game was closed for, to drive offline progress. Always targets the
+// currently active save slot (slot 0 uses the legacy key names).
 export const saveGameState = state => {
+  const slotId = getActiveSlotId()
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    localStorage.setItem(LAST_SAVE_TIMESTAMP_KEY, String(Date.now()))
+    localStorage.setItem(slotStateKey(slotId), JSON.stringify(state))
+    localStorage.setItem(slotTimestampKey(slotId), String(Date.now()))
   } catch {
     // Silently ignore (storage quota exceeded, private-browsing restrictions, etc.)
   }
 }
 
 export const loadGameState = () => {
+  const slotId = getActiveSlotId()
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(slotStateKey(slotId))
     if (!raw) return null
     return migrateState(JSON.parse(raw))
   } catch {
@@ -277,13 +491,14 @@ export const loadGameState = () => {
   }
 }
 
-// Milliseconds since epoch as of the most recent saveGameState call, or null if there's no
-// record of one (never saved, or an older save predating this feature). Used to compute how
-// long the game was closed for offline progress; a missing/invalid value means "unknown", not
-// "just now" — callers should skip offline progress rather than guess.
+// Milliseconds since epoch as of the most recent saveGameState call for the active slot, or
+// null if there's no record of one (never saved, or an older save predating this feature). Used
+// to compute how long the game was closed for offline progress; a missing/invalid value means
+// "unknown", not "just now" — callers should skip offline progress rather than guess.
 export const loadLastSaveTimestamp = () => {
+  const slotId = getActiveSlotId()
   try {
-    const raw = localStorage.getItem(LAST_SAVE_TIMESTAMP_KEY)
+    const raw = localStorage.getItem(slotTimestampKey(slotId))
     if (!raw) return null
     const parsed = Number(raw)
     return Number.isFinite(parsed) ? parsed : null
@@ -292,10 +507,12 @@ export const loadLastSaveTimestamp = () => {
   }
 }
 
+/** Clears only the active save slot's state + timestamp (not other slots or the unlock entitlement). */
 export const clearGameState = () => {
+  const slotId = getActiveSlotId()
   try {
-    localStorage.removeItem(STORAGE_KEY)
-    localStorage.removeItem(LAST_SAVE_TIMESTAMP_KEY)
+    localStorage.removeItem(slotStateKey(slotId))
+    localStorage.removeItem(slotTimestampKey(slotId))
   } catch {
     // Silently ignore
   }

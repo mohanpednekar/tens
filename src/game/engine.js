@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -264,6 +264,13 @@ export const createInitialGameState = () => ({
     // grants points instead of directly doubling production.
     count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
+  },
+  // Prestige museum — permanent per save slot. Every real Prestige appends one history entry
+  // (see prestigeGame); players may pin a subset for the Supporter museum UI. Meta QoL only —
+  // never affects production, costs, or unlocks.
+  prestigeMuseum: {
+    history: [],
+    pinnedIds: [],
   },
   // The Byte Foundry pre-game intro's own state — a currency pool entirely separate from
   // resources.base (see the "Byte Foundry" constants in layers.js) until the manual/auto
@@ -2915,6 +2922,18 @@ export const prestigeGame = state => {
 
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const initial = createInitialGameState()
+  const nextPrestigeNumber = state.prestige.count + 1
+  const museumEntry = {
+    id: `p${nextPrestigeNumber}-${Date.now()}`,
+    at: Date.now(),
+    prestigeNumber: nextPrestigeNumber,
+    pointsAwarded,
+    moneyBits: clampNonNegative(state.resources[MONEY_ID]),
+  }
+  const previousMuseum = state.prestigeMuseum ?? initial.prestigeMuseum
+  const nextHistory = [museumEntry, ...(previousMuseum.history ?? [])].slice(0, MUSEUM_HISTORY_CAP)
+  const nextHistoryIds = new Set(nextHistory.map(entry => entry.id))
+  const nextPinnedIds = (previousMuseum.pinnedIds ?? []).filter(id => nextHistoryIds.has(id))
   // applyAutobuyerMilestones runs last, against the freshly-incremented prestige.count below —
   // it's what actually unlocks the next tier's autobuyer/tier-tickspeed-autobuyer the instant this
   // prestige crosses their milestone (see getAutobuyerUnlockMilestone/
@@ -2922,6 +2941,10 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
+    prestigeMuseum: {
+      history: nextHistory,
+      pinnedIds: nextPinnedIds,
+    },
     // "Memory" (bits/productionAccumulator/mainGameUnlocked) resets to
     // fresh on every real Prestige, in the same atomic reset as resources/owned above — a new
     // cycle always starts this screen's balance from 0 and re-shows it before MainPage. The Byte
@@ -3045,9 +3068,36 @@ export const prestigeGame = state => {
     prestige: {
       ...initial.prestige,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
-      count: state.prestige.count + 1,
+      count: nextPrestigeNumber,
     },
   })
+}
+
+// Pin a Prestige museum history entry (Supporter UI). No-op if missing, already pinned, or at cap.
+export const pinMuseumEntry = entryId => state => {
+  const museum = state.prestigeMuseum ?? { history: [], pinnedIds: [] }
+  if (!(museum.history ?? []).some(entry => entry.id === entryId)) return state
+  if ((museum.pinnedIds ?? []).includes(entryId)) return state
+  if ((museum.pinnedIds ?? []).length >= MUSEUM_PIN_CAP) return state
+  return {
+    ...state,
+    prestigeMuseum: {
+      history: museum.history ?? [],
+      pinnedIds: [...(museum.pinnedIds ?? []), entryId],
+    },
+  }
+}
+
+export const unpinMuseumEntry = entryId => state => {
+  const museum = state.prestigeMuseum ?? { history: [], pinnedIds: [] }
+  if (!(museum.pinnedIds ?? []).includes(entryId)) return state
+  return {
+    ...state,
+    prestigeMuseum: {
+      history: museum.history ?? [],
+      pinnedIds: (museum.pinnedIds ?? []).filter(id => id !== entryId),
+    },
+  }
 }
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches PRESTIGE_THRESHOLD:
@@ -3119,6 +3169,8 @@ export const speedUpGame = state => {
     // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
+    // Museum is permanent per save — Speed Up must not wipe prestige history/pins.
+    prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
     // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Speed Up
@@ -3178,6 +3230,8 @@ export const overclockGame = state => {
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // lastTierXpConsumed/everUnlockedTierIds are NOT carried over — same reasoning as speedUpGame,
     // see there.
+    // Museum is permanent per save — Overclock must not wipe prestige history/pins.
+    prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     // speedUpCount is deliberately NOT carried over (unlike speedUpGame's own self-increment) —
     // resets to 0 (initial.speedUpCount), wiping Speed Up's own stacking bonus. This is Overclock's
