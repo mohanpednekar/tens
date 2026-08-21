@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Nav attention dots** on the bottom `AppNav`: green corner indicators when a destination has a
+  pending action, with **high** (larger, pulsing — Memory full, full purchase level, Prestige
+  freeze, redeemable disk, combine ready) vs **normal** emphasis. Shared predicates in
+  `game/navAttention.js`.
 - **More** menu (⋯ on the bottom nav) and standalone **Milestones** / **Settings** screens —
   reachable from every page, including the Byte Foundry gate, with no progress requirement.
   Settings holds About / Appearance notes and Reset; Milestones mirrors the MainPage Milestones
@@ -29,15 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
-- **App navigation** is a shared fixed bottom bar (`components/AppNav`): **Tiers** / **Foundry** /
-  **Storage** / **Compute** / **Guide** / **More**, with the active destination marked via
-  `aria-current`. Storage and Compute appear once each mechanic is revealed; **Tiers** stays
-  hidden during the mandatory Byte Foundry gate (no gameplay escape hatch), but **Guide** and
-  **More** are always available from the first launch — utilities never require unlocking the
-  main game. More opens Milestones, Settings, and Reset. Nested Back buttons and page-local
-  open-* links are removed — jump directly between unlocked destinations. The main ladder screen
-  is labeled **Tiers** (not "Game") so it doesn't collide with MainPage's own Game/Upgrades/
-  Milestones view tabs.
+- **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play
+  progression). **Storage** is no longer a top-level tab — it lives under Foundry as a second-level
+  **Memory | Disks** peer tab pair (same Memory pool + shared `DiskArrayRow`). Tiers uses
+  **Ladder | Upgrades** peer tabs after the first Prestige (no back chrome; Milestones only under
+  More). Attention dots fold Storage cues into Foundry.
+- **App navigation** is a shared fixed bottom bar (`components/AppNav`): active destination marked via
+  `aria-current`. Compute appears once revealed; **Tiers** stays hidden during the mandatory Byte
+  Foundry gate, but **Guide** and **More** are always available. Nested Back buttons and page-local
+  open-* links are removed.
 - The in-game **Guide** is rewritten for readability: short bullets and sub-headings instead of
   dense paragraphs, fuller coverage (forced priority, Storage release/redeem rules, tier-funded
   Compute Boost with Stack/Reclaim, Prestige), and numbers kept in sync with live `layers.js` /

@@ -14,7 +14,7 @@ app switches between five top-level pages, `ByteFoundryPage` (the tap-to-earn pr
 until its one-time transition into the main game), `MainPage` (the tier ladder), `InfoPage` (all the
 static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens once each
 mechanic is revealed), via a plain `useState` toggle in `App.jsx` plus a shared bottom `AppNav`
-(Tiers / Foundry / Storage / Compute / Guide / More) — not a router (see "Architecture" below).
+(Tiers / Foundry / Compute / Guide / More — Storage is under Foundry as Memory | Disks) — not a router (see "Architecture" below).
 Guide and More (Milestones / Settings / Reset) are always available, including during the
 mandatory Byte Foundry gate; only Tiers stays progress-gated.
 
@@ -316,13 +316,16 @@ src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
+    navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
+                               Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
                                keyed last-save timestamp used to compute offline progress
   components/
-    AppNav/index.jsx        ← fixed bottom bar switching Tiers/Foundry/Storage/Compute/Guide
-                               (see Architecture / App.jsx); Storage/Compute items appear once
-                               revealed; Tiers/Guide omit during the mandatory Byte Foundry gate
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
+                               (progression order); Tiers omits during the Foundry gate
+                               (Guide/More stay); green attention dots via game/navAttention.js
+    AppMenu/index.jsx       ← More sheet — Milestones / Settings / Reset (always reachable)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -348,17 +351,11 @@ src/
                                App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage
-    StoragePage/index.jsx   ← Storage's fuller, every-size detail screen — a thin wrapper rendering
-                               one `components/DiskArrayRow` per size ever reached — NOT the Build
-                               button, which stays on ByteFoundryPage (see "Architecture" 4a below
-                               for the full field breakdown). Reached via AppNav once revealed;
-                               takes `{ game }`
-    ComputePage/index.jsx   ← the Compute screen, including the nine-boundary merge chain and the
-                               Boost effects section — issue #326 put the Boost effects (armed-tier
-                               status/presets/Stack+Reclaim) at the TOP of the page, tier rows below
-                               (see "Architecture" 4b below for the full field breakdown — row
-                               layout, squares, issue citations). Reached via AppNav once revealed;
-                               takes `{ game }`
+    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
+                               Build stays on Foundry Memory tab. File kept as a thin reusable
+                               wrapper — not a top-level AppNav destination
+    ComputePage/index.jsx   ← Compute's dedicated screen (merge chain + Boost). Reached via AppNav
+                               once revealed; takes `{ game }`
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game }` — the
                                full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Full
@@ -386,7 +383,7 @@ src/
                                <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<StoragePage/>/<ComputePage/>
                                via a local `page` useState (`'game'`/`'info'`/`'foundry'`/`'storage'`/
                                `'compute'`, default `'game'`) — not a routing library — plus a shared
-                               fixed bottom `AppNav` (Tiers / Foundry / Storage / Compute / Guide).
+                               fixed bottom `AppNav` (Foundry → Compute → Tiers → Guide → More).
                                Same "local toggle, not real routing" convention MainPage's own
                                Game/Upgrades/Milestones view tabs already use. Which screen actually
                                renders is a derived `showingFoundry = page !== 'info' && page !==
@@ -728,7 +725,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1292 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1305 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
