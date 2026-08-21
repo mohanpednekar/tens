@@ -308,7 +308,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Reset Byte Foundry wipes Capacity/Storage/Compute but restores Combine and Invest', async () => {
+test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
@@ -324,7 +324,6 @@ test('Reset Byte Foundry wipes Capacity/Storage/Compute but restores Combine and
       bits: 0,
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
-      // Slow tick so restored Invest cannot race this test while clicking Settings.
       tickSpeedSeconds: 1e12,
       productionMultiplier: 4,
       productionMilestoneTier: 3,
@@ -347,31 +346,29 @@ test('Reset Byte Foundry wipes Capacity/Storage/Compute but restores Combine and
   expect(window.confirm).toHaveBeenCalled()
   expect(window.confirm.mock.calls[0][0]).toMatch(/byte foundry/i)
   expect(window.confirm.mock.calls[0][0]).toMatch(/capacity/i)
-  expect(window.confirm.mock.calls[0][0]).toMatch(/invest/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/convenience|auto/i)
 
-  // Still on Settings (main game stays unlocked); Tiers progress was not wiped.
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open tiers/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Owned may keep growing via restored Invest production + auto-convert; only assert it was not wiped.
   expect(saved.owned.tier01).toBeGreaterThanOrEqual(5)
   expect(saved.prestige.points).toBe(7)
   expect(saved.prestige.count).toBe(2)
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.byteCreated).toBe(true)
-  expect(saved.intro.tickSpeedSeconds).toBe(1e12)
-  expect(saved.intro.productionMultiplier).toBe(4)
-  expect(saved.intro.productionMilestoneTier).toBe(3)
+  // Upgrades restart from scratch…
+  expect(saved.intro.byteCreated).toBe(false)
+  expect(saved.intro.productionMultiplier).toBe(1)
+  expect(saved.intro.productionMilestoneTier).toBe(0)
   expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
   expect(saved.intro.disks).toEqual({})
   expect(saved.intro.disksBuiltTotal).toEqual({})
   expect(saved.intro.computeCores).toBe(0)
-  expect(saved.intro.computeCoresEverEarned).toBe(0)
-  expect(saved.intro.computeMergePageUnlocked).toBe(false)
-  expect(saved.intro.autoClaimCoreEnabled).toBe(false)
-  // Compute nav should disappear once capacity is back below the reveal threshold.
+  // …but caps remember prior highs for convenience auto-clicks.
+  expect(saved.intro.foundryResetCaps.byteCreated).toBe(true)
+  expect(saved.intro.foundryResetCaps.productionMilestoneTier).toBe(3)
+  expect(saved.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(4)
   expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
 })
 

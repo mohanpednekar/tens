@@ -661,6 +661,7 @@ describe('schema migration', () => {
         computeSupercomputersMergeRemainingSeconds: 0,
         computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
         computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
+        foundryResetCaps: null,
       },
     }
     saveGameState(state)
@@ -989,7 +990,8 @@ describe('supporter unlock + save slots', () => {
     const message = buildResetByteFoundryConfirmMessage()
     expect(message).toContain('Foundry wipe')
     expect(message).toMatch(/capacity/i)
-    expect(message).toMatch(/auto-restored/i)
+    expect(message).toMatch(/convenience/i)
+    expect(message).toMatch(/auto-press/i)
     expect(message).toMatch(/invest/i)
     expect(message).toMatch(/disks\/storage/i)
     expect(message).toMatch(/compute/i)

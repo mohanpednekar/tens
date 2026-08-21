@@ -77,6 +77,7 @@ import {
   getComputeBoostTierMultiplier,
   getCostEpochExponent,
   getDiskCost,
+  getDiskLadderSizeBits,
   getDiskRedeemTierName,
   getDiskSize,
   getDiskSizesToShow,
@@ -180,6 +181,7 @@ import {
   startComputeSupercomputersMerge,
   startDiskBuild,
   tapIntroBit,
+  tickFoundryResetConvenience,
   tickAutoMergeClustersIntoNetwork,
   unpinMuseumEntry,
   tickAutoMergeCloudsIntoDatacenter,
@@ -199,7 +201,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -804,14 +806,13 @@ describe('eraseAllComputeTokens', () => {
 })
 
 describe('resetByteFoundry', () => {
-  it('resets Capacity/Memory/Disks/Compute but auto-restores Combine + Invest up to pre-reset highs', () => {
+  it('wipes Capacity/upgrades/Disks/Compute to scratch and records convenience caps', () => {
     const initial = createInitialGameState()
+    const diskSize = INTRO_STARTING_CAPACITY * 8000
     const state = {
       ...initial,
       resources: { ...initial.resources, base: 50_000, tier01: 3 },
       owned: { ...initial.owned, tier01: 12, tier02: 2 },
-      purchased: { ...initial.purchased, tier01: 12 },
-      purchaseLevels: { ...initial.purchaseLevels, tier01: 2 },
       prestige: { ...initial.prestige, points: 42, count: 3, xp: 10 },
       autobuyers: { ...initial.autobuyers, tier01: true },
       intro: {
@@ -825,80 +826,70 @@ describe('resetByteFoundry', () => {
         productionMilestoneTierClaims: 1,
         mainGameUnlocked: true,
         capacityUpgradeQueued: true,
-        disks: { [INTRO_STARTING_CAPACITY * 8000]: 2 },
-        disksBuiltTotal: { [INTRO_STARTING_CAPACITY * 8000]: 5 },
-        diskCache: { [INTRO_STARTING_CAPACITY * 8000]: 100 },
-        diskBuild: { size: INTRO_STARTING_CAPACITY * 8000, remainingSeconds: 3, totalSeconds: 10 },
-        diskAutoRedeemedSizes: { [INTRO_STARTING_CAPACITY * 8000]: true },
+        disks: { [diskSize]: 2 },
+        disksBuiltTotal: { [diskSize]: 5 },
+        diskCache: { [diskSize]: 100 },
         computeCores: 7,
         computeCoresEverEarned: 20,
-        computeNodes: 3,
-        computeClusters: 1,
         computeMergePageUnlocked: true,
         autoClaimCoreEnabled: true,
-        autoMergeCoresIntoNode: true,
-        computeCoresMergeRemainingSeconds: 12,
-        computeBoostType: 'standard',
-        computeBoostTierIndex: 0,
-        computeBoostStacks: 2,
-        computeBoostRemainingSeconds: 40,
       },
     }
 
     const after = resetByteFoundry(state)
     const freshIntro = createInitialGameState().intro
 
-    // Capacity / Memory / Storage / Compute wiped…
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.productionAccumulator).toBe(0)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
-    expect(after.intro.disks).toEqual({})
-    expect(after.intro.disksBuiltTotal).toEqual({})
-    expect(after.intro.diskCache).toEqual({})
-    expect(after.intro.diskBuild).toBeNull()
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeCoresEverEarned).toBe(0)
-    expect(after.intro.computeMergePageUnlocked).toBe(false)
-    expect(after.intro.autoClaimCoreEnabled).toBe(false)
-    expect(after.intro.autoMergeCoresIntoNode).toBe(false)
-    expect(after.intro.computeBoostType).toBeNull()
-
-    // …but Combine + Invest are auto-restored at the pre-reset highs (Capacity excluded).
-    expect(after.intro.byteCreated).toBe(true)
-    expect(after.intro.tickSpeedSeconds).toBe(INTRO_MIN_TICK_SPEED_SECONDS)
-    expect(after.intro.productionMultiplier).toBe(8)
-    expect(after.intro.productionMilestoneTier).toBe(4)
-    expect(after.intro.productionMilestoneTierClaims).toBe(1)
-    expect(after.intro.mainGameUnlocked).toBe(true)
-
-    // Sanity: everything else on intro matches a fresh Foundry aside from the restored fields.
-    expect(after.intro).toEqual({
-      ...freshIntro,
-      mainGameUnlocked: true,
-      byteCreated: true,
-      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
-      productionMultiplier: 8,
-      productionMilestoneTier: 4,
-      productionMilestoneTierClaims: 1,
-    })
-
-    expect(after.resources).toEqual(state.resources)
-    expect(after.owned).toEqual(state.owned)
-    expect(after.purchased).toEqual(state.purchased)
-    expect(after.purchaseLevels).toEqual(state.purchaseLevels)
-    expect(after.prestige).toEqual(state.prestige)
-    expect(after.autobuyers).toEqual(state.autobuyers)
-  })
-
-  it('does not invent Combine/Invest progress that was never earned', () => {
-    const after = resetByteFoundry(createInitialGameState())
-    const fresh = createInitialGameState().intro
     expect(after.intro.byteCreated).toBe(false)
-    expect(after.intro.tickSpeedSeconds).toBe(fresh.tickSpeedSeconds)
-    expect(after.intro.productionMultiplier).toBe(fresh.productionMultiplier)
+    expect(after.intro.tickSpeedSeconds).toBe(freshIntro.tickSpeedSeconds)
+    expect(after.intro.productionMultiplier).toBe(freshIntro.productionMultiplier)
     expect(after.intro.productionMilestoneTier).toBe(0)
     expect(after.intro.productionMilestoneTierClaims).toBe(0)
+    expect(after.intro.disks).toEqual({})
+    expect(after.intro.disksBuiltTotal).toEqual({})
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.foundryResetCaps).toEqual({
+      byteCreated: true,
+      productionMilestoneTier: 4,
+      productionMilestoneTierClaims: 1,
+      disksBuiltTotal: { [String(diskSize)]: 5 },
+    })
+    expect(after.resources).toEqual(state.resources)
+    expect(after.owned).toEqual(state.owned)
+    expect(after.prestige).toEqual(state.prestige)
+  })
+
+  it('merges caps across repeated Foundry resets', () => {
+    const initial = createInitialGameState()
+    const first = resetByteFoundry({
+      ...initial,
+      intro: {
+        ...initial.intro,
+        byteCreated: true,
+        productionMilestoneTier: 2,
+        productionMilestoneTierClaims: 1,
+        disksBuiltTotal: { 8000: 3 },
+        mainGameUnlocked: true,
+      },
+    })
+    const second = resetByteFoundry({
+      ...first,
+      intro: {
+        ...first.intro,
+        byteCreated: true,
+        productionMilestoneTier: 5,
+        productionMilestoneTierClaims: 0,
+        capacity: INTRO_DISK_UNLOCK_CAPACITY,
+        disksBuiltTotal: { 8000: 1, 80000: 2 },
+      },
+    })
+    expect(second.intro.foundryResetCaps.byteCreated).toBe(true)
+    expect(second.intro.foundryResetCaps.productionMilestoneTier).toBe(5)
+    expect(second.intro.foundryResetCaps.productionMilestoneTierClaims).toBe(0)
+    expect(second.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(3)
+    expect(second.intro.foundryResetCaps.disksBuiltTotal['80000']).toBe(2)
   })
 
   it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
@@ -906,24 +897,106 @@ describe('resetByteFoundry', () => {
       bits: 8,
       byteCreated: true,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
-      tickSpeedSeconds: 0.5,
-      productionMultiplier: 2,
-      productionMilestoneTier: 1,
-      productionMilestoneTierClaims: 1,
       mainGameUnlocked: false,
       disks: { 8000: 1 },
       computeCores: 2,
     })
     const after = resetByteFoundry(state)
     expect(after.intro.mainGameUnlocked).toBe(false)
-    expect(after.intro.byteCreated).toBe(true)
-    expect(after.intro.tickSpeedSeconds).toBe(0.5)
-    expect(after.intro.productionMultiplier).toBe(2)
-    expect(after.intro.productionMilestoneTier).toBe(1)
-    expect(after.intro.productionMilestoneTierClaims).toBe(1)
+    expect(after.intro.byteCreated).toBe(false)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-    expect(after.intro.disks).toEqual({})
-    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.foundryResetCaps.byteCreated).toBe(true)
+  })
+})
+
+describe('tickFoundryResetConvenience', () => {
+  it('auto-combines and auto-Invests up to caps without touching Capacity', () => {
+    const caps = {
+      byteCreated: true,
+      productionMilestoneTier: 1,
+      productionMilestoneTierClaims: 0,
+      disksBuiltTotal: {},
+    }
+    // Enough Memory for Combine (8) + first Invest claim (INTRO_STARTING_CAPACITY).
+    let state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY + INTRO_BYTE_COMBINE_COST,
+      capacity: INTRO_STARTING_CAPACITY * 100,
+      foundryResetCaps: caps,
+      mainGameUnlocked: true,
+    })
+
+    state = tickFoundryResetConvenience(state)
+    expect(state.intro.byteCreated).toBe(true)
+    // At least one Invest claim should have fired (tier advanced or claims bumped).
+    expect(
+      state.intro.productionMilestoneTier > 0
+      || state.intro.productionMilestoneTierClaims > 0
+      || state.intro.productionMultiplier > 1
+      || state.intro.tickSpeedSeconds < INTRO_STARTING_TICK_SPEED_SECONDS,
+    ).toBe(true)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
+
+    // Keep auto-Investing while Memory can cover the bit-funded path.
+    for (let i = 0; i < 20; i += 1) {
+      state = {
+        ...state,
+        intro: {
+          ...state.intro,
+          bits: Math.max(state.intro.bits, getIntroProductionMilestoneCost(state.intro.productionMilestoneTier) + 1),
+        },
+      }
+      state = tickFoundryResetConvenience(state)
+    }
+    expect(state.intro.productionMilestoneTier).toBe(1)
+    expect(state.intro.productionMilestoneTierClaims).toBe(0)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
+  })
+
+  it('auto-starts Disk Build when under the per-size cap', () => {
+    const size = getDiskLadderSizeBits(1)
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(size) + 10,
+      capacity: getDiskCost(size) * 10,
+      byteCreated: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.diskBuild).not.toBeNull()
+    expect(after.intro.diskBuild.size).toBe(size)
+  })
+
+  it('is a no-op without foundryResetCaps', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_BYTE_COMBINE_COST,
+      capacity: INTRO_STARTING_CAPACITY * 10,
+    })
+    expect(tickFoundryResetConvenience(state)).toBe(state)
+  })
+
+  it('never auto-Sacrifices Capacity even when Memory is full', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: {},
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 })
 

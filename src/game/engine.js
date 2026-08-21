@@ -319,6 +319,10 @@ export const createInitialGameState = () => ({
     // 9 = Megacomputers) for the sequential Bandwidth-via-compute sacrifice. Resets to 0 when
     // Sacrifice rolls back compute-funded Bandwidth.
     computeBandwidthSacrificeIndex: 0,
+    // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Invest /
+    // Bandwidth, Disk Build) after a Foundry wipe. null when inactive. Capacity is never replayed.
+    // Survives Prestige like other permanent intro fields; cleared only by a full save Reset.
+    foundryResetCaps: null,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
     // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
@@ -1101,7 +1105,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
   const stateAfterStorage = tickDiskAutoFill(stateAfterQueuedCapacity)
-  const stateAfterComputeCores = tickComputeCoreConversion(stateAfterStorage)
+  // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps —
+  // Bandwidth ranks above Compute, so this runs before Core conversion can claim a full Memory bar.
+  const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
+  const stateAfterComputeCores = tickComputeCoreConversion(stateAfterFoundryConvenience)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
   // AUTO_MERGE_TICKERS and issue #321. Each ticker both auto-starts a reserve merge (once that
@@ -3375,37 +3382,128 @@ export const buyGlobalTickspeedMultiplier = state => {
 // this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
 // tiers, not to change what Prestige/Speed Up themselves do.
 
+// Snapshot of Foundry upgrade progress used as a high-water cap for resetByteFoundry's
+// convenience auto-replay (see tickFoundryResetConvenience). Capacity is deliberately omitted.
+export const captureFoundryUpgradeCaps = intro => {
+  const disksBuiltTotal = intro?.disksBuiltTotal ?? {}
+  const diskCaps = {}
+  for (const [sizeKey, count] of Object.entries(disksBuiltTotal)) {
+    const n = Math.max(0, Math.floor(clampNonNegative(count)))
+    if (n > 0) diskCaps[sizeKey] = n
+  }
+  return {
+    byteCreated: intro?.byteCreated === true,
+    productionMilestoneTier: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTier ?? 0))),
+    productionMilestoneTierClaims: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTierClaims ?? 0))),
+    disksBuiltTotal: diskCaps,
+  }
+}
+
+// Merge two cap snapshots, taking the max progress on each axis (Invest lexicographic; per-size
+// disk build counts). null/undefined sides are treated as empty.
+export const mergeFoundryUpgradeCaps = (a, b) => {
+  const left = a ?? captureFoundryUpgradeCaps(null)
+  const right = b ?? captureFoundryUpgradeCaps(null)
+  const leftAhead =
+    left.productionMilestoneTier > right.productionMilestoneTier
+    || (left.productionMilestoneTier === right.productionMilestoneTier
+      && left.productionMilestoneTierClaims >= right.productionMilestoneTierClaims)
+  const invest = leftAhead
+    ? {
+      productionMilestoneTier: left.productionMilestoneTier,
+      productionMilestoneTierClaims: left.productionMilestoneTierClaims,
+    }
+    : {
+      productionMilestoneTier: right.productionMilestoneTier,
+      productionMilestoneTierClaims: right.productionMilestoneTierClaims,
+    }
+  const diskCaps = { ...left.disksBuiltTotal }
+  for (const [sizeKey, count] of Object.entries(right.disksBuiltTotal ?? {})) {
+    diskCaps[sizeKey] = Math.max(diskCaps[sizeKey] ?? 0, count)
+  }
+  return {
+    byteCreated: left.byteCreated || right.byteCreated,
+    ...invest,
+    disksBuiltTotal: diskCaps,
+  }
+}
+
+const isInvestProgressBelowCap = (intro, caps) => {
+  const tier = intro?.productionMilestoneTier ?? 0
+  const claims = intro?.productionMilestoneTierClaims ?? 0
+  const capTier = caps.productionMilestoneTier ?? 0
+  const capClaims = caps.productionMilestoneTierClaims ?? 0
+  if (tier < capTier) return true
+  if (tier > capTier) return false
+  return claims < capClaims
+}
+
+const isDiskBuildBelowCap = (state, caps) => {
+  const size = getDiskSize(state)
+  const built = state.intro?.disksBuiltTotal?.[size] ?? 0
+  const cap = caps.disksBuiltTotal?.[String(size)] ?? caps.disksBuiltTotal?.[size] ?? 0
+  return built < cap
+}
+
+// Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
+const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
+
+// Convenience auto-clicker after resetByteFoundry: while foundryResetCaps is set, press Combine,
+// bit-funded Invest / Bandwidth, and Disk Build whenever their normal turn gates allow — capped
+// at the pre-reset highs. Capacity / Sacrifice is never auto-pressed. Same-reference no-op when
+// caps are inactive or nothing is eligible. Called from tickGame after Disk auto-fill.
+export const tickFoundryResetConvenience = state => {
+  const caps = state.intro?.foundryResetCaps
+  if (!caps) return state
+
+  let next = state
+  let changed = false
+
+  if (caps.byteCreated && !next.intro.byteCreated) {
+    const combined = combineIntroByte(next)
+    if (combined !== next) {
+      next = combined
+      changed = true
+    }
+  }
+
+  for (let step = 0; step < FOUNDRY_RESET_CONVENIENCE_MAX_STEPS; step += 1) {
+    if (!isInvestProgressBelowCap(next.intro, caps)) break
+    const invested = pickIntroProductionMilestone(next)
+    if (invested === next) break
+    next = invested
+    changed = true
+  }
+
+  if (isDiskBuildBelowCap(next, caps)) {
+    const built = startDiskBuild(next)
+    if (built !== next) {
+      next = built
+      changed = true
+    }
+  }
+
+  return changed ? next : state
+}
+
 // Settings → Danger zone "Reset Byte Foundry" — for when Capacity (and the Storage/Compute that
-// came with it) was pushed too far. Wipes Memory, Capacity (back to INTRO_STARTING_CAPACITY), the
-// Capacity-upgrade queue, Disks/Storage, and the entire Compute ladder + boosts + auto-claim/
-// auto-merge unlocks + reveal latches. Leaves every non-intro field untouched (Tiers, Prestige,
-// automations, …).
-//
-// Non-Capacity Foundry upgrades are auto-restored free of Memory cost, capped at whatever the
-// player had already earned before this reset: Combine (`byteCreated`) and Invest / Bandwidth
-// (`tickSpeedSeconds` / `productionMultiplier` / `productionMilestoneTier` /
-// `productionMilestoneTierClaims`). Capacity itself is never restored — that is the point of the
-// action. Preserves `intro.mainGameUnlocked` when already true so Tiers stays reachable.
+// came with it) was pushed too far. Wipes Memory, Capacity, Disks/Storage, Compute, and every
+// Foundry upgrade (Combine / Invest / Bandwidth multipliers restart from scratch). Records
+// high-water caps in intro.foundryResetCaps so tickFoundryResetConvenience can auto-press those
+// upgrade/build buttons again up to the prior highs — Capacity stays manual. Preserves
+// mainGameUnlocked when already true. Leaves every non-intro field untouched.
 export const resetByteFoundry = state => {
   const initialIntro = createInitialGameState().intro
   const prev = state.intro ?? {}
   const keepMainUnlocked = prev.mainGameUnlocked === true
+  const foundryResetCaps = mergeFoundryUpgradeCaps(prev.foundryResetCaps, captureFoundryUpgradeCaps(prev))
 
   return {
     ...state,
     intro: {
       ...initialIntro,
       mainGameUnlocked: keepMainUnlocked,
-      // Auto-replay Combine + Invest up to the pre-reset high-water marks (Capacity excluded).
-      byteCreated: prev.byteCreated === true,
-      tickSpeedSeconds: Number.isFinite(prev.tickSpeedSeconds) && prev.tickSpeedSeconds > 0
-        ? prev.tickSpeedSeconds
-        : initialIntro.tickSpeedSeconds,
-      productionMultiplier: Number.isFinite(prev.productionMultiplier) && prev.productionMultiplier >= 1
-        ? prev.productionMultiplier
-        : initialIntro.productionMultiplier,
-      productionMilestoneTier: Math.max(0, Math.floor(clampNonNegative(prev.productionMilestoneTier ?? 0))),
-      productionMilestoneTierClaims: Math.max(0, Math.floor(clampNonNegative(prev.productionMilestoneTierClaims ?? 0))),
+      foundryResetCaps,
     },
   }
 }
@@ -3459,6 +3557,9 @@ export const prestigeGame = state => {
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
       computeFundedBandwidthClaims: state.intro?.computeFundedBandwidthClaims ?? initial.intro.computeFundedBandwidthClaims,
       computeBandwidthSacrificeIndex: state.intro?.computeBandwidthSacrificeIndex ?? initial.intro.computeBandwidthSacrificeIndex,
+      // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps
+      // working after a real Prestige cycle; cleared only by a full save Reset.
+      foundryResetCaps: state.intro?.foundryResetCaps ?? initial.intro.foundryResetCaps,
       // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
       // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its
