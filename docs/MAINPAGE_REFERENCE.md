@@ -952,8 +952,8 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (just
 `TierName`'s tier symbol now — see "No per-tier automation icon on the Game view row" above for the
-two badges that used to also share this area), then the production figure and the owned count — in
-that order, production first — on the
+two badges that used to also share this area), then the owned count and the production figure — in
+that order, owned first — on the
 top line, then the tickspeed multiplier button and Buy (each spanning two of four equal-width tracks) on
 the middle line, then a third `details`-area line spanning all four tracks. There is no separate
 `autobuyer` grid row/line — an earlier version gave the autobuyer status badge its own row, then later
@@ -961,7 +961,7 @@ folded it into the icon-only badge sharing the `name` area (freeing that vertica
 single glyph needs no row of its own) before removing the badge from this view entirely.
 `ProductionText` sits in the wider (1.3fr) track and `OwnedText`
 in the narrower (0.7fr) one, matching their typical content length, with `text-align: right` on
-whichever one is currently rightmost (`OwnedText`) so it hugs the row's edge. Below `40rem`, only
+whichever one is currently rightmost (`ProductionText`) so it hugs the row's edge. Below `40rem`, only
 fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`)
 — assert via `toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width:
 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets

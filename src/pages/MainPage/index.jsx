@@ -84,10 +84,10 @@ const reveal = keyframes`
 // Top line: name (+ compact tickspeed multiplier badge and, once unlocked, the icon-only
 // autobuyer status indicator — see MainPage — both sharing the first two tracks, the width the
 // PP-based Automate control used to occupy before it moved to the PP Upgrades page), the
-// production figure, then the owned count — production sits left of owned (not the other way
-// around) so the row reads "what it makes" before "how many you have"; the wider track (1.3fr)
-// follows production's spot since that figure tends to run longer (e.g. currency strings) and the
-// narrower one (0.7fr) follows owned's. Middle line: just the two buttons, each spanning two of
+// owned count, then the production figure — owned sits left of production so the row reads
+// "how many you have" before "what it makes"; the wider track (1.3fr) follows production's
+// spot since that figure tends to run longer (e.g. currency strings) and the narrower one
+// (0.7fr) follows owned's. Middle line: just the two buttons, each spanning two of
 // the four tracks — the track pairs sum equally (col1+col2 = col3+col4) so the tickspeed
 // multiplier button and Buy each take exactly half the row's width, unaffected by how the top
 // row's own two tracks are split between them. Buy sits rightmost, not the tickspeed button — Buy
@@ -107,10 +107,10 @@ const reveal = keyframes`
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name production owned'
+    'name name owned production'
     'upgrade upgrade buy buy'
     'details details details details';
-  grid-template-columns: 1.4fr 0.6fr 1.3fr 0.7fr;
+  grid-template-columns: 1.4fr 0.6fr 0.7fr 1.3fr;
   align-items: center;
   column-gap: 0.5rem;
   row-gap: 0.3rem;
@@ -595,7 +595,6 @@ const OwnedText = styled(MutedText)`
   grid-area: owned;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
-  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
@@ -607,6 +606,7 @@ const ProductionText = styled(MutedText)`
   grid-area: production;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
