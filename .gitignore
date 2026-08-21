@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 bower_components/
+# Yarn Classic is the only package manager — ignore npm's lockfile so an accidental
+# `npm install` cannot reintroduce it alongside yarn.lock (see CLAUDE.md Tech stack).
+package-lock.json
 
 # Build output
 /build
