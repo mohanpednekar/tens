@@ -2832,25 +2832,64 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
-    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB).
-    expect(screen.getByText('Cache — 1 Kb each')).toBeInTheDocument()
+    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Cache caption
+    // also names the manual-only Tiers Bits transfer path.
+    expect(screen.getByText('Cache — 1 Kb each (tap full → Tiers Bits)')).toBeInTheDocument()
     expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
   })
 
-  test('the Cache/Disks detail row hides on ByteFoundryPage once the current size isn\'t redeemable by any tier — the Build button stays visible/usable regardless', () => {
-    // The ladder has advanced past currentBankSize (10 built), so the currently-offered size is
-    // now futureBankSize (tier01 level 2's cost) — but tier01 (and every other tier) is still at
-    // its default level 1, well below that cost, so nothing currently matches it.
+  test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
+    // 10 built at 1 KB advances the Build offer to 10 KB (not yet matching any tier at level 1),
+    // but the 1 KB array still matches Kilobytes — it must stay on Foundry Memory while relevant.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      disks: { [currentBankSize]: 1 },
     })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
+    expect(screen.getByText(/Disks — 1 KB each/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    expect(screen.getByText(/Tap a full disk → 1 free Kilobytes/i)).toBeInTheDocument()
+  })
+
+  test('the Cache/Disks detail rows hide on ByteFoundryPage once no shown size is redeemable by any tier — the Build button stays visible/usable regardless', () => {
+    // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    seedIntroState(
+      {
+        bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      },
+      { purchaseLevels: { [tier01.id]: 3 } }
+    )
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /disk array cache/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/^Cache —/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Disks —/)).not.toBeInTheDocument()
+  })
+
+  test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
+    vi.useFakeTimers()
+
+    seedIntroState(
+      {
+        bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: 1 },
+        disks: { [currentBankSize]: 1 },
+      },
+      { autobuyers: { [tier01.id]: 1 } }
+    )
+    const { unmount } = render(<App />)
+
+    const autoButton = screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })
+    expect(autoButton).toBeDisabled()
+    expect(screen.getByText(/Auto-redeem → Kilobytes \(autobuyer on\)/i)).toBeInTheDocument()
+
+    unmount()
+    vi.useRealTimers()
   })
 
   test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {
@@ -2950,10 +2989,11 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })).toBeDisabled()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
+    expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)

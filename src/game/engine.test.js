@@ -36,6 +36,10 @@ import {
   isStorageUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
+  queueIntroCapacityUpgrade,
+  clearIntroCapacityUpgradeQueue,
+  eraseAllComputeTokens,
+  tickQueuedCapacityUpgrade,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
@@ -61,6 +65,7 @@ import {
   getDiskRedeemTierName,
   getDiskSize,
   getDiskSizesToShow,
+  getRelevantDiskSizesForFoundry,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
@@ -122,6 +127,8 @@ import {
   isDiskBuildAvailable,
   isDiskBuildTurnAvailable,
   isDiskCacheBlockReleasable,
+  isDiskAutoRedeemEligible,
+  isDiskManualRedeemAvailable,
   isDiskFillAvailable,
   isDiskRedeemable,
   isGlobalTickspeedMultiplierUnlocked,
@@ -684,6 +691,100 @@ describe('pickIntroCapacityMilestone', () => {
     )
     expect(isProductionFrozen(state)).toBe(true)
     expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+  })
+
+  it('clears capacityUpgradeQueued on a successful manual Sacrifice', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true, ...noOtherUpgradesLeft,
+    })
+    expect(pickIntroCapacityMilestone(state).intro.capacityUpgradeQueued).toBe(false)
+  })
+})
+
+describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
+  it('queues before Memory is full and is idempotent while already queued', () => {
+    const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+    const queued = queueIntroCapacityUpgrade(state)
+    expect(queued.intro.capacityUpgradeQueued).toBe(true)
+    expect(queueIntroCapacityUpgrade(queued)).toBe(queued)
+  })
+
+  it('clearIntroCapacityUpgradeQueue clears the flag', () => {
+    const queued = queueIntroCapacityUpgrade(createInitialGameState())
+    const cleared = clearIntroCapacityUpgradeQueue(queued)
+    expect(cleared.intro.capacityUpgradeQueued).toBe(false)
+    expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
+  })
+
+  it('fires when full: erases Compute tokens, Sacrifices, and clears the queue — even if Boosts are available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      capacityUpgradeQueued: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      // Mid-build so Disk Build is unavailable while Memory stays full.
+      diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
+      computeCores: 5,
+      computeNodes: 3,
+      computeBoostType: null,
+    })
+    // Holding Cores makes Burst activatable → normal Sacrifice would be blocked.
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+    const after = tickQueuedCapacityUpgrade(state)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+  })
+
+  it('is a no-op while Memory is not yet full', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY - 1,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+    })
+    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
+  })
+
+  it('still yields to Disk Fill / Bandwidth / Disk Build while queued', () => {
+    const investable = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+      productionMilestoneTierClaims: 0,
+    })
+    expect(tickQueuedCapacityUpgrade(investable)).toBe(investable)
+  })
+})
+
+describe('eraseAllComputeTokens', () => {
+  it('wipes ladder balances and an active Boost, leaving unlock flags alone', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 4,
+      computeNodes: 2,
+      autoClaimCoreEnabled: true,
+      autoMergeCoresIntoNode: true,
+      computeCoresEverEarned: 20,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 30,
+      computeCoresMergeRemainingSeconds: 15,
+    })
+    const after = eraseAllComputeTokens(state)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0)
+    expect(after.intro.autoClaimCoreEnabled).toBe(true)
+    expect(after.intro.autoMergeCoresIntoNode).toBe(true)
+    expect(after.intro.computeCoresEverEarned).toBe(20)
   })
 })
 
@@ -1327,6 +1428,43 @@ describe('getDiskSizesToShow', () => {
   })
 })
 
+describe('getRelevantDiskSizesForFoundry', () => {
+  it('includes the currently-offered size when tier01\'s level-1 cost matches it', () => {
+    const state = createInitialGameState()
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
+  })
+
+  it('keeps an older built size while it still matches a tier cost, even after the ladder advances', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
+  })
+
+  it('returns empty once no shown size matches any tier\'s current cost', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+      }),
+      tensTier.id,
+      3
+    )
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([])
+  })
+
+  it('lists multiple matching sizes ascending (smallest first)', () => {
+    const megabyteDiskSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [megabyteDiskSize]: 1 },
+    })
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, megabyteDiskSize])
+  })
+})
+
 describe('startDiskBuild', () => {
   // Disk Build ranks below Bandwidth in the Byte Foundry's forced priority order (see
   // isDiskBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable at
@@ -1727,6 +1865,21 @@ describe('redeemDisk', () => {
     expect(redeemDisk(level2Size)(state)).toBe(state)
   })
 
+  it('does not sync-fill after a manual redeem — Forced Priority can hand Memory to Bandwidth first', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: {},
+    })
+    const after = redeemDisk(FIRST_DISK_SIZE)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    // Emptied, but Memory is left intact for Bandwidth/Invest rather than pulled into cache here.
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
     const state = withMoney(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), PRESTIGE_THRESHOLD)
     expect(isProductionFrozen(state)).toBe(true)
@@ -1741,6 +1894,37 @@ describe('redeemDisk', () => {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
     expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+})
+
+describe('isDiskAutoRedeemEligible / isDiskManualRedeemAvailable', () => {
+  it('manual redeem is available for a full matching disk when the tier has no autobuyer', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('auto-redeem is eligible once the matching tier\'s autobuyer is unlocked and enabled', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }),
+      tensTier.id,
+      1
+    )
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('falls back to manual after that size has already auto-redeemed this cycle', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskAutoRedeemedSizes: { [FIRST_DISK_SIZE]: true },
+      }),
+      tensTier.id,
+      1
+    )
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(true)
   })
 })
 
@@ -2734,6 +2918,31 @@ describe('tickGame Disk auto-redeem integration', () => {
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+  })
+
+  it('refills that size\'s cache ASAP after auto-redeem when Memory and an empty container remain', () => {
+    // Exercise the same redeem-then-fill composition tickGame's tickStorage uses (scoped to a
+    // real redeem change). Avoid full tickGame here — tickIntroAutoInvest would spend the same
+    // Memory toward Kilobytes before auto-redeem runs.
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        bits: FIRST_DISK_SIZE,
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskCache: {},
+      }),
+      tensTier.id,
+      1
+    )
+    const afterRedeem = tickDiskAutoRedeem(state)
+    expect(afterRedeem).not.toBe(state)
+    expect(afterRedeem.owned[tensTier.id]).toBe(1)
+    expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
+    expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+
+    const afterFill = tickDiskAutoFill(afterRedeem)
+    expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(afterFill.intro.bits).toBe(0)
   })
 
   // Regression: tickDiskAutoRedeem used to only run after tickGame's normal (non-frozen) path, so

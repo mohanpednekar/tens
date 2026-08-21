@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
+  `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
+  available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active
+  Boost, in-flight merge timers — not permanent auto-claim/auto-merge unlocks) and performs the
+  ×10 Capacity Sacrifice, so Compute cannot starve a committed Capacity upgrade. Clears on Prestige.
 - **Supporter pack** (Settings): optional meta extras — extra save slots (1 free → 3), Prestige
   museum (history + pins), and Ops dashboard sparklines. Unlock via placeholder code `TENS-SUPPORT`
   or a **dummy checkout** button until real payment ships. Never changes Bits, PP, Disks, Compute,
@@ -43,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   **4×** (was 8×) and **no longer extends duration** — every tier uses the base Burst / Standard /
   Sustain length. Limited slots already make not-merging wasteful, and auto-merge adds dedicated
   reserve slots, so effect-only scaling is enough.
+- **Foundry Disk/Cache rows**: Memory tab lists every currently transferable size (tier cost
+  matches), ascending smallest→largest — not only the ladder’s current build size — and hides when
+  none remain relevant. Cache caption/aria make the manual-only “tap full → Tiers Bits” path
+  obvious; full disks show a clear auto-redeem (matching tier autobuyer on — not clickable) vs
+  tap-to-redeem affordance. After auto-redeem, that size’s cache can refill ASAP the same tick
+  when Memory allows (manual redeem leaves Memory for Forced Priority / Bandwidth first).
 - **Reset** appears only under **Settings → Danger zone** (More → Settings). Removed from the More
   sheet and from the bottom of the Tiers / MainPage screen.
 - **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play

@@ -311,6 +311,13 @@ export const createInitialGameState = () => ({
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
+    // Resets every real Prestige. When true, the next time Memory is full (and Disk Fill /
+    // Bandwidth / Disk Build are not available), tickQueuedCapacityUpgrade / the queued fire path
+    // erases all held Compute tokens (ladder balances + active boost + in-flight merge timers)
+    // and performs Sacrifice for 10x Capacity — bypassing the normal "Compute blocks Capacity"
+    // forced-priority gate so Capacity can be committed before the bar is full and not starved
+    // by Core claims / Boosts. See queueIntroCapacityUpgrade/eraseAllComputeTokens.
+    capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
     // exactly like the Byte generator itself (a full disk's contents ride through a real Prestige
@@ -1061,7 +1068,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
-  const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
+  // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
+  // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
+  const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
+  const stateAfterStorage = tickDiskAutoFill(stateAfterQueuedCapacity)
   const stateAfterComputeCores = tickComputeCoreConversion(stateAfterStorage)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
@@ -1088,7 +1098,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // since it has no such dependency on any tier's level. A same-reference no-op when nothing
   // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
   // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
-  const tickStorage = tickDiskAutoRedeem
+  // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
+  // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
+  // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
+  // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
+  // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
+  // docs/DESIGN_HISTORY.md).
+  const tickStorage = state => {
+    const afterRedeem = tickDiskAutoRedeem(state)
+    return afterRedeem === state ? state : tickDiskAutoFill(afterRedeem)
+  }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
@@ -1547,12 +1566,103 @@ export const isMemoryCapacityUpgradeAvailable = state => {
 // "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
 // availability gate (Memory full AND no other currently-possible action left to take first).
 // Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op
-// otherwise.
+// otherwise. Clears capacityUpgradeQueued on success (a manual Sacrifice also consumes any queue).
 export const pickIntroCapacityMilestone = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
   return {
     ...state,
-    intro: { ...state.intro, bits: 0, capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER },
+    intro: {
+      ...state.intro,
+      bits: 0,
+      capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
+  }
+}
+
+// Commit to the next Sacrifice before Memory is full — prevents Compute (Core claim / Boosts)
+// from starving Capacity once the bar fills. Idempotent while already queued. Cleared on Prestige
+// (fresh intro default), on a successful Sacrifice (manual or queued), or via
+// clearIntroCapacityUpgradeQueue.
+export const queueIntroCapacityUpgrade = state => {
+  if (state.intro?.capacityUpgradeQueued) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
+}
+
+export const clearIntroCapacityUpgradeQueue = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: false } }
+}
+
+const COMPUTE_MERGE_TIMER_FIELDS = [
+  'computeCoresMergeRemainingSeconds',
+  'computeNodesMergeRemainingSeconds',
+  'computeClustersMergeRemainingSeconds',
+  'computeNetworksMergeRemainingSeconds',
+  'computeGridsMergeRemainingSeconds',
+  'computeFabricsMergeRemainingSeconds',
+  'computeCloudsMergeRemainingSeconds',
+  'computeDatacentersMergeRemainingSeconds',
+  'computeSupercomputersMergeRemainingSeconds',
+]
+
+// Wipes every held Compute ladder token, any active Boost, and any in-flight reserve-merge timers.
+// Does NOT touch permanent unlock flags (autoClaimCoreEnabled / autoMerge*) or lifetime counters
+// (computeCoresEverEarned / computeMergePageUnlocked). Same-reference no-op when nothing to wipe.
+export const eraseAllComputeTokens = state => {
+  const intro = state.intro ?? {}
+  let changed = false
+  const next = { ...intro }
+  for (const field of COMPUTE_BOOST_TIER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  for (const field of COMPUTE_MERGE_TIMER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  if ((next.computeBoostType ?? null) !== null) {
+    next.computeBoostType = null
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  } else if ((next.computeBoostStacks ?? 0) !== 0 || (next.computeBoostRemainingSeconds ?? 0) !== 0) {
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  }
+  if (!changed) return state
+  return { ...state, intro: next }
+}
+
+// Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
+// except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
+// tokens (the queued-Sacrifice penalty), then Sacrifices — bypassing isComputeUpgradeAvailable so
+// Boosts / Core-claim eligibility cannot starve a committed Capacity upgrade. Called from
+// tickGame after intro production (and from attentive UIs/bots). Same-reference no-op otherwise.
+export const tickQueuedCapacityUpgrade = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
+  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return state
+  if (isDiskFillAvailable(state)) return state
+  if (isBandwidthAvailable(state)) return state
+  if (isDiskBuildAvailable(state)) return state
+
+  const erased = eraseAllComputeTokens(state)
+  return {
+    ...erased,
+    intro: {
+      ...erased.intro,
+      bits: 0,
+      capacity: erased.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
   }
 }
 
@@ -2096,7 +2206,9 @@ export const getDiskRedeemTierName = (state, capacityBits) =>
 // rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
 // tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
 // empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
-// fill again later. No-op if no disk of that size is currently full, if that size's array is
+// fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
+// sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
+// Priority). No-op if no disk of that size is currently full, if that size's array is
 // currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
 // (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
@@ -2122,6 +2234,35 @@ export const redeemDisk = capacityBits => state => {
 const isTierAutobuyerActive = (state, tierId) =>
   (state.autobuyers?.[tierId] ?? null) !== null && (state.autobuyersEnabled?.[tierId] ?? true)
 
+// True when a full disk of `capacityBits` will auto-redeem on the next tickDiskAutoRedeem /
+// tickGame pass: currently full, not mid-build, not already auto-redeemed this Prestige cycle,
+// and the matching tier's unit-buying autobuyer is unlocked and unpaused. DiskArrayRow uses this
+// to visually distinguish "will auto-redeem" from "tap to redeem" (manual — matching tier has no
+// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks are
+// never auto-transferred — only manual releaseDiskCacheBlock moves them into Bits for Tiers.
+export const isDiskAutoRedeemEligible = (state, capacityBits) => {
+  if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
+  if (state.intro?.diskBuild?.size === capacityBits) return false
+  if (state.intro?.diskAutoRedeemedSizes?.[capacityBits]) return false
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  return tier !== undefined && isTierAutobuyerActive(state, tier.id)
+}
+
+// True when a full disk of `capacityBits` is redeemable right now but will NOT auto-redeem — the
+// player must click (see redeemDisk). Complementary to isDiskAutoRedeemEligible for UI affordances.
+export const isDiskManualRedeemAvailable = (state, capacityBits) =>
+  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
+  state.intro?.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits) &&
+  !isDiskAutoRedeemEligible(state, capacityBits)
+
+// Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
+// whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
+// that tier). Ascending — Cache then Disks of each row render smallest→largest. Empty when
+// nothing is transferable; the Build button stays independent of this list.
+export const getRelevantDiskSizesForFoundry = state =>
+  getDiskSizesToShow(state).filter(size => getDiskRedeemTierName(state, size) !== null)
+
 // Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
 // getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active
 // (see isTierAutobuyerActive above), or that matches no tier at all right now: "whenever there is
@@ -2137,7 +2278,9 @@ const isTierAutobuyerActive = (state, tierId) =>
 // this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
 // eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
 // branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
-// level for the tick, not a stale mid-tick one.
+// level for the tick, not a stale mid-tick one. tickGame re-runs tickDiskAutoFill only when this
+// actually changes state, so the emptied container's cache can top up ASAP the same tick when
+// Memory allows — without a trailing fill on every no-op pass.
 export const tickDiskAutoRedeem = state => {
   const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
   const buildingSize = state.intro.diskBuild?.size

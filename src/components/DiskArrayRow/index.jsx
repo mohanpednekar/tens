@@ -1,15 +1,24 @@
-import { formatCacheSize, formatDiskSize, getDiskRedeemTierName, isDiskCacheBlockReleasable } from 'game/engine'
+import {
+  formatCacheSize,
+  formatDiskSize,
+  getDiskRedeemTierName,
+  isDiskAutoRedeemEligible,
+  isDiskCacheBlockReleasable,
+  isDiskManualRedeemAvailable,
+} from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 
 // One size's own cache-blocks-plus-disk-squares detail: a "Cache" row (see CacheBlocksRow below)
-// followed by a "Disks" row — a fixed DISK_ARRAY_LADDER_CAP-long strip read together as one
-// progress bar: currently FULL (leftmost, clickable once redeemable), then built-but-EMPTY —
-// constructed, waiting for its cache to pour into it (see tickDiskAutoFill in engine.js) — then
-// not-yet-built placeholders (rightmost). Each row carries its own RowLabel caption naming its
-// own per-item size, in its own correct unit scale (see RowLabel below), and the two shapes
-// deliberately differ (round disks vs. square cache blocks — see DiskSquare/CacheBlock below), so
-// which row is which reads at a glance rather than as one undifferentiated strip of squares.
+// followed immediately by a "Disks" row of the same size — Cache first, Disks of that row right
+// after (smallest→largest across sizes is the caller's job). A fixed DISK_ARRAY_LADDER_CAP-long
+// strip read together as one progress bar: currently FULL (leftmost, clickable once redeemable),
+// then built-but-EMPTY — constructed, waiting for its cache to pour into it (see tickDiskAutoFill
+// in engine.js) — then not-yet-built placeholders (rightmost). Each row carries its own RowLabel
+// caption naming its own per-item size, in its own correct unit scale (see RowLabel below), and
+// the two shapes deliberately differ (round disks vs. square cache blocks — see DiskSquare/
+// CacheBlock below), so which row is which reads at a glance rather than as one undifferentiated
+// strip of squares.
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -33,6 +42,15 @@ const RowLabel = styled.p`
   color: ${props => props.theme.color.textMuted};
 `
 
+// Short status under the Disks row when a full disk is actionable — makes auto vs manual redeem
+// obvious without relying on square color alone (Cache never auto-transfers; only Disks do).
+const ActionHint = styled.p`
+  align-self: flex-start;
+  margin: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => (props.$auto ? props.theme.color.info : props.theme.color.good)};
+`
+
 // Shown in place of the cache/disk rows while this size's array is mid-build (see intro.diskBuild
 // in engine.js) — every IO operation against it is disallowed for the build's duration, so the
 // interactive rows are replaced by a plain status line rather than rendered disabled-but-visible.
@@ -49,32 +67,44 @@ const SquaresRow = styled.div`
   width: 100%;
 `
 
+const manualPulse = keyframes`
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+`
+
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
 // mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
 // squares always stretches to fill the full row rather than staying small and centered with
 // leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
 // CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
-// disk is round; a cache/memory block is square) rather than as one undifferentiated strip. $full
-// (currently holding its cache's poured contents, awaiting redeem — accent border, filled green
-// once $redeemable, a duller raised fill otherwise, clickable only when both $full and
-// $redeemable) takes priority over $empty (built but not yet poured into by the array's cache — a
-// dim muted-bordered fill, distinct from the plain not-yet-built placeholder below it) over the
-// plain not-yet-built placeholder (transparent, outline only, disabled).
+// disk is round; a cache/memory block is square). $full takes priority over $empty over the plain
+// not-yet-built placeholder. Among full disks: $autoRedeem (info/blue — matching tier autobuyer
+// will take it) vs $manualRedeem (good/green + pulse — player must tap) vs merely redeemable-
+// looking but not yet full.
 const DiskSquare = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
   border-radius: 50%;
   border: 1.5px solid ${props =>
-    props.$full ? props.theme.color.accent : props.$empty ? props.theme.color.textMuted : props.theme.color.surfaceSunken};
+    props.$full
+      ? props.theme.color.accent
+      : props.$empty
+        ? props.theme.color.textMuted
+        : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
-      ? (props.$redeemable ? props.theme.color.good : props.theme.color.surfaceRaised)
+      ? (props.$manualRedeem
+        ? props.theme.color.good
+        : props.$autoRedeem
+          ? props.theme.color.info
+          : props.theme.color.surfaceRaised)
       : props.$empty
         ? props.theme.color.surfaceSunken
         : 'transparent'};
-  cursor: ${props => (props.$full && props.$redeemable ? 'pointer' : 'default')};
+  cursor: ${props => (props.$full && props.$manualRedeem ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
+  animation: ${props => (props.$manualRedeem ? manualPulse : 'none')} 1.4s ease-in-out infinite;
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -86,6 +116,7 @@ const DiskSquare = styled.button`
 
   &:disabled {
     cursor: not-allowed;
+    animation: none;
   }
 `
 
@@ -95,8 +126,8 @@ const DiskSquare = styled.button`
 // Memory tops the cache up (see tickDiskAutoFill in engine.js) before any of it pours into an empty
 // disk container below. A full block ($full) can be manually released ($releasable — accent
 // border, clickable) only while some tier's current per-unit cost matches this array's size,
-// crediting that block's bits straight into resources.base (the shared Bits currency) rather than
-// generic Memory.
+// crediting that block's bits straight into resources.base (the shared Bits currency on Tiers) —
+// never auto-transferred; Cache → Tiers is always a manual tap.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -128,9 +159,8 @@ const CacheBlock = styled.button`
 `
 
 // One Disk array's full interactive detail (cache release, redeem) for a single `size` — shared by
-// ByteFoundryPage (the single currently-active/buildable size only) and StoragePage (every size
-// ever reached), so the detail reads and behaves identically wherever it's shown rather than
-// StoragePage having its own copy and ByteFoundryPage settling for a lifeless text summary. See
+// ByteFoundryPage (every currently-relevant/redeemable size, ascending) and StoragePage (every
+// size ever reached), so the detail reads and behaves identically wherever it's shown. See
 // CLAUDE.md's "Byte Foundry"/"Economy model" sections. Redeeming/releasing are both unaffected by
 // the Byte Foundry's forced priority order (Disk Fill ranks highest — see isDiskFillAvailable in
 // engine.js), so nothing here is ever disabled by anything elsewhere in that chain — only by this
@@ -146,6 +176,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const emptyCount = Math.max(0, builtTotal - full)
   const redeemTierName = getDiskRedeemTierName(state, size)
   const redeemable = redeemTierName !== null
+  const autoRedeem = isDiskAutoRedeemEligible(state, size)
+  const manualRedeem = isDiskManualRedeemAvailable(state, size)
   const rebuilding = intro.diskBuild?.size === size
   const cached = intro.diskCache?.[size] ?? 0
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
@@ -164,7 +196,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
         </RebuildingText>
       ) : (
         <>
-          <RowLabel>{`Cache — ${formatCacheSize(blockBits)} each`}</RowLabel>
+          <RowLabel>{`Cache — ${formatCacheSize(blockBits)} each (tap full → Tiers Bits)`}</RowLabel>
           <CacheBlocksRow role="group" aria-label={`${formatDiskSize(size)} disk array cache`}>
             {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
               const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
@@ -175,7 +207,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                   key={index}
                   aria-label={
                     releasable
-                      ? `release ${formatDiskSize(size)} cache block ${index + 1} into Bits`
+                      ? `transfer ${formatDiskSize(size)} cache block ${index + 1} to Tiers Bits`
                       : `${formatDiskSize(size)} cache block ${index + 1}`
                   }
                   disabled={!releasable}
@@ -183,8 +215,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
                   title={
                     isFull
                       ? (releasable
-                        ? `Release this block's ${formatCacheSize(blockBits)} into your Bits balance (credits toward ${redeemTierName})`
-                        : `Redeemable only once some tier's level cost matches ${formatDiskSize(size)}`)
+                        ? `Transfer this block's ${formatCacheSize(blockBits)} to Tiers as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
+                        : `Transferable to Tiers only once some tier's level cost matches ${formatDiskSize(size)}`)
                       : 'Filling from Memory'
                   }
                   type="button"
@@ -207,13 +239,19 @@ const DiskArrayRow = ({ actions, size, state }) => {
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
-          const clickable = isFull && redeemable && !rebuilding
+          // Auto-eligible disks wait for tickDiskAutoRedeem — not clickable, so a tap cannot
+          // bypass the once-per-cycle auto mark or confuse "will auto" with a manual redeem.
+          const clickable = isFull && manualRedeem && !rebuilding
           return (
             <DiskSquare
               key={index}
               aria-label={
                 isFull
-                  ? `redeem ${formatDiskSize(size)} disk`
+                  ? (autoRedeem
+                    ? `auto-redeem ${formatDiskSize(size)} disk for ${redeemTierName}`
+                    : manualRedeem
+                      ? `redeem ${formatDiskSize(size)} disk for ${redeemTierName}`
+                      : `redeem ${formatDiskSize(size)} disk`)
                   : isEmpty
                     ? `empty ${formatDiskSize(size)} disk`
                     : `not yet built ${formatDiskSize(size)} disk`
@@ -224,9 +262,13 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 rebuilding
                   ? 'This array is offline while it rebuilds'
                   : isFull
-                    ? (redeemable
-                      ? `Redeems 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
-                      : `Redeemable once some tier's level cost matches ${formatDiskSize(size)}`)
+                    ? (autoRedeem
+                      ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
+                      : manualRedeem
+                        ? `Tap to redeem 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
+                        : redeemable
+                          ? `Redeems 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
+                          : `Redeemable once some tier's level cost matches ${formatDiskSize(size)}`)
                     : isEmpty
                       ? "Built, waiting for this array's cache to pour into it"
                       : 'Not yet built'
@@ -234,11 +276,23 @@ const DiskArrayRow = ({ actions, size, state }) => {
               type="button"
               $full={isFull}
               $empty={isEmpty}
-              $redeemable={redeemable}
+              $autoRedeem={isFull && autoRedeem}
+              $manualRedeem={isFull && manualRedeem}
             />
           )
         })}
       </SquaresRow>
+
+      {!rebuilding && autoRedeem && (
+        <ActionHint $auto>
+          {`Auto-redeem → ${redeemTierName} (autobuyer on)`}
+        </ActionHint>
+      )}
+      {!rebuilding && manualRedeem && (
+        <ActionHint>
+          {`Tap a full disk → 1 free ${redeemTierName}`}
+        </ActionHint>
+      )}
     </DiskSizeRow>
   )
 }
