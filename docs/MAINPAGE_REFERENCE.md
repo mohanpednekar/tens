@@ -119,8 +119,8 @@ Storage split differently: **Build Disk** stays on this page — its own core-lo
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
 capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
 more deliberate reveal than `revealed`'s own 8000-bit gate above). Its visible label always tracks
-`getDiskSize(state)` — an independent ladder that walks tier01's own per-unit level-cost sequence,
-expressed in real, Byte-accurate bits (`getTierCost(tier01, level) * BITS_PER_BYTE`): 8000 bits/"1
+`getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
+`10^(n-1)`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
 8,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too — and only advances
 once `DISK_ARRAY_LADDER_CAP` (10) disks have ever been built at the current size (`disksBuiltTotal`,

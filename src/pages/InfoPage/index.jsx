@@ -220,8 +220,8 @@ const InfoPage = () => {
           </li>
           <li>
             Up to {DISK_ARRAY_LADDER_CAP} disks can be built at the current size before the ladder
-            advances. Sizes follow {firstTierName}’ own level-cost sequence (skipped prices never
-            appear).
+            advances. Sizes are every Byte power of ten (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …)
+            with no gaps.
           </li>
           <li>The Build button always stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>

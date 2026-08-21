@@ -628,9 +628,10 @@ live indefinitely, every cycle.
 `getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
-tier01-only: a size's ladder (walking tier01's own per-unit level-cost sequence, in real
-Byte-accurate bits — `getTierCost(tier01, level) * BITS_PER_BYTE`, so a "1 KB" disk needs 8000 bits,
-not a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size. Starting
+tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
+`DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → 100 KB → **1 MB** → 10 MB → …, so a "1 KB"
+disk needs 8000 bits, not a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the
+current size. Starting
 a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
 size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
@@ -757,7 +758,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1377 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1378 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy
