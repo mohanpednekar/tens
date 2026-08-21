@@ -20,18 +20,28 @@ REST API, used by Phase 0(c)/Phase B item 2 below, doesn't come back empty or 40
 Dependabot alerts by default for public repos, so no separate manual step is needed for this one).
 
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
-unlimited. The real constraint is Claude usage quota (`CLAUDE_CODE_OAUTH_TOKEN` is subscription-based).
-`autonomous-maintenance.yml` has no fixed `--max-turns` cap — its prompt instead has Claude
-self-estimate, at the start of every run, how much of the rolling 5-hour usage window is likely still
-available and aim to keep that run's work at or under roughly **50%** of a full window's worth of
-effort, recalculated fresh every invocation rather than tuned by hand after failures. 50% is a soft
-target, not a hard limit: it's a self-estimated heuristic (Claude Code has no API to query metered
-window consumption), with no visibility into concurrent usage from `autonomous-pr-followup.yml` or
-interactive sessions, so a modest overshoot is expected and not treated as a failure. See
-`docs/DESIGN_HISTORY.md` for why the earlier fixed-cap approach — and its `25→40→50` retuning
-history, now historical — was replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns
-30` cap, unaffected by this change. Both workflows are naturally self-limited further by the PR-dedup
-guard (below), which caps concurrently-open autonomous PRs.
+unlimited. The real constraint is agent usage quota:
+
+- **Claude** (`CLAUDE_CODE_OAUTH_TOKEN`, subscription-based): `autonomous-maintenance.yml` has no
+  fixed `--max-turns` cap — its prompt instead has Claude self-estimate, at the start of every run,
+  how much of the rolling 5-hour usage window is likely still available and aim to keep that run's
+  work at or under roughly **50%** of a full window's worth of effort, recalculated fresh every
+  invocation rather than tuned by hand after failures. 50% is a soft target, not a hard limit: it's
+  a self-estimated heuristic (Claude Code has no API to query metered window consumption), with no
+  visibility into concurrent usage from `autonomous-pr-followup.yml` or interactive sessions, so a
+  modest overshoot is expected and not treated as a failure. See `docs/DESIGN_HISTORY.md` for why
+  the earlier fixed-cap approach — and its `25→40→50` retuning history, now historical — was
+  replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 30` cap, unaffected by
+  this change.
+- **Cursor** (`CURSOR_API_KEY`, Cursor Pro quota): soft guidance is roughly **~1% of Cursor Pro
+  quota per session** for every Cursor session (interactive, development automation, and
+  housekeeping alike — not planning-only), not a hard limit — size one small coherent unit of work,
+  file non-trivial findings instead of half-implementing, and still reserve overhead for
+  test/commit/push/PR. Development slots may run larger Phase A tasks when needed, but should still
+  prefer staying near that soft target when a smaller slice is viable.
+
+Both engines are naturally self-limited further by the PR-dedup guard (below), which caps
+concurrently-open autonomous PRs.
 
 ### Orchestration model
 
@@ -135,19 +145,28 @@ cancelling an in-progress run mid-task would itself produce an orphaned `claude/
 exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
 avoids causing that unnecessarily rather than trading one race for another failure mode.
 
-**Budget discipline.** Wall-clock time is not a constraint (one task per scheduled run is fine), but Claude
-usage quota is. There's no fixed `--max-turns` cap on this workflow (see "Cost implications" above) —
-instead, before starting whatever task it picks, Claude self-estimates how much of the current rolling
-5-hour usage window is likely still available and roughly sizes the task against a soft ~50% target,
-using elapsed turns/time during the run as the practical signal once underway, and reserving ~15-20% of
-that self-estimated budget for test + commit + push + PR-open overhead. If a task looks too large even
-after buffering, it scopes down rather than risking a runaway run: a Phase A task lands its largest
-coherent, test-covered *slice* first (PR body says `Part of #<number>` instead of `Closes #<number>`,
-plus a `gh issue comment` recording what remains); a Phase B menu task scopes to one coherent sub-area
-and leaves the rest for a future run. Either way, Claude opens the PR as soon as there's a meaningful,
-test-passing first commit and pushes each subsequent commit as it lands. A task issue's
-`size:S`/`size:M`/`size:L` label is advisory context, not a gate. Skipping a task this way is noted in
-reasoning/PR description, not silent.
+**Budget discipline.** Wall-clock time is not a constraint (one task per scheduled run is fine), but
+agent usage quota is:
+
+- **Claude** (`autonomous-maintenance.yml`): no fixed `--max-turns` cap (see "Cost implications"
+  above). Before starting whatever task it picks, Claude self-estimates how much of the current
+  rolling 5-hour usage window is likely still available and roughly sizes the task against a soft
+  ~50% target, using elapsed turns/time during the run as the practical signal once underway, and
+  reserving ~15-20% of that self-estimated budget for test + commit + push + PR-open overhead.
+- **Cursor** (`cursor-autonomous-maintenance.yml` and every other Cursor session): soft guidance
+  of roughly **~1% of Cursor Pro quota per session** (not a hard limit; not planning-only). Prefer
+  one small coherent unit; file non-trivial findings instead of half-implementing; still reserve
+  overhead for test/commit/push/PR. Development slots may take a larger Phase A slice when needed,
+  but should prefer staying near that soft target when a smaller slice is viable.
+
+If a task looks too large even after buffering, the run scopes down rather than risking a runaway:
+a Phase A task lands its largest coherent, test-covered *slice* first (PR body says
+`Part of #<number>` instead of `Closes #<number>`, plus a `gh issue comment` recording what
+remains); a Phase B menu task scopes to one coherent sub-area and leaves the rest for a future run.
+Either way, the agent opens the PR as soon as there's a meaningful, test-passing first commit and
+pushes each subsequent commit as it lands. A task issue's `size:S`/`size:M`/`size:L` label is
+advisory context, not a gate. Skipping a task this way is noted in reasoning/PR description, not
+silent.
 
 **Reliability: cron dormancy.** GitHub Actions disables a workflow's cron trigger after 60 days with no
 repository activity. Unlikely in practice since merged automation PRs count as activity and Phase B's
@@ -302,12 +321,41 @@ designed to coexist safely with the Claude ones during the transition:
   slots (GitHub Actions cron is UTC; IST = UTC+5:30), plus `workflow_dispatch` with a `mode` input:
   - **Development** (Phase 0/A/B, same as Claude): 6:30am / 11:30am / 4:30pm / 9:30pm IST
     (`0 1,6,11,16 * * *` UTC).
-  - **Housekeeping** (1:30am IST, `0 20 * * *` UTC): meta only — unblocking conflicted PRs
-    (auto-merge-enabled first), planning/replanning the `claude-task` backlog, and process
-    improvement (self-edit of this workflow, or filing one gap-analysis issue). Does **not**
-    implement Phase A feature tasks. Does **not** skip for the 5-PR ceiling (unblocking is the
-    point of the overnight slot). The two crons must stay separate so `github.event.schedule`
-    can select the mode; folding them into one cron would silently drop the split.
+  - **Housekeeping / planning** (1:30am IST, `0 20 * * *` UTC, **and on every `push` to
+    `main`** — i.e. whenever a PR merges or main otherwise advances): meta + pipeline health —
+    security first (fix immediately when safe/small), workflow/CI failures, conflicted PRs
+    (auto-merge-enabled first), CLAUDE.md/docs vs code consistency (fix trivial drift, file
+    non-trivial), backlog plan/replan, and optional process improvement (self-edit of this
+    workflow, or filing one gap-analysis issue). Post-merge (`push` to main) runs always sweep
+    **all** open non-fork PRs (conflicts after main moved, failing checks, stalled auto-merge,
+    drafts that should be ready) — not only `claude/auto-*` / `cursor/auto-*`. Triggered via
+    `push` to `main` (not `pull_request` closed) so the workflow YAML always comes from the
+    default-branch tip. Does **not** implement Phase A feature tasks. Does **not** skip for the
+    5-PR ceiling (unblocking is the point of the overnight / post-merge sweep). Soft budget
+    guidance is the same as every other Cursor session: roughly **~1% of Cursor Pro quota**
+    (not a hard limit — see Budget discipline). The two crons must stay separate so
+    `github.event.schedule` can select the mode; folding them into one cron would silently drop
+    the split. Checklist (one unit of work, priority order):
+    1. **Security (immediate)** — critical/high Dependabot alerts (and any other confirmed
+       vulnerability): fix when a safe small bump fits the soft budget; else file `priority:high`
+       `claude-task` (and a heal PR if a minimal fix is still landable). Prefer an in-flight
+       Dependabot PR / `@dependabot rebase` over duplicating work. Never dismiss alerts via the API.
+    2. **Workflow / CI failures** — red `ci.yml` on `main`, or failing checks on open non-fork PRs:
+       trivial → fix (`cursor/heal-main-*` for broken main); non-trivial → file `claude-task` with
+       run URL / notes. Never fake green.
+    3. **Conflicted / stalled open PRs (all open PRs)** — auto-merge-enabled first; real conflict
+       resolution after main moves; never force-push / push to main / merge or approve own PR.
+       Post-merge triggers prioritize this sweep across every open non-fork PR.
+    4. **Spec vs implementation** — CLAUDE.md / overlapping AGENTS.md / `docs/*_REFERENCE.md` vs
+       live source (signatures, constants, state shape, test counts, nav/mechanic summaries).
+       Trivial drift → fix; larger mismatch → file, don't guess.
+    5. **Backlog plan/replan** — stale specs, Blocked-by, size/priority labels, duplicates
+       (comments / labels / replacement issues only).
+    6. **Process improvement (optional)** — self-edit of `cursor-autonomous-maintenance.yml` only,
+       or one gap-analysis + `claude-task` issue.
+
+    Triage: **trivial** = confident fix within the ~1% soft quota; **non-trivial** = file and stop;
+    **security** = always immediate (fix or high-priority file in the same run).
 - **`cursor-pr-followup.yml`** — the Cursor twin of `autonomous-pr-followup.yml`, with identical event
   handling and security posture (pwn-request actor gating, fork refusal, SHA-pinned checkout), scoped to
   `cursor/auto-*` branches only. The Claude follow-up stays scoped to `claude/auto-*`, so the two never
