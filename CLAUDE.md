@@ -650,7 +650,13 @@ bank-redeemability check, the flat vs. dynamic transfer cost).
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
 (`.claude/skills/simulate-run-times/SKILL.md`): it plays out full runs with the real engine functions
-rather than reasoning about the formulas by hand.
+rather than reasoning about the formulas by hand. **Also re-run and publish** that skill whenever
+making a change that can significantly affect ideal Foundry / prestige timings (economy constants
+or formulas in `engine.js`/`layers.js`, Foundry/Disk/Compute/Capacity/tickspeed/autobuyer/
+prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publishing writes **one
+new file per run** onto the stable orphan branch `ideal-run-strategy` via
+`publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
+into `main`, and do not rename it with an agent/session suffix.
 
 ## Path aliases
 

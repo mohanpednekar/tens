@@ -36,11 +36,11 @@
 //   node run-simulation.mjs                         # career table (prestiges 0..10) + PP sweep
 //   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh prestige.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
-//   node run-simulation.mjs --strategy-out /tmp/IDEAL_STRATEGY.md
-//   node run-simulation.mjs --pp 0 --strategy-out ./IDEAL_STRATEGY.md
+//   node run-simulation.mjs --strategy-out /tmp/run.md
+//   node run-simulation.mjs --pp 0 --strategy-out ./runs/2026-03-21T120000Z-abc1234.md
 
 import { execSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import {
   activateComputeBoost,
   applyAutobuyerMilestones,
@@ -510,31 +510,16 @@ if (strategyOut) {
   const resultsBody = outputLines.join('\n')
   const headline = freshTotal
     ? `Fresh ideal prestige cycle: **${freshTotal}** (Foundry **${freshFoundry}**).`
-    : 'See latest tables below.'
+    : 'See tables below.'
 
-  let priorLog = ''
-  if (existsSync(strategyOut)) {
-    try {
-      const prior = readFileSync(strategyOut, 'utf8')
-      const marker = '## Run log'
-      const idx = prior.indexOf(marker)
-      if (idx >= 0) {
-        const logSection = prior.slice(idx)
-        const lines = logSection.split('\n')
-        priorLog = lines.slice(3).join('\n').trimEnd()
-      }
-    } catch {
-      priorLog = ''
-    }
-  }
-
-  const logRow = `| ${now} | \`${engineSha}\` | ${freshTotal ?? '—'} | ${freshFoundry ?? '—'} | default career + PP sweep |`
+  // Each publish is a standalone snapshot (one file per run on orphan branch
+  // `ideal-run-strategy`). No append / run-log — history is the runs/ directory.
   const strategyDoc = `# Tens ideal run strategy
 
-Living document on orphan branch \`cursor/ideal-run-strategy-4551\`.
-**Updated automatically on every \`simulate-run-times\` skill run** via \`publish-strategy.sh\`.
+Snapshot on orphan branch \`ideal-run-strategy\` (\`runs/<UTC-stamp>-<sha>.md\`).
+Published by \`publish-strategy.sh\` — **do not merge** that branch into \`main\`.
 
-- Last updated: ${now}
+- Run at (UTC): ${now}
 - Engine / skill commit: \`${engineSha}\`
 - ${headline}
 
@@ -549,16 +534,10 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
 6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Speed-Up / Auto-Prestige in this baseline.
 
-## Latest simulation results
+## Simulation results
 
 ${resultsBody}
-
-## Run log
-
-| When (UTC) | Commit | Fresh total | Fresh Foundry | Args |
-|---|---|---|---|---|
-${logRow}
-${priorLog ? `${priorLog}\n` : ''}`
+`
 
   writeFileSync(strategyOut, strategyDoc, 'utf8')
   console.error(`Wrote strategy doc → ${strategyOut}`)

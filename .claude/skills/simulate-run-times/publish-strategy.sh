@@ -1,29 +1,22 @@
 #!/usr/bin/env bash
-# Runs simulate-run-times and publishes IDEAL_STRATEGY.md to the orphan branch
-# cursor/ideal-run-strategy-4551. Invoke after every skill run (see SKILL.md).
+# Runs simulate-run-times and publishes one new run file to the stable orphan
+# branch `ideal-run-strategy` (never merge into main). See SKILL.md.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
-STRATEGY_BRANCH="cursor/ideal-run-strategy-4551"
+# Stable name — no agent/session suffix. Do not rename casually.
+STRATEGY_BRANCH="ideal-run-strategy"
 WORKTREE="${TMPDIR:-/tmp}/tens-ideal-strategy-docs"
-DOC_NAME="IDEAL_STRATEGY.md"
 STAGING="${TMPDIR:-/tmp}/tens-ideal-strategy-staging"
-STAGED_DOC="${STAGING}/${DOC_NAME}"
-
 mkdir -p "$STAGING"
 cd "$ROOT"
 
-# Preserve prior run log when the orphan branch already exists.
-PRIOR_DOC=""
-if git fetch origin "$STRATEGY_BRANCH" 2>/dev/null; then
-  PRIOR_DOC="$(git show "origin/${STRATEGY_BRANCH}:${DOC_NAME}" 2>/dev/null || true)"
-fi
-if [[ -n "$PRIOR_DOC" ]]; then
-  printf '%s\n' "$PRIOR_DOC" > "$STAGED_DOC"
-else
-  rm -f "$STAGED_DOC"
-fi
+ENGINE_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+# UTC stamp safe for filenames; sorts chronologically. One file per run.
+RUN_STAMP="$(date -u +%Y-%m-%dT%H%M%SZ)"
+RUN_BASENAME="${RUN_STAMP}-${ENGINE_SHA}.md"
+STAGED_DOC="${STAGING}/${RUN_BASENAME}"
 
 # Forward any extra args to the simulator (default = full career + PP sweep).
 node "$SKILL_DIR/simulate.mjs" --strategy-out "$STAGED_DOC" "$@"
@@ -43,41 +36,55 @@ if git fetch origin "$STRATEGY_BRANCH" 2>/dev/null && git rev-parse --verify "or
   cd "$WORKTREE"
   git checkout -B "$STRATEGY_BRANCH"
 else
-  # First publish: orphan branch with only the strategy doc.
+  # First publish (or migration from a retired name): orphan branch.
   git worktree add --detach "$WORKTREE"
   cd "$WORKTREE"
   git checkout --orphan "$STRATEGY_BRANCH"
   git rm -rf . >/dev/null 2>&1 || true
-  # Remove leftover untracked files from the detached worktree checkout.
   find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 fi
 
-cp "$STAGED_DOC" "$WORKTREE/$DOC_NAME"
-# Small pointer README so the orphan branch isn't a single mystery file.
-cat > "$WORKTREE/README.md" <<'EOF'
+mkdir -p "$WORKTREE/runs"
+cp "$STAGED_DOC" "$WORKTREE/runs/$RUN_BASENAME"
+
+# Index: newest run first (filename sort is chronological ascending).
+{
+  cat <<'EOF'
 # Ideal run strategy (orphan branch)
 
-This branch is **orphaned** from `main` on purpose — it only holds the living
-ideal-playthrough strategy document produced by the `simulate-run-times` skill.
+This branch is **orphaned** from `main` on purpose — it only holds ideal-playthrough
+strategy snapshots from the `simulate-run-times` skill.
 
-- Canonical doc: [`IDEAL_STRATEGY.md`](./IDEAL_STRATEGY.md)
-- Updated by: `.claude/skills/simulate-run-times/publish-strategy.sh`
-- Do not merge this branch into `main`.
+- **Stable branch name:** `ideal-run-strategy` (do not add agent/session suffixes)
+- **One file per run:** `runs/<UTC-stamp>-<engine-sha>.md`
+- **Do not merge** this branch into `main`
+- Produced by: `.claude/skills/simulate-run-times/publish-strategy.sh`
+
+Re-run and publish whenever answering pacing questions **or** after any code change
+that can significantly affect ideal Foundry / prestige timings (see the skill's
+SKILL.md).
+
+## Runs (newest last in listing; open the last path for latest)
+
 EOF
+  # shellcheck disable=SC2012
+  ls -1 "$WORKTREE/runs"/*.md 2>/dev/null | xargs -n1 basename | sort | while read -r f; do
+    echo "- [\`runs/${f}\`](./runs/${f})"
+  done
+} > "$WORKTREE/README.md"
 
-git add "$DOC_NAME" README.md
+git add README.md "runs/$RUN_BASENAME"
 if git diff --cached --quiet; then
-  echo "Strategy doc unchanged; nothing to publish."
+  echo "Strategy run unchanged; nothing to publish."
 else
   git -c user.email="$(git -C "$ROOT" config user.email)" \
       -c user.name="$(git -C "$ROOT" config user.name)" \
-      commit -m "Update ideal run strategy $(date -u +%Y-%m-%dT%H:%MZ)"
+      commit -m "Add ideal run strategy ${RUN_BASENAME}"
   git push -u origin "$STRATEGY_BRANCH"
-  echo "Published ${DOC_NAME} → origin/${STRATEGY_BRANCH}"
+  echo "Published runs/${RUN_BASENAME} → origin/${STRATEGY_BRANCH}"
 fi
 
 cd "$ROOT"
-# Stay on the branch we started from (worktree operations shouldn't move it, but be explicit).
 if [[ -n "$CURRENT_BRANCH" ]]; then
   git checkout "$CURRENT_BRANCH" >/dev/null 2>&1 || true
 fi
