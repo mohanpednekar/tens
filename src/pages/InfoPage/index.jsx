@@ -169,7 +169,11 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Invest</strong> spends Memory on an independent cost ladder for permanently
-            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance).
+            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
+            that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
+            the next Compute tier (Cores → … → Megacomputers, once each) for the same ×2 — separate
+            from auto-merge sacrifices. Memory Sacrifice rolls those compute-funded Bandwidth
+            claims back.
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Memory into free {firstTierName} at
@@ -311,8 +315,8 @@ const InfoPage = () => {
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power.
-            Duration stays at the base preset. Spend 1 token of the armed tier to activate.
+            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power
+            and duration. Spend 1 token of the armed tier to activate.
           </li>
           <li>
             Base (Core) presets:{' '}
@@ -324,8 +328,8 @@ const InfoPage = () => {
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
-            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration does not
-            scale with tier. Boost multiplies Memory production and {firstTierName} production at
+            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration ×2 per
+            step. Boost multiplies Memory production and {firstTierName} production at
             once.
           </li>
           <li>

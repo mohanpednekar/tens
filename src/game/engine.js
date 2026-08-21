@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -311,6 +311,14 @@ export const createInitialGameState = () => ({
     // getIntroProductionMilestoneMaxClaims(productionMilestoneTier)); resets to 0 whenever the tier
     // advances — see pickIntroProductionMilestone.
     productionMilestoneTierClaims: 0,
+    // PERMANENT until Sacrifice rolls it back (#323/#324): how many Bandwidth ×2 claims were
+    // funded by sacrificing COMPUTE_ENTITY_CAP tokens of a compute tier (when the bit cost
+    // exceeded Memory capacity). Sacrifice rewinds exactly this many Invest steps.
+    computeFundedBandwidthClaims: 0,
+    // PERMANENT until Sacrifice rolls it back: next COMPUTE_BOOST_TIER_FIELDS index (0 = Cores …
+    // 9 = Megacomputers) for the sequential Bandwidth-via-compute sacrifice. Resets to 0 when
+    // Sacrifice rolls back compute-funded Bandwidth.
+    computeBandwidthSacrificeIndex: 0,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
     // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
@@ -1538,12 +1546,42 @@ export const isDiskFillAvailable = state =>
     .map(Number)
     .some(size => (state.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(state, size))
 
-// "Bandwidth" ("Invest for Double Production") — true whenever the current
-// productionMilestoneTier's own cost is affordable and hasn't already used up its claims.
-export const isBandwidthAvailable = state => {
+// "Bandwidth" ("Invest for Double Production") — true whenever a claim can fire right now: either
+// the bit-cost path (affordable and claims remain) or the compute-token overflow path (#323 —
+// bit cost exceeds capacity, sacrifice COMPUTE_ENTITY_CAP of the next compute tier).
+export const isBandwidthAvailable = state =>
+  isBitFundedBandwidthAvailable(state) || isComputeFundedBandwidthAvailable(state)
+
+export const isBitFundedBandwidthAvailable = state => {
   const cost = getIntroProductionMilestoneCost(state.intro.productionMilestoneTier)
   const claimsUsedUp = state.intro.productionMilestoneTierClaims >= getIntroProductionMilestoneMaxClaims(state.intro.productionMilestoneTier)
   return state.intro.bits >= cost && !claimsUsedUp
+}
+
+// Issue #323: Bandwidth ×2 funded by sacrificing COMPUTE_ENTITY_CAP of the next compute-ladder
+// tier (Cores → … → Megacomputers, once each in order) — only when the normal bit cost exceeds
+// Memory capacity (bit payment impossible). Separate from auto-merge / auto-claim 10-token sinks.
+export const isComputeFundedBandwidthAvailable = state => {
+  const intro = state.intro ?? {}
+  const index = intro.computeBandwidthSacrificeIndex ?? 0
+  if (index < 0 || index >= COMPUTE_BOOST_TIER_FIELDS.length) return false
+  const tier = intro.productionMilestoneTier ?? 0
+  const claimsUsedUp = (intro.productionMilestoneTierClaims ?? 0) >= getIntroProductionMilestoneMaxClaims(tier)
+  if (claimsUsedUp) return false
+  const cost = getIntroProductionMilestoneCost(tier)
+  if (cost <= (intro.capacity ?? 0)) return false
+  const field = COMPUTE_BOOST_TIER_FIELDS[index]
+  return (intro[field] ?? 0) >= COMPUTE_ENTITY_CAP
+}
+
+export const getComputeBandwidthSacrificeField = state => {
+  const index = state.intro?.computeBandwidthSacrificeIndex ?? 0
+  return COMPUTE_BOOST_TIER_FIELDS[index] ?? null
+}
+
+export const getComputeBandwidthSacrificeLabel = state => {
+  const index = state.intro?.computeBandwidthSacrificeIndex ?? 0
+  return COMPUTE_TIER_LABELS[index] ?? null
 }
 
 // "Disk Build" — true whenever no array is already mid-build (intro.diskBuild — only one build
@@ -1583,18 +1621,67 @@ export const isMemoryCapacityUpgradeAvailable = state => {
   return true
 }
 
+// Rewind one Bandwidth ×2 claim (inverse of applyIntroProductionDoublingToIntro) — used when
+// Sacrifice rolls back compute-funded Invest steps (#324).
+const rewindOneIntroProductionClaim = intro => {
+  let tier = intro.productionMilestoneTier ?? 0
+  let claims = intro.productionMilestoneTierClaims ?? 0
+  let { tickSpeedSeconds, productionMultiplier } = intro
+
+  if (claims > 0) {
+    claims -= 1
+  } else if (tier > 0) {
+    tier -= 1
+    claims = getIntroProductionMilestoneMaxClaims(tier) - 1
+  }
+
+  if (productionMultiplier > 1) {
+    productionMultiplier = productionMultiplier / INTRO_PRODUCTION_MULTIPLIER_STEP
+  } else {
+    tickSpeedSeconds = tickSpeedSeconds * INTRO_PRODUCTION_MULTIPLIER_STEP
+  }
+
+  return {
+    ...intro,
+    productionMilestoneTier: tier,
+    productionMilestoneTierClaims: claims,
+    tickSpeedSeconds,
+    productionMultiplier,
+  }
+}
+
+// Issue #324: undo exactly computeFundedBandwidthClaims Invest doubles and reset the sequential
+// compute-sacrifice index. Same-reference no-op when nothing compute-funded is outstanding.
+export const rollbackComputeFundedBandwidth = state => {
+  const funded = state.intro?.computeFundedBandwidthClaims ?? 0
+  const index = state.intro?.computeBandwidthSacrificeIndex ?? 0
+  if (funded <= 0 && index === 0) return state
+
+  let intro = { ...state.intro }
+  for (let i = 0; i < funded; i++) {
+    intro = rewindOneIntroProductionClaim(intro)
+  }
+  intro.computeFundedBandwidthClaims = 0
+  intro.computeBandwidthSacrificeIndex = 0
+  return { ...state, intro }
+}
+
 // "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
 // availability gate (Memory full AND no other currently-possible action left to take first).
-// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op
-// otherwise. Clears capacityUpgradeQueued on success (a manual Sacrifice also consumes any queue).
+// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. Once
+// Compute is unlocked, also erases all compute tokens/timers and rolls back compute-funded
+// Bandwidth progress (#324). Clears capacityUpgradeQueued on success.
 export const pickIntroCapacityMilestone = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
+  const afterWipe = isComputeCoreConversionUnlocked(state)
+    ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
+    : state
   return {
-    ...state,
+    ...afterWipe,
     intro: {
-      ...state.intro,
+      ...afterWipe.intro,
       bits: 0,
-      capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
       capacityUpgradeQueued: false,
     },
   }
@@ -1663,9 +1750,9 @@ export const eraseAllComputeTokens = state => {
 
 // Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
 // except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
-// tokens (the queued-Sacrifice penalty), then Sacrifices — bypassing isComputeUpgradeAvailable so
-// Boosts / Core-claim eligibility cannot starve a committed Capacity upgrade. Called from
-// tickGame after intro production (and from attentive UIs/bots). Same-reference no-op otherwise.
+// tokens and rolls back compute-funded Bandwidth (#324), then Sacrifices — bypassing
+// isComputeUpgradeAvailable so Boosts / Core-claim eligibility cannot starve a committed Capacity
+// upgrade. Called from tickGame after intro production. Same-reference no-op otherwise.
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
   if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
@@ -1674,13 +1761,15 @@ export const tickQueuedCapacityUpgrade = state => {
   if (isBandwidthAvailable(state)) return state
   if (isDiskBuildAvailable(state)) return state
 
-  const erased = eraseAllComputeTokens(state)
+  const wiped = isComputeCoreConversionUnlocked(state)
+    ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
+    : eraseAllComputeTokens(state)
   return {
-    ...erased,
+    ...wiped,
     intro: {
-      ...erased.intro,
+      ...wiped.intro,
       bits: 0,
-      capacity: erased.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacity: wiped.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
       capacityUpgradeQueued: false,
     },
   }
@@ -1720,6 +1809,25 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 // it switch to multiplying productionMultiplier (growing the batch) instead, so growth never
 // stalls once the tick loop's own granularity limit is reached.
 
+// Apply one Bandwidth ×2 to intro (rate doubling + milestone counter advance) without charging.
+const applyIntroProductionDoublingToIntro = intro => {
+  const tier = intro.productionMilestoneTier
+  const claims = intro.productionMilestoneTierClaims
+  const maxClaims = getIntroProductionMilestoneMaxClaims(tier)
+  const fasterTickSpeed = intro.tickSpeedSeconds / INTRO_PRODUCTION_MULTIPLIER_STEP
+  const canSpeedUp = fasterTickSpeed >= INTRO_MIN_TICK_SPEED_SECONDS
+  const tierComplete = claims + 1 >= maxClaims
+
+  return {
+    ...intro,
+    productionMilestoneTier: tierComplete ? tier + 1 : tier,
+    productionMilestoneTierClaims: tierComplete ? 0 : claims + 1,
+    ...(canSpeedUp
+      ? { tickSpeedSeconds: fasterTickSpeed }
+      : { productionMultiplier: intro.productionMultiplier * INTRO_PRODUCTION_MULTIPLIER_STEP }),
+  }
+}
+
 // "Bandwidth"'s own forced-priority turn (see the priority-order block above
 // isMemoryCapacityUpgradeAvailable): available AND nothing ranked above it (Disk Fill) currently
 // is. Used by pickIntroProductionMilestone's own guard below and directly by ByteFoundryPage to
@@ -1727,30 +1835,38 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 export const isBandwidthTurnAvailable = state =>
   isBandwidthAvailable(state) && !isDiskFillAvailable(state)
 
+// Bit-funded Invest when affordable; otherwise compute-funded overflow path (#323) when the bit
+// cost exceeds capacity. Prefer bits whenever isBitFundedBandwidthAvailable so normal play is
+// unchanged.
 export const pickIntroProductionMilestone = state => {
   if (!isBandwidthTurnAvailable(state)) return state
 
-  const tier = state.intro.productionMilestoneTier
-  const cost = getIntroProductionMilestoneCost(tier)
-  const claims = state.intro.productionMilestoneTierClaims
-  const maxClaims = getIntroProductionMilestoneMaxClaims(tier)
-
-  const fasterTickSpeed = state.intro.tickSpeedSeconds / INTRO_PRODUCTION_MULTIPLIER_STEP
-  const canSpeedUp = fasterTickSpeed >= INTRO_MIN_TICK_SPEED_SECONDS
-  const tierComplete = claims + 1 >= maxClaims
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      bits: clampNonNegative(state.intro.bits - cost),
-      productionMilestoneTier: tierComplete ? tier + 1 : tier,
-      productionMilestoneTierClaims: tierComplete ? 0 : claims + 1,
-      ...(canSpeedUp
-        ? { tickSpeedSeconds: fasterTickSpeed }
-        : { productionMultiplier: state.intro.productionMultiplier * INTRO_PRODUCTION_MULTIPLIER_STEP }),
-    },
+  if (isBitFundedBandwidthAvailable(state)) {
+    const cost = getIntroProductionMilestoneCost(state.intro.productionMilestoneTier)
+    return {
+      ...state,
+      intro: {
+        ...applyIntroProductionDoublingToIntro(state.intro),
+        bits: clampNonNegative(state.intro.bits - cost),
+      },
+    }
   }
+
+  if (isComputeFundedBandwidthAvailable(state)) {
+    const index = state.intro.computeBandwidthSacrificeIndex ?? 0
+    const field = COMPUTE_BOOST_TIER_FIELDS[index]
+    return {
+      ...state,
+      intro: {
+        ...applyIntroProductionDoublingToIntro(state.intro),
+        [field]: clampNonNegative((state.intro[field] ?? 0) - COMPUTE_ENTITY_CAP),
+        computeBandwidthSacrificeIndex: index + 1,
+        computeFundedBandwidthClaims: (state.intro.computeFundedBandwidthClaims ?? 0) + 1,
+      },
+    }
+  }
+
+  return state
 }
 
 // Predicate, not a reducer: whether the manual "convert bits to a Kilobyte" action and the "next
@@ -2744,13 +2860,13 @@ const AUTO_MERGE_TICKERS = [
   tickAutoMergeSupercomputersIntoMegacomputer,
 ]
 
-// --- Compute Boost tier scaling --- issues #326/#363: a boost activated from compute-ladder tier
-// `tierIndex` (1 = Core, … COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) is
-// COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex - 1) times as powerful as that preset's own BASE (tier
-// 1) multiplier; duration stays at the preset's base `durationSeconds` for every tier (no duration
-// enhancement from merging — limited slots + auto-merge reserves already incentivize merging).
-// Both return 0 for an invalid boostType/tierIndex, which every caller below treats the same as
-// "not activatable."
+// --- Compute Boost tier scaling --- issues #326/#363 (effect) + restored duration doubling:
+// a boost activated from compute-ladder tier `tierIndex` (1 = Core, …
+// COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) is COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex - 1)
+// times as powerful as that preset's own BASE (tier 1) multiplier, and lasts
+// COMPUTE_BOOST_TIER_DURATION_STEP^(tierIndex - 1) times the preset's base durationSeconds
+// ("effect time doubles after merge"). Both return 0 for an invalid boostType/tierIndex, which
+// every caller below treats the same as "not activatable."
 const isValidComputeBoostTier = tierIndex => Number.isInteger(tierIndex) && tierIndex >= 1 && tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length
 
 export const getComputeBoostTierField = tierIndex =>
@@ -2765,7 +2881,7 @@ export const getComputeBoostTierMultiplier = (boostType, tierIndex) => {
 export const getComputeBoostTierDurationSeconds = (boostType, tierIndex) => {
   const preset = COMPUTE_BOOST_PRESETS[boostType]
   if (!preset || !isValidComputeBoostTier(tierIndex)) return 0
-  return preset.durationSeconds
+  return preset.durationSeconds * COMPUTE_BOOST_TIER_DURATION_STEP ** (tierIndex - 1)
 }
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
@@ -3312,6 +3428,8 @@ export const prestigeGame = state => {
       productionMultiplier: state.intro?.productionMultiplier ?? initial.intro.productionMultiplier,
       productionMilestoneTier: state.intro?.productionMilestoneTier ?? initial.intro.productionMilestoneTier,
       productionMilestoneTierClaims: state.intro?.productionMilestoneTierClaims ?? initial.intro.productionMilestoneTierClaims,
+      computeFundedBandwidthClaims: state.intro?.computeFundedBandwidthClaims ?? initial.intro.computeFundedBandwidthClaims,
+      computeBandwidthSacrificeIndex: state.intro?.computeBandwidthSacrificeIndex ?? initial.intro.computeBandwidthSacrificeIndex,
       // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
       // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its

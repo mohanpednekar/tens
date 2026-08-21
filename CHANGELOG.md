@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Compute Boost duration** scales with merge tier again: **×2 per tier**
+  (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
+  “effect time doubles after merge” after #363/#364 had flattened duration.
 - **Sacrifice confirm** uses an in-game `ConfirmDialog` (theme overlay) instead of
   `window.confirm`. The “future Cores cost more” warning appears only once Compute Cores are
   unlocked.
@@ -17,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   larger disks are migrated so the ladder does not rewind through newly inserted sizes.
 
 ### Added
+- **Bandwidth via Compute tokens** (#323): when Invest’s bit cost exceeds Memory capacity, the
+  Foundry Bandwidth button spends **10** of the next Compute tier (Cores → … → Megacomputers,
+  once each, separate from auto-merge) for the same permanent ×2. Sacrifice (manual or queued),
+  once Compute is unlocked, wipes held Compute tokens/timers and **rolls back** those
+  compute-funded Bandwidth claims only (#324 slice).
 - **Compute Auto-Boost** (30 PP, one-time): when a compute-ladder tier is at cap and waiting on
   its own in-flight reserve merge, automatically activates (or stacks) your preferred Boost preset
   from the **biggest** such tier (default **Standard**). Preference is selectable on Compute after

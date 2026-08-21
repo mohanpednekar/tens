@@ -3,8 +3,8 @@ import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -317,9 +317,12 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     actions.pickIntroCapacityMilestone()
   }
   const cancelSacrifice = () => setSacrificeConfirmOpen(false)
-
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
-  const investCostDisplay = formatBitsInNearestUnit(investCost)
+  const computeBandwidthLabel = getComputeBandwidthSacrificeLabel(state)
+  const computeFundedInvest = isComputeFundedBandwidthAvailable(state)
+  const investCostDisplay = computeFundedInvest
+    ? `${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel}`
+    : formatBitsInNearestUnit(investCost)
   const investMaxClaims = getIntroProductionMilestoneMaxClaims(intro.productionMilestoneTier)
   const investClaimsUsedUp = intro.productionMilestoneTierClaims >= investMaxClaims
   // Ranked below Disk Fill in the forced priority order — see isBandwidthTurnAvailable.
@@ -374,7 +377,10 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
-  const investProgress = clampPercent((intro.bits / investCost) * 100)
+  const computeBandwidthField = getComputeBandwidthSacrificeField(state)
+  const investProgress = computeFundedInvest && computeBandwidthField
+    ? clampPercent(((intro[computeBandwidthField] ?? 0) / COMPUTE_ENTITY_CAP) * 100)
+    : clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
   return (
@@ -509,7 +515,11 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
             </Button>
 
             <Button
-              aria-label="invest bits for double production"
+              aria-label={
+                computeFundedInvest
+                  ? `sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for double production`
+                  : 'invest bits for double production'
+              }
               disabled={!canInvest}
               onClick={actions.pickIntroProductionMilestone}
               title={
@@ -517,7 +527,9 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
                   ? 'Already claimed at this tier'
                   : investBlockedByPriority
                     ? 'Redeem a full Disk first'
-                    : 'Doubles production rate'
+                    : computeFundedInvest
+                      ? `Bit cost exceeds Memory — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 production`
+                      : 'Doubles production rate'
               }
               type="button"
               variant={canInvest ? 'info' : 'neutral'}
@@ -530,9 +542,13 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
               <VisuallyHidden
                 role="progressbar"
                 aria-label="byte foundry invest progress"
-                aria-valuenow={intro.bits}
+                aria-valuenow={
+                  computeFundedInvest && computeBandwidthField
+                    ? (intro[computeBandwidthField] ?? 0)
+                    : intro.bits
+                }
                 aria-valuemin={0}
-                aria-valuemax={investCost}
+                aria-valuemax={computeFundedInvest ? COMPUTE_ENTITY_CAP : investCost}
               />
             </Button>
           </MilestonesRow>
@@ -670,7 +686,13 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
           {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
         </p>
         {computeCoreRevealed && (
-          <p>Every future Core will cost more — a higher capacity means a bigger Memory flush each time.</p>
+          <>
+            <p>Every future Core will cost more — a higher capacity means a bigger Memory flush each time.</p>
+            <p>
+              This also wipes all held Compute tokens and rolls back Bandwidth upgrades bought with
+              Compute tokens.
+            </p>
+          </>
         )}
       </ConfirmDialog>
     </RootDiv>
