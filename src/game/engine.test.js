@@ -199,7 +199,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -640,15 +640,14 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
   })
 
   it('is false while a Compute Boost (higher priority) is currently available', () => {
-    // Pushes the Disk Build ladder past level 3 (800,000,000-bit build cost, well above this
-    // balance) so Disk Build doesn't ALSO block Sacrifice here — isolates the new Compute check
-    // itself, the same way the "Storage is revealed" tests above isolate Storage.
+    // Cap the Disk Build ladder through 100 KB so the next offer is 1 MB (build cost 10 MB /
+    // 80,000,000 bits) — unaffordable at 1 MB capacity — isolating the Compute check itself.
     const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       bits: capacity, capacity, ...noOtherUpgradesLeft,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: DISK_ARRAY_LADDER_CAP },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
       computeCores: 1,
     })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
@@ -1461,6 +1460,7 @@ describe('getDiskSize', () => {
   it('starts at 8000 bits (1 KB, Byte-accurate) on a fresh cycle', () => {
     const state = createInitialGameState()
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(getDiskSize(state)).toBe(DISK_LADDER_BASE_SIZE_BITS)
     expect(getDiskSize(state)).toBe(8000)
   })
 
@@ -1469,9 +1469,9 @@ describe('getDiskSize', () => {
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
   })
 
-  it('advances to tier01\'s NEXT level cost once DISK_ARRAY_LADDER_CAP disks have ever been built at the current size', () => {
+  it('advances to the next Byte power-of-ten size once DISK_ARRAY_LADDER_CAP disks have ever been built at the current size', () => {
     const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
-    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 2) * BITS_PER_BYTE) // 80,000
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER) // 80,000 = 10 KB
   })
 
   it('does not regress after disks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
@@ -1479,47 +1479,45 @@ describe('getDiskSize', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       disks: { [FIRST_DISK_SIZE]: 3 }, // some already redeemed, some still full — either way, below the cap
     })
-    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 2) * BITS_PER_BYTE)
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER)
   })
 
-  it('advances sequentially through level 3 — tier01\'s Fibonacci exponent sequence does not skip it', () => {
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const state = withIntro(createInitialGameState(), {
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP },
+  it('advances through 100 KB then 1 MB — every Byte power-of-ten size is offered (issue #368)', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
+    const after100KB = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
     })
-    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) still reads 3 at epoch 2 (level 3) —
-    // the same as the triangular sequence would — so level 3 costs 100,000, not skipped yet.
-    expect(getTierCost(tensTier, 3)).toBe(100000)
-    expect(getDiskSize(state)).toBe(100000 * BITS_PER_BYTE)
-  })
+    expect(getDiskSize(after100KB)).toBe(size100KB)
+    expect(size100KB).toBe(800000)
 
-  it('skips a size tier01\'s own level-cost sequence skips (1,000,000) — jumps straight from 100,000 to 10,000,000', () => {
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
-    const state = withIntro(createInitialGameState(), {
+    const after1MB = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [size10KB]: DISK_ARRAY_LADDER_CAP,
+        [size100KB]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    // tier01's cost-epoch exponent sequence (1, 2, 3, 5, 8, …) skips level 4's exponent straight to
-    // 5, so level 4 costs 10,000,000, never 1,000,000.
-    expect(getTierCost(tensTier, 4)).toBe(10000000)
-    expect(getDiskSize(state)).toBe(10000000 * BITS_PER_BYTE)
+    expect(getDiskSize(after1MB)).toBe(size1MB)
+    expect(size1MB).toBe(8000000) // 1 MB — redeems into Tier02 at level 1
   })
 
-  it('keeps advancing indefinitely past level 4 — the ladder is uncapped, unlike an earlier version of the Compute Core mechanic (see docs/DESIGN_HISTORY.md)', () => {
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
-    const level4Size = getTierCost(tensTier, 4) * BITS_PER_BYTE
+  it('keeps advancing indefinitely past 10 MB — the ladder is uncapped', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
+    const size10MB = size1MB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [level2Size]: DISK_ARRAY_LADDER_CAP,
-        [level3Size]: DISK_ARRAY_LADDER_CAP,
-        [level4Size]: DISK_ARRAY_LADDER_CAP,
+        [size10KB]: DISK_ARRAY_LADDER_CAP,
+        [size100KB]: DISK_ARRAY_LADDER_CAP,
+        [size1MB]: DISK_ARRAY_LADDER_CAP,
+        [size10MB]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getDiskSize(state)).toBe(getTierCost(tensTier, 5) * BITS_PER_BYTE) // keeps going
+    expect(getDiskSize(state)).toBe(size10MB * DISK_LADDER_SIZE_MULTIPLIER) // 100 MB
   })
 })
 

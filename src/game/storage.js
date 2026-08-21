@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, createInitialGameState } from './engine'
-import { COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE } from './layers'
+import { COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER } from './layers'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
@@ -342,6 +342,36 @@ const shiftTierIdDown = id => {
   const oldIndex = Number(match[1])
   return oldIndex === 1 ? null : `tier${String(oldIndex - 1).padStart(2, '0')}`
 }
+// Issue #368: when the Disk ladder gained previously-skipped Byte sizes (e.g. 1 MB), a save that
+// already owns disks at a larger size must not have getDiskSize rewind to the new intermediate.
+// For every new-ladder size strictly below the largest known disk size on the save, ensure
+// disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP so the offer stays at/above that frontier.
+const fillDiskLadderGapsBelowKnownSizes = intro => {
+  const built = { ...(intro?.disksBuiltTotal ?? {}) }
+  const held = intro?.disks ?? {}
+  const known = [
+    ...new Set([
+      ...Object.keys(built).map(Number),
+      ...Object.keys(held).map(Number),
+    ]),
+  ].filter(size => Number.isFinite(size) && size > 0)
+  if (known.length === 0) return intro
+
+  const maxKnown = Math.max(...known)
+  let size = DISK_LADDER_BASE_SIZE_BITS
+  let changed = false
+  // Safety cap: ladder is uncapped, but we only need to walk up to maxKnown.
+  for (let i = 0; i < 64 && size < maxKnown; i += 1) {
+    if ((built[size] ?? 0) < DISK_ARRAY_LADDER_CAP) {
+      built[size] = DISK_ARRAY_LADDER_CAP
+      changed = true
+    }
+    size *= DISK_LADDER_SIZE_MULTIPLIER
+  }
+  if (!changed) return intro
+  return { ...intro, disksBuiltTotal: built }
+}
+
 // The shift itself must NOT be idempotent-unsafe: migrateState runs on every load, and a save
 // already on the current (post-shift) tier scheme has no marker distinguishing its 'tier01' (real
 // Kilobytes) from an old save's 'tier01' (Bytes, meant to be dropped) — reapplying the shift to an
@@ -503,7 +533,7 @@ const migrateState = saved => {
     ...(saved.intro?.storageBanksBuiltTotal !== undefined ? { disksBuiltTotal: saved.intro.storageBanksBuiltTotal } : {}),
     ...(saved.intro?.storageAutoRedeemedSizes !== undefined ? { diskAutoRedeemedSizes: saved.intro.storageAutoRedeemedSizes } : {}),
   }
-  const migratedIntro = isPreByteFoundrySave
+  const migratedIntroRaw = isPreByteFoundrySave
     ? { ...fresh.intro, mainGameUnlocked: true }
     : {
       ...fresh.intro,
@@ -515,6 +545,11 @@ const migrateState = saved => {
       ...(legacyComputeCoresEverEarned !== undefined ? { computeCoresEverEarned: legacyComputeCoresEverEarned } : {}),
       ...(legacyComputeMergePageUnlocked ? { computeMergePageUnlocked: true } : {}),
     }
+  // Issue #368: Disk ladder is now every Byte power-of-ten size (includes 1 MB). A save that
+  // already built past a previously-skipped size (e.g. had 10 MB disks when the old ladder jumped
+  // 100 KB → 10 MB) must not be rewound to re-offer 1 MB — mark every new-ladder size strictly
+  // below the largest known disk size as fully built (DISK_ARRAY_LADDER_CAP).
+  const migratedIntro = fillDiskLadderGapsBelowKnownSizes(migratedIntroRaw)
 
   // applyAutobuyerMilestones (see engine.js) retroactively unlocks any tier autobuyer/tier-
   // tickspeed-autobuyer a save's prestige.count already qualifies for under the new

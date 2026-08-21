@@ -2288,3 +2288,17 @@ timing out.
 tier ids `tier01`/`tier02`/… with display names `Tens`/`Thousands`/…) — don't reintroduce the older
 lowercase scheme (`'money'`, `'ones'`, `'hundreds'`) that a previous, unfinished rename left behind in
 the tests; that mismatch has been reconciled in favor of the current `layers.js`/`engine.js` source.
+
+
+### Disk ladder offers every Byte power-of-ten size (issue #368)
+
+The build ladder previously walked tier01's level-cost sequence (×`BITS_PER_BYTE`), which skipped
+sizes whenever cost-epoch exponents jumped — notably **100 KB → 10 MB**, never **1 MB**. That made
+the intended "10 MB Memory capacity → build 1 MB disks → redeem into Tier02/Megabytes at level 1"
+path impossible (1 MB disk face value = Tier02 L1 × 8 bits/byte; build cost = 10× = 10 MB Memory).
+
+Replaced with an explicit ×10 Byte ladder (`DISK_LADDER_BASE_SIZE_BITS` / `DISK_LADDER_SIZE_MULTIPLIER`):
+1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …. Redeem matching is unchanged. Saves that already own a
+larger disk size get every smaller new-ladder size marked fully built on load so the offer does not
+rewind.
+

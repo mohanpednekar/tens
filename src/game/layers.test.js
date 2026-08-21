@@ -19,6 +19,8 @@ import {
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
+  DISK_LADDER_BASE_SIZE_BITS,
+  DISK_LADDER_SIZE_MULTIPLIER,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -255,6 +257,11 @@ describe('constants', () => {
 
   it('DISK_ARRAY_LADDER_CAP is 10 (disks per size before the build ladder advances)', () => {
     expect(DISK_ARRAY_LADDER_CAP).toBe(10)
+  })
+
+  it('DISK_LADDER_BASE_SIZE_BITS is 8000 (1 KB) and DISK_LADDER_SIZE_MULTIPLIER is 10 (every Byte power-of-ten size)', () => {
+    expect(DISK_LADDER_BASE_SIZE_BITS).toBe(8000)
+    expect(DISK_LADDER_SIZE_MULTIPLIER).toBe(10)
   })
 
   it('DISK_CACHE_BLOCK_COUNT is 8 (a disk array\'s cache splits into 8 equal releasable blocks)', () => {

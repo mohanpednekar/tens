@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInitialGameState } from './engine'
-import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { createInitialGameState, getDiskSize } from './engine'
+import { DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, MONEY_ID, TIER_DEFINITIONS } from './layers'
 import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -688,6 +688,29 @@ describe('schema migration', () => {
     // fresh's {}/null defaults rather than throwing on the old save's absence of either.
     expect(loaded.intro.diskCache).toEqual({})
     expect(loaded.intro.diskBuild).toBeNull()
+  })
+
+  it('marks every new-ladder size below an already-owned larger disk as fully built so getDiskSize does not rewind (issue #368)', () => {
+    // Old ladder jumped 100 KB → 10 MB. A save that already has 10 MB disks must not be offered
+    // 1 MB on load after the gapless ladder lands.
+    const size10MB = 80_000_000
+    const oldSave = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        mainGameUnlocked: true,
+        disks: { [size10MB]: 2 },
+        disksBuiltTotal: { [size10MB]: 4 },
+      },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.intro.disksBuiltTotal[8000]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(loaded.intro.disksBuiltTotal[80_000]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(loaded.intro.disksBuiltTotal[800_000]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(loaded.intro.disksBuiltTotal[8_000_000]).toBe(DISK_ARRAY_LADDER_CAP) // 1 MB filled in
+    expect(loaded.intro.disksBuiltTotal[size10MB]).toBe(4)
+    expect(getDiskSize(loaded)).toBe(size10MB)
   })
 
   it('backfills mainGameUnlocked from an old boolean intro.completed field for a save that predates the mainGameUnlocked field', () => {

@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -2050,35 +2050,27 @@ export const tickIntroAutoInvest = state => {
 // `disksBuiltTotal[size] - disks[size]`. Consuming (redeeming) a full disk empties it again,
 // returning it to the fillable pool — disks are reusable, not single-use.
 
-// tier01's own per-unit level cost skips values as it grows (getCostEpochExponent's Fibonacci
-// exponent sequence jumps 1, 2, 3, 5, 8, … — e.g. level 4 is 10,000,000, not 1,000,000), so every
-// size a disk is ever built or redeemed at is one of tier01's own actual per-unit level costs,
-// never an arbitrary round number in between (a 1,000,000,000-bit/"1 MB" disk can never exist,
-// since no tier01 level ever costs that in bits — see the BITS_PER_BYTE factor below).
-const getFirstTierCost = level => getTierCost(TIER_DEFINITIONS[0], level)
+// Disk ladder step `n` (1-indexed): DISK_LADDER_BASE_SIZE_BITS × DISK_LADDER_SIZE_MULTIPLIER^(n-1)
+// — 1 KB, 10 KB, 100 KB, 1 MB, 10 MB, … with no gaps (issue #368). Exported for tests/docs.
+export const getDiskLadderSizeBits = step => {
+  const safeStep = Math.max(1, Number.isFinite(step) ? Math.floor(step) : 1)
+  return DISK_LADDER_BASE_SIZE_BITS * (DISK_LADDER_SIZE_MULTIPLIER ** (safeStep - 1))
+}
 
-// The size (in bits) startDiskBuild currently builds: an independent ladder that walks tier01's
-// own level-cost sequence (level 1, 2, 3, … via getFirstTierCost), each expressed in real bits via
-// the same ×BITS_PER_BYTE conversion getIntroKilobyteConversionCost uses — a real "1 KB" disk is
-// 8000 bits, not the 1000-bit "kilobit" an earlier version of this ladder mistakenly used (see
-// docs/DESIGN_HISTORY.md for that bug and its fix) — rather than tier01's CURRENT level directly,
-// advancing to the next level's cost once DISK_ARRAY_LADDER_CAP disks have ever been built at the
-// current one — read from disksBuiltTotal, a cumulative counter that redeeming never decrements,
-// so the ladder only ever advances (see the "Byte Foundry Storage" comment in layers.js for why
-// this is deliberately decoupled from tier01's own CURRENT level — docs/DESIGN_HISTORY.md). A
-// freshly offered size isn't necessarily redeemable yet — see isDiskRedeemable below for the
-// separate, tier01-price-driven gate on that. Uncapped — keeps walking tier01's level-cost
-// sequence indefinitely (an earlier version of the Compute Core mechanic capped this ladder so its
-// own readiness check could enumerate a finite set of sizes; that whole approach was superseded —
-// Compute Cores no longer depend on Storage state at all, so the cap was reverted — see
-// docs/DESIGN_HISTORY.md).
+// The size (in bits) startDiskBuild currently builds: walks the gapless Byte power-of-ten ladder
+// (see getDiskLadderSizeBits), advancing once DISK_ARRAY_LADDER_CAP disks have ever been built at
+// the current size (disksBuiltTotal — cumulative, never decremented by redeeming). Deliberately
+// decoupled from any tier's CURRENT purchase level — see layers.js / docs/DESIGN_HISTORY.md. A
+// freshly offered size isn't necessarily redeemable yet — isDiskRedeemable is the separate gate.
+// Uncapped. Replaced an earlier ladder that walked tier01's level-cost sequence and skipped sizes
+// whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB — issue #368).
 export const getDiskSize = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
-  let level = 1
-  let size = getFirstTierCost(level) * BITS_PER_BYTE
+  let step = 1
+  let size = getDiskLadderSizeBits(step)
   while ((builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
-    level += 1
-    size = getFirstTierCost(level) * BITS_PER_BYTE
+    step += 1
+    size = getDiskLadderSizeBits(step)
   }
   return size
 }
@@ -2096,7 +2088,7 @@ export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIP
 // start at 10 seconds, 100 KB at 100 seconds," and so on), derived from the level-1 disk size
 // (8000 bits = "1 KB" = the base unit) rather than a separate constant, so it always tracks
 // getDiskSize's own real-Kilobyte scale.
-const getDiskBuildBaseSeconds = capacityBits => capacityBits / (getFirstTierCost(1) * BITS_PER_BYTE)
+const getDiskBuildBaseSeconds = capacityBits => capacityBits / DISK_LADDER_BASE_SIZE_BITS
 
 // Building the Nth disk of a given size (N = 1 for the array's very first disk, 2 for its second,
 // …) takes N × that size's own base build time — "adding another disk to the array takes [the]
