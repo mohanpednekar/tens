@@ -1,8 +1,18 @@
 
+### Compute merge-duration step upgrades (issue #367)
+
+Timed merge durations are a live chain: each boundary is always ×10 the previous layer’s duration
+(Core→Node starts at 1s). After auto-merge unlock, sacrificing 10 held tokens of a boundary’s input
+layer permanently changes that boundary’s step to ×5 instead of ×10 — later boundaries rescale from
+the new chain (“at any point of time”). Claimable only in order Core→Node → … →
+Supercomputer→Megacomputer. Applies to newly started merges; in-flight timers keep their remaining
+countdown. Permanent across Prestige.
+
 ### Compute merge durations: 1s × 10^n (issue #370)
 
 Reserve-merge timers previously doubled from 60s (1/2/4/…/256 minutes). Replaced with a powers-of-ten
-scale matching the rest of the game's theme: 1s, 10s, 100s, …, 1e8 s per boundary. Instant merges
+scale matching the rest of the game's theme: unupgraded chain 1s, 10s, 100s, …, 1e8 s per boundary
+(now computed live via the ×10 step above rather than only as a fixed table). Instant merges
 before auto-merge unlock are unchanged.
 
 # Design history & rationale

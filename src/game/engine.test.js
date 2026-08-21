@@ -60,6 +60,8 @@ import {
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
+  getComputeMergeDurationSeconds,
+  getNextComputeMergeDurationUpgradeIndex,
   getCostEpochExponent,
   getDiskCost,
   getDiskRedeemTierName,
@@ -136,6 +138,7 @@ import {
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
   isTierUnlocked,
+  isUpgradeComputeMergeDurationAvailable,
   mergeComputeClustersIntoNetwork,
   mergeComputeCloudsIntoDatacenter,
   mergeComputeCoresIntoNode,
@@ -182,8 +185,9 @@ import {
   tickGame,
   tickIntroAutoInvest,
   tickIntroProduction,
+  upgradeComputeMergeDuration,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -2515,6 +2519,90 @@ describe.each([
     const after = tickGame(duration)(state)
     expect(after.intro[outputField]).toBe(1)
     expect(after.intro[timerField]).toBe(0)
+  })
+})
+
+describe('compute merge duration live ×10 / upgraded ×5 chain (issue #367)', () => {
+  it('unupgraded durations match COMPUTE_MERGE_DURATIONS_SECONDS and each step is ×10 the previous', () => {
+    const state = createInitialGameState()
+    for (let i = 0; i < COMPUTE_MERGE_DURATIONS_SECONDS.length; i += 1) {
+      expect(getComputeMergeDurationSeconds(state, i)).toBe(COMPUTE_MERGE_DURATIONS_SECONDS[i])
+      if (i > 0) {
+        expect(getComputeMergeDurationSeconds(state, i)).toBe(
+          getComputeMergeDurationSeconds(state, i - 1) * COMPUTE_MERGE_STEP_MULTIPLIER,
+        )
+      }
+    }
+  })
+
+  it('upgrading Core→Node makes it ×5 of the implicit base unit and cascades later layers', () => {
+    const locked = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP,
+    })
+    expect(isUpgradeComputeMergeDurationAvailable(locked)).toBe(true)
+    expect(getNextComputeMergeDurationUpgradeIndex(locked)).toBe(0)
+    const after = upgradeComputeMergeDuration(locked)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeMergeDurationUpgrades).toBe(1)
+    expect(getComputeMergeDurationSeconds(after, 0)).toBe(0.5)
+    expect(getComputeMergeDurationSeconds(after, 1)).toBe(5)
+    expect(getComputeMergeDurationSeconds(after, 2)).toBe(50)
+    expect(getComputeMergeDurationSeconds(after, 1)).toBe(
+      getComputeMergeDurationSeconds(after, 0) * COMPUTE_MERGE_STEP_MULTIPLIER,
+    )
+  })
+
+  it('a second upgrade makes Node→Cluster ×5 of Core→Node (not ×10), cascading further', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 1,
+      autoMergeNodesIntoCluster: true,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    const after = upgradeComputeMergeDuration(state)
+    expect(after.intro.computeMergeDurationUpgrades).toBe(2)
+    expect(getComputeMergeDurationSeconds(after, 0)).toBe(0.5)
+    expect(getComputeMergeDurationSeconds(after, 1)).toBe(0.5 * COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED)
+    expect(getComputeMergeDurationSeconds(after, 2)).toBe(
+      getComputeMergeDurationSeconds(after, 1) * COMPUTE_MERGE_STEP_MULTIPLIER,
+    )
+  })
+
+  it('is a same-reference no-op without auto-merge unlocked or enough input held', () => {
+    const noAuto = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP })
+    expect(upgradeComputeMergeDuration(noAuto)).toBe(noAuto)
+    const tooFew = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP - 1,
+    })
+    expect(upgradeComputeMergeDuration(tooFew)).toBe(tooFew)
+  })
+
+  it('refuses to skip ahead — Node→Cluster upgrade is unavailable until Core→Node is claimed', () => {
+    const state = withIntro(createInitialGameState(), {
+      autoMergeNodesIntoCluster: true,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    expect(getNextComputeMergeDurationUpgradeIndex(state)).toBe(0)
+    expect(isUpgradeComputeMergeDurationAvailable(state)).toBe(false)
+  })
+
+  it('the upgrade count is permanent — carried over unchanged by a real Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 3,
+      autoMergeCoresIntoNode: true,
+    }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro.computeMergeDurationUpgrades).toBe(3)
+  })
+
+  it('a newly started Core→Node merge uses the upgraded duration', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 1,
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_MERGE_RATIO,
+    })
+    const after = startComputeCoresMerge(state)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0.5)
   })
 })
 
@@ -5347,6 +5435,10 @@ describe('applyOfflineProgress', () => {
 describe('formatOfflineDuration', () => {
   it('formats seconds-only durations', () => {
     expect(formatOfflineDuration(45)).toBe('45s')
+  })
+
+  it('formats sub-second durations with one decimal (upgraded Core→Node merges)', () => {
+    expect(formatOfflineDuration(0.5)).toBe('0.5s')
   })
 
   it('formats minutes and seconds', () => {

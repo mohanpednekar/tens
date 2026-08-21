@@ -291,9 +291,16 @@ const InfoPage = () => {
           </li>
           <li>
             After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve with a timed
-            countdown ({formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, ×10
-            each step up to {formatOfflineDuration(topMergeSeconds)} for Supercomputer →
-            Megacomputer). Before unlock, merges stay instant.
+            countdown. Each layer is always ×10 the previous layer’s duration (
+            {formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, up to{' '}
+            {formatOfflineDuration(topMergeSeconds)} for Supercomputer → Megacomputer when
+            unupgraded). Before unlock, merges stay instant.
+          </li>
+          <li>
+            Once a boundary’s auto-merge is unlocked, sacrifice {COMPUTE_ENTITY_CAP} held tokens of
+            its input layer so that boundary is ×5 (not ×10) the previous layer — later layers
+            rescale from the new chain. One boundary at a time, in order from Core → Supercomputer
+            (each only once).
           </li>
           <li>Auto-merge starts when the input tier’s normal slots are completely full ({COMPUTE_ENTITY_CAP}).</li>
         </ul>

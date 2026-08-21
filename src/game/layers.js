@@ -256,10 +256,34 @@ export const COMPUTE_MERGE_RESERVE_CAP = 8
 // higher tier's own merge is a proportionally bigger commitment. Only meaningful once a
 // boundary's auto-merge is unlocked — see COMPUTE_MERGE_RESERVE_CAP above.
 export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 1
-// One duration per tier boundary, lowest tier first (index 0 = Core→Node, … index 8 =
-// Supercomputer→Megacomputer) — COMPUTE_MERGE_BASE_DURATION_SECONDS (1s) × 10^n per step:
-// 1s / 10s / 100s / 1000s / … / 1e8 s. E.g. index 2 (Cluster→Network) is 100s. Issue #370.
+// Default step between consecutive merge boundaries (and into Core→Node from an implicit
+// BASE/10 unit). Unupgraded chain: 1s, 10s, 100s, … — see COMPUTE_MERGE_DURATIONS_SECONDS.
+export const COMPUTE_MERGE_STEP_MULTIPLIER = 10
+// After a sequential duration upgrade (issue #367), that boundary's step vs the previous layer
+// uses this instead of COMPUTE_MERGE_STEP_MULTIPLIER — so every layer stays a fixed multiple of
+// the previous at any time, and upgrading an early boundary cascades to later ones.
+export const COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED = 5
+// Convenience snapshot of the unupgraded chain (BASE × STEP^n) — live durations always come from
+// getComputeMergeDurationSeconds, which re-multiplies from the current upgrade count.
 export const COMPUTE_MERGE_DURATIONS_SECONDS = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]
+// Issue #367: sequential one-time upgrades — sacrifice 10 of a boundary's input layer so that
+// boundary's step vs the previous layer is ×5 instead of ×10. Tracked by
+// intro.computeMergeDurationUpgrades (0..this).
+export const COMPUTE_MERGE_DURATION_UPGRADE_COUNT = COMPUTE_MERGE_DURATIONS_SECONDS.length
+// Per-boundary metadata for duration upgrades and live duration lookup (lowest first).
+// `inputField` is the layer sacrificed (10 held); `autoFlagField` must already be true (timed
+// merges only exist after auto-merge unlock).
+export const COMPUTE_MERGE_BOUNDARIES = [
+  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds' },
+  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds' },
+  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds' },
+  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds' },
+  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds' },
+  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds' },
+  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds' },
+  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds' },
+  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds' },
+]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
 // tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/

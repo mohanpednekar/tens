@@ -1,6 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -224,6 +224,15 @@ const StackReclaimRow = styled.div`
   align-items: center;
   justify-content: center;
   gap: ${props => props.theme.space.sm};
+  width: 100%;
+`
+
+// Issue #367: sequential one-time "sacrifice 10 so this layer is ×5 (not ×10) the previous" —
+// one control for the next claimable boundary, above the tier rows. Later layers rescale live.
+const DurationUpgradeRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
 `
 
@@ -557,6 +566,35 @@ const ComputePage = ({ game }) => {
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
+            {(() => {
+              const nextUpgradeIndex = getNextComputeMergeDurationUpgradeIndex(state)
+              if (nextUpgradeIndex === null) return null
+              const nextRow = ENTITY_ROWS[nextUpgradeIndex]
+              const currentDuration = getComputeMergeDurationSeconds(state, nextUpgradeIndex)
+              const afterDuration = getComputeMergeDurationSeconds(
+                { intro: { ...intro, computeMergeDurationUpgrades: nextUpgradeIndex + 1 } },
+                nextUpgradeIndex,
+              )
+              const canUpgrade = isUpgradeComputeMergeDurationAvailable(state)
+              return (
+                <DurationUpgradeRow>
+                  <CompactButton
+                    aria-label={`upgrade ${nextRow.label} merge duration step to ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED}`}
+                    disabled={!canUpgrade}
+                    onClick={actions.upgradeComputeMergeDuration}
+                    title={
+                      canUpgrade
+                        ? `Sacrifice all ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
+                        : `Next duration upgrade: ${nextRow.label} → ${nextRow.mergeOutputLabel}. Needs auto-merge unlocked and ${COMPUTE_ENTITY_CAP} held ${nextRow.label}`
+                    }
+                    type="button"
+                    variant="info"
+                  >
+                    <ButtonContent>{`×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} ${nextRow.symbol}`}</ButtonContent>
+                  </CompactButton>
+                </DurationUpgradeRow>
+              )
+            })()}
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0

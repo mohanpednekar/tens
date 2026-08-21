@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **Compute reserve-merge durations** are now 1 second at Core→Node, then ×10 each boundary
-  (10s, 100s, 1000s, … up to 1e8 s for Supercomputer→Megacomputer), instead of 1–256 minutes
-  doubling from 60s.
+  (10s, 100s, 1000s, … up to 1e8 s for Supercomputer→Megacomputer when unupgraded), instead of
+  1–256 minutes doubling from 60s. Durations are a live chain vs the previous layer.
+- **Compute merge-duration upgrades** (issue #367): after a boundary’s auto-merge is unlocked,
+  sacrifice 10 held tokens of that boundary’s input layer so it is ×5 (not ×10) the previous
+  layer — later layers rescale. Sequential, once per boundary, Core→Node first through
+  Supercomputer→Megacomputer.
 
 ### Added
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
