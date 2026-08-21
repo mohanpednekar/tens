@@ -64,11 +64,31 @@ node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 5 10
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 100 10000
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 --career 0 1
 node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numbers = PP sweep (legacy)
+node .claude/skills/simulate-run-times/simulate.mjs --strategy-out /tmp/IDEAL_STRATEGY.md
 ```
 
 Prints markdown tables to stdout. A run capped by the script's `MAX_TICKS` safety net (5,000,000
 simulated seconds) is marked `(capped)` in the duration column — call that out to the user rather
 than presenting it as a finished run.
+
+## Strategy document (orphan branch) — required after every run
+
+The living **winning strategy** doc lives only on the orphan branch
+`cursor/ideal-run-strategy-4551` (file `IDEAL_STRATEGY.md`). It is intentionally **not** on
+`main`.
+
+**After every skill run, publish an update:**
+
+```
+.claude/skills/simulate-run-times/publish-strategy.sh
+# optional: forward sim args, e.g.
+.claude/skills/simulate-run-times/publish-strategy.sh --career 0 1 10 --pp 0 25000 50000
+```
+
+That script runs the simulator with `--strategy-out`, appends a row to the doc's run log, and
+force-updates the orphan branch via a temporary git worktree (does not merge into `main`). If you
+cannot push, still run the sim with `--strategy-out` and report the tables; note that the orphan
+branch still needs publishing.
 
 ## When editing the simulation
 

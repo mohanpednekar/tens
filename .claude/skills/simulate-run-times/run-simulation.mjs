@@ -36,8 +36,11 @@
 //   node run-simulation.mjs                         # career table (prestiges 0..10) + PP sweep
 //   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh prestige.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
-//   node run-simulation.mjs --pp 0 --career 0 1 10   # both
+//   node run-simulation.mjs --strategy-out /tmp/IDEAL_STRATEGY.md
+//   node run-simulation.mjs --pp 0 --strategy-out ./IDEAL_STRATEGY.md
 
+import { execSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import {
   activateComputeBoost,
   applyAutobuyerMilestones,
@@ -379,8 +382,10 @@ function formatDuration(totalSeconds) {
 function parseArgs(argv) {
   const pp = []
   const career = []
+  let strategyOut = null
   let mode = null
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
     if (arg === '--pp') {
       mode = 'pp'
       continue
@@ -389,41 +394,56 @@ function parseArgs(argv) {
       mode = 'career'
       continue
     }
+    if (arg === '--strategy-out') {
+      strategyOut = argv[i + 1] ?? null
+      i += 1
+      mode = null
+      continue
+    }
     const n = Number(arg)
     if (!Number.isFinite(n) || n < 0) continue
     if (mode === 'career') career.push(Math.floor(n))
     else if (mode === 'pp') pp.push(n)
     else pp.push(n)
   }
-  return { pp, career }
+  return { pp, career, strategyOut }
 }
 
 const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 25000, 50000]
 const defaultCareerPrestiges = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-const { pp: cliPP, career: cliCareer } = parseArgs(process.argv.slice(2))
+const { pp: cliPP, career: cliCareer, strategyOut } = parseArgs(process.argv.slice(2))
 const runPP = cliPP.length > 0 || (cliPP.length === 0 && cliCareer.length === 0)
 const runCareer = cliCareer.length > 0 || (cliPP.length === 0 && cliCareer.length === 0)
 const ppValues = cliPP.length > 0 ? cliPP : defaultPPValues
 const careerTargets = cliCareer.length > 0 ? cliCareer : defaultCareerPrestiges
+
+const outputLines = []
+function emit(line = '') {
+  outputLines.push(line)
+  console.log(line)
+}
 
 function printCycleRow(labelCols, result) {
   const durationCell = result.reached ? formatDuration(result.ticks) : `${formatDuration(result.ticks)} (capped)`
   const foundryCell = formatDuration(result.foundryTicks)
   const mainCell = result.reached || result.mainTicks > 0 ? formatDuration(result.mainTicks) : '—'
   const moneyCell = result.reached ? formatCurrency(result.finalMoney) : 'not reached'
-  console.log(
+  emit(
     `| ${labelCols.join(' | ')} | ${foundryCell} | ${mainCell} | ${durationCell} | ${result.autobuyers} | ${result.speedUps} | ${result.overclock} | ${moneyCell} |`,
   )
 }
 
+let freshTotal = null
+let freshFoundry = null
+
 if (runCareer) {
-  console.log('## Career cycles (fresh start → prestige N, permanent Foundry carry)')
-  console.log('')
-  console.log(
+  emit('## Career cycles (fresh start → prestige N, permanent Foundry carry)')
+  emit('')
+  emit(
     '| After prestiges | Starting PP (banked) | Foundry | Main → Googol | Total cycle | Autobuyers | Speed Ups | Overclock Δ | Money at Googol |',
   )
-  console.log('|---|---|---|---|---|---|---|---|---|')
+  emit('|---|---|---|---|---|---|---|---|---|')
 
   let state = seedState({ prestigeCount: 0, startingPP: 0 })
   let nextTargetIndex = 0
@@ -434,14 +454,19 @@ if (runCareer) {
     const ppAtStart = state.prestige.points
     const result = simulateCycle(state)
 
+    if (countAtStart === 0) {
+      freshTotal = result.reached ? formatDuration(result.ticks) : `${formatDuration(result.ticks)} (capped)`
+      freshFoundry = formatDuration(result.foundryTicks)
+    }
+
     while (nextTargetIndex < targets.length && targets[nextTargetIndex] === countAtStart) {
       printCycleRow([String(countAtStart), String(ppAtStart)], result)
       nextTargetIndex += 1
     }
 
     if (!result.reached) {
-      console.log('')
-      console.log(`Stopped early: cycle at prestige.count=${countAtStart} hit the ${MAX_TICKS.toLocaleString()}-tick cap.`)
+      emit('')
+      emit(`Stopped early: cycle at prestige.count=${countAtStart} hit the ${MAX_TICKS.toLocaleString()}-tick cap.`)
       break
     }
 
@@ -449,21 +474,21 @@ if (runCareer) {
 
     state = prestigeGame(result.state)
     if (state.prestige.count <= countAtStart) {
-      console.log('')
-      console.log('Stopped early: prestigeGame did not increment prestige.count.')
+      emit('')
+      emit('Stopped early: prestigeGame did not increment prestige.count.')
       break
     }
   }
-  console.log('')
+  emit('')
 }
 
 if (runPP) {
-  console.log('## PP sweep (fresh prestige.count = 0 — no tier autobuyers; manual buys unstall)')
-  console.log('')
-  console.log(
+  emit('## PP sweep (fresh prestige.count = 0 — no tier autobuyers; manual buys unstall)')
+  emit('')
+  emit(
     '| PP balance | Speed bonus | Foundry | Main → Googol | Total | Autobuyers | Speed Ups | Overclock Δ | Money at Googol |',
   )
-  console.log('|---|---|---|---|---|---|---|---|---|')
+  emit('|---|---|---|---|---|---|---|---|---|')
   for (const pp of ppValues) {
     const result = simulateCycle(seedState({ prestigeCount: 0, startingPP: pp }))
     const remainingPP = result.state.prestige.points
@@ -472,4 +497,69 @@ if (runPP) {
       : 'locked'
     printCycleRow([String(pp), bonusCell], result)
   }
+}
+
+if (strategyOut) {
+  let engineSha = 'unknown'
+  try {
+    engineSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+  } catch {
+    /* non-git context */
+  }
+  const now = new Date().toISOString()
+  const resultsBody = outputLines.join('\n')
+  const headline = freshTotal
+    ? `Fresh ideal prestige cycle: **${freshTotal}** (Foundry **${freshFoundry}**).`
+    : 'See latest tables below.'
+
+  let priorLog = ''
+  if (existsSync(strategyOut)) {
+    try {
+      const prior = readFileSync(strategyOut, 'utf8')
+      const marker = '## Run log'
+      const idx = prior.indexOf(marker)
+      if (idx >= 0) {
+        const logSection = prior.slice(idx)
+        const lines = logSection.split('\n')
+        priorLog = lines.slice(3).join('\n').trimEnd()
+      }
+    } catch {
+      priorLog = ''
+    }
+  }
+
+  const logRow = `| ${now} | \`${engineSha}\` | ${freshTotal ?? '—'} | ${freshFoundry ?? '—'} | default career + PP sweep |`
+  const strategyDoc = `# Tens ideal run strategy
+
+Living document on orphan branch \`cursor/ideal-run-strategy-4551\`.
+**Updated automatically on every \`simulate-run-times\` skill run** via \`publish-strategy.sh\`.
+
+- Last updated: ${now}
+- Engine / skill commit: \`${engineSha}\`
+- ${headline}
+
+## Winning bot strategy
+
+Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
+
+1. **Foundry gate:** Tap / Combine; pause tier autobuyers while gated; convert Memory → Kilobytes before redeeming permanent Disks (avoids softlock).
+2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Never enable permanent auto-claim / auto-merge.
+3. **Ladder:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
+4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
+5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
+6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Speed-Up / Auto-Prestige in this baseline.
+
+## Latest simulation results
+
+${resultsBody}
+
+## Run log
+
+| When (UTC) | Commit | Fresh total | Fresh Foundry | Args |
+|---|---|---|---|---|
+${logRow}
+${priorLog ? `${priorLog}\n` : ''}`
+
+  writeFileSync(strategyOut, strategyDoc, 'utf8')
+  console.error(`Wrote strategy doc → ${strategyOut}`)
 }
