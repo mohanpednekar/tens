@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   larger disks are migrated so the ladder does not rewind through newly inserted sizes.
 
 ### Added
+- **Compute Auto-Boost** (30 PP, one-time): when a compute-ladder tier is at cap and waiting on
+  its own in-flight reserve merge, automatically activates (or stacks) your preferred Boost preset
+  from the **biggest** such tier (default **Standard**). Preference is selectable on Compute after
+  unlock. Never forfeits an active boost to switch presets.
+- **Forfeit Compute Boost**: cancel an active boost with no refund, or replace it with a different
+  preset/funding tier. Both paths require an explicit confirmation dialog.
+- **Reset Byte Foundry** (Settings → Danger zone): wipe only Memory, the Byte generator, Disks /
+  Storage, and all Compute on the active save — Tiers progress, Prestige Points / count / upgrades,
+  and (if already unlocked) main-game access this cycle stay. Intended for when Capacity (or
+  Storage / Compute) was pushed too far and you want to rebuild Foundry without losing Prestige /
+  Tiers. Separate from full Reset / Erase all; still asks for confirmation and stays disabled while
+  production is frozen at Prestige.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
   available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active
@@ -50,6 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- **Compute reserve-merge durations** are no longer a fixed 1–256 minute doubling table. Core→Node
+  takes **10× live Core earn time** (Memory capacity ÷ Byte generator bits/sec, before Boost); each
+  next boundary is ×10 the previous, or ×5 after that boundary’s sequential duration upgrade
+  (sacrifice 10 input tokens once auto-merge is unlocked). In-flight timers keep the duration
+  snapshotted at start.
 - **Compute Boost** merge-tier funding: each higher compute-ladder tier multiplies Boost effect by
   **4×** (was 8×) and **no longer extends duration** — every tier uses the base Burst / Standard /
   Sustain length. Limited slots already make not-merging wasteful, and auto-merge adds dedicated

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry } from './engine'
+import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyComputeAutoBoost, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, reclaimComputeBoost, forfeitComputeBoost, redeemDisk, releaseDiskCacheBlock, resetByteFoundry, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setComputeAutoBoostType, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry, upgradeComputeMergeDuration } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
 import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
 
@@ -179,6 +179,8 @@ export const useIncrementalGame = () => {
     speedUp: () => setState(speedUpGame),
     overclock: () => setState(overclockGame),
     buyAutoSpeedUp: () => setState(buyAutoSpeedUp),
+    buyComputeAutoBoost: () => setState(buyComputeAutoBoost),
+    setComputeAutoBoostType: boostType => setState(setComputeAutoBoostType(boostType)),
     buyTickspeedAutobuyer: () => setState(buyTickspeedAutobuyer),
     consumeXpForLastTierTickspeed: amount => setState(consumeXpForLastTierTickspeed(amount)),
     setAutoSpeedUpEnabled: enabled => setState(setAutoSpeedUpEnabled(enabled)),
@@ -195,9 +197,10 @@ export const useIncrementalGame = () => {
     startDiskBuild: () => setState(startDiskBuild),
     redeemDisk: capacityBits => setState(redeemDisk(capacityBits)),
     releaseDiskCacheBlock: capacityBits => setState(releaseDiskCacheBlock(capacityBits)),
-    activateComputeBoost: (boostType, tierIndex) => setState(activateComputeBoost(boostType, tierIndex)),
+    activateComputeBoost: (boostType, tierIndex, forfeitConfirmed = false) => setState(activateComputeBoost(boostType, tierIndex, forfeitConfirmed)),
     stackComputeBoost: () => setState(stackComputeBoost),
     reclaimComputeBoost: () => setState(reclaimComputeBoost),
+    forfeitComputeBoost: () => setState(forfeitComputeBoost),
     mergeComputeCoresIntoNode: () => setState(mergeComputeCoresIntoNode),
     mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
     mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
@@ -227,6 +230,7 @@ export const useIncrementalGame = () => {
     startComputeCloudsMerge: () => setState(startComputeCloudsMerge),
     startComputeDatacentersMerge: () => setState(startComputeDatacentersMerge),
     startComputeSupercomputersMerge: () => setState(startComputeSupercomputersMerge),
+    upgradeComputeMergeDuration: () => setState(upgradeComputeMergeDuration),
     pinMuseumEntry: entryId => setState(pinMuseumEntry(entryId)),
     unpinMuseumEntry: entryId => setState(unpinMuseumEntry(entryId)),
   }), [])
@@ -238,6 +242,12 @@ export const useIncrementalGame = () => {
     setOpsSamples([])
     refreshSavesUi()
   }, [refreshSavesUi])
+
+  // Narrower than resetGame: only wipes Byte Foundry / Storage / Compute (state.intro), keeping
+  // Tiers + Prestige intact. Persists via the ordinary save effect — does not clear the slot.
+  const resetByteFoundryProgress = useCallback(() => {
+    setState(resetByteFoundry)
+  }, [])
 
   const clearSlot = useCallback(slotId => {
     const result = clearSaveSlot(slotId)
@@ -310,6 +320,7 @@ export const useIncrementalGame = () => {
     purchaseSupporterDummy,
     redeemUnlockCode,
     renameSaveSlot: renameActiveSaveSlot,
+    resetByteFoundry: resetByteFoundryProgress,
     resetGame,
     saveSlots,
     savesMeta,
