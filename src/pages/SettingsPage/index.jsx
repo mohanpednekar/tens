@@ -167,7 +167,7 @@ const buildSparklinePath = (samples, key) => {
     .join(' ')
 }
 
-const SettingsPage = ({ game, onReset }) => {
+const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
   const frozen = isProductionFrozen(game.state)
   const supporter = Boolean(game.savesMeta?.supporterUnlocked)
   const [code, setCode] = useState('')
@@ -459,6 +459,29 @@ const SettingsPage = ({ game, onReset }) => {
           <ButtonContent>↺ Reset active save…</ButtonContent>
           <VisuallyHidden id="settings-reset-description">
             Erases the active save slot and starts over; other slots and Supporter unlock stay
+          </VisuallyHidden>
+        </Button>
+        <p>
+          Wipe only the Byte Foundry on the active save — useful if Capacity (or Storage /
+          Compute) was pushed too far and you want to rebuild from scratch. Erases Memory, the
+          Byte generator, all Disks / Storage, and all Compute. Tiers progress and Prestige stay.
+        </p>
+        <Button
+          aria-describedby="settings-reset-foundry-description"
+          aria-label="Reset Byte Foundry"
+          disabled={frozen}
+          onClick={onResetByteFoundry}
+          title={
+            frozen
+              ? 'Prestige first — production is frozen at 1 Googol Bytes'
+              : 'Resets Byte Foundry, Storage, and Compute only (asks for confirmation)'
+          }
+          type="button"
+          variant="danger"
+        >
+          <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
+          <VisuallyHidden id="settings-reset-foundry-description">
+            Erases Byte Foundry, Storage, and Compute on the active save; Tiers and Prestige stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
