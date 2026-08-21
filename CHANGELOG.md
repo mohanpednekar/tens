@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Nav attention dots** on the bottom `AppNav` (and MainPage's Game view tab): a green corner
+  indicator when that destination has a pending action — Memory full / combine / Sacrifice /
+  Invest / Disk Build / Claim Core / transfer ready (Foundry), affordable full purchase level /
+  Prestige / Speed Up / Overclock / Money tickspeed or affordable PP upgrades (Tiers), redeemable
+  disk or releasable cache block (Storage), boost/merge/auto-merge unlock ready (Compute). Shared
+  predicates live in `game/navAttention.js`; Upgrades still uses its existing PP-upgrade dot.
 - **More** menu (⋯ on the bottom nav) and standalone **Milestones** / **Settings** screens —
   reachable from every page, including the Byte Foundry gate, with no progress requirement.
   Settings holds About / Appearance notes and Reset; Milestones mirrors the MainPage Milestones

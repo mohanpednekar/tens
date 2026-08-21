@@ -316,13 +316,17 @@ src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
+    navAttention.js         ← pure predicates for AppNav / MainPage view-tab attention dots
+                               (Memory full, affordable full level, redeemable disk, …)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
                                keyed last-save timestamp used to compute offline progress
   components/
     AppNav/index.jsx        ← fixed bottom bar switching Tiers/Foundry/Storage/Compute/Guide
                                (see Architecture / App.jsx); Storage/Compute items appear once
-                               revealed; Tiers/Guide omit during the mandatory Byte Foundry gate
+                               revealed; Tiers omits during the mandatory Byte Foundry gate
+                               (Guide/More stay); green attention dots via game/navAttention.js
+    AppMenu/index.jsx       ← More sheet — Milestones / Settings / Reset (always reachable)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -728,7 +732,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1292 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1304 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

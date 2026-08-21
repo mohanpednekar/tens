@@ -13,8 +13,10 @@ Fixed bottom navigation bar (`.jsx`) switching primary destinations plus always-
 **Guide** (`open guide`, always), and **More** (`open more menu`, always — opens `AppMenu`).
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
-occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
-showTiers, showStorage, showCompute, moreOpen }`.
+occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore, showTiers, showStorage, showCompute, moreOpen,
+attention }`. `attention` is a map of page id → boolean from `game/navAttention.getNavAttention`
+(green corner dot when that destination has a pending action — Memory full, affordable full
+purchase level, redeemable disk, ready Compute merge/boost, etc.).
 
 ## `AppMenu/index.jsx`
 

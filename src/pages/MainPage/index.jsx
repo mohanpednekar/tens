@@ -4,6 +4,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { hasAffordablePpUpgrade, hasTiersGameAttention } from 'game/navAttention'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -691,9 +692,10 @@ const ViewTabButton = styled(Button)`
   position: relative;
 `
 
-// Small affordability indicator on the PP Upgrades tab — lit whenever unspent PP can afford at
-// least one purchase on that page, so the player knows to check in without having to open it on
-// spec every time.
+// Small affordability / pending-action indicator on view tabs — lit on Game when a full purchase
+// level (or Prestige / Speed Up / Overclock / Money tickspeed) is ready, and on Upgrades when
+// unspent PP can afford a purchase. Same green cue as AppNav's attention dots
+// (game/navAttention.js).
 const NavDot = styled.span`
   background: #4ade80;
   border-radius: 50%;
@@ -1101,25 +1103,10 @@ const MainPage = ({ game }) => {
   }, [globalTickspeedUnlocked])
 
   // Lights the PP Upgrades tab's dot whenever unspent PP can afford at least one purchase over
-  // there — any tier's Smart (the only remaining PP-funded per-tier purchase; autobuyer unlock and
-  // the tier tickspeed autobuyer are both free, prestige-count-milestone unlocks now — see
-  // applyAutobuyerMilestones in engine.js, and the Milestones page they're tracked on instead), the
-  // speed bonus unlock, Auto Speed Up, the (global) Tickspeed Autobuyer, or Auto-Prestige (once
-  // revealed via allTiersFullyAutomated) — so the player knows to check in without opening the page
-  // on spec every time. The global tickspeed multiplier *itself* is Money-funded and lives on the
-  // Game view instead, so it doesn't factor in here — only its PP-funded automation toggle does.
-  const hasAffordablePpUpgrade = !isFrozen && !isFirstRun && (
-    TIER_DEFINITIONS.some(tier =>
-      isTierUnlocked(state)(tier) &&
-      (state.autobuyers[tier.id] ?? null) !== null &&
-      !state.smartAutobuyer?.[tier.id] &&
-      prestige.points >= getSmartAutobuyerCost(tier.id)
-    ) ||
-    canBuySpeedBonus ||
-    canBuyAutoSpeedUp ||
-    canBuyTickspeedAutobuyer ||
-    (allTiersFullyAutomated && canBuyAutoPrestige)
-  )
+  // there — see hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Tiers dot).
+  const showPpUpgradeAttention = hasAffordablePpUpgrade(state)
+  // Game tab: full purchase level affordable, prestige freeze, Speed Up / Overclock, Money tickspeed.
+  const showGameAttention = hasTiersGameAttention(state)
 
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
   // interactive element on screen while it's showing (no close/dismiss control by design).
@@ -1350,7 +1337,7 @@ const MainPage = ({ game }) => {
           role="tab"
           type="button"
         >
-          Game
+          Game{showGameAttention && <NavDot aria-label="action available" />}
         </ViewTabButton>
         {!isFirstRun && (
           <ViewTabButton
@@ -1360,7 +1347,7 @@ const MainPage = ({ game }) => {
             role="tab"
             type="button"
           >
-            Upgrades{hasAffordablePpUpgrade && <NavDot aria-label="PP upgrade available" />}
+            Upgrades{showPpUpgradeAttention && <NavDot aria-label="PP upgrade available" />}
           </ViewTabButton>
         )}
         <ViewTabButton
