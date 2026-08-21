@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Cursor housekeeping / planning run** now checks security (fix immediately when safe),
+  workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
+  findings and files `claude-task` issues for non-trivial ones. Soft budget guidance: ~1% of
+  Cursor Pro quota per session.
 - **Disk Cache** stays full as its steady state (except right after a block is released or a size
   is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
   visible between transfers; empty disks fill from Memory directly (Cache no longer pours into

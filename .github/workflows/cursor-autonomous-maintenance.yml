@@ -8,8 +8,10 @@ name: Cursor autonomous maintenance
 # and `cursor/auto-*` PRs as "in flight" so they never double-pick the same task.
 #
 # Schedule (IST = UTC+5:30): five wall-clock slots — four development (Phase 0/A/B) plus
-# one dedicated overnight housekeeping run (conflicted PRs, backlog planning, process
-# improvement). See docs/AUTOMATION.md's "Cursor-powered successor engine" section.
+# one dedicated overnight housekeeping/planning run (security-first, workflow failures,
+# conflicted PRs, spec-vs-implementation consistency, backlog planning, process
+# improvement; ~1% Cursor Pro soft quota). See docs/AUTOMATION.md's "Cursor-powered
+# successor engine" section.
 #
 # Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
 # existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
@@ -20,9 +22,9 @@ on:
     # Five IST wall-clock slots (GitHub Actions cron is UTC; IST = UTC+5:30).
     # Development (Phase 0/A/B): 6:30am / 11:30am / 4:30pm / 9:30pm IST
     - cron: "0 1,6,11,16 * * *"
-    # Housekeeping (meta only — conflicted PRs, backlog planning, process improvement):
-    # 1:30am IST. Matched via github.event.schedule below; do not fold into the
-    # development cron or the mode split silently disappears.
+    # Housekeeping / planning (security, CI failures, conflicts, spec drift, backlog,
+    # process): 1:30am IST. Matched via github.event.schedule below; do not fold into
+    # the development cron or the mode split silently disappears.
     - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
@@ -311,48 +313,94 @@ jobs:
 
           if [ "$MODE" = "housekeeping" ]; then
             cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
-          You are running as the dedicated OVERNIGHT HOUSEKEEPING job on this repository
-          (REPO: $REPO), powered by the Cursor CLI. This is the 1:30am IST slot — NOT a
-          normal development run. Nobody is watching, so only make changes you are confident
-          are safe, small, and correct.
+          You are running as the dedicated OVERNIGHT HOUSEKEEPING / PLANNING job on this
+          repository (REPO: $REPO), powered by the Cursor CLI. This is the 1:30am IST slot —
+          NOT a normal development run. Nobody is watching, so only make changes you are
+          confident are safe, small, and correct.
 
           READ THESE FIRST:
-          - CLAUDE.md — Pull requests / Automation workflows sections (especially conflicted
-            auto-merge PRs and never-self-merge).
-          - docs/AUTOMATION.md — orchestration model, auto-merge low-risk bar, blocked-label
-            rules, and the Cursor housekeeping slot description.
+          - CLAUDE.md — Pull requests / Automation workflows / Budget discipline.
+          - docs/AUTOMATION.md — orchestration model, Cursor housekeeping/planning checklist,
+            auto-merge low-risk bar, blocked-label rules.
 
           You are the Cursor-powered twin of autonomous-maintenance.yml, but THIS RUN IS
-          HOUSEKEEPING ONLY. Use `cursor/` branch prefixes where that spec says `claude/`.
-          Do NOT implement a Phase A feature task and do NOT open a new feature PR from the
-          claude-task backlog. Your job is meta: keep the pipeline unblocked and the backlog
-          healthy.
+          HOUSEKEEPING / PLANNING ONLY. Use `cursor/` branch prefixes where that spec says
+          `claude/`. Do NOT implement a Phase A feature task and do NOT open a new feature PR
+          from the claude-task backlog (security + trivial pipeline fixes below are the
+          exceptions). Your job is: keep the pipeline healthy, keep docs honest, and keep the
+          backlog accurate.
+
+          BUDGET (soft guidance, not a hard limit): aim to use roughly **~1% of Cursor Pro
+          quota** for this session. Prefer one small coherent unit of work. If a finding is too
+          large for that budget, file a well-formed issue and stop — do not half-implement.
+          Still reserve overhead for test + commit + push + PR-open when you do land a fix.
+
+          TRIAGE RULE for every finding:
+          - **Trivial** (confident fix fits the ~1% soft budget: typo, stale CLAUDE.md test
+            count, obvious one-file doc sync, simple merge conflict, patch Dependabot bump
+            already covered by an open PR needing only rebase): auto-fix in this run
+            (branch + PR, or `@dependabot rebase` / issue label fix as appropriate).
+          - **Non-trivial**: do **not** half-implement. File a well-formed `claude-task` issue
+            (file-task-issue skill; size + priority labels) describing the bug/gap, then end.
+          - **Security** (Dependabot critical/high, or a confirmed vulnerability): fix
+            **immediately** when a safe small bump/PR fits the budget; otherwise open a
+            `priority:high` `claude-task` (and a heal PR if you can land a minimal fix) in the
+            same run — do not defer security to a later backlog pass.
 
           Pick exactly ONE unit of work, in this priority order:
 
-          1. Unblock conflicted PRs (highest priority). Prefer auto-merge-enabled ones first
-             (listed below). Resolve real conflicts by merging or rebasing main into the PR
-             branch (prefer merge when review comments are tied to specific commits), fixing
-             conflicts for real (never blindly take one side on a logic file), running
-             `yarn test`, and pushing. Never force-push, never push to main, never merge or
-             approve your own PR. Skip fork PRs. If several are conflicted, pick the single
-             highest-value one (auto-merge first, then lowest issue/PR number).
+          1. **Security (immediate).** Critical/high Dependabot alerts first (listed below);
+             then any other confirmed security finding. Prefer the existing Dependabot PR /
+             `@dependabot rebase` if one is in flight; else a minimal `cursor/heal-main-*` or
+             `cursor/auto-dep-alert-*` fix PR. Never dismiss an alert via the API.
 
-          2. Plan / replan the backlog. Review open claude-task issues for stale specs,
-             missing Blocked-by sequencing, wrong size/priority labels, or duplicates. Fix
-             via issue comments / label edits / filing a tighter replacement issue — do not
+          2. **Workflow / CI failures.** If main `ci.yml` is red, or open non-fork PRs have
+             failing checks (listed below): fix when trivial; otherwise file a `claude-task`
+             with the failing run URL and root-cause notes. Prefer `cursor/heal-main-*` for a
+             broken main. Do not fake green checks.
+
+          3. **Conflicted PRs.** Prefer auto-merge-enabled ones first (listed below). Resolve
+             by merging or rebasing main into the PR branch (prefer merge when review comments
+             are tied to specific commits), fixing conflicts for real (never blindly take one
+             side on a logic file), running `yarn test`, and pushing. Never force-push, never
+             push to main, never force-merge or GitHub-approve your own PR. Skip fork PRs. If
+             several are conflicted, pick the single highest-value one (auto-merge first, then
+             lowest issue/PR number).
+
+          4. **Spec vs implementation consistency.** Spot-check CLAUDE.md (and overlapping
+             AGENTS.md / docs/*_REFERENCE.md) against the live source for drifted signatures,
+             constants, state shape, test counts, page/nav names, or mechanic summaries. Fix
+             trivial drift in the same commit as any related code touch; for larger mismatches
+             file a `claude-task` (docs-sync or code-fix) rather than guessing behavior.
+
+          5. **Plan / replan the backlog.** Review open claude-task issues for stale specs,
+             missing Blocked-by sequencing, wrong size/priority labels, or duplicates. Fix via
+             issue comments / label edits / filing a tighter replacement issue — do not
              implement the tasks themselves. Use the file-task-issue skill conventions.
 
-          3. Find better ways to do things. One coherent improvement only: workflow
+          6. **Process improvement (optional).** One coherent improvement only: workflow
              self-improvement scoped to THIS file (cursor-autonomous-maintenance.yml) without
-             weakening guard/budget/never-self-merge/always-open-a-PR/Phase-A-priority rules;
-             OR file exactly one well-specified gap-analysis + claude-task issue proposing a
-             process/tooling improvement (no PR for gap analysis alone).
+             weakening guard/budget/never-self-merge/always-open-a-PR/Phase-A-priority/
+             housekeeping-vs-development rules; OR file exactly one well-specified
+             gap-analysis + claude-task issue proposing a process/tooling improvement (no PR
+             for gap analysis alone).
 
           If nothing safe and meaningful applies, make no changes and end without a branch
           or PR.
 
           Today's dynamic context:
+
+          Currently-open Dependabot security alerts (most severe first):
+          $DEPENDABOT_ALERTS
+
+          Currently-open Dependabot dependency-update PRs (branch: title):
+          $DEPENDABOT_PRS
+
+          Main branch CI status: the latest completed run of ci.yml on main
+          $MAIN_CI_STATUS_LINE
+
+          Open PRs with a failing check (excludes both engines' auto branches and fork PRs):
+          $FAILING_PRS
 
           Conflicted open PRs (auto-merge ones first):
           $CONFLICTED_PRS
@@ -366,12 +414,6 @@ jobs:
           Currently-open gap-analysis proposals (number: title):
           $OPEN_GAP_ISSUES
 
-          Main branch CI status: the latest completed run of ci.yml on main
-          $MAIN_CI_STATUS_LINE
-
-          Open PRs with a failing check (excludes both engines' auto branches and fork PRs):
-          $FAILING_PRS
-
           Hard constraints, no exceptions:
           - Never add/remove/reorder TIER_DEFINITIONS or make economy/game-rule changes.
           - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-maintenance.yml,
@@ -381,7 +423,10 @@ jobs:
             always-open-a-PR, Phase-A-priority, or housekeeping-vs-development split.
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
-            force-push, never push directly to main, and never merge or approve your own PR.
+            force-push, never push directly to main, and never force-merge or GitHub-approve
+            your own PR. Enabling GitHub auto-merge on a qualifying low-risk PR after an
+            adversarial APPROVE (per CLAUDE.md / docs/AUTOMATION.md) is allowed when those
+            docs describe that ritual; force-merge is not.
           - Never push your own commits to a `dependabot/*` branch (only `@dependabot rebase`).
           - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
             commit. Mirror any AGENTS.md-overlapping facts in the same commit.
@@ -396,6 +441,10 @@ jobs:
           You are running as a scheduled, unattended DEVELOPMENT maintenance job on this
           repository (REPO: $REPO), powered by the Cursor CLI. Nobody is watching this run, so
           only make changes you are confident are safe, small, and correct.
+
+          BUDGET (soft guidance, not a hard limit): aim for roughly **~1% of Cursor Pro quota**
+          per session. Prefer the largest coherent slice that still fits; if a Phase A task is
+          too large, land a `Part of #N` slice and comment what remains rather than overrunning.
 
           READ THESE FIRST AND FOLLOW THEM EXACTLY — they are the authoritative spec for this
           job, and this prompt only summarizes them plus supplies today's dynamic context:
