@@ -38,7 +38,7 @@ describe('navAttention', () => {
       byteCreated: true,
     })
     expect(hasFoundryAttention(state)).toBe(true)
-    expect(getNavAttention(state).foundry).toBe(true)
+    expect(getNavAttention(state).foundry).toBe('high')
   })
 
   it('lights Foundry when combine into a Byte is ready', () => {
@@ -89,7 +89,7 @@ describe('navAttention', () => {
     expect(hasAffordableFullLevel(state)).toBe(true)
     expect(hasTiersGameAttention(state)).toBe(true)
     expect(hasTiersAttention(state)).toBe(true)
-    expect(getNavAttention(state).game).toBe(true)
+    expect(getNavAttention(state).game).toBe('high')
   })
 
   it('lights Tiers when prestige is required (production frozen)', () => {
@@ -99,7 +99,7 @@ describe('navAttention', () => {
       resources: { ...createInitialGameState().resources, [MONEY_ID]: PRESTIGE_THRESHOLD },
     }
     expect(hasTiersGameAttention(state)).toBe(true)
-    expect(getNavAttention(state).game).toBe(true)
+    expect(getNavAttention(state).game).toBe('high')
   })
 
   it('does not light Tiers on a fresh unlocked save with almost no money', () => {
@@ -111,7 +111,7 @@ describe('navAttention', () => {
     expect(hasTiersGameAttention(state)).toBe(false)
   })
 
-  it('lights Storage when a full disk is redeemable', () => {
+  it('lights Foundry (via folded Storage attention) when a full disk is redeemable', () => {
     // 8000-bit disk matches tier01's fresh per-unit cost (1000 Bytes × 8 bits).
     const diskSize = 8000
     const state = withIntro({
@@ -122,7 +122,8 @@ describe('navAttention', () => {
       disksBuiltTotal: { [diskSize]: 1 },
     })
     expect(hasStorageAttention(state)).toBe(true)
-    expect(getNavAttention(state).storage).toBe(true)
+    expect(getNavAttention(state).foundry).toBe('high')
+    expect(getNavAttention(state).storage).toBeUndefined()
   })
 
   it('does not light Storage before Storage unlocks', () => {

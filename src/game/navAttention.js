@@ -53,10 +53,15 @@ import {
   isTierUnlocked,
 } from 'game/engine'
 
-// Attention dots on AppNav / MainPage ViewNav — lit when a destination has a pending player
-// action (Memory full, a full purchase level affordable, redeemable disk, ready merge, …). Pure
-// predicates over game state; the UI only renders the dot. Engine re-validates every action on
-// click either way.
+// Attention dots on AppNav — lit when a destination has a pending player action. Levels:
+//   'high'   — time-sensitive / high-value (Memory full, full purchase level, Prestige freeze,
+//              redeemable disk, combine ready) → larger emphasis dot
+//   'normal' — other actionable cues (Invest/Build, PP upgrades, merges, Speed Up, …)
+//   false    — nothing pending
+// Pure predicates over game state; the UI only renders the dot. Engine re-validates on click.
+
+export const ATTENTION_HIGH = 'high'
+export const ATTENTION_NORMAL = 'normal'
 
 const lastTier = () => TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
@@ -105,6 +110,12 @@ const isTransferBlockAffordable = state =>
   isIntroConversionUnlocked(state) &&
   (state.intro?.bits ?? 0) >= getIntroKilobyteConversionCost(state)
 
+const pickLevel = (high, normal) => {
+  if (high) return ATTENTION_HIGH
+  if (normal) return ATTENTION_NORMAL
+  return false
+}
+
 /** True when some unlocked tier can afford every remaining unit of its current purchase level. */
 export const hasAffordableFullLevel = state => {
   if (isProductionFrozen(state)) return false
@@ -150,7 +161,7 @@ export const hasOverclockAvailable = state => {
   return level >= getOverclockRequirement(state.overclockCount ?? 0)
 }
 
-/** MainPage Game view — buys, prestige, Speed Up / Overclock, Money-funded tickspeed. */
+/** Ladder-view cues on Tiers (buys, prestige, Speed Up / Overclock, Money tickspeed). */
 export const hasTiersGameAttention = state =>
   isProductionFrozen(state) ||
   hasAffordableFullLevel(state) ||
@@ -158,13 +169,11 @@ export const hasTiersGameAttention = state =>
   hasSpeedUpAvailable(state) ||
   hasOverclockAvailable(state)
 
-/** MainPage Upgrades view — unspent PP can buy at least one upgrade. */
+/** PP Upgrades view — unspent PP can buy at least one upgrade. */
 export const hasAffordablePpUpgrade = state => {
   if (isProductionFrozen(state)) return false
   if ((state.prestige?.count ?? 0) < 1) return false
   const points = state.prestige?.points ?? 0
-  // Same bar as MainPage: every tier has Smart + tier tickspeed autobuyer — Auto-Prestige only
-  // appears once that endgame progression is done.
   const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
     Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
@@ -182,14 +191,15 @@ export const hasAffordablePpUpgrade = state => {
   )
 }
 
-/** AppNav Tiers — Game-view actions or affordable PP upgrades. */
 export const hasTiersAttention = state =>
   hasTiersGameAttention(state) || hasAffordablePpUpgrade(state)
 
-/**
- * AppNav Foundry — Memory full, combine ready, Sacrifice/Invest/Build/Claim Core turns,
- * affordable transfer block, or a redeemable full disk (also reachable from Storage).
- */
+export const getTiersAttentionLevel = state =>
+  pickLevel(
+    isProductionFrozen(state) || hasAffordableFullLevel(state),
+    hasTiersAttention(state),
+  )
+
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
@@ -200,11 +210,24 @@ export const hasFoundryAttention = state =>
   isTransferBlockAffordable(state) ||
   isDiskFillAvailable(state)
 
-/** AppNav Storage — redeemable full disk or releasable cache block. */
+export const getFoundryAttentionLevel = state =>
+  pickLevel(
+    isMemoryFull(state) || isCombineAvailable(state) || isDiskFillAvailable(state),
+    hasFoundryAttention(state),
+  )
+
 export const hasStorageAttention = state => {
   if (!isStorageUnlocked(state)) return false
   if (isDiskFillAvailable(state)) return true
   return getDiskSizesToShow(state).some(size => isDiskCacheBlockReleasable(state, size))
+}
+
+export const getStorageAttentionLevel = state => {
+  if (!isStorageUnlocked(state)) return false
+  return pickLevel(
+    isDiskFillAvailable(state),
+    hasStorageAttention(state),
+  )
 }
 
 const hasInstantMergeAvailable = state =>
@@ -215,7 +238,6 @@ const hasInstantMergeAvailable = state =>
     return held >= COMPUTE_MERGE_RATIO && out < COMPUTE_ENTITY_CAP
   })
 
-/** AppNav Compute — boost turn, instant merge, auto-merge unlock, reserve start, auto-claim unlock. */
 export const hasComputeAttention = state => {
   if (!isComputeCoreConversionUnlocked(state)) return false
   return (
@@ -227,10 +249,27 @@ export const hasComputeAttention = state => {
   )
 }
 
-/** Map of AppNav page id → whether that destination wants attention. */
+export const getComputeAttentionLevel = state => {
+  if (!isComputeCoreConversionUnlocked(state)) return false
+  return pickLevel(
+    isComputeUpgradeTurnAvailable(state) || hasInstantMergeAvailable(state),
+    hasComputeAttention(state),
+  )
+}
+
+/** Prefer the stronger of two attention levels. */
+export const maxAttention = (a, b) => {
+  if (a === ATTENTION_HIGH || b === ATTENTION_HIGH) return ATTENTION_HIGH
+  if (a === ATTENTION_NORMAL || b === ATTENTION_NORMAL) return ATTENTION_NORMAL
+  return false
+}
+
+/**
+ * Map of AppNav page id → 'high' | 'normal' | false.
+ * Storage attention folds into Foundry (Memory | Disks second-level tabs).
+ */
 export const getNavAttention = state => ({
-  game: hasTiersAttention(state),
-  foundry: hasFoundryAttention(state),
-  storage: hasStorageAttention(state),
-  compute: hasComputeAttention(state),
+  game: getTiersAttentionLevel(state),
+  foundry: maxAttention(getFoundryAttentionLevel(state), getStorageAttentionLevel(state)),
+  compute: getComputeAttentionLevel(state),
 })

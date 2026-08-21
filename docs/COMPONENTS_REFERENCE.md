@@ -7,16 +7,16 @@ state each is currently in.
 
 ## `AppNav/index.jsx`
 
-Fixed bottom navigation bar (`.jsx`) switching primary destinations plus always-on utilities:
-**Tiers** (`aria-label="open tiers"`, internal page id `'game'`, only once `mainGameUnlocked`),
-**Foundry** (`open byte foundry`), **Storage** / **Compute** (once each mechanic is revealed),
-**Guide** (`open guide`, always), and **More** (`open more menu`, always — opens `AppMenu`).
+Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
+**Compute** (`open compute`, once revealed) → **Tiers** (`open tiers`, page id `'game'`, only once
+`mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
+opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Disks.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
-occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore, showTiers, showStorage, showCompute, moreOpen,
-attention }`. `attention` is a map of page id → boolean from `game/navAttention.getNavAttention`
-(green corner dot when that destination has a pending action — Memory full, affordable full
-purchase level, redeemable disk, ready Compute merge/boost, etc.).
+occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
+showTiers, showCompute, moreOpen, attention }`. `attention` is a map of page id → `'high'` |
+`'normal'` | false from `game/navAttention.getNavAttention` (Storage cues fold into `foundry`;
+high = larger pulsing green dot).
 
 ## `AppMenu/index.jsx`
 

@@ -4,7 +4,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
-import { hasAffordablePpUpgrade, hasTiersGameAttention } from 'game/navAttention'
+import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -678,10 +678,8 @@ const ResetButton = styled(Button)`
   padding: 0.3em 0.55em;
 `
 
-// Tab pair switching MainPage between the Game view and the PP Upgrades view — a local view-state
-// toggle, not real routing (this stays a single-page app, see CLAUDE.md). Only rendered once
-// !isFirstRun, since Prestige Points don't exist as a concept for the player before their first
-// prestige — same gate every other PP surface already uses.
+// Second-level tabs on Tiers: Ladder | Upgrades (peer tabs — no back chrome). Milestones lives
+// under AppNav → More. Shown only after a first Prestige (!isFirstRun).
 const ViewNav = styled.div`
   display: flex;
   gap: 0.5rem;
@@ -692,10 +690,7 @@ const ViewTabButton = styled(Button)`
   position: relative;
 `
 
-// Small affordability / pending-action indicator on view tabs — lit on Game when a full purchase
-// level (or Prestige / Speed Up / Overclock / Money tickspeed) is ready, and on Upgrades when
-// unspent PP can afford a purchase. Same green cue as AppNav's attention dots
-// (game/navAttention.js).
+// Affordability cue on the Upgrades tab — same green as AppNav attention dots.
 const NavDot = styled.span`
   background: #4ade80;
   border-radius: 50%;
@@ -819,7 +814,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ game }) => {
+const MainPage = ({ game, focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
   const theme = useTheme()
   const { prestige } = state
@@ -841,9 +836,13 @@ const MainPage = ({ game }) => {
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
   const prestigeLabel = 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
-  // Which top-level view is showing — a local toggle, not real routing (see ViewNav above). Reset
-  // back to 'game' on a full Reset, alongside the reveal flags below.
+  // Ladder vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
+  // the ladder is the default Tiers screen, and Milestones lives under AppNav → More. Upgrades
+  // stays here because it's the only PP-purchase surface and isn't elsewhere in AppNav/More.
   const [view, setView] = useState('game')
+  useEffect(() => {
+    setView('game')
+  }, [focusNonce])
   // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
   // than firing immediately on click — there's no modal/confirm component elsewhere in this app
   // to reuse, so window.confirm is the simplest fit.
@@ -1102,11 +1101,9 @@ const MainPage = ({ game }) => {
     if (globalTickspeedUnlocked) setGlobalTickspeedCardEverRevealed(true)
   }, [globalTickspeedUnlocked])
 
-  // Lights the PP Upgrades tab's dot whenever unspent PP can afford at least one purchase over
-  // there — see hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Tiers dot).
+  // Lights the Upgrades control whenever unspent PP can afford at least one purchase — see
+  // hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Tiers attention level).
   const showPpUpgradeAttention = hasAffordablePpUpgrade(state)
-  // Game tab: full purchase level affordable, prestige freeze, Speed Up / Overclock, Money tickspeed.
-  const showGameAttention = hasTiersGameAttention(state)
 
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
   // interactive element on screen while it's showing (no close/dismiss control by design).
@@ -1324,23 +1321,22 @@ const MainPage = ({ game }) => {
         )}
       </StickyBalances>
 
-      {/* Game and Milestones are always reachable (MainPage itself is only ever rendered once the
-          Byte Foundry's main-game gate is unlocked) — Chapters (see the Milestones view below) needs to be
-          visible before a first Prestige so "Go Googol" can actually be seen locked, not
-          permanently pre-checked. Upgrades stays gated on !isFirstRun: PP upgrades genuinely don't
-          exist before a first Prestige. */}
-      <ViewNav role="tablist" aria-label="page view">
-        <ViewTabButton
-          aria-selected={view === 'game'}
-          color={view === 'game' ? 'white' : 'darkgrey'}
-          onClick={() => setView('game')}
-          role="tab"
-          type="button"
-        >
-          Game{showGameAttention && <NavDot aria-label="action available" />}
-        </ViewTabButton>
-        {!isFirstRun && (
+      {/* Second-level Tiers tabs: Ladder | Upgrades (no back button). Milestones is under More.
+          Upgrades gated on !isFirstRun — PP upgrades don't exist before a first Prestige. */}
+      {!isFirstRun && (
+        <ViewNav role="tablist" aria-label="tiers view">
           <ViewTabButton
+            aria-label="open ladder"
+            aria-selected={view === 'game'}
+            color={view === 'game' ? 'white' : 'darkgrey'}
+            onClick={() => setView('game')}
+            role="tab"
+            type="button"
+          >
+            Ladder
+          </ViewTabButton>
+          <ViewTabButton
+            aria-label="open upgrades"
             aria-selected={view === 'upgrades'}
             color={view === 'upgrades' ? 'white' : 'darkgrey'}
             onClick={() => setView('upgrades')}
@@ -1349,17 +1345,8 @@ const MainPage = ({ game }) => {
           >
             Upgrades{showPpUpgradeAttention && <NavDot aria-label="PP upgrade available" />}
           </ViewTabButton>
-        )}
-        <ViewTabButton
-          aria-selected={view === 'milestones'}
-          color={view === 'milestones' ? 'white' : 'darkgrey'}
-          onClick={() => setView('milestones')}
-          role="tab"
-          type="button"
-        >
-          Milestones
-        </ViewTabButton>
-      </ViewNav>
+        </ViewNav>
+      )}
 
       {view === 'game' && (<>
 
@@ -2088,124 +2075,6 @@ const MainPage = ({ game }) => {
               </UpgradeRow>
             </UpgradeCategory>
           )}
-        </UpgradesList>
-      )}
-
-      {view === 'milestones' && (
-        <UpgradesList aria-label="milestones page">
-          <UpgradeCategory aria-label="chapters category">
-            <CategoryHeading>Chapters</CategoryHeading>
-            {[
-              { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
-              { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
-              { label: 'Coming soon…', reached: false },
-            ].map(chapter => (
-              <UpgradeRow key={chapter.label} aria-label={`${chapter.label} chapter`}>
-                <span>{chapter.label}</span>
-                <PpUpgradeBadge
-                  $color={chapter.reached ? '#4ade80' : 'darkgrey'}
-                  $dimmed={!chapter.reached}
-                  aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
-                >
-                  {chapter.reached ? '✅' : '🔒'} {chapter.label}
-                </PpUpgradeBadge>
-              </UpgradeRow>
-            ))}
-          </UpgradeCategory>
-
-          {/* Tier Autobuyer Unlocks/Tier Tickspeed Autobuyers stay gated on !isFirstRun — unlike
-              Chapters above, both are keyed entirely off Prestige count, which is a meaningless
-              concept before a first Prestige (see the isFirstRun comment near its declaration). */}
-          {!isFirstRun && (<>
-          <UpgradeCategory aria-label="tier autobuyer unlock milestones category">
-            <CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading>
-            {TIER_DEFINITIONS.map(tier => {
-              const milestone = getAutobuyerUnlockMilestone(tier.id)
-              const reached = (state.autobuyers[tier.id] ?? null) !== null
-              return (
-                <UpgradeRow key={tier.id} aria-label={`${tier.name} autobuyer unlock milestone`}>
-                  <TierNameLabel title={tier.name}>
-                    <VisuallyHidden>{tier.name}</VisuallyHidden>
-                    <span aria-hidden="true">{tier.symbol}</span>
-                  </TierNameLabel>
-                  {reached ? (
-                    <PpUpgradeBadge
-                      $color="#4ade80"
-                      aria-label={`${tier.name}'s autobuyer unlocked at Prestige ${milestone}`}
-                    >
-                      ✅ Prestige {milestone}
-                    </PpUpgradeBadge>
-                  ) : (
-                    <UpgradeRowControls>
-                      <PpUpgradeBadge
-                        $color="darkgrey"
-                        $dimmed
-                        aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
-                        title={`You're at Prestige ${prestige.count}`}
-                      >
-                        🔒 Prestige {milestone}
-                      </PpUpgradeBadge>
-                      <VisuallyHidden
-                        role="progressbar"
-                        aria-label={`${tier.name} autobuyer unlock milestone progress`}
-                        aria-valuenow={Math.min(prestige.count, milestone)}
-                        aria-valuemin={0}
-                        aria-valuemax={milestone}
-                      />
-                    </UpgradeRowControls>
-                  )}
-                </UpgradeRow>
-              )
-            })}
-          </UpgradeCategory>
-
-          <UpgradeCategory aria-label="tier tickspeed autobuyer milestones category">
-            <Disclosure onClick={collapseDisclosure}>
-              <summary><CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading></summary>
-              <MutedText>
-                Starts at Prestige {getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)}, +{TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} per tier after that.
-              </MutedText>
-            </Disclosure>
-            {TIER_DEFINITIONS.map(tier => {
-              const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
-              const reached = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-              return (
-                <UpgradeRow key={tier.id} aria-label={`${tier.name} tickspeed autobuyer milestone`}>
-                  <TierNameLabel title={tier.name}>
-                    <VisuallyHidden>{tier.name}</VisuallyHidden>
-                    <span aria-hidden="true">{tier.symbol}</span>
-                  </TierNameLabel>
-                  {reached ? (
-                    <PpUpgradeBadge
-                      $color="#4ade80"
-                      aria-label={`${tier.name}'s tickspeed autobuyer unlocked at Prestige ${milestone}`}
-                    >
-                      ✅ Prestige {milestone}
-                    </PpUpgradeBadge>
-                  ) : (
-                    <UpgradeRowControls>
-                      <PpUpgradeBadge
-                        $color="darkgrey"
-                        $dimmed
-                        aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
-                        title={`You're at Prestige ${prestige.count}`}
-                      >
-                        🔒 Prestige {milestone}
-                      </PpUpgradeBadge>
-                      <VisuallyHidden
-                        role="progressbar"
-                        aria-label={`${tier.name} tickspeed autobuyer milestone progress`}
-                        aria-valuenow={Math.min(prestige.count, milestone)}
-                        aria-valuemin={0}
-                        aria-valuemax={milestone}
-                      />
-                    </UpgradeRowControls>
-                  )}
-                </UpgradeRow>
-              )
-            })}
-          </UpgradeCategory>
-          </>)}
         </UpgradesList>
       )}
 
