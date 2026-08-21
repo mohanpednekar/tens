@@ -1768,12 +1768,11 @@ engine state).
                                                           // getIntroProductionMilestoneCost) — entirely
                                                           // decoupled from capacity above; only ever advances
     productionMilestoneTierClaims: 0,                     // PERMANENT. Claims made at the current
-                                                          // productionMilestoneTier
+                                                          // productionMilestoneTier; resets to 0 whenever
+                                                          // the tier advances
     computeFundedBandwidthClaims: 0,                      // PERMANENT until Sacrifice rollback (#323/#324)
     computeBandwidthSacrificeIndex: 0,                    // PERMANENT until Sacrifice rollback — next
                                                           // COMPUTE_BOOST_TIER_FIELDS index for Bandwidth-via-compute
-                                                          // productionMilestoneTier; resets to 0 whenever the
-                                                          // tier advances
     mainGameUnlocked: false,                              // Resets to false every real Prestige: true the
                                                           // instant any bits are ever converted into
                                                           // Kilobytes this cycle (manual or auto) — drives
