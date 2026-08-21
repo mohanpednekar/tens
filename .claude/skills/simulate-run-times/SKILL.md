@@ -27,12 +27,11 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   advance tier01's cost), skip Disk Fill/Build, and convert Memory → Kilobytes until the gate
   opens — redeeming permanent full Disks before that convert advances purchase levels without
   flipping `mainGameUnlocked` and can softlock the gate once conversion cost exceeds capacity.
-  After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → convert → optional
-  Capacity/Sacrifice → Boosts → **Core claim last** (only when Fill/Invest/Build are all
-  unavailable; Capacity is optional with a large Compute penalty in the intended design, and is
-  attempted before Core). Does **not** enable permanent auto-claim / auto-merge. Capacity-queue /
-  erase-Compute-on-Sacrifice is approximated by preferring Sacrifice before Core until that engine
-  path is fully wired.
+  After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → **queue Capacity** when
+  Invest can't take the next spend (or while climbing to conversion unlock) →
+  `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
+  → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Does **not** enable
+  permanent auto-claim / auto-merge.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
   `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`

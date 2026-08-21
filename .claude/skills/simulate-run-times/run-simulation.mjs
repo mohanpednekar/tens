@@ -70,6 +70,7 @@ import {
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
   prestigeGame,
+  queueIntroCapacityUpgrade,
   redeemDisk,
   setAutobuyerEnabled,
   speedUpGame,
@@ -77,10 +78,12 @@ import {
   startDiskBuild,
   tapIntroBit,
   tickGame,
+  tickQueuedCapacityUpgrade,
 } from '../../../src/game/engine.js'
 import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
+  INTRO_CONVERSION_UNLOCK_CAPACITY,
   MONEY_ID,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   TIER_DEFINITIONS,
@@ -115,7 +118,17 @@ function actFoundry(state) {
       s = next
     }
     s = pickIntroProductionMilestone(s)
-    s = pickIntroCapacityMilestone(s)
+    if (
+      !(s.intro.capacityUpgradeQueued ?? false) &&
+      s.intro.bits < s.intro.capacity &&
+      (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
+    ) {
+      s = queueIntroCapacityUpgrade(s)
+    }
+    s = tickQueuedCapacityUpgrade(s)
+    if (!(s.intro.capacityUpgradeQueued ?? false)) {
+      s = pickIntroCapacityMilestone(s)
+    }
     for (let i = 0; i < 64; i += 1) {
       const next = convertIntroBitsToKilobytes(s)
       if (next === s) break
@@ -140,17 +153,28 @@ function actFoundry(state) {
   s = pickIntroProductionMilestone(s)
   s = startDiskBuild(s)
 
+  // Queue Capacity before the bar is full when Invest can't take the next Memory spend (or while
+  // still climbing to the conversion unlock) — tickQueuedCapacityUpgrade / tickGame then fires it
+  // on full Memory, erasing all Compute tokens as the queued-Sacrifice penalty.
+  if (
+    !(s.intro.capacityUpgradeQueued ?? false) &&
+    s.intro.bits < s.intro.capacity &&
+    (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
+  ) {
+    s = queueIntroCapacityUpgrade(s)
+  }
+  s = tickQueuedCapacityUpgrade(s)
+
   for (let i = 0; i < 64; i += 1) {
     const next = convertIntroBitsToKilobytes(s)
     if (next === s) break
     s = next
   }
 
-  // Optional Capacity / Sacrifice — preferred over Core when the engine allows it (Memory full and
-  // nothing ranked above Compute+Memory). Large penalty in the real design: a queued Capacity fire
-  // erases Compute tokens; the engine wipe/queue path isn't fully wired yet, so this bot only
-  // approximates by trying Sacrifice before ever minting another Core.
-  s = pickIntroCapacityMilestone(s)
+  // Optional manual Capacity only when not relying on a queue (queue path already handled above).
+  if (!(s.intro.capacityUpgradeQueued ?? false)) {
+    s = pickIntroCapacityMilestone(s)
+  }
 
   // Compute Boosts spend held tokens, not Memory — fine before Core claim.
   if ((s.intro.computeBoostType ?? null) !== null) {
@@ -175,11 +199,11 @@ function actFoundry(state) {
     }
   }
 
-  // Core claim is LAST: only when Memory is full and nothing else Memory-affordable is available
-  // (Disk Fill / Invest / Disk Build). Capacity is the exception — optional, already attempted
-  // above; we do not mint a Core just to spend a full bar when Sacrifice was the strategic choice.
+  // Core claim is LAST: only when Memory is full, Capacity is not queued, and nothing else
+  // Memory-affordable is available (Disk Fill / Invest / Disk Build).
   if (
     isComputeCoreClaimAvailable(s) &&
+    !(s.intro.capacityUpgradeQueued ?? false) &&
     !isDiskFillAvailable(s) &&
     !isBandwidthAvailable(s) &&
     !isDiskBuildAvailable(s)
