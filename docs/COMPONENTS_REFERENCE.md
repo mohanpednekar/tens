@@ -33,22 +33,20 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 ## `DiskArrayRow/index.jsx`
 
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <block size> each (tap full → Tiers
-Bits)"` with one cache block's own size (`size / DISK_CACHE_BLOCK_COUNT`) in `formatCacheSize`'s
-bit-scale `Kb`/`Mb`/… unit (each block itself also shown in that unit, clickable/releasable via
+prominent Byte-scale array size header (`formatDiskSize` — e.g. `1 KB`), then a
+`DISK_CACHE_BLOCK_COUNT`-block cache row labeled `"Cache"` with muted bit-scale block meta
+(`"<block> each"` via `formatCacheSize` — e.g. `1 Kb each`; each block clickable/releasable via
 `actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable` — manual transfer to
-Tiers Bits only; never auto), followed immediately by a fixed `DISK_ARRAY_LADDER_CAP`-square disk
-row of the same size, captioned `"Disks — <size> each (<full> full, <built>/10 built)"` with the
-disk size in `formatDiskSize`'s Byte-scale `KB`/`MB`/… unit (dropping the built clause for
-`"Disks — <size> each (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`,
-since that clause is then permanently stuck at "10/10"; full/empty/not-yet-built states). Full
-disks distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria
-`"auto-redeem …"`, hint `"Auto-redeem → <tier> (autobuyer on)"`) from **manual redeem**
+Tiers Bits only; never auto; instructional copy lives in `title`/`aria`/`ActionHint`, not the
+caption), followed immediately by a fixed `DISK_ARRAY_LADDER_CAP`-square disk row labeled
+`"Disks"` only — built/full counts are visual on the strip (full / empty / not-yet-built), not
+restated in text. Full disks distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue
+fill, aria `"auto-redeem …"`, hint `"Auto-redeem → <tier> (autobuyer on)"`) from **manual redeem**
 (`isDiskManualRedeemAvailable` — good/green pulsing fill, aria `"redeem … for <tier>"`, hint
 `"Tap a full disk → 1 free <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable` — or,
 while `intro.diskBuild?.size` matches this size, a plain "Array rebuilding — Ns left" status line
 in place of both interactive rows (and their captions). Disks render as circles, cache blocks as
-squares, and neither row's caption uses `text-transform: uppercase` — deliberately, so the size
+squares, and neither size label uses `text-transform: uppercase` — deliberately, so the size
 text's own lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes, Disks);
 see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
