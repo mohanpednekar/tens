@@ -63,16 +63,20 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
-      docs/COMPONENTS_REFERENCE.md
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Tiers → Guide → More) + More sheet
+    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
+                            styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; see "Byte Foundry" below
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
+                            "Byte Foundry" below
     StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
     ComputePage/index.jsx  ← Compute's own screen, reached via AppNav once revealed
-    MainPage/index.jsx     ← the game; renders all tiers data-driven from TIER_DEFINITIONS
-    InfoPage/index.jsx     ← static mechanic explanations; reads no game state
+    MainPage/index.jsx     ← the game; Ladder | Upgrades; data-driven from TIER_DEFINITIONS
+    InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
+    MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
+    SettingsPage/index.jsx ← Supporter / saves / museum / Ops / Reset; via AppNav → More
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
-  App.jsx                  ← root component
+  App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
 vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
 ```
@@ -84,14 +88,14 @@ React, no side effects. `useIncrementalGame.js` is the only place holding React 
 localStorage persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
-state); `StoragePage`/`ComputePage` are pure renderers. `App.jsx` switches pages via a local
-`page` `useState` and a shared bottom `AppNav` (Foundry → Compute → Tiers → Guide → More), with
-`ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says, except on
-gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`) — whenever the current
-Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry" below). Storage is a
-Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Tiers stays hidden during
-the gate; Guide and More stay reachable so utilities never require unlocking the main game. Once
-unlocked, Foundry is just another AppNav destination.
+state); `StoragePage`/`ComputePage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
+switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Compute →
+Tiers → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
+`page` says, except on gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`)
+— whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
+below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Tiers
+stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
+main game. Once unlocked, Foundry is just another AppNav destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
