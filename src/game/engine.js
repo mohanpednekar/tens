@@ -2407,10 +2407,19 @@ export const isDiskManualRedeemAvailable = (state, capacityBits) =>
 
 // Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
 // whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
-// that tier). Ascending — Cache then Disks of each row render smallest→largest. Empty when
-// nothing is transferable; the Build button stays independent of this list.
-export const getRelevantDiskSizesForFoundry = state =>
-  getDiskSizesToShow(state).filter(size => getDiskRedeemTierName(state, size) !== null)
+// that tier), PLUS always the highest size in that list — even when it does not currently match.
+// The highest row is usually the ladder's current / incomplete array, which is the most useful
+// one to keep tracking on Foundry even while building ahead of redeemability. Ascending — Cache
+// then Disks of each row render smallest→largest. The Build button stays independent of this list;
+// full history stays on the Disks tab / StoragePage.
+export const getRelevantDiskSizesForFoundry = state => {
+  const shown = getDiskSizesToShow(state)
+  if (shown.length === 0) return []
+  const matching = shown.filter(size => getDiskRedeemTierName(state, size) !== null)
+  const highest = shown[shown.length - 1]
+  if (matching.includes(highest)) return matching
+  return [...matching, highest]
+}
 
 // Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
 // getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
+  (even when that size is not currently redeemable), so the ladder’s current / incomplete array
+  stays trackable. Matching/redeemable sizes are still listed ascending as before.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk

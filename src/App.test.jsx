@@ -2965,6 +2965,7 @@ describe('Byte Foundry Storage', () => {
   test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
     // 10 built at 1 KB advances the Build offer to 10 KB (not yet matching any tier at level 1),
     // but the 1 KB array still matches Kilobytes — it must stay on Foundry Memory while relevant.
+    // The highest (10 KB) offer is also kept so the incomplete next array stays visible.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
@@ -2974,12 +2975,14 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByText(/Disks — 1 KB each/)).toBeInTheDocument()
+    expect(screen.getByText(/Disks — 10 KB each/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
     expect(screen.getByText(/Tap a full disk → 1 free Kilobytes/i)).toBeInTheDocument()
   })
 
-  test('the Cache/Disks detail rows hide on ByteFoundryPage once no shown size is redeemable by any tier — the Build button stays visible/usable regardless', () => {
+  test('Foundry Memory keeps the highest Disk row even when no shown size is redeemable — the incomplete ladder size stays trackable', () => {
     // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    // Highest (level-2 / current offer) must still render so the player can track the incomplete array.
     seedIntroState(
       {
         bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -2990,9 +2993,10 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: /disk array cache/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Cache —/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Disks —/)).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /disk array cache/i })).toBeInTheDocument()
+    expect(screen.getByText(/^Cache —/)).toBeInTheDocument()
+    expect(screen.getByText(/Disks — 10 KB each/)).toBeInTheDocument()
+    expect(screen.queryByText(/Disks — 1 KB each/)).not.toBeInTheDocument()
   })
 
   test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {

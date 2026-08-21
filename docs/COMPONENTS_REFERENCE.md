@@ -53,8 +53,9 @@ text's own lowercase `b` (bits, Cache) never visually collapses into uppercase `
 see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
-Extracted so both `ByteFoundryPage` (every currently-relevant size from
-`getRelevantDiskSizesForFoundry`, ascending) and `StoragePage` / Foundry Disks tab (every size ever
+Extracted so both `ByteFoundryPage` (every currently-matching size from
+`getRelevantDiskSizesForFoundry`, plus always the highest shown size even when unmatched,
+ascending) and `StoragePage` / Foundry Disks tab (every size ever
 reached, via `getDiskSizesToShow`) render this detail identically. Every action here is unaffected
 by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
