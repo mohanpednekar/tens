@@ -11,10 +11,12 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between five top-level pages, `ByteFoundryPage` (the tap-to-earn pre-game bootstrap, shown
-until its one-time transition into the main game), `MainPage` (the game itself), `InfoPage` (all the
-static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens reached only
-from `ByteFoundryPage`'s own nav buttons, once each mechanic is revealed), via a plain `useState`
-toggle in `App.jsx` — not a router (see "Architecture" below).
+until its one-time transition into the main game), `MainPage` (the tier ladder), `InfoPage` (all the
+static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens once each
+mechanic is revealed), via a plain `useState` toggle in `App.jsx` plus a shared bottom `AppNav`
+(Tiers / Foundry / Compute / Guide / More — Storage is under Foundry as Memory | Disks) — not a router (see "Architecture" below).
+Guide and More (Milestones / Settings) are always available, including during the
+mandatory Byte Foundry gate; only Tiers stays progress-gated.
 
 ## Tech stack
 
@@ -194,14 +196,15 @@ Three workflows under `.github/workflows/` run Claude Code and GitHub automation
 fixing up, and merging PRs with no human in the loop — except a narrow, conservative class of low-risk
 bot-authored PRs that merge on green checks alone. All three authenticate via the `GH_AUTOMATION_PAT`
 repo secret rather than the default `GITHUB_TOKEN` (whose commits/pushes/merges can't trigger other
-workflows). That PAT is deliberately narrowly-scoped and currently lacks `Workflows: write`, so it
-can't push any commit touching `.github/workflows/**` — such changes need an interactive session
-instead (see issue #62/#69 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites for the up-to-date
-status).
+workflows). That PAT is deliberately narrowly-scoped and includes `Workflows: write`, so autonomous
+runs can push commits that touch `.github/workflows/**` when a task authorizes it (e.g. Phase B
+self-improvement on `autonomous-maintenance.yml`, or a new workflow file from a Phase A issue).
+Owner review via `.github/CODEOWNERS` still applies once branch protection requires it (see issue
+#62 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
-`autonomous-maintenance.yml`, which runs every 5 hours and does exactly one unit of work per run,
+`autonomous-maintenance.yml`, which runs twice daily (9:00am and 9:00pm IST) and does exactly one unit of work per run,
 picked in three phases — Phase 0 (CI/CD failures, plus any unaddressed critical/high-severity
 Dependabot security alert, severity-sorted the same way Phase A sorts priority labels) always
 outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low`), which
@@ -224,7 +227,9 @@ repo secret. Every agent step is gated on that secret existing, so the files are
 maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes no behavior until then.
 While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
 `cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
-the two never double-pick; its schedule is offset from the Claude cron. See `docs/AUTOMATION.md`'s
+the two never double-pick; its schedule is five IST wall-clock slots (four development + one
+dedicated 1:30am IST housekeeping run for conflicted PRs / backlog planning / process improvement),
+offset from the Claude twice-daily cron. See `docs/AUTOMATION.md`'s
 "Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
 setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
 Claude workflows).
@@ -311,10 +316,20 @@ src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
+    navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
+                               Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
-                               keyed last-save timestamp used to compute offline progress
+    storage.js              ← localStorage save/load/clear + save-schema migration, multi-slot
+                               saves + Supporter entitlement (unlock code / dummy checkout),
+                               clearSaveSlot / clearAllSaveProgress (never revokes unlock),
+                               plus the separately keyed last-save timestamp used to compute
+                               offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
+                               (progression order); Tiers omits during the Foundry gate
+                               (Guide/More stay); green attention dots via game/navAttention.js
+    AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
+                               Byte Foundry are Settings → Danger zone only)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -336,31 +351,22 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
     ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (see "Architecture" 4 and "Economy
-                               model" below). Takes an `onBack` prop (only passed once
-                               `intro.mainGameUnlocked` — the mandatory gate itself has no way out).
-                               Receives the full `game` object (`{ state, actions, ... }` from
-                               `useIncrementalGame`) as a prop, same as MainPage
-    StoragePage/index.jsx   ← Storage's fuller, every-size detail screen — a thin wrapper rendering
-                               one `components/DiskArrayRow` per size ever reached — NOT the Build
-                               button, which stays on ByteFoundryPage (see "Architecture" 4a below
-                               for the full field breakdown). Reached only via ByteFoundryPage's own
-                               "🏦 Storage" nav button; takes `{ game, onBack }`, `onBack` always
-                               returning to ByteFoundryPage (`page = 'foundry'`)
-    ComputePage/index.jsx   ← the Compute screen, including the nine-boundary merge chain and the
-                               Boost effects section — issue #326 put the Boost effects (armed-tier
-                               status/presets/Stack+Reclaim) at the TOP of the page, tier rows below
-                               (see "Architecture" 4b below for the full field breakdown — row
-                               layout, squares, issue citations). Reached only via ByteFoundryPage's
-                               own "⚡ Compute" nav button; takes `{ game, onBack }`, `onBack` always
-                               returning to ByteFoundryPage (`page = 'foundry'`)
-    MainPage/index.jsx      ← the game itself (see "Architecture" below). Takes `{ game,
-                               onOpenFoundry, onOpenInfo }` props — `game` is the full
-                               `useIncrementalGame()` object, lifted up into App.jsx (see below) so
+                               model" below). Takes `{ game }` only — top-level navigation lives in
+                               App.jsx's shared AppNav. Receives the full `game` object
+                               (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
+                               same as MainPage
+    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
+                               Build stays on Foundry Memory tab. File kept as a thin reusable
+                               wrapper — not a top-level AppNav destination
+    ComputePage/index.jsx   ← Compute's dedicated screen (merge chain + Boost). Reached via AppNav
+                               once revealed; takes `{ game }`
+    MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game }` — the
+                               full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Full
                                field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
-                               Foundry/Storage/Compute sections. Reachable via MainPage's "ℹ️ Guide"
-                               nav button; its own "← Back to game" button returns to MainPage
+                               Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
+                               takes no navigation props (AppNav is the exit)
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -380,29 +386,28 @@ src/
                                wraps <ThemeProvider><GlobalStyle/>, switching between
                                <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<StoragePage/>/<ComputePage/>
                                via a local `page` useState (`'game'`/`'info'`/`'foundry'`/`'storage'`/
-                               `'compute'`, default `'game'`) — not a routing library, same "local
-                               toggle, not real routing" convention MainPage's own Game/Upgrades/
-                               Milestones view tabs already use. Which screen actually renders is a
-                               derived `showingFoundry = page !== 'info' && page !== 'storage' && page
-                               !== 'compute' && (!intro.mainGameUnlocked || page === 'foundry')` check,
-                               not `page` directly: ByteFoundryPage is both a *mandatory gate* (whenever
-                               `intro.mainGameUnlocked` is false — no fresh Kilobytes without tapping
-                               through it, see "Economy model" below) and, once unlocked, a *permanent,
-                               voluntarily-revisitable screen* reachable at any time via MainPage's own
-                               "⚙️ Byte Foundry" link (`page = 'foundry'`) to review the current cycle's
-                               stats — it no longer disappears once passed. `'info'`/`'storage'`/
-                               `'compute'` are all excluded from the gate override: `'info'` for the
-                               original courtesy (a Prestige/Reset firing while the Guide page is open
-                               doesn't yank the player off it); `'storage'`/`'compute'` for a stronger
-                               reason — they're reached only via a button ON ByteFoundryPage itself
-                               (gate or voluntary-link phase alike), so without this exclusion the
-                               override would make them permanently unreachable during the gate phase
-                               (mainGameUnlocked flips true well before Storage/Compute's own much
-                               higher capacity thresholds could ever be revealed). Either way the gate
-                               picks back up the instant the player clicks back to `'game'`. Since
-                               `page` is independent of `intro.mainGameUnlocked`, no syncing effect is
-                               needed at all: the gate resolving just reveals whatever `page` already
-                               was (typically `'game'`)
+                               `'compute'`, default `'game'`) — not a routing library — plus a shared
+                               fixed bottom `AppNav` (Foundry → Compute → Tiers → Guide → More).
+                               Same "local toggle, not real routing" convention MainPage's own
+                               Game/Upgrades/Milestones view tabs already use. Which screen actually
+                               renders is a derived `showingFoundry = page !== 'info' && page !==
+                               'storage' && page !== 'compute' && (!intro.mainGameUnlocked || page ===
+                               'foundry')` check, not `page` directly: ByteFoundryPage is both a
+                               *mandatory gate* (whenever `intro.mainGameUnlocked` is false — no fresh
+                               Kilobytes without tapping through it, see "Economy model" below) and,
+                               once unlocked, a *permanent, voluntarily-revisitable screen* reachable
+                               at any time via AppNav's Foundry item (`page = 'foundry'`) to review the
+                               current cycle's stats — it no longer disappears once passed.
+                               `'info'`/`'storage'`/`'compute'` are all excluded from the gate
+                               override: `'info'` for the original courtesy (a Prestige/Reset firing
+                               while the Guide page is open doesn't yank the player off it);
+                               `'storage'`/`'compute'` because capacity can reveal them during the
+                               gate itself, so without this exclusion the override would make them
+                               permanently unreachable until the first transfer. Either way the gate
+                               picks back up the instant the player navigates to `'game'` (Tiers).
+                               Since `page` is independent of `intro.mainGameUnlocked`, no syncing
+                               effect is needed at all: the gate resolving just reveals whatever
+                               `page` already was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -442,7 +447,8 @@ Strict three-layer separation:
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (not in
    MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
-   offlineProgress, dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+   resetByteFoundry, offlineProgress, dismissOfflineProgress, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown
@@ -472,53 +478,47 @@ Strict three-layer separation:
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
-   controls, numbers, and status text only; it takes an `onOpenInfo` callback (wired by `App.jsx`) for
-   its one navigation link out to `InfoPage`, but reads no explanatory prose about *how* a mechanic
-   works, only *what its current state is* (e.g. the Tickspeed panel's "Lv.N — +X% faster ticks" line
-   is live status, not a description, so it stays here). See docs/MAINPAGE_REFERENCE.md for the full
-   field-by-field layout.
+   controls, numbers, and status text only; top-level destinations live in `App.jsx`'s shared `AppNav`
+   (Tiers is this page), so MainPage itself carries no page-to-page open-* links. See
+   docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
-   taking `game` (and an optional `onBack`, plus `onOpenStorage`/`onOpenCompute`) as props. It's the
-   only way any Prestige cycle ever earns its first Kilobytes, replacing the old, since-removed
-   self-producing Bytes tier as the game's actual bootstrap — a mandatory gate whenever
-   `intro.mainGameUnlocked` is false, with no way out. Once that cycle's `intro.mainGameUnlocked`
-   flips true (the first bits ever converted into Kilobytes this cycle), it stops being a gate and
-   becomes a permanent screen the player can voluntarily reopen at any time (MainPage's "⚙️ Byte
-   Foundry" link), with an `onBack`-driven exit back to MainPage — but it stays just as interactive
-   either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the standalone Tap
-   button is removed entirely — Memory's own tile becomes the tap target instead (an `as="button"`
-   swap on the same styled `FillableStatCard`, calling the identical `actions.tapIntroBit`), rather
-   than two separate controls doing the same thing. Compute moved to its own dedicated screen (see 4b
-   below) once revealed; this page only renders a nav button to reach it, always enabled once
-   revealed. Storage split differently: starting the next Disk's build (its own core-loop action,
-   alongside Sacrifice/Invest) and the single currently-active/buildable size's own full
-   interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half),
-   and redeeming (Disk Fill itself) — both stay here, rendered via the shared
-   `components/DiskArrayRow` (see "Repo layout" above). The Build button always stays visible/
-   usable regardless of eligibility (building ahead of every tier's current cost is a deliberate
-   strategy — see "Economy model" below), but the `DiskArrayRow` detail itself only renders while
-   the current size is actually redeemable by some tier right now (`getDiskRedeemTierName(state,
-   diskSize) !== null`) — once every tier's cost has grown past it with nothing left to redeem or
-   release toward, the row is just inert clutter here (its full history stays reviewable on
-   StoragePage regardless). Only one Disk/Cache array is ever shown here at a time; only every
-   OTHER size the ladder has since moved past — full multi-size history, via that same shared
-   component — lives on the dedicated `StoragePage` (see 4a below), reached via its own nav button,
-   always enabled once revealed. Every action — here or on either dedicated screen — stays gated by
-   the forced priority order (see "Economy model" below).
+   taking `{ game }` as a prop. It's the only way any Prestige cycle ever earns its first Kilobytes,
+   replacing the old, since-removed self-producing Bytes tier as the game's actual bootstrap — a
+   mandatory gate whenever `intro.mainGameUnlocked` is false, with no way out (AppNav omits Tiers/
+   Guide during the gate). Once that cycle's `intro.mainGameUnlocked` flips true (the first bits
+   ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent screen
+   the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just as
+   interactive either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the
+   standalone Tap button is removed entirely — Memory's own tile becomes the tap target instead (an
+   `as="button"` swap on the same styled `FillableStatCard`, calling the identical
+   `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute and
+   Storage live on their own dedicated screens (see 4a/4b below) once revealed, reached via AppNav
+   (not page-local open-* buttons). Starting the next Disk's build (its own core-loop action,
+   alongside Sacrifice/Invest) and every currently-relevant size's full interactive detail — cache
+   blocks, disk squares, releasing (Disk Fill's manual-release half → Tiers Bits only), and
+   redeeming (Disk Fill itself; auto when the matching tier's autobuyer is on, else manual) — both
+   stay here, rendered via the shared `components/DiskArrayRow` (see "Repo layout" above), ascending
+   smallest→largest with Cache of a row immediately above that row's Disks. The Build button always
+   stays visible/usable regardless of eligibility (building ahead of every tier's current cost is a
+   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` only renders while that
+   size is actually redeemable by some tier right now (`getRelevantDiskSizesForFoundry` —
+   `getDiskRedeemTierName(state, size) !== null` for sizes from `getDiskSizesToShow`) — including an
+   older array the ladder has moved past that still matches. Once no size is transferable, the
+   detail rows hide (full history stays on the Disks tab / `StoragePage`). Every action — here or on
+   either dedicated screen — stays gated by the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
     rendering one `components/DiskArrayRow` per size ever reached (ascending, via
     `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-    `{ game, onBack }`. Reached only via ByteFoundryPage's "🏦 Storage" nav button; `onBack` always
-    returns to ByteFoundryPage (`page = 'foundry'`). A pure renderer, same "engine re-validates, UI
-    just mirrors it" posture as every other page here.
-4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game, onBack }`. Reached
-    only via ByteFoundryPage's "⚡ Compute" nav button; `onBack` always returns to ByteFoundryPage
-    (`page = 'foundry'`). Same posture as StoragePage above. Also where the nine-boundary merge
-    chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
-    Megacomputer — see "Economy model" below and issues #280/#316/#321) lives, behind its own later,
-    one-time `intro.computeMergePageUnlocked` reveal nested inside this same page — not a separate
-    page/nav link. "Compute" names the page/feature only — individual entities drop the word
-    (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every player-visible label.
+    `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
+    re-validates, UI just mirrors it" posture as every other page here.
+4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game }`. Reached via
+    AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
+    the nine-boundary merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud →
+    Datacenter → Supercomputer → Megacomputer — see "Economy model" below and issues #280/#316/#321)
+    lives, behind its own later, one-time `intro.computeMergePageUnlocked` reveal nested inside this
+    same page — not a separate page/nav link. "Compute" names the page/feature only — individual
+    entities drop the word (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every
+    player-visible label.
     Deliberately terse: every control is icon-only (no or single-word visible labels), the full
     sentence living in `title`/`aria-label` instead — and the prose explanation of each mechanic
     lives in the Guide (`InfoPage`), not here. Render order top to bottom: an active Compute
@@ -527,7 +527,8 @@ Strict three-layer separation:
     the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
     Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
     how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
-    minute/10 minutes/1 hour at tier 1/Core, scaling per tier — see "Economy model" below), disabled
+    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
+    enhancement — see "Economy model" below), disabled
     until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
     (any type/tier) — a Stack + Reclaim row appears right below the presets instead:
     `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
@@ -539,25 +540,26 @@ Strict three-layer separation:
     the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
     #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
     from Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`)
-    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power/duration ("click
-    any tier row" — the effects section renders first specifically so it's visible without
-    scrolling once a tier below it is clicked), highlighted while selected; row 2 is, before that
-    boundary's auto-merge is unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO`
-    held) plus an Unlock Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the produced tier
-    held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves,
-    clickable as the manual-start trigger with no separate button ("slots are the button"), showing
-    a countdown while a merge is in flight. Megacomputer (the bottom of the chain) has no row 2, but
-    its row 1 is still Boost-selectable — the only place a Megacomputer has any use at all. Cores'
-    own row 1 also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock
-    control — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see
-    "Economy model" below.
-5. **`InfoPage/index.jsx`** — a separate, static page holding every mechanic's evergreen explanation
-   (what used to be MainPage's click-to-expand `InfoDetails` disclosures — Byte Foundry, Storage,
-   Compute, Tickspeed, Speed Up, Overclock, Tier Autobuyers, Milestones, plus the app's tagline).
-   Reads no `useIncrementalGame` state at all, only pure constants/formulas from
-   `game/engine.js`/`game/layers.js`, so nothing here can drift out of sync with a live run.
-   `App.jsx` toggles between these pages locally; there is still no routing library or backend
-   involved.
+    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power (duration stays
+    at the base preset — issue #363) ("click any tier row" — the effects section renders first
+    specifically so it's visible without scrolling once a tier below it is clicked), highlighted
+    while selected; row 2 is, before that boundary's auto-merge is unlocked, an instant Merge button
+    (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock Auto-merge button (disabled below
+    `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP`
+    (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
+    button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
+    (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
+    a Megacomputer has any use at all. Cores' own row 1 also carries a small badge for the separate,
+    unrelated Memory → Core auto-claim unlock control — its manual counterpart (Claim Core) still
+    lives on ByteFoundryPage instead — see "Economy model" below.
+5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
+   explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,
+   Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
+   `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
+   Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
+   can drift out of sync with a live run. Reached via AppNav's Guide item; `App.jsx` toggles
+   between these pages locally; there is still no routing library or backend involved.
 
 ## Economy model
 
@@ -649,7 +651,13 @@ bank-redeemability check, the flat vs. dynamic transfer cost).
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
 (`.claude/skills/simulate-run-times/SKILL.md`): it plays out full runs with the real engine functions
-rather than reasoning about the formulas by hand.
+rather than reasoning about the formulas by hand. **Also re-run and publish** that skill whenever
+making a change that can significantly affect ideal Foundry / prestige timings (economy constants
+or formulas in `engine.js`/`layers.js`, Foundry/Disk/Compute/Capacity/tickspeed/autobuyer/
+prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publishing writes **one
+new file per run** onto the stable orphan branch `ideal-run-strategy` via
+`publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
+into `main`, and do not rename it with an agent/session suffix.
 
 ## Path aliases
 
@@ -715,7 +723,7 @@ already cover the genuinely useful items on that checklist.
   compact icon-based visible text), so `getByRole('button', { name: … })` still matches even though a
   labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
-  Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
+  Reset (Settings → Danger zone) `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
   `afterEach` (see `App.test.jsx`). If a test ever needs to observe behavior across real tick boundaries
   again (none currently does), use `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))`
   **once per tick** (not one large jump per assertion — jumping by more than one tick fires the live
@@ -728,7 +736,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1269 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1340 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

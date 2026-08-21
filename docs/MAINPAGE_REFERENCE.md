@@ -9,33 +9,30 @@ below), since all four pages are tightly coupled around the same `game` prop and
 mechanic. `MainPage` is
 deliberately purely game — live controls, numbers, and status text only. Every mechanic's
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
-now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via the `ℹ️ Guide`
-link beside the page title; see CLAUDE.md's Architecture section for the split and
-`onOpenInfo`/`onBack` wiring. `MainPage` is only ever rendered while the Byte Foundry gate isn't
-active — i.e. `state.intro.mainGameUnlocked` is true and the player hasn't voluntarily navigated to
-`ByteFoundryPage` via its own "⚙️ Byte Foundry" link (`onOpenFoundry` prop) — see "Byte Foundry
-page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
+now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
+item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
+`App.jsx`'s shared `components/AppNav` (Tiers / Foundry / Storage / Compute / Guide) — pages
+themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
+ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
+true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
+see "Byte Foundry page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
 
 **Byte Foundry page** (`src/pages/ByteFoundryPage/index.jsx`). The tap screen — a separate, much
 simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
-renders identically whether reached as the mandatory gate or voluntarily; `onBack` (present only
-once `state.intro.mainGameUnlocked` is true) is the only thing that differs.
+renders identically whether reached as the mandatory gate or voluntarily; AppNav is hidden (or
+omits Tiers/Guide) during the gate so there is still no escape hatch.
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
-the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a `Header` row
-(`display: flex`, `justify-content: space-between`, the same title/nav-link placement convention
-`MainPage`'s own `<Header>` and `InfoPage`'s own `<Header>` already use) pairing the page title with
-a "← Back to game" button (`aria-label="Back to game"`, same convention as `InfoPage`'s own back
-button, calling `onBack`) — shown only once `onBack` is passed, i.e. only when reached voluntarily
-post-`mainGameUnlocked`, since the mandatory gate has no way out — rather than the exit sitting alone
-at the bottom of the page; a one-line status explainer below that (two variants — pre-unlock
-instructions, or a post-unlock acknowledgment that transfers keep working indefinitely, with no
-per-cycle cap to run into); a `TilesRow` (flex row) holding a single `FillableStatCard`
+the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
+`Header` with the page title (top-level navigation lives in AppNav, not here); a one-line status
+explainer below that (two variants — pre-unlock instructions, or a post-unlock acknowledgment that
+transfers keep working indefinitely, with no per-cycle cap to run into); a `TilesRow` (flex row)
+holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
@@ -49,7 +46,7 @@ paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte 
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
 (`getIntroProductionRate(intro) / BITS_PER_BYTE`). There is no separate Cache tile — the same
-progress the old Cache 1KB tile showed (progress toward the next convertible 1000-bit chunk) is now
+progress the old Cache tile showed (progress toward the next convertible Memory→Kilobyte unit) is now
 read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
 element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
@@ -106,25 +103,22 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Compute moved entirely to its own dedicated screen (`ComputePage` — see below) — this page only
-renders a nav button to reach it, once revealed (`computeCoreRevealed`,
-`isComputeCoreConversionUnlocked(state)` — `capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`), always
-enabled regardless of what's currently actionable there — a permanent, voluntarily-revisitable
-posture, same as `MainPage`'s own "⚙️ Byte Foundry" link — shown as a "⚡ Compute" button
-(`aria-label="open compute"`, calling `onOpenCompute`). One exception to "Compute lives entirely on
-its own screen": Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label
-`🧮 Claim Core`, calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the
-Memory tile above already computes) renders on THIS page, right before the Compute nav button, once
-`computeCoreRevealed` AND `!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled)
-once auto-claim is unlocked (see issue #316). `disabled={!canClaimComputeCore}` where
-`canClaimComputeCore = isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores
-under `COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that
-Memory needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
+Compute lives on its own dedicated screen (`ComputePage` — see below), reached via AppNav once
+revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). One exception to "Compute lives entirely on its own screen":
+Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label `🧮 Claim Core`,
+calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the Memory tile
+above already computes) renders on THIS page once `computeCoreRevealed` AND
+`!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled) once auto-claim is unlocked
+(see issue #316). `disabled={!canClaimComputeCore}` where `canClaimComputeCore =
+isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores under
+`COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that Memory
+needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
 
 Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
 capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
-more deliberate reveal than `revealed`'s own 1000-bit gate above). Its visible label always tracks
+more deliberate reveal than `revealed`'s own 8000-bit gate above). Its visible label always tracks
 `getDiskSize(state)` — an independent ladder that walks tier01's own per-unit level-cost sequence,
 expressed in real, Byte-accurate bits (`getTierCost(tier01, level) * BITS_PER_BYTE`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
@@ -178,12 +172,10 @@ shows one small `StorageSummaryChip` per size, each reading `"<size> <full>/<bui
 a compact, at-a-glance readout, deliberately not the fuller square-by-square grid StoragePage itself
 renders (see below); visiting StoragePage is still how a full disk actually gets redeemed.
 
-Below Build/the summary, a "🏦 Storage" nav button (`aria-label="open storage"`, calling
-`onOpenStorage`, same reveal gate as Build) reaches `StoragePage` for the fuller per-size detail and
-redeeming — always enabled regardless of what's currently actionable there, same posture as the
-Compute nav button above.
+`StoragePage` (reached via AppNav once Storage is revealed) holds the fuller per-size detail and
+redeeming for every size ever reached; Build stays on ByteFoundryPage.
 
-Below the Storage/Compute nav buttons, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below Build / Claim Core, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
@@ -249,18 +241,17 @@ cycle a head start — so the gate is a fast pit-stop after the first cycle, not
 Auto-redeem (`tickDiskAutoRedeem`) is no longer gated by any persisted per-cycle toggle at all — it
 checks whether the matched tier's own autobuyer is currently active (`autobuyers[tier.id]` non-null
 AND `autobuyersEnabled[tier.id]` not `false`), so there's no `storageAutoRedeemEnabled`-style field
-to carry over or reset in the first place. Once unlocked, the page also persists as a screen the player can
-return to at any time (via `onOpenFoundry`) rather than disappearing for the rest of the cycle — and
-stays just as interactive there as on the gate itself.
+to carry over or reset in the first place. Once unlocked, the page also persists as a screen the
+player can return to at any time via AppNav's Foundry item rather than disappearing for the rest of
+the cycle — and stays just as interactive there as on the gate itself.
 
 **Storage page** (`src/pages/StoragePage/index.jsx`). Storage's fuller detail screen, split out of
-ByteFoundryPage (see "Byte Foundry" section above) — reached only via ByteFoundryPage's "🏦 Storage"
-nav button, `onBack` always returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack
-}`. A `Header` row (title `🏦 Storage` + a "← Back" button, `aria-label="Back to Byte Foundry"`) is
-all the page-chrome it has — **no Build button and no Memory balance readout here**: building the
-next disk (and its own brief per-size summary) stays on ByteFoundryPage itself (see above); this page
-holds only the fuller per-size cache/squares grid and the two Storage actions that live only here,
-releasing a full cache block back into Memory and redeeming a full disk.
+ByteFoundryPage (see "Byte Foundry" section above) — reached via AppNav once Storage is revealed.
+Takes `{ game }`. A centered title `🏦 Storage` is all the page-chrome it has — **no Build button
+and no Memory balance readout here**: building the next disk stays on ByteFoundryPage itself (see
+above); this page holds only the fuller per-size cache/squares grid and the two Storage actions that
+live only here, releasing a full cache block into the Bits balance (`resources.base`) and redeeming
+a full disk.
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
@@ -275,30 +266,28 @@ the build's duration; otherwise, two rows render:
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's own small staging buffer, filling left to right as Memory tops it up (`tickDiskAutoFill`)
-  before any of it pours into an empty disk container below. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and independently
-  **releasable** (`$releasable`, accent border, clickable) once `isDiskCacheBlockReleasable(state,
-  size)` — full AND that size isn't mid-build. `aria-label` is `"release <size> cache block N back
-  into Memory"` when releasable, else the plain `"<size> cache block N"`; `title` is `"Release this
-  block's <blockBits formatted> back into Memory"` once full, else `"Filling from Memory"`; clicking a
-  releasable block calls `actions.releaseDiskCacheBlock(size)`, redirecting those bits back to Memory
-  (e.g. toward an ordinary Kilobyte transfer) instead of waiting for the array's next disk to
-  complete.
+  before any of it pours into an empty disk container below. Caption reads `"Cache — <block> each
+  (tap full → Tiers Bits)"`. A block reads **full** (`$full` — a raised fill) once its own share of
+  `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`, accent border,
+  clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and**
+  some tier's current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
+  `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain `"<size> cache
+  block N"`; `title` names the manual-only Tiers Bits transfer once releasable; clicking a
+  releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
+  `resources.base` (Bits) — Cache never auto-transfers.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
-  **full** (leftmost, holding a full cache's worth of Memory — accent border, `aria-label="redeem
-  <size> disk"`, calling `actions.redeemDisk(size)`, clickable/highlighted (`theme.color.good`) only
-  once `redeemable` — i.e. `getDiskRedeemTierName(state, size)` returns non-null, meaning *some*
-  tier in `TIER_DEFINITIONS` (not specifically tier01 any more — the first one, in array order, whose
-  current per-unit level cost matches this size exactly) — otherwise disabled with a duller fill,
-  never itself blocked by the forced priority order, since Disk Fill is ranked highest) — **empty**
-  (built but not yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always
-  disabled) — **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built
-  <size> disk"`, always disabled). A full square's `title` names which tier it would redeem into
-  right now (`"Redeems 1 <size> disk for 1 free <tierName> — empties it, ready for its cache to fill
-  again"`) or, if no tier currently matches, `"Redeemable once some tier's level cost matches
-  <size>"`; an empty square's `title` is `"Built, waiting for this array's cache to pour into it"`; a
-  not-yet-built square's is `"Not yet built"`; while rebuilding (this branch doesn't render, but the
+  **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
+  `aria-label="auto-redeem <size> disk for <tier>"`, hint `"Auto-redeem → <tier> (autobuyer on)"`;
+  `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for
+  <tier>"`, hint `"Tap a full disk → 1 free <tier>"`; both call `actions.redeemDisk(size)` and are
+  never blocked by the forced priority order (Disk Fill ranks highest) — **empty** (built but not
+  yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
+  **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
+  always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
+  `"Redeemable once some tier's level cost matches <size>"` when not yet matching; an empty square's
+  `title` is `"Built, waiting for this array's cache to pour into it"`; a not-yet-built square's is
+  `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
   rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
   empty again, re-entering the fillable pool.
@@ -317,9 +306,8 @@ started reading that exact same value directly; that transfer-block row (back on
 the only place this progress is shown.
 
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
-ByteFoundryPage — reached only via ByteFoundryPage's "⚡ Compute" nav button, `onBack` always
-returning to ByteFoundryPage (`page = 'foundry'`). Takes `{ game, onBack }`. A `Header` row (title
-`⚡ Compute` + a "← Back" button, `aria-label="Back to Byte Foundry"`).
+ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title
+`⚡ Compute` is the page chrome (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
@@ -579,13 +567,8 @@ not at the bottom"):
   *what its current numbers are*.
 - **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
   current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
-  `<h1>Tens</h1>`, beside the "⚙️ Byte Foundry" nav button (`aria-label="open byte foundry"`,
-  calling the `onOpenFoundry` prop) and the "ℹ️ Guide" nav button (`aria-label="open guide"`,
-  calling `onOpenInfo`) — all three always visible, no disclosure involved. Both nav buttons are a
-  real `Button`/`ButtonContent` pair (`variant="info"`, styled via a small `NavButton = styled(Button)`
-  override for header-scale sizing), the same convention `ByteFoundryPage`'s own "🏦 Storage"/"⚡
-  Compute" nav buttons already use — not the plain underlined `GuideLink` text-button this page used
-  before, which read as far less obviously clickable than the rest of the app's own navigation.
+  `<h1>Tens</h1>` — always visible, no disclosure involved. Top-level destinations (Tiers / Foundry /
+  Storage / Compute / Guide) live in `App.jsx`'s shared `AppNav`, not as header buttons here.
   Sourced from `package.json`'s `"version"` field via a build-time JSON import
   (`import { version } from '../../../package.json'`) — the single source of truth; no separate
   constant duplicates it.
@@ -625,9 +608,10 @@ Autobuyers" below), this only checks tier Smart purchases plus the global automa
 the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
 since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
 tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`,
-`OverclockCard`, and the Reset button are Game-view-only; every PP-spending control lives on the
+balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and
+`OverclockCard` are Game-view-only; every PP-spending control lives on the
 Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
+Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered

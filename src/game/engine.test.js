@@ -36,6 +36,10 @@ import {
   isStorageUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
+  queueIntroCapacityUpgrade,
+  clearIntroCapacityUpgradeQueue,
+  eraseAllComputeTokens,
+  tickQueuedCapacityUpgrade,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
@@ -61,6 +65,7 @@ import {
   getDiskRedeemTierName,
   getDiskSize,
   getDiskSizesToShow,
+  getRelevantDiskSizesForFoundry,
   getEffectiveTierTickSpeedSeconds,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
@@ -122,6 +127,8 @@ import {
   isDiskBuildAvailable,
   isDiskBuildTurnAvailable,
   isDiskCacheBlockReleasable,
+  isDiskAutoRedeemEligible,
+  isDiskManualRedeemAvailable,
   isDiskFillAvailable,
   isDiskRedeemable,
   isGlobalTickspeedMultiplierUnlocked,
@@ -139,10 +146,12 @@ import {
   mergeComputeNodesIntoCluster,
   mergeComputeSupercomputersIntoMegacomputer,
   overclockGame,
+  pinMuseumEntry,
   reclaimComputeBoost,
   prestigeGame,
   redeemDisk,
   releaseDiskCacheBlock,
+  resetByteFoundry,
   speedUpGame,
   stackComputeBoost,
   startComputeCloudsMerge,
@@ -157,6 +166,7 @@ import {
   startDiskBuild,
   tapIntroBit,
   tickAutoMergeClustersIntoNetwork,
+  unpinMuseumEntry,
   tickAutoMergeCloudsIntoDatacenter,
   tickAutoMergeCoresIntoNode,
   tickAutoMergeDatacentersIntoSupercomputer,
@@ -682,6 +692,172 @@ describe('pickIntroCapacityMilestone', () => {
     )
     expect(isProductionFrozen(state)).toBe(true)
     expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+  })
+
+  it('clears capacityUpgradeQueued on a successful manual Sacrifice', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true, ...noOtherUpgradesLeft,
+    })
+    expect(pickIntroCapacityMilestone(state).intro.capacityUpgradeQueued).toBe(false)
+  })
+})
+
+describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
+  it('queues before Memory is full and is idempotent while already queued', () => {
+    const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+    const queued = queueIntroCapacityUpgrade(state)
+    expect(queued.intro.capacityUpgradeQueued).toBe(true)
+    expect(queueIntroCapacityUpgrade(queued)).toBe(queued)
+  })
+
+  it('clearIntroCapacityUpgradeQueue clears the flag', () => {
+    const queued = queueIntroCapacityUpgrade(createInitialGameState())
+    const cleared = clearIntroCapacityUpgradeQueue(queued)
+    expect(cleared.intro.capacityUpgradeQueued).toBe(false)
+    expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
+  })
+
+  it('fires when full: erases Compute tokens, Sacrifices, and clears the queue — even if Boosts are available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      capacityUpgradeQueued: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      // Mid-build so Disk Build is unavailable while Memory stays full.
+      diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
+      computeCores: 5,
+      computeNodes: 3,
+      computeBoostType: null,
+    })
+    // Holding Cores makes Burst activatable → normal Sacrifice would be blocked.
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+    const after = tickQueuedCapacityUpgrade(state)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+  })
+
+  it('is a no-op while Memory is not yet full', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY - 1,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+    })
+    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
+  })
+
+  it('still yields to Disk Fill / Bandwidth / Disk Build while queued', () => {
+    const investable = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+      productionMilestoneTierClaims: 0,
+    })
+    expect(tickQueuedCapacityUpgrade(investable)).toBe(investable)
+  })
+})
+
+describe('eraseAllComputeTokens', () => {
+  it('wipes ladder balances and an active Boost, leaving unlock flags alone', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 4,
+      computeNodes: 2,
+      autoClaimCoreEnabled: true,
+      autoMergeCoresIntoNode: true,
+      computeCoresEverEarned: 20,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 30,
+      computeCoresMergeRemainingSeconds: 15,
+    })
+    const after = eraseAllComputeTokens(state)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0)
+    expect(after.intro.autoClaimCoreEnabled).toBe(true)
+    expect(after.intro.autoMergeCoresIntoNode).toBe(true)
+    expect(after.intro.computeCoresEverEarned).toBe(20)
+  })
+})
+
+describe('resetByteFoundry', () => {
+  it('wipes Memory, Byte generator, Disks, and Compute while keeping Tiers and Prestige', () => {
+    const initial = createInitialGameState()
+    const state = {
+      ...initial,
+      resources: { ...initial.resources, base: 50_000, tier01: 3 },
+      owned: { ...initial.owned, tier01: 12, tier02: 2 },
+      purchased: { ...initial.purchased, tier01: 12 },
+      purchaseLevels: { ...initial.purchaseLevels, tier01: 2 },
+      prestige: { ...initial.prestige, points: 42, count: 3, xp: 10 },
+      autobuyers: { ...initial.autobuyers, tier01: true },
+      intro: {
+        ...initial.intro,
+        bits: 500,
+        capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+        byteCreated: true,
+        tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+        productionMultiplier: 8,
+        productionMilestoneTier: 4,
+        productionMilestoneTierClaims: 1,
+        mainGameUnlocked: true,
+        capacityUpgradeQueued: true,
+        disks: { [INTRO_STARTING_CAPACITY * 8000]: 2 },
+        disksBuiltTotal: { [INTRO_STARTING_CAPACITY * 8000]: 5 },
+        diskCache: { [INTRO_STARTING_CAPACITY * 8000]: 100 },
+        diskBuild: { size: INTRO_STARTING_CAPACITY * 8000, remainingSeconds: 3, totalSeconds: 10 },
+        diskAutoRedeemedSizes: { [INTRO_STARTING_CAPACITY * 8000]: true },
+        computeCores: 7,
+        computeCoresEverEarned: 20,
+        computeNodes: 3,
+        computeClusters: 1,
+        computeMergePageUnlocked: true,
+        autoClaimCoreEnabled: true,
+        autoMergeCoresIntoNode: true,
+        computeCoresMergeRemainingSeconds: 12,
+        computeBoostType: 'standard',
+        computeBoostTierIndex: 0,
+        computeBoostStacks: 2,
+        computeBoostRemainingSeconds: 40,
+      },
+    }
+
+    const after = resetByteFoundry(state)
+    const freshIntro = createInitialGameState().intro
+
+    expect(after.intro).toEqual({ ...freshIntro, mainGameUnlocked: true })
+    expect(after.resources).toEqual(state.resources)
+    expect(after.owned).toEqual(state.owned)
+    expect(after.purchased).toEqual(state.purchased)
+    expect(after.purchaseLevels).toEqual(state.purchaseLevels)
+    expect(after.prestige).toEqual(state.prestige)
+    expect(after.autobuyers).toEqual(state.autobuyers)
+  })
+
+  it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 8,
+      byteCreated: true,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      mainGameUnlocked: false,
+      disks: { 8000: 1 },
+      computeCores: 2,
+    })
+    const after = resetByteFoundry(state)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.byteCreated).toBe(false)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.disks).toEqual({})
+    expect(after.intro.computeCores).toBe(0)
   })
 })
 
@@ -1325,6 +1501,43 @@ describe('getDiskSizesToShow', () => {
   })
 })
 
+describe('getRelevantDiskSizesForFoundry', () => {
+  it('includes the currently-offered size when tier01\'s level-1 cost matches it', () => {
+    const state = createInitialGameState()
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
+  })
+
+  it('keeps an older built size while it still matches a tier cost, even after the ladder advances', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
+  })
+
+  it('returns empty once no shown size matches any tier\'s current cost', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withPurchaseLevel(
+      withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+      }),
+      tensTier.id,
+      3
+    )
+    expect(getDiskSize(state)).toBe(level2Size)
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([])
+  })
+
+  it('lists multiple matching sizes ascending (smallest first)', () => {
+    const megabyteDiskSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [megabyteDiskSize]: 1 },
+    })
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, megabyteDiskSize])
+  })
+})
+
 describe('startDiskBuild', () => {
   // Disk Build ranks below Bandwidth in the Byte Foundry's forced priority order (see
   // isDiskBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable at
@@ -1725,6 +1938,21 @@ describe('redeemDisk', () => {
     expect(redeemDisk(level2Size)(state)).toBe(state)
   })
 
+  it('does not sync-fill after a manual redeem — Forced Priority can hand Memory to Bandwidth first', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: {},
+    })
+    const after = redeemDisk(FIRST_DISK_SIZE)(state)
+    expect(after.owned[tensTier.id]).toBe(1)
+    // Emptied, but Memory is left intact for Bandwidth/Invest rather than pulled into cache here.
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
     const state = withMoney(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), PRESTIGE_THRESHOLD)
     expect(isProductionFrozen(state)).toBe(true)
@@ -1739,6 +1967,37 @@ describe('redeemDisk', () => {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
     expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+})
+
+describe('isDiskAutoRedeemEligible / isDiskManualRedeemAvailable', () => {
+  it('manual redeem is available for a full matching disk when the tier has no autobuyer', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('auto-redeem is eligible once the matching tier\'s autobuyer is unlocked and enabled', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }),
+      tensTier.id,
+      1
+    )
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('falls back to manual after that size has already auto-redeemed this cycle', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskAutoRedeemedSizes: { [FIRST_DISK_SIZE]: true },
+      }),
+      tensTier.id,
+      1
+    )
+    expect(isDiskAutoRedeemEligible(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(isDiskManualRedeemAvailable(state, FIRST_DISK_SIZE)).toBe(true)
   })
 })
 
@@ -2134,7 +2393,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
 
-  it('reclaims from a higher tier\'s own field, at that tier\'s own scaled duration', () => {
+  it('reclaims from a higher tier\'s own field, at that tier\'s own base duration', () => {
     const state = withIntro(createInitialGameState(), {
       computeClusters: 2, // tier 3
       computeBoostType: 'burst',
@@ -2446,15 +2705,15 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierDurationSeconds('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) and the duration linearly (tierIndex times)', () => {
-    // The spec's own worked example: tier 5 (Grid) is 5x as long and 8^4 as powerful as tier 1.
+  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) with no duration enhancement', () => {
+    // Issue #363: tier 5 (Grid) is 4^4 as powerful as tier 1, same base duration.
     expect(getComputeBoostTierMultiplier('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** 4)
-    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds * 5)
+    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('tier 3 (Cluster) matches "clusters take 4 minutes" style scaling: 8^2 power, 3x duration', () => {
-    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * 64)
-    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * 3)
+  it('tier 3 (Cluster) is 4^2 power at the base preset duration', () => {
+    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * (COMPUTE_BOOST_TIER_POWER_STEP ** 2))
+    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
   it('returns 0 for an invalid boostType or an out-of-range tierIndex', () => {
@@ -2522,7 +2781,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4)
   })
 
-  it('starts a fresh boost at the tier-scaled multiplier/duration, recording the funding tier', () => {
+  it('starts a fresh boost at the tier-scaled multiplier and base duration, recording the funding tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
     const after = activateComputeBoost('standard', 1)(state)
     expect(after.intro.computeBoostType).toBe('standard')
@@ -2531,7 +2790,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier/duration', () => {
+  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier (duration stays base)', () => {
     const state = withIntro(createInitialGameState(), { computeClusters: 1 })
     const after = activateComputeBoost('burst', 3)(state)
     expect(after.intro.computeClusters).toBe(0)
@@ -2732,6 +2991,31 @@ describe('tickGame Disk auto-redeem integration', () => {
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+  })
+
+  it('refills that size\'s cache ASAP after auto-redeem when Memory and an empty container remain', () => {
+    // Exercise the same redeem-then-fill composition tickGame's tickStorage uses (scoped to a
+    // real redeem change). Avoid full tickGame here — tickIntroAutoInvest would spend the same
+    // Memory toward Kilobytes before auto-redeem runs.
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        bits: FIRST_DISK_SIZE,
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskCache: {},
+      }),
+      tensTier.id,
+      1
+    )
+    const afterRedeem = tickDiskAutoRedeem(state)
+    expect(afterRedeem).not.toBe(state)
+    expect(afterRedeem.owned[tensTier.id]).toBe(1)
+    expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
+    expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+
+    const afterFill = tickDiskAutoFill(afterRedeem)
+    expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(afterFill.intro.bits).toBe(0)
   })
 
   // Regression: tickDiskAutoRedeem used to only run after tickGame's normal (non-frozen) path, so
@@ -5505,6 +5789,41 @@ describe('prestigeGame', () => {
     const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
     const after = prestigeGame(state)
     expect(after.prestige.count).toBe(1)
+  })
+
+  it('appends a Prestige museum history entry and carries it across Speed Up', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+    const after = prestigeGame(state)
+    expect(after.prestigeMuseum.history).toHaveLength(1)
+    expect(after.prestigeMuseum.history[0].prestigeNumber).toBe(1)
+    expect(after.prestigeMuseum.history[0].pointsAwarded).toBe(1)
+
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const readyToSpeedUp = {
+      ...after,
+      purchaseLevels: { ...after.purchaseLevels, [lastTier.id]: getSpeedUpRequirement(0) },
+      owned: { ...after.owned, [lastTier.id]: DEFAULT_PURCHASE_BLOCK_SIZE },
+    }
+    const sped = speedUpGame(readyToSpeedUp)
+    expect(sped.prestigeMuseum.history).toHaveLength(1)
+    expect(sped.prestigeMuseum.history[0].id).toBe(after.prestigeMuseum.history[0].id)
+  })
+
+  it('pins and unpins museum entries up to the pin cap', () => {
+    const withHistory = {
+      ...createInitialGameState(),
+      prestigeMuseum: {
+        history: [
+          { id: 'a', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 },
+          { id: 'b', at: 2, prestigeNumber: 2, pointsAwarded: 1, moneyBits: 1 },
+        ],
+        pinnedIds: [],
+      },
+    }
+    const pinned = pinMuseumEntry('a')(withHistory)
+    expect(pinned.prestigeMuseum.pinnedIds).toEqual(['a'])
+    expect(unpinMuseumEntry('a')(pinned).prestigeMuseum.pinnedIds).toEqual([])
+    expect(pinMuseumEntry('missing')(withHistory)).toBe(withHistory)
   })
 
   it('awards 1 Prestige Point at exactly PRESTIGE_THRESHOLD', () => {

@@ -10,6 +10,41 @@ structure so you can jump to the matching topic.
 
 ## Automation workflows
 
+### Stale `blocked` labels after Workflows: write landed — 2026-08-20
+
+`GH_AUTOMATION_PAT` missing `Workflows: write` was a real Phase A killer through mid-July 2026:
+any push whose reachable history touched `.github/workflows/**` was rejected, so a large
+`claude-task` chain (#35–#37, #51–#52, #53/#55/…, #75, …) got the `blocked` label. A 2026-07-29
+re-test after a claimed grant still failed (see #69), #69 was landed interactively (#209), and
+the dependent issues kept their labels. By 2026-08-20 the maintainer confirmed the scope is on
+the PAT, but Phase A was still empty of implementable work: the guard excludes `blocked`-labeled
+issues, and the three remaining unlabeled candidates (#52/#139/#140) soft-skip on open
+`Blocked by #N` parents (#51 still `blocked`; #138 `blocked` for a separate subjective UI
+judgment). Clearing the PAT-era labels (keeping #138) and fixing the docs that still said the
+PAT lacked the scope is what unsticks the backlog — not another settings-page change.
+
+### Schedule retune (Cursor IST slots + Claude twice-daily) — 2026-08-20
+
+Cursor's maintenance twin originally ran on a UTC cron offset ~2.5h from Claude's every-5-hours
+`0 */5 * * *` (`30 2,7,12,17,22 * * *`). That kept the two engines from colliding but tied both
+cadences to UTC arithmetic rather than the maintainer's IST wall clock, and treated every Cursor
+wake identically (Phase 0/A/B).
+
+The retune (issue #339):
+
+- **Cursor** — five fixed IST slots: 6:30am / 11:30am / 4:30pm / 9:30pm for development, plus a
+  dedicated **1:30am housekeeping** run. Housekeeping is meta only (conflicted PRs, backlog
+  planning, process improvement) and deliberately does **not** skip for the 5-PR ceiling — a full
+  ceiling is when unblocking conflicted auto-merge PRs matters most. The two crons stay separate
+  so `github.event.schedule` can select the mode; folding them into one expression would silently
+  drop the split.
+- **Claude** — cut from every 5 hours to **twice daily** at 9:00am / 9:00pm IST (`30 3,15 * * *`
+  UTC). Exact clock times were a judgment call (the request specified count only); 9am/9pm IST sit
+  clear of every Cursor slot so the engines still never wake together.
+
+IST = UTC+5:30, so IST `:30` maps to UTC `:00` for Cursor and IST `:00` maps to UTC `:30` for
+Claude — do not "simplify" the minute fields without re-checking that mapping.
+
 ### Why a PAT instead of the default `GITHUB_TOKEN`
 
 All three workflows authenticate with `GH_AUTOMATION_PAT` instead of `GITHUB_TOKEN`. This isn't
@@ -228,6 +263,15 @@ entirely by the script's own `if` logic, so it's backed by a second, structural 
 the script staying correct: a `.github/CODEOWNERS` entry maps `.github/workflows/**` to the repo
 owner, and once branch protection requires Code Owner review, GitHub itself blocks any workflow-file
 PR from merging without that review — defense in depth, not a replacement for the script-level check.
+
+### Auto-merge merge method must match the Main ruleset (2026-08-20)
+
+The repository ruleset **Main** (`allowed_merge_methods: merge + rebase` only — squash disabled as
+of its 2026-08-15 update) rejects `gh pr merge --auto --squash`. That made every PR look
+unmergeable to anything that defaults to squash (Cursor’s merge UI; the old `pr-auto-merge.yml`
+flag), even when the same PR was clean and merged fine from the GitHub app via “Create a merge
+commit.” Fix: switch automation to `--merge`, document the alignment in `docs/AUTOMATION.md`, and
+optionally re-enable Squash in the ruleset if Cursor’s UI should keep using squash (tracking #343).
 
 ## Architecture / MainPage UI decisions
 
@@ -1936,6 +1980,17 @@ and was explicitly corrected.
 Durations moved during the same conversation before landing on the final numbers implemented here:
 `COMPUTE_BOOST_PRESETS` in `layers.js` — Burst 10s, Standard 60s, Sustain 600s.
 
+### Compute Boost tier scaling: 4× effect only, no duration enhancement (#363)
+
+Issue #326 originally scaled higher merge tiers with `COMPUTE_BOOST_TIER_POWER_STEP = 8` (exponential
+power) plus linear duration (`preset.durationSeconds * tierIndex`). That over-rewarded merging:
+normal slots per tier are capped (`COMPUTE_ENTITY_CAP`), so leaving tokens unmerged is already pure
+wastage, and auto-merge already adds a dedicated reserve pool (`COMPUTE_MERGE_RESERVE_CAP`) for
+merging. The maintainer therefore cut the step to **4× effect only** and removed duration scaling
+entirely — `getComputeBoostTierDurationSeconds` returns the base preset duration for every valid
+tier. **If this is revisited, don't restore linear duration as a default** without a new reason that
+still accounts for the slot-cap / reserve-slot incentive already in place.
+
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
 Memory's own passive production (Byte Foundry) and `tier01`'s (Kilobytes') production (main game)
@@ -2124,6 +2179,15 @@ leaving the remainder in Memory" test, which pins exactly this). A regression te
 size with an empty cache that can never finish this tick (not enough bits) alongside a larger size
 whose cache is already fully staged, and asserts the larger one still pours — this failed under the
 old code (the larger size's `disks` count stayed at 0) and passes under the fix.
+
+A later follow-up (#360) extended the same ASAP idea past auto-redeem: `tickGame`'s post-
+`tickDiskAutoRedeem` pass re-runs `tickDiskAutoFill` only when auto-redeem actually changed
+state, so an emptied container's cache can start topping up the same tick when Memory allows —
+without a trailing fill on every no-op pass, and without sync-filling inside manual `redeemDisk`
+(that would steal Memory Forced Priority just freed for Bandwidth). Foundry Memory lists every
+currently transferable size via `getRelevantDiskSizesForFoundry` (not only the ladder's current
+build size), with DiskArrayRow making Cache → Tiers Bits (manual-only) and Disks auto vs manual
+redeem visually distinct (auto-eligible disks are not clickable).
 
 ### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
 

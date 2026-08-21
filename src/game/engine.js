@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -265,6 +265,13 @@ export const createInitialGameState = () => ({
     count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
   },
+  // Prestige museum — permanent per save slot. Every real Prestige appends one history entry
+  // (see prestigeGame); players may pin a subset for the Supporter museum UI. Meta QoL only —
+  // never affects production, costs, or unlocks.
+  prestigeMuseum: {
+    history: [],
+    pinnedIds: [],
+  },
   // The Byte Foundry pre-game intro's own state — a currency pool entirely separate from
   // resources.base (see the "Byte Foundry" constants in layers.js) until the manual/auto
   // conversions into owned Kilobytes (see convertIntroBitsToKilobytes/tickIntroAutoInvest below).
@@ -304,6 +311,13 @@ export const createInitialGameState = () => ({
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
+    // Resets every real Prestige. When true, the next time Memory is full (and Disk Fill /
+    // Bandwidth / Disk Build are not available), tickQueuedCapacityUpgrade / the queued fire path
+    // erases all held Compute tokens (ladder balances + active boost + in-flight merge timers)
+    // and performs Sacrifice for 10x Capacity — bypassing the normal "Compute blocks Capacity"
+    // forced-priority gate so Capacity can be committed before the bar is full and not starved
+    // by Core claims / Boosts. See queueIntroCapacityUpgrade/eraseAllComputeTokens.
+    capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
     // exactly like the Byte generator itself (a full disk's contents ride through a real Prestige
@@ -1054,7 +1068,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
-  const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
+  // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
+  // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
+  const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
+  const stateAfterStorage = tickDiskAutoFill(stateAfterQueuedCapacity)
   const stateAfterComputeCores = tickComputeCoreConversion(stateAfterStorage)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
@@ -1081,7 +1098,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // since it has no such dependency on any tier's level. A same-reference no-op when nothing
   // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
   // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
-  const tickStorage = tickDiskAutoRedeem
+  // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
+  // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
+  // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
+  // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
+  // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
+  // docs/DESIGN_HISTORY.md).
+  const tickStorage = state => {
+    const afterRedeem = tickDiskAutoRedeem(state)
+    return afterRedeem === state ? state : tickDiskAutoFill(afterRedeem)
+  }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
@@ -1540,12 +1566,103 @@ export const isMemoryCapacityUpgradeAvailable = state => {
 // "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
 // availability gate (Memory full AND no other currently-possible action left to take first).
 // Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op
-// otherwise.
+// otherwise. Clears capacityUpgradeQueued on success (a manual Sacrifice also consumes any queue).
 export const pickIntroCapacityMilestone = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
   return {
     ...state,
-    intro: { ...state.intro, bits: 0, capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER },
+    intro: {
+      ...state.intro,
+      bits: 0,
+      capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
+  }
+}
+
+// Commit to the next Sacrifice before Memory is full — prevents Compute (Core claim / Boosts)
+// from starving Capacity once the bar fills. Idempotent while already queued. Cleared on Prestige
+// (fresh intro default), on a successful Sacrifice (manual or queued), or via
+// clearIntroCapacityUpgradeQueue.
+export const queueIntroCapacityUpgrade = state => {
+  if (state.intro?.capacityUpgradeQueued) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
+}
+
+export const clearIntroCapacityUpgradeQueue = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: false } }
+}
+
+const COMPUTE_MERGE_TIMER_FIELDS = [
+  'computeCoresMergeRemainingSeconds',
+  'computeNodesMergeRemainingSeconds',
+  'computeClustersMergeRemainingSeconds',
+  'computeNetworksMergeRemainingSeconds',
+  'computeGridsMergeRemainingSeconds',
+  'computeFabricsMergeRemainingSeconds',
+  'computeCloudsMergeRemainingSeconds',
+  'computeDatacentersMergeRemainingSeconds',
+  'computeSupercomputersMergeRemainingSeconds',
+]
+
+// Wipes every held Compute ladder token, any active Boost, and any in-flight reserve-merge timers.
+// Does NOT touch permanent unlock flags (autoClaimCoreEnabled / autoMerge*) or lifetime counters
+// (computeCoresEverEarned / computeMergePageUnlocked). Same-reference no-op when nothing to wipe.
+export const eraseAllComputeTokens = state => {
+  const intro = state.intro ?? {}
+  let changed = false
+  const next = { ...intro }
+  for (const field of COMPUTE_BOOST_TIER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  for (const field of COMPUTE_MERGE_TIMER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  if ((next.computeBoostType ?? null) !== null) {
+    next.computeBoostType = null
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  } else if ((next.computeBoostStacks ?? 0) !== 0 || (next.computeBoostRemainingSeconds ?? 0) !== 0) {
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  }
+  if (!changed) return state
+  return { ...state, intro: next }
+}
+
+// Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
+// except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
+// tokens (the queued-Sacrifice penalty), then Sacrifices — bypassing isComputeUpgradeAvailable so
+// Boosts / Core-claim eligibility cannot starve a committed Capacity upgrade. Called from
+// tickGame after intro production (and from attentive UIs/bots). Same-reference no-op otherwise.
+export const tickQueuedCapacityUpgrade = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
+  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return state
+  if (isDiskFillAvailable(state)) return state
+  if (isBandwidthAvailable(state)) return state
+  if (isDiskBuildAvailable(state)) return state
+
+  const erased = eraseAllComputeTokens(state)
+  return {
+    ...erased,
+    intro: {
+      ...erased.intro,
+      bits: 0,
+      capacity: erased.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
   }
 }
 
@@ -2089,7 +2206,9 @@ export const getDiskRedeemTierName = (state, capacityBits) =>
 // rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
 // tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
 // empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
-// fill again later. No-op if no disk of that size is currently full, if that size's array is
+// fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
+// sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
+// Priority). No-op if no disk of that size is currently full, if that size's array is
 // currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
 // (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
@@ -2115,6 +2234,35 @@ export const redeemDisk = capacityBits => state => {
 const isTierAutobuyerActive = (state, tierId) =>
   (state.autobuyers?.[tierId] ?? null) !== null && (state.autobuyersEnabled?.[tierId] ?? true)
 
+// True when a full disk of `capacityBits` will auto-redeem on the next tickDiskAutoRedeem /
+// tickGame pass: currently full, not mid-build, not already auto-redeemed this Prestige cycle,
+// and the matching tier's unit-buying autobuyer is unlocked and unpaused. DiskArrayRow uses this
+// to visually distinguish "will auto-redeem" from "tap to redeem" (manual — matching tier has no
+// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks are
+// never auto-transferred — only manual releaseDiskCacheBlock moves them into Bits for Tiers.
+export const isDiskAutoRedeemEligible = (state, capacityBits) => {
+  if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
+  if (state.intro?.diskBuild?.size === capacityBits) return false
+  if (state.intro?.diskAutoRedeemedSizes?.[capacityBits]) return false
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  return tier !== undefined && isTierAutobuyerActive(state, tier.id)
+}
+
+// True when a full disk of `capacityBits` is redeemable right now but will NOT auto-redeem — the
+// player must click (see redeemDisk). Complementary to isDiskAutoRedeemEligible for UI affordances.
+export const isDiskManualRedeemAvailable = (state, capacityBits) =>
+  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
+  state.intro?.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits) &&
+  !isDiskAutoRedeemEligible(state, capacityBits)
+
+// Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
+// whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
+// that tier). Ascending — Cache then Disks of each row render smallest→largest. Empty when
+// nothing is transferable; the Build button stays independent of this list.
+export const getRelevantDiskSizesForFoundry = state =>
+  getDiskSizesToShow(state).filter(size => getDiskRedeemTierName(state, size) !== null)
+
 // Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
 // getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active
 // (see isTierAutobuyerActive above), or that matches no tier at all right now: "whenever there is
@@ -2130,7 +2278,9 @@ const isTierAutobuyerActive = (state, tierId) =>
 // this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
 // eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
 // branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
-// level for the tick, not a stale mid-tick one.
+// level for the tick, not a stale mid-tick one. tickGame re-runs tickDiskAutoFill only when this
+// actually changes state, so the emptied container's cache can top up ASAP the same tick when
+// Memory allows — without a trailing fill on every no-op pass.
 export const tickDiskAutoRedeem = state => {
   const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
   const buildingSize = state.intro.diskBuild?.size
@@ -2494,13 +2644,13 @@ const AUTO_MERGE_TICKERS = [
   tickAutoMergeSupercomputersIntoMegacomputer,
 ]
 
-// --- Compute Boost tier scaling --- issue #326: a boost activated from compute-ladder tier
+// --- Compute Boost tier scaling --- issues #326/#363: a boost activated from compute-ladder tier
 // `tierIndex` (1 = Core, … COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) is
 // COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex - 1) times as powerful as that preset's own BASE (tier
-// 1) multiplier, but only tierIndex times as long — a deliberately different scaling shape
-// (exponential power, linear duration) so a higher tier trades a much bigger multiplier for a
-// proportionally, not exponentially, longer commitment. Both return 0 for an invalid
-// boostType/tierIndex, which every caller below treats the same as "not activatable."
+// 1) multiplier; duration stays at the preset's base `durationSeconds` for every tier (no duration
+// enhancement from merging — limited slots + auto-merge reserves already incentivize merging).
+// Both return 0 for an invalid boostType/tierIndex, which every caller below treats the same as
+// "not activatable."
 const isValidComputeBoostTier = tierIndex => Number.isInteger(tierIndex) && tierIndex >= 1 && tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length
 
 export const getComputeBoostTierField = tierIndex =>
@@ -2515,7 +2665,7 @@ export const getComputeBoostTierMultiplier = (boostType, tierIndex) => {
 export const getComputeBoostTierDurationSeconds = (boostType, tierIndex) => {
   const preset = COMPUTE_BOOST_PRESETS[boostType]
   if (!preset || !isValidComputeBoostTier(tierIndex)) return 0
-  return preset.durationSeconds * tierIndex
+  return preset.durationSeconds
 }
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
@@ -2910,11 +3060,44 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
 // this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
 // tiers, not to change what Prestige/Speed Up themselves do.
+
+// Settings → Danger zone "Reset Byte Foundry" — wipes EVERYTHING under `intro` (Memory, Byte
+// generator + its permanent upgrades, Disks/Storage, the entire Compute ladder + boosts +
+// auto-claim/auto-merge unlocks + reveal latches) back to createInitialGameState()'s fresh
+// values, while leaving every non-intro field untouched (Tiers resources/owned/purchase levels,
+// Prestige Points/count/XP/museum, autobuyers, PP upgrades, Speed Up/Overclock counters, …).
+// Unlike a full `resetGame`, this is not a new save — only Foundry/Storage/Compute progress is
+// lost. Preserves `intro.mainGameUnlocked` when already true so Tiers stays reachable without
+// forcing another transfer through the gate; if the gate was still closed, it stays closed.
+export const resetByteFoundry = state => {
+  const initialIntro = createInitialGameState().intro
+  const keepMainUnlocked = state.intro?.mainGameUnlocked === true
+  return {
+    ...state,
+    intro: {
+      ...initialIntro,
+      mainGameUnlocked: keepMainUnlocked,
+    },
+  }
+}
+
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < PRESTIGE_THRESHOLD) return state
 
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const initial = createInitialGameState()
+  const nextPrestigeNumber = state.prestige.count + 1
+  const museumEntry = {
+    id: `p${nextPrestigeNumber}-${Date.now()}`,
+    at: Date.now(),
+    prestigeNumber: nextPrestigeNumber,
+    pointsAwarded,
+    moneyBits: clampNonNegative(state.resources[MONEY_ID]),
+  }
+  const previousMuseum = state.prestigeMuseum ?? initial.prestigeMuseum
+  const nextHistory = [museumEntry, ...(previousMuseum.history ?? [])].slice(0, MUSEUM_HISTORY_CAP)
+  const nextHistoryIds = new Set(nextHistory.map(entry => entry.id))
+  const nextPinnedIds = (previousMuseum.pinnedIds ?? []).filter(id => nextHistoryIds.has(id))
   // applyAutobuyerMilestones runs last, against the freshly-incremented prestige.count below —
   // it's what actually unlocks the next tier's autobuyer/tier-tickspeed-autobuyer the instant this
   // prestige crosses their milestone (see getAutobuyerUnlockMilestone/
@@ -2922,6 +3105,10 @@ export const prestigeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
+    prestigeMuseum: {
+      history: nextHistory,
+      pinnedIds: nextPinnedIds,
+    },
     // "Memory" (bits/productionAccumulator/mainGameUnlocked) resets to
     // fresh on every real Prestige, in the same atomic reset as resources/owned above — a new
     // cycle always starts this screen's balance from 0 and re-shows it before MainPage. The Byte
@@ -3045,9 +3232,36 @@ export const prestigeGame = state => {
     prestige: {
       ...initial.prestige,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
-      count: state.prestige.count + 1,
+      count: nextPrestigeNumber,
     },
   })
+}
+
+// Pin a Prestige museum history entry (Supporter UI). No-op if missing, already pinned, or at cap.
+export const pinMuseumEntry = entryId => state => {
+  const museum = state.prestigeMuseum ?? { history: [], pinnedIds: [] }
+  if (!(museum.history ?? []).some(entry => entry.id === entryId)) return state
+  if ((museum.pinnedIds ?? []).includes(entryId)) return state
+  if ((museum.pinnedIds ?? []).length >= MUSEUM_PIN_CAP) return state
+  return {
+    ...state,
+    prestigeMuseum: {
+      history: museum.history ?? [],
+      pinnedIds: [...(museum.pinnedIds ?? []), entryId],
+    },
+  }
+}
+
+export const unpinMuseumEntry = entryId => state => {
+  const museum = state.prestigeMuseum ?? { history: [], pinnedIds: [] }
+  if (!(museum.pinnedIds ?? []).includes(entryId)) return state
+  return {
+    ...state,
+    prestigeMuseum: {
+      history: museum.history ?? [],
+      pinnedIds: (museum.pinnedIds ?? []).filter(id => id !== entryId),
+    },
+  }
 }
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches PRESTIGE_THRESHOLD:
@@ -3119,6 +3333,8 @@ export const speedUpGame = state => {
     // like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
+    // Museum is permanent per save — Speed Up must not wipe prestige history/pins.
+    prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
     // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Speed Up
@@ -3178,6 +3394,8 @@ export const overclockGame = state => {
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // lastTierXpConsumed/everUnlockedTierIds are NOT carried over — same reasoning as speedUpGame,
     // see there.
+    // Museum is permanent per save — Overclock must not wipe prestige history/pins.
+    prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     // speedUpCount is deliberately NOT carried over (unlike speedUpGame's own self-increment) —
     // resets to 0 (initial.speedUpCount), wiping Speed Up's own stacking bonus. This is Overclock's

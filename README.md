@@ -11,70 +11,40 @@ Play it live at [mohanpednekar.github.io/tens](https://mohanpednekar.github.io/t
 
 ## Scripts
 
-- `yarn start` / `yarn dev` - start the Vite development server on `127.0.0.1`.
-- `yarn build` - create a production build.
-- `yarn test` - run the Vitest test suite once.
-- `yarn test:watch` - run Vitest in watch mode on `127.0.0.1`.
-- `yarn audit` - run a recursive dependency audit.
+- `yarn start` / `yarn dev` — start the Vite development server on `127.0.0.1` (app at `/tens/`).
+- `yarn build` — create a production build.
+- `yarn test` — run the Vitest test suite once.
+- `yarn test:watch` — run Vitest in watch mode on `127.0.0.1`.
+- `yarn test:e2e` — run the Playwright end-to-end suite (Chromium, against `yarn dev`).
+- `yarn audit` — run Yarn Classic’s dependency audit.
+- `yarn gen-pwa-icons` — regenerate PWA icon PNGs from `scripts/generate-pwa-icons.mjs`.
 
 ## Game design
 
 ### Core economy
 
-The base resource is Money ($, resource id `Ones`). The player starts with $10.
+- Base currency is **Bits** (resource id `base`, symbol `b`).
+- Ten tiers — **Kilobytes** through **Quettabytes** — are bought with Bits; each produces the tier below it (Kilobytes both costs and produces Bits).
+- Bytes are **not** a purchasable tier. Every fresh save (and every Prestige) earns its first Kilobytes via the **Byte Foundry** tap screen.
+- Reaching **1 Googol Bytes** (8×10^100 Bits) freezes production until Prestige.
 
-### Production layers
+Full formulas, Prestige Points, Storage, Compute, tickspeed, Speed Up, Overclock, and offline progress: [`docs/ECONOMY_REFERENCE.md`](docs/ECONOMY_REFERENCE.md). Current behavior summary: [`CLAUDE.md`](CLAUDE.md). Design rationale / superseded ideas: [`docs/DESIGN_HISTORY.md`](docs/DESIGN_HISTORY.md).
 
-Before the main game, a separate **Byte Foundry** pre-game screen has you tap to earn bits, combine
-your first 8 into a Byte generator, and grow capacity/production until you can convert into the main
-game's starting Kilobytes — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section for the full
-mechanic.
+### Byte Foundry
 
-There are 10 tiers, from Kilobytes up to Quettabytes (a byte-scale/computing theme). **Every tier is
-bought directly with Money** and, once owned, produces the tier immediately below it (which cascades
-down to Money). The first tier, Kilobytes, both costs and produces Money — it's the entry-level
-generator.
+Tap to fill Memory, combine into a permanent Byte generator, grow via Sacrifice / Invest, then transfer Memory into free Kilobytes. Later: Disks (Storage) and Compute Cores → Megacomputer plus Compute Boost. Generator / Disks / Compute are permanent across Prestige; Memory and the unlock gate reset each cycle.
 
-| Tier | Symbol | Base cost | Produces |
-|------|--------|-----------|----------|
-| Kilobytes | KB | $1e3 | Money |
-| Megabytes | MB | $1e6 | Kilobytes |
-| Gigabytes | GB | $1e9 | Megabytes |
-| Terabytes | TB | $1e12 | Gigabytes |
-| Petabytes | PB | $1e15 | Terabytes |
-| Exabytes | EB | $1e18 | Petabytes |
-| Zettabytes | ZB | $1e21 | Exabytes |
-| Yottabytes | YB | $1e24 | Zettabytes |
-| Ronnabytes | RB | $1e27 | Yottabytes |
-| Quettabytes | QB | $1e30 | Ronnabytes |
+### Guide
 
-Costs scale in Fibonacci-driven jumps every block of 10 purchases (see `getTierCost` in `engine.js`).
-
-A tier unlocks once you own **10 or more** of the tier below it (already-owned tiers stay unlocked even if
-the rule changes later, so old saves remain playable).
-
-### Autobuyers
-
-Each tier has its own autobuyer, unlocked and upgraded with Prestige Points:
-- **Unlocking** costs PP and doubles per tier layer (1, 2, 4, 8 PP, …).
-- **Upgrading** a level spends the tier's own resource in powers of ten (10, 100, 1,000, … per level).
-- Each autobuyer level buys 1 generator of its tier per tick, as long as funds allow.
-
-### Prestige
-
-Players earn **1 Power Point (PP)** each time Money crosses a new power-of-ten milestone ($100, $1,000, $10,000 …).
-
-Players may Prestige at any time:
-- Costs **10 PP** and grants **1 Prestige Level**.
-- Resets all resources, owned counts, and active autobuyer levels (unlocked autobuyers stay unlocked).
-- Each Prestige Level **doubles production** at every layer (×2^level).
+In-game **ℹ️ Guide** (`InfoPage`) holds evergreen, bullet-oriented explanations of every mechanic. Numbers there are derived from the same `engine.js` / `layers.js` constants the game uses.
 
 ## Game architecture
 
-- `src/game/layers.js` — tier definitions (`TIER_DEFINITIONS`), resource symbols (`RESOURCE_SYMBOL`), and constants.
-- `src/game/engine.js` — pure state helpers: `createInitialGameState`, `tickGame`, `buyTier`, `buyAutobuyer`, `prestigeGame`, `getTierCost`, `getAutobuyerCost`, `getAutobuyerUnlockPPCost`, `isTierUnlocked`, `productionMultiplier`.
-- `src/game/useIncrementalGame.js` — connects the pure engine to React state; owns timer cleanup.
-- `src/pages/MainPage/index.jsx` — renders every tier and the prestige panel data-driven from `TIER_DEFINITIONS`, so adding a new tier requires only a new entry in `layers.js`.
+- `src/game/layers.js` — `TIER_DEFINITIONS` and economy constants.
+- `src/game/engine.js` — pure state helpers (no React, no side effects).
+- `src/game/useIncrementalGame.js` — React hook: state, tick timer, localStorage.
+- `src/App.jsx` — owns the single game hook; switches Byte Foundry / Main / Info / Storage / Compute via local `useState` (no router).
+- `src/pages/MainPage/index.jsx` — main game UI, data-driven from `TIER_DEFINITIONS`.
 
 ## Security notes
 

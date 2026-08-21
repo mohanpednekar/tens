@@ -7,13 +7,13 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 ## Project
 
-**Tens** — a React incremental game. Every mechanic uses powers of ten. Five top-level pages —
-`ByteFoundryPage` (a tap-to-earn pre-game bootstrap, mandatory before each Prestige cycle's first
-Kilobytes, then a permanent voluntarily-revisitable screen), `MainPage` (the game itself), `InfoPage`
-(static "how it works" prose), and `StoragePage`/`ComputePage` (dedicated sub-screens reached only
-from `ByteFoundryPage`'s own nav buttons once each mechanic is revealed) — switched via a plain
-`useState` in `App.jsx`, not a routing library; no backend — state lives in React and persists to
-`localStorage`.
+**Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
+shared bottom `AppNav` in progression order: **Foundry → Compute → Tiers → Guide → More**. Storage
+is under Foundry as **Memory | Disks** (not its own AppNav item). Tiers uses **Ladder | Upgrades**
+after the first Prestige. Guide and More (Milestones, Settings) are always available — even
+during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Foundry / Storage /
+Compute only — Tiers + Prestige kept) live under Settings → Danger zone. No backend — state
+lives in React and persists to `localStorage`.
 
 ## Tech stack
 
@@ -60,14 +60,15 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    storage.js             ← localStorage save/load/clear + migration logic
+    storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
+                               Supporter unlock (code / dummy checkout)
   components/
     Button/, Money/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
                             docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; see "Byte Foundry" below
-    StoragePage/index.jsx  ← Storage's own screen, reached via ByteFoundryPage's "🏦 Storage" nav
-    ComputePage/index.jsx  ← Compute's own screen, reached via ByteFoundryPage's "⚡ Compute" nav
+    StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
+    ComputePage/index.jsx  ← Compute's own screen, reached via AppNav once revealed
     MainPage/index.jsx     ← the game; renders all tiers data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← static mechanic explanations; reads no game state
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
@@ -83,12 +84,14 @@ React, no side effects. `useIncrementalGame.js` is the only place holding React 
 localStorage persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
-state); `StoragePage`/`ComputePage` are pure renderers reached only via nav buttons on
-`ByteFoundryPage`. `App.jsx` switches between all five via a local `page` `useState`, with
+state); `StoragePage`/`ComputePage` are pure renderers. `App.jsx` switches pages via a local
+`page` `useState` and a shared bottom `AppNav` (Foundry → Compute → Tiers → Guide → More), with
 `ByteFoundryPage` additionally forced onto screen — overriding whatever `page` says, except on
-`'info'`/`'storage'`/`'compute'` — whenever the current Prestige cycle's `intro.mainGameUnlocked` is
-still false (see "Byte Foundry" below); once true, it's just a normal page reachable via MainPage's
-own "⚙️ Byte Foundry" link.
+gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`) — whenever the current
+Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry" below). Storage is a
+Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Tiers stays hidden during
+the gate; Guide and More stay reachable so utilities never require unlocking the main game. Once
+unlocked, Foundry is just another AppNav destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
@@ -116,6 +119,12 @@ main-game-unlock gate reset each cycle. **This summary is intentionally thin —
 specific numbers/gates from it.** Full mechanics, the forced-priority-order ranking recurring upgrade
 actions, and every constant: `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section (or `CLAUDE.md`'s
 condensed version, which this file mirrors).
+
+For run times / pacing questions — and after any change that can significantly affect ideal Foundry
+or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
+Snapshots land on the stable orphan branch `ideal-run-strategy` as **one file per run** under
+`runs/` (never merge into `main`; do not rename with an agent/session suffix). Details:
+`.claude/skills/simulate-run-times/SKILL.md` / `CLAUDE.md`.
 
 ### Adding a new tier
 
@@ -173,8 +182,10 @@ immediately: both coexist for now. The Cursor twins share the `claude-task` back
 `CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches, authenticate with a
 `CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert until that secret is
 added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
-double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Full design + staged cutover:
-`docs/AUTOMATION.md`'s "Cursor-powered successor engine" section (authoritative: `CLAUDE.md`).
+double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
+slots/day (including a 1:30am housekeeping run); Claude runs twice daily at 9:00am/9:00pm IST.
+Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
+(authoritative: `CLAUDE.md`).
 
 ## Reliability: cron dormancy
 

@@ -25,7 +25,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         run: |
-          gh pr merge --auto --squash "${{ github.event.pull_request.number }}" \
+          # Must match the Main ruleset's allowed_merge_methods (merge + rebase;
+          # squash is not allowed). Using --squash fails enable-auto-merge for every PR.
+          gh pr merge --auto --merge "${{ github.event.pull_request.number }}" \
             -R "${{ github.repository }}"
 
   # Path 2: no human approval yet, but checks just went green on a bot-authored branch and
@@ -119,7 +121,8 @@ jobs:
 
           if [ "$eligible" = "true" ]; then
             echo "Auto-merging PR #$number without waiting for approval: $reason"
-            gh pr merge --auto --squash "$number" -R "${{ github.repository }}"
+            # --merge (not --squash): Main ruleset allows merge + rebase only.
+            gh pr merge --auto --merge "$number" -R "${{ github.repository }}"
           else
             echo "PR #$number doesn't meet the low-risk bar, leaving for human approval."
           fi

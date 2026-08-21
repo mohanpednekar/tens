@@ -7,17 +7,33 @@ name: Cursor autonomous maintenance
 # engines never collide on a branch name, and its guard step counts BOTH `claude/auto-*`
 # and `cursor/auto-*` PRs as "in flight" so they never double-pick the same task.
 #
+# Schedule (IST = UTC+5:30): five wall-clock slots — four development (Phase 0/A/B) plus
+# one dedicated overnight housekeeping run (conflicted PRs, backlog planning, process
+# improvement). See docs/AUTOMATION.md's "Cursor-powered successor engine" section.
+#
 # Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
 # existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
-# maintainer adds CURSOR_API_KEY. See docs/AUTOMATION.md's "Cursor-powered twin" section.
+# maintainer adds CURSOR_API_KEY.
 
 on:
   schedule:
-    # Every 5 hours, offset ~2.5h from autonomous-maintenance.yml's "0 */5 * * *" so the
-    # two scheduled engines don't wake at the same instant. Coordination against
-    # double-picking a task is handled by the guard step below regardless of timing.
-    - cron: "30 2,7,12,17,22 * * *"
+    # Five IST wall-clock slots (GitHub Actions cron is UTC; IST = UTC+5:30).
+    # Development (Phase 0/A/B): 6:30am / 11:30am / 4:30pm / 9:30pm IST
+    - cron: "0 1,6,11,16 * * *"
+    # Housekeeping (meta only — conflicted PRs, backlog planning, process improvement):
+    # 1:30am IST. Matched via github.event.schedule below; do not fold into the
+    # development cron or the mode split silently disappears.
+    - cron: "0 20 * * *"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode (scheduled runs pick automatically from the cron that fired)"
+        required: false
+        default: development
+        type: choice
+        options:
+          - development
+          - housekeeping
 
 concurrency:
   group: cursor-autonomous-maintenance
@@ -44,7 +60,25 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Can't reference secrets in an `if:` directly; surface presence as a boolean here.
           HAS_CURSOR_KEY: ${{ secrets.CURSOR_API_KEY != '' && 'true' || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
+          # Present only on schedule events — the cron expression that fired this run.
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          # Present only on workflow_dispatch — defaults to development when unset.
+          DISPATCH_MODE: ${{ github.event.inputs.mode }}
         run: |
+          # Resolve run mode first so skip/ceiling logic can differ for housekeeping.
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            if [ "$EVENT_SCHEDULE" = "0 20 * * *" ]; then
+              MODE=housekeeping
+            else
+              MODE=development
+            fi
+          else
+            MODE="${DISPATCH_MODE:-development}"
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Resolved run mode: $MODE (event=$EVENT_NAME schedule=${EVENT_SCHEDULE:-(n/a)})"
+
           # If the opt-in secret isn't set, skip the whole run cleanly — this makes the
           # workflow inert-by-default so merging it spends nothing until a maintainer adds
           # CURSOR_API_KEY.
@@ -96,7 +130,30 @@ jobs:
             echo "FAIL_EOF"
           } >> "$GITHUB_OUTPUT"
 
-          if [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
+          # Conflicted open PRs (housekeeping priority). mergeable is MERGEABLE / CONFLICTING /
+          # UNKNOWN — UNKNOWN is treated as inconclusive and listed separately so the agent
+          # can re-check rather than skip. Auto-merge-enabled ones are called out first.
+          conflicted_prs=$(gh pr list --state open --limit 100 \
+            --json number,headRefName,title,mergeable,autoMergeRequest,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository == false)
+                        | select(.mergeable == "CONFLICTING")]
+                  | sort_by(if .autoMergeRequest != null then 0 else 1 end, .number)
+                  | .[]
+                  | (if .autoMergeRequest != null then " [auto-merge]" else "" end) as $am
+                  | "- #\(.number) (\(.headRefName))\($am): \(.title)"')
+          {
+            echo "conflicted_prs<<CONFLICT_EOF"
+            echo "$conflicted_prs"
+            echo "CONFLICT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Development mode keeps the 5-PR ceiling (Phase 0 main-broken still bypasses).
+          # Housekeeping never skips for that reason — unblocking conflicted PRs is the point
+          # of the overnight slot, and a full ceiling is exactly when it is most needed.
+          if [ "$MODE" = "housekeeping" ]; then
+            echo "Housekeeping mode — 5-PR ceiling does not skip this run."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          elif [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
             echo "5 autonomous PRs already open across both engines — skipping this run."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
@@ -107,9 +164,17 @@ jobs:
           # excluding `blocked`. Sorted priority:high -> normal -> priority:low, each tier by
           # ascending issue number, capped for display (matching autonomous-maintenance.yml).
           TASK_DISPLAY_CAP=30
-          open_tasks_json=$(gh issue list --label claude-task --state open --limit 200 \
+          # Filter by label CLIENT-SIDE from the unfiltered open-issue list rather than via
+          # `gh issue list --label claude-task`. The server-side --label filter routes through
+          # GitHub's issue search index, which was observed (2026-08-20) returning an empty set
+          # while 24 open claude-task issues actually existed — verified by direct `gh issue
+          # view` and by client-side filtering of the unfiltered list — silently starving Phase
+          # A and forcing a fall-through to Phase B. Listing issues unfiltered and matching the
+          # label in jq reads live label data and is immune to that search-index lag.
+          open_tasks_json=$(gh issue list --state open --limit 300 \
             --json number,title,labels \
-            --jq '[.[] | select([.labels[].name] | index("blocked") | not)]')
+            --jq '[.[] | select([.labels[].name] | index("claude-task"))
+                       | select([.labels[].name] | index("blocked") | not)]')
           open_tasks_count=$(jq 'length' <<<"$open_tasks_json")
           open_tasks=$(jq -r --argjson cap "$TASK_DISPLAY_CAP" '
             def prio: if ([.labels[].name] | index("priority:high")) then 0
@@ -155,9 +220,11 @@ jobs:
             echo "DEPPR_EOF"
           } >> "$GITHUB_OUTPUT"
 
-          # Already-open gap-analysis proposals, so Phase B item 6 doesn't re-propose.
-          open_gap_issues=$(gh issue list --label gap-analysis --state open --limit 100 \
-            --json number,title --jq '.[] | "- #\(.number): \(.title)"')
+          # Already-open gap-analysis proposals, so Phase B item 6 doesn't re-propose. Same
+          # client-side-filter rationale as the claude-task backlog above (search-index lag).
+          open_gap_issues=$(gh issue list --state open --limit 300 \
+            --json number,title,labels \
+            --jq '.[] | select([.labels[].name] | index("gap-analysis")) | "- #\(.number): \(.title)"')
           {
             echo "open_gap_issues<<GAP_EOF"
             echo "$open_gap_issues"
@@ -212,12 +279,14 @@ jobs:
         if: steps.guard.outputs.skip != 'true'
         env:
           REPO: ${{ github.repository }}
+          MODE: ${{ steps.guard.outputs.mode }}
           OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
           OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
           OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
           MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
           FAILING_PRS: ${{ steps.guard.outputs.failing_prs }}
+          CONFLICTED_PRS: ${{ steps.guard.outputs.conflicted_prs }}
           DEPENDABOT_ALERTS: ${{ steps.guard.outputs.dependabot_alerts }}
           DEPENDABOT_PRS: ${{ steps.guard.outputs.dependabot_prs }}
         run: |
@@ -231,6 +300,7 @@ jobs:
           : "${OPEN_TASKS:=(none)}"
           : "${OPEN_GAP_ISSUES:=(none)}"
           : "${FAILING_PRS:=(none)}"
+          : "${CONFLICTED_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
           : "${DEPENDABOT_PRS:=(none)}"
           if [ "$MAIN_CI_BROKEN" = "true" ]; then
@@ -238,10 +308,94 @@ jobs:
           else
             MAIN_CI_STATUS_LINE="is green."
           fi
-          cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
-          You are running as a scheduled, unattended maintenance job on this repository
-          (REPO: $REPO), powered by the Cursor CLI. Nobody is watching this run, so only make
-          changes you are confident are safe, small, and correct.
+
+          if [ "$MODE" = "housekeeping" ]; then
+            cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
+          You are running as the dedicated OVERNIGHT HOUSEKEEPING job on this repository
+          (REPO: $REPO), powered by the Cursor CLI. This is the 1:30am IST slot — NOT a
+          normal development run. Nobody is watching, so only make changes you are confident
+          are safe, small, and correct.
+
+          READ THESE FIRST:
+          - CLAUDE.md — Pull requests / Automation workflows sections (especially conflicted
+            auto-merge PRs and never-self-merge).
+          - docs/AUTOMATION.md — orchestration model, auto-merge low-risk bar, blocked-label
+            rules, and the Cursor housekeeping slot description.
+
+          You are the Cursor-powered twin of autonomous-maintenance.yml, but THIS RUN IS
+          HOUSEKEEPING ONLY. Use `cursor/` branch prefixes where that spec says `claude/`.
+          Do NOT implement a Phase A feature task and do NOT open a new feature PR from the
+          claude-task backlog. Your job is meta: keep the pipeline unblocked and the backlog
+          healthy.
+
+          Pick exactly ONE unit of work, in this priority order:
+
+          1. Unblock conflicted PRs (highest priority). Prefer auto-merge-enabled ones first
+             (listed below). Resolve real conflicts by merging or rebasing main into the PR
+             branch (prefer merge when review comments are tied to specific commits), fixing
+             conflicts for real (never blindly take one side on a logic file), running
+             `yarn test`, and pushing. Never force-push, never push to main, never merge or
+             approve your own PR. Skip fork PRs. If several are conflicted, pick the single
+             highest-value one (auto-merge first, then lowest issue/PR number).
+
+          2. Plan / replan the backlog. Review open claude-task issues for stale specs,
+             missing Blocked-by sequencing, wrong size/priority labels, or duplicates. Fix
+             via issue comments / label edits / filing a tighter replacement issue — do not
+             implement the tasks themselves. Use the file-task-issue skill conventions.
+
+          3. Find better ways to do things. One coherent improvement only: workflow
+             self-improvement scoped to THIS file (cursor-autonomous-maintenance.yml) without
+             weakening guard/budget/never-self-merge/always-open-a-PR/Phase-A-priority rules;
+             OR file exactly one well-specified gap-analysis + claude-task issue proposing a
+             process/tooling improvement (no PR for gap analysis alone).
+
+          If nothing safe and meaningful applies, make no changes and end without a branch
+          or PR.
+
+          Today's dynamic context:
+
+          Conflicted open PRs (auto-merge ones first):
+          $CONFLICTED_PRS
+
+          Currently-open autonomous PRs across BOTH engines (branch: title):
+          $OPEN_PRS
+
+          Open task backlog (issues labeled claude-task):
+          $OPEN_TASKS
+
+          Currently-open gap-analysis proposals (number: title):
+          $OPEN_GAP_ISSUES
+
+          Main branch CI status: the latest completed run of ci.yml on main
+          $MAIN_CI_STATUS_LINE
+
+          Open PRs with a failing check (excludes both engines' auto branches and fork PRs):
+          $FAILING_PRS
+
+          Hard constraints, no exceptions:
+          - Never add/remove/reorder TIER_DEFINITIONS or make economy/game-rule changes.
+          - Never modify .github/workflows/ci.yml, deploy.yml, autonomous-maintenance.yml,
+            autonomous-pr-followup.yml, pr-auto-merge.yml, or cursor-pr-followup.yml. You may
+            edit ONLY this file (.github/workflows/cursor-autonomous-maintenance.yml) for
+            process self-improvement, and may not weaken its guard, budget, never-self-merge,
+            always-open-a-PR, Phase-A-priority, or housekeeping-vs-development split.
+          - Never change the dev/test server host binding away from 127.0.0.1.
+          - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
+            force-push, never push directly to main, and never merge or approve your own PR.
+          - Never push your own commits to a `dependabot/*` branch (only `@dependabot rebase`).
+          - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
+            commit. Mirror any AGENTS.md-overlapping facts in the same commit.
+          - Run `yarn test` (and `yarn build` if you touched dependencies) before opening or
+            updating a PR that changes code.
+
+          Use `gh` for all GitHub operations (GH_AUTOMATION_PAT-authenticated GH_TOKEN is in
+          your environment).
+          TEMPLATE_EOF
+          else
+            cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
+          You are running as a scheduled, unattended DEVELOPMENT maintenance job on this
+          repository (REPO: $REPO), powered by the Cursor CLI. Nobody is watching this run, so
+          only make changes you are confident are safe, small, and correct.
 
           READ THESE FIRST AND FOLLOW THEM EXACTLY — they are the authoritative spec for this
           job, and this prompt only summarizes them plus supplies today's dynamic context:
@@ -305,7 +459,8 @@ jobs:
             autonomous-pr-followup.yml, pr-auto-merge.yml, or cursor-pr-followup.yml. For the
             Phase B self-improvement task you may edit ONLY this file
             (.github/workflows/cursor-autonomous-maintenance.yml), and may not weaken its guard,
-            budget, never-self-merge, always-open-a-PR, or Phase-A-priority rules.
+            budget, never-self-merge, always-open-a-PR, Phase-A-priority, or
+            housekeeping-vs-development split.
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
             force-push, never push directly to main, and never merge or approve your own PR.
@@ -321,12 +476,15 @@ jobs:
           for a slice) for a Phase A task. If, after all three phases, there is nothing safe and
           meaningful to do, make no changes and end without a branch or PR.
           TEMPLATE_EOF
+          fi
+
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}
           prompt_text=${prompt_text//'$OPEN_PRS'/$OPEN_PRS}
           prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
           prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
+          prompt_text=${prompt_text//'$CONFLICTED_PRS'/$CONFLICTED_PRS}
           prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
           prompt_text=${prompt_text//'$DEPENDABOT_PRS'/$DEPENDABOT_PRS}
           prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}

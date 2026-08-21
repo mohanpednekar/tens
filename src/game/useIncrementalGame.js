@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame } from './engine'
-import { OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, TICK_RATE_MS } from './layers'
-import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
+import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, resetByteFoundry, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry } from './engine'
+import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -50,6 +50,7 @@ const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
 // fully torn down (a real page load/PWA cold start) — see the tick-loop effect below for the
 // separate, more common case of a tab/app merely backgrounded or suspended without a remount.
 const computeInitialGame = () => {
+  loadSavesMeta()
   const loaded = loadGameState()
   if (!loaded) return { state: createInitialGameState(), offlineProgress: null }
 
@@ -66,12 +67,21 @@ export const useIncrementalGame = () => {
   const [initial] = useState(computeInitialGame)
   const [state, setState] = useState(initial.state)
   const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
+  const [savesMeta, setSavesMeta] = useState(() => loadSavesMeta())
+  const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
+  // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
+  const [opsSamples, setOpsSamples] = useState([])
 
   // Mirrors `state` for the tick-loop effect below to read without depending on `state` itself —
   // depending on it would tear down and recreate the interval/listener (and, worse, reset the
   // gap-detection clock) on every single tick.
   const stateRef = useRef(state)
   useEffect(() => { stateRef.current = state }, [state])
+
+  const refreshSavesUi = useCallback(() => {
+    setSavesMeta(loadSavesMeta())
+    setSaveSlots(listSaveSlots())
+  }, [])
 
   useEffect(() => {
     // Real wall-clock time of the most recently processed tick (live or catch-up), used to detect
@@ -131,6 +141,31 @@ export const useIncrementalGame = () => {
   useEffect(() => {
     saveGameState(state)
   }, [state])
+
+  // Ops sparkline sampling — only while Supporter is unlocked (avoids useless work for free).
+  useEffect(() => {
+    if (!savesMeta.supporterUnlocked) {
+      setOpsSamples([])
+      return undefined
+    }
+    const sample = () => {
+      const s = stateRef.current
+      setOpsSamples(prev => {
+        const next = [
+          ...prev,
+          {
+            t: Date.now(),
+            money: s.resources?.[MONEY_ID] ?? 0,
+            prestigePoints: s.prestige?.points ?? 0,
+          },
+        ]
+        return next.length > OPS_SAMPLE_CAP ? next.slice(next.length - OPS_SAMPLE_CAP) : next
+      })
+    }
+    sample()
+    const id = window.setInterval(sample, OPS_SAMPLE_INTERVAL_MS)
+    return () => window.clearInterval(id)
+  }, [savesMeta.supporterUnlocked, savesMeta.activeSlotId])
 
   const actions = useMemo(() => ({
     buyTierQuantity: tierId => setState(buyTierQuantity(tierId, BUY_QUANTITY)),
@@ -192,15 +227,100 @@ export const useIncrementalGame = () => {
     startComputeCloudsMerge: () => setState(startComputeCloudsMerge),
     startComputeDatacentersMerge: () => setState(startComputeDatacentersMerge),
     startComputeSupercomputersMerge: () => setState(startComputeSupercomputersMerge),
+    pinMuseumEntry: entryId => setState(pinMuseumEntry(entryId)),
+    unpinMuseumEntry: entryId => setState(unpinMuseumEntry(entryId)),
   }), [])
 
   const resetGame = useCallback(() => {
     clearGameState()
     setState(createInitialGameState())
     setOfflineProgress(null)
+    setOpsSamples([])
+    refreshSavesUi()
+  }, [refreshSavesUi])
+
+  // Narrower than resetGame: only wipes Byte Foundry / Storage / Compute (state.intro), keeping
+  // Tiers + Prestige intact. Persists via the ordinary save effect — does not clear the slot.
+  const resetByteFoundryProgress = useCallback(() => {
+    setState(resetByteFoundry)
   }, [])
+
+  const clearSlot = useCallback(slotId => {
+    const result = clearSaveSlot(slotId)
+    if (!result.ok) return result
+    if (result.clearedActive) {
+      setState(createInitialGameState())
+      setOfflineProgress(null)
+      setOpsSamples([])
+    }
+    refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  const eraseAllSaveProgress = useCallback(() => {
+    clearAllSaveProgress()
+    setState(createInitialGameState())
+    setOfflineProgress(null)
+    setOpsSamples([])
+    refreshSavesUi()
+    return { ok: true }
+  }, [refreshSavesUi])
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
-  return { actions, dismissOfflineProgress, offlineProgress, resetGame, state }
+  const switchSaveSlot = useCallback(slotId => {
+    saveGameState(stateRef.current)
+    const result = setActiveSaveSlot(slotId)
+    if (!result.ok) return result
+    if (result.already) {
+      refreshSavesUi()
+      return result
+    }
+    const loaded = loadGameState()
+    const nextState = loaded ?? createInitialGameState()
+    const lastSaveTimestamp = loadLastSaveTimestamp()
+    const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState)
+    setState(caughtUp?.state ?? nextState)
+    setOfflineProgress(caughtUp?.offlineProgress ?? null)
+    setOpsSamples([])
+    refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  const renameActiveSaveSlot = useCallback((slotId, name) => {
+    const result = renameSaveSlot(slotId, name)
+    if (result.ok) refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  const redeemUnlockCode = useCallback(code => {
+    const result = redeemSupporterUnlockCode(code)
+    if (result.ok) refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  const purchaseSupporterDummy = useCallback(() => {
+    const result = completeDummySupporterPurchase()
+    if (result.ok) refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  return {
+    actions,
+    clearSlot,
+    dismissOfflineProgress,
+    eraseAllSaveProgress,
+    offlineProgress,
+    opsSamples,
+    purchaseSupporterDummy,
+    redeemUnlockCode,
+    renameSaveSlot: renameActiveSaveSlot,
+    resetByteFoundry: resetByteFoundryProgress,
+    resetGame,
+    saveSlots,
+    savesMeta,
+    state,
+    switchSaveSlot,
+  }
 }

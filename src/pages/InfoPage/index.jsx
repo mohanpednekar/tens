@@ -1,4 +1,3 @@
-import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatBitsInNearestUnit,
@@ -9,10 +8,14 @@ import {
   getTierTickspeedAutobuyerMilestone,
 } from 'game/engine'
 import {
+  COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_MERGE_DURATIONS_SECONDS,
   COMPUTE_MERGE_RATIO,
+  COMPUTE_MERGE_RESERVE_CAP,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_MULTIPLIER,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -20,6 +23,7 @@ import {
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
   INTRO_DISK_UNLOCK_CAPACITY,
+  INTRO_PRODUCTION_MULTIPLIER_STEP,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
 } from 'game/layers'
@@ -42,11 +46,8 @@ const RootDiv = styled.main`
 `
 
 const Header = styled.header`
-  align-items: center;
   color: ${props => props.theme.color.text};
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
+  text-align: center;
 
   h1 {
     font-family: ${props => props.theme.font.display};
@@ -69,6 +70,13 @@ const Section = styled(StatCard)`
     margin: 0 0 0.4rem;
   }
 
+  h3 {
+    color: ${props => props.theme.color.text};
+    font-size: ${props => props.theme.type.scale.md.size};
+    font-weight: 600;
+    margin: 0.65rem 0 0.25rem;
+  }
+
   p {
     color: ${props => props.theme.color.textMuted};
     margin: 0 0 0.5rem;
@@ -77,185 +85,371 @@ const Section = styled(StatCard)`
   p:last-child {
     margin-bottom: 0;
   }
+
+  ul {
+    color: ${props => props.theme.color.textMuted};
+    margin: 0 0 0.5rem;
+    padding-left: 1.15rem;
+  }
+
+  ul:last-child {
+    margin-bottom: 0;
+  }
+
+  li {
+    margin: 0 0 0.3rem;
+  }
+
+  li:last-child {
+    margin-bottom: 0;
+  }
+
+  ul ul {
+    margin: 0.25rem 0 0.15rem;
+  }
 `
 
-const InfoPage = ({ onBack }) => {
+const InfoPage = () => {
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
   const speedUpFirstRequirement = getSpeedUpRequirement(0) - 1
   const overclockFirstRequirement = getOverclockRequirement(0)
+  const lastTierName = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name
+  const firstTierName = TIER_DEFINITIONS[0].name
+  const secondTierName = TIER_DEFINITIONS[1].name
+  const coreToNodeMergeSeconds = COMPUTE_MERGE_DURATIONS_SECONDS[0]
+  const topMergeSeconds = COMPUTE_MERGE_DURATIONS_SECONDS[COMPUTE_MERGE_DURATIONS_SECONDS.length - 1]
 
   return (
     <RootDiv>
       <Header>
-        <div>
-          <h1>Tens — Guide</h1>
-          <VersionText>v{version}</VersionText>
-        </div>
-        <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-          <ButtonContent>← Back to game</ButtonContent>
-        </Button>
+        <h1>Tens — Guide</h1>
+        <VersionText>v{version}</VersionText>
       </Header>
 
       <Section aria-label="overview section">
         <h2>Overview</h2>
-        <p>Build by powers of ten. Prestige for Prestige Points.</p>
-        <p>
-          Every tier is bought directly with Bits, the base currency, and once owned, produces the
-          tier immediately below it — production cascades all the way down to Bits. Reaching
-          1 Googol Bytes (8×10^100 Bits) freezes production except for Prestige. Once your balance
-          reaches 8000 Bits (1000 Bytes), the main balance display switches over to showing whole
-          Bytes instead — every cost and production number elsewhere keeps reading in Bits.
-        </p>
+        <ul>
+          <li>Everything scales by powers of ten — costs, production, and many upgrades.</li>
+          <li>Buy every tier with <strong>Bits</strong> (the base currency).</li>
+          <li>Each owned tier produces the tier below it; production cascades down to Bits.</li>
+          <li>
+            The main balance switches from Bits to whole Bytes once you hit 8000 Bits (1000 Bytes).
+            Costs and other production numbers still show in Bits.
+          </li>
+          <li>
+            Hitting <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you Prestige.
+          </li>
+        </ul>
       </Section>
 
       <Section aria-label="byte foundry section">
         <h2>Byte Foundry</h2>
         <p>
-          Every fresh save — and every real Prestige after that — starts here, before Kilobytes
-          exist. Tap to fill Memory with bits, then combine the first {INTRO_BYTE_COMBINE_COST} into
-          a permanent Byte generator that produces passively from then on. Once Kilobytes are
-          reached, the standalone Tap button is gone — Memory's own tile becomes the tap target
-          instead, with the identical effect. Sacrifice drains Memory
-          for ×{INTRO_CAPACITY_MULTIPLIER} more capacity; Invest drains it instead for permanently
-          double production. A row of transfer blocks converts Memory into free Kilobytes — the
-          first conversion unlocks the main game, with no limit on further transfers after that.
-          A fixed priority order governs which of these (plus Storage and Compute below) you can
-          take at any moment: whichever ranks highest that's currently affordable is the only one
-          on offer.
+          Every fresh save — and every Prestige — starts here before {firstTierName} exist.
+          Reopen any time from the bottom nav’s Foundry item.
         </p>
-        <p>
-          The Byte generator itself, and everything in Storage/Compute below, is permanent — carried
-          over by every real Prestige. Only Memory's own balance and the main-game-unlock gate reset
-          each cycle, so returning cycles are a fast pit-stop, not a full replay. Revisit this screen
-          any time via MainPage's "⚙️ Byte Foundry" link.
-        </p>
+
+        <h3>The loop</h3>
+        <ul>
+          <li>
+            <strong>Tap</strong> fills Memory with bits (one second of production per tap at the
+            current rate). After the main game unlocks, Memory’s own tile is the tap target —
+            the standalone Tap button goes away.
+          </li>
+          <li>
+            Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
+            produces passively forever after.
+          </li>
+          <li>
+            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_MULTIPLIER} capacity
+            (only when Memory is full and nothing higher-priority is available).
+          </li>
+          <li>
+            <strong>Invest</strong> spends Memory on an independent cost ladder for permanently
+            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance).
+          </li>
+          <li>
+            <strong>Transfer blocks</strong> convert Memory into free {firstTierName} at
+            {firstTierName}’ current per-unit cost. The first transfer unlocks the main game;
+            there’s no per-cycle cap after that. Auto-convert keeps running even when the manual
+            row is hidden.
+          </li>
+        </ul>
+
+        <h3>What resets vs. what stays</h3>
+        <ul>
+          <li>
+            <strong>Resets each Prestige:</strong> Memory balance and the main-game unlock gate.
+          </li>
+          <li>
+            <strong>Permanent:</strong> the Byte generator, capacity/production upgrades, Disks,
+            and every Compute entity.
+          </li>
+          <li>Later cycles are a fast pit-stop, not a full replay.</li>
+        </ul>
+
+        <h3>Forced priority</h3>
+        <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
+        <ul>
+          <li>Disk Fill → Bandwidth/Invest → Disk Build → Compute Boost → Memory/Sacrifice</li>
+        </ul>
       </Section>
 
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Once Memory's capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)},
-          build Disks — a growing ladder of sizes, each costing {DISK_BUILD_COST_MULTIPLIER}× its
-          own size to build. Building takes real time, not just Bits: the array's very first disk
-          takes 1 second per "KB" of its size (a 1 KB disk takes 1s, a 10 KB disk takes 10s, and so
-          on), and every further disk added to that same array takes that same base time again,
-          multiplied by its own position in the array — the array's 6th disk takes 6× as long as
-          its 1st. While an array rebuilds to add a disk, every disk already in it goes offline —
-          no filling, releasing, or redeeming — until the rebuild finishes.
+          Unlocks once Memory capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
+          Open it from the bottom nav’s Storage item.
         </p>
-        <p>
-          A built disk starts empty. Each array has its own small staging cache —{' '}
-          {DISK_CACHE_BLOCK_COUNT} blocks together holding one disk's worth of bits — that Memory
-          tops up first; only once the cache is completely full does it pour into an empty disk
-          container, smallest array first. A full cache block can be released back into Memory by
-          hand at any time, redirecting those bits elsewhere instead of waiting for the disk. A
-          full disk redeems for 1 free unit of whichever tier's current per-unit price exactly
-          matches its size right now — any tier, not just Kilobytes — then empties and refills
-          again, ready to be reused; if more than one tier happens to match at once, the tier
-          ranked earliest in the main game's own tier order wins. Redeeming happens automatically
-          once that tier's own autobuyer is active, or by hand (cache block or disk) otherwise. Up
-          to {DISK_ARRAY_LADDER_CAP} disks can ever be built at the ladder's current size before it
-          advances to the next.
-        </p>
+
+        <h3>Building Disks</h3>
+        <ul>
+          <li>
+            Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
+          </li>
+          <li>
+            Build time is real: the first disk of a size takes 1s per “KB” of that size; the Nth
+            disk of the same array takes N× that base time.
+          </li>
+          <li>
+            While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
+            until the build finishes.
+          </li>
+          <li>
+            Up to {DISK_ARRAY_LADDER_CAP} disks can be built at the current size before the ladder
+            advances. Sizes follow {firstTierName}’ own level-cost sequence (skipped prices never
+            appear).
+          </li>
+          <li>The Build button always stays on Byte Foundry; Storage shows every size you’ve reached.</li>
+        </ul>
+
+        <h3>Cache, fill, release, redeem</h3>
+        <ul>
+          <li>
+            Each array has a staging cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s
+            worth of bits. Memory fills the cache first; only a full cache pours into an empty disk
+            (smallest array first).
+          </li>
+          <li>
+            A full cache block can be <strong>released into your Bits balance</strong> (not back
+            into Memory) — but only while some tier’s current per-unit cost matches that array’s
+            size.
+          </li>
+          <li>
+            A full disk <strong>redeems</strong> for 1 free unit of whichever tier’s current price
+            exactly matches its size (any tier). Ties break toward the earliest tier in the main
+            ladder.
+          </li>
+          <li>
+            Auto-redeem fires only when that matching tier’s unit autobuyer is unlocked and
+            unpaused; otherwise redeem by hand.
+          </li>
+          <li>Disks are reusable and permanent across Prestige; a full disk stays full through Prestige.</li>
+        </ul>
       </Section>
 
       <Section aria-label="compute section">
         <h2>Compute</h2>
         <p>
-          Once Memory's capacity reaches{' '}
-          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}, a full Memory can convert
-          into 1 Core — the cost is your entire current capacity, so a bigger capacity buys fewer
-          but pricier Cores. Claiming a Core is a manual "Claim Core" click on the Byte Foundry
-          screen by default; sacrificing {COMPUTE_ENTITY_CAP} held Nodes permanently automates it,
-          after which Memory converts on its own and the manual button disappears. Every{' '}
-          {COMPUTE_CORES_PER_NODE} Cores automatically convert into 1 Node either way.
+          Unlocks once Memory capacity reaches{' '}
+          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
+          nav’s Compute item.
         </p>
-        <p>
-          From Node onward, merging is your own choice: a Merge button (always available once
-          reached, enabled at {COMPUTE_MERGE_RATIO} held) converts {COMPUTE_MERGE_RATIO} of one
-          tier into 1 of the next, all the way up Node → Cluster → Network → Grid → Fabric → Cloud
-          → Datacenter → Supercomputer → Megacomputer. Every tier caps at {COMPUTE_ENTITY_CAP} held.
-          Sacrificing {COMPUTE_ENTITY_CAP} held units of the tier a merge produces permanently
-          unlocks auto-merge for that step — once unlocked, the same {COMPUTE_MERGE_RATIO}-for-1
-          merge also fires on its own whenever the input tier is completely full
-          ({COMPUTE_ENTITY_CAP}, not {COMPUTE_MERGE_RATIO}), leaving the manual button just as
-          usable alongside it.
-        </p>
-        <p>
-          Spend 1 Core on a Compute Boost — Burst (×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
-          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}), Standard
-          (×{COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
-          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.standard.durationSeconds)}), or Sustain
-          (×{COMPUTE_BOOST_PRESETS.sustain.multiplier} for{' '}
-          {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}) — for a temporary
-          production multiplier on both Memory and Kilobytes at once, shown at the top of the
-          Compute screen while active. Activating the same preset again while it's already running
-          stacks it instead, extending the remaining time additively; the most recent unused stack
-          can also be reclaimed, one at a time, refunding 1 Core.
-        </p>
+
+        <h3>Cores</h3>
+        <ul>
+          <li>
+            A full Memory converts into 1 Core — the cost is your entire current capacity, so bigger
+            capacity means fewer but pricier Cores.
+          </li>
+          <li>
+            Claim Core is manual on Byte Foundry by default. Sacrificing {COMPUTE_ENTITY_CAP} held
+            Nodes permanently unlocks auto-claim (manual button then disappears).
+          </li>
+          <li>
+            Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
+            boundary).
+          </li>
+          <li>Every compute entity caps at {COMPUTE_ENTITY_CAP} held.</li>
+        </ul>
+
+        <h3>Merge chain</h3>
+        <ul>
+          <li>
+            Chain: Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
+            Supercomputer → Megacomputer.
+          </li>
+          <li>
+            Manual merge: convert {COMPUTE_MERGE_RATIO} of one tier into 1 of the next (enabled at
+            {COMPUTE_MERGE_RATIO} held).
+          </li>
+          <li>
+            Sacrifice {COMPUTE_ENTITY_CAP} held units of the produced tier to unlock auto-merge for
+            that boundary.
+          </li>
+          <li>
+            After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve with a timed
+            countdown ({formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, doubling
+            each step up to {formatOfflineDuration(topMergeSeconds)} for Supercomputer →
+            Megacomputer). Before unlock, merges stay instant.
+          </li>
+          <li>Auto-merge starts when the input tier’s normal slots are completely full ({COMPUTE_ENTITY_CAP}).</li>
+        </ul>
+
+        <h3>Compute Boost</h3>
+        <ul>
+          <li>
+            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power.
+            Duration stays at the base preset. Spend 1 token of the armed tier to activate.
+          </li>
+          <li>
+            Base (Core) presets:{' '}
+            Burst ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
+            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Standard ×
+            {COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
+            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.standard.durationSeconds)}; Sustain ×
+            {COMPUTE_BOOST_PRESETS.sustain.multiplier} for{' '}
+            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
+          </li>
+          <li>
+            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration does not
+            scale with tier. Boost multiplies Memory production and {firstTierName} production at
+            once.
+          </li>
+          <li>
+            Only one boost can run at a time — starting a new one is blocked while any boost is
+            active.
+          </li>
+          <li>
+            While active: <strong>Stack</strong> spends another token of the active boost’s own
+            funding tier to extend duration (up to {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier
+            doesn’t compound). <strong>Reclaim</strong> undoes the most recent unused stack,
+            refunding 1 token.
+          </li>
+          <li>Megacomputer’s only use is funding a Boost.</li>
+        </ul>
       </Section>
 
       <Section aria-label="tickspeed section">
         <h2>Tickspeed</h2>
-        <p>
-          Spend Bits to permanently speed up every tier's production ticks by another 1% at once —
-          more frequent deliveries, not bigger ones. Each level costs another power of ten. Unlocks
-          once you own {TIER_DEFINITIONS[1].name}.
-        </p>
+        <ul>
+          <li>
+            Spend Bits to permanently speed up every tier’s production ticks by another 1% at once —
+            more frequent deliveries, not bigger ones.
+          </li>
+          <li>Each level costs another power of ten.</li>
+          <li>Unlocks once you own {secondTierName}.</li>
+          <li>
+            There’s also a per-tier tickspeed track on each unlocked tier row, funded the same way.
+          </li>
+        </ul>
       </Section>
 
       <Section aria-label="speed up section">
         <h2>Speed Up</h2>
-        <p>
-          Reach the required level on {TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name} to
-          trigger a Speed Up: resets your tiers and resources (keeps unlocked autobuyers and
-          Prestige Points) and permanently doubles production speed. The first Speed Up needs
-          level {speedUpFirstRequirement}; each one after that needs one more level than the last.
-        </p>
+        <ul>
+          <li>
+            Reach the required level on {lastTierName} to trigger a Speed Up.
+          </li>
+          <li>
+            Resets tiers and resources; keeps unlocked autobuyers and Prestige Points.
+          </li>
+          <li>Permanently doubles production speed each time (stacks: ×2, ×4, ×8, …).</li>
+          <li>
+            First Speed Up needs displayed level {speedUpFirstRequirement}; each later one needs
+            one more level than the last.
+          </li>
+          <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
+        </ul>
       </Section>
 
       <Section aria-label="overclock section">
         <h2>Overclock</h2>
-        <p>
-          Reach the required level on {TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name} to
-          claim an Overclock level: resets your tiers and resources just like Speed Up (keeps
-          unlocked autobuyers and Prestige Points) but also wipes Speed Up's own stacking bonus
-          back to zero — in exchange, it permanently multiplies the Tickspeed upgrade's own
-          per-level rate by ×1.1, compounding with every level claimed (1% → 1.1% → 1.21% → …),
-          across both its regular levels and its every-10th-level milestone bonus. The first level
-          needs level {overclockFirstRequirement}; each one after that needs one more level than
-          the last. Falling behind doesn't cost you progress — claiming jumps straight to whatever
-          level {TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name} has already reached, so you
-          never have to claim every intermediate level one at a time.
-        </p>
+        <ul>
+          <li>
+            Reach the required level on {lastTierName} to claim an Overclock level.
+          </li>
+          <li>
+            Resets tiers and resources like Speed Up (keeps unlocked autobuyers and Prestige Points).
+          </li>
+          <li>
+            Also wipes Speed Up’s stacking bonus back to zero.
+          </li>
+          <li>
+            In exchange, permanently multiplies the Tickspeed upgrade’s per-level rate by ×1.1 each
+            claim (1% → 1.1% → 1.21% → …), including its every-10th-level milestone bonus.
+          </li>
+          <li>
+            First claim needs level {overclockFirstRequirement}; each later claim needs one more
+            level than the last.
+          </li>
+          <li>
+            Claiming jumps straight to whatever level {lastTierName} has already reached — you don’t
+            have to claim every intermediate level one at a time.
+          </li>
+        </ul>
       </Section>
 
       <Section aria-label="tier autobuyers section">
         <h2>Tier Autobuyers</h2>
-        <p>
-          Each tier's unit-buying autobuyer and its tickspeed autobuyer unlock automatically as you
-          prestige more — see the Milestones section below for exactly when. Once unlocked, the
-          ⏸/▶ button next to each pauses or resumes it without losing the unlock. Smart is a
-          one-time Prestige Point purchase that makes a tier's unit-buying autobuyer buy one at a
-          time until a full level is affordable, then in blocks after that — fixing an early-game
-          stall where a full level isn't affordable yet.
-        </p>
+        <ul>
+          <li>
+            Each tier’s unit-buying autobuyer and its tickspeed autobuyer unlock automatically as
+            you Prestige more — see Milestones for exact thresholds.
+          </li>
+          <li>
+            Once unlocked, the ⏸/▶ control pauses or resumes without losing the unlock.
+          </li>
+          <li>
+            <strong>Smart</strong> is a one-time Prestige Point purchase: the unit autobuyer buys
+            one at a time until a full level is affordable, then in blocks — fixing an early-game
+            stall where a full level isn’t affordable yet.
+          </li>
+        </ul>
       </Section>
 
       <Section aria-label="milestones section">
         <h2>Milestones</h2>
-        <p>
-          Tier Autobuyer Unlocks: unlocks one tier per prestige, starting at Prestige{' '}
-          {firstTierAutobuyerMilestone} for {TIER_DEFINITIONS[0].name}, up through
-          Prestige {lastTierAutobuyerMilestone} for {TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name}.
-        </p>
-        <p>
-          Tier Tickspeed Autobuyers: unlocks later — starting at
-          Prestige {firstTierTickspeedAutobuyerMilestone}, every{' '}
-          {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} prestiges after that.
-        </p>
+        <ul>
+          <li>
+            <strong>Tier Autobuyer Unlocks:</strong> one tier per Prestige, from Prestige{' '}
+            {firstTierAutobuyerMilestone} ({firstTierName}) through Prestige{' '}
+            {lastTierAutobuyerMilestone} ({lastTierName}).
+          </li>
+          <li>
+            <strong>Tier Tickspeed Autobuyers:</strong> start at Prestige{' '}
+            {firstTierTickspeedAutobuyerMilestone}, then every{' '}
+            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges after that.
+          </li>
+        </ul>
+      </Section>
+
+      <Section aria-label="prestige section">
+        <h2>Prestige</h2>
+        <ul>
+          <li>
+            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Production freezes until you
+            Prestige.
+          </li>
+          <li>
+            Awards Prestige Points from how far your money exponent climbed; spend PP on
+            automations and upgrades on the Upgrades tab.
+          </li>
+          <li>
+            Resets resources, owned counts, and run-scoped progress. Unlocked autobuyers stay
+            unlocked.
+          </li>
+          <li>
+            Sends you back through the Byte Foundry gate each cycle, but permanent Foundry /
+            Storage / Compute progress carries over.
+          </li>
+          <li>
+            The first Prestige of a save uses a full-screen overlay; later ones use the top bar /
+            PP header control.
+          </li>
+        </ul>
       </Section>
     </RootDiv>
   )

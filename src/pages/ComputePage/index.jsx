@@ -15,13 +15,10 @@ const RootDiv = styled.div`
   color: ${props => props.theme.color.text};
 `
 
-// Title plus the "← Back to Byte Foundry" exit share one row, the same title/nav-link placement
-// convention ByteFoundryPage's own <Header> already uses.
 const Header = styled.header`
   align-items: center;
   display: flex;
-  gap: ${props => props.theme.space.sm};
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
 `
 
@@ -70,10 +67,10 @@ const TierHeaderRow = styled.div`
 
 // The symbol/label/slots portion of row 1 is its own clickable button — issue #326: clicking any
 // tier row arms the 3 Compute Boost presets above (the effects section renders before the tier
-// rows — see ComputePage below), scaled to that tier's own power/duration. Kept
-// as a SEPARATE element from the auto-claim IconButton that sometimes shares this row (Cores only)
-// rather than making the whole TierHeaderRow itself a button, since nesting a <button> (auto-
-// claim) inside another <button> is invalid HTML.
+// rows — see ComputePage below), scaled to that tier's own power (duration stays at the base
+// preset — issue #363). Kept as a SEPARATE element from the auto-claim IconButton that sometimes
+// shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
+// nesting a <button> (auto-claim) inside another <button> is invalid HTML.
 const TierSelectButton = styled.button`
   display: flex;
   flex: 1 1 auto;
@@ -204,7 +201,7 @@ const ArmedStatusText = styled.p`
 `
 
 // The 3 preset buttons row — issue #326: only enabled once a tier row below has been clicked to
-// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power/duration.
+// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power (flat duration).
 const BoostRow = styled.div`
   display: flex;
   align-items: center;
@@ -432,24 +429,24 @@ const ENTITY_ROWS = [
 const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COMPUTE_ENTITY_CAP
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
-// once revealed (isComputeCoreConversionUnlocked), reached via that page's "⚡ Compute" nav
-// button. Activation is still gated by the Byte Foundry's forced priority order — Disk
-// Fill > Bandwidth > Disk Build > Compute > Memory — so a preset can show disabled here
-// even while mechanically activatable (canActivateComputeBoost), if something ranked above
-// Compute (which lives back on ByteFoundryPage/StoragePage) currently outranks it. The ten-tier
-// merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
-// Supercomputer → Megacomputer, see issues #280/#321) lives here too, alongside Boost — one page
-// for everything Compute, rather than a second dedicated screen. Render order top to bottom: the
-// active-boost status (if any), then the Boost effects section itself (armed-tier status line, 3
-// preset buttons, Stack/Reclaim row — issue #326), THEN the tier rows below it, since clicking a
-// tier row is what arms the effects section above it. Each tier renders two rows (see
-// ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's
-// name/symbol; row 2 is, pre-unlock, an instant Merge button + an Unlock Auto-merge button, or,
-// post-unlock, the COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is
-// what manually starts a new reserve merge once isCompute*MergeStartAvailable allows it ("the
-// button is enabled only when there are at least 8 tokens available across all the 18 slots").
-// Merging only ever fires automatically once the player has separately unlocked auto-merge for
-// that specific boundary; either way, once unlocked, a start (auto or manual) commits
+// once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
+// by the Byte Foundry's forced priority order — Disk Fill > Bandwidth > Disk Build > Compute >
+// Memory — so a preset can show disabled here even while mechanically activatable
+// (canActivateComputeBoost), if something ranked above Compute (which lives back on
+// ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
+// Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
+// issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
+// than a second dedicated screen. Render order top to bottom: the active-boost status (if any),
+// then the Boost effects section itself (armed-tier status line, 3 preset buttons, Stack/Reclaim
+// row — issue #326), THEN the tier rows below it, since clicking a tier row is what arms the
+// effects section above it. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
+// is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an
+// instant Merge button + an Unlock Auto-merge button, or, post-unlock, the
+// COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is what manually
+// starts a new reserve merge once isCompute*MergeStartAvailable allows it ("the button is
+// enabled only when there are at least 8 tokens available across all the 18 slots"). Merging
+// only ever fires automatically once the player has separately unlocked auto-merge for that
+// specific boundary; either way, once unlocked, a start (auto or manual) commits
 // COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's own fixed
 // duration (COMPUTE_MERGE_DURATIONS_SECONDS in layers.js) before granting 1 of the output entity.
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
@@ -457,13 +454,12 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
 // (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
 // hidden behind its own later, one-time latch until the player has actually earned enough Cores to
-// use it (see engine.js's tickComputeCoreConversion for where that latch flips). `onBack` always
-// returns to the Byte Foundry.
+// use it (see engine.js's tickComputeCoreConversion for where that latch flips).
 // ENTITY_ROWS' own labels are always plural ("Cores", "Nodes", …) — strip the trailing "s" for a
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
 
-const ComputePage = ({ game, onBack }) => {
+const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
@@ -488,9 +484,6 @@ const ComputePage = ({ game, onBack }) => {
     <RootDiv>
       <Header>
         <Title>⚡ Compute</Title>
-        <Button aria-label="Back to Byte Foundry" onClick={onBack} title="Back to Byte Foundry" type="button" variant="neutral">
-          <ButtonContent>← Back</ButtonContent>
-        </Button>
       </Header>
 
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
@@ -587,7 +580,7 @@ const ComputePage = ({ game, onBack }) => {
                       onClick={() => setSelectedBoostTierIndex(prev => (prev === tierIndex ? null : tierIndex))}
                       aria-pressed={selectedBoostTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power/duration`}
+                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
                       $selected={selectedBoostTierIndex === tierIndex}
                     >
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
