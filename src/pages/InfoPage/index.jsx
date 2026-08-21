@@ -8,14 +8,17 @@ import {
   getTierTickspeedAutobuyerMilestone,
 } from 'game/engine'
 import {
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
-  COMPUTE_MERGE_DURATIONS_SECONDS,
+  COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
   COMPUTE_MERGE_RATIO,
   COMPUTE_MERGE_RESERVE_CAP,
+  COMPUTE_MERGE_STEP_MULTIPLIER,
+  COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_MULTIPLIER,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -118,8 +121,6 @@ const InfoPage = () => {
   const lastTierName = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name
   const firstTierName = TIER_DEFINITIONS[0].name
   const secondTierName = TIER_DEFINITIONS[1].name
-  const coreToNodeMergeSeconds = COMPUTE_MERGE_DURATIONS_SECONDS[0]
-  const topMergeSeconds = COMPUTE_MERGE_DURATIONS_SECONDS[COMPUTE_MERGE_DURATIONS_SECONDS.length - 1]
 
   return (
     <RootDiv>
@@ -295,9 +296,18 @@ const InfoPage = () => {
           </li>
           <li>
             After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve with a timed
-            countdown ({formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, doubling
-            each step up to {formatOfflineDuration(topMergeSeconds)} for Supercomputer →
-            Megacomputer). Before unlock, merges stay instant.
+            countdown. Core → Node takes {COMPUTE_MERGE_CORE_EARN_MULTIPLIER}× the time to earn one
+            Core at your current Memory fill rate (capacity ÷ bits/sec, before Boost). Each next
+            boundary is ×{COMPUTE_MERGE_STEP_MULTIPLIER} the previous layer’s duration — or ×
+            {COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} after that boundary’s sequential duration
+            upgrade (sacrifice {COMPUTE_ENTITY_CAP} held tokens of its input tier once auto-merge
+            is unlocked). Before unlock, merges stay instant.
+          </li>
+          <li>
+            Duration upgrades are sequential (Core → Node first through Supercomputer →
+            Megacomputer). Upgrading a step clears that rung’s merge bottleneck; the next
+            unupgraded ×{COMPUTE_MERGE_STEP_MULTIPLIER} step becomes the new one. Later layers
+            rescale from the new chain. An in-flight timer keeps the duration snapshotted at start.
           </li>
           <li>Auto-merge starts when the input tier’s normal slots are completely full ({COMPUTE_ENTITY_CAP}).</li>
         </ul>
@@ -323,14 +333,23 @@ const InfoPage = () => {
             once.
           </li>
           <li>
-            Only one boost can run at a time — starting a new one is blocked while any boost is
-            active.
+            Only one boost runs at a time. To switch to a different preset or funding tier, you
+            must <strong>Forfeit</strong> the active boost (no refund) — the UI asks for explicit
+            confirmation. Same preset + tier while active uses <strong>Stack</strong> instead.
           </li>
           <li>
             While active: <strong>Stack</strong> spends another token of the active boost’s own
             funding tier to extend duration (up to {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier
             doesn’t compound). <strong>Reclaim</strong> undoes the most recent unused stack,
-            refunding 1 token.
+            refunding 1 token. <strong>Forfeit</strong> cancels everything with no refund
+            (confirmation required).
+          </li>
+          <li>
+            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
+            tier is full and waiting on its own in-flight reserve merge, automatically activates
+            (or stacks) your preferred preset from the <strong>biggest</strong> such tier (default
+            Standard). Preference is selectable on Compute after unlock. Never forfeits an active
+            boost to switch presets.
           </li>
           <li>Megacomputer’s only use is funding a Boost.</li>
         </ul>
