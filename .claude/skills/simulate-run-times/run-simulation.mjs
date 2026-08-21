@@ -36,6 +36,8 @@
 //   node run-simulation.mjs                         # career table (prestiges 0..10) + PP sweep
 //   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh prestige.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
+//   node run-simulation.mjs --capacity-cap           # default 1MB/10MB/100MB/1GB/unlimited sweep
+//   node run-simulation.mjs --capacity-cap 8000000 80000000 unlimited
 //   node run-simulation.mjs --strategy-out /tmp/run.md
 //   node run-simulation.mjs --pp 0 --strategy-out ./runs/2026-03-21T120000Z-abc1234.md
 
@@ -86,6 +88,7 @@ import {
 import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   MONEY_ID,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
@@ -97,11 +100,37 @@ const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 const MAX_TICKS = 5_000_000
 const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
-function actFoundry(state) {
+// Memory display uses BITS_PER_BYTE × 1000^n (B/KB/MB/…) — same as formatBitsInNearestUnit.
+// Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth).
+const DEFAULT_CAPACITY_CAPS_BITS = [
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // 1 MB — Compute unlock floor
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 10, // 10 MB
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 100, // 100 MB
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 1000, // 1 GB
+  null, // unlimited — current grow-forever bot
+]
+
+function formatCapacityLabel(capacityBits) {
+  if (capacityBits == null) return 'unlimited'
+  const bytes = capacityBits / 8
+  if (bytes >= 1e9) return `${bytes / 1e9} GB (${capacityBits} bits)`
+  if (bytes >= 1e6) return `${bytes / 1e6} MB (${capacityBits} bits)`
+  if (bytes >= 1e3) return `${bytes / 1e3} KB (${capacityBits} bits)`
+  return `${capacityBits} bits`
+}
+
+function totalDisksBuilt(intro) {
+  return Object.values(intro?.disksBuiltTotal ?? {}).reduce((sum, n) => sum + (n ?? 0), 0)
+}
+
+function actFoundry(state, { capacityCapBits = null } = {}) {
   let s = state
 
   s = tapIntroBit(s)
   s = combineIntroByte(s)
+
+  const canGrowCapacity =
+    capacityCapBits == null || (s.intro?.capacity ?? 0) < capacityCapBits
 
   // Convert FIRST while the gate is still closed. Full permanent Disks carried across Prestige are
   // redeemable immediately at tier01's fresh level-1 cost — redeeming them (manual Disk Fill or
@@ -122,6 +151,7 @@ function actFoundry(state) {
     }
     s = pickIntroProductionMilestone(s)
     if (
+      canGrowCapacity &&
       !(s.intro.capacityUpgradeQueued ?? false) &&
       s.intro.bits < s.intro.capacity &&
       (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
@@ -129,7 +159,7 @@ function actFoundry(state) {
       s = queueIntroCapacityUpgrade(s)
     }
     s = tickQueuedCapacityUpgrade(s)
-    if (!(s.intro.capacityUpgradeQueued ?? false)) {
+    if (canGrowCapacity && !(s.intro.capacityUpgradeQueued ?? false)) {
       s = pickIntroCapacityMilestone(s)
     }
     for (let i = 0; i < 64; i += 1) {
@@ -159,7 +189,10 @@ function actFoundry(state) {
   // Queue Capacity before the bar is full when Invest can't take the next Memory spend (or while
   // still climbing to the conversion unlock) — tickQueuedCapacityUpgrade / tickGame then fires it
   // on full Memory, erasing all Compute tokens as the queued-Sacrifice penalty.
+  // Under a capacity cap, stop queueing/Sacrificing once the cap is reached so Core cost stays
+  // fixed (Storage vs Compute tradeoff sweep — see --capacity-cap).
   if (
+    canGrowCapacity &&
     !(s.intro.capacityUpgradeQueued ?? false) &&
     s.intro.bits < s.intro.capacity &&
     (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
@@ -175,7 +208,7 @@ function actFoundry(state) {
   }
 
   // Optional manual Capacity only when not relying on a queue (queue path already handled above).
-  if (!(s.intro.capacityUpgradeQueued ?? false)) {
+  if (canGrowCapacity && !(s.intro.capacityUpgradeQueued ?? false)) {
     s = pickIntroCapacityMilestone(s)
   }
 
@@ -292,20 +325,21 @@ function actSpeedBonus(state) {
   return state
 }
 
-function actPlayer(state) {
-  return actSoftResets(actSpeedBonus(actTickspeed(actMainBuys(actFoundry(state)))))
+function actPlayer(state, options = {}) {
+  return actSoftResets(actSpeedBonus(actTickspeed(actMainBuys(actFoundry(state, options)))))
 }
 
 function countUnlockedAutobuyers(state) {
   return TIER_DEFINITIONS.filter(t => (state.autobuyers?.[t.id] ?? null) !== null).length
 }
 
-function simulateCycle(startingState, { maxTicks = MAX_TICKS } = {}) {
+function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = null } = {}) {
   let state = startingState
   let ticks = 0
   let foundryTicks = null
   let speedUpsAtStart = state.speedUpCount ?? 0
   let overclocksAtStart = state.overclockCount ?? 0
+  const options = { capacityCapBits }
 
   const startedUnlocked = Boolean(state.intro?.mainGameUnlocked)
 
@@ -321,11 +355,14 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS } = {}) {
         overclock: (state.overclockCount ?? 0) - overclocksAtStart,
         speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
         autobuyers: countUnlockedAutobuyers(state),
+        capacity: state.intro?.capacity ?? 0,
+        coresEver: state.intro?.computeCoresEverEarned ?? 0,
+        disksBuilt: totalDisksBuilt(state.intro),
         state,
       }
     }
 
-    state = actPlayer(state)
+    state = actPlayer(state, options)
     if (!startedUnlocked && foundryTicks == null && state.intro?.mainGameUnlocked) {
       foundryTicks = ticks + 1
     }
@@ -349,6 +386,9 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS } = {}) {
     overclock: (state.overclockCount ?? 0) - overclocksAtStart,
     speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
     autobuyers: countUnlockedAutobuyers(state),
+    capacity: state.intro?.capacity ?? 0,
+    coresEver: state.intro?.computeCoresEverEarned ?? 0,
+    disksBuilt: totalDisksBuilt(state.intro),
     state,
   }
 }
@@ -382,8 +422,10 @@ function formatDuration(totalSeconds) {
 function parseArgs(argv) {
   const pp = []
   const career = []
+  const capacityCaps = []
   let strategyOut = null
   let mode = null
+  let runCapacitySweep = false
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     if (arg === '--pp') {
@@ -394,10 +436,24 @@ function parseArgs(argv) {
       mode = 'career'
       continue
     }
+    if (arg === '--capacity-cap' || arg === '--capacity-caps') {
+      mode = 'capacity'
+      runCapacitySweep = true
+      continue
+    }
     if (arg === '--strategy-out') {
       strategyOut = argv[i + 1] ?? null
       i += 1
       mode = null
+      continue
+    }
+    if (mode === 'capacity') {
+      if (arg === 'unlimited' || arg === 'grow' || arg === 'null') {
+        capacityCaps.push(null)
+        continue
+      }
+      const n = Number(arg)
+      if (Number.isFinite(n) && n > 0) capacityCaps.push(n)
       continue
     }
     const n = Number(arg)
@@ -406,17 +462,27 @@ function parseArgs(argv) {
     else if (mode === 'pp') pp.push(n)
     else pp.push(n)
   }
-  return { pp, career, strategyOut }
+  return { pp, career, capacityCaps, runCapacitySweep, strategyOut }
 }
 
 const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 25000, 50000]
 const defaultCareerPrestiges = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-const { pp: cliPP, career: cliCareer, strategyOut } = parseArgs(process.argv.slice(2))
-const runPP = cliPP.length > 0 || (cliPP.length === 0 && cliCareer.length === 0)
-const runCareer = cliCareer.length > 0 || (cliPP.length === 0 && cliCareer.length === 0)
+const {
+  pp: cliPP,
+  career: cliCareer,
+  capacityCaps: cliCapacityCaps,
+  runCapacitySweep,
+  strategyOut,
+} = parseArgs(process.argv.slice(2))
+
+// Capacity-cap mode is exclusive of the default career+PP tables unless those flags are also set.
+const onlyCapacity = runCapacitySweep && cliPP.length === 0 && cliCareer.length === 0
+const runPP = !onlyCapacity && (cliPP.length > 0 || (cliPP.length === 0 && cliCareer.length === 0 && !runCapacitySweep))
+const runCareer = !onlyCapacity && (cliCareer.length > 0 || (cliPP.length === 0 && cliCareer.length === 0 && !runCapacitySweep))
 const ppValues = cliPP.length > 0 ? cliPP : defaultPPValues
 const careerTargets = cliCareer.length > 0 ? cliCareer : defaultCareerPrestiges
+const capacityCapValues = cliCapacityCaps.length > 0 ? cliCapacityCaps : DEFAULT_CAPACITY_CAPS_BITS
 
 const outputLines = []
 function emit(line = '') {
@@ -436,6 +502,46 @@ function printCycleRow(labelCols, result) {
 
 let freshTotal = null
 let freshFoundry = null
+let capacityWinner = null
+
+if (runCapacitySweep || onlyCapacity) {
+  emit('## Memory capacity-cap sweep (Storage vs Compute)')
+  emit('')
+  emit(
+    'Freeze Sacrifice once Memory capacity reaches each listed bit value (climb normally until then).',
+  )
+  emit(
+    'Higher caps allow larger Disks (faster early tiers) but each Core costs a full Memory fill —',
+  )
+  emit('worse Core farming / Boost uptime. `unlimited` is the grow-forever baseline bot.')
+  emit('')
+  emit(
+    '| Capacity cap | End capacity | Foundry | Main → Googol | Total | Cores ever | Disks built | Speed Ups | Overclock Δ | Money at Googol |',
+  )
+  emit('|---|---|---|---|---|---|---|---|---|---|')
+
+  let bestTicks = Infinity
+  for (const cap of capacityCapValues) {
+    const result = simulateCycle(seedState({ prestigeCount: 0, startingPP: 0 }), {
+      capacityCapBits: cap,
+    })
+    const durationCell = result.reached
+      ? formatDuration(result.ticks)
+      : `${formatDuration(result.ticks)} (capped)`
+    emit(
+      `| ${formatCapacityLabel(cap)} | ${formatCapacityLabel(result.capacity)} | ${formatDuration(result.foundryTicks)} | ${formatDuration(result.mainTicks)} | ${durationCell} | ${result.coresEver} | ${result.disksBuilt} | ${result.speedUps} | ${result.overclock} | ${result.reached ? formatCurrency(result.finalMoney) : 'not reached'} |`,
+    )
+    if (result.reached && result.ticks < bestTicks) {
+      bestTicks = result.ticks
+      capacityWinner = formatCapacityLabel(cap)
+    }
+  }
+  if (capacityWinner) {
+    emit('')
+    emit(`Fastest to Googol in this sweep: **${capacityWinner}**.`)
+  }
+  emit('')
+}
 
 if (runCareer) {
   emit('## Career cycles (fresh start → prestige N, permanent Foundry carry)')
@@ -508,9 +614,11 @@ if (strategyOut) {
   }
   const now = new Date().toISOString()
   const resultsBody = outputLines.join('\n')
-  const headline = freshTotal
-    ? `Fresh ideal prestige cycle: **${freshTotal}** (Foundry **${freshFoundry}**).`
-    : 'See tables below.'
+  const headline = capacityWinner
+    ? `Capacity-cap sweep fastest: **${capacityWinner}**.${freshTotal ? ` Fresh unlimited cycle: **${freshTotal}** (Foundry **${freshFoundry}**).` : ''}`
+    : freshTotal
+      ? `Fresh ideal prestige cycle: **${freshTotal}** (Foundry **${freshFoundry}**).`
+      : 'See tables below.'
 
   // Each publish is a standalone snapshot (one file per run on orphan branch
   // `ideal-run-strategy`). No append / run-log — history is the runs/ directory.
@@ -528,7 +636,7 @@ Published by \`publish-strategy.sh\` — **do not merge** that branch into \`mai
 Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
 
 1. **Foundry gate:** Tap / Combine; pause tier autobuyers while gated; convert Memory → Kilobytes before redeeming permanent Disks (avoids softlock).
-2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Never enable permanent auto-claim / auto-merge.
+2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Never enable permanent auto-claim / auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
 3. **Ladder:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
