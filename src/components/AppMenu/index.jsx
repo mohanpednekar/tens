@@ -1,9 +1,10 @@
 import styled from 'styled-components'
 
-// Overflow sheet for always-available utilities (Milestones, Settings, Reset) — reachable from
-// every screen, including the mandatory Byte Foundry gate, without requiring any progress. Guide
-// stays on AppNav itself; this sheet holds everything else that shouldn't consume a nav slot.
-// Opened from AppNav's More item; closes on backdrop click, Escape, or any action.
+// Overflow sheet for always-available utilities (Milestones, Settings) — reachable from every
+// screen, including the mandatory Byte Foundry gate, without requiring any progress. Guide stays
+// on AppNav itself; this sheet holds everything else that shouldn't consume a nav slot. Reset
+// lives only under Settings → Danger zone (not duplicated here). Opened from AppNav's More item;
+// closes on backdrop click, Escape, or any action.
 
 const Backdrop = styled.div`
   background: rgba(0, 0, 0, 0.55);
@@ -48,7 +49,7 @@ const MenuButton = styled.button`
   background: ${props => props.theme.color.surfaceSunken};
   border: 1px solid ${props => props.theme.color.border};
   border-radius: ${props => props.theme.radius.sm};
-  color: ${props => (props.$danger ? props.theme.color.danger : props.theme.color.text)};
+  color: ${props => props.theme.color.text};
   cursor: pointer;
   display: flex;
   font-family: ${props => props.theme.font.body};
@@ -64,11 +65,6 @@ const MenuButton = styled.button`
     outline: 2px solid ${props => props.theme.color.accent};
     outline-offset: 2px;
   }
-
-  &:disabled {
-    color: ${props => props.theme.color.disabled};
-    cursor: not-allowed;
-  }
 `
 
 const Icon = styled.span`
@@ -77,7 +73,7 @@ const Icon = styled.span`
   width: 1.4rem;
 `
 
-const AppMenu = ({ open, onClose, onNavigate, onReset, resetDisabled = false, resetTitle }) => {
+const AppMenu = ({ open, onClose, onNavigate }) => {
   if (!open) return null
 
   const go = pageId => {
@@ -108,20 +104,6 @@ const AppMenu = ({ open, onClose, onNavigate, onReset, resetDisabled = false, re
         <MenuButton aria-label="open settings" onClick={() => go('settings')} type="button">
           <Icon aria-hidden="true">🎚️</Icon>
           Settings
-        </MenuButton>
-        <MenuButton
-          aria-label="Reset game"
-          $danger
-          disabled={resetDisabled}
-          onClick={() => {
-            onReset()
-            onClose()
-          }}
-          title={resetTitle}
-          type="button"
-        >
-          <Icon aria-hidden="true">↺</Icon>
-          Reset save…
         </MenuButton>
       </Sheet>
     </Backdrop>
