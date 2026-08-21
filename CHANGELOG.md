@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Disk build ladder** now offers every Byte power-of-ten size (1 KB → 10 KB → 100 KB → **1 MB** →
+  10 MB → …) instead of walking Kilobytes’ level-cost sequence (which skipped 1 MB). A 1 MB disk
+  redeems into Megabytes at level 1; building it costs 10 MB of Memory. Saves that already own
+  larger disks are migrated so the ladder does not rewind through newly inserted sizes.
+
 ### Added
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not

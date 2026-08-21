@@ -154,19 +154,20 @@ export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // "kilobits" instead of real Kilobytes; see docs/DESIGN_HISTORY.md for that bug and its fix), so no
 // further unit conversion is needed here the way an older version of this constant once required.
 export const DISK_BUILD_COST_MULTIPLIER = 10
-// The buildable size ladder walks tier01's own per-unit LEVEL COST sequence (getTierCost(tier01,
-// level) for level 1, 2, 3, …), expressed in real bits via the same BITS_PER_BYTE factor
-// getIntroKilobyteConversionCost uses, rather than a synthetic ×10 progression — offers tier01's
-// level-1 cost (8000 bits, a real "1 KB") until DISK_ARRAY_LADDER_CAP of them have ever been
-// built, then tier01's level-2 cost (80,000 bits, "10 KB") until another DISK_ARRAY_LADDER_CAP,
-// and so on (see getDiskSize in engine.js). Because getCostEpochExponent's Fibonacci exponent
-// sequence (1, 2, 3, 5, 8, …) skips values as levels increase, this ladder skips sizes too — e.g.
-// tier01's level 4 costs 10,000,000,000 bits ("10 MB"), not 1,000,000,000 ("1 MB"), so a 1 MB disk
-// can never exist. An independent progression, deliberately decoupled from tier01's CURRENT level
-// (unlike an earlier version of this feature, see docs/DESIGN_HISTORY.md): a player can build
-// ahead of or fall behind tier01's actual price, with isDiskRedeemable the only gate on whether a
-// built disk is spendable yet. The ladder only ever advances — it's driven by
-// intro.disksBuiltTotal, a cumulative count that redeeming a disk never decrements.
+// Smallest buildable Disk size, in bits — 1 KB Byte-accurate (same face value tier01's own level-1
+// unit cost × BITS_PER_BYTE). See getDiskLadderSizeBits / getDiskSize in engine.js.
+export const DISK_LADDER_BASE_SIZE_BITS = BITS_PER_BYTE * 1000
+// Each ladder step multiplies the previous size by this (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …)
+// so every Byte-scale power-of-ten size is offered — including 1 MB disks that redeem into
+// Tier02/Megabytes at level 1 (issue #368). An earlier ladder walked tier01's level-cost sequence
+// instead and skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB);
+// see docs/DESIGN_HISTORY.md.
+export const DISK_LADDER_SIZE_MULTIPLIER = 10
+// How many disks must ever be built at the current ladder size before getDiskSize advances to the
+// next (×DISK_LADDER_SIZE_MULTIPLIER) size. Driven by intro.disksBuiltTotal — cumulative, never
+// decremented by redeeming — so the ladder only ever advances. Deliberately decoupled from any
+// tier's CURRENT purchase level (a player can build ahead of or fall behind redeemability;
+// isDiskRedeemable is the only gate on whether a built disk is spendable yet).
 export const DISK_ARRAY_LADDER_CAP = 10
 // A disk array's cache — a small staging buffer Memory fills before any of the array's own disk
 // containers (see tickDiskAutoFill in engine.js) — is split into this many equal blocks, each
