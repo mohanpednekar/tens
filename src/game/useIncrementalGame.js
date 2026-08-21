@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, reclaimComputeBoost, redeemDisk, releaseDiskCacheBlock, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { clearGameState, completeDummySupporterPurchase, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -239,6 +239,27 @@ export const useIncrementalGame = () => {
     refreshSavesUi()
   }, [refreshSavesUi])
 
+  const clearSlot = useCallback(slotId => {
+    const result = clearSaveSlot(slotId)
+    if (!result.ok) return result
+    if (result.clearedActive) {
+      setState(createInitialGameState())
+      setOfflineProgress(null)
+      setOpsSamples([])
+    }
+    refreshSavesUi()
+    return result
+  }, [refreshSavesUi])
+
+  const eraseAllSaveProgress = useCallback(() => {
+    clearAllSaveProgress()
+    setState(createInitialGameState())
+    setOfflineProgress(null)
+    setOpsSamples([])
+    refreshSavesUi()
+    return { ok: true }
+  }, [refreshSavesUi])
+
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
   const switchSaveSlot = useCallback(slotId => {
@@ -281,7 +302,9 @@ export const useIncrementalGame = () => {
 
   return {
     actions,
+    clearSlot,
     dismissOfflineProgress,
+    eraseAllSaveProgress,
     offlineProgress,
     opsSamples,
     purchaseSupporterDummy,

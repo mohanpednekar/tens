@@ -321,6 +321,7 @@ src/
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage save/load/clear + save-schema migration, multi-slot
                                saves + Supporter entitlement (unlock code / dummy checkout),
+                               clearSaveSlot / clearAllSaveProgress (never revokes unlock),
                                plus the separately keyed last-save timestamp used to compute
                                offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
@@ -446,7 +447,7 @@ Strict three-layer separation:
    MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    offlineProgress, dismissOfflineProgress, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
-   redeemUnlockCode, purchaseSupporterDummy, opsSamples }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown

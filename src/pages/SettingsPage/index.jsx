@@ -3,7 +3,7 @@ import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
 import { formatCurrency, formatMoneyBalance, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
-import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE } from 'game/storage'
+import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
 
@@ -209,6 +209,18 @@ const SettingsPage = ({ game, onReset }) => {
     game.renameSaveSlot(slot.id, next)
   }
 
+  const handleClearSlot = slot => {
+    if (frozen && slot.isActive) return
+    if (!window.confirm(buildClearSlotConfirmMessage(slot))) return
+    game.clearSlot(slot.id)
+  }
+
+  const handleEraseAll = () => {
+    if (frozen) return
+    if (!window.confirm(buildEraseAllSavesConfirmMessage())) return
+    game.eraseAllSaveProgress()
+  }
+
   const moneyPath = buildSparklinePath(game.opsSamples ?? [], 'money')
   const ppPath = buildSparklinePath(game.opsSamples ?? [], 'prestigePoints')
 
@@ -269,7 +281,10 @@ const SettingsPage = ({ game, onReset }) => {
 
       <Section aria-label="save slots section">
         <h2>Save slots</h2>
-        <p>Independent runs on this device. Switching saves the current slot first. Reset only erases the active slot.</p>
+        <p>
+          Independent runs on this device. Switching saves the current slot first. Reset / Clear
+          wipe progress only — your Supporter unlock is never removed here.
+        </p>
         {(game.saveSlots ?? []).map(slot => (
           <SlotRow $active={slot.isActive} key={slot.id}>
             <SlotLabel>
@@ -301,6 +316,20 @@ const SettingsPage = ({ game, onReset }) => {
                   variant="neutral"
                 >
                   <ButtonContent>Rename</ButtonContent>
+                </Button>
+                <Button
+                  aria-label={`clear ${slot.name}`}
+                  disabled={frozen && slot.isActive}
+                  onClick={() => handleClearSlot(slot)}
+                  title={
+                    frozen && slot.isActive
+                      ? 'Prestige first — production is frozen at 1 Googol Bytes'
+                      : 'Erase this slot only (asks for confirmation)'
+                  }
+                  type="button"
+                  variant="danger"
+                >
+                  <ButtonContent>Clear…</ButtonContent>
                 </Button>
               </Row>
             )}
@@ -410,7 +439,10 @@ const SettingsPage = ({ game, onReset }) => {
 
       <Section aria-label="danger zone">
         <h2>Danger zone</h2>
-        <p>Erase the <strong>active</strong> save slot and start from the Byte Foundry gate. Other slots are untouched.</p>
+        <p>
+          Erase the <strong>active</strong> save (“{game.saveSlots?.find(s => s.isActive)?.name ?? 'Save 1'}”)
+          and start from the Byte Foundry. Other slots and your Supporter unlock stay.
+        </p>
         <Button
           aria-describedby="settings-reset-description"
           aria-label="Reset game"
@@ -425,7 +457,24 @@ const SettingsPage = ({ game, onReset }) => {
           variant="danger"
         >
           <ButtonContent>↺ Reset active save…</ButtonContent>
-          <VisuallyHidden id="settings-reset-description">Erases the active save slot and starts over</VisuallyHidden>
+          <VisuallyHidden id="settings-reset-description">
+            Erases the active save slot and starts over; other slots and Supporter unlock stay
+          </VisuallyHidden>
+        </Button>
+        <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
+        <Button
+          aria-label="Erase all save progress"
+          disabled={frozen}
+          onClick={handleEraseAll}
+          title={
+            frozen
+              ? 'Prestige first — production is frozen at 1 Googol Bytes'
+              : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
+          }
+          type="button"
+          variant="danger"
+        >
+          <ButtonContent>Erase all save progress…</ButtonContent>
         </Button>
       </Section>
     </RootDiv>

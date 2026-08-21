@@ -211,6 +211,77 @@ export const redeemSupporterUnlockCode = code => {
  */
 export const completeDummySupporterPurchase = () => grantSupporterUnlock('dummy_purchase')
 
+export const getActiveSlotDisplayName = () => {
+  const meta = loadSavesMeta()
+  return meta.slots.find(s => s.id === meta.activeSlotId)?.name ?? defaultSlotName(0)
+}
+
+/**
+ * Confirm copy for wiping the active slot. Never implies other slots or Supporter unlock are lost.
+ */
+export const buildResetActiveSlotConfirmMessage = () => {
+  const meta = loadSavesMeta()
+  const name = getActiveSlotDisplayName()
+  const survivors = []
+  if (meta.unlockedSlotCount > 1) survivors.push('other save slots')
+  if (meta.supporterUnlocked) survivors.push('your Supporter unlock')
+  const survivorLine = survivors.length
+    ? `\n\nKept: ${survivors.join(' and ')}.`
+    : ''
+  return `Erase "${name}" (active save) and start over from the Byte Foundry?${survivorLine}\n\nThis cannot be undone.`
+}
+
+export const buildClearSlotConfirmMessage = slot => {
+  const label = slot?.name ?? 'this save'
+  const activeNote = slot?.isActive ? ' (currently active — you will restart at the Byte Foundry)' : ''
+  return `Clear "${label}"${activeNote}?\n\nOther slots and your Supporter unlock (if any) stay.\n\nThis cannot be undone.`
+}
+
+export const buildEraseAllSavesConfirmMessage = () => {
+  const meta = loadSavesMeta()
+  const unlockNote = meta.supporterUnlocked
+    ? 'Your Supporter unlock and slot names stay.'
+    : 'Slot names stay.'
+  return `Erase ALL save progress on this device?\n\n${unlockNote}\n\nThis cannot be undone.`
+}
+
+const removeSlotStorage = slotId => {
+  try {
+    localStorage.removeItem(slotStateKey(slotId))
+    localStorage.removeItem(slotTimestampKey(slotId))
+  } catch {
+    // Silently ignore
+  }
+}
+
+/**
+ * Clears one unlocked slot's game data. Does not change active slot id or Supporter entitlement.
+ * Returns { ok, clearedActive } so the hook can reload fresh state when the active slot was wiped.
+ */
+export const clearSaveSlot = slotId => {
+  const id = String(slotId)
+  const meta = loadSavesMeta()
+  const index = Number(id)
+  if (!Number.isInteger(index) || index < 0 || index >= meta.unlockedSlotCount) {
+    return { ok: false, reason: 'locked' }
+  }
+  removeSlotStorage(id)
+  return { ok: true, clearedActive: meta.activeSlotId === id, meta }
+}
+
+/**
+ * Wipes every slot's game state + timestamps. Keeps tens_saves_meta (supporter unlock, names,
+ * active slot id). Never revokes supporterUnlocked.
+ */
+export const clearAllSaveProgress = () => {
+  for (let i = 0; i < SUPPORTER_SLOT_COUNT; i += 1) {
+    removeSlotStorage(String(i))
+  }
+  // Touch meta so coerce stays normalized without clearing entitlement.
+  const meta = loadSavesMeta()
+  return { ok: true, meta }
+}
+
 // Legacy name-based tier ids (pre-tier0N rename) mapped to their new naming-agnostic id.
 // Nonillions/Decillions have no new id — they were dropped when the tier count went 12 → 10,
 // so their old data is discarded rather than remapped (see LEGACY_REMOVED_TIER_IDS below).
@@ -509,11 +580,5 @@ export const loadLastSaveTimestamp = () => {
 
 /** Clears only the active save slot's state + timestamp (not other slots or the unlock entitlement). */
 export const clearGameState = () => {
-  const slotId = getActiveSlotId()
-  try {
-    localStorage.removeItem(slotStateKey(slotId))
-    localStorage.removeItem(slotTimestampKey(slotId))
-  } catch {
-    // Silently ignore
-  }
+  clearSaveSlot(getActiveSlotId())
 }

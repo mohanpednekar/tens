@@ -9,6 +9,7 @@ import SettingsPage from 'pages/SettingsPage'
 import { isComputeCoreConversionUnlocked, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
+import { buildResetActiveSlotConfirmMessage } from 'game/storage'
 import { GlobalStyle, ThemeProvider } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -64,7 +65,7 @@ function App() {
 
   const handleReset = () => {
     if (isProductionFrozen(game.state)) return
-    if (!window.confirm('Erase the active save slot and start over? Other slots are kept. This cannot be undone.')) return
+    if (!window.confirm(buildResetActiveSlotConfirmMessage())) return
     game.resetGame()
     setPage('game')
     setMenuOpen(false)

@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Supporter pack** (Settings): optional meta extras — extra save slots (1 free → 3), Prestige
   museum (history + pins), and Ops dashboard sparklines. Unlock via placeholder code `TENS-SUPPORT`
   or a **dummy checkout** button until real payment ships. Never changes Bits, PP, Disks, Compute,
-  or unlock order. Reset clears only the **active** save slot.
+  or unlock order. Reset / Clear wipe **save progress only** (active slot, a chosen slot, or all
+  slots); Supporter unlock is never revoked from Settings.
 - **Nav attention dots** on the bottom `AppNav`: green corner indicators when a destination has a
   pending action, with **high** (larger, pulsing — Memory full, full purchase level, Prestige
   freeze, redeemable disk, combine ready) vs **normal** emphasis. Shared predicates in

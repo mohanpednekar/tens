@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
@@ -909,5 +909,51 @@ describe('supporter unlock + save slots', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
     expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
+  })
+
+  it('clearSaveSlot wipes one slot and leaves others + unlock intact', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 },
+    })
+    setActiveSaveSlot('1')
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 },
+    })
+
+    expect(clearSaveSlot('0').ok).toBe(true)
+    setActiveSaveSlot('0')
+    expect(loadGameState()).toBeNull()
+    setActiveSaveSlot('1')
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+    expect(isSupporterUnlocked()).toBe(true)
+  })
+
+  it('clearAllSaveProgress wipes every slot but keeps supporterUnlocked', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    renameSaveSlot('1', 'Alt')
+    saveGameState(createInitialGameState())
+    setActiveSaveSlot('1')
+    saveGameState(createInitialGameState())
+
+    expect(clearAllSaveProgress().ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt')
+    setActiveSaveSlot('0')
+    expect(loadGameState()).toBeNull()
+    setActiveSaveSlot('1')
+    expect(loadGameState()).toBeNull()
+  })
+
+  it('reset confirm message names the active slot and mentions survivors when unlocked', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    renameSaveSlot('0', 'Main run')
+    const message = buildResetActiveSlotConfirmMessage()
+    expect(message).toContain('Main run')
+    expect(message).toMatch(/other save slots/i)
+    expect(message).toMatch(/supporter unlock/i)
+    expect(buildEraseAllSavesConfirmMessage()).toMatch(/supporter unlock/i)
   })
 })
