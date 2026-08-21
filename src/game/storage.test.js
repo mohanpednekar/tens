@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearGameState, loadGameState, loadLastSaveTimestamp, saveGameState } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
@@ -640,6 +640,7 @@ describe('schema migration', () => {
         bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false,
+        capacityUpgradeQueued: false,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
         diskAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
@@ -846,5 +847,126 @@ describe('saveGameState / loadLastSaveTimestamp', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadLastSaveTimestamp()).toBeNull()
+  })
+})
+
+describe('supporter unlock + save slots', () => {
+  it('starts with one unlocked slot and no supporter flag', () => {
+    const meta = loadSavesMeta()
+    expect(meta.unlockedSlotCount).toBe(FREE_SLOT_COUNT)
+    expect(meta.supporterUnlocked).toBe(false)
+    expect(listSaveSlots().filter(s => s.unlocked)).toHaveLength(FREE_SLOT_COUNT)
+  })
+
+  it('rejects an invalid unlock code', () => {
+    expect(redeemSupporterUnlockCode('nope').ok).toBe(false)
+    expect(isSupporterUnlocked()).toBe(false)
+  })
+
+  it('redeems TENS-SUPPORT (case-insensitive) and unlocks three slots', () => {
+    const result = redeemSupporterUnlockCode('tens support')
+    expect(result.ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(loadSavesMeta().unlockedSlotCount).toBe(SUPPORTER_SLOT_COUNT)
+    expect(listSaveSlots().every(s => s.unlocked)).toBe(true)
+  })
+
+  it('dummy purchase grants the same entitlement', () => {
+    expect(completeDummySupporterPurchase().ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(completeDummySupporterPurchase().already).toBe(true)
+  })
+
+  it('keeps slot 0 on the legacy tens_game_state key and isolates other slots', () => {
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 },
+    })
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).resources[MONEY_ID]).toBe(111)
+
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    expect(setActiveSaveSlot('1').ok).toBe(true)
+    expect(loadGameState()).toBeNull()
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 },
+    })
+    expect(localStorage.getItem('tens_slot_1_state')).toBeTruthy()
+
+    expect(setActiveSaveSlot('0').ok).toBe(true)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+
+    clearGameState()
+    expect(loadGameState()).toBeNull()
+    expect(setActiveSaveSlot('1').ok).toBe(true)
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+  })
+
+  it('refuses switching to a locked slot', () => {
+    expect(setActiveSaveSlot('2').ok).toBe(false)
+  })
+
+  it('renames an unlocked slot', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
+    expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
+  })
+
+  it('clearSaveSlot wipes one slot and leaves others + unlock intact', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 },
+    })
+    setActiveSaveSlot('1')
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 },
+    })
+
+    expect(clearSaveSlot('0').ok).toBe(true)
+    setActiveSaveSlot('0')
+    expect(loadGameState()).toBeNull()
+    setActiveSaveSlot('1')
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+    expect(isSupporterUnlocked()).toBe(true)
+  })
+
+  it('clearAllSaveProgress wipes every slot but keeps supporterUnlocked', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    renameSaveSlot('1', 'Alt')
+    saveGameState(createInitialGameState())
+    setActiveSaveSlot('1')
+    saveGameState(createInitialGameState())
+
+    expect(clearAllSaveProgress().ok).toBe(true)
+    expect(isSupporterUnlocked()).toBe(true)
+    expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt')
+    setActiveSaveSlot('0')
+    expect(loadGameState()).toBeNull()
+    setActiveSaveSlot('1')
+    expect(loadGameState()).toBeNull()
+  })
+
+  it('reset confirm message names the active slot and mentions survivors when unlocked', () => {
+    redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
+    renameSaveSlot('0', 'Main run')
+    const message = buildResetActiveSlotConfirmMessage()
+    expect(message).toContain('Main run')
+    expect(message).toMatch(/other save slots/i)
+    expect(message).toMatch(/supporter unlock/i)
+    expect(buildEraseAllSavesConfirmMessage()).toMatch(/supporter unlock/i)
+  })
+
+  it('Byte Foundry reset confirm names losses and what stays', () => {
+    renameSaveSlot('0', 'Foundry wipe')
+    const message = buildResetByteFoundryConfirmMessage()
+    expect(message).toContain('Foundry wipe')
+    expect(message).toMatch(/capacity/i)
+    expect(message).toMatch(/memory/i)
+    expect(message).toMatch(/disks\/storage/i)
+    expect(message).toMatch(/compute/i)
+    expect(message).toMatch(/tiers ladder/i)
+    expect(message).toMatch(/prestige points/i)
   })
 })

@@ -1,13 +1,18 @@
-import styled from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
+import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Persistent top-level page switcher. Primary destinations (Tiers / Foundry / Storage / Compute)
-// sit alongside always-available Guide + More. More opens AppMenu (Guide / Milestones / Reset /
-// Settings) so utilities never require unlocking Tiers or any other progress gate — including
-// during the mandatory Byte Foundry gate (Tiers stays hidden then; Guide/More stay).
-// Accessible names stay stable for tests: open tiers / open byte foundry / open storage /
-// open compute / open guide / open more menu.
+// Bottom bar order follows play progression: Foundry → Compute → Tiers, then Guide / More.
+// Storage is folded into Foundry as a Memory | Disks second-level tab (same Memory pool +
+// DiskArrayRow). Tiers stays progress-gated; Guide/More stay available during the Foundry gate.
+// Accessible names: open byte foundry / open compute / open tiers / open guide / open more menu.
+// Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
+
+const pulseHigh = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+`
 
 const Bar = styled.nav`
   background: ${props => props.theme.color.surfaceRaised};
@@ -42,6 +47,7 @@ const NavItem = styled.button`
   max-width: 5.5rem;
   min-width: 0;
   padding: 0.35rem 0.25rem;
+  position: relative;
   transition:
     color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard},
     background ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard},
@@ -70,20 +76,43 @@ const Label = styled.span`
   width: 100%;
 `
 
+const AttentionDot = styled.span`
+  background: ${props => props.theme.color.good};
+  border-radius: 50%;
+  display: block;
+  position: absolute;
+  right: 0.22rem;
+  top: 0.18rem;
+
+  ${props => props.$emphasis === ATTENTION_HIGH ? css`
+    box-shadow: 0 0 0 2px ${props.theme.color.surfaceRaised};
+    height: 0.7rem;
+    width: 0.7rem;
+    animation: ${pulseHigh} 1.4s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  ` : css`
+    height: 0.4rem;
+    width: 0.4rem;
+  `}
+`
+
 const AppNav = ({
   currentPage,
   onNavigate,
   onOpenMore,
   showTiers = true,
-  showStorage = false,
   showCompute = false,
   moreOpen = false,
+  attention = {},
 }) => {
+  // Progression order: Foundry family → Compute → Tiers → utilities.
   const items = [
-    showTiers && { id: 'game', ariaLabel: 'open tiers', icon: '📶', label: 'Tiers', title: 'Tier ladder — buy and produce' },
-    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry' },
-    showStorage && { id: 'storage', ariaLabel: 'open storage', icon: '🏦', label: 'Storage', title: 'Storage' },
+    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry — Memory and Disks' },
     showCompute && { id: 'compute', ariaLabel: 'open compute', icon: '⚡', label: 'Compute', title: 'Compute' },
+    showTiers && { id: 'game', ariaLabel: 'open tiers', icon: '📶', label: 'Tiers', title: 'Tier ladder — buy and produce' },
     { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
   ].filter(Boolean)
 
@@ -93,6 +122,7 @@ const AppNav = ({
     <Bar aria-label="main navigation">
       {items.map(item => {
         const active = currentPage === item.id
+        const level = attention[item.id] || false
         return (
           <NavItem
             key={item.id}
@@ -103,6 +133,12 @@ const AppNav = ({
             title={item.title}
             type="button"
           >
+            {level && (
+              <AttentionDot
+                $emphasis={level}
+                aria-label={level === ATTENTION_HIGH ? 'important action available' : 'action available'}
+              />
+            )}
             <Icon aria-hidden="true">{item.icon}</Icon>
             <Label>{item.label}</Label>
           </NavItem>
@@ -114,7 +150,7 @@ const AppNav = ({
         aria-label="open more menu"
         $active={utilityActive}
         onClick={onOpenMore}
-        title="Guide, Milestones, Settings, Reset"
+        title="Milestones, Settings"
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>

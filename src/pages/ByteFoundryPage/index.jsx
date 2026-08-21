@@ -2,8 +2,9 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -30,6 +31,18 @@ const Header = styled.header`
   display: flex;
   justify-content: center;
   width: 100%;
+`
+
+// Second-level Foundry tabs: Memory | Disks (peer tabs — Storage is no longer a top-level AppNav
+// destination). Shown once Storage unlocks.
+const SubNav = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+`
+
+const SubNavButton = styled(Button)`
+  flex: 1;
 `
 
 const StatusText = styled.p`
@@ -258,23 +271,19 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// Before intro.mainGameUnlocked this page is a mandatory gate with no way out (AppNav is hidden).
-// Once unlocked, AppNav's Foundry item reopens it at any time — nothing here is read-only:
-// Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see tickIntroAutoInvest
-// in engine.js) all stay fully live either way. The Byte generator itself (capacity/byteCreated/
-// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims)
-// is PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to
-// cycle, until the next Prestige resets Memory fresh.
-//
-// Compute lives on ComputePage once revealed; Storage's full multi-size history lives on
-// StoragePage. Both are reached via AppNav (not page-local open-* buttons). Starting the next
-// disk's build and the single currently-active/buildable size's interactive detail
-// (components/DiskArrayRow) stay here. Every action — here or on either dedicated screen —
-// stays gated by the Byte Foundry's forced priority order (see "Byte Foundry" in CLAUDE.md):
-// Disk Fill > Bandwidth > Disk Build > Compute > Memory.
-const ByteFoundryPage = ({ game }) => {
+// Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
+// still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
+// here is read-only. Storage's every-size history is the Disks second-level tab on this same page
+// (not a separate AppNav destination). Starting the next disk's build and the currently-active
+// size's DiskArrayRow stay on the Memory tab. Forced priority: Disk Fill > Bandwidth > Disk Build >
+// Compute > Memory.
+const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
+  const [foundryTab, setFoundryTab] = useState('memory')
+  useEffect(() => {
+    setFoundryTab('memory')
+  }, [focusNonce])
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
@@ -290,10 +299,11 @@ const ByteFoundryPage = ({ game }) => {
   // is removed entirely, not merely disabled — see "Byte Foundry" in CLAUDE.md.
   const canClaimComputeCore = isComputeCoreClaimAvailable(state)
   const productionRate = getIntroProductionRate(intro)
+  const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
   // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
   // costs more once capacity is higher) — same "no modal component to reuse, use window.confirm"
-  // rationale MainPage's own Reset button confirm already documents.
+  // rationale Settings → Danger zone's Reset confirm already documents.
   const handleSacrificeClick = () => {
     const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
     if (window.confirm(
@@ -313,8 +323,9 @@ const ByteFoundryPage = ({ game }) => {
   const investBlockedByPriority = isBandwidthAvailable(state) && !canInvest
 
   // Starting the next disk's build stays on this page (the Byte Foundry's own core loop) even
-  // though redeeming lives on the dedicated StoragePage — see "Byte Foundry" in CLAUDE.md. Ranked
-  // third in the forced priority order — see isDiskBuildTurnAvailable.
+  // though every-size history lives on the Disks tab — see "Byte Foundry" in CLAUDE.md. Ranked
+  // third in the forced priority order — see isDiskBuildTurnAvailable. Relevant DiskArrayRows
+  // (Cache then Disks per size, ascending) render below while transferable.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
   const canStartDiskBuild = isDiskBuildTurnAvailable(state)
@@ -324,14 +335,12 @@ const ByteFoundryPage = ({ game }) => {
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  // The interactive cache/disk detail (DiskArrayRow) only earns its place here while the current
-  // size is actually transferrable right now — some tier's current cost matches it. The Build
-  // button itself stays visible/usable regardless (building ahead of the curve, before any tier
-  // has caught up to this size, is a deliberate strategy — see "Economy model" in CLAUDE.md), but
-  // once every tier's cost has grown past this size with nothing left to redeem or release toward,
-  // the detail row is just inert clutter; StoragePage's own full history remains the place to
-  // review a size like that.
-  const showDiskArrayRow = diskRedeemTierName !== null
+  // Every currently-relevant size (tier cost matches — Cache releasable / Disks redeemable),
+  // ascending smallest→largest — not only the ladder's current build size. An older array that
+  // still matches stays visible here until it stops being transferable; the Build button itself
+  // stays visible/usable regardless (building ahead of the curve is deliberate — see "Economy
+  // model" in CLAUDE.md). Disks tab / StoragePage keep the full history either way.
+  const relevantDiskSizes = storageRevealed ? getRelevantDiskSizesForFoundry(state) : []
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -375,6 +384,39 @@ const ByteFoundryPage = ({ game }) => {
           ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
           : 'Main game unlocked — keep transferring Memory into Kilobytes any time.'}
       </StatusText>
+
+      {storageRevealed && (
+        <SubNav role="tablist" aria-label="foundry view">
+          <SubNavButton
+            aria-label="open memory"
+            aria-selected={foundryTab === 'memory'}
+            color={foundryTab === 'memory' ? 'white' : 'darkgrey'}
+            onClick={() => setFoundryTab('memory')}
+            role="tab"
+            type="button"
+          >
+            Memory
+          </SubNavButton>
+          <SubNavButton
+            aria-label="open disks"
+            aria-selected={foundryTab === 'disks'}
+            color={foundryTab === 'disks' ? 'white' : 'darkgrey'}
+            onClick={() => setFoundryTab('disks')}
+            role="tab"
+            type="button"
+          >
+            Disks
+          </SubNavButton>
+        </SubNav>
+      )}
+
+      {foundryTab === 'disks' && storageRevealed && (
+        diskSizesToShow.map(size => (
+          <DiskArrayRow key={size} actions={actions} size={size} state={state} />
+        ))
+      )}
+
+      {foundryTab === 'memory' && (<>
 
       <TilesRow>
         <FillableStatCard
@@ -527,7 +569,9 @@ const ByteFoundryPage = ({ game }) => {
             />
           </Button>
 
-          {showDiskArrayRow && <DiskArrayRow actions={actions} size={diskSize} state={state} />}
+          {relevantDiskSizes.map(size => (
+            <DiskArrayRow key={size} actions={actions} size={size} state={state} />
+          ))}
         </>
       )}
 
@@ -604,6 +648,8 @@ const ByteFoundryPage = ({ game }) => {
           👆 Tap
         </TapArea>
       )}
+
+      </>)}
     </RootDiv>
   )
 }

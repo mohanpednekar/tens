@@ -26,9 +26,9 @@ const Title = styled.h1`
   margin: 0;
 `
 
-// Storage's dedicated screen — reached via AppNav once isStorageUnlocked. Renders one
-// DiskArrayRow per size ever reached (ascending via getDiskSizesToShow). Starting the next
-// disk's build stays on ByteFoundryPage; this page is for reviewing/acting on every array.
+// Storage's every-size detail — kept as a thin wrapper for reuse/tests. Primary UI path is now
+// ByteFoundryPage's Disks second-level tab (Storage is no longer a top-level AppNav destination).
+// Starting the next disk's build stays on the Foundry Memory tab.
 const StoragePage = ({ game }) => {
   const { actions, state } = game
   const diskSizesToShow = getDiskSizesToShow(state)
