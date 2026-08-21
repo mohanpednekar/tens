@@ -1,6 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -67,10 +67,10 @@ const TierHeaderRow = styled.div`
 
 // The symbol/label/slots portion of row 1 is its own clickable button — issue #326: clicking any
 // tier row arms the 3 Compute Boost presets above (the effects section renders before the tier
-// rows — see ComputePage below), scaled to that tier's own power/duration. Kept
-// as a SEPARATE element from the auto-claim IconButton that sometimes shares this row (Cores only)
-// rather than making the whole TierHeaderRow itself a button, since nesting a <button> (auto-
-// claim) inside another <button> is invalid HTML.
+// rows — see ComputePage below), scaled to that tier's own power (duration stays at the base
+// preset — issue #363). Kept as a SEPARATE element from the auto-claim IconButton that sometimes
+// shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
+// nesting a <button> (auto-claim) inside another <button> is invalid HTML.
 const TierSelectButton = styled.button`
   display: flex;
   flex: 1 1 auto;
@@ -201,7 +201,7 @@ const ArmedStatusText = styled.p`
 `
 
 // The 3 preset buttons row — issue #326: only enabled once a tier row below has been clicked to
-// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power/duration.
+// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power (flat duration).
 const BoostRow = styled.div`
   display: flex;
   align-items: center;
@@ -225,6 +225,28 @@ const StackReclaimRow = styled.div`
   justify-content: center;
   gap: ${props => props.theme.space.sm};
   width: 100%;
+`
+
+const DurationUpgradeRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+`
+
+const AutoBoostRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+`
+
+const AutoBoostLabel = styled.p`
+  margin: 0;
+  color: ${props => props.theme.color.textMuted};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  text-align: center;
 `
 
 // The active-boost status line (effect + countdown + stack count) plus its optional Reclaim
@@ -447,8 +469,9 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 // enabled only when there are at least 8 tokens available across all the 18 slots"). Merging
 // only ever fires automatically once the player has separately unlocked auto-merge for that
 // specific boundary; either way, once unlocked, a start (auto or manual) commits
-// COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's own fixed
-// duration (COMPUTE_MERGE_DURATIONS_SECONDS in layers.js) before granting 1 of the output entity.
+// COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's live duration
+// (Core earn time ×10 chain, or ×5 after a duration upgrade — see getComputeMergeDurationSeconds)
+// before granting 1 of the output entity.
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
@@ -505,20 +528,48 @@ const ComputePage = ({ game }) => {
         {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => {
           const multiplier = armedTierIndex ? getComputeBoostTierMultiplier(boostType, armedTierIndex) : preset.multiplier
           const durationSeconds = armedTierIndex ? getComputeBoostTierDurationSeconds(boostType, armedTierIndex) : preset.durationSeconds
-          const turnAvailable = armedTierIndex !== null && isComputeBoostTurnAvailable(state, boostType, armedTierIndex)
+          const needsForfeit = boostActive
+          const sameAsActive = needsForfeit
+            && intro.computeBoostType === boostType
+            && (intro.computeBoostTierIndex ?? 1) === armedTierIndex
+          // Fresh start, or a different preset/tier that would forfeit (confirm happens on click).
+          const turnAvailable = armedTierIndex !== null
+            && !sameAsActive
+            && (
+              isComputeBoostTurnAvailable(state, boostType, armedTierIndex, false)
+              || isComputeBoostTurnAvailable(state, boostType, armedTierIndex, true)
+            )
 
           return (
             <CompactButton
               key={boostType}
-              aria-label={`activate ${boostType} compute boost`}
+              aria-label={needsForfeit && !sameAsActive
+                ? `forfeit active boost and activate ${boostType} compute boost`
+                : `activate ${boostType} compute boost`}
               disabled={!turnAvailable}
-              onClick={() => actions.activateComputeBoost(boostType, armedTierIndex)}
+              onClick={() => {
+                if (armedTierIndex === null) return
+                if (needsForfeit) {
+                  const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
+                  const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
+                  if (!window.confirm(
+                    `Forfeit the active ${activeLabel} boost with no refund, and start ${nextLabel}?`,
+                  )) return
+                  actions.activateComputeBoost(boostType, armedTierIndex, true)
+                  return
+                }
+                actions.activateComputeBoost(boostType, armedTierIndex, false)
+              }}
               title={
                 armedTierIndex === null
                   ? 'Select a tier below first'
-                  : canActivateComputeBoost(state, boostType, armedTierIndex) && blockedByPriority
-                    ? 'Take a higher-priority upgrade first (Disk Fill, Bandwidth, or Disk Build)'
-                    : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                  : sameAsActive
+                    ? 'This boost is already active — use Stack to extend it'
+                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                      ? 'Take a higher-priority upgrade first (Disk Fill, Bandwidth, or Disk Build)'
+                      : needsForfeit
+                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
+                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
               }
               type="button"
               variant="prestige"
@@ -530,7 +581,7 @@ const ComputePage = ({ game }) => {
       </BoostRow>
 
       {boostActive && (
-        <StackReclaimRow role="group" aria-label="stack or reclaim the active compute boost">
+        <StackReclaimRow role="group" aria-label="stack, reclaim, or forfeit the active compute boost">
           <CompactButton
             aria-label="stack the active compute boost"
             disabled={!isStackComputeBoostTurnAvailable(state)}
@@ -551,12 +602,93 @@ const ComputePage = ({ game }) => {
           >
             <ButtonContent>↩ Reclaim</ButtonContent>
           </CompactButton>
+          <CompactButton
+            aria-label="forfeit the active compute boost with no refund"
+            disabled={!canForfeitComputeBoost(state)}
+            onClick={() => {
+              if (!window.confirm('Forfeit the active boost with no refund?')) return
+              actions.forfeitComputeBoost()
+            }}
+            title="Forfeit: cancel the active boost immediately with no token refund — asks for confirmation"
+            type="button"
+            variant="danger"
+          >
+            <ButtonContent>✕ Forfeit</ButtonContent>
+          </CompactButton>
         </StackReclaimRow>
       )}
+
+      <AutoBoostRow aria-label="compute auto boost">
+        {state.computeAutoBoostUnlocked ? (
+          <>
+            <AutoBoostLabel>
+              Auto from biggest tier waiting on merge — preference:
+            </AutoBoostLabel>
+            <BoostRow role="group" aria-label="auto boost preference">
+              {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
+                const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
+                return (
+                  <CompactButton
+                    key={`auto-${boostType}`}
+                    aria-label={`set auto boost preference to ${boostType}`}
+                    aria-pressed={selected}
+                    onClick={() => actions.setComputeAutoBoostType(boostType)}
+                    title={`Auto-Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
+                    type="button"
+                    variant={selected ? 'prestige' : 'neutral'}
+                  >
+                    <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
+                  </CompactButton>
+                )
+              })}
+            </BoostRow>
+          </>
+        ) : (
+          <CompactButton
+            aria-label={`unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
+            disabled={isProductionFrozen(state) || (state.prestige?.points ?? 0) < COMPUTE_AUTO_BOOST_UNLOCK_COST}
+            onClick={actions.buyComputeAutoBoost}
+            title={`Unlock Auto-Boost: while a tier is full and waiting on its own in-flight merge, automatically activate your preferred preset from the biggest such tier (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
+            type="button"
+            variant="prestige"
+          >
+            <ButtonContent>{`🤖 Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
+          </CompactButton>
+        )}
+      </AutoBoostRow>
 
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
+            {(() => {
+              const nextUpgradeIndex = getNextComputeMergeDurationUpgradeIndex(state)
+              if (nextUpgradeIndex === null) return null
+              const nextRow = ENTITY_ROWS[nextUpgradeIndex]
+              const currentDuration = getComputeMergeDurationSeconds(state, nextUpgradeIndex)
+              const afterDuration = getComputeMergeDurationSeconds(
+                { intro: { ...intro, computeMergeDurationUpgrades: nextUpgradeIndex + 1 } },
+                nextUpgradeIndex,
+              )
+              const canUpgrade = isUpgradeComputeMergeDurationAvailable(state)
+              return (
+                <DurationUpgradeRow>
+                  <CompactButton
+                    aria-label={`upgrade ${nextRow.label} merge duration step to ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED}`}
+                    disabled={!canUpgrade}
+                    onClick={actions.upgradeComputeMergeDuration}
+                    title={
+                      canUpgrade
+                        ? `Sacrifice all ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
+                        : `Next duration upgrade: ${nextRow.label} → ${nextRow.mergeOutputLabel}. Needs auto-merge unlocked and ${COMPUTE_ENTITY_CAP} held ${nextRow.label}`
+                    }
+                    type="button"
+                    variant="info"
+                  >
+                    <ButtonContent>{`×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} ${nextRow.symbol}`}</ButtonContent>
+                  </CompactButton>
+                </DurationUpgradeRow>
+              )
+            })()}
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
@@ -580,7 +712,7 @@ const ComputePage = ({ game }) => {
                       onClick={() => setSelectedBoostTierIndex(prev => (prev === tierIndex ? null : tierIndex))}
                       aria-pressed={selectedBoostTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power/duration`}
+                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
                       $selected={selectedBoostTierIndex === tierIndex}
                     >
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>

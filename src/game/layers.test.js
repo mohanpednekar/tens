@@ -5,11 +5,16 @@ import {
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
+  COMPUTE_MERGE_DURATION_UPGRADE_COUNT,
+  COMPUTE_MERGE_STEP_MULTIPLIER,
+  COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
@@ -227,6 +232,17 @@ describe('constants', () => {
     expect(COMPUTE_ENTITY_CAP).toBe(10)
   })
 
+  it('COMPUTE_MERGE duration multipliers are 10× Core earn / 10× step / 5× upgraded, with 9 boundaries', () => {
+    expect(COMPUTE_MERGE_CORE_EARN_MULTIPLIER).toBe(10)
+    expect(COMPUTE_MERGE_STEP_MULTIPLIER).toBe(10)
+    expect(COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED).toBe(5)
+    expect(COMPUTE_MERGE_DURATION_UPGRADE_COUNT).toBe(9)
+  })
+
+  it('COMPUTE_AUTO_BOOST_UNLOCK_COST is 30 PP', () => {
+    expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
+  })
+
   it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits (10 KB in Memory\'s own B/KB/MB display scale)', () => {
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
@@ -250,8 +266,8 @@ describe('constants', () => {
     expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
   })
 
-  it('COMPUTE_BOOST_TIER_POWER_STEP is 8 (each compute-ladder tier is 8x as powerful as the previous one)', () => {
-    expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(8)
+  it('COMPUTE_BOOST_TIER_POWER_STEP is 4 (each compute-ladder tier is 4x as powerful as the previous one)', () => {
+    expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(4)
   })
 
   it('COMPUTE_BOOST_TIER_FIELDS lists all 10 compute-ladder entities, lowest tier (Core) first', () => {

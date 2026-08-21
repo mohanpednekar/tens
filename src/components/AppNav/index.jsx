@@ -150,7 +150,7 @@ const AppNav = ({
         aria-label="open more menu"
         $active={utilityActive}
         onClick={onOpenMore}
-        title="Milestones, Settings, Reset"
+        title="Milestones, Settings"
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>

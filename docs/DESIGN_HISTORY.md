@@ -1980,6 +1980,32 @@ and was explicitly corrected.
 Durations moved during the same conversation before landing on the final numbers implemented here:
 `COMPUTE_BOOST_PRESETS` in `layers.js` — Burst 10s, Standard 60s, Sustain 600s.
 
+### Compute Boost tier scaling: 4× effect only, no duration enhancement (#363)
+
+Issue #326 originally scaled higher merge tiers with `COMPUTE_BOOST_TIER_POWER_STEP = 8` (exponential
+power) plus linear duration (`preset.durationSeconds * tierIndex`). That over-rewarded merging:
+normal slots per tier are capped (`COMPUTE_ENTITY_CAP`), so leaving tokens unmerged is already pure
+wastage, and auto-merge already adds a dedicated reserve pool (`COMPUTE_MERGE_RESERVE_CAP`) for
+merging. The maintainer therefore cut the step to **4× effect only** and removed duration scaling
+entirely — `getComputeBoostTierDurationSeconds` returns the base preset duration for every valid
+tier. **If this is revisited, don't restore linear duration as a default** without a new reason that
+still accounts for the slot-cap / reserve-slot incentive already in place.
+
+### Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)
+
+Fixed second tables (60s doubling, then 1s×10^n experiments in #370/#371/#372) drifted from Foundry
+Invest pacing. The locked rule: **no hardcoded absolute seconds** — Core→Node = 10×
+`capacity / getIntroProductionRate` (unboosted); each next boundary ×10 the previous, or ×5 after a
+sequential duration upgrade. Snapshot at merge start so mid-merge Invest/Boost changes do not
+rescale in-flight timers.
+
+Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in flight and that
+tier's normal slots refill to cap — spend via preferred preset (default Standard) from the
+**biggest** such waiting tier. It never forfeits an active boost to switch presets (that would
+surprise). Switching presets while one is active requires an **explicit forfeit confirmation**
+(same `window.confirm` posture as Reset / Sacrifice) — Stack remains the non-destructive extend
+path for the same type+tier.
+
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
 Memory's own passive production (Byte Foundry) and `tier01`'s (Kilobytes') production (main game)
@@ -2168,6 +2194,15 @@ leaving the remainder in Memory" test, which pins exactly this). A regression te
 size with an empty cache that can never finish this tick (not enough bits) alongside a larger size
 whose cache is already fully staged, and asserts the larger one still pours — this failed under the
 old code (the larger size's `disks` count stayed at 0) and passes under the fix.
+
+A later follow-up (#360) extended the same ASAP idea past auto-redeem: `tickGame`'s post-
+`tickDiskAutoRedeem` pass re-runs `tickDiskAutoFill` only when auto-redeem actually changed
+state, so an emptied container's cache can start topping up the same tick when Memory allows —
+without a trailing fill on every no-op pass, and without sync-filling inside manual `redeemDisk`
+(that would steal Memory Forced Priority just freed for Bandwidth). Foundry Memory lists every
+currently transferable size via `getRelevantDiskSizesForFoundry` (not only the ladder's current
+build size), with DiskArrayRow making Cache → Tiers Bits (manual-only) and Disks auto vs manual
+redeem visually distinct (auto-eligible disks are not clickable).
 
 ### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
 

@@ -52,6 +52,13 @@ afterEach(() => {
 const seedMainGameState = (overrides = {}) =>
   localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true }, ...overrides }))
 
+// Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
+// More sheet itself. Tests that click Reset must open Settings first.
+const openSettings = async user => {
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+}
+
 test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
   render(<App />)
@@ -103,7 +110,7 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Milestones, Settings, and Reset from any screen without progress gates', async () => {
+test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -112,6 +119,8 @@ test('More menu reaches Milestones, Settings, and Reset from any screen without 
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   expect(screen.getByRole('dialog', { name: /more menu/i })).toBeInTheDocument()
+  // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
@@ -120,7 +129,13 @@ test('More menu reaches Milestones, Settings, and Reset from any screen without 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/supporter pack section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/save slots section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/prestige museum section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/ops dashboard section/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
@@ -209,11 +224,22 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
 })
 
-test('the Reset button is always rendered, not gated behind a dev-only build check', () => {
+test('Reset appears only in Settings → Danger zone, not on the Tiers screen or in More', async () => {
+  const user = userEvent.setup()
   seedMainGameState()
   render(<App />)
 
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+
+  expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /reset byte foundry/i })).toBeInTheDocument()
 })
 
 test('reset game restores starting state once the confirm dialog is accepted', async () => {
@@ -227,7 +253,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
-  // Reset
+  await openSettings(user)
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
@@ -249,6 +275,7 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
 
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
 
+  await openSettings(user)
   // After reset the save-effect fires with fresh state, so money should be back to 1
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
@@ -269,12 +296,102 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
+  await openSettings(user)
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
+  // Still on Settings — cancel must not navigate away or wipe progress.
+  expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
+})
+
+test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prestige', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+  seedMainGameState({
+    resources: { base: 25_000 },
+    owned: { tier01: 5 },
+    // count ≥ 1 unlocks the Kilobytes autobuyer on load — pause it so live ticks cannot
+    // spend Bits into extra owned while this test clicks through Settings.
+    prestige: { xp: 0, points: 7, count: 2, highestMilestone: 1 },
+    autobuyersEnabled: { tier01: false },
+    intro: {
+      mainGameUnlocked: true,
+      bits: 0,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      tickSpeedSeconds: 1e12,
+      disks: { 8000: 2 },
+      disksBuiltTotal: { 8000: 4 },
+      computeCores: 6,
+      computeCoresEverEarned: 12,
+      computeMergePageUnlocked: true,
+      autoClaimCoreEnabled: true,
+    },
+  })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
+
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  expect(window.confirm.mock.calls[0][0]).toMatch(/byte foundry/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/tiers/i)
+
+  // Still on Settings (main game stays unlocked); Tiers progress is intact.
+  expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(5)
+  expect(saved.resources.base).toBe(25_000)
+  expect(saved.prestige.points).toBe(7)
+  expect(saved.prestige.count).toBe(2)
+  expect(saved.intro.mainGameUnlocked).toBe(true)
+  expect(saved.intro.byteCreated).toBe(false)
+  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+  expect(saved.intro.bits).toBe(0)
+  expect(saved.intro.disks).toEqual({})
+  expect(saved.intro.disksBuiltTotal).toEqual({})
+  expect(saved.intro.computeCores).toBe(0)
+  expect(saved.intro.computeCoresEverEarned).toBe(0)
+  expect(saved.intro.computeMergePageUnlocked).toBe(false)
+  expect(saved.intro.autoClaimCoreEnabled).toBe(false)
+  // Compute nav should disappear once capacity is back below the reveal threshold.
+  expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
+})
+
+test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true,
+      byteCreated: true,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      disks: { 8000: 1 },
+      computeCores: 3,
+    },
+  })
+  render(<App />)
+
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.byteCreated).toBe(true)
+  expect(saved.intro.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
+  expect(saved.intro.disks).toEqual({ 8000: 1 })
+  expect(saved.intro.computeCores).toBe(3)
 })
 
 test('Megabytes tier appears and is purchasable once Kilobytes has fully purchased two levels (16 owned)', () => {
@@ -779,7 +896,8 @@ test('the sticky PP display is not a clickable button before Prestige is availab
   expect(screen.queryByRole('button', { name: /^prestige points display$/i })).not.toBeInTheDocument()
 })
 
-test('production and every other control freeze once money reaches a googol', () => {
+test('production and every other control freeze once money reaches a googol', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier01: 5 },
@@ -788,6 +906,7 @@ test('production and every other control freeze once money reaches a googol', ()
   render(<App />)
 
   expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
+  await openSettings(user)
   expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
 })
 
@@ -2802,25 +2921,64 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
-    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB).
-    expect(screen.getByText('Cache — 1 Kb each')).toBeInTheDocument()
+    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Cache caption
+    // also names the manual-only Tiers Bits transfer path.
+    expect(screen.getByText('Cache — 1 Kb each (tap full → Tiers Bits)')).toBeInTheDocument()
     expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
   })
 
-  test('the Cache/Disks detail row hides on ByteFoundryPage once the current size isn\'t redeemable by any tier — the Build button stays visible/usable regardless', () => {
-    // The ladder has advanced past currentBankSize (10 built), so the currently-offered size is
-    // now futureBankSize (tier01 level 2's cost) — but tier01 (and every other tier) is still at
-    // its default level 1, well below that cost, so nothing currently matches it.
+  test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
+    // 10 built at 1 KB advances the Build offer to 10 KB (not yet matching any tier at level 1),
+    // but the 1 KB array still matches Kilobytes — it must stay on Foundry Memory while relevant.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      disks: { [currentBankSize]: 1 },
     })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
+    expect(screen.getByText(/Disks — 1 KB each/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    expect(screen.getByText(/Tap a full disk → 1 free Kilobytes/i)).toBeInTheDocument()
+  })
+
+  test('the Cache/Disks detail rows hide on ByteFoundryPage once no shown size is redeemable by any tier — the Build button stays visible/usable regardless', () => {
+    // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    seedIntroState(
+      {
+        bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      },
+      { purchaseLevels: { [tier01.id]: 3 } }
+    )
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /disk array cache/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/^Cache —/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Disks —/)).not.toBeInTheDocument()
+  })
+
+  test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
+    vi.useFakeTimers()
+
+    seedIntroState(
+      {
+        bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: 1 },
+        disks: { [currentBankSize]: 1 },
+      },
+      { autobuyers: { [tier01.id]: 1 } }
+    )
+    const { unmount } = render(<App />)
+
+    const autoButton = screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })
+    expect(autoButton).toBeDisabled()
+    expect(screen.getByText(/Auto-redeem → Kilobytes \(autobuyer on\)/i)).toBeInTheDocument()
+
+    unmount()
+    vi.useRealTimers()
   })
 
   test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {
@@ -2920,10 +3078,11 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })).toBeDisabled()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
+    expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)
@@ -3052,7 +3211,7 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
-  test('every preset activation button — including the SAME type — stays disabled while a boost is already active; issue #326 replaces same-type restacking with a separate Stack button', () => {
+  test('same-type preset stays disabled while active (use Stack); other presets offer forfeit-replace with confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
@@ -3060,8 +3219,8 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /forfeit active boost and activate standard/i })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: /stack the active compute boost/i }))
 
@@ -3069,6 +3228,56 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeCores).toBe(2)
     expect(saved.intro.computeBoostStacks).toBe(2)
     expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+  })
+
+  test('forfeit-replace of a different preset asks for confirmation; cancel keeps the active boost', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
+    expect(confirmSpy).toHaveBeenCalled()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe('burst')
+    expect(saved.intro.computeCores).toBe(3)
+    confirmSpy.mockRestore()
+  })
+
+  test('forfeit-replace of a different preset with confirmation starts the new boost and does not refund', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe('standard')
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(saved.intro.computeCores).toBe(2)
+    confirmSpy.mockRestore()
+  })
+
+  test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe(null)
+    expect(saved.intro.computeCores).toBe(3)
+    confirmSpy.mockRestore()
   })
 
   test('the Stack button is disabled once the active boost is already at COMPUTE_BOOST_MAX_STACKS', () => {
@@ -3138,7 +3347,7 @@ describe('Byte Foundry Compute Boost', () => {
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
     const boostRow = screen.getByLabelText(/^compute boost$/i)
-    const stackReclaimRow = screen.getByLabelText(/^stack or reclaim the active compute boost$/i)
+    const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
     // DOCUMENT_POSITION_FOLLOWING (4) means the first argument comes before the second in document
     // order — i.e. activeStatus renders above boostRow, which renders above stackReclaimRow, which
@@ -3617,7 +3826,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Tiers but
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — Guide + More (Milestones / Settings / Reset) stay available.
+  // Utilities must not require progress — Guide + More (Milestones / Settings) stay available.
   expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()

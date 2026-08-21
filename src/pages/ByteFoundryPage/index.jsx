@@ -2,7 +2,7 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -303,7 +303,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
 
   // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
   // costs more once capacity is higher) — same "no modal component to reuse, use window.confirm"
-  // rationale MainPage's own Reset button confirm already documents.
+  // rationale Settings → Danger zone's Reset confirm already documents.
   const handleSacrificeClick = () => {
     const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
     if (window.confirm(
@@ -323,8 +323,9 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const investBlockedByPriority = isBandwidthAvailable(state) && !canInvest
 
   // Starting the next disk's build stays on this page (the Byte Foundry's own core loop) even
-  // though redeeming lives on the dedicated StoragePage — see "Byte Foundry" in CLAUDE.md. Ranked
-  // third in the forced priority order — see isDiskBuildTurnAvailable.
+  // though every-size history lives on the Disks tab — see "Byte Foundry" in CLAUDE.md. Ranked
+  // third in the forced priority order — see isDiskBuildTurnAvailable. Relevant DiskArrayRows
+  // (Cache then Disks per size, ascending) render below while transferable.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
   const canStartDiskBuild = isDiskBuildTurnAvailable(state)
@@ -334,14 +335,12 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  // The interactive cache/disk detail (DiskArrayRow) only earns its place here while the current
-  // size is actually transferrable right now — some tier's current cost matches it. The Build
-  // button itself stays visible/usable regardless (building ahead of the curve, before any tier
-  // has caught up to this size, is a deliberate strategy — see "Economy model" in CLAUDE.md), but
-  // once every tier's cost has grown past this size with nothing left to redeem or release toward,
-  // the detail row is just inert clutter; StoragePage's own full history remains the place to
-  // review a size like that.
-  const showDiskArrayRow = diskRedeemTierName !== null
+  // Every currently-relevant size (tier cost matches — Cache releasable / Disks redeemable),
+  // ascending smallest→largest — not only the ladder's current build size. An older array that
+  // still matches stays visible here until it stops being transferable; the Build button itself
+  // stays visible/usable regardless (building ahead of the curve is deliberate — see "Economy
+  // model" in CLAUDE.md). Disks tab / StoragePage keep the full history either way.
+  const relevantDiskSizes = storageRevealed ? getRelevantDiskSizesForFoundry(state) : []
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -570,7 +569,9 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
             />
           </Button>
 
-          {showDiskArrayRow && <DiskArrayRow actions={actions} size={diskSize} state={state} />}
+          {relevantDiskSizes.map(size => (
+            <DiskArrayRow key={size} actions={actions} size={size} state={state} />
+          ))}
         </>
       )}
 

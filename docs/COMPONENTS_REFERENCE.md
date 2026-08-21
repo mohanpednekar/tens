@@ -21,9 +21,10 @@ high = larger pulsing green dot).
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Tiers: **Milestones**, **Settings**, and **Reset save…** (same
-`window.confirm` + `resetGame` path as MainPage's Reset). Closes on backdrop click, Escape, or
-any action. Takes `{ open, onClose, onNavigate, onReset, resetDisabled, resetTitle }`.
+must not depend on unlocking Tiers: **Milestones** and **Settings**. Destructive **Reset** / **Reset
+Byte Foundry** live only under Settings → Danger zone (not duplicated in this sheet or on MainPage).
+Closes on backdrop
+click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
 
 ## `Button/index.jsx`
 
@@ -32,28 +33,30 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 ## `DiskArrayRow/index.jsx`
 
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <block size> each"` with one cache
-block's own size (`size / DISK_CACHE_BLOCK_COUNT`) in `formatCacheSize`'s bit-scale `Kb`/`Mb`/…
-unit (each block itself also shown in that unit, clickable/releasable via
-`actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable`), followed by a fixed
-`DISK_ARRAY_LADDER_CAP`-square disk row,
-captioned `"Disks — <size> each (<full> full, <built>/10 built)"` with the disk size in
-`formatDiskSize`'s Byte-scale `KB`/`MB`/… unit (dropping the built clause for `"Disks — <size>
-each (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`, since that clause
-is then permanently stuck at "10/10"; full/empty/not-yet-built states, clickable/redeemable via
-`actions.redeemDisk` once full and `isDiskRedeemable`) — or, while `intro.diskBuild?.size` matches
-this size, a plain "Array rebuilding — Ns left" status line in place of both interactive rows (and
-their captions). Disks render as circles, cache blocks as squares, and neither row's caption uses
-`text-transform: uppercase` — deliberately, so the size text's own lowercase `b` (bits, Cache)
-never visually collapses into uppercase `B` (Bytes, Disks); see CLAUDE.md's "Economy model" for the
-`Kb`/`KB` distinction this exists to preserve.
+`DISK_CACHE_BLOCK_COUNT`-block cache row, captioned `"Cache — <block size> each (tap full → Tiers
+Bits)"` with one cache block's own size (`size / DISK_CACHE_BLOCK_COUNT`) in `formatCacheSize`'s
+bit-scale `Kb`/`Mb`/… unit (each block itself also shown in that unit, clickable/releasable via
+`actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable` — manual transfer to
+Tiers Bits only; never auto), followed immediately by a fixed `DISK_ARRAY_LADDER_CAP`-square disk
+row of the same size, captioned `"Disks — <size> each (<full> full, <built>/10 built)"` with the
+disk size in `formatDiskSize`'s Byte-scale `KB`/`MB`/… unit (dropping the built clause for
+`"Disks — <size> each (<n>/10 full)"` instead once `builtCapped` reaches `DISK_ARRAY_LADDER_CAP`,
+since that clause is then permanently stuck at "10/10"; full/empty/not-yet-built states). Full
+disks distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria
+`"auto-redeem …"`, hint `"Auto-redeem → <tier> (autobuyer on)"`) from **manual redeem**
+(`isDiskManualRedeemAvailable` — good/green pulsing fill, aria `"redeem … for <tier>"`, hint
+`"Tap a full disk → 1 free <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable` — or,
+while `intro.diskBuild?.size` matches this size, a plain "Array rebuilding — Ns left" status line
+in place of both interactive rows (and their captions). Disks render as circles, cache blocks as
+squares, and neither row's caption uses `text-transform: uppercase` — deliberately, so the size
+text's own lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes, Disks);
+see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
-Extracted so both `ByteFoundryPage` (the single currently-active/buildable size only) and
-`StoragePage` (every size ever reached, via `getDiskSizesToShow`) render this detail identically —
-previously `StoragePage` owned the only copy and `ByteFoundryPage` showed a lifeless text summary
-chip instead; see `CLAUDE.md`'s "Architecture" 4/4a. Every action here is unaffected by the Byte
-Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
+Extracted so both `ByteFoundryPage` (every currently-relevant size from
+`getRelevantDiskSizesForFoundry`, ascending) and `StoragePage` / Foundry Disks tab (every size ever
+reached, via `getDiskSizesToShow`) render this detail identically. Every action here is unaffected
+by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
 specific size's own array being mid-build.
 

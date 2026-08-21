@@ -15,7 +15,7 @@ until its one-time transition into the main game), `MainPage` (the tier ladder),
 static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens once each
 mechanic is revealed), via a plain `useState` toggle in `App.jsx` plus a shared bottom `AppNav`
 (Tiers / Foundry / Compute / Guide / More — Storage is under Foundry as Memory | Disks) — not a router (see "Architecture" below).
-Guide and More (Milestones / Settings / Reset) are always available, including during the
+Guide and More (Milestones / Settings) are always available, including during the
 mandatory Byte Foundry gate; only Tiers stays progress-gated.
 
 ## Tech stack
@@ -319,13 +319,17 @@ src/
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
                                Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema migration, plus the separately
-                               keyed last-save timestamp used to compute offline progress
+    storage.js              ← localStorage save/load/clear + save-schema migration, multi-slot
+                               saves + Supporter entitlement (unlock code / dummy checkout),
+                               clearSaveSlot / clearAllSaveProgress (never revokes unlock),
+                               plus the separately keyed last-save timestamp used to compute
+                               offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
                                (progression order); Tiers omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
-    AppMenu/index.jsx       ← More sheet — Milestones / Settings / Reset (always reachable)
+    AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
+                               Byte Foundry are Settings → Danger zone only)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -443,7 +447,8 @@ Strict three-layer separation:
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (not in
    MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
-   offlineProgress, dismissOfflineProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+   resetByteFoundry, offlineProgress, dismissOfflineProgress, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown
@@ -489,23 +494,22 @@ Strict three-layer separation:
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute and
    Storage live on their own dedicated screens (see 4a/4b below) once revealed, reached via AppNav
    (not page-local open-* buttons). Starting the next Disk's build (its own core-loop action,
-   alongside Sacrifice/Invest) and the single currently-active/buildable size's own full interactive
-   detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half), and redeeming
-   (Disk Fill itself) — both stay here, rendered via the shared `components/DiskArrayRow` (see
-   "Repo layout" above). The Build button always stays visible/usable regardless of eligibility
-   (building ahead of every tier's current cost is a deliberate strategy — see "Economy model"
-   below), but the `DiskArrayRow` detail itself only renders while the current size is actually
-   redeemable by some tier right now (`getDiskRedeemTierName(state, diskSize) !== null`) — once
-   every tier's cost has grown past it with nothing left to redeem or release toward, the row is
-   just inert clutter here (its full history stays reviewable on StoragePage regardless). Only one
-   Disk/Cache array is ever shown here at a time; only every OTHER size the ladder has since moved
-   past — full multi-size history, via that same shared component — lives on the dedicated
-   `StoragePage` (see 4a below). Every action — here or on either dedicated screen — stays gated by
-   the forced priority order (see "Economy model" below).
+   alongside Sacrifice/Invest) and every currently-relevant size's full interactive detail — cache
+   blocks, disk squares, releasing (Disk Fill's manual-release half → Tiers Bits only), and
+   redeeming (Disk Fill itself; auto when the matching tier's autobuyer is on, else manual) — both
+   stay here, rendered via the shared `components/DiskArrayRow` (see "Repo layout" above), ascending
+   smallest→largest with Cache of a row immediately above that row's Disks. The Build button always
+   stays visible/usable regardless of eligibility (building ahead of every tier's current cost is a
+   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` only renders while that
+   size is actually redeemable by some tier right now (`getRelevantDiskSizesForFoundry` —
+   `getDiskRedeemTierName(state, size) !== null` for sizes from `getDiskSizesToShow`) — including an
+   older array the ladder has moved past that still matches. Once no size is transferable, the
+   detail rows hide (full history stays on the Disks tab / `StoragePage`). Every action — here or on
+   either dedicated screen — stays gated by the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
     rendering one `components/DiskArrayRow` per size ever reached (ascending, via
     `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-    `{ game }`. Reached via AppNav once `isStorageUnlocked`. A pure renderer, same "engine
+    `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
     re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game }`. Reached via
     AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
@@ -523,7 +527,8 @@ Strict three-layer separation:
     the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
     Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
     how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
-    minute/10 minutes/1 hour at tier 1/Core, scaling per tier — see "Economy model" below), disabled
+    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
+    enhancement — see "Economy model" below), disabled
     until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
     (any type/tier) — a Stack + Reclaim row appears right below the presets instead:
     `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
@@ -535,18 +540,18 @@ Strict three-layer separation:
     the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
     #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
     from Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`)
-    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power/duration ("click
-    any tier row" — the effects section renders first specifically so it's visible without
-    scrolling once a tier below it is clicked), highlighted while selected; row 2 is, before that
-    boundary's auto-merge is unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO`
-    held) plus an Unlock Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the produced tier
-    held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves,
-    clickable as the manual-start trigger with no separate button ("slots are the button"), showing
-    a countdown while a merge is in flight. Megacomputer (the bottom of the chain) has no row 2, but
-    its row 1 is still Boost-selectable — the only place a Megacomputer has any use at all. Cores'
-    own row 1 also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock
-    control — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see
-    "Economy model" below.
+    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power (duration stays
+    at the base preset — issue #363) ("click any tier row" — the effects section renders first
+    specifically so it's visible without scrolling once a tier below it is clicked), highlighted
+    while selected; row 2 is, before that boundary's auto-merge is unlocked, an instant Merge button
+    (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock Auto-merge button (disabled below
+    `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP`
+    (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
+    button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
+    (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
+    a Megacomputer has any use at all. Cores' own row 1 also carries a small badge for the separate,
+    unrelated Memory → Core auto-claim unlock control — its manual counterpart (Claim Core) still
+    lives on ByteFoundryPage instead — see "Economy model" below.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
    `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,
@@ -646,7 +651,13 @@ bank-redeemability check, the flat vs. dynamic transfer cost).
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
 (`.claude/skills/simulate-run-times/SKILL.md`): it plays out full runs with the real engine functions
-rather than reasoning about the formulas by hand.
+rather than reasoning about the formulas by hand. **Also re-run and publish** that skill whenever
+making a change that can significantly affect ideal Foundry / prestige timings (economy constants
+or formulas in `engine.js`/`layers.js`, Foundry/Disk/Compute/Capacity/tickspeed/autobuyer/
+prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publishing writes **one
+new file per run** onto the stable orphan branch `ideal-run-strategy` via
+`publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
+into `main`, and do not rename it with an agent/session suffix.
 
 ## Path aliases
 
@@ -713,7 +724,7 @@ already cover the genuinely useful items on that checklist.
   compact icon-based visible text), so `getByRole('button', { name: … })` still matches even though a
   labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
-  Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
+  Reset (Settings → Danger zone) `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
   `afterEach` (see `App.test.jsx`). If a test ever needs to observe behavior across real tick boundaries
   again (none currently does), use `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))`
   **once per tick** (not one large jump per assertion — jumping by more than one tick fires the live
@@ -726,8 +737,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1316 tests). The four core test files (`engine.test.js`, `layers.test.js`,
-  `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
+- `yarn test` is green (1376 tests). The four core test files (`engine.test.js`, `layers.test.js`,  `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy

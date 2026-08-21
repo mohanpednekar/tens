@@ -10,9 +10,10 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Compute → Tiers → Guide → More**. Storage
 is under Foundry as **Memory | Disks** (not its own AppNav item). Tiers uses **Ladder | Upgrades**
-after the first Prestige. Guide and More (Milestones, Settings, Reset) are always available —
-even during the Byte Foundry gate. No backend — state lives in React and persists to
-`localStorage`.
+after the first Prestige. Guide and More (Milestones, Settings) are always available — even
+during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Foundry / Storage /
+Compute only — Tiers + Prestige kept) live under Settings → Danger zone. No backend — state
+lives in React and persists to `localStorage`.
 
 ## Tech stack
 
@@ -59,7 +60,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    storage.js             ← localStorage save/load/clear + migration logic
+    storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
+                               Supporter unlock (code / dummy checkout)
   components/
     Button/, Money/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
                             docs/COMPONENTS_REFERENCE.md
@@ -117,6 +119,12 @@ main-game-unlock gate reset each cycle. **This summary is intentionally thin —
 specific numbers/gates from it.** Full mechanics, the forced-priority-order ranking recurring upgrade
 actions, and every constant: `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section (or `CLAUDE.md`'s
 condensed version, which this file mirrors).
+
+For run times / pacing questions — and after any change that can significantly affect ideal Foundry
+or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
+Snapshots land on the stable orphan branch `ideal-run-strategy` as **one file per run** under
+`runs/` (never merge into `main`; do not rename with an agent/session suffix). Details:
+`.claude/skills/simulate-run-times/SKILL.md` / `CLAUDE.md`.
 
 ### Adding a new tier
 

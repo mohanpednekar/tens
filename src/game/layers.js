@@ -222,8 +222,8 @@ export const COMPUTE_ENTITY_CAP = 10
 // enableAutoMergeCoresIntoNode/enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing
 // ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own output entity — once
 // unlocked, that boundary's merging (both manual and automatic) fully transitions to a timed
-// RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP/
-// COMPUTE_MERGE_DURATIONS_SECONDS below). Core's own Memory → Core conversion has the
+// RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP /
+// getComputeMergeDurationSeconds below). Core's own Memory → Core conversion has the
 // analogous "auto claim" concept instead of "auto merge" (see intro.autoClaimCoreEnabled/
 // claimComputeCore/enableAutoClaimCore in engine.js), since it has no merge INPUT of its own —
 // sacrificing 10 Nodes unlocks it (enableAutoClaimCore). Note this is a genuinely SEPARATE unlock
@@ -232,7 +232,7 @@ export const COMPUTE_ENTITY_CAP = 10
 // can unlock either, both, or neither independently.
 export const COMPUTE_MERGE_RATIO = 8
 
-// --- Byte Foundry Compute reserve-merge timers --- see issue #321. Every one of the 9 tier
+// --- Byte Foundry Compute reserve-merge timers --- see issue #321 / #377. Every one of the 9 tier
 // boundaries (Core→Node through Supercomputer→Megacomputer) now merges through a timed RESERVE
 // pool once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… below) — a same-sized second pool of COMPUTE_MERGE_RESERVE_CAP (8,
@@ -251,23 +251,37 @@ export const COMPUTE_MERGE_RATIO = 8
 // once its own auto-merge flag flips true, since merging fully transitions to the timed reserve
 // system from then on).
 export const COMPUTE_MERGE_RESERVE_CAP = 8
-// The base duration a reserve merge takes to complete once started, at the very first boundary
-// (Core→Node) — doubling at every successive boundary (COMPUTE_MERGE_DURATIONS_SECONDS below), so
-// a higher tier's own merge is a proportionally bigger commitment. Only meaningful once a
-// boundary's auto-merge is unlocked — see COMPUTE_MERGE_RESERVE_CAP above.
-export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 60
-// One duration per tier boundary, lowest tier first (index 0 = Core→Node, … index 8 =
-// Supercomputer→Megacomputer) — each COMPUTE_MERGE_BASE_DURATION_SECONDS (60s/1 minute) doubled
-// once per boundary: 1/2/4/8/16/32/64/128/256 minutes. E.g. index 2 (Cluster→Network) is 240s (4
-// minutes).
-export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]
+// Timed reserve-merge durations are NOT a fixed second table — they derive from live Core earn
+// time (Memory capacity ÷ Byte generator bits/sec, before Compute Boost). Core→Node starts at
+// COMPUTE_MERGE_CORE_EARN_MULTIPLIER × that earn time; each next boundary multiplies the previous
+// duration by COMPUTE_MERGE_STEP_MULTIPLIER (10), or COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED (5)
+// once that boundary’s sequential duration upgrade is claimed. See getComputeMergeDurationSeconds.
+export const COMPUTE_MERGE_CORE_EARN_MULTIPLIER = 10
+export const COMPUTE_MERGE_STEP_MULTIPLIER = 10
+export const COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED = 5
+// Nine boundaries (Core→Node … Supercomputer→Megacomputer); one sequential upgrade each.
+export const COMPUTE_MERGE_DURATION_UPGRADE_COUNT = 9
+// Metadata per merge boundary (lowest first) for duration lookup / upgrades — sacrifice
+// COMPUTE_ENTITY_CAP of `inputField` once that boundary’s auto-merge is unlocked.
+export const COMPUTE_MERGE_BOUNDARIES = [
+  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cores→Nodes' },
+  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Nodes→Clusters' },
+  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', label: 'Clusters→Networks' },
+  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', label: 'Networks→Grids' },
+  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', label: 'Grids→Fabrics' },
+  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', label: 'Fabrics→Clouds' },
+  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', label: 'Clouds→Datacenters' },
+  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', label: 'Datacenters→Supercomputers' },
+  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', label: 'Supercomputers→Megacomputers' },
+]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
 // tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/
 // computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
-// preset strength/duration, scaled up per tier by COMPUTE_BOOST_TIER_POWER_STEP/tierIndex below.
+// preset strength/duration; only the multiplier scales up per tier via COMPUTE_BOOST_TIER_POWER_STEP
+// below (duration stays at the base preset for every tier — see issue #363).
 // Grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
 // Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
@@ -278,13 +292,12 @@ export const COMPUTE_BOOST_PRESETS = {
   standard: { multiplier: 8, durationSeconds: 600 },
   sustain: { multiplier: 2, durationSeconds: 3600 },
 }
-// Issue #326: each compute-ladder tier past the first multiplies a preset's own BASE `multiplier`
-// (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
-// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. See
-// getComputeBoostTierMultiplier/getComputeBoostTierDurationSeconds in engine.js — duration instead
-// scales LINEARLY with tier index (tier 5's duration is 5x tier 1's own base duration), a
-// deliberately different scaling shape from the multiplier's exponential one.
-export const COMPUTE_BOOST_TIER_POWER_STEP = 8
+// Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
+// `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
+// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. Duration does NOT
+// scale with tier (see getComputeBoostTierDurationSeconds) — limited normal slots make not-merging
+// pure wastage, and auto-merge already adds dedicated reserve slots, so effect-only 4× is enough.
+export const COMPUTE_BOOST_TIER_POWER_STEP = 4
 // One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
 // 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
 // activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place
@@ -317,6 +330,14 @@ export const OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 10 * 60
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
+
+// Supporter Prestige museum (meta QoL — no economy effect). Every prestige appends one history
+// entry; pinned entries are a player-curated subset. Caps keep localStorage bounded.
+export const MUSEUM_HISTORY_CAP = 20
+export const MUSEUM_PIN_CAP = 10
+// Ops dashboard in-session sparkline sample cap (hook-owned ring buffer, not persisted).
+export const OPS_SAMPLE_CAP = 60
+export const OPS_SAMPLE_INTERVAL_MS = 2000
 
 // The purchase block size a tier's level 1 (the very start of a run) requires to complete: buying
 // this many pieces of it advances a tier from level 1 to level 2. This is only the *default/
@@ -460,6 +481,12 @@ export const OVERCLOCK_REQUIREMENT_STEP = 1
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
 // smaller, earlier-game upgrade than Speed Up.
 export const AUTO_SPEED_UP_COST = 20
+// One-time PP cost to permanently unlock Compute auto-Boost (see engine.js's
+// buyComputeAutoBoost / tickAutoComputeBoost): while a reserve merge is in flight and any
+// compute-ladder tier is at COMPUTE_ENTITY_CAP, automatically activate (or stack) the player's
+// preferred Boost preset (default Standard). Priced just above AUTO_SPEED_UP_COST — a mid-early
+// automation that only matters once Compute merges are timed — and well below AUTO_PRESTIGE_COST.
+export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 // One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
 // tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
 // eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
