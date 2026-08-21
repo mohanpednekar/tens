@@ -376,9 +376,11 @@ jobs:
             `claude/heal-main-<short-slug>` off the latest main, make the smallest correct fix
             that gets `yarn test` (and `yarn build` if the failure is build-related) green again,
             push it, and open a PR with `gh pr create` explaining what broke and why the fix
-            addresses it. Do not merge it yourself. This branch prefix is already recognized by
-            pr-auto-merge.yml's low-risk auto-merge path, so a small fix can merge without
-            waiting for a human or for your next run.
+            addresses it. Do not force-merge it yourself. After the final commit, run the
+            adversarial review ritual (CLAUDE.md) and, if APPROVE + low-risk, enable auto-merge
+            with `scripts/enable-auto-merge-if-eligible.sh`. This branch prefix is already
+            recognized by pr-auto-merge.yml's low-risk auto-merge path, so a small fix can merge
+            without waiting for a human or for your next run.
           - (b) Otherwise, if "Open PRs with a failing check" above is non-empty, pick one (most
             valuable first) and unblock it:
             - For a Dependabot PR (branch starts with `dependabot/`): these usually fail because
@@ -550,9 +552,11 @@ jobs:
              "improving" it: the duplicate-PR guard step, the self-estimated usage-window budgeting
              instructions (the ~50%-of-window soft target and its self-scoping fallback behavior),
              the settings.permissions.deny list protecting the other workflow files, the requirement
-             that you never merge your own PR, the requirement to always open a PR for human
-             review instead of pushing straight to main, or the rule that the Phase A task
-             backlog always takes priority over this menu.
+             that you never force-merge or push your own PR to main (enabling GitHub auto-merge
+             via `scripts/enable-auto-merge-if-eligible.sh` after an adversarial APPROVE on a
+             low-risk PR is required, not forbidden — see CLAUDE.md), the requirement to always
+             open a PR for human review instead of pushing straight to main, or the rule that the
+             Phase A task backlog always takes priority over this menu.
           6. Gap analysis — survey the repo for a gap not already covered by an open issue or PR:
              a missing test, stale or missing documentation, a CI/CD failure mode nothing
              currently watches (Phase 0 above already covers a red main and stale/failing PRs —
@@ -610,6 +614,17 @@ jobs:
           (a comment, not a branch or PR), Phase 0(c)'s issue-filing path when a critical/high
           alert needs more than a safe direct bump, and Phase B item 6 (gap analysis) — all three
           produce a filed issue or comment, not a branch or PR.
+
+          After the final commit on a finished PR (local checks green, nothing further planned):
+          run the adversarial review in `.claude/agents/code-reviewer.md` (spawn that subagent if
+          your tool list allows; otherwise apply its checklist yourself), post a PR comment that
+          includes its machine-readable marker
+          (`<!-- adversarial-review sha=<headOid> verdict=APPROVE|NEEDS_CHANGES|BLOCK -->`), and
+          when the verdict is APPROVE and the PR meets the low-risk bar, **always** enable
+          auto-merge with `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve`
+          (marks ready if needed). That enables GitHub auto-merge only — never force-merge, never
+          push to main, never submit a GitHub approval on your own PR. See CLAUDE.md "After the
+          final commit" and docs/AUTOMATION.md Auto-merge Path 3.
           TEMPLATE_EOF
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}
@@ -647,7 +662,7 @@ jobs:
           # the only way to see WHY an unattended run ended without producing anything.
           show_full_output: true
           claude_args: |
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*)"
           settings: |
             {
               "permissions": {
