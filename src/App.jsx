@@ -9,7 +9,7 @@ import SettingsPage from 'pages/SettingsPage'
 import { isComputeCoreConversionUnlocked, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
-import { buildResetActiveSlotConfirmMessage } from 'game/storage'
+import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage } from 'game/storage'
 import { GlobalStyle, ThemeProvider } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -71,6 +71,15 @@ function App() {
     setMenuOpen(false)
   }
 
+  const handleResetByteFoundry = () => {
+    if (isProductionFrozen(game.state)) return
+    if (!window.confirm(buildResetByteFoundryConfirmMessage())) return
+    game.resetByteFoundry()
+    // Compute may no longer be revealed after the wipe — leave Settings (or fall back to Foundry
+    // if somehow still on the Compute page).
+    if (page === 'compute') setPage('foundry')
+  }
+
   useEffect(() => {
     if (!menuOpen) return undefined
     const onKey = event => {
@@ -90,7 +99,7 @@ function App() {
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'settings') {
-    content = <SettingsPage game={game} onReset={handleReset} />
+    content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} />
   } else {
     content = <MainPage focusNonce={tiersFocusNonce} game={game} />
   }

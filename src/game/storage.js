@@ -231,6 +231,22 @@ export const buildResetActiveSlotConfirmMessage = () => {
   return `Erase "${name}" (active save) and start over from the Byte Foundry?${survivorLine}\n\nThis cannot be undone.`
 }
 
+/**
+ * Confirm copy for wiping only Byte Foundry / Storage / Compute on the active save.
+ * Tiers ladder + Prestige progress stay; other slots and Supporter unlock are untouched.
+ */
+export const buildResetByteFoundryConfirmMessage = () => {
+  const name = getActiveSlotDisplayName()
+  return (
+    `Reset Byte Foundry on "${name}"?\n\n` +
+    `Use this if Capacity (or Storage / Compute) went too far and you want to rebuild Foundry from scratch.\n\n` +
+    `Erased: Memory, Capacity / Invest progress, the Byte generator, all Disks/Storage, and all Compute progress.\n\n` +
+    `Kept: Tiers ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
+    `Other save slots and your Supporter unlock (if any) stay.\n\n` +
+    `This cannot be undone.`
+  )
+}
+
 export const buildClearSlotConfirmMessage = slot => {
   const label = slot?.name ?? 'this save'
   const activeNote = slot?.isActive ? ' (currently active — you will restart at the Byte Foundry)' : ''

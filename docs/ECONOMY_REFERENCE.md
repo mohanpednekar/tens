@@ -1485,12 +1485,21 @@ identically regardless of `prestige.count`.
 
 ### Reset
 
-The "↺ Reset" button (`resetGame`, wipes the save and starts a fresh game) is always rendered.
-`ResetButton` (`styled(Button)`, smaller) gates the actual `resetGame()` call behind a native
-`window.confirm(...)` prompt. Cancelling leaves state untouched. On acceptance, alongside `resetGame()`,
-the handler resets `MainPage`'s local view-state to `'game'` and clears the
-`speedUpEverRevealed`/`globalTickspeedCardEverRevealed` flags (plain component state, not part of
-engine state).
+The "↺ Reset active save…" button (`resetGame`, wipes the active save and starts a fresh game) is
+always rendered in Settings → Danger zone. It gates the actual `resetGame()` call behind a native
+`window.confirm(...)` prompt (`buildResetActiveSlotConfirmMessage`). Cancelling leaves state
+untouched. On acceptance, alongside `resetGame()`, the App handler navigates back toward the default
+page (`'game'`, which the Foundry gate then overrides until `mainGameUnlocked`).
+
+A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteFoundry` (also behind
+`window.confirm` via `buildResetByteFoundryConfirmMessage`). It replaces `state.intro` with
+`createInitialGameState().intro` while preserving `intro.mainGameUnlocked` when it was already
+true — so Memory, the Byte generator (capacity / Invest progress / etc.), Disks/Storage, and every
+Compute ladder entity / boost / auto-claim / auto-merge unlock / reveal latch are wiped, but every
+non-`intro` field (Tiers resources/owned/purchase levels, Prestige Points/count/XP/museum,
+autobuyers, PP upgrades, Speed Up/Overclock counters, …) is left unchanged. Unlike full Reset, it
+does not clear the save slot or restart the whole game. Both Danger-zone actions stay disabled while
+production is frozen at the Prestige threshold.
 
 ### Game state shape
 
@@ -1944,6 +1953,7 @@ purchases were manual or automatic.
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` (idempotent). May be called before Memory is full — commits the next full-bar spend to Capacity so Compute cannot starve it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears `capacityUpgradeQueued` without Sacrificing. Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
+| `resetByteFoundry` | `state → state` | Settings → Danger zone: replaces `intro` with a fresh `createInitialGameState().intro`, preserving `mainGameUnlocked` when already true. Wipes Memory, Byte generator upgrades, Disks/Storage, and all Compute (including unlocks/latches). Leaves every non-`intro` field (Tiers, Prestige, automations, …) untouched |
 | `tickQueuedCapacityUpgrade` | `state → state` | If queued and Memory full and Disk Fill/Bandwidth/Disk Build unavailable: `eraseAllComputeTokens` then Sacrifice ×10 and clear the queue (bypasses `isComputeUpgradeAvailable`). Called from `tickGame` after intro production / disk-build countdown, before Disk auto-fill / Compute Core conversion. Same-reference no-op otherwise |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/10/100 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
