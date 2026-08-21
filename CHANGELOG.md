@@ -42,9 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry Disk/Cache rows**: Memory tab lists every currently transferable size (tier cost
   matches), ascending smallest→largest — not only the ladder’s current build size — and hides when
   none remain relevant. Cache caption/aria make the manual-only “tap full → Tiers Bits” path
-  obvious; full disks show a clear auto-redeem (matching tier autobuyer on) vs tap-to-redeem
-  affordance. After redeem (auto or manual), that size’s cache can refill ASAP in the same tick
-  when Memory allows.
+  obvious; full disks show a clear auto-redeem (matching tier autobuyer on — not clickable) vs
+  tap-to-redeem affordance. After auto-redeem, that size’s cache can refill ASAP the same tick
+  when Memory allows (manual redeem leaves Memory for Forced Priority / Bandwidth first).
 - **Reset** appears only under **Settings → Danger zone** (More → Settings). Removed from the More
   sheet and from the bottom of the Tiers / MainPage screen.
 - **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play

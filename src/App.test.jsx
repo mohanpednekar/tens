@@ -2884,7 +2884,8 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
 
-    expect(screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    const autoButton = screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })
+    expect(autoButton).toBeDisabled()
     expect(screen.getByText(/Auto-redeem → Kilobytes \(autobuyer on\)/i)).toBeInTheDocument()
 
     unmount()
@@ -2988,10 +2989,11 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })).toBeDisabled()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
+    expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(1)

@@ -1088,11 +1088,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // since it has no such dependency on any tier's level. A same-reference no-op when nothing
   // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
   // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
-  // After auto-redeem empties a disk, tickDiskAutoFill runs again so that size's cache can start
-  // refilling ASAP the same tick (smallest→largest), rather than sitting empty until the next
-  // tick's earlier auto-fill pass — cache's whole purpose is to convert/refill the instant it's
-  // used (see docs/DESIGN_HISTORY.md's tickDiskAutoFill ASAP note).
-  const tickStorage = state => tickDiskAutoFill(tickDiskAutoRedeem(state))
+  // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
+  // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
+  // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
+  // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
+  // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
+  // docs/DESIGN_HISTORY.md).
+  const tickStorage = state => {
+    const afterRedeem = tickDiskAutoRedeem(state)
+    return afterRedeem === state ? state : tickDiskAutoFill(afterRedeem)
+  }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
@@ -2100,9 +2105,9 @@ export const getDiskRedeemTierName = (state, capacityBits) =>
 // rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
 // tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
 // empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
-// fill again later. Immediately re-runs tickDiskAutoFill so that emptied slot's cache can start
-// topping up ASAP in the same call (Memory permitting) — same ASAP posture tickGame's post-
-// auto-redeem pass uses. No-op if no disk of that size is currently full, if that size's array is
+// fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
+// sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
+// Priority). No-op if no disk of that size is currently full, if that size's array is
 // currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
 // (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
@@ -2115,10 +2120,10 @@ export const redeemDisk = capacityBits => state => {
   const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
   const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
 
-  return tickDiskAutoFill(grantTierUnits(tier.id, 1)({
+  return grantTierUnits(tier.id, 1)({
     ...state,
     intro: { ...state.intro, disks: nextDisks },
-  }))
+  })
 }
 
 // Whether tierId's own unit-buying autobuyer is currently actually running — unlocked (purchased,
@@ -2172,8 +2177,9 @@ export const getRelevantDiskSizesForFoundry = state =>
 // this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
 // eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
 // branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
-// level for the tick, not a stale mid-tick one. redeemDisk itself re-runs tickDiskAutoFill so the
-// emptied container's cache can top up ASAP in the same call when Memory allows.
+// level for the tick, not a stale mid-tick one. tickGame re-runs tickDiskAutoFill only when this
+// actually changes state, so the emptied container's cache can top up ASAP the same tick when
+// Memory allows — without a trailing fill on every no-op pass.
 export const tickDiskAutoRedeem = state => {
   const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
   const buildingSize = state.intro.diskBuild?.size

@@ -1767,7 +1767,7 @@ describe('redeemDisk', () => {
     expect(redeemDisk(level2Size)(state)).toBe(state)
   })
 
-  it('refills that size\'s cache ASAP in the same call once an emptied container has Memory available', () => {
+  it('does not sync-fill after a manual redeem — Forced Priority can hand Memory to Bandwidth first', () => {
     const state = withIntro(createInitialGameState(), {
       bits: FIRST_DISK_SIZE,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
@@ -1776,10 +1776,9 @@ describe('redeemDisk', () => {
     })
     const after = redeemDisk(FIRST_DISK_SIZE)(state)
     expect(after.owned[tensTier.id]).toBe(1)
-    // One full disk emptied → 2 empty containers; Memory pours through cache into one of them
-    // immediately (ASAP refill), leaving the other empty and cache cleared after the pour.
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.intro.bits).toBe(0)
+    // Emptied, but Memory is left intact for Bandwidth/Invest rather than pulled into cache here.
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+    expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
     expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
   })
 
@@ -2821,6 +2820,31 @@ describe('tickGame Disk auto-redeem integration', () => {
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThanOrEqual(1)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+  })
+
+  it('refills that size\'s cache ASAP after auto-redeem when Memory and an empty container remain', () => {
+    // Exercise the same redeem-then-fill composition tickGame's tickStorage uses (scoped to a
+    // real redeem change). Avoid full tickGame here — tickIntroAutoInvest would spend the same
+    // Memory toward Kilobytes before auto-redeem runs.
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), {
+        bits: FIRST_DISK_SIZE,
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+        disks: { [FIRST_DISK_SIZE]: 1 },
+        diskCache: {},
+      }),
+      tensTier.id,
+      1
+    )
+    const afterRedeem = tickDiskAutoRedeem(state)
+    expect(afterRedeem).not.toBe(state)
+    expect(afterRedeem.owned[tensTier.id]).toBe(1)
+    expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
+    expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
+
+    const afterFill = tickDiskAutoFill(afterRedeem)
+    expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(afterFill.intro.bits).toBe(0)
   })
 
   // Regression: tickDiskAutoRedeem used to only run after tickGame's normal (non-frozen) path, so

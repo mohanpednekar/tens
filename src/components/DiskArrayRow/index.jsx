@@ -102,7 +102,7 @@ const DiskSquare = styled.button`
       : props.$empty
         ? props.theme.color.surfaceSunken
         : 'transparent'};
-  cursor: ${props => (props.$full && (props.$manualRedeem || props.$autoRedeem) ? 'pointer' : 'default')};
+  cursor: ${props => (props.$full && props.$manualRedeem ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
   animation: ${props => (props.$manualRedeem ? manualPulse : 'none')} 1.4s ease-in-out infinite;
 
@@ -239,7 +239,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
-          const clickable = isFull && redeemable && !rebuilding
+          // Auto-eligible disks wait for tickDiskAutoRedeem — not clickable, so a tap cannot
+          // bypass the once-per-cycle auto mark or confuse "will auto" with a manual redeem.
+          const clickable = isFull && manualRedeem && !rebuilding
           return (
             <DiskSquare
               key={index}
@@ -261,7 +263,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                   ? 'This array is offline while it rebuilds'
                   : isFull
                     ? (autoRedeem
-                      ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on (you can still tap)`
+                      ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
                       : manualRedeem
                         ? `Tap to redeem 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
                         : redeemable
