@@ -1,5 +1,12 @@
 # Design history & rationale
 
+### Sacrifice confirm: in-game dialog; Core warning only when unlocked
+
+Sacrifice for 10x Capacity used a native `window.confirm` that always warned about future Cores
+costing more — even before Compute existed. Replaced with `components/ConfirmDialog` (theme
+StatCard overlay). The Core-cost warning line only appears once
+`isComputeCoreConversionUnlocked` is true.
+
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation
 results, superseded designs, and the reasoning for choices that aren't self-evident from current
 behavior alone. `CLAUDE.md` states what the system currently does and is what loads into every
@@ -2000,10 +2007,10 @@ doubled the state/UI surface for a request that gave no signal such a choice was
 turns out wrong, the fix is additive: a `computeBoostTarget` field and a per-target multiplier
 check, rather than removing anything already shipped.
 
-Also implemented alongside this: a native `window.confirm()` before Sacrifice for 10x Capacity
-actually fires, spelling out that it's permanent and raises every future Compute Core's cost — same
-"no modal component to reuse" rationale MainPage's own Reset button confirm already documents (see
-`handleSacrificeClick` in `ByteFoundryPage`).
+Also implemented alongside this: a confirmation before Sacrifice for 10x Capacity actually fires
+(`window.confirm` originally — later replaced by an in-game `ConfirmDialog`, with the “future Cores
+cost more” warning shown only once Compute is unlocked). Same permanence caveat as Settings →
+Danger zone Reset; see `handleSacrificeClick` in `ByteFoundryPage`.
 
 ### Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens
 

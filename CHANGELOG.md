@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Sacrifice confirm** uses an in-game `ConfirmDialog` (theme overlay) instead of
+  `window.confirm`. The “future Cores cost more” warning appears only once Compute Cores are
+  unlocked.
+
 ### Added
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not

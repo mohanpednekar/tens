@@ -62,8 +62,8 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    Button/, Money/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
-                            docs/COMPONENTS_REFERENCE.md
+    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
+      docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; see "Byte Foundry" below
     StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)

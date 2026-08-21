@@ -341,6 +341,9 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); replaces
+                               native `window.confirm` for Sacrifice on ByteFoundryPage. Full
+                               contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
                                JSX), extracted so both MainPage and ByteFoundryPage can render it —
                                offline progress already applies to the Byte Foundry mechanically
