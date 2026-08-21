@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { DEFAULT_PURCHASE_BLOCK_SIZE, MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 const thousandsTier = TIER_DEFINITIONS[1]
@@ -956,5 +956,17 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/other save slots/i)
     expect(message).toMatch(/supporter unlock/i)
     expect(buildEraseAllSavesConfirmMessage()).toMatch(/supporter unlock/i)
+  })
+
+  it('Byte Foundry reset confirm names losses and what stays', () => {
+    renameSaveSlot('0', 'Foundry wipe')
+    const message = buildResetByteFoundryConfirmMessage()
+    expect(message).toContain('Foundry wipe')
+    expect(message).toMatch(/capacity/i)
+    expect(message).toMatch(/memory/i)
+    expect(message).toMatch(/disks\/storage/i)
+    expect(message).toMatch(/compute/i)
+    expect(message).toMatch(/tiers ladder/i)
+    expect(message).toMatch(/prestige points/i)
   })
 })
