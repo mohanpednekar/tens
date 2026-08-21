@@ -1998,6 +1998,21 @@ entirely — `getComputeBoostTierDurationSeconds` returns the base preset durati
 tier. **If this is revisited, don't restore linear duration as a default** without a new reason that
 still accounts for the slot-cap / reserve-slot incentive already in place.
 
+### Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)
+
+Fixed second tables (60s doubling, then 1s×10^n experiments in #370/#371/#372) drifted from Foundry
+Invest pacing. The locked rule: **no hardcoded absolute seconds** — Core→Node = 10×
+`capacity / getIntroProductionRate` (unboosted); each next boundary ×10 the previous, or ×5 after a
+sequential duration upgrade. Snapshot at merge start so mid-merge Invest/Boost changes do not
+rescale in-flight timers.
+
+Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in flight and that
+tier's normal slots refill to cap — spend via preferred preset (default Standard) from the
+**biggest** such waiting tier. It never forfeits an active boost to switch presets (that would
+surprise). Switching presets while one is active requires an **explicit forfeit confirmation**
+(same `window.confirm` posture as Reset / Sacrifice) — Stack remains the non-destructive extend
+path for the same type+tier.
+
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
 Memory's own passive production (Byte Foundry) and `tier01`'s (Kilobytes') production (main game)
