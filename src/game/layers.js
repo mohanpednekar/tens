@@ -267,8 +267,9 @@ export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 38
 // computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
-// preset strength/duration; only the multiplier scales up per tier via COMPUTE_BOOST_TIER_POWER_STEP
-// below (duration stays at the base preset for every tier — see issue #363).
+// preset strength/duration; multiplier scales via COMPUTE_BOOST_TIER_POWER_STEP and duration via
+// COMPUTE_BOOST_TIER_DURATION_STEP below (duration doubles each merge tier — restored after #363
+// had flattened it; see docs/DESIGN_HISTORY.md).
 // Grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
 // Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
@@ -281,10 +282,17 @@ export const COMPUTE_BOOST_PRESETS = {
 }
 // Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
 // `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
-// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. Duration does NOT
-// scale with tier (see getComputeBoostTierDurationSeconds) — limited normal slots make not-merging
-// pure wastage, and auto-merge already adds dedicated reserve slots, so effect-only 4× is enough.
+// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier.
 export const COMPUTE_BOOST_TIER_POWER_STEP = 4
+// Duration scales independently: each tier past Core multiplies the preset's base durationSeconds
+// by this step (×2 per tier — "effect time doubles after merge"). Tier N lasts
+// `durationSeconds * COMPUTE_BOOST_TIER_DURATION_STEP^(N-1)`.
+export const COMPUTE_BOOST_TIER_DURATION_STEP = 2
+// Plural labels for COMPUTE_BOOST_TIER_FIELDS (same order), for Foundry Bandwidth-via-compute copy.
+export const COMPUTE_TIER_LABELS = [
+  'Cores', 'Nodes', 'Clusters', 'Networks', 'Grids',
+  'Fabrics', 'Clouds', 'Datacenters', 'Supercomputers', 'Megacomputers',
+]
 // One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
 // 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
 // activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place

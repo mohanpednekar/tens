@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Compute Boost duration** scales with merge tier again: **×2 per tier**
+  (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
+  “effect time doubles after merge” after #363/#364 had flattened duration.
+
 ### Added
+- **Bandwidth via Compute tokens** (#323): when Invest’s bit cost exceeds Memory capacity, the
+  Foundry Bandwidth button spends **10** of the next Compute tier (Cores → … → Megacomputers,
+  once each, separate from auto-merge) for the same permanent ×2. Sacrifice (manual or queued),
+  once Compute is unlocked, wipes held Compute tokens/timers and **rolls back** those
+  compute-funded Bandwidth claims only (#324 slice).
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
   available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active

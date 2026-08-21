@@ -1988,8 +1988,14 @@ normal slots per tier are capped (`COMPUTE_ENTITY_CAP`), so leaving tokens unmer
 wastage, and auto-merge already adds a dedicated reserve pool (`COMPUTE_MERGE_RESERVE_CAP`) for
 merging. The maintainer therefore cut the step to **4× effect only** and removed duration scaling
 entirely — `getComputeBoostTierDurationSeconds` returns the base preset duration for every valid
-tier. **If this is revisited, don't restore linear duration as a default** without a new reason that
-still accounts for the slot-cap / reserve-slot incentive already in place.
+tier.
+
+**Later revisit:** duration doubling was restored (`COMPUTE_BOOST_TIER_DURATION_STEP = 2`, i.e.
+`durationSeconds * 2^(tierIndex-1)`) while keeping **4× effect**. Rationale: reward merging with
+longer Boost uptime (“effect time doubles after merge”) without returning to the old linear
+`× tierIndex` formula or the steeper 8× power step. Achievement-based multipliers remain a
+separate, later lever. **If flattening duration again, document why slot-cap incentives alone are
+enough.**
 
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH

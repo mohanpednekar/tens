@@ -658,6 +658,7 @@ describe('schema migration', () => {
         computeCloudsMergeRemainingSeconds: 0, computeDatacentersMergeRemainingSeconds: 0,
         computeSupercomputersMergeRemainingSeconds: 0,
         computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
+        computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
       },
     }
     saveGameState(state)

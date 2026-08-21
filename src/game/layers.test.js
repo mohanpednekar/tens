@@ -6,6 +6,7 @@ import {
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_BOOST_TIER_DURATION_STEP,
   COMPUTE_BOOST_TIER_FIELDS,
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
@@ -252,6 +253,10 @@ describe('constants', () => {
 
   it('COMPUTE_BOOST_TIER_POWER_STEP is 4 (each compute-ladder tier is 4x as powerful as the previous one)', () => {
     expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(4)
+  })
+
+  it('COMPUTE_BOOST_TIER_DURATION_STEP is 2 (each merge tier doubles Boost duration)', () => {
+    expect(COMPUTE_BOOST_TIER_DURATION_STEP).toBe(2)
   })
 
   it('COMPUTE_BOOST_TIER_FIELDS lists all 10 compute-ladder entities, lowest tier (Core) first', () => {

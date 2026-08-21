@@ -38,6 +38,9 @@ import {
   pickIntroProductionMilestone,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
+  isBitFundedBandwidthAvailable,
+  isComputeFundedBandwidthAvailable,
+  rollbackComputeFundedBandwidth,
   eraseAllComputeTokens,
   tickQueuedCapacityUpgrade,
   setAutobuyerEnabled,
@@ -183,7 +186,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -902,6 +905,94 @@ describe('pickIntroProductionMilestone', () => {
       bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1, disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('sacrifices COMPUTE_ENTITY_CAP Cores for ×2 when bit cost exceeds capacity (#323)', () => {
+    // Tier 7 costs 8e7 bits; capacity 8e6 → compute path. Rate already at floor from prior invests.
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      productionMilestoneTier: 7,
+      productionMilestoneTierClaims: 0,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 128,
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeBandwidthSacrificeIndex: 0,
+      computeFundedBandwidthClaims: 0,
+    })
+    expect(isBitFundedBandwidthAvailable(state)).toBe(false)
+    expect(isComputeFundedBandwidthAvailable(state)).toBe(true)
+    const after = pickIntroProductionMilestone(state)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeBandwidthSacrificeIndex).toBe(1)
+    expect(after.intro.computeFundedBandwidthClaims).toBe(1)
+    expect(after.intro.productionMultiplier).toBe(256)
+    expect(getIntroProductionRate(after.intro)).toBe(getIntroProductionRate(state.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
+  })
+
+  it('compute-funded Bandwidth is a no-op below COMPUTE_ENTITY_CAP of the next tier', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      productionMilestoneTier: 7,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 128,
+      computeCores: COMPUTE_ENTITY_CAP - 1,
+    })
+    expect(isComputeFundedBandwidthAvailable(state)).toBe(false)
+    expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+})
+
+describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
+  it('rewinds compute-funded Invest steps and resets the sacrifice index', () => {
+    const funded = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      productionMilestoneTier: 8,
+      productionMilestoneTierClaims: 0,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 256,
+      computeFundedBandwidthClaims: 1,
+      computeBandwidthSacrificeIndex: 1,
+      computeCores: 0,
+    })
+    const after = rollbackComputeFundedBandwidth(funded)
+    expect(after.intro.computeFundedBandwidthClaims).toBe(0)
+    expect(after.intro.computeBandwidthSacrificeIndex).toBe(0)
+    expect(after.intro.productionMultiplier).toBe(128)
+    expect(after.intro.productionMilestoneTier).toBe(7)
+  })
+
+  it('pickIntroCapacityMilestone once Compute is unlocked wipes tokens and rolls back compute-funded Bandwidth', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 256,
+      productionMilestoneTier: 8,
+      productionMilestoneTierClaims: 0,
+      computeCores: 5,
+      computeNodes: 3,
+      computeFundedBandwidthClaims: 1,
+      computeBandwidthSacrificeIndex: 1,
+      diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
+      // Active boost at max stacks with no spare tokens to stack → Compute unavailable.
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
+      computeBoostRemainingSeconds: 30,
+    })
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.computeFundedBandwidthClaims).toBe(0)
+    expect(after.intro.computeBandwidthSacrificeIndex).toBe(0)
+    expect(after.intro.productionMultiplier).toBe(128)
   })
 })
 
@@ -2632,15 +2723,15 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierDurationSeconds('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) with no duration enhancement', () => {
-    // Issue #363: tier 5 (Grid) is 4^4 as powerful as tier 1, same base duration.
+  it('scales the multiplier by COMPUTE_BOOST_TIER_POWER_STEP and duration by COMPUTE_BOOST_TIER_DURATION_STEP per tier', () => {
+    // Tier 5 (Grid): 4^4 power, 2^4 duration vs tier 1.
     expect(getComputeBoostTierMultiplier('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** 4)
-    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds * COMPUTE_BOOST_TIER_DURATION_STEP ** 4)
   })
 
-  it('tier 3 (Cluster) is 4^2 power at the base preset duration', () => {
+  it('tier 3 (Cluster) is 4^2 power and 2^2 duration vs base', () => {
     expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * (COMPUTE_BOOST_TIER_POWER_STEP ** 2))
-    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * (COMPUTE_BOOST_TIER_DURATION_STEP ** 2))
   })
 
   it('returns 0 for an invalid boostType or an out-of-range tierIndex', () => {
