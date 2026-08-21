@@ -804,7 +804,7 @@ describe('eraseAllComputeTokens', () => {
 })
 
 describe('resetByteFoundry', () => {
-  it('wipes Memory, Byte generator, Disks, and Compute while keeping Tiers and Prestige', () => {
+  it('resets Capacity/Memory/Disks/Compute but auto-restores Combine + Invest up to pre-reset highs', () => {
     const initial = createInitialGameState()
     const state = {
       ...initial,
@@ -848,7 +848,41 @@ describe('resetByteFoundry', () => {
     const after = resetByteFoundry(state)
     const freshIntro = createInitialGameState().intro
 
-    expect(after.intro).toEqual({ ...freshIntro, mainGameUnlocked: true })
+    // Capacity / Memory / Storage / Compute wiped…
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.productionAccumulator).toBe(0)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.disks).toEqual({})
+    expect(after.intro.disksBuiltTotal).toEqual({})
+    expect(after.intro.diskCache).toEqual({})
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeCoresEverEarned).toBe(0)
+    expect(after.intro.computeMergePageUnlocked).toBe(false)
+    expect(after.intro.autoClaimCoreEnabled).toBe(false)
+    expect(after.intro.autoMergeCoresIntoNode).toBe(false)
+    expect(after.intro.computeBoostType).toBeNull()
+
+    // …but Combine + Invest are auto-restored at the pre-reset highs (Capacity excluded).
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.tickSpeedSeconds).toBe(INTRO_MIN_TICK_SPEED_SECONDS)
+    expect(after.intro.productionMultiplier).toBe(8)
+    expect(after.intro.productionMilestoneTier).toBe(4)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+
+    // Sanity: everything else on intro matches a fresh Foundry aside from the restored fields.
+    expect(after.intro).toEqual({
+      ...freshIntro,
+      mainGameUnlocked: true,
+      byteCreated: true,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 8,
+      productionMilestoneTier: 4,
+      productionMilestoneTierClaims: 1,
+    })
+
     expect(after.resources).toEqual(state.resources)
     expect(after.owned).toEqual(state.owned)
     expect(after.purchased).toEqual(state.purchased)
@@ -857,18 +891,36 @@ describe('resetByteFoundry', () => {
     expect(after.autobuyers).toEqual(state.autobuyers)
   })
 
+  it('does not invent Combine/Invest progress that was never earned', () => {
+    const after = resetByteFoundry(createInitialGameState())
+    const fresh = createInitialGameState().intro
+    expect(after.intro.byteCreated).toBe(false)
+    expect(after.intro.tickSpeedSeconds).toBe(fresh.tickSpeedSeconds)
+    expect(after.intro.productionMultiplier).toBe(fresh.productionMultiplier)
+    expect(after.intro.productionMilestoneTier).toBe(0)
+    expect(after.intro.productionMilestoneTierClaims).toBe(0)
+  })
+
   it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 8,
       byteCreated: true,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      tickSpeedSeconds: 0.5,
+      productionMultiplier: 2,
+      productionMilestoneTier: 1,
+      productionMilestoneTierClaims: 1,
       mainGameUnlocked: false,
       disks: { 8000: 1 },
       computeCores: 2,
     })
     const after = resetByteFoundry(state)
     expect(after.intro.mainGameUnlocked).toBe(false)
-    expect(after.intro.byteCreated).toBe(false)
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.tickSpeedSeconds).toBe(0.5)
+    expect(after.intro.productionMultiplier).toBe(2)
+    expect(after.intro.productionMilestoneTier).toBe(1)
+    expect(after.intro.productionMilestoneTierClaims).toBe(1)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
     expect(after.intro.disks).toEqual({})
     expect(after.intro.computeCores).toBe(0)

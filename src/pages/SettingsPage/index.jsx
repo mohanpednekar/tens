@@ -462,9 +462,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           </VisuallyHidden>
         </Button>
         <p>
-          Wipe only the Byte Foundry on the active save — useful if Capacity (or Storage /
-          Compute) was pushed too far and you want to rebuild from scratch. Erases Memory, the
-          Byte generator, all Disks / Storage, and all Compute. Tiers progress and Prestige stay.
+          Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
+          Capacity was pushed too far. Combine and Invest / Bandwidth are auto-restored up to your
+          pre-reset highs (Capacity is not). Tiers progress and Prestige stay.
         </p>
         <Button
           aria-describedby="settings-reset-foundry-description"
@@ -474,14 +474,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           title={
             frozen
               ? 'Prestige first — production is frozen at 1 Googol Bytes'
-              : 'Resets Byte Foundry, Storage, and Compute only (asks for confirmation)'
+              : 'Resets Capacity, Storage, and Compute; restores Combine/Invest (asks for confirmation)'
           }
           type="button"
           variant="danger"
         >
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
-            Erases Byte Foundry, Storage, and Compute on the active save; Tiers and Prestige stay
+            Erases Capacity, Storage, and Compute; auto-restores Combine and Invest up to pre-reset
+            highs; Tiers and Prestige stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>

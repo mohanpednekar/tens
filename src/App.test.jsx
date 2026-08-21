@@ -308,7 +308,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prestige', async () => {
+test('Reset Byte Foundry wipes Capacity/Storage/Compute but restores Combine and Invest', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
@@ -324,7 +324,11 @@ test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prest
       bits: 0,
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
+      // Slow tick so restored Invest cannot race this test while clicking Settings.
       tickSpeedSeconds: 1e12,
+      productionMultiplier: 4,
+      productionMilestoneTier: 3,
+      productionMilestoneTierClaims: 0,
       disks: { 8000: 2 },
       disksBuiltTotal: { 8000: 4 },
       computeCores: 6,
@@ -342,22 +346,25 @@ test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prest
 
   expect(window.confirm).toHaveBeenCalled()
   expect(window.confirm.mock.calls[0][0]).toMatch(/byte foundry/i)
-  expect(window.confirm.mock.calls[0][0]).toMatch(/tiers/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/capacity/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/invest/i)
 
-  // Still on Settings (main game stays unlocked); Tiers progress is intact.
+  // Still on Settings (main game stays unlocked); Tiers progress was not wiped.
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open tiers/i }))
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.owned.tier01).toBe(5)
-  expect(saved.resources.base).toBe(25_000)
+  // Owned may keep growing via restored Invest production + auto-convert; only assert it was not wiped.
+  expect(saved.owned.tier01).toBeGreaterThanOrEqual(5)
   expect(saved.prestige.points).toBe(7)
   expect(saved.prestige.count).toBe(2)
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.byteCreated).toBe(false)
+  expect(saved.intro.byteCreated).toBe(true)
+  expect(saved.intro.tickSpeedSeconds).toBe(1e12)
+  expect(saved.intro.productionMultiplier).toBe(4)
+  expect(saved.intro.productionMilestoneTier).toBe(3)
   expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-  expect(saved.intro.bits).toBe(0)
   expect(saved.intro.disks).toEqual({})
   expect(saved.intro.disksBuiltTotal).toEqual({})
   expect(saved.intro.computeCores).toBe(0)
