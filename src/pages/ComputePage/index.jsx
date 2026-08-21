@@ -67,10 +67,10 @@ const TierHeaderRow = styled.div`
 
 // The symbol/label/slots portion of row 1 is its own clickable button — issue #326: clicking any
 // tier row arms the 3 Compute Boost presets above (the effects section renders before the tier
-// rows — see ComputePage below), scaled to that tier's own power/duration. Kept
-// as a SEPARATE element from the auto-claim IconButton that sometimes shares this row (Cores only)
-// rather than making the whole TierHeaderRow itself a button, since nesting a <button> (auto-
-// claim) inside another <button> is invalid HTML.
+// rows — see ComputePage below), scaled to that tier's own power (duration stays at the base
+// preset — issue #363). Kept as a SEPARATE element from the auto-claim IconButton that sometimes
+// shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
+// nesting a <button> (auto-claim) inside another <button> is invalid HTML.
 const TierSelectButton = styled.button`
   display: flex;
   flex: 1 1 auto;
@@ -201,7 +201,7 @@ const ArmedStatusText = styled.p`
 `
 
 // The 3 preset buttons row — issue #326: only enabled once a tier row below has been clicked to
-// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power/duration.
+// arm them (see ArmedStatusText/TierSelectButton), scaled to that tier's own power (flat duration).
 const BoostRow = styled.div`
   display: flex;
   align-items: center;
@@ -580,7 +580,7 @@ const ComputePage = ({ game }) => {
                       onClick={() => setSelectedBoostTierIndex(prev => (prev === tierIndex ? null : tierIndex))}
                       aria-pressed={selectedBoostTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power/duration`}
+                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
                       $selected={selectedBoostTierIndex === tierIndex}
                     >
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>

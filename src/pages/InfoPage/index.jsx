@@ -301,8 +301,8 @@ const InfoPage = () => {
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power and
-            duration. Spend 1 token of the armed tier to activate.
+            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power.
+            Duration stays at the base preset. Spend 1 token of the armed tier to activate.
           </li>
           <li>
             Base (Core) presets:{' '}
@@ -314,9 +314,9 @@ const InfoPage = () => {
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
-            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration scales
-            linearly with tier index. Boost multiplies Memory production and {firstTierName}{' '}
-            production at once.
+            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration does not
+            scale with tier. Boost multiplies Memory production and {firstTierName} production at
+            once.
           </li>
           <li>
             Only one boost can run at a time — starting a new one is blocked while any boost is
