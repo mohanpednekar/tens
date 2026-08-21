@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- **Foundry Disk/Cache rows**: Memory tab lists every currently transferable size (tier cost
+  matches), ascending smallest→largest — not only the ladder’s current build size — and hides when
+  none remain relevant. Cache caption/aria make the manual-only “tap full → Tiers Bits” path
+  obvious; full disks show a clear auto-redeem (matching tier autobuyer on — not clickable) vs
+  tap-to-redeem affordance. After auto-redeem, that size’s cache can refill ASAP the same tick
+  when Memory allows (manual redeem leaves Memory for Forced Priority / Bandwidth first).
 - **Reset** appears only under **Settings → Danger zone** (More → Settings). Removed from the More
   sheet and from the bottom of the Tiers / MainPage screen.
 - **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play

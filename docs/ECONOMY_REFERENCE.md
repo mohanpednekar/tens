@@ -402,7 +402,11 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    tier's truly final level for the tick — auto-redeems the smallest eligible full disk each tick
    (redeeming can itself advance a tier's level/cost, which can in turn change which tier OTHER
    sizes now match, so a further eligible disk just gets picked up on a later tick, imperceptibly
-   fast at the tick loop's ~10Hz cadence). A size is "eligible" if a disk of it is currently FULL and
+   fast at the tick loop's ~10Hz cadence). Immediately after a successful auto-redeem,
+   `tickDiskAutoFill` runs again so the emptied container's cache can start topping up ASAP the
+   same tick when Memory allows (scoped to a real redeem change — a no-op auto-redeem pass does
+   not pull leftover Memory into caches). Manual `redeemDisk` does not sync-fill, so clearing the
+   last full disk can hand Memory to Bandwidth under Forced Priority. A size is "eligible" if a disk of it is currently FULL and
    `isDiskRedeemable`, its array isn't currently mid-build, it isn't already in
    `diskAutoRedeemedSizes` this cycle (reset fresh every real Prestige, unlike every other Disk field
    above — a disk that refills later the same cycle needs a manual click for the rest of it), **AND**
@@ -414,7 +418,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    no active autobuyer for the matching tier, a full/redeemable disk simply waits for a manual click
    instead. Disks are **never lost**: nothing here ever expires, decays, or gets spent implicitly —
    only an explicit redeem (manual or auto) ever empties one, and it's immediately eligible to be
-   auto-filled again.
+   auto-filled again. UI helpers `isDiskAutoRedeemEligible` / `isDiskManualRedeemAvailable` /
+   `getRelevantDiskSizesForFoundry` expose the same rules for Foundry/DiskArrayRow affordances
+   (Cache → Tiers Bits is always manual-only via `releaseDiskCacheBlock`; auto-eligible disks are
+   shown but not clickable).
 
    `disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` are all **PERMANENT**, carried through
    `prestigeGame` unchanged exactly like the Byte generator itself — a disk already FULL when

@@ -2169,6 +2169,15 @@ size with an empty cache that can never finish this tick (not enough bits) along
 whose cache is already fully staged, and asserts the larger one still pours — this failed under the
 old code (the larger size's `disks` count stayed at 0) and passes under the fix.
 
+A later follow-up (#360) extended the same ASAP idea past auto-redeem: `tickGame`'s post-
+`tickDiskAutoRedeem` pass re-runs `tickDiskAutoFill` only when auto-redeem actually changed
+state, so an emptied container's cache can start topping up the same tick when Memory allows —
+without a trailing fill on every no-op pass, and without sync-filling inside manual `redeemDisk`
+(that would steal Memory Forced Priority just freed for Bandwidth). Foundry Memory lists every
+currently transferable size via `getRelevantDiskSizesForFoundry` (not only the ladder's current
+build size), with DiskArrayRow making Cache → Tiers Bits (manual-only) and Disks auto vs manual
+redeem visually distinct (auto-eligible disks are not clickable).
+
 ### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
 
 Requested directly, in three related lines: "Storage need not be shown in Foundry if main game
