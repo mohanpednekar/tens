@@ -265,15 +265,15 @@ the build's duration; otherwise, two rows render:
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
-  array's own small staging buffer, filling left to right as Memory tops it up (`tickDiskAutoFill`)
-  before any of it pours into an empty disk container below. Caption reads `"Cache — <block> each
-  (tap full → Tiers Bits)"`. A block reads **full** (`$full` — a raised fill) once its own share of
-  `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`, accent border,
-  clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and**
-  some tier's current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
-  `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain `"<size> cache
-  block N"`; `title` names the manual-only Tiers Bits transfer once releasable; clicking a
-  releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
+  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
+  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Caption reads `"Cache —
+  <block> each (tap full → Tiers Bits)"`. A block reads **full** (`$full` — a raised fill) once its
+  own share of `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`,
+  accent border, clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't
+  mid-build, **and** some tier's current per-unit cost matches this size (`isDiskRedeemable`).
+  `aria-label` is `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain
+  `"<size> cache block N"`; `title` names the manual-only Tiers Bits transfer once releasable;
+  clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
   `resources.base` (Bits) — Cache never auto-transfers.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
@@ -286,7 +286,7 @@ the build's duration; otherwise, two rows render:
   **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
   always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
   `"Redeemable once some tier's level cost matches <size>"` when not yet matching; an empty square's
-  `title` is `"Built, waiting for this array's cache to pour into it"`; a not-yet-built square's is
+  `title` is `"Built, waiting for Memory to fill it"`; a not-yet-built square's is
   `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
   rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
@@ -298,9 +298,9 @@ gated per-size by whichever tier currently matches that size having its own unit
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
-tick, no toggle: Memory cascades into every currently-fillable array's cache first, smallest size
-first, then pours a completed cache into that array's next empty disk, whenever there's enough of it
-and that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
+tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then fills
+empty disks directly from Memory, smallest size first, whenever there's enough and that size isn't
+mid-build. This page used to show its own live progress row mirroring tier01's
 current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
 started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
 the only place this progress is shown.

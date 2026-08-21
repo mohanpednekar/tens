@@ -114,7 +114,7 @@ cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onw
 player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
 passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
 production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
-builds with a per-array cache, redeemable against any main-game tier whose current price matches)
+builds with a per-array always-full cache for manual tier funding, redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`). Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,

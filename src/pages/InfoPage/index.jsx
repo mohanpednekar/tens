@@ -233,14 +233,19 @@ const InfoPage = () => {
         <h3>Cache, fill, release, redeem</h3>
         <ul>
           <li>
-            Each array has a staging cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s
-            worth of bits. Memory fills the cache first; only a full cache pours into an empty disk
-            (smallest array first).
+            Each array keeps a Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth
+            of bits (e.g. a 1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory
+            refills whole blocks when a block was just released or the size was just unlocked —
+            Memory fills visibly between transfers rather than draining bit-by-bit.
+          </li>
+          <li>
+            Empty disks fill from Memory directly (smallest array first). Cache does not pour into
+            disks.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
             into Memory) — but only while some tier’s current per-unit cost matches that array’s
-            size.
+            size. That is Cache’s only use: manually funding matching main-game level blocks.
           </li>
           <li>
             A full disk <strong>redeems</strong> for 1 free unit of whichever tier’s current price

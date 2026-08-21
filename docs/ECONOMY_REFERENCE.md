@@ -343,29 +343,26 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    — so `isDiskBuildAvailable` (the base predicate, ignoring priority) checks only `!diskBuild &&
    affordable`.
 
-   **The cache.** Each array's own `diskCache[size]` (0..size bits) stages Memory before any of
-   that size's empty containers can be filled — split into `DISK_CACHE_BLOCK_COUNT` (8) equal
-   blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits, totaling one disk's own capacity.
-   `tickDiskAutoFill(state)` is what actually fills a disk: unconditionally (no toggle, no
-   prerequisite), every tick, it cascades Memory into every currently-fillable empty array in one
-   pass, smallest size first (skipping any size currently mid-build) — for the smallest size with an
-   empty container (`disksBuiltTotal[size] > disks[size]`), it first tops `diskCache[size]` up from
-   Memory (no full-lump-sum requirement — a partial fill persists tick to tick); only once that
-   cache is genuinely FULL (`cached >= size`) does it pour straight into the empty container, no
-   further Memory needed (the bits already left Memory when they entered the cache) —
-   `disks[size] += 1`, `diskCache[size]` resets to 0 — then repeats; since sizes are checked
-   smallest-first and cost scales with size, once the smallest remaining size can't be topped up
-   further this call, no larger one can be either, so the cascade always terminates in one call.
-   Whatever Memory has left over once nothing more is fillable simply stays as its own ordinary
-   balance. `isDiskCacheBlockReleasable(state, capacityBits)` is true once that size's cache holds
-   at least one full block (`diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT`),
-   that size isn't mid-build, **and** some tier's current per-unit cost exactly matches
-   `capacityBits` right now (`isDiskRedeemable` — same eligibility a full disk's own redeem uses);
+   **The cache.** Each array's own `diskCache[size]` (0..size bits) is a permanent always-full
+   reserve — split into `DISK_CACHE_BLOCK_COUNT` (8) equal blocks, each holding
+   `size / DISK_CACHE_BLOCK_COUNT` bits (e.g. a 1 MB array → 8 × 1 Mb), totaling one disk's own
+   capacity. Steady state is full; gaps appear only right after a manual block release or when a
+   size is newly unlocked/built. Cache does **not** pour into disk containers — its only player
+   use is manual funding of matching main-game tier level blocks via `releaseDiskCacheBlock`.
+   `tickDiskAutoFill(state)` runs two ascending passes every tick (unconditional, no toggle,
+   skipping mid-build sizes): (1) refill every known size's cache toward full in **whole-block**
+   transfers only when Memory holds at least one block (so Memory visibly fills between transfers;
+   if capacity itself is smaller than one block and Memory is full, dump the balance so large
+   arrays can still progress); (2) fill empty disk containers (`disksBuiltTotal[size] > disks[size]`)
+   **directly from Memory**, spending exactly `size` bits per container and leaving Cache
+   untouched. Leftover Memory stays as its ordinary balance. `isDiskCacheBlockReleasable(state,
+   capacityBits)` is true once that size's cache holds at least one full block
+   (`diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT`), that size isn't mid-build,
+   **and** some tier's current per-unit cost exactly matches `capacityBits` right now
+   (`isDiskRedeemable` — same eligibility a full disk's own redeem uses);
    `releaseDiskCacheBlock(capacityBits)` manually moves exactly one block's worth of bits into
    `resources.base` (the shared Bits currency any unlocked tier is bought with) — **not** back into
-   Memory — a player override that funds an eligible tier's purchases instead of waiting for
-   `tickDiskAutoFill` to keep growing this array's cache toward completing its next disk. Since
-   released bits leave the cache for good, the two paths can never double-spend the same bits.
+   Memory. `tickDiskAutoFill` refills the gap in whole-block transfers once Memory has enough again.
 
    **Redemption now matches ANY main-game tier, not just tier01.** A Disk's face value is a Byte
    Foundry currency amount, not a tier-specific one — since every tier shares the same
@@ -411,9 +408,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    (redeeming can itself advance a tier's level/cost, which can in turn change which tier OTHER
    sizes now match, so a further eligible disk just gets picked up on a later tick, imperceptibly
    fast at the tick loop's ~10Hz cadence). Immediately after a successful auto-redeem,
-   `tickDiskAutoFill` runs again so the emptied container's cache can start topping up ASAP the
-   same tick when Memory allows (scoped to a real redeem change — a no-op auto-redeem pass does
-   not pull leftover Memory into caches). Manual `redeemDisk` does not sync-fill, so clearing the
+   `tickDiskAutoFill` runs again so emptied containers can refill from Memory (and any Cache gap
+   can top up) the same tick when Memory allows (scoped to a real redeem change — a no-op
+   auto-redeem pass does not pull leftover Memory into caches). Manual `redeemDisk` does not
+   sync-fill, so clearing the
    last full disk can hand Memory to Bandwidth under Forced Priority. A size is "eligible" if a disk of it is currently FULL and
    `isDiskRedeemable`, its array isn't currently mid-build, it isn't already in
    `diskAutoRedeemedSizes` this cycle (reset fresh every real Prestige, unlike every other Disk field
@@ -1803,9 +1801,9 @@ production is frozen at the Prestige threshold.
                                                           // this; drives getDiskSize's one-way ladder
                                                           // advance. Empty count = builtTotal - disks
     diskCache: {},                                        // PERMANENT. { [capacityBits]: bits currently
-                                                          // staged } in that size array's own cache, a
-                                                          // staging buffer Memory fills before any of the
-                                                          // array's disk containers — see tickDiskAutoFill.
+                                                          // held } in that size array's always-full
+                                                          // cache (manual tier funding only — not a
+                                                          // staging pour into disks). See tickDiskAutoFill.
                                                           // 0..size, conceptually split into
                                                           // DISK_CACHE_BLOCK_COUNT (8) equal blocks for
                                                           // manual release — see releaseDiskCacheBlock
@@ -1978,9 +1976,9 @@ purchases were manual or automatic.
 | `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a migrated pre-ladder save missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by ByteFoundryPage's own brief per-size summary chip row and StoragePage's fuller per-size squares rows |
 | `startDiskBuild` | `state → state` | Byte Foundry Disks: requires `isDiskBuildTurnAvailable(state)` (see its own row above); spends `getDiskCost(getDiskSize(state))` bits from `intro.bits` immediately and sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }` — a real TIMED construction rather than an instant grant (an earlier version completed instantly — see `docs/DESIGN_HISTORY.md`). `totalSeconds = getDiskBuildBaseSeconds(size) * ordinal`, where `getDiskBuildBaseSeconds(size) = size / (getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE)` (1 second per real "KB" of size) and `ordinal = disksBuiltTotal[size] + 1` at the moment the build starts (so a size's Nth disk takes N times its own base build time). The array itself only gains the new EMPTY container, and starts accepting IO again, once `tickDiskBuild` finishes the countdown. No-op below cost, or if an array is already mid-build. Only ever queues ONE build at a time |
 | `tickDiskBuild` | `elapsedSeconds → state → state` | Byte Foundry Disks: same-reference no-op when no build is in progress (`intro.diskBuild` is `null`); otherwise counts `remainingSeconds` down by `elapsedSeconds`. Once it crosses (or reaches) 0, increments `intro.disksBuiltTotal[size]` (the container now exists, empty, ready for `tickDiskAutoFill`) and clears `diskBuild` back to `null`, re-enabling every IO operation against that size's array. Called from `tickGame` right after `tickIntroProduction` and before `tickDiskAutoFill` — unconditional, bypasses nothing |
-| `tickDiskAutoFill` | `state → state` | Byte Foundry Disks: visits every known size smallest-first (skipping any size currently mid-build — `intro.diskBuild?.size`), via each array's own cache: for a size with an empty container (`disksBuiltTotal[size] > disks[size]`), first tops `diskCache[size]` (0..size) up from Memory — no full-lump-sum requirement, a partial fill persists tick to tick — and once that cache is genuinely FULL pours it straight into the empty container (no further bits needed — they already left Memory when they entered the cache), incrementing `disks[size]` and resetting the cache to 0, immediately eligible to top up again toward that same size's next empty container if it has one. Critically, the FULL check (and pour) is attempted for every size regardless of whether Memory still has bits left — so a size whose cache was already fully staged from an earlier tick always pours here, even after a smaller size has exhausted this tick's Memory on its own still-incomplete cache; only topping up a not-yet-full cache is gated on `bits > 0` (an earlier version picked one global smallest "fillable" size per loop iteration and re-evaluated from scratch, which could starve an already-complete larger cache indefinitely behind a smaller size's ongoing top-up — see docs/DESIGN_HISTORY.md). Whatever's left over once every size has been visited stays as Memory's own balance. Unconditional — no toggle, no prerequisite. Bypasses `isProductionFrozen`, same posture as every other Byte Foundry mechanic. Same-reference no-op when nothing changed |
+| `tickDiskAutoFill` | `state → state` | Byte Foundry Disks: two ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's Cache toward full in whole-block transfers only when Memory holds ≥ one block (or dump a full-but-sub-block balance when capacity itself is &lt; one block), keeping Cache always-full except right after a release / new unlock; (2) fill empty disks (`disksBuiltTotal[size] > disks[size]`) directly from Memory at `size` bits each, leaving Cache untouched — Cache never pours into disks. Same-reference no-op when nothing changed. Called from `tickGame` right after `tickDiskBuild` (and again after a successful `tickDiskAutoRedeem`) — unconditional, bypasses `isProductionFrozen` |
 | `isDiskCacheBlockReleasable` | `(state, capacityBits) → bool` | Byte Foundry Disks: whether that size's cache currently holds at least one full, releasable block — `diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT` — that size isn't currently mid-build, **and** `isDiskRedeemable(state, capacityBits)` (some tier's current per-unit cost matches this size) |
-| `releaseDiskCacheBlock` | `capacityBits → state → state` | Byte Foundry Disks: no-op unless `isDiskCacheBlockReleasable`; otherwise moves exactly one block's worth of bits (`capacityBits / DISK_CACHE_BLOCK_COUNT`) out of `diskCache[capacityBits]` into `resources.base` (Bits) — **not** Memory — so the bits fund an eligible tier's purchases instead of waiting for the array's next disk to complete. Since released bits leave the cache for good, this and `tickDiskAutoFill` can never double-spend the same bits |
+| `releaseDiskCacheBlock` | `capacityBits → state → state` | Byte Foundry Disks: no-op unless `isDiskCacheBlockReleasable`; otherwise moves exactly one block's worth of bits (`capacityBits / DISK_CACHE_BLOCK_COUNT`) out of `diskCache[capacityBits]` into `resources.base` (Bits) — **not** Memory — Cache's only player-facing use (manual funding of the matching tier's level blocks). `tickDiskAutoFill` refills the gap in whole-block transfers once Memory has enough again |
 | `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever ANY tier in `TIER_DEFINITIONS` (not just tier01) has `getTierCost(tier, purchaseLevels[tier.id] ?? 1) * BITS_PER_BYTE === capacityBits` right now — a genuine one-tick-only EXACT match (an earlier, tier01-only version used `<=`, "at or below," which let a disk redeem at a price higher than its own size — see `docs/DESIGN_HISTORY.md`). Every tier shares the same `costResourceId` ('base'/Bits), so a Disk's face value is a Byte Foundry currency amount, not a tier-specific one. An autobuyer burst can still jump a tier's level, and hence its cost, straight past a disk's exact size in a single tick — such a disk just waits, still full, until a later reset regrows the price back through that value — the only gate on whether a FULL disk is spendable |
 | `getDiskRedeemTierName` | `(state, capacityBits) → string \| null` | Byte Foundry Disks: names which tier a disk of `capacityBits` would actually redeem into right now — the matched tier's display `name` (via the internal `getMatchingTierForDiskSize` helper — the FIRST tier in `TIER_DEFINITIONS` array order whose current per-unit cost exactly matches), or `null` if none currently matches. `ByteFoundryPage`/`StoragePage` call this directly (rather than reimplementing the match) to render e.g. "Redeems 1 10 KB disk for 1 free Megabyte" |
 | `redeemDisk` | `capacityBits → state → state` | Byte Foundry Disks: no-op if no disk of that size is currently full (`intro.disks[capacityBits] <= 0`), if that size's array is currently mid-build (`intro.diskBuild?.size === capacityBits` — IO disallowed), or if no tier currently matches its size (`isDiskRedeemable`); otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants 1 free unit of whichever tier currently matches via `grantTierUnits` — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at redeem time) |

@@ -638,15 +638,17 @@ size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size f
 scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
-array has its own small staging **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
-`size / 8` bits each, totaling one disk's worth — displayed in the bit-scale `Kb`/`Mb`/…/`Qb` unit
-via `formatCacheSize`, lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/…
-via `formatDiskSize`, uppercase `B` for Bytes) that Memory must top up completely before
-`tickDiskAutoFill` pours it into an empty container; a full block can be released by hand
-(`releaseDiskCacheBlock`) instead, at any time before it pours — but only while some tier's current
-per-unit cost matches this array's size (same eligibility `isDiskRedeemable` already gates a full
-disk's own redeem on), crediting the block's bits directly into `resources.base` (the shared Bits
-currency any unlocked tier is bought with) rather than into Memory itself. A full disk redeems
+array has its own always-full **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
+`size / 8` bits each, totaling one disk's worth — e.g. a 1 MB array → 8 × 1 Mb; displayed in the
+bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
+Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
+full; Memory refills whole blocks when a block was just released or the size was just unlocked
+(so Memory visibly fills between transfers). Cache does not pour into disks — empty disks fill
+from Memory directly. A full block can be released by hand (`releaseDiskCacheBlock`) to fund
+matching main-game tier level blocks — but only while some tier's current per-unit cost matches
+this array's size (same eligibility `isDiskRedeemable` already gates a full disk's own redeem on),
+crediting the block's bits directly into `resources.base` (the shared Bits currency any unlocked
+tier is bought with) rather than into Memory itself. A full disk redeems
 (`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
 **any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
 tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in
@@ -758,7 +760,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1383 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1387 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy
