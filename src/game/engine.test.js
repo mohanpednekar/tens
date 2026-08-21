@@ -2411,8 +2411,16 @@ describe.each([
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
     const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
-    expect(after.intro[outputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(duration - 1) // the same tick's elapsedSeconds also counts down
+    // Same tick also counts the timer down. When duration is 1s (Core→Node), that finishes the
+    // merge in the same tick — output is granted and the timer clears. Longer boundaries still
+    // leave the merge in flight after a 1s tick.
+    if (duration <= 1) {
+      expect(after.intro[outputField]).toBe(1)
+      expect(after.intro[timerField]).toBe(0)
+    } else {
+      expect(after.intro[outputField]).toBe(0)
+      expect(after.intro[timerField]).toBe(duration - 1)
+    }
   })
 
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled back to COMPUTE_ENTITY_CAP', () => {
@@ -2492,7 +2500,14 @@ describe.each([
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
-    expect(after.intro[timerField]).toBeGreaterThan(0)
+    // duration === 1 completes in the same 1s tick (see auto-start case above).
+    if (duration <= 1) {
+      expect(after.intro[timerField]).toBe(0)
+      expect(after.intro[outputField]).toBe(1)
+    } else {
+      expect(after.intro[timerField]).toBeGreaterThan(0)
+      expect(after.intro[outputField]).toBe(0)
+    }
   })
 
   it('is wired into tickGame — a real tick completes an in-flight merge once its duration fully elapses', () => {

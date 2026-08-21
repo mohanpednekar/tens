@@ -2486,7 +2486,8 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // pool (see COMPUTE_MERGE_RESERVE_CAP/COMPUTE_MERGE_DURATIONS_SECONDS in layers.js): starting a
 // merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input entity's own normal
 // COMPUTE_ENTITY_CAP (10) slots into the boundary's reserve, then counts down that boundary's own
-// fixed duration (doubling per tier, starting at 60s/1 minute for Core → Node) before granting 1
+// fixed duration (×10 per tier, starting at 1s for Core → Node — see
+// COMPUTE_MERGE_DURATIONS_SECONDS) before granting 1
 // of the output entity (cap-checked) and clearing the reserve — at most one merge in flight per
 // boundary at a time. Auto-triggers only once the input is COMPLETELY full (10, not 8) — a
 // stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8), so automation only ever mops up

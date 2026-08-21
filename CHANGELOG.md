@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Compute reserve-merge durations** are now 1 second at Core→Node, then ×10 each boundary
+  (10s, 100s, 1000s, … up to 1e8 s for Supercomputer→Megacomputer), instead of 1–256 minutes
+  doubling from 60s.
+
 ### Added
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not

@@ -291,7 +291,7 @@ const InfoPage = () => {
           </li>
           <li>
             After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve with a timed
-            countdown ({formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, doubling
+            countdown ({formatOfflineDuration(coreToNodeMergeSeconds)} for Core → Node, ×10
             each step up to {formatOfflineDuration(topMergeSeconds)} for Supercomputer →
             Megacomputer). Before unlock, merges stay instant.
           </li>

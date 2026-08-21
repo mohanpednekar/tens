@@ -1,3 +1,10 @@
+
+### Compute merge durations: 1s × 10^n (issue #370)
+
+Reserve-merge timers previously doubled from 60s (1/2/4/…/256 minutes). Replaced with a powers-of-ten
+scale matching the rest of the game's theme: 1s, 10s, 100s, …, 1e8 s per boundary. Instant merges
+before auto-merge unlock are unchanged.
+
 # Design history & rationale
 
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation

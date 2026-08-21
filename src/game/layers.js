@@ -252,15 +252,14 @@ export const COMPUTE_MERGE_RATIO = 8
 // system from then on).
 export const COMPUTE_MERGE_RESERVE_CAP = 8
 // The base duration a reserve merge takes to complete once started, at the very first boundary
-// (Core→Node) — doubling at every successive boundary (COMPUTE_MERGE_DURATIONS_SECONDS below), so
-// a higher tier's own merge is a proportionally bigger commitment. Only meaningful once a
+// (Core→Node) — ×10 at every successive boundary (COMPUTE_MERGE_DURATIONS_SECONDS below), so a
+// higher tier's own merge is a proportionally bigger commitment. Only meaningful once a
 // boundary's auto-merge is unlocked — see COMPUTE_MERGE_RESERVE_CAP above.
-export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 60
+export const COMPUTE_MERGE_BASE_DURATION_SECONDS = 1
 // One duration per tier boundary, lowest tier first (index 0 = Core→Node, … index 8 =
-// Supercomputer→Megacomputer) — each COMPUTE_MERGE_BASE_DURATION_SECONDS (60s/1 minute) doubled
-// once per boundary: 1/2/4/8/16/32/64/128/256 minutes. E.g. index 2 (Cluster→Network) is 240s (4
-// minutes).
-export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]
+// Supercomputer→Megacomputer) — COMPUTE_MERGE_BASE_DURATION_SECONDS (1s) × 10^n per step:
+// 1s / 10s / 100s / 1000s / … / 1e8 s. E.g. index 2 (Cluster→Network) is 100s. Issue #370.
+export const COMPUTE_MERGE_DURATIONS_SECONDS = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
 // tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/

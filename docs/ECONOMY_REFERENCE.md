@@ -535,10 +535,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    merge (`startComputeCoresMerge`/`startComputeNodesMerge`/…, built off a shared
    `startComputeMergeReserve` factory) instantly moves `COMPUTE_MERGE_RATIO` (8) tokens out of the
    input entity's normal slots and starts the timer at that boundary's own fixed duration
-   (`COMPUTE_MERGE_DURATIONS_SECONDS` in `layers.js` — doubling per boundary, starting at
-   `COMPUTE_MERGE_BASE_DURATION_SECONDS` = 60s/1 minute for Core → Node: 1/2/4/8/16/32/64/128/256
-   minutes for the 9 boundaries lowest tier first — e.g. Cluster → Network, index 2, is 240s/4
-   minutes). `tickComputeMergeReserveTimer` counts an in-flight merge's remaining duration down every
+   (`COMPUTE_MERGE_DURATIONS_SECONDS` in `layers.js` — ×10 per boundary, starting at
+   `COMPUTE_MERGE_BASE_DURATION_SECONDS` = 1s for Core → Node: 1s / 10s / 100s / … / 1e8 s for the
+   9 boundaries lowest tier first — e.g. Cluster → Network, index 2, is 100s; see issue #370).
+   `tickComputeMergeReserveTimer` counts an in-flight merge's remaining duration down every
    tick (frozen or not, same posture as every other Byte Foundry mechanic) and, on completion, grants
    1 of the output entity (capped defensively at `COMPUTE_ENTITY_CAP`) and clears the timer, freeing
    the reserve for the next merge. There are two ways to start a merge, sharing the same underlying
@@ -2123,8 +2123,8 @@ purchases were manual or automatic.
 - `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) — see `tickComputeCoreConversion`/every `mergeCompute*Into*` function/the reserve-timer system below. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`), stricter than the manual `COMPUTE_MERGE_RATIO`
 - `COMPUTE_MERGE_RATIO = 8` — ComputePage merge chain (issues #280/#321): how many of one compute-ladder entity merge into 1 of the next tier up (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer) — the manual-trigger threshold either for the old instant merge (pre-unlock) or for starting a reserve merge (post-unlock, via `startCompute*Merge`) — see every `mergeCompute*Into*` function and `startComputeMergeReserve`
 - `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary. Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio
-- `COMPUTE_MERGE_BASE_DURATION_SECONDS = 60` — issue #321: the base reserve-merge duration, at the very first boundary (Core → Node) — doubling at every successive boundary, see `COMPUTE_MERGE_DURATIONS_SECONDS` below
-- `COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]` — issue #321: one duration per tier boundary, lowest tier first (index 0 = Core → Node, … index 8 = Supercomputer → Megacomputer) — 1/2/4/8/16/32/64/128/256 minutes, each `COMPUTE_MERGE_BASE_DURATION_SECONDS` doubled once per boundary — see `startComputeMergeReserve`/`tickComputeMergeBoundary`
+- `COMPUTE_MERGE_BASE_DURATION_SECONDS = 1` — the base reserve-merge duration at Core → Node; ×10 at every successive boundary (issue #370)
+- `COMPUTE_MERGE_DURATIONS_SECONDS = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]` — one duration per tier boundary (Core → Node … Supercomputer → Megacomputer) — see `startComputeMergeReserve`/`tickComputeMergeBoundary`
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Core through Megacomputer — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
 - `COMPUTE_BOOST_TIER_POWER_STEP = 4` — each compute-ladder tier past Core multiplies a Boost preset's base multiplier by this much (`4^(tierIndex - 1)`); duration is unaffected
 - `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; starting a *new* boost while one is active is blocked entirely) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
