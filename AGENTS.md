@@ -217,6 +217,14 @@ branch.
   cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
   code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
 
+**After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
+`<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —
+when the verdict is `APPROVE` and the PR meets the low-risk bar — **always** enable auto-merge via
+`scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on
+`pr-auto-merge.yml` Path 3 reacting to the marker). That enables GitHub auto-merge only; never
+force-merge, never push to `main`, never GitHub-approve your own PR. Full detail:
+`CLAUDE.md` Pull requests + `docs/AUTOMATION.md` Auto-merge.
+
 ## Issue-authoring tooling
 
 - `.claude/skills/file-task-issue/SKILL.md` — full `claude-task` issue-template guidance,

@@ -144,3 +144,19 @@ downgrade anything you cannot re-confirm. Then report:
 
 Do not soften findings to be agreeable, and do not manufacture findings to seem thorough — an
 earned APPROVE with a substantive checked-and-clean list is a fully successful review.
+
+## Machine-readable marker (required on every report)
+
+End every report with exactly one HTML-comment marker so automation can tie the verdict to the
+reviewed head SHA (see `docs/AUTOMATION.md` "After final commit" and
+`scripts/adversarialReviewMarker.js`):
+
+```
+<!-- adversarial-review sha=<full-head-oid> verdict=APPROVE|NEEDS_CHANGES|BLOCK -->
+```
+
+Use the PR's current `headRefOid` (40-char hex). Map this agent's verdict vocabulary as
+`APPROVE` → `APPROVE`, `NEEDS CHANGES` → `NEEDS_CHANGES`, `BLOCK` → `BLOCK`. The author (not
+you — you never edit or comment on the PR yourself) copies that marker into a PR issue comment
+after the final commit so `pr-auto-merge.yml` Path 3 can enable auto-merge when the PR is also
+low-risk.
