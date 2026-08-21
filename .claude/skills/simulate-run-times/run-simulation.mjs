@@ -10,8 +10,9 @@
 //       as gated, and convert Memory → Kilobytes until the gate opens. Redeeming permanent full
 //       Disks before that convert advances purchase levels without flipping mainGameUnlocked and
 //       softlocks once conversion cost exceeds capacity.
-//     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → manual Compute claim /
-//       Burst boost → Sacrifice; keep converting. Never enable permanent auto-claim / auto-merge.
+//     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → convert → optional
+//       Capacity/Sacrifice → Boosts → Core claim LAST (only if isComputeCoreClaimAvailable and
+//       Fill/Invest/Build are all unavailable). Never enable permanent auto-claim / auto-merge.
 //   Main ladder (every tick):
 //     - Autobuyers wherever applicable: unlocked tiers (autobuyers[tierId] non-null from
 //       applyAutobuyerMilestones / prestige.count) are left to tickGame's autobuyer loop with the
