@@ -177,9 +177,9 @@ Applies to every session, not just automation:
 
 - **Claude:** self-estimate remaining 5-hour Claude usage window and target roughly **half** of it
   per session (soft).
-- **Cursor:** soft guidance of roughly **~1% of Cursor Pro quota per session** (especially
-  housekeeping/planning); prefer one small coherent unit and file non-trivial findings instead of
-  half-implementing.
+- **Cursor:** soft guidance of roughly **~1% of Cursor Pro quota per session** for every Cursor
+  session (not planning-only); prefer one small coherent unit and file non-trivial findings instead
+  of half-implementing.
 
 See `CLAUDE.md`'s "Budget discipline" paragraph and `docs/AUTOMATION.md` Cost implications for the
 full soft-target/overshoot/partial-slice policy — not restated here to avoid drift between the two
@@ -197,7 +197,8 @@ immediately: both coexist for now. The Cursor twins share the `claude-task` back
 added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
 double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
 slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures, conflicts,
-spec drift, backlog, process; ~1% Cursor Pro soft quota); Claude runs twice daily at 9:00am/9:00pm IST.
+spec drift, backlog, process); Claude runs twice daily at 9:00am/9:00pm IST. All Cursor sessions
+share the ~1% Cursor Pro soft quota guidance (see Budget discipline).
 Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
 (authoritative: `CLAUDE.md`).
 

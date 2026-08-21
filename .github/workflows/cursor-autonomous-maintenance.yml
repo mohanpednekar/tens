@@ -10,8 +10,8 @@ name: Cursor autonomous maintenance
 # Schedule (IST = UTC+5:30): five wall-clock slots — four development (Phase 0/A/B) plus
 # one dedicated overnight housekeeping/planning run (security-first, workflow failures,
 # conflicted PRs, spec-vs-implementation consistency, backlog planning, process
-# improvement; ~1% Cursor Pro soft quota). See docs/AUTOMATION.md's "Cursor-powered
-# successor engine" section.
+# improvement). All Cursor sessions share ~1% Cursor Pro soft quota guidance — see
+# docs/AUTOMATION.md's "Cursor-powered successor engine" / Budget discipline.
 #
 # Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
 # existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
@@ -331,7 +331,8 @@ jobs:
           backlog accurate.
 
           BUDGET (soft guidance, not a hard limit): aim to use roughly **~1% of Cursor Pro
-          quota** for this session. Prefer one small coherent unit of work. If a finding is too
+          quota** for this session — the same guidance as every other Cursor session, not a
+          planning-only cap. Prefer one small coherent unit of work. If a finding is too
           large for that budget, file a well-formed issue and stop — do not half-implement.
           Still reserve overhead for test + commit + push + PR-open when you do land a fix.
 
@@ -445,8 +446,10 @@ jobs:
           only make changes you are confident are safe, small, and correct.
 
           BUDGET (soft guidance, not a hard limit): aim for roughly **~1% of Cursor Pro quota**
-          per session. Prefer the largest coherent slice that still fits; if a Phase A task is
-          too large, land a `Part of #N` slice and comment what remains rather than overrunning.
+          per session — the same guidance as every other Cursor session (interactive and
+          housekeeping included), not a planning-only cap. Prefer the largest coherent slice that
+          still fits; if a Phase A task is too large, land a `Part of #N` slice and comment what
+          remains rather than overrunning.
 
           READ THESE FIRST AND FOLLOW THEM EXACTLY — they are the authoritative spec for this
           job, and this prompt only summarizes them plus supplies today's dynamic context:
@@ -466,11 +469,12 @@ jobs:
           `cursor/auto-*` PR as in flight and do not duplicate it.
 
           Budget: there is no fixed turn cap. Soft guidance is roughly **~1% of Cursor Pro
-          quota** per session (not a hard limit — see docs/AUTOMATION.md Cost implications).
-          Prefer one small coherent unit; if a Phase A task is too large, land a
-          `Part of #<number>` slice and comment what remains. Reserve overhead for test +
-          commit + push + PR-open. Open the PR as soon as there's a meaningful, test-passing
-          first commit and push each subsequent commit as it lands.
+          quota** per session for every Cursor session (not planning-only — see
+          docs/AUTOMATION.md Cost implications / Budget discipline). Prefer one small coherent
+          unit; if a Phase A task is too large, land a `Part of #<number>` slice and comment what
+          remains. Reserve overhead for test + commit + push + PR-open. Open the PR as soon as
+          there's a meaningful, test-passing first commit and push each subsequent commit as it
+          lands.
 
           Today's dynamic context:
 

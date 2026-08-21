@@ -34,10 +34,11 @@ unlimited. The real constraint is agent usage quota:
   replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 30` cap, unaffected by
   this change.
 - **Cursor** (`CURSOR_API_KEY`, Cursor Pro quota): soft guidance is roughly **~1% of Cursor Pro
-  quota per session** (especially housekeeping/planning), not a hard limit — size one small coherent
-  unit of work, file non-trivial findings instead of half-implementing, and still reserve overhead
-  for test/commit/push/PR. Development slots may run larger Phase A tasks when needed, but should
-  still prefer staying near that soft target when a smaller slice is viable.
+  quota per session** for every Cursor session (interactive, development automation, and
+  housekeeping alike — not planning-only), not a hard limit — size one small coherent unit of work,
+  file non-trivial findings instead of half-implementing, and still reserve overhead for
+  test/commit/push/PR. Development slots may run larger Phase A tasks when needed, but should still
+  prefer staying near that soft target when a smaller slice is viable.
 
 Both engines are naturally self-limited further by the PR-dedup guard (below), which caps
 concurrently-open autonomous PRs.
@@ -152,11 +153,11 @@ agent usage quota is:
   rolling 5-hour usage window is likely still available and roughly sizes the task against a soft
   ~50% target, using elapsed turns/time during the run as the practical signal once underway, and
   reserving ~15-20% of that self-estimated budget for test + commit + push + PR-open overhead.
-- **Cursor** (`cursor-autonomous-maintenance.yml`, including housekeeping/planning): soft guidance
-  of roughly **~1% of Cursor Pro quota per session** (not a hard limit). Prefer one small coherent
-  unit; file non-trivial findings instead of half-implementing; still reserve overhead for
-  test/commit/push/PR. Development slots may take a larger Phase A slice when needed, but should
-  prefer staying near that soft target when a smaller slice is viable.
+- **Cursor** (`cursor-autonomous-maintenance.yml` and every other Cursor session): soft guidance
+  of roughly **~1% of Cursor Pro quota per session** (not a hard limit; not planning-only). Prefer
+  one small coherent unit; file non-trivial findings instead of half-implementing; still reserve
+  overhead for test/commit/push/PR. Development slots may take a larger Phase A slice when needed,
+  but should prefer staying near that soft target when a smaller slice is viable.
 
 If a task looks too large even after buffering, the run scopes down rather than risking a runaway:
 a Phase A task lands its largest coherent, test-covered *slice* first (PR body says
@@ -305,8 +306,8 @@ designed to coexist safely with the Claude ones during the transition:
     non-trivial), backlog plan/replan, and optional process improvement (self-edit of this
     workflow, or filing one gap-analysis issue). Does **not** implement Phase A feature tasks.
     Does **not** skip for the 5-PR ceiling (unblocking is the point of the overnight slot). Soft
-    budget guidance: aim for roughly **~1% of Cursor Pro quota** per housekeeping session (not a
-    hard limit — see Budget discipline). The two crons must stay separate so
+    budget guidance is the same as every other Cursor session: roughly **~1% of Cursor Pro quota**
+    (not a hard limit — see Budget discipline). The two crons must stay separate so
     `github.event.schedule` can select the mode; folding them into one cron would silently drop
     the split. Checklist (one unit of work, priority order):
     1. **Security (immediate)** — critical/high Dependabot alerts (and any other confirmed
