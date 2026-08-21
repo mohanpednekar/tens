@@ -260,12 +260,15 @@ that defaults to squash, including Cursor's merge UI — see issue #343):
 3. **On adversarial APPROVE after the final commit** (`issue_comment: created` containing
    `<!-- adversarial-review sha=<headOid> verdict=APPROVE -->`) — when that marker matches the PR's
    **current** head SHA and the PR also meets the same low-risk bar, auto-merge is **always**
-   enabled and a draft is marked ready. This is the automation half of CLAUDE.md's "After the final
-   commit" ritual: agents run `.claude/agents/code-reviewer.md`, post the marker (via
-   `scripts/adversarialReviewMarker.js`'s formatter), then run
+   enabled and a draft is marked ready. Only comments from `OWNER` / `COLLABORATOR` / `MEMBER`
+   trigger this path (same public-repo pwn-request gate as the PR-followup workflows); the
+   *triggering* comment must itself carry the HEAD-matching marker. This is the automation half of
+   CLAUDE.md's "After the final commit" ritual: agents run `.claude/agents/code-reviewer.md`, post
+   the marker (via `scripts/adversarialReviewMarker.js`'s formatter), then run
    `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on this
    path firing from the comment). `NEEDS_CHANGES` / `BLOCK` markers never enable auto-merge.
-   Non-low-risk APPROVEs still need a human via Path 1.
+   Non-low-risk APPROVEs still need a human via Path 1. The enable script checks low-risk
+   eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
 adversarial reviewer on the final head → post the marker comment → on APPROVE+low-risk always

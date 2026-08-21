@@ -12,11 +12,14 @@
 #   2. Optionally require an issue comment on the PR containing
 #        <!-- adversarial-review sha=<headOid> verdict=APPROVE -->
 #      matching the current head SHA (posted after the final commit's review).
-#   3. Optionally mark the PR ready if it is still a draft (drafts cannot
+#   3. Check low-risk eligibility via scripts/pr-low-risk-eligible.sh *before*
+#      any draft promotion — a premature --mark-ready must not ready ineligible
+#      / WIP PRs.
+#   4. Optionally mark the PR ready if it is still a draft (drafts cannot
 #      auto-merge). `--require-adversarial-approve` implies `--mark-ready` so
-#      the post-review ritual never leaves a finished PR stuck in draft; the
-#      plain green-checks path does NOT mark ready (avoids promoting WIP drafts).
-#   4. Check low-risk eligibility via scripts/pr-low-risk-eligible.sh.
+#      the post-review ritual never leaves a finished low-risk PR stuck in
+#      draft; the plain green-checks path does NOT mark ready (avoids promoting
+#      WIP drafts).
 #   5. Enable auto-merge with --merge (Main ruleset: merge + rebase only).
 #
 # Exit 0 on success (auto-merge enabled or already enabled), 1 if skipped /
@@ -72,12 +75,19 @@ if [ "$require_review" = "true" ]; then
   # Issue comments on the PR (not review threads). Paginate lightly.
   comments=$(gh api --paginate "repos/{owner}/{repo}/issues/${pr_number}/comments" \
     --jq '.[].body')
+  # Case-insensitive verdict to match scripts/adversarialReviewMarker.js.
   marker_re="<!--[[:space:]]*adversarial-review[[:space:]]+sha=${head_sha}[[:space:]]+verdict=APPROVE[[:space:]]*-->"
-  if ! grep -Eq "$marker_re" <<<"$comments"; then
+  if ! grep -Eiq "$marker_re" <<<"$comments"; then
     echo "PR #$pr_number ($branch @ ${head_sha:0:7}): no adversarial APPROVE marker for current HEAD."
     exit 1
   fi
   echo "Found adversarial APPROVE marker for $head_sha"
+fi
+
+# Eligibility before mark-ready: never promote a draft that cannot auto-merge.
+if ! reason=$("$ELIGIBLE_SCRIPT" --pr "$pr_number"); then
+  echo "PR #$pr_number is not low-risk eligible: $reason"
+  exit 1
 fi
 
 if [ "$(jq -r '.isDraft' <<<"$pr_json")" = "true" ]; then
@@ -88,11 +98,6 @@ if [ "$(jq -r '.isDraft' <<<"$pr_json")" = "true" ]; then
     echo "PR #$pr_number is still a draft; not enabling auto-merge (pass --mark-ready after final review)."
     exit 1
   fi
-fi
-
-if ! reason=$("$ELIGIBLE_SCRIPT" --pr "$pr_number"); then
-  echo "PR #$pr_number is not low-risk eligible: $reason"
-  exit 1
 fi
 
 # Re-fetch in case we just marked ready or auto-merge raced.

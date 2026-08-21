@@ -45,7 +45,7 @@ jobs:
       CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
     steps:
       - name: Checkout eligibility scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Merge if the PR on this branch meets the low-risk bar
         run: |
@@ -78,10 +78,15 @@ jobs:
   # Path 3: an adversarial code-reviewer APPROVE marker was posted for the PR's current
   # HEAD after the final commit. If the PR is also low-risk, always enable auto-merge
   # (and mark ready if still draft). Re-posts for an old SHA are ignored.
+  #
+  # Public-repo pwn-request surface: anyone can comment on a PR. Only OWNER /
+  # COLLABORATOR / MEMBER comments may trigger this privileged path (same gate as
+  # autonomous-pr-followup.yml / cursor-pr-followup.yml).
   auto-merge-after-adversarial-approve:
     if: >
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request != null &&
+      contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association) &&
       contains(github.event.comment.body, 'adversarial-review') &&
       contains(github.event.comment.body, 'verdict=APPROVE')
     runs-on: ubuntu-latest
@@ -89,12 +94,21 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
       PR_NUMBER: ${{ github.event.issue.number }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
     steps:
       - name: Checkout eligibility scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Enable auto-merge when low-risk + APPROVE on current HEAD
         run: |
+          # Require the *triggering* comment (not an older one) to carry a marker for
+          # the current HEAD — avoids arming from a stale APPROVE still in the thread.
+          head_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          marker_re="<!--[[:space:]]*adversarial-review[[:space:]]+sha=${head_sha}[[:space:]]+verdict=APPROVE[[:space:]]*-->"
+          if ! grep -Eiq "$marker_re" <<<"$COMMENT_BODY"; then
+            echo "Triggering comment has no APPROVE marker for current HEAD ($head_sha); skipping."
+            exit 0
+          fi
           if scripts/enable-auto-merge-if-eligible.sh "$PR_NUMBER" --require-adversarial-approve; then
             echo "Auto-merge enabled after adversarial APPROVE on PR #$PR_NUMBER."
           else
