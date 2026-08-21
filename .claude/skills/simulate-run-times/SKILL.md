@@ -1,83 +1,86 @@
 ---
 name: simulate-run-times
-description: Simulates full playthroughs of Tens (fresh state to reaching 1 Googol Money / prestige) using the real engine functions in src/game/engine.js, to show how starting Prestige Point balance affects a single run's length. Use when asked about run times, time-to-prestige, pacing/balance simulations, or how PP affects game speed.
+description: Simulates full playthroughs of Tens (fresh state through Byte Foundry unlock and on to 1 Googol Money / prestige) using the real engine functions in src/game/engine.js, to show ideal Foundry + prestige cycle lengths and how starting Prestige Point balance / prestige-count autobuyer milestones affect them. Use when asked about run times, time-to-prestige, Foundry duration, pacing/balance simulations, or how PP / autobuyers affect game speed.
 ---
 
-Runs `node simulate.mjs [ppValues...]` (in this skill's own directory) and reports the printed
-markdown table back to the user, verbatim or lightly summarized — do not recompute the numbers by
+Runs `node simulate.mjs [args...]` (in this skill's own directory) and reports the printed
+markdown tables back to the user, verbatim or lightly summarized — do not recompute the numbers by
 hand or estimate them yourself; the script drives the actual game engine so its output is
 authoritative.
 
 ## What it does
 
-For each requested starting Prestige Point (PP) balance, it plays a full run from
-`createInitialGameState()` to the instant `isProductionFrozen` becomes true (Money reaches 1
-Googol), counting simulated ticks (each tick = 1 real second at the game's fixed `TICK_RATE_MS`).
-It uses the actual, current `src/game/engine.js`/`src/game/layers.js` source — not a
-reimplementation — so results automatically reflect any balance changes made to the engine.
+For each requested scenario it plays from `createInitialGameState()` (or a post-`prestigeGame`
+carry in career mode) to the instant `isProductionFrozen` becomes true (Money reaches
+`PRESTIGE_THRESHOLD` = 1 Googol Bytes in Bits), counting simulated ticks (each tick = 1 real second
+at the game's fixed `TICK_RATE_MS`). It uses the actual, current `src/game/engine.js`/
+`src/game/layers.js` source — not a reimplementation — so results automatically reflect any
+balance changes made to the engine.
 
-**Bot strategy** (fixed across every row, so PP balance is the only thing varying):
-- Every tick, "clicks Buy" on every unlocked tier (`buyTierQuantity`, a fixed 10-unit-per-tick cap
-  chosen for this simulation — not literally matching the real Buy button, which batches up to the
-  current cost-block boundary, a value that can grow past 10 over a run; see
-  `docs/ECONOMY_REFERENCE.md`'s purchase-block-size section).
-- Tier autobuyers are never unlocked during a run. Unlocking is no longer a PP purchase — the old
-  `buyAutobuyerUnlock` is gone — it's a free, automatic unlock keyed to lifetime prestige count
-  (`applyAutobuyerMilestones`, gated on `state.prestige.count` reaching
-  `getAutobuyerUnlockMilestone(tier.id)`, 1 prestige for tier01). Every simulated run starts a fresh
-  state (`prestige.count = 0`) and never calls `prestigeGame` mid-run (the loop exits the instant
-  `isProductionFrozen` becomes true), so under the current rules no tier's autobuyer can ever reach
-  its milestone within a single simulated run — the bot models manual-Buy-only tier purchases
-  throughout, for every starting PP balance.
-- Autobuyer levels are never manually Upgraded past 1, and no PP is spent on Auto-upgrade
-  automation or Smart — this isolates the effect of the passive +1%-per-point production-speed
-  bonus (`getPrestigeProductionMultiplier`) on run length, holding every other lever fixed. If the
-  user wants those other levers varied too (e.g. "what if automation is already bought"), that
-  needs a different, explicitly-scoped simulation — say so rather than silently changing strategy.
-- Every tick, the instant enough unspent PP is banked, "clicks Unlock" on the passive speed bonus
-  (`buyPrestigeSpeedBonus`) — the one PP lever this bot doesn't hold back, since without it a run's
-  starting PP balance is otherwise inert: the bot never actually prestiges mid-run (the loop exits
-  the instant `isProductionFrozen` becomes true, before ever calling `prestigeGame`), so
-  `prestige.points` never grows beyond the starting value passed in. Only starting balances at or
-  above `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) ever afford this — lower balances leave it
-  permanently locked for the whole run, and the output table's "Speed bonus" column reports
-  `locked` rather than a fictional `+N%` in that case.
-- Every tick, the instant the last tier's current LEVEL reaches that cycle's requirement
-  (`state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)`: level 2 for the
-  first activation, level 3 for the second, level 4 for the third, …), "clicks Speed Up"
-  (`speedUpGame`) immediately. This is a core, always-on, no-cost mechanic (not a PP-gated lever
-  being deliberately held fixed for isolation), so always accepting it the moment it's available is
-  the natural "attentive player" behavior.
-- Because autobuyers can never unlock within a single simulated run (see above), a run without
-  manual, moment-to-moment tier purchases would stall — this bot's every-tick manual Buy loop is
-  therefore load-bearing for reaching Googol at all, not just an optimization. Expect most runs,
-  especially at low starting PP, to hit the script's `MAX_TICKS` safety cap rather than finish; call
-  that out to the user per the capped-run note below rather than treating it as a bug.
+Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → Googol** time
+(remaining ticks to the Prestige freeze) separately, plus total cycle length.
+
+**Bot strategy** (ideal attentive player, fixed across every row):
+
+- **Foundry every tick:** Tap Memory when not full; Combine into a Byte when affordable. While
+  `mainGameUnlocked` is false, pause every unlocked tier autobuyer (so `tickDiskAutoRedeem` cannot
+  advance tier01's cost), skip Disk Fill/Build, and convert Memory → Kilobytes until the gate
+  opens — redeeming permanent full Disks before that convert advances purchase levels without
+  flipping `mainGameUnlocked` and can softlock the gate once conversion cost exceeds capacity.
+  After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → convert → Capacity/Sacrifice
+  (optional, preferred over Core) → Core claim only when Fill/Invest/Build are all unavailable →
+  Burst boost. Does **not** enable permanent auto-claim / auto-merge (those survive Prestige and
+  can starve later gates). Capacity-queue / erase-Compute-on-Sacrifice engine behavior is not
+  simulated beyond preferring Sacrifice before Core.
+- **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
+  `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
+  are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
+  batch (same sentinel `useIncrementalGame.js` uses — not a literal 10).
+- **Manual clicks where waiting would stall:** `buyTierQuantity` on any tier with no autobuyer yet,
+  OR whose autobuyer would stall this tick (some units affordable, but fewer than the full
+  cost-block batch the autobuyer waits for — the classic level-1 / Smart-missing stall). Manual
+  buys purchase whatever is affordable up to the block boundary.
+- **Tickspeed (Money / XP):** buy the global tickspeed multiplier and each tier's own tickspeed
+  multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
+  min-consumption gate allows.
+- **Soft resets:** Overclock first when eligible (`getOverclockRequirement`), then Speed Up
+  (`getSpeedUpRequirement` = `speedUpCount + 6`). Overclock-first is empirically faster to Googol
+  than Speed-Up-first or either alone.
+- **PP lever kept active:** unlock the passive +1%-per-unspent-point production-speed bonus
+  (`buyPrestigeSpeedBonus`) the instant `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) is banked —
+  note that unlock **spends** those 10000 PP, so a starting balance of exactly 10000 leaves 0
+  unspent and grants no ongoing bonus (same run length as 0 PP). Balances above 10000 keep the
+  remainder. Other PP automations (Smart, Auto-Speed-Up, Auto-Prestige, tickspeed autobuyer) are
+  **not** bought — those are separate levers; say so rather than silently enabling them if the
+  user asks about those specifically.
+- Career mode calls `prestigeGame` between cycles so permanent Foundry upgrades and
+  prestige-count autobuyer milestones carry forward for real.
 
 ## Usage
 
 ```
-node .claude/skills/simulate-run-times/simulate.mjs                  # default PP balances
-node .claude/skills/simulate-run-times/simulate.mjs 0 100 1000 10000 # custom PP balances
+node .claude/skills/simulate-run-times/simulate.mjs                  # career 0..10 + default PP sweep
+node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 5 10
+node .claude/skills/simulate-run-times/simulate.mjs --pp 0 100 10000
+node .claude/skills/simulate-run-times/simulate.mjs --pp 0 --career 0 1
+node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numbers = PP sweep (legacy)
 ```
 
-Prints a markdown table straight to stdout: PP balance, the production-speed bonus it actually
-granted (`locked` if the run's starting balance never reached the unlock cost — see the bot
-strategy above), ticks elapsed (= simulated seconds), a human-readable duration, the money balance
-at the moment Googol was crossed (which can overshoot substantially in the final tick — see
-`getPrestigePointsAwarded` in `docs/ECONOMY_REFERENCE.md`), and how many times Speed Up fired during
-the run. The
-default PP range (`0` through `50000`) deliberately spans `PRESTIGE_SPEED_BONUS_UNLOCK_COST`
-(10000) so both the locked and unlocked cases show up. A run capped by the script's `MAX_TICKS`
-safety net (5,000,000 simulated seconds) is marked "(capped)" in the duration column rather than a
-real result — call this out to the user if it happens rather than presenting it as a finished run.
+Prints markdown tables to stdout. A run capped by the script's `MAX_TICKS` safety net (5,000,000
+simulated seconds) is marked `(capped)` in the duration column — call that out to the user rather
+than presenting it as a finished run.
 
 ## When editing the simulation
 
-If the user asks to change the bot strategy, the PP range, or add a new dimension (e.g. varying
-automation/Smart state too), edit `run-simulation.mjs` directly — it's a plain, readable script.
-Keep importing the real `src/game/engine.js`/`layers.js` (via the relative paths already in the
-file) rather than inlining copies of the game logic, so the simulation can never silently drift
-out of sync with the actual game rules. `ext-loader.mjs` and the `register()` call in `simulate.mjs`
-exist only to let plain Node resolve `engine.js`'s Vite-style extensionless imports — leave them
-alone unless that resolution itself breaks.
+If the user asks to change the bot strategy, the PP / career range, or add a new dimension
+(e.g. buying Smart / Auto-Speed-Up too), edit `run-simulation.mjs` directly — it's a plain,
+readable script. Keep importing the real `src/game/engine.js`/`layers.js` (via the relative paths
+already in the file) rather than inlining copies of the game logic, so the simulation can never
+silently drift out of sync with the actual game rules. `ext-loader.mjs` and the `register()` call
+in `simulate.mjs` exist only to let plain Node resolve `engine.js`'s Vite-style extensionless
+imports — leave them alone unless that resolution itself breaks.
+
+**Do not** reintroduce the old `BUY_QUANTITY = 10` hardcode or a Foundry-skipping bot: both are
+wrong against the current game (real Buy batches to the cost-block boundary;
+`mainGameUnlocked` starts false and only flips via Foundry conversion). Also keep
+`getSpeedUpRequirement` as `speedUpCount + 6` (not the long-superseded level-2/3/4 sequence).
