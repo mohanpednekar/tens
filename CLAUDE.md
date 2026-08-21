@@ -493,23 +493,22 @@ Strict three-layer separation:
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute and
    Storage live on their own dedicated screens (see 4a/4b below) once revealed, reached via AppNav
    (not page-local open-* buttons). Starting the next Disk's build (its own core-loop action,
-   alongside Sacrifice/Invest) and the single currently-active/buildable size's own full interactive
-   detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half), and redeeming
-   (Disk Fill itself) — both stay here, rendered via the shared `components/DiskArrayRow` (see
-   "Repo layout" above). The Build button always stays visible/usable regardless of eligibility
-   (building ahead of every tier's current cost is a deliberate strategy — see "Economy model"
-   below), but the `DiskArrayRow` detail itself only renders while the current size is actually
-   redeemable by some tier right now (`getDiskRedeemTierName(state, diskSize) !== null`) — once
-   every tier's cost has grown past it with nothing left to redeem or release toward, the row is
-   just inert clutter here (its full history stays reviewable on StoragePage regardless). Only one
-   Disk/Cache array is ever shown here at a time; only every OTHER size the ladder has since moved
-   past — full multi-size history, via that same shared component — lives on the dedicated
-   `StoragePage` (see 4a below). Every action — here or on either dedicated screen — stays gated by
-   the forced priority order (see "Economy model" below).
+   alongside Sacrifice/Invest) and every currently-relevant size's full interactive detail — cache
+   blocks, disk squares, releasing (Disk Fill's manual-release half → Tiers Bits only), and
+   redeeming (Disk Fill itself; auto when the matching tier's autobuyer is on, else manual) — both
+   stay here, rendered via the shared `components/DiskArrayRow` (see "Repo layout" above), ascending
+   smallest→largest with Cache of a row immediately above that row's Disks. The Build button always
+   stays visible/usable regardless of eligibility (building ahead of every tier's current cost is a
+   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` only renders while that
+   size is actually redeemable by some tier right now (`getRelevantDiskSizesForFoundry` —
+   `getDiskRedeemTierName(state, size) !== null` for sizes from `getDiskSizesToShow`) — including an
+   older array the ladder has moved past that still matches. Once no size is transferable, the
+   detail rows hide (full history stays on the Disks tab / `StoragePage`). Every action — here or on
+   either dedicated screen — stays gated by the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
     rendering one `components/DiskArrayRow` per size ever reached (ascending, via
     `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-    `{ game }`. Reached via AppNav once `isStorageUnlocked`. A pure renderer, same "engine
+    `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
     re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game }`. Reached via
     AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
@@ -729,7 +728,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1317 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1327 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

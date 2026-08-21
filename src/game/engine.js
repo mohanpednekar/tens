@@ -1088,7 +1088,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // since it has no such dependency on any tier's level. A same-reference no-op when nothing
   // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
   // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
-  const tickStorage = tickDiskAutoRedeem
+  // After auto-redeem empties a disk, tickDiskAutoFill runs again so that size's cache can start
+  // refilling ASAP the same tick (smallest→largest), rather than sitting empty until the next
+  // tick's earlier auto-fill pass — cache's whole purpose is to convert/refill the instant it's
+  // used (see docs/DESIGN_HISTORY.md's tickDiskAutoFill ASAP note).
+  const tickStorage = state => tickDiskAutoFill(tickDiskAutoRedeem(state))
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
   // purchases — until the player prestiges. Returning the same reference (rather than an
@@ -2096,7 +2100,9 @@ export const getDiskRedeemTierName = (state, capacityBits) =>
 // rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
 // tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
 // empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
-// fill again later. No-op if no disk of that size is currently full, if that size's array is
+// fill again later. Immediately re-runs tickDiskAutoFill so that emptied slot's cache can start
+// topping up ASAP in the same call (Memory permitting) — same ASAP posture tickGame's post-
+// auto-redeem pass uses. No-op if no disk of that size is currently full, if that size's array is
 // currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
 // (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
@@ -2109,10 +2115,10 @@ export const redeemDisk = capacityBits => state => {
   const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
   const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
 
-  return grantTierUnits(tier.id, 1)({
+  return tickDiskAutoFill(grantTierUnits(tier.id, 1)({
     ...state,
     intro: { ...state.intro, disks: nextDisks },
-  })
+  }))
 }
 
 // Whether tierId's own unit-buying autobuyer is currently actually running — unlocked (purchased,
@@ -2121,6 +2127,35 @@ export const redeemDisk = capacityBits => state => {
 // auto-redeem on whichever tier it would currently redeem into.
 const isTierAutobuyerActive = (state, tierId) =>
   (state.autobuyers?.[tierId] ?? null) !== null && (state.autobuyersEnabled?.[tierId] ?? true)
+
+// True when a full disk of `capacityBits` will auto-redeem on the next tickDiskAutoRedeem /
+// tickGame pass: currently full, not mid-build, not already auto-redeemed this Prestige cycle,
+// and the matching tier's unit-buying autobuyer is unlocked and unpaused. DiskArrayRow uses this
+// to visually distinguish "will auto-redeem" from "tap to redeem" (manual — matching tier has no
+// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks are
+// never auto-transferred — only manual releaseDiskCacheBlock moves them into Bits for Tiers.
+export const isDiskAutoRedeemEligible = (state, capacityBits) => {
+  if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
+  if (state.intro?.diskBuild?.size === capacityBits) return false
+  if (state.intro?.diskAutoRedeemedSizes?.[capacityBits]) return false
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  return tier !== undefined && isTierAutobuyerActive(state, tier.id)
+}
+
+// True when a full disk of `capacityBits` is redeemable right now but will NOT auto-redeem — the
+// player must click (see redeemDisk). Complementary to isDiskAutoRedeemEligible for UI affordances.
+export const isDiskManualRedeemAvailable = (state, capacityBits) =>
+  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
+  state.intro?.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits) &&
+  !isDiskAutoRedeemEligible(state, capacityBits)
+
+// Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
+// whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
+// that tier). Ascending — Cache then Disks of each row render smallest→largest. Empty when
+// nothing is transferable; the Build button stays independent of this list.
+export const getRelevantDiskSizesForFoundry = state =>
+  getDiskSizesToShow(state).filter(size => getDiskRedeemTierName(state, size) !== null)
 
 // Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
 // getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active
@@ -2137,7 +2172,8 @@ const isTierAutobuyerActive = (state, tierId) =>
 // this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
 // eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
 // branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
-// level for the tick, not a stale mid-tick one.
+// level for the tick, not a stale mid-tick one. redeemDisk itself re-runs tickDiskAutoFill so the
+// emptied container's cache can top up ASAP in the same call when Memory allows.
 export const tickDiskAutoRedeem = state => {
   const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
   const buildingSize = state.intro.diskBuild?.size
