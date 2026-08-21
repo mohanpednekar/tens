@@ -2307,5 +2307,22 @@ path impossible (1 MB disk face value = Tier02 L1 × 8 bits/byte; build cost = 1
 Replaced with an explicit ×10 Byte ladder (`DISK_LADDER_BASE_SIZE_BITS` / `DISK_LADDER_SIZE_MULTIPLIER`):
 1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …. Redeem matching is unchanged. Saves that already own a
 larger disk size get every smaller new-ladder size marked fully built on load so the offer does not
-rewind.
+Rewind.
+
+### Disk Cache: always-full reserve, whole-block Memory transfers, no pour into disks (issue #382)
+
+Reported that Memory showed no progress while Cache was filling — `tickDiskAutoFill` drained
+Memory into the cache bit-by-bit. Clarified intent: Cache should stay full as its steady state
+(except right after a block is consumed or a size is newly unlocked); Memory should fill visibly
+and transfer only when sufficient for a whole cache block; Cache's only use is manually funding
+matching main-game tier level blocks (e.g. a 1 MB array → 8 × 1 Mb).
+
+Supersedes the earlier "staging buffer that must fill before pouring into an empty disk"
+model: emptying Cache into disks constantly fought the "always full" steady state. Empty disks
+now fill **directly from Memory** (spend `size` bits per container). Cache refill is a separate
+first pass that keeps every known size full in whole-block quanta (with a capacity&lt;block dump
+so large arrays can still progress when Memory capacity cannot hold one block). The earlier
+"fully-staged cache must still pour even when a smaller size is bit-starved" fix is obsolete —
+there is no pour step anymore; Cache simply stays full while disks compete for Memory on their
+own pass.
 

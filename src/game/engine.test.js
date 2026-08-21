@@ -1768,16 +1768,18 @@ describe('Disk array IO lockout during a build', () => {
   it('tickDiskAutoFill skips the mid-build size entirely, while other sizes still fill normally', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
-      bits: FIRST_DISK_SIZE + level2Size,
+      bits: level2Size * 2,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
+      diskCache: { [level2Size]: level2Size }, // already full — Memory goes to the empty disk
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
     const after = tickDiskAutoFill(state)
     // The mid-build size's cache/disks are untouched...
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
-    // ...but the other size still fills normally.
+    // ...but the other size still fills its empty disk from Memory, cache stays full.
     expect(after.intro.disks[level2Size]).toBe(1)
+    expect(after.intro.diskCache[level2Size]).toBe(level2Size)
   })
 
   it('tickDiskAutoRedeem skips a full, otherwise-redeemable disk of the mid-build size', () => {
@@ -1828,92 +1830,169 @@ describe('Disk array IO lockout during a build', () => {
 })
 
 describe('tickDiskAutoFill', () => {
+  const blockBits = FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
+  // Storage unlocks at 80_000 capacity; seed that so bit balances in these tests aren't above
+  // capacity (which would look "full" and trip the capacity&lt;block dump path).
+  const storageCapacity = 80_000
+
   it('is a same-reference no-op with no built disks', () => {
-    const state = withIntro(createInitialGameState(), { bits: 5000 })
+    const state = withIntro(createInitialGameState(), { bits: 5000, capacity: storageCapacity })
     expect(tickDiskAutoFill(state)).toBe(state)
   })
 
   it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
-    const state = withIntro(createInitialGameState(), { bits: 0, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+    const state = withIntro(createInitialGameState(), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+    })
     expect(tickDiskAutoFill(state)).toBe(state)
   })
 
-  it('tops up the cache partially when Memory has fewer bits than a full cache needs — no disk created yet', () => {
-    const state = withIntro(createInitialGameState(), { bits: 3000, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
-    const after = tickDiskAutoFill(state)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(3000)
-    expect(after.intro.bits).toBe(0)
-    expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  it('leaves Memory untouched when bits are fewer than one cache block — progress stays visible in Memory', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: blockBits - 1,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+    })
+    expect(tickDiskAutoFill(state)).toBe(state)
   })
 
-  it('pours an already-full cache into an empty container with no further bits needed', () => {
+  it('transfers whole cache blocks only, leaving a sub-block remainder in Memory', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: blockBits * 3 + 250,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 }, // no empty disk — only cache refill
+    })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 3)
+    expect(after.intro.bits).toBe(250)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+  })
+
+  it('keeps an already-full cache full and does not pour it into an empty disk — disks need Memory', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 0,
+      capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
-      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE }, // already full from a prior tick
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    expect(tickDiskAutoFill(state)).toBe(state)
+  })
+
+  it('fills cache first, then an empty disk from Memory, leaving cache full', () => {
+    // Cache (size) + one disk (size) = 2× size from Memory in one call when both start empty.
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE * 2,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
     const after = tickDiskAutoFill(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(0)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(after.intro.bits).toBe(0)
   })
 
-  it('fills one empty container exactly — topping up then pouring in one call — spending the size in bits from Memory overall', () => {
-    const state = withIntro(createInitialGameState(), { bits: FIRST_DISK_SIZE, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 } })
+  it('fills an empty disk from Memory when cache is already full, without resetting cache', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     const after = tickDiskAutoFill(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(0)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(after.intro.bits).toBe(0)
   })
 
-  it('cascades smallest to largest in one pass, leaving the remainder in Memory', () => {
+  it('refills every size\'s cache before spending Memory on any empty disk', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    // Enough for both caches + first size's two disks, but not level2's disk — cache pass must
+    // claim both caches before any disk fill, so level2's cache is full and its disk still empty.
     const state = withIntro(createInitialGameState(), {
-      bits: FIRST_DISK_SIZE * 2 + level2Size + 500,
+      bits: FIRST_DISK_SIZE * 3 + level2Size,
+      capacity: FIRST_DISK_SIZE * 3 + level2Size,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
     })
     const after = tickDiskAutoFill(state)
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2) // both 1 KB disks filled first
-    expect(after.intro.disks[level2Size]).toBe(1) // then the 10 KB one
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskCache[level2Size]).toBe(level2Size)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2)
+    expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('cascades empty disks smallest to largest after caches are full, leaving the remainder in Memory', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      bits: FIRST_DISK_SIZE * 2 + level2Size + 500,
+      capacity: FIRST_DISK_SIZE * 2 + level2Size + 500,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE, [level2Size]: level2Size },
+    })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2)
+    expect(after.intro.disks[level2Size]).toBe(1)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskCache[level2Size]).toBe(level2Size)
     expect(after.intro.bits).toBe(500)
   })
 
   it('only fills as many containers of a size as are actually empty, even with surplus Memory', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1_000_000,
+      capacity: 1_000_000,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
-      disks: { [FIRST_DISK_SIZE]: 1 }, // one already full — only one more can be filled
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickDiskAutoFill(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(2)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(after.intro.bits).toBe(1_000_000 - FIRST_DISK_SIZE)
   })
 
-  it('leaves an already-fully-filled size untouched', () => {
+  it('still tops up cache when every disk of that size is already full', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: 5000,
+      bits: blockBits * 2 + 100,
+      capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: 0 },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 2)
+    expect(after.intro.bits).toBe(100)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
-  it('pours a larger size\'s already-fully-staged cache even when a smaller size is still bit-starved this same tick — a completed cache is never blocked from pouring by an unrelated size\'s ongoing top-up', () => {
+  it('does not dribble a sub-block remainder into a smaller size\'s cache while a larger size\'s cache stays full', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    // The smaller size (FIRST_DISK_SIZE) has an empty container and an EMPTY cache that will eat
-    // every available bit without ever completing; the larger size (level2Size) has an empty
-    // container too, but its cache is ALREADY fully staged from a previous tick — pouring it needs
-    // no further bits at all, so it must not get starved out just because the smaller size sorts
-    // first.
     const state = withIntro(createInitialGameState(), {
-      bits: 100, // far short of what FIRST_DISK_SIZE's cache needs to complete
+      bits: 100, // below one FIRST_DISK_SIZE cache block
+      capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
       diskCache: { [level2Size]: level2Size },
     })
     const after = tickDiskAutoFill(state)
-    expect(after.intro.disks[level2Size]).toBe(1)
-    expect(after.intro.diskCache[level2Size]).toBe(0)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(100)
+    expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+    expect(after.intro.diskCache[level2Size]).toBe(level2Size)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after.intro.bits).toBe(100)
+  })
+
+  it('dumps a full-but-sub-block Memory balance into cache when capacity cannot hold one block', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE // 80_000; block = 10_000
+    const state = withIntro(createInitialGameState(), {
+      bits: 5000,
+      capacity: 5000, // full Memory, but below one level-2 cache block
+      disksBuiltTotal: { [level2Size]: 1 },
+      disks: { [level2Size]: 1 },
+    })
+    const after = tickDiskAutoFill(state)
+    expect(after.intro.diskCache[level2Size]).toBe(5000)
     expect(after.intro.bits).toBe(0)
   })
 })
@@ -3342,13 +3421,14 @@ describe('tickGame Disk auto-redeem integration', () => {
   it('refills that size\'s cache ASAP after auto-redeem when Memory and an empty container remain', () => {
     // Exercise the same redeem-then-fill composition tickGame's tickStorage uses (scoped to a
     // real redeem change). Avoid full tickGame here — tickIntroAutoInvest would spend the same
-    // Memory toward Kilobytes before auto-redeem runs.
+    // Memory toward Kilobytes before auto-redeem runs. Cache stays full across the redeem; the
+    // emptied disk refills from Memory directly without wiping Cache.
     const state = withAutobuyer(
       withIntro(createInitialGameState(), {
         bits: FIRST_DISK_SIZE,
         disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
         disks: { [FIRST_DISK_SIZE]: 1 },
-        diskCache: {},
+        diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
       }),
       tensTier.id,
       1
@@ -3361,6 +3441,7 @@ describe('tickGame Disk auto-redeem integration', () => {
 
     const afterFill = tickDiskAutoFill(afterRedeem)
     expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(afterFill.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(afterFill.intro.bits).toBe(0)
   })
 

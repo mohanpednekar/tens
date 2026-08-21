@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Disk Cache** stays full as its steady state (except right after a block is released or a size
+  is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
+  visible between transfers; empty disks fill from Memory directly (Cache no longer pours into
+  disks). Cache’s only use remains manually funding matching main-game tier level blocks
+  (e.g. a 1 MB array → 8 × 1 Mb).
 - **Compute Boost duration** scales with merge tier again: **×2 per tier**
   (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
   “effect time doubles after merge” after #363/#364 had flattened duration.

@@ -13,7 +13,7 @@ import styled, { keyframes } from 'styled-components'
 // followed immediately by a "Disks" row of the same size — Cache first, Disks of that row right
 // after (smallest→largest across sizes is the caller's job). A fixed DISK_ARRAY_LADDER_CAP-long
 // strip read together as one progress bar: currently FULL (leftmost, clickable once redeemable),
-// then built-but-EMPTY — constructed, waiting for its cache to pour into it (see tickDiskAutoFill
+// then built-but-EMPTY — constructed, waiting for Memory to fill it directly (see tickDiskAutoFill
 // in engine.js) — then not-yet-built placeholders (rightmost). Each row carries its own RowLabel
 // caption naming its own per-item size, in its own correct unit scale (see RowLabel below), and
 // the two shapes deliberately differ (round disks vs. square cache blocks — see DiskSquare/
@@ -120,14 +120,14 @@ const DiskSquare = styled.button`
   }
 `
 
-// The array's own small staging-cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
+// The array's own always-full cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
-// formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"), filling left to right as
-// Memory tops the cache up (see tickDiskAutoFill in engine.js) before any of it pours into an empty
-// disk container below. A full block ($full) can be manually released ($releasable — accent
-// border, clickable) only while some tier's current per-unit cost matches this array's size,
-// crediting that block's bits straight into resources.base (the shared Bits currency on Tiers) —
-// never auto-transferred; Cache → Tiers is always a manual tap.
+// formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
+// refills whole blocks when a block was just released or the size was just unlocked (see
+// tickDiskAutoFill). A full block ($full) can be manually released ($releasable — accent border,
+// clickable) only while some tier's current per-unit cost matches this array's size, crediting
+// that block's bits straight into resources.base (the shared Bits currency on Tiers) — never
+// auto-transferred; Cache → Tiers is always a manual tap. Cache does not pour into disks.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -265,12 +265,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
                     ? (autoRedeem
                       ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
                       : manualRedeem
-                        ? `Tap to redeem 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
+                        ? `Tap to redeem 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
                         : redeemable
-                          ? `Redeems 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for its cache to fill again`
+                          ? `Redeems 1 ${formatDiskSize(size)} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
                           : `Redeemable once some tier's level cost matches ${formatDiskSize(size)}`)
                     : isEmpty
-                      ? "Built, waiting for this array's cache to pour into it"
+                      ? 'Built, waiting for Memory to fill it'
                       : 'Not yet built'
               }
               type="button"

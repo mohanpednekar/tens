@@ -2842,8 +2842,9 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 // engine.js). Disks are a storage MEDIUM, not a one-shot pre-paid item: starting a build spends
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
-// tickDiskBuild); Memory then auto-fills any empty container on a later tick through that array's
-// own cache first (see tickDiskAutoFill), smallest size first. A FULL disk's redeemability is
+// tickDiskBuild); Memory then keeps each array's Cache full (whole-block transfers) and
+// auto-fills empty disks directly from Memory on a later tick (see tickDiskAutoFill), smallest
+// size first. A FULL disk's redeemability is
 // separately gated on SOME tier's CURRENT per-unit level cost catching up to that disk's size, and
 // auto-redeeming it is further gated on that matching tier's own unit-buying autobuyer being
 // unlocked and enabled (see tickDiskAutoRedeem) — there is no more "smallest size always
@@ -3045,14 +3046,14 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Memory auto-fills an empty disk on a later tick, through the array\'s own cache first — the fill and the build are separate steps', () => {
+  test('Memory keeps Cache full then auto-fills an empty disk on a later tick — fill and build are separate steps', () => {
     vi.useFakeTimers()
 
-    // A disk already built (empty) plus enough Memory to fill exactly one of it, all the way
-    // through its array's own cache. Capacity must also clear INTRO_DISK_UNLOCK_CAPACITY for the
-    // Storage nav button to even render.
+    // A disk already built (empty) plus enough Memory for Cache (always-full reserve) and one
+    // disk fill. Capacity must also clear INTRO_DISK_UNLOCK_CAPACITY for the Storage nav button
+    // to even render.
     seedIntroState({
-      bits: currentBankSize,
+      bits: currentBankSize * 2,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: 1 },
@@ -3063,14 +3064,15 @@ describe('Byte Foundry Storage', () => {
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Filled through the cache in the same tick. No autobuyer is unlocked for tier01 in this seed,
-    // so it is NOT auto-redeemed away (see the dedicated auto-redeem tests below) — it stays full,
-    // ready for a manual redeem. Auto-fill is unaffected by the forced priority order — that only
-    // gates manual clicks (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background
-    // automation.
+    // Cache topped up and the empty disk filled from Memory in the same tick. No autobuyer is
+    // unlocked for tier01 in this seed, so it is NOT auto-redeemed away (see the dedicated
+    // auto-redeem tests below) — it stays full, ready for a manual redeem. Auto-fill is
+    // unaffected by the forced priority order — that only gates manual clicks
+    // (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background automation.
     expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
+    expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
 

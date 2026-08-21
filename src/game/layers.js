@@ -128,9 +128,10 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
-// container (after a real build TIME — see below); Memory (intro.bits) then auto-fills any empty
-// container as it accumulates — via that array's own cache first (see the cache comment below),
-// smallest size first — and whatever's left over simply stays as Memory's own balance. Redeeming a
+// container (after a real build TIME — see below); Memory (intro.bits) then keeps each array's
+// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and auto-fills
+// any empty disk container directly from Memory, smallest size first — leftover Memory stays as
+// its own balance. Redeeming a
 // FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
 // reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
 // bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
@@ -169,14 +170,14 @@ export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // tier's CURRENT purchase level (a player can build ahead of or fall behind redeemability;
 // isDiskRedeemable is the only gate on whether a built disk is spendable yet).
 export const DISK_ARRAY_LADDER_CAP = 10
-// A disk array's cache — a small staging buffer Memory fills before any of the array's own disk
-// containers (see tickDiskAutoFill in engine.js) — is split into this many equal blocks, each
-// holding `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array's cache is 8 blocks of
-// 1000 bits each, totaling one disk's own 8000-bit capacity, displayed as "1 Kb" per block —
-// lowercase 'b', a bit-scale unit distinct from a Disk's own uppercase 'B'/Byte-scale one, see
-// formatCacheSize in engine.js). A full block can be manually released (see releaseDiskCacheBlock
-// in engine.js) — but only while some tier's current per-unit cost matches this array's size —
-// crediting resources.base directly instead of waiting for the array's next disk to complete.
+// A disk array's cache — a permanent always-full reserve Memory tops up in whole-block transfers
+// (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
+// `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
+// array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
+// Byte-scale). Cache funds matching main-game tier level blocks via manual release only
+// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size) — it
+// does not pour into disk containers; empty disks fill from Memory directly. Steady state is
+// full; gaps only right after a release or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
