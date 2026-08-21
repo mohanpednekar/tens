@@ -318,9 +318,12 @@ test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prest
     prestige: { xp: 0, points: 7, count: 2, highestMilestone: 1 },
     intro: {
       mainGameUnlocked: true,
-      bits: 400,
+      // Keep Memory empty and production effectively paused so live ticks cannot
+      // auto-convert Foundry bits into extra tier01 while this test clicks through Settings.
+      bits: 0,
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
+      tickSpeedSeconds: 1e12,
       disks: { 8000: 2 },
       disksBuiltTotal: { 8000: 4 },
       computeCores: 6,
