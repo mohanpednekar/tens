@@ -311,6 +311,13 @@ export const createInitialGameState = () => ({
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
+    // Resets every real Prestige. When true, the next time Memory is full (and Disk Fill /
+    // Bandwidth / Disk Build are not available), tickQueuedCapacityUpgrade / the queued fire path
+    // erases all held Compute tokens (ladder balances + active boost + in-flight merge timers)
+    // and performs Sacrifice for 10x Capacity — bypassing the normal "Compute blocks Capacity"
+    // forced-priority gate so Capacity can be committed before the bar is full and not starved
+    // by Core claims / Boosts. See queueIntroCapacityUpgrade/eraseAllComputeTokens.
+    capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
     // exactly like the Byte generator itself (a full disk's contents ride through a real Prestige
@@ -1061,7 +1068,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
-  const stateAfterStorage = tickDiskAutoFill(stateAfterDiskBuild)
+  // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
+  // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
+  const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
+  const stateAfterStorage = tickDiskAutoFill(stateAfterQueuedCapacity)
   const stateAfterComputeCores = tickComputeCoreConversion(stateAfterStorage)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
@@ -1556,12 +1566,103 @@ export const isMemoryCapacityUpgradeAvailable = state => {
 // "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
 // availability gate (Memory full AND no other currently-possible action left to take first).
 // Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. No-op
-// otherwise.
+// otherwise. Clears capacityUpgradeQueued on success (a manual Sacrifice also consumes any queue).
 export const pickIntroCapacityMilestone = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
   return {
     ...state,
-    intro: { ...state.intro, bits: 0, capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER },
+    intro: {
+      ...state.intro,
+      bits: 0,
+      capacity: state.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
+  }
+}
+
+// Commit to the next Sacrifice before Memory is full — prevents Compute (Core claim / Boosts)
+// from starving Capacity once the bar fills. Idempotent while already queued. Cleared on Prestige
+// (fresh intro default), on a successful Sacrifice (manual or queued), or via
+// clearIntroCapacityUpgradeQueue.
+export const queueIntroCapacityUpgrade = state => {
+  if (state.intro?.capacityUpgradeQueued) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
+}
+
+export const clearIntroCapacityUpgradeQueue = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: false } }
+}
+
+const COMPUTE_MERGE_TIMER_FIELDS = [
+  'computeCoresMergeRemainingSeconds',
+  'computeNodesMergeRemainingSeconds',
+  'computeClustersMergeRemainingSeconds',
+  'computeNetworksMergeRemainingSeconds',
+  'computeGridsMergeRemainingSeconds',
+  'computeFabricsMergeRemainingSeconds',
+  'computeCloudsMergeRemainingSeconds',
+  'computeDatacentersMergeRemainingSeconds',
+  'computeSupercomputersMergeRemainingSeconds',
+]
+
+// Wipes every held Compute ladder token, any active Boost, and any in-flight reserve-merge timers.
+// Does NOT touch permanent unlock flags (autoClaimCoreEnabled / autoMerge*) or lifetime counters
+// (computeCoresEverEarned / computeMergePageUnlocked). Same-reference no-op when nothing to wipe.
+export const eraseAllComputeTokens = state => {
+  const intro = state.intro ?? {}
+  let changed = false
+  const next = { ...intro }
+  for (const field of COMPUTE_BOOST_TIER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  for (const field of COMPUTE_MERGE_TIMER_FIELDS) {
+    if ((next[field] ?? 0) !== 0) {
+      next[field] = 0
+      changed = true
+    }
+  }
+  if ((next.computeBoostType ?? null) !== null) {
+    next.computeBoostType = null
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  } else if ((next.computeBoostStacks ?? 0) !== 0 || (next.computeBoostRemainingSeconds ?? 0) !== 0) {
+    next.computeBoostTierIndex = null
+    next.computeBoostStacks = 0
+    next.computeBoostRemainingSeconds = 0
+    changed = true
+  }
+  if (!changed) return state
+  return { ...state, intro: next }
+}
+
+// Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
+// except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
+// tokens (the queued-Sacrifice penalty), then Sacrifices — bypassing isComputeUpgradeAvailable so
+// Boosts / Core-claim eligibility cannot starve a committed Capacity upgrade. Called from
+// tickGame after intro production (and from attentive UIs/bots). Same-reference no-op otherwise.
+export const tickQueuedCapacityUpgrade = state => {
+  if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
+  if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
+  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return state
+  if (isDiskFillAvailable(state)) return state
+  if (isBandwidthAvailable(state)) return state
+  if (isDiskBuildAvailable(state)) return state
+
+  const erased = eraseAllComputeTokens(state)
+  return {
+    ...erased,
+    intro: {
+      ...erased.intro,
+      bits: 0,
+      capacity: erased.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacityUpgradeQueued: false,
+    },
   }
 }
 

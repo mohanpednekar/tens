@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
+  `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
+  available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active
+  Boost, in-flight merge timers — not permanent auto-claim/auto-merge unlocks) and performs the
+  ×10 Capacity Sacrifice, so Compute cannot starve a committed Capacity upgrade. Clears on Prestige.
 - **Supporter pack** (Settings): optional meta extras — extra save slots (1 free → 3), Prestige
   museum (history + pins), and Ops dashboard sparklines. Unlock via placeholder code `TENS-SUPPORT`
   or a **dummy checkout** button until real payment ships. Never changes Bits, PP, Disks, Compute,

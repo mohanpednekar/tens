@@ -36,6 +36,10 @@ import {
   isStorageUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
+  queueIntroCapacityUpgrade,
+  clearIntroCapacityUpgradeQueue,
+  eraseAllComputeTokens,
+  tickQueuedCapacityUpgrade,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
@@ -687,6 +691,100 @@ describe('pickIntroCapacityMilestone', () => {
     )
     expect(isProductionFrozen(state)).toBe(true)
     expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+  })
+
+  it('clears capacityUpgradeQueued on a successful manual Sacrifice', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true, ...noOtherUpgradesLeft,
+    })
+    expect(pickIntroCapacityMilestone(state).intro.capacityUpgradeQueued).toBe(false)
+  })
+})
+
+describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
+  it('queues before Memory is full and is idempotent while already queued', () => {
+    const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+    const queued = queueIntroCapacityUpgrade(state)
+    expect(queued.intro.capacityUpgradeQueued).toBe(true)
+    expect(queueIntroCapacityUpgrade(queued)).toBe(queued)
+  })
+
+  it('clearIntroCapacityUpgradeQueue clears the flag', () => {
+    const queued = queueIntroCapacityUpgrade(createInitialGameState())
+    const cleared = clearIntroCapacityUpgradeQueue(queued)
+    expect(cleared.intro.capacityUpgradeQueued).toBe(false)
+    expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
+  })
+
+  it('fires when full: erases Compute tokens, Sacrifices, and clears the queue — even if Boosts are available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      capacityUpgradeQueued: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      // Mid-build so Disk Build is unavailable while Memory stays full.
+      diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
+      computeCores: 5,
+      computeNodes: 3,
+      computeBoostType: null,
+    })
+    // Holding Cores makes Burst activatable → normal Sacrifice would be blocked.
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+    const after = tickQueuedCapacityUpgrade(state)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+  })
+
+  it('is a no-op while Memory is not yet full', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY - 1,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+    })
+    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
+  })
+
+  it('still yields to Disk Fill / Bandwidth / Disk Build while queued', () => {
+    const investable = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      capacityUpgradeQueued: true,
+      byteCreated: true,
+      productionMilestoneTierClaims: 0,
+    })
+    expect(tickQueuedCapacityUpgrade(investable)).toBe(investable)
+  })
+})
+
+describe('eraseAllComputeTokens', () => {
+  it('wipes ladder balances and an active Boost, leaving unlock flags alone', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 4,
+      computeNodes: 2,
+      autoClaimCoreEnabled: true,
+      autoMergeCoresIntoNode: true,
+      computeCoresEverEarned: 20,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 30,
+      computeCoresMergeRemainingSeconds: 15,
+    })
+    const after = eraseAllComputeTokens(state)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeNodes).toBe(0)
+    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0)
+    expect(after.intro.autoClaimCoreEnabled).toBe(true)
+    expect(after.intro.autoMergeCoresIntoNode).toBe(true)
+    expect(after.intro.computeCoresEverEarned).toBe(20)
   })
 })
 

@@ -175,6 +175,15 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    Core's cost (step 9 below); cancelling leaves Memory/capacity untouched. The engine-level gate
    above is unaffected either way — the confirm dialog is a UI-level checkpoint on top of it, not a
    replacement for it.
+   **Queued Capacity** (`queueIntroCapacityUpgrade` / `tickQueuedCapacityUpgrade`): Capacity may be
+   queued before Memory is full. Once queued, the next time Memory is full and Disk Fill / Bandwidth /
+   Disk Build are unavailable, the queued fire path **erases all held Compute tokens** (ladder
+   balances, active Boost, in-flight merge timers — not permanent auto-claim/auto-merge unlocks or
+   `computeCoresEverEarned`) and performs the ×10 Sacrifice, bypassing the normal "Compute blocks
+   Capacity" gate so Boosts/Core claims cannot starve a committed Capacity upgrade. Clears on
+   Prestige, on successful manual Sacrifice, or via `clearIntroCapacityUpgradeQueue`. `tickGame`
+   runs `tickQueuedCapacityUpgrade` after intro production / disk-build countdown and before Disk
+   auto-fill / Compute Core conversion.
 5. **Invest for Double Production** (`pickIntroProductionMilestone`) runs on its own **independent
    cost ladder**, entirely decoupled from `capacity`/Sacrifice — a separate, permanent progression
    tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is
@@ -1766,6 +1775,11 @@ engine state).
                                                           // App.jsx's page routing gate. NOT a freeze flag —
                                                           // the Byte Foundry stays fully interactive well
                                                           // past this point
+    capacityUpgradeQueued: false,                         // Resets every real Prestige. When true, the next
+                                                          // full-Memory tick (Disk Fill / Bandwidth / Disk
+                                                          // Build unavailable) erases all Compute tokens and
+                                                          // Sacrifices ×10 capacity — see
+                                                          // queueIntroCapacityUpgrade/tickQueuedCapacityUpgrade
     disks: {},                                            // PERMANENT. { [capacityBits]: count } of
                                                           // currently-FULL Disks of that size — see
                                                           // tickDiskAutoFill/redeemDisk. A full disk's
@@ -1925,7 +1939,11 @@ purchases were manual or automatic.
 | `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)` — `stackComputeBoost`'s own actual gate |
 | `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 10x Capacity" can actually fire right now — `intro.bits === intro.capacity` **and** none of Combine into a Byte (`!byteCreated`, affordable), `isDiskFillAvailable`, `isBandwidthAvailable` (the current Invest tier affordable/unclaimed), `isDiskBuildAvailable` (a currently-buildable Disk array), or `isComputeUpgradeAvailable` is still possible with that same balance — see "Forced priority order" above, the lowest-ranked action, composing all four base predicates above it. Since Invest's own cost ladder (`getIntroProductionMilestoneCost`) starts at the same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep by default, so claiming the current Invest tier is effectively a prerequisite for Sacrificing again most cycles. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
-| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
+| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`, clears `capacityUpgradeQueued`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
+| `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` (idempotent). May be called before Memory is full — commits the next full-bar spend to Capacity so Compute cannot starve it |
+| `clearIntroCapacityUpgradeQueue` | `state → state` | Clears `capacityUpgradeQueued` without Sacrificing. Same-reference no-op when already false |
+| `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
+| `tickQueuedCapacityUpgrade` | `state → state` | If queued and Memory full and Disk Fill/Bandwidth/Disk Build unavailable: `eraseAllComputeTokens` then Sacrifice ×10 and clear the queue (bypasses `isComputeUpgradeAvailable`). Called from `tickGame` after intro production / disk-build countdown, before Disk auto-fill / Compute Core conversion. Same-reference no-op otherwise |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/10/100 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry "Invest for Double Production" — requires `isBandwidthTurnAvailable(state)` (see its own row above); reads `cost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)`; deducts exactly `cost` from `bits`, and either increments `productionMilestoneTierClaims` (same tier) or advances `productionMilestoneTier` with a fresh claim count of 0 once the tier's claim limit is reached. Doubles the overall rate: halves `tickSpeedSeconds` while that stays ≥ `INTRO_MIN_TICK_SPEED_SECONDS`, otherwise multiplies `productionMultiplier` by `INTRO_PRODUCTION_MULTIPLIER_STEP` instead. No-op below cost, once every claim at the current tier is already used, or while a Disk Fill (higher priority) is currently available. Never freezes |
