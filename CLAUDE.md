@@ -253,19 +253,28 @@ maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes n
 While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
 `cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
 the two never double-pick; its schedule is five IST wall-clock slots (four development + one
-dedicated 1:30am IST housekeeping run for conflicted PRs / backlog planning / process improvement),
-offset from the Claude twice-daily cron. See `docs/AUTOMATION.md`'s
+dedicated 1:30am IST housekeeping/planning run for security / CI failures / conflicted PRs /
+spec-vs-implementation checks / backlog planning / process improvement, plus the same
+housekeeping sweep on every push to `main`), offset from the Claude
+twice-daily cron. See `docs/AUTOMATION.md`'s
 "Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
 setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
 Claude workflows).
 
-**Budget discipline applies to every session, not just automation.** There's no fixed turn cap — self-
-estimate how much of the rolling 5-hour Claude usage window is likely still available and aim to keep
-that session's work at or under roughly **50%** of a full window, recalculated fresh each time. This is
-a soft target, not a hard limit (a modest overshoot from estimation inaccuracy or unknown concurrent
-usage is expected, not a failure). If a task looks too large even after buffering, land the largest
-coherent, test-covered slice first (`Part of #N` instead of `Closes #N`, plus a comment on what
-remains) rather than risking a runaway session — see `docs/AUTOMATION.md`'s "Budget discipline" for the
+**Budget discipline applies to every session, not just automation.**
+
+- **Claude Code:** self-estimate how much of the rolling 5-hour Claude usage window is likely still
+  available and aim to keep that session's work at or under roughly **50%** of a full window,
+  recalculated fresh each time. Soft target, not a hard limit (a modest overshoot from estimation
+  inaccuracy or unknown concurrent usage is expected, not a failure).
+- **Cursor (Pro quota):** soft guidance is roughly **~1% of Cursor Pro quota per session** for
+  every Cursor session (interactive, development automation, and housekeeping alike — not
+  planning-only). Prefer one small coherent unit; file non-trivial findings instead of
+  half-implementing. Not a hard limit.
+
+If a task looks too large even after buffering, land the largest coherent, test-covered slice first
+(`Part of #N` instead of `Closes #N`, plus a comment on what remains) rather than risking a runaway
+session — see `docs/AUTOMATION.md`'s "Budget discipline" / Cost implications for the
 overhead-reservation detail (~15-20% held back for test/commit/push/PR-open).
 
 For the full phase-by-phase logic (guard-step details, the `blocked`-label mechanics, the 5-PR
