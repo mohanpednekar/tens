@@ -3122,7 +3122,7 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
-  test('every preset activation button — including the SAME type — stays disabled while a boost is already active; issue #326 replaces same-type restacking with a separate Stack button', () => {
+  test('same-type preset stays disabled while active (use Stack); other presets offer forfeit-replace with confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
@@ -3130,8 +3130,8 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /forfeit active boost and activate standard/i })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: /stack the active compute boost/i }))
 
@@ -3139,6 +3139,56 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeCores).toBe(2)
     expect(saved.intro.computeBoostStacks).toBe(2)
     expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
+  })
+
+  test('forfeit-replace of a different preset asks for confirmation; cancel keeps the active boost', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
+    expect(confirmSpy).toHaveBeenCalled()
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe('burst')
+    expect(saved.intro.computeCores).toBe(3)
+    confirmSpy.mockRestore()
+  })
+
+  test('forfeit-replace of a different preset with confirmation starts the new boost and does not refund', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe('standard')
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(saved.intro.computeCores).toBe(2)
+    confirmSpy.mockRestore()
+  })
+
+  test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openCompute()
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe(null)
+    expect(saved.intro.computeCores).toBe(3)
+    confirmSpy.mockRestore()
   })
 
   test('the Stack button is disabled once the active boost is already at COMPUTE_BOOST_MAX_STACKS', () => {
@@ -3208,7 +3258,7 @@ describe('Byte Foundry Compute Boost', () => {
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
     const boostRow = screen.getByLabelText(/^compute boost$/i)
-    const stackReclaimRow = screen.getByLabelText(/^stack or reclaim the active compute boost$/i)
+    const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
     // DOCUMENT_POSITION_FOLLOWING (4) means the first argument comes before the second in document
     // order — i.e. activeStatus renders above boostRow, which renders above stackReclaimRow, which

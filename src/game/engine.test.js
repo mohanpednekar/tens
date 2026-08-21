@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   activateComputeBoost,
+  isAnyComputeMergeInFlight,
+  tickAutoComputeBoost,
+  setComputeAutoBoostType,
+  buyComputeAutoBoost,
+  canForfeitComputeBoost,
+  forfeitComputeBoost,
+  upgradeComputeMergeDuration,
+  isUpgradeComputeMergeDurationAvailable,
+  getNextComputeMergeDurationUpgradeIndex,
+  getComputeMergeDurationSeconds,
+  getCoreEarnTimeSeconds,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPrestige,
@@ -183,7 +194,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_DURATIONS_SECONDS, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -2387,16 +2398,19 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
 })
 
 describe.each([
-  { tick: tickAutoMergeCoresIntoNode, enable: enableAutoMergeCoresIntoNode, isUnlockAvailable: isAutoMergeCoresIntoNodeUnlockAvailable, start: startComputeCoresMerge, isStartAvailable: isComputeCoresMergeStartAvailable, inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[0], label: 'coresIntoNode' },
-  { tick: tickAutoMergeNodesIntoCluster, enable: enableAutoMergeNodesIntoCluster, isUnlockAvailable: isAutoMergeNodesIntoClusterUnlockAvailable, start: startComputeNodesMerge, isStartAvailable: isComputeNodesMergeStartAvailable, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[1], label: 'nodesIntoCluster' },
-  { tick: tickAutoMergeClustersIntoNetwork, enable: enableAutoMergeClustersIntoNetwork, isUnlockAvailable: isAutoMergeClustersIntoNetworkUnlockAvailable, start: startComputeClustersMerge, isStartAvailable: isComputeClustersMergeStartAvailable, inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[2], label: 'clustersIntoNetwork' },
-  { tick: tickAutoMergeNetworksIntoGrid, enable: enableAutoMergeNetworksIntoGrid, isUnlockAvailable: isAutoMergeNetworksIntoGridUnlockAvailable, start: startComputeNetworksMerge, isStartAvailable: isComputeNetworksMergeStartAvailable, inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[3], label: 'networksIntoGrid' },
-  { tick: tickAutoMergeGridsIntoFabric, enable: enableAutoMergeGridsIntoFabric, isUnlockAvailable: isAutoMergeGridsIntoFabricUnlockAvailable, start: startComputeGridsMerge, isStartAvailable: isComputeGridsMergeStartAvailable, inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[4], label: 'gridsIntoFabric' },
-  { tick: tickAutoMergeFabricsIntoCloud, enable: enableAutoMergeFabricsIntoCloud, isUnlockAvailable: isAutoMergeFabricsIntoCloudUnlockAvailable, start: startComputeFabricsMerge, isStartAvailable: isComputeFabricsMergeStartAvailable, inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[5], label: 'fabricsIntoCloud' },
-  { tick: tickAutoMergeCloudsIntoDatacenter, enable: enableAutoMergeCloudsIntoDatacenter, isUnlockAvailable: isAutoMergeCloudsIntoDatacenterUnlockAvailable, start: startComputeCloudsMerge, isStartAvailable: isComputeCloudsMergeStartAvailable, inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[6], label: 'cloudsIntoDatacenter' },
-  { tick: tickAutoMergeDatacentersIntoSupercomputer, enable: enableAutoMergeDatacentersIntoSupercomputer, isUnlockAvailable: isAutoMergeDatacentersIntoSupercomputerUnlockAvailable, start: startComputeDatacentersMerge, isStartAvailable: isComputeDatacentersMergeStartAvailable, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[7], label: 'datacentersIntoSupercomputer' },
-  { tick: tickAutoMergeSupercomputersIntoMegacomputer, enable: enableAutoMergeSupercomputersIntoMegacomputer, isUnlockAvailable: isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable, start: startComputeSupercomputersMerge, isStartAvailable: isComputeSupercomputersMergeStartAvailable, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', duration: COMPUTE_MERGE_DURATIONS_SECONDS[8], label: 'supercomputersIntoMegacomputer' },
-])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, duration }) => {
+  { tick: tickAutoMergeCoresIntoNode, enable: enableAutoMergeCoresIntoNode, isUnlockAvailable: isAutoMergeCoresIntoNodeUnlockAvailable, start: startComputeCoresMerge, isStartAvailable: isComputeCoresMergeStartAvailable, inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', boundaryIndex: 0, label: 'coresIntoNode' },
+  { tick: tickAutoMergeNodesIntoCluster, enable: enableAutoMergeNodesIntoCluster, isUnlockAvailable: isAutoMergeNodesIntoClusterUnlockAvailable, start: startComputeNodesMerge, isStartAvailable: isComputeNodesMergeStartAvailable, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', boundaryIndex: 1, label: 'nodesIntoCluster' },
+  { tick: tickAutoMergeClustersIntoNetwork, enable: enableAutoMergeClustersIntoNetwork, isUnlockAvailable: isAutoMergeClustersIntoNetworkUnlockAvailable, start: startComputeClustersMerge, isStartAvailable: isComputeClustersMergeStartAvailable, inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', boundaryIndex: 2, label: 'clustersIntoNetwork' },
+  { tick: tickAutoMergeNetworksIntoGrid, enable: enableAutoMergeNetworksIntoGrid, isUnlockAvailable: isAutoMergeNetworksIntoGridUnlockAvailable, start: startComputeNetworksMerge, isStartAvailable: isComputeNetworksMergeStartAvailable, inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', boundaryIndex: 3, label: 'networksIntoGrid' },
+  { tick: tickAutoMergeGridsIntoFabric, enable: enableAutoMergeGridsIntoFabric, isUnlockAvailable: isAutoMergeGridsIntoFabricUnlockAvailable, start: startComputeGridsMerge, isStartAvailable: isComputeGridsMergeStartAvailable, inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', boundaryIndex: 4, label: 'gridsIntoFabric' },
+  { tick: tickAutoMergeFabricsIntoCloud, enable: enableAutoMergeFabricsIntoCloud, isUnlockAvailable: isAutoMergeFabricsIntoCloudUnlockAvailable, start: startComputeFabricsMerge, isStartAvailable: isComputeFabricsMergeStartAvailable, inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', boundaryIndex: 5, label: 'fabricsIntoCloud' },
+  { tick: tickAutoMergeCloudsIntoDatacenter, enable: enableAutoMergeCloudsIntoDatacenter, isUnlockAvailable: isAutoMergeCloudsIntoDatacenterUnlockAvailable, start: startComputeCloudsMerge, isStartAvailable: isComputeCloudsMergeStartAvailable, inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', boundaryIndex: 6, label: 'cloudsIntoDatacenter' },
+  { tick: tickAutoMergeDatacentersIntoSupercomputer, enable: enableAutoMergeDatacentersIntoSupercomputer, isUnlockAvailable: isAutoMergeDatacentersIntoSupercomputerUnlockAvailable, start: startComputeDatacentersMerge, isStartAvailable: isComputeDatacentersMergeStartAvailable, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', boundaryIndex: 7, label: 'datacentersIntoSupercomputer' },
+  { tick: tickAutoMergeSupercomputersIntoMegacomputer, enable: enableAutoMergeSupercomputersIntoMegacomputer, isUnlockAvailable: isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable, start: startComputeSupercomputersMerge, isStartAvailable: isComputeSupercomputersMergeStartAvailable, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', boundaryIndex: 8, label: 'supercomputersIntoMegacomputer' },
+])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, boundaryIndex }) => {
+  const durationOf = (introOverrides = {}) =>
+    getComputeMergeDurationSeconds(withIntro(createInitialGameState(), introOverrides), boundaryIndex)
+
   it('tick is a same-reference no-op while the auto flag is unset, even with the input entity completely full', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP })
     expect(tick(1)(state)).toBe(state)
@@ -2412,14 +2426,14 @@ describe.each([
     const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
     expect(after.intro[outputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(duration - 1) // the same tick's elapsedSeconds also counts down
+    expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
   })
 
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled back to COMPUTE_ENTITY_CAP', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, [timerField]: duration })
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, [timerField]: durationOf() })
     const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP) // untouched — no second merge started
-    expect(after.intro[timerField]).toBe(duration - 1) // only the in-flight merge's own timer ticks down
+    expect(after.intro[timerField]).toBe(durationOf() - 1) // only the in-flight merge's own timer ticks down
   })
 
   it('tick completes an in-flight merge once its full duration has elapsed, granting 1 of the output and clearing the timer', () => {
@@ -2440,7 +2454,7 @@ describe.each([
     expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
     expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
     expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: duration }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
     expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
   })
 
@@ -2453,7 +2467,7 @@ describe.each([
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     const after = start(state)
     expect(after.intro[inputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(duration)
+    expect(after.intro[timerField]).toBe(durationOf())
     expect(after.intro[outputField]).toBe(0)
   })
 
@@ -2484,8 +2498,8 @@ describe.each([
   })
 
   it('an in-flight merge timer is permanent — carried over unchanged by a real Prestige rather than being cancelled', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: duration - 5 }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro[timerField]).toBe(duration - 5)
+    const state = withMoney(withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: durationOf() - 5 }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro[timerField]).toBe(durationOf() - 5)
   })
 
   it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input is full', () => {
@@ -2496,10 +2510,167 @@ describe.each([
   })
 
   it('is wired into tickGame — a real tick completes an in-flight merge once its duration fully elapses', () => {
-    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: duration, byteCreated: true })
-    const after = tickGame(duration)(state)
+    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: durationOf(), byteCreated: true })
+    const after = tickGame(durationOf())(state)
     expect(after.intro[outputField]).toBe(1)
     expect(after.intro[timerField]).toBe(0)
+  })
+})
+
+describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues #377/#380)', () => {
+  it('Core→Node is COMPUTE_MERGE_CORE_EARN_MULTIPLIER × getCoreEarnTimeSeconds; each next step is ×10', () => {
+    const state = createInitialGameState()
+    const coreEarn = getCoreEarnTimeSeconds(state)
+    expect(coreEarn).toBe(INTRO_STARTING_CAPACITY) // capacity 8, rate 1
+    expect(getComputeMergeDurationSeconds(state, 0)).toBe(coreEarn * COMPUTE_MERGE_CORE_EARN_MULTIPLIER)
+    for (let i = 1; i < COMPUTE_MERGE_DURATION_UPGRADE_COUNT; i += 1) {
+      expect(getComputeMergeDurationSeconds(state, i)).toBe(
+        getComputeMergeDurationSeconds(state, i - 1) * COMPUTE_MERGE_STEP_MULTIPLIER,
+      )
+    }
+  })
+
+  it('scales with capacity and Invest rate (no hardcoded second table)', () => {
+    const slow = withIntro(createInitialGameState(), { capacity: 8000, productionMultiplier: 1, tickSpeedSeconds: 1 })
+    const fast = withIntro(createInitialGameState(), { capacity: 8000, productionMultiplier: 2, tickSpeedSeconds: 1 })
+    expect(getComputeMergeDurationSeconds(slow, 0)).toBe(8000 * COMPUTE_MERGE_CORE_EARN_MULTIPLIER)
+    expect(getComputeMergeDurationSeconds(fast, 0)).toBe(getComputeMergeDurationSeconds(slow, 0) / 2)
+  })
+
+  it('upgrading Core→Node makes it ×5 of Core earn and cascades later layers', () => {
+    const locked = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP,
+    })
+    expect(isUpgradeComputeMergeDurationAvailable(locked)).toBe(true)
+    expect(getNextComputeMergeDurationUpgradeIndex(locked)).toBe(0)
+    const after = upgradeComputeMergeDuration(locked)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.computeMergeDurationUpgrades).toBe(1)
+    const coreEarn = getCoreEarnTimeSeconds(after)
+    expect(getComputeMergeDurationSeconds(after, 0)).toBe(coreEarn * COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED)
+    expect(getComputeMergeDurationSeconds(after, 1)).toBe(
+      getComputeMergeDurationSeconds(after, 0) * COMPUTE_MERGE_STEP_MULTIPLIER,
+    )
+  })
+
+  it('a second upgrade makes Node→Cluster ×5 of Core→Node', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 1,
+      autoMergeNodesIntoCluster: true,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    const after = upgradeComputeMergeDuration(state)
+    expect(after.intro.computeMergeDurationUpgrades).toBe(2)
+    expect(getComputeMergeDurationSeconds(after, 1)).toBe(
+      getComputeMergeDurationSeconds(after, 0) * COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
+    )
+  })
+
+  it('upgrade is a same-reference no-op without auto-merge unlocked or enough input held', () => {
+    const noAuto = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP })
+    expect(upgradeComputeMergeDuration(noAuto)).toBe(noAuto)
+    const tooFew = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP - 1,
+    })
+    expect(upgradeComputeMergeDuration(tooFew)).toBe(tooFew)
+  })
+
+  it('the upgrade count is permanent across Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 3,
+      autoMergeCoresIntoNode: true,
+    }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro.computeMergeDurationUpgrades).toBe(3)
+  })
+
+  it('a newly started Core→Node merge snapshots the live upgraded duration', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeMergeDurationUpgrades: 1,
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_MERGE_RATIO,
+    })
+    const after = startComputeCoresMerge(state)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
+  })
+})
+
+describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
+  it(`spends ${30} PP to unlock auto-Boost permanently`, () => {
+    const state = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST)
+    const after = buyComputeAutoBoost(state)
+    expect(after.computeAutoBoostUnlocked).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('is a same-reference no-op below cost or when already unlocked', () => {
+    const tooFew = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST - 1)
+    expect(buyComputeAutoBoost(tooFew)).toBe(tooFew)
+    const unlocked = { ...createInitialGameState(), computeAutoBoostUnlocked: true, prestige: { ...createInitialGameState().prestige, points: 100 } }
+    expect(buyComputeAutoBoost(unlocked)).toBe(unlocked)
+  })
+
+  it('survives Prestige once unlocked; preference defaults to standard', () => {
+    const state = withMoney({
+      ...withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }),
+      computeAutoBoostUnlocked: true,
+    }, PRESTIGE_THRESHOLD)
+    const after = prestigeGame(state)
+    expect(after.computeAutoBoostUnlocked).toBe(true)
+    expect(after.intro.computeAutoBoostType).toBe('burst')
+  })
+
+  it('tickAutoComputeBoost is a no-op until unlocked', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeCoresMergeRemainingSeconds: 10,
+      autoMergeCoresIntoNode: true,
+    })
+    expect(isAnyComputeMergeInFlight(state)).toBe(true)
+    expect(tickAutoComputeBoost(state)).toBe(state)
+  })
+
+  it('once unlocked, activates the preferred preset from the lowest full tier while a merge is in flight', () => {
+    const state = {
+      ...withIntro(createInitialGameState(), {
+        computeCores: COMPUTE_ENTITY_CAP,
+        computeCoresMergeRemainingSeconds: 10,
+        autoMergeCoresIntoNode: true,
+        computeAutoBoostType: 'standard',
+        productionMilestoneTierClaims: 2, // avoid Bandwidth priority blocking
+      }),
+      computeAutoBoostUnlocked: true,
+    }
+    const after = tickAutoComputeBoost(state)
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
+  })
+
+  it('stacks the active boost when its funding tier is full and a merge is in flight', () => {
+    const state = {
+      ...withIntro(createInitialGameState(), {
+        computeCores: COMPUTE_ENTITY_CAP,
+        computeCoresMergeRemainingSeconds: 10,
+        computeBoostType: 'standard',
+        computeBoostTierIndex: 1,
+        computeBoostStacks: 1,
+        computeBoostRemainingSeconds: 100,
+        productionMilestoneTierClaims: 2,
+      }),
+      computeAutoBoostUnlocked: true,
+    }
+    const after = tickAutoComputeBoost(state)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
+  })
+
+  it('setComputeAutoBoostType updates the preference; unknown keys are a no-op', () => {
+    const state = createInitialGameState()
+    expect(state.intro.computeAutoBoostType).toBe('standard')
+    const after = setComputeAutoBoostType('burst')(state)
+    expect(after.intro.computeAutoBoostType).toBe('burst')
+    expect(setComputeAutoBoostType('nope')(after)).toBe(after)
   })
 })
 
@@ -2682,11 +2853,14 @@ describe('canActivateComputeBoost', () => {
     expect(canActivateComputeBoost(state, 'burst', 2)).toBe(false) // Nodes (tier 2) not held
   })
 
-  it('is false for ANY (type, tier) combo while a boost is already active — issue #326 blocks new activation entirely; see stackComputeBoost instead', () => {
+  it('is false for the same type+tier while a boost is already active (use Stack); different type/tier needs forfeitConfirmed', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1 })
-    expect(canActivateComputeBoost(state, 'burst', 1)).toBe(false) // same type/tier
-    expect(canActivateComputeBoost(state, 'standard', 1)).toBe(false) // different type, same tier
-    expect(canActivateComputeBoost(state, 'burst', 2)).toBe(false) // same type, different tier
+    expect(canActivateComputeBoost(state, 'burst', 1)).toBe(false) // same type/tier — use Stack
+    expect(canActivateComputeBoost(state, 'standard', 1)).toBe(false) // different type, no forfeit confirm
+    expect(canActivateComputeBoost(state, 'burst', 2)).toBe(false) // different tier, no forfeit confirm
+    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(true) // forfeit-confirmed replace
+    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(true)
+    expect(canActivateComputeBoost(state, 'burst', 1, true)).toBe(false) // same type+tier still blocked
   })
 
   it('is false for an unrecognized preset name', () => {
@@ -2731,9 +2905,50 @@ describe('activateComputeBoost', () => {
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
-  it('is a same-reference no-op while ANY boost is already active — even the same type/tier (see stackComputeBoost instead)', () => {
+  it('is a same-reference no-op while the same type+tier boost is already active (see stackComputeBoost instead)', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1 })
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)
+  })
+
+  it('is a same-reference no-op when replacing a different boost without forfeitConfirmed', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30 })
+    expect(activateComputeBoost('standard', 1)(state)).toBe(state)
+  })
+
+  it('with forfeitConfirmed, replaces a different active boost with no refund of the forfeited stacks', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 5,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 90,
+    })
+    const after = activateComputeBoost('standard', 1, true)(state)
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+    expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the 2 burst stacks
+  })
+
+  it('forfeitComputeBoost clears the active boost with no token refund', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 3,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 40,
+    })
+    expect(canForfeitComputeBoost(state)).toBe(true)
+    const after = forfeitComputeBoost(state)
+    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostStacks).toBe(0)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+    expect(after.intro.computeCores).toBe(3)
+  })
+
+  it('forfeitComputeBoost is a same-reference no-op while no boost is active', () => {
+    const state = createInitialGameState()
+    expect(forfeitComputeBoost(state)).toBe(state)
   })
 
   it('is a same-reference no-op while Bandwidth (higher priority) is currently available', () => {

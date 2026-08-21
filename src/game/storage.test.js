@@ -652,6 +652,8 @@ describe('schema migration', () => {
         autoMergeNetworksIntoGrid: false, autoMergeGridsIntoFabric: false, autoMergeFabricsIntoCloud: false,
         autoMergeCloudsIntoDatacenter: false, autoMergeDatacentersIntoSupercomputer: false,
         autoMergeSupercomputersIntoMegacomputer: false,
+        computeMergeDurationUpgrades: 0,
+        computeAutoBoostType: 'standard',
         computeCoresMergeRemainingSeconds: 0, computeNodesMergeRemainingSeconds: 0,
         computeClustersMergeRemainingSeconds: 0, computeNetworksMergeRemainingSeconds: 0,
         computeGridsMergeRemainingSeconds: 0, computeFabricsMergeRemainingSeconds: 0,
