@@ -10,7 +10,9 @@ name: Cursor autonomous maintenance
 # Schedule (IST = UTC+5:30): five wall-clock slots — four development (Phase 0/A/B) plus
 # one dedicated overnight housekeeping/planning run (security-first, workflow failures,
 # conflicted PRs, spec-vs-implementation consistency, backlog planning, process
-# improvement). All Cursor sessions share ~1% Cursor Pro soft quota guidance — see
+# improvement). Also runs housekeeping whenever any PR is merged into main, to sweep
+# all remaining open PRs (conflicts after main moved, failing checks, stalled
+# auto-merge). All Cursor sessions share ~1% Cursor Pro soft quota guidance — see
 # docs/AUTOMATION.md's "Cursor-powered successor engine" / Budget discipline.
 #
 # Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
@@ -26,6 +28,9 @@ on:
     # process): 1:30am IST. Matched via github.event.schedule below; do not fold into
     # the development cron or the mode split silently disappears.
     - cron: "0 20 * * *"
+  pull_request:
+    # Post-merge housekeeping: whenever any PR lands on main, sweep all open PRs.
+    types: [closed]
   workflow_dispatch:
     inputs:
       mode:
@@ -67,19 +72,51 @@ jobs:
           EVENT_SCHEDULE: ${{ github.event.schedule }}
           # Present only on workflow_dispatch — defaults to development when unset.
           DISPATCH_MODE: ${{ github.event.inputs.mode }}
+          # Present only on pull_request closed — post-merge housekeeping when merged into main.
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Resolve run mode first so skip/ceiling logic can differ for housekeeping.
-          if [ "$EVENT_NAME" = "schedule" ]; then
+          TRIGGER=scheduled
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            # Only act on merges into main. Closed-without-merge / other bases are no-ops.
+            if [ "$PR_MERGED" = "true" ] && [ "$PR_BASE_REF" = "main" ]; then
+              MODE=housekeeping
+              TRIGGER=post-merge
+            else
+              echo "pull_request closed but not a merge into main (merged=$PR_MERGED base=$PR_BASE_REF) — skipping."
+              echo "mode=housekeeping" >> "$GITHUB_OUTPUT"
+              echo "trigger=none" >> "$GITHUB_OUTPUT"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          elif [ "$EVENT_NAME" = "schedule" ]; then
             if [ "$EVENT_SCHEDULE" = "0 20 * * *" ]; then
               MODE=housekeeping
+              TRIGGER=overnight
             else
               MODE=development
+              TRIGGER=scheduled
             fi
           else
             MODE="${DISPATCH_MODE:-development}"
+            TRIGGER=dispatch
           fi
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "Resolved run mode: $MODE (event=$EVENT_NAME schedule=${EVENT_SCHEDULE:-(n/a)})"
+          echo "trigger=$TRIGGER" >> "$GITHUB_OUTPUT"
+          echo "Resolved run mode: $MODE (event=$EVENT_NAME trigger=$TRIGGER schedule=${EVENT_SCHEDULE:-(n/a)})"
+          if [ "$TRIGGER" = "post-merge" ]; then
+            {
+              echo "merged_pr_context<<MERGE_EOF"
+              echo "PR #$PR_NUMBER ($PR_HEAD_REF) just merged into main: $PR_TITLE"
+              echo "MERGE_EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "merged_pr_context=" >> "$GITHUB_OUTPUT"
+          fi
 
           # If the opt-in secret isn't set, skip the whole run cleanly — this makes the
           # workflow inert-by-default so merging it spends nothing until a maintainer adds
@@ -149,11 +186,31 @@ jobs:
             echo "CONFLICT_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Every non-fork open PR (housekeeping / post-merge sweep). Includes draft,
+          # mergeable, and auto-merge flags so the agent can check the full set — not only
+          # autonomous branches — after main moves.
+          all_open_prs=$(gh pr list --state open --limit 100 \
+            --json number,headRefName,title,mergeable,autoMergeRequest,isDraft,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository == false)]
+                  | sort_by(.number)
+                  | .[]
+                  | (if .autoMergeRequest != null then " [auto-merge]" else "" end) as $am
+                  | (if .isDraft then " [draft]" else "" end) as $dr
+                  | (if .mergeable == "CONFLICTING" then " [CONFLICT]"
+                     elif .mergeable == "UNKNOWN" then " [mergeable:?]"
+                     else "" end) as $mg
+                  | "- #\(.number) (\(.headRefName))\($am)\($dr)\($mg): \(.title)"')
+          {
+            echo "all_open_prs<<ALLPR_EOF"
+            echo "$all_open_prs"
+            echo "ALLPR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
           # Development mode keeps the 5-PR ceiling (Phase 0 main-broken still bypasses).
           # Housekeeping never skips for that reason — unblocking conflicted PRs is the point
-          # of the overnight slot, and a full ceiling is exactly when it is most needed.
+          # of the overnight / post-merge sweep, and a full ceiling is exactly when it is most needed.
           if [ "$MODE" = "housekeeping" ]; then
-            echo "Housekeeping mode — 5-PR ceiling does not skip this run."
+            echo "Housekeeping mode — 5-PR ceiling does not skip this run (trigger=$TRIGGER)."
             echo "skip=false" >> "$GITHUB_OUTPUT"
           elif [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
             echo "5 autonomous PRs already open across both engines — skipping this run."
@@ -282,7 +339,10 @@ jobs:
         env:
           REPO: ${{ github.repository }}
           MODE: ${{ steps.guard.outputs.mode }}
+          TRIGGER: ${{ steps.guard.outputs.trigger }}
+          MERGED_PR_CONTEXT: ${{ steps.guard.outputs.merged_pr_context }}
           OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
+          ALL_OPEN_PRS: ${{ steps.guard.outputs.all_open_prs }}
           OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
           OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
@@ -299,12 +359,15 @@ jobs:
           # authoritative spec instead of restating the whole phase machine, so this file
           # can't drift out of sync with the Claude engine's copy.
           : "${OPEN_PRS:=(none)}"
+          : "${ALL_OPEN_PRS:=(none)}"
           : "${OPEN_TASKS:=(none)}"
           : "${OPEN_GAP_ISSUES:=(none)}"
           : "${FAILING_PRS:=(none)}"
           : "${CONFLICTED_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
           : "${DEPENDABOT_PRS:=(none)}"
+          : "${TRIGGER:=scheduled}"
+          : "${MERGED_PR_CONTEXT:=}"
           if [ "$MAIN_CI_BROKEN" = "true" ]; then
             MAIN_CI_STATUS_LINE="FAILED: $MAIN_CI_RUN_URL"
           else
@@ -313,10 +376,11 @@ jobs:
 
           if [ "$MODE" = "housekeeping" ]; then
             cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/prompt-template.txt"
-          You are running as the dedicated OVERNIGHT HOUSEKEEPING / PLANNING job on this
-          repository (REPO: $REPO), powered by the Cursor CLI. This is the 1:30am IST slot —
-          NOT a normal development run. Nobody is watching, so only make changes you are
-          confident are safe, small, and correct.
+          You are running a HOUSEKEEPING / PLANNING job on this repository (REPO: $REPO),
+          powered by the Cursor CLI. Trigger: $TRIGGER.
+          $MERGED_PR_CONTEXT
+          This is NOT a normal development run. Nobody is watching, so only make changes you
+          are confident are safe, small, and correct.
 
           READ THESE FIRST:
           - CLAUDE.md — Pull requests / Automation workflows / Budget discipline.
@@ -329,6 +393,13 @@ jobs:
           from the claude-task backlog (security + trivial pipeline fixes below are the
           exceptions). Your job is: keep the pipeline healthy, keep docs honest, and keep the
           backlog accurate.
+
+          POST-MERGE / OPEN-PR SWEEP (always do this check when trigger is post-merge; also
+          do it on overnight runs): review **every** open non-fork PR listed below — not only
+          autonomous branches. After main moves, look for newly conflicted PRs, failing checks,
+          stalled auto-merge (enabled but mergeable CONFLICTING / behind), and drafts that
+          should be ready. Prefer the highest-value single fix (auto-merge-enabled conflicts
+          first). Skip fork PRs.
 
           BUDGET (soft guidance, not a hard limit): aim to use roughly **~1% of Cursor Pro
           quota** for this session — the same guidance as every other Cursor session, not a
@@ -360,15 +431,16 @@ jobs:
              with the failing run URL and root-cause notes. Prefer `cursor/heal-main-*` for a
              broken main. Do not fake green checks.
 
-          3. **Conflicted PRs.** Prefer auto-merge-enabled ones first (listed below). Resolve
-             by merging or rebasing main into the PR branch (prefer merge when review comments
-             are tied to specific commits), fixing conflicts for real (never blindly take one
-             side on a logic file), running `yarn test`, and pushing. Never force-push, never
-             push to main, never merge or approve your own PR (enabling GitHub auto-merge on a
-             qualifying low-risk PR after an adversarial APPROVE is allowed only when
-             CLAUDE.md / docs/AUTOMATION.md describe that ritual — force-merge is never
-             allowed). Skip fork PRs. If several are conflicted, pick the single highest-value
-             one (auto-merge first, then lowest issue/PR number).
+          3. **Conflicted / stalled open PRs (all open PRs).** Prefer auto-merge-enabled ones
+             first (listed below). Resolve by merging or rebasing main into the PR branch
+             (prefer merge when review comments are tied to specific commits), fixing
+             conflicts for real (never blindly take one side on a logic file), running
+             `yarn test`, and pushing. Never force-push, never push to main, never merge or
+             approve your own PR (enabling GitHub auto-merge on a qualifying low-risk PR after
+             an adversarial APPROVE is allowed only when CLAUDE.md / docs/AUTOMATION.md
+             describe that ritual — force-merge is never allowed). Skip fork PRs. If several
+             need attention, pick the single highest-value one (auto-merge first, then lowest
+             issue/PR number).
 
           4. **Spec vs implementation consistency.** Spot-check CLAUDE.md (and overlapping
              AGENTS.md / docs/*_REFERENCE.md) against the live source for drifted signatures,
@@ -392,6 +464,12 @@ jobs:
           or PR.
 
           Today's dynamic context:
+
+          Trigger: $TRIGGER
+          $MERGED_PR_CONTEXT
+
+          ALL open non-fork PRs (check these after every merge / on overnight runs):
+          $ALL_OPEN_PRS
 
           Currently-open Dependabot security alerts (most severe first):
           $DEPENDABOT_ALERTS
@@ -535,7 +613,10 @@ jobs:
 
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}
+          prompt_text=${prompt_text//'$TRIGGER'/$TRIGGER}
+          prompt_text=${prompt_text//'$MERGED_PR_CONTEXT'/$MERGED_PR_CONTEXT}
           prompt_text=${prompt_text//'$OPEN_PRS'/$OPEN_PRS}
+          prompt_text=${prompt_text//'$ALL_OPEN_PRS'/$ALL_OPEN_PRS}
           prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
           prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}

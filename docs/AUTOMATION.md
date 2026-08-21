@@ -300,16 +300,20 @@ designed to coexist safely with the Claude ones during the transition:
   slots (GitHub Actions cron is UTC; IST = UTC+5:30), plus `workflow_dispatch` with a `mode` input:
   - **Development** (Phase 0/A/B, same as Claude): 6:30am / 11:30am / 4:30pm / 9:30pm IST
     (`0 1,6,11,16 * * *` UTC).
-  - **Housekeeping / planning** (1:30am IST, `0 20 * * *` UTC): meta + pipeline health —
+  - **Housekeeping / planning** (1:30am IST, `0 20 * * *` UTC, **and on every PR merge into
+    `main`** via `pull_request` `closed` with `merged == true`): meta + pipeline health —
     security first (fix immediately when safe/small), workflow/CI failures, conflicted PRs
     (auto-merge-enabled first), CLAUDE.md/docs vs code consistency (fix trivial drift, file
     non-trivial), backlog plan/replan, and optional process improvement (self-edit of this
-    workflow, or filing one gap-analysis issue). Does **not** implement Phase A feature tasks.
-    Does **not** skip for the 5-PR ceiling (unblocking is the point of the overnight slot). Soft
-    budget guidance is the same as every other Cursor session: roughly **~1% of Cursor Pro quota**
-    (not a hard limit — see Budget discipline). The two crons must stay separate so
-    `github.event.schedule` can select the mode; folding them into one cron would silently drop
-    the split. Checklist (one unit of work, priority order):
+    workflow, or filing one gap-analysis issue). Post-merge runs always sweep **all** open
+    non-fork PRs (conflicts after main moved, failing checks, stalled auto-merge, drafts that
+    should be ready) — not only `claude/auto-*` / `cursor/auto-*`. Does **not** implement Phase A
+    feature tasks. Does **not** skip for the 5-PR ceiling (unblocking is the point of the
+    overnight / post-merge sweep). Soft budget guidance is the same as every other Cursor
+    session: roughly **~1% of Cursor Pro quota** (not a hard limit — see Budget discipline). The
+    two crons must stay separate so `github.event.schedule` can select the mode; folding them into
+    one cron would silently drop the split. Closed-without-merge and non-`main` bases are no-ops.
+    Checklist (one unit of work, priority order):
     1. **Security (immediate)** — critical/high Dependabot alerts (and any other confirmed
        vulnerability): fix when a safe small bump fits the soft budget; else file `priority:high`
        `claude-task` (and a heal PR if a minimal fix is still landable). Prefer an in-flight
@@ -317,8 +321,9 @@ designed to coexist safely with the Claude ones during the transition:
     2. **Workflow / CI failures** — red `ci.yml` on `main`, or failing checks on open non-fork PRs:
        trivial → fix (`cursor/heal-main-*` for broken main); non-trivial → file `claude-task` with
        run URL / notes. Never fake green.
-    3. **Conflicted PRs** — auto-merge-enabled first; real conflict resolution; never force-push /
-       push to main / merge or approve own PR.
+    3. **Conflicted / stalled open PRs (all open PRs)** — auto-merge-enabled first; real conflict
+       resolution after main moves; never force-push / push to main / merge or approve own PR.
+       Post-merge triggers prioritize this sweep across every open non-fork PR.
     4. **Spec vs implementation** — CLAUDE.md / overlapping AGENTS.md / `docs/*_REFERENCE.md` vs
        live source (signatures, constants, state shape, test counts, nav/mechanic summaries).
        Trivial drift → fix; larger mismatch → file, don't guess.
