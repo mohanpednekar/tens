@@ -230,13 +230,16 @@ test('Reset appears only in Settings → Danger zone, not on the Tiers screen or
   render(<App />)
 
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /reset byte foundry/i })).toBeInTheDocument()
 })
 
 test('reset game restores starting state once the confirm dialog is accepted', async () => {
@@ -303,6 +306,88 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
+})
+
+test('Reset Byte Foundry wipes Foundry/Storage/Compute but keeps Tiers and Prestige', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+  seedMainGameState({
+    resources: { base: 25_000 },
+    owned: { tier01: 5 },
+    prestige: { xp: 0, points: 7, count: 2, highestMilestone: 1 },
+    intro: {
+      mainGameUnlocked: true,
+      bits: 400,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disks: { 8000: 2 },
+      disksBuiltTotal: { 8000: 4 },
+      computeCores: 6,
+      computeCoresEverEarned: 12,
+      computeMergePageUnlocked: true,
+      autoClaimCoreEnabled: true,
+    },
+  })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
+
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  expect(window.confirm.mock.calls[0][0]).toMatch(/byte foundry/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/tiers/i)
+
+  // Still on Settings (main game stays unlocked); Tiers progress is intact.
+  expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.owned.tier01).toBe(5)
+  expect(saved.resources.base).toBe(25_000)
+  expect(saved.prestige.points).toBe(7)
+  expect(saved.prestige.count).toBe(2)
+  expect(saved.intro.mainGameUnlocked).toBe(true)
+  expect(saved.intro.byteCreated).toBe(false)
+  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+  expect(saved.intro.bits).toBe(0)
+  expect(saved.intro.disks).toEqual({})
+  expect(saved.intro.disksBuiltTotal).toEqual({})
+  expect(saved.intro.computeCores).toBe(0)
+  expect(saved.intro.computeCoresEverEarned).toBe(0)
+  expect(saved.intro.computeMergePageUnlocked).toBe(false)
+  expect(saved.intro.autoClaimCoreEnabled).toBe(false)
+  // Compute nav should disappear once capacity is back below the reveal threshold.
+  expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
+})
+
+test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true,
+      byteCreated: true,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      disks: { 8000: 1 },
+      computeCores: 3,
+    },
+  })
+  render(<App />)
+
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+
+  expect(window.confirm).toHaveBeenCalled()
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.byteCreated).toBe(true)
+  expect(saved.intro.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
+  expect(saved.intro.disks).toEqual({ 8000: 1 })
+  expect(saved.intro.computeCores).toBe(3)
 })
 
 test('Megabytes tier appears and is purchasable once Kilobytes has fully purchased two levels (16 owned)', () => {
