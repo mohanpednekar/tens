@@ -15,7 +15,7 @@ until its one-time transition into the main game), `MainPage` (the tier ladder),
 static "how it works" prose), and `StoragePage`/`ComputePage` (two dedicated sub-screens once each
 mechanic is revealed), via a plain `useState` toggle in `App.jsx` plus a shared bottom `AppNav`
 (Tiers / Foundry / Compute / Guide / More — Storage is under Foundry as Memory | Disks) — not a router (see "Architecture" below).
-Guide and More (Milestones / Settings / Reset) are always available, including during the
+Guide and More (Milestones / Settings) are always available, including during the
 mandatory Byte Foundry gate; only Tiers stays progress-gated.
 
 ## Tech stack
@@ -325,7 +325,7 @@ src/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
                                (progression order); Tiers omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
-    AppMenu/index.jsx       ← More sheet — Milestones / Settings / Reset (always reachable)
+    AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset is Settings → Danger zone only)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -712,7 +712,7 @@ already cover the genuinely useful items on that checklist.
   compact icon-based visible text), so `getByRole('button', { name: … })` still matches even though a
   labeled node is nested inside them.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for the
-  Reset button's `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
+  Reset (Settings → Danger zone) `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and restore it in
   `afterEach` (see `App.test.jsx`). If a test ever needs to observe behavior across real tick boundaries
   again (none currently does), use `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))`
   **once per tick** (not one large jump per assertion — jumping by more than one tick fires the live

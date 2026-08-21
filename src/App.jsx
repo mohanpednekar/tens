@@ -94,7 +94,6 @@ function App() {
     content = <MainPage focusNonce={tiersFocusNonce} game={game} />
   }
 
-  const resetDisabled = isProductionFrozen(game.state)
   const navAttention = getNavAttention(game.state)
 
   return (
@@ -115,14 +114,7 @@ function App() {
       <AppMenu
         onClose={() => setMenuOpen(false)}
         onNavigate={navigate}
-        onReset={handleReset}
         open={menuOpen}
-        resetDisabled={resetDisabled}
-        resetTitle={
-          resetDisabled
-            ? 'Prestige first — production is frozen at 1 Googol Bytes'
-            : 'Erases all progress and starts over (asks for confirmation)'
-        }
       />
     </ThemeProvider>
   )

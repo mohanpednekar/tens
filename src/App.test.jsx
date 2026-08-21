@@ -52,6 +52,13 @@ afterEach(() => {
 const seedMainGameState = (overrides = {}) =>
   localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true }, ...overrides }))
 
+// Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
+// More sheet itself. Tests that click Reset must open Settings first.
+const openSettings = async user => {
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+}
+
 test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
   render(<App />)
@@ -103,7 +110,7 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Milestones, Settings, and Reset from any screen without progress gates', async () => {
+test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -112,6 +119,8 @@ test('More menu reaches Milestones, Settings, and Reset from any screen without 
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   expect(screen.getByRole('dialog', { name: /more menu/i })).toBeInTheDocument()
+  // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
@@ -120,6 +129,7 @@ test('More menu reaches Milestones, Settings, and Reset from any screen without 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open guide/i }))
@@ -209,10 +219,18 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
 })
 
-test('the Reset button is always rendered, not gated behind a dev-only build check', () => {
+test('Reset appears only in Settings → Danger zone, not on the Tiers screen or in More', async () => {
+  const user = userEvent.setup()
   seedMainGameState()
   render(<App />)
 
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+
+  expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
 })
 
@@ -227,7 +245,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
-  // Reset
+  await openSettings(user)
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
@@ -249,6 +267,7 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
 
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
 
+  await openSettings(user)
   // After reset the save-effect fires with fresh state, so money should be back to 1
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
@@ -269,9 +288,13 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
+  await openSettings(user)
   await user.click(screen.getByRole('button', { name: /reset game/i }))
 
   expect(window.confirm).toHaveBeenCalled()
+  // Still on Settings — cancel must not navigate away or wipe progress.
+  expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open tiers/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
@@ -779,7 +802,8 @@ test('the sticky PP display is not a clickable button before Prestige is availab
   expect(screen.queryByRole('button', { name: /^prestige points display$/i })).not.toBeInTheDocument()
 })
 
-test('production and every other control freeze once money reaches a googol', () => {
+test('production and every other control freeze once money reaches a googol', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { Ones: PRESTIGE_THRESHOLD },
     owned: { tier01: 5 },
@@ -788,6 +812,7 @@ test('production and every other control freeze once money reaches a googol', ()
   render(<App />)
 
   expect(screen.getByRole('button', { name: /^buy/i })).toBeDisabled()
+  await openSettings(user)
   expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
 })
 
@@ -3617,7 +3642,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Tiers but
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open tiers/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — Guide + More (Milestones / Settings / Reset) stay available.
+  // Utilities must not require progress — Guide + More (Milestones / Settings) stay available.
   expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()

@@ -611,9 +611,10 @@ Autobuyers" below), this only checks tier Smart purchases plus the global automa
 the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
 since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
 tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`,
-`OverclockCard`, and the Reset button are Game-view-only; every PP-spending control lives on the
+balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and
+`OverclockCard` are Game-view-only; every PP-spending control lives on the
 Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
+Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered

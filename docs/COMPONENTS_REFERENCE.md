@@ -21,9 +21,9 @@ high = larger pulsing green dot).
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Tiers: **Milestones**, **Settings**, and **Reset save…** (same
-`window.confirm` + `resetGame` path as MainPage's Reset). Closes on backdrop click, Escape, or
-any action. Takes `{ open, onClose, onNavigate, onReset, resetDisabled, resetTitle }`.
+must not depend on unlocking Tiers: **Milestones** and **Settings**. Destructive **Reset** lives
+only under Settings → Danger zone (not duplicated in this sheet or on MainPage). Closes on backdrop
+click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
 
 ## `Button/index.jsx`
 
