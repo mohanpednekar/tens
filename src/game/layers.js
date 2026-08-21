@@ -267,7 +267,8 @@ export const COMPUTE_MERGE_DURATIONS_SECONDS = [60, 120, 240, 480, 960, 1920, 38
 // computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
-// preset strength/duration, scaled up per tier by COMPUTE_BOOST_TIER_POWER_STEP/tierIndex below.
+// preset strength/duration; only the multiplier scales up per tier via COMPUTE_BOOST_TIER_POWER_STEP
+// below (duration stays at the base preset for every tier — see issue #363).
 // Grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
 // Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
@@ -278,13 +279,12 @@ export const COMPUTE_BOOST_PRESETS = {
   standard: { multiplier: 8, durationSeconds: 600 },
   sustain: { multiplier: 2, durationSeconds: 3600 },
 }
-// Issue #326: each compute-ladder tier past the first multiplies a preset's own BASE `multiplier`
-// (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
-// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. See
-// getComputeBoostTierMultiplier/getComputeBoostTierDurationSeconds in engine.js — duration instead
-// scales LINEARLY with tier index (tier 5's duration is 5x tier 1's own base duration), a
-// deliberately different scaling shape from the multiplier's exponential one.
-export const COMPUTE_BOOST_TIER_POWER_STEP = 8
+// Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
+// `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
+// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier. Duration does NOT
+// scale with tier (see getComputeBoostTierDurationSeconds) — limited normal slots make not-merging
+// pure wastage, and auto-merge already adds dedicated reserve slots, so effect-only 4× is enough.
+export const COMPUTE_BOOST_TIER_POWER_STEP = 4
 // One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
 // 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
 // activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place

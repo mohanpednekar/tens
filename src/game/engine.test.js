@@ -2320,7 +2320,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
 
-  it('reclaims from a higher tier\'s own field, at that tier\'s own scaled duration', () => {
+  it('reclaims from a higher tier\'s own field, at that tier\'s own base duration', () => {
     const state = withIntro(createInitialGameState(), {
       computeClusters: 2, // tier 3
       computeBoostType: 'burst',
@@ -2632,15 +2632,15 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierDurationSeconds('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) and the duration linearly (tierIndex times)', () => {
-    // The spec's own worked example: tier 5 (Grid) is 5x as long and 8^4 as powerful as tier 1.
+  it('scales the multiplier exponentially (COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex-1)) with no duration enhancement', () => {
+    // Issue #363: tier 5 (Grid) is 4^4 as powerful as tier 1, same base duration.
     expect(getComputeBoostTierMultiplier('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** 4)
-    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds * 5)
+    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('tier 3 (Cluster) matches "clusters take 4 minutes" style scaling: 8^2 power, 3x duration', () => {
-    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * 64)
-    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * 3)
+  it('tier 3 (Cluster) is 4^2 power at the base preset duration', () => {
+    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * (COMPUTE_BOOST_TIER_POWER_STEP ** 2))
+    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
   it('returns 0 for an invalid boostType or an out-of-range tierIndex', () => {
@@ -2708,7 +2708,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4)
   })
 
-  it('starts a fresh boost at the tier-scaled multiplier/duration, recording the funding tier', () => {
+  it('starts a fresh boost at the tier-scaled multiplier and base duration, recording the funding tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
     const after = activateComputeBoost('standard', 1)(state)
     expect(after.intro.computeBoostType).toBe('standard')
@@ -2717,7 +2717,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier/duration', () => {
+  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier (duration stays base)', () => {
     const state = withIntro(createInitialGameState(), { computeClusters: 1 })
     const after = activateComputeBoost('burst', 3)(state)
     expect(after.intro.computeClusters).toBe(0)

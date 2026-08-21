@@ -526,7 +526,8 @@ Strict three-layer separation:
     the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
     Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
     how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
-    minute/10 minutes/1 hour at tier 1/Core, scaling per tier — see "Economy model" below), disabled
+    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
+    enhancement — see "Economy model" below), disabled
     until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
     (any type/tier) — a Stack + Reclaim row appears right below the presets instead:
     `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
@@ -538,18 +539,18 @@ Strict three-layer separation:
     the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
     #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
     from Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`)
-    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power/duration ("click
-    any tier row" — the effects section renders first specifically so it's visible without
-    scrolling once a tier below it is clicked), highlighted while selected; row 2 is, before that
-    boundary's auto-merge is unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO`
-    held) plus an Unlock Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the produced tier
-    held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves,
-    clickable as the manual-start trigger with no separate button ("slots are the button"), showing
-    a countdown while a merge is in flight. Megacomputer (the bottom of the chain) has no row 2, but
-    its row 1 is still Boost-selectable — the only place a Megacomputer has any use at all. Cores'
-    own row 1 also carries a small badge for the separate, unrelated Memory → Core auto-claim unlock
-    control — its manual counterpart (Claim Core) still lives on ByteFoundryPage instead — see
-    "Economy model" below.
+    that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power (duration stays
+    at the base preset — issue #363) ("click any tier row" — the effects section renders first
+    specifically so it's visible without scrolling once a tier below it is clicked), highlighted
+    while selected; row 2 is, before that boundary's auto-merge is unlocked, an instant Merge button
+    (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock Auto-merge button (disabled below
+    `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP`
+    (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
+    button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
+    (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
+    a Megacomputer has any use at all. Cores' own row 1 also carries a small badge for the separate,
+    unrelated Memory → Core auto-claim unlock control — its manual counterpart (Claim Core) still
+    lives on ByteFoundryPage instead — see "Economy model" below.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
    `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,

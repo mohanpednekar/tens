@@ -2644,13 +2644,13 @@ const AUTO_MERGE_TICKERS = [
   tickAutoMergeSupercomputersIntoMegacomputer,
 ]
 
-// --- Compute Boost tier scaling --- issue #326: a boost activated from compute-ladder tier
+// --- Compute Boost tier scaling --- issues #326/#363: a boost activated from compute-ladder tier
 // `tierIndex` (1 = Core, … COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) is
 // COMPUTE_BOOST_TIER_POWER_STEP^(tierIndex - 1) times as powerful as that preset's own BASE (tier
-// 1) multiplier, but only tierIndex times as long — a deliberately different scaling shape
-// (exponential power, linear duration) so a higher tier trades a much bigger multiplier for a
-// proportionally, not exponentially, longer commitment. Both return 0 for an invalid
-// boostType/tierIndex, which every caller below treats the same as "not activatable."
+// 1) multiplier; duration stays at the preset's base `durationSeconds` for every tier (no duration
+// enhancement from merging — limited slots + auto-merge reserves already incentivize merging).
+// Both return 0 for an invalid boostType/tierIndex, which every caller below treats the same as
+// "not activatable."
 const isValidComputeBoostTier = tierIndex => Number.isInteger(tierIndex) && tierIndex >= 1 && tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length
 
 export const getComputeBoostTierField = tierIndex =>
@@ -2665,7 +2665,7 @@ export const getComputeBoostTierMultiplier = (boostType, tierIndex) => {
 export const getComputeBoostTierDurationSeconds = (boostType, tierIndex) => {
   const preset = COMPUTE_BOOST_PRESETS[boostType]
   if (!preset || !isValidComputeBoostTier(tierIndex)) return 0
-  return preset.durationSeconds * tierIndex
+  return preset.durationSeconds
 }
 
 // The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while

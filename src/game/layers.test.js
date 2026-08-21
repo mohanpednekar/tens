@@ -250,8 +250,8 @@ describe('constants', () => {
     expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
   })
 
-  it('COMPUTE_BOOST_TIER_POWER_STEP is 8 (each compute-ladder tier is 8x as powerful as the previous one)', () => {
-    expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(8)
+  it('COMPUTE_BOOST_TIER_POWER_STEP is 4 (each compute-ladder tier is 4x as powerful as the previous one)', () => {
+    expect(COMPUTE_BOOST_TIER_POWER_STEP).toBe(4)
   })
 
   it('COMPUTE_BOOST_TIER_FIELDS lists all 10 compute-ladder entities, lowest tier (Core) first', () => {

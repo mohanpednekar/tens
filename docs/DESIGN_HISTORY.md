@@ -1980,6 +1980,17 @@ and was explicitly corrected.
 Durations moved during the same conversation before landing on the final numbers implemented here:
 `COMPUTE_BOOST_PRESETS` in `layers.js` — Burst 10s, Standard 60s, Sustain 600s.
 
+### Compute Boost tier scaling: 4× effect only, no duration enhancement (#363)
+
+Issue #326 originally scaled higher merge tiers with `COMPUTE_BOOST_TIER_POWER_STEP = 8` (exponential
+power) plus linear duration (`preset.durationSeconds * tierIndex`). That over-rewarded merging:
+normal slots per tier are capped (`COMPUTE_ENTITY_CAP`), so leaving tokens unmerged is already pure
+wastage, and auto-merge already adds a dedicated reserve pool (`COMPUTE_MERGE_RESERVE_CAP`) for
+merging. The maintainer therefore cut the step to **4× effect only** and removed duration scaling
+entirely — `getComputeBoostTierDurationSeconds` returns the base preset duration for every valid
+tier. **If this is revisited, don't restore linear duration as a default** without a new reason that
+still accounts for the slot-cap / reserve-slot incentive already in place.
+
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
 Memory's own passive production (Byte Foundry) and `tier01`'s (Kilobytes') production (main game)
