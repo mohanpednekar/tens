@@ -257,7 +257,7 @@ branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 
 ### Auto-merge (`pr-auto-merge.yml`)
 
-Two independent paths, either of which calls `gh pr merge --auto --merge` to enable GitHub's native
+Three independent paths, any of which calls `gh pr merge --auto --merge` to enable GitHub's native
 auto-merge (merge commit — must match the Main ruleset's `allowed_merge_methods`, which is
 `merge` + `rebase` only; `--squash` is rejected and makes every PR look unmergeable to anything
 that defaults to squash, including Cursor's merge UI — see issue #343):
@@ -267,12 +267,33 @@ that defaults to squash, including Cursor's merge UI — see issue #343):
    Repo-wide, not just autonomous PRs.
 2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`)
    — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `dependabot/*`; never a fork), auto-merge is enabled immediately once the
-   diff meets a conservative "low risk" bar: the whole diff touches only
-   `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total changed lines ≤50, OR it's a
-   Dependabot PR with a patch/minor semver bump (major bumps wait for approval). A PR touching
-   anything under `.github/workflows/` is **always** excluded from this path regardless of size or
-   content. This path is a plain shell script (no Claude invocation) for speed and determinism.
+   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-main-*`, `dependabot/*`; never a fork),
+   auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
+   implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
+   the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
+   changed lines ≤50, OR it's a Dependabot PR with a patch/minor semver bump (major bumps wait for
+   approval). A PR touching anything under `.github/workflows/` is **always** excluded from this
+   path regardless of size or content. This path does **not** mark drafts ready (a still-draft PR
+   is skipped so WIP work with green CI is not promoted). Plain shell / shared scripts — no Claude
+   invocation — for speed and determinism.
+3. **On adversarial APPROVE after the final commit** (`issue_comment: created` containing
+   `<!-- adversarial-review sha=<headOid> verdict=APPROVE -->`) — when that marker matches the PR's
+   **current** head SHA and the PR also meets the same low-risk bar, auto-merge is **always**
+   enabled and a draft is marked ready. Only comments from `OWNER` / `COLLABORATOR` / `MEMBER`
+   trigger this path (same public-repo pwn-request gate as the PR-followup workflows); the
+   *triggering* comment must itself carry the HEAD-matching marker. This is the automation half of
+   CLAUDE.md's "After the final commit" ritual: agents run `.claude/agents/code-reviewer.md`, post
+   the marker (via `scripts/adversarialReviewMarker.js`'s formatter), then run
+   `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on this
+   path firing from the comment). `NEEDS_CHANGES` / `BLOCK` markers never enable auto-merge.
+   Non-low-risk APPROVEs still need a human via Path 1. The enable script checks low-risk
+   eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
+
+**After final commit (agent duty).** For every finished autonomous or interactive PR: run the
+adversarial reviewer on the final head → post the marker comment → on APPROVE+low-risk always
+enable auto-merge (script above). Enabling auto-merge here is an explicit standing exception to
+"never self-merge"; force-merging, pushing to `main`, and GitHub-approving your own PR remain
+forbidden. Workflow-file PRs remain human-gated via CODEOWNERS + Path 2/3 exclusions.
 
 **Three one-time manual prerequisites** (not settable through tools available to a Claude Code
 session):

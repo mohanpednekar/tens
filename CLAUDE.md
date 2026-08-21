@@ -92,6 +92,30 @@ there's nothing left to do. A draft doesn't get reviewed and isn't eligible for 
 indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
 every PR in this repo, autonomous or interactive.
 
+**After the final commit** on a finished PR (nothing further planned; local checks green), always
+run the adversarial `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) against that head
+SHA before considering the session done. Post its machine-readable marker as a PR issue comment:
+
+```
+<!-- adversarial-review sha=<headOid> verdict=APPROVE|NEEDS_CHANGES|BLOCK -->
+```
+
+Then:
+
+- **`APPROVE` + meets the low-risk bar** (`scripts/pr-low-risk-eligible.sh` / `docs/AUTOMATION.md`):
+  **always** enable GitHub auto-merge — run
+  `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (marks ready if
+  still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
+  auto-merge on qualifying PRs only; it is not permission to force-merge, push to `main`, approve
+  the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
+- **`APPROVE` but not low-risk**: mark ready for human review; do not enable auto-merge.
+- **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
+  the next final commit so the marker matches the new HEAD.
+
+`pr-auto-merge.yml` Path 3 also reacts to that APPROVE marker on its own (belt-and-suspenders with
+the script). Path 2 (green checks, no review marker) still auto-merges low-risk bot/Dependabot PRs
+as before — it does not mark drafts ready.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and
 bot — Copilot, Codex, etc.), and address every actionable item — fix it directly if small and
 confident, or ask first if ambiguous or architecturally significant. After pushing a fix, check
@@ -769,7 +793,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1392 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1400 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

@@ -431,10 +431,12 @@ jobs:
              first (listed below). Resolve by merging or rebasing main into the PR branch
              (prefer merge when review comments are tied to specific commits), fixing
              conflicts for real (never blindly take one side on a logic file), running
-             `yarn test`, and pushing. Never force-push, never push to main, never merge or
-             approve your own PR. Auto-merge for low-risk bot PRs is handled by
-             `pr-auto-merge.yml`. Skip fork PRs. If several need attention, pick the single
-             highest-value one (auto-merge first, then lowest issue/PR number).
+             `yarn test`, and pushing. Never force-push, never push to main, never force-merge
+             or GitHub-approve your own PR. Enabling auto-merge via
+             `scripts/enable-auto-merge-if-eligible.sh` after an adversarial APPROVE on a
+             low-risk PR is required (CLAUDE.md), not a violation. Skip fork PRs. If several
+             need attention, pick the single highest-value one (auto-merge first, then lowest
+             issue/PR number).
 
           4. **Spec vs implementation consistency.** Spot-check CLAUDE.md (and overlapping
              AGENTS.md / docs/*_REFERENCE.md) against the live source for drifted signatures,
@@ -498,9 +500,9 @@ jobs:
             always-open-a-PR, Phase-A-priority, or housekeeping-vs-development split.
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
-            force-push, never push directly to main, and never merge or approve your own PR.
-            Auto-merge for low-risk bot PRs is handled by `pr-auto-merge.yml`, not by this agent
-            force-merging.
+            force-push, never push directly to main, and never force-merge or GitHub-approve your
+            own PR. Enabling auto-merge via `scripts/enable-auto-merge-if-eligible.sh` after an
+            adversarial APPROVE on a low-risk PR is required (CLAUDE.md), not a violation.
           - Never push your own commits to a `dependabot/*` branch (only `@dependabot rebase`).
           - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
             commit. Mirror any AGENTS.md-overlapping facts in the same commit.
@@ -589,7 +591,9 @@ jobs:
             housekeeping-vs-development split.
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
-            force-push, never push directly to main, and never merge or approve your own PR.
+            force-push, never push directly to main, and never force-merge or GitHub-approve your
+            own PR. Enabling auto-merge via `scripts/enable-auto-merge-if-eligible.sh` after an
+            adversarial APPROVE on a low-risk PR is required (CLAUDE.md), not a violation.
           - Never push your own commits to a `dependabot/*` branch (only the `@dependabot rebase`
             comment is allowed). Never call the Dependabot alerts API to dismiss an alert.
           - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same commit.
@@ -599,7 +603,13 @@ jobs:
           Use `gh` for all GitHub operations (a GH_AUTOMATION_PAT-authenticated GH_TOKEN is in your
           environment). Open PRs against main with `gh pr create`, structuring the body to match
           .github/pull_request_template.md, and include `Closes #<number>` (or `Part of #<number>`
-          for a slice) for a Phase A task. If, after all three phases, there is nothing safe and
+          for a slice) for a Phase A task. After the final commit on a finished PR: run the
+          adversarial review in `.claude/agents/code-reviewer.md`, post its
+          `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, and when the
+          verdict is APPROVE and the PR is low-risk, **always** run
+          `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve`. That
+          enables GitHub auto-merge only — never force-merge, never push to main, never
+          GitHub-approve your own PR. If, after all three phases, there is nothing safe and
           meaningful to do, make no changes and end without a branch or PR.
           TEMPLATE_EOF
           fi

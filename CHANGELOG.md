@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Cursor Pro quota applies to **every** Cursor session (not planning-only). The same housekeeping
   sweep also runs on every **push to `main`** (typically a merged PR), checking **all** open
   non-fork PRs for conflicts, failing checks, and stalled auto-merge.
+- **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
+  `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
+  (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
+  Path 2 is unchanged for Dependabot/small diffs; workflow-file PRs stay human-gated.
 - **Disk Cache** stays full as its steady state (except right after a block is released or a size
   is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
   visible between transfers; empty disks fill from Memory directly (Cache no longer pours into
