@@ -44,10 +44,12 @@ const Header = styled.header`
   }
 `
 
-// The app version + the Byte Foundry/Guide nav buttons sit directly beneath the title, always
-// visible. The Guide page (InfoPage — all the static "how it works" prose that used to live
-// inline here as click-to-expand disclosures, see CLAUDE.md's Architecture section) no longer
-// needs an InfoDetails/summary wrapper, since there's no longer any collapsed body to reveal.
+// The app version sits directly beneath the title. Top-level destinations (Tiers / Foundry /
+// Storage / Compute / Guide) live in App.jsx's shared AppNav once the main game is unlocked —
+// not as header buttons here. The Guide page (InfoPage — all the static "how it works" prose
+// that used to live inline here as click-to-expand disclosures, see CLAUDE.md's Architecture
+// section) no longer needs an InfoDetails/summary wrapper, since there's no longer any collapsed
+// body to reveal.
 const HeaderMeta = styled.div`
   align-items: center;
   display: flex;
@@ -55,16 +57,6 @@ const HeaderMeta = styled.div`
   gap: 0.6rem;
   justify-content: center;
   margin-top: 0.4rem;
-`
-
-// Both nav buttons here use the same real Button + variant="info" convention every other
-// page-to-page link in the app already uses (ByteFoundryPage's own "🏦 Storage"/"⚡ Compute" nav
-// buttons) — a plain underlined text link (this page's own previous GuideLink styled-component)
-// read as far less obviously clickable/discoverable than that established pattern, particularly
-// for "⚙️ Byte Foundry", the more functionally important of the two links.
-const NavButton = styled(Button)`
-  font-size: 0.8rem;
-  padding: 0.4em 0.7em;
 `
 
 const TierList = styled.div`
@@ -825,7 +817,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
+const MainPage = ({ game }) => {
   const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
   const theme = useTheme()
   const { prestige } = state
@@ -1240,12 +1232,6 @@ const MainPage = ({ game, onOpenFoundry, onOpenInfo }) => {
         <h1>Tens</h1>
         <HeaderMeta>
           <VersionText>v{version}</VersionText>
-          <NavButton aria-label="open byte foundry" onClick={onOpenFoundry} title="Review this run's Byte Foundry" type="button" variant="info">
-            <ButtonContent>⚙️ Byte Foundry</ButtonContent>
-          </NavButton>
-          <NavButton aria-label="open guide" onClick={onOpenInfo} title="How this game works" type="button" variant="info">
-            <ButtonContent>ℹ️ Guide</ButtonContent>
-          </NavButton>
         </HeaderMeta>
       </Header>
 

@@ -23,15 +23,12 @@ const Title = styled.h1`
   margin: 0;
 `
 
-// Title plus the "← Back to game" exit (when present) share one row, the same title/nav-link
-// placement convention MainPage's own <Header> and InfoPage's <Header> already use — rather than
-// the exit sitting alone at the bottom of the page, disconnected from the rest of the page's own
-// navigation.
+// Page title only — top-level navigation lives in App.jsx's shared AppNav once the main game is
+// unlocked (and there is deliberately no exit during the mandatory gate).
 const Header = styled.header`
   align-items: center;
   display: flex;
-  gap: ${props => props.theme.space.sm};
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
 `
 
@@ -261,29 +258,21 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// `onBack` is only passed once intro.mainGameUnlocked is true (see App.jsx) — before that, this
-// page is a mandatory gate with no way out. Once set, the player got here voluntarily (via
-// MainPage's "⚙️ Byte Foundry" link) to check on this cycle's progress — but nothing here is
-// read-only: Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see
-// tickIntroAutoInvest in engine.js) all stay fully live whether reached via the mandatory gate
-// or this voluntary link. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
-// productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims) is PERMANENT — see
-// prestigeGame in engine.js — so it carries over exactly as left, cycle to cycle, until the next
-// Prestige resets Memory fresh.
+// Before intro.mainGameUnlocked this page is a mandatory gate with no way out (AppNav is hidden).
+// Once unlocked, AppNav's Foundry item reopens it at any time — nothing here is read-only:
+// Tap/Combine/Sacrifice/Invest and further block transfers (uncapped — see tickIntroAutoInvest
+// in engine.js) all stay fully live either way. The Byte generator itself (capacity/byteCreated/
+// tickSpeedSeconds/productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims)
+// is PERMANENT — see prestigeGame in engine.js — so it carries over exactly as left, cycle to
+// cycle, until the next Prestige resets Memory fresh.
 //
-// Compute moved entirely to its own dedicated screen (ComputePage) once revealed — this page only
-// shows a nav button to reach it. Storage split differently: starting the next disk's build (its
-// own core loop action, same as Sacrifice/Invest) and the single currently-active/buildable size's
-// own full interactive detail — cache blocks, disk squares, releasing, redeeming (see
-// components/DiskArrayRow, shared with StoragePage below) — both stay here, on this page. Only
-// every OTHER size the ladder has since moved past — full multi-size history — lives on the
-// dedicated StoragePage, reached via its own nav button below. Both nav buttons are always
-// enabled once revealed (same "permanent, voluntarily-revisitable screen" posture as MainPage's
-// own "⚙️ Byte Foundry" link) so the player can check on built-but-not-yet-affordable progress (a
-// held disk, banked Cores) even when nothing there is currently actionable. Every action
-// itself — here or on either dedicated screen — stays gated by the Byte Foundry's forced priority
-// order (see "Byte Foundry" in CLAUDE.md): Disk Fill > Bandwidth > Disk Build > Compute > Memory.
-const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
+// Compute lives on ComputePage once revealed; Storage's full multi-size history lives on
+// StoragePage. Both are reached via AppNav (not page-local open-* buttons). Starting the next
+// disk's build and the single currently-active/buildable size's interactive detail
+// (components/DiskArrayRow) stay here. Every action — here or on either dedicated screen —
+// stays gated by the Byte Foundry's forced priority order (see "Byte Foundry" in CLAUDE.md):
+// Disk Fill > Bandwidth > Disk Build > Compute > Memory.
+const ByteFoundryPage = ({ game }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
 
@@ -380,11 +369,6 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
       <Header>
         <Title>⚙️ Byte Foundry</Title>
-        {onBack && (
-          <Button aria-label="Back to game" onClick={onBack} title="Back to game" type="button" variant="neutral">
-            <ButtonContent>← Back to game</ButtonContent>
-          </Button>
-        )}
       </Header>
       <StatusText>
         {!intro.mainGameUnlocked
@@ -544,48 +528,25 @@ const ByteFoundryPage = ({ game, onBack, onOpenCompute, onOpenStorage }) => {
           </Button>
 
           {showDiskArrayRow && <DiskArrayRow actions={actions} size={diskSize} state={state} />}
-
-          <Button
-            aria-label="open storage"
-            onClick={onOpenStorage}
-            title="Review Storage in detail, and redeem full disks (still gated by the forced priority order)"
-            type="button"
-            variant="info"
-          >
-            <ButtonContent>🏦 Storage</ButtonContent>
-          </Button>
         </>
       )}
 
-      {computeCoreRevealed && (
-        <>
-          {!intro.autoClaimCoreEnabled && (
-            <Button
-              aria-label="claim a compute core"
-              disabled={!canClaimComputeCore}
-              onClick={actions.claimComputeCore}
-              title={
-                canClaimComputeCore
-                  ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
-                  : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
-              }
-              type="button"
-              variant={canClaimComputeCore ? 'prestige' : 'neutral'}
-              $progress={fullProgress}
-            >
-              <ButtonContent>🧮 Claim Core</ButtonContent>
-            </Button>
-          )}
-          <Button
-            aria-label="open compute"
-            onClick={onOpenCompute}
-            title="Review Compute — Cores, Nodes, merging, auto-merge, and Boost activation (still gated by the forced priority order)"
-            type="button"
-            variant="info"
-          >
-            <ButtonContent>⚡ Compute</ButtonContent>
-          </Button>
-        </>
+      {computeCoreRevealed && !intro.autoClaimCoreEnabled && (
+        <Button
+          aria-label="claim a compute core"
+          disabled={!canClaimComputeCore}
+          onClick={actions.claimComputeCore}
+          title={
+            canClaimComputeCore
+              ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
+              : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
+          }
+          type="button"
+          variant={canClaimComputeCore ? 'prestige' : 'neutral'}
+          $progress={fullProgress}
+        >
+          <ButtonContent>🧮 Claim Core</ButtonContent>
+        </Button>
       )}
 
       {showTransferSection && (<>

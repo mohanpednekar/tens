@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **More** menu (⋯ on the bottom nav) and standalone **Milestones** / **Settings** screens —
+  reachable from every page, including the Byte Foundry gate, with no progress requirement.
+  Settings holds About / Appearance notes and Reset; Milestones mirrors the MainPage Milestones
+  view (Chapters always, prestige-gated unlock lists after a first Prestige).
 - A new **Byte Foundry** pre-game screen, shown before the main game on every fresh save: tap to generate bits, combine your first 8 into a permanent Byte generator that then produces bits passively, and grow two independent tracks each time your bit balance fills — sacrifice it all for 10x capacity, or invest in "double production" via its own independent cost ladder (1/10/100/1000/10000 Bytes, 2 claims per tier for the first three tiers and 1 for every tier after — no need to be full to claim). Once capacity reaches 1000 Bytes, a row of transfer blocks lets you convert bits into Kilobytes, each block costing whatever Kilobytes' own current per-level price is (8000 bits at first, growing from there): only the leftmost not-yet-transferred block is clickable at a time, and the very first transfer unlocks the main game immediately, but blocks stay on screen once spent, greying out to show they're consumed rather than disappearing. There's no cap on further transfers — clicking through blocks manually, or converting live, one block at a time, the instant enough Memory accumulates — the row simply mirrors the Kilobyte tier's own live purchase-block progress (8 blocks — 64,000 bits — at the start of a run, growing later), rolling over to a fresh block set the instant a level completes rather than ever running out. Replaces the old self-producing Bytes tier as the game's actual bootstrap.
 - A new **Quettabytes** tier (10^30) at the top of the tier ladder.
 - A new **Chapters** category on the Milestones page — "The first KiloByte", "Go Googol", and a "Coming soon…" placeholder for future content — now reachable before your first Prestige (previously the whole Milestones tab, and the Game tab alongside it, waited until after a first Prestige; only the Upgrades tab still does).
@@ -25,6 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
 
 ### Changed
+- **App navigation** is a shared fixed bottom bar (`components/AppNav`): **Tiers** / **Foundry** /
+  **Storage** / **Compute** / **Guide** / **More**, with the active destination marked via
+  `aria-current`. Storage and Compute appear once each mechanic is revealed; **Tiers** stays
+  hidden during the mandatory Byte Foundry gate (no gameplay escape hatch), but **Guide** and
+  **More** are always available from the first launch — utilities never require unlocking the
+  main game. More opens Milestones, Settings, and Reset. Nested Back buttons and page-local
+  open-* links are removed — jump directly between unlocked destinations. The main ladder screen
+  is labeled **Tiers** (not "Game") so it doesn't collide with MainPage's own Game/Upgrades/
+  Milestones view tabs.
 - The in-game **Guide** is rewritten for readability: short bullets and sub-headings instead of
   dense paragraphs, fuller coverage (forced priority, Storage release/redeem rules, tier-funded
   Compute Boost with Stack/Reclaim, Prestige), and numbers kept in sync with live `layers.js` /
