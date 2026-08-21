@@ -163,7 +163,8 @@ jobs:
           You are following up, unattended, on PR #$PR_NUMBER (branch $PR_BRANCH) in $REPO,
           powered by the Cursor CLI. This PR was opened by the Cursor autonomous maintenance
           workflow, and this run was triggered by new review activity, a new comment, or a
-          failing check on it. Work efficiently.
+          failing check on it. Work efficiently. Soft budget guidance: roughly **~1% of Cursor
+          Pro quota** per session (same as every other Cursor session — not a hard limit).
 
           Read CLAUDE.md first and follow it exactly (especially its Pull requests section).
 

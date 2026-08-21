@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Cursor housekeeping / planning run** now checks security (fix immediately when safe),
+  workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
+  findings and files `claude-task` issues for non-trivial ones. Soft budget guidance of ~1% of
+  Cursor Pro quota applies to **every** Cursor session (not planning-only). The same housekeeping
+  sweep also runs on every **push to `main`** (typically a merged PR), checking **all** open
+  non-fork PRs for conflicts, failing checks, and stalled auto-merge.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
