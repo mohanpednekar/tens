@@ -363,9 +363,11 @@ jobs:
              by merging or rebasing main into the PR branch (prefer merge when review comments
              are tied to specific commits), fixing conflicts for real (never blindly take one
              side on a logic file), running `yarn test`, and pushing. Never force-push, never
-             push to main, never force-merge or GitHub-approve your own PR. Skip fork PRs. If
-             several are conflicted, pick the single highest-value one (auto-merge first, then
-             lowest issue/PR number).
+             push to main, never merge or approve your own PR (enabling GitHub auto-merge on a
+             qualifying low-risk PR after an adversarial APPROVE is allowed only when
+             CLAUDE.md / docs/AUTOMATION.md describe that ritual — force-merge is never
+             allowed). Skip fork PRs. If several are conflicted, pick the single highest-value
+             one (auto-merge first, then lowest issue/PR number).
 
           4. **Spec vs implementation consistency.** Spot-check CLAUDE.md (and overlapping
              AGENTS.md / docs/*_REFERENCE.md) against the live source for drifted signatures,
@@ -423,10 +425,10 @@ jobs:
             always-open-a-PR, Phase-A-priority, or housekeeping-vs-development split.
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
-            force-push, never push directly to main, and never force-merge or GitHub-approve
-            your own PR. Enabling GitHub auto-merge on a qualifying low-risk PR after an
-            adversarial APPROVE (per CLAUDE.md / docs/AUTOMATION.md) is allowed when those
-            docs describe that ritual; force-merge is not.
+            force-push, never push directly to main, and never merge or approve your own PR.
+            Enabling GitHub auto-merge on a qualifying low-risk PR after an adversarial APPROVE
+            (per CLAUDE.md / docs/AUTOMATION.md) is allowed when those docs describe that ritual;
+            force-merge is never allowed.
           - Never push your own commits to a `dependabot/*` branch (only `@dependabot rebase`).
           - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
             commit. Mirror any AGENTS.md-overlapping facts in the same commit.
@@ -463,12 +465,12 @@ jobs:
           Claude engine — treat a task already covered by EITHER a `claude/auto-*` or a
           `cursor/auto-*` PR as in flight and do not duplicate it.
 
-          Budget: there is no fixed turn cap. Before picking or sizing a task, estimate how much
-          of the current rolling 5-hour Cursor usage window is likely still available and keep
-          this run's planned work at or under roughly 50% of a full window, reserving ~15-20% for
-          test + commit + push + PR-open overhead. Land the largest coherent, test-covered slice
-          (`Part of #<number>`) rather than a rushed whole. Open the PR as soon as there's a
-          meaningful, test-passing first commit and push each subsequent commit as it lands.
+          Budget: there is no fixed turn cap. Soft guidance is roughly **~1% of Cursor Pro
+          quota** per session (not a hard limit — see docs/AUTOMATION.md Cost implications).
+          Prefer one small coherent unit; if a Phase A task is too large, land a
+          `Part of #<number>` slice and comment what remains. Reserve overhead for test +
+          commit + push + PR-open. Open the PR as soon as there's a meaningful, test-passing
+          first commit and push each subsequent commit as it lands.
 
           Today's dynamic context:
 
