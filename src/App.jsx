@@ -8,6 +8,7 @@ import MilestonesPage from 'pages/MilestonesPage'
 import SettingsPage from 'pages/SettingsPage'
 import StoragePage from 'pages/StoragePage'
 import { isComputeCoreConversionUnlocked, isProductionFrozen, isStorageUnlocked } from 'game/engine'
+import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { GlobalStyle, ThemeProvider } from 'theme'
 import { useEffect, useState } from 'react'
@@ -85,6 +86,7 @@ function App() {
   }
 
   const resetDisabled = isProductionFrozen(game.state)
+  const navAttention = getNavAttention(game.state)
 
   return (
     <ThemeProvider>
@@ -93,6 +95,7 @@ function App() {
         {content}
       </PageShell>
       <AppNav
+        attention={navAttention}
         currentPage={currentNavPage}
         moreOpen={menuOpen}
         onNavigate={navigate}

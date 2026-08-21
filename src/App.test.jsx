@@ -115,6 +115,33 @@ test('More menu reaches Milestones, Settings, and Reset from any screen without 
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 })
 
+// Attention dots on AppNav — Memory full on Foundry; affordable full purchase level on Tiers.
+test('AppNav Foundry attention dot lights when Memory is full while on Tiers', () => {
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true,
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+    },
+  })
+  render(<App />)
+
+  const foundryButton = screen.getByRole('button', { name: /open byte foundry/i })
+  expect(within(foundryButton).getByLabelText(/action available/i)).toBeInTheDocument()
+})
+
+test('AppNav Tiers attention dot lights when a full purchase level is affordable', () => {
+  // Kilobytes costs 1,000/unit; a fresh block is 8 units → 8,000 Bits buys a full level.
+  seedMainGameState({ resources: { Ones: DEFAULT_PURCHASE_BLOCK_SIZE * 1000 } })
+  render(<App />)
+
+  const tiersButton = screen.getByRole('button', { name: /open tiers/i })
+  expect(within(tiersButton).getByLabelText(/action available/i)).toBeInTheDocument()
+  const gameTab = screen.getByRole('tab', { name: /^game/i })
+  expect(within(gameTab).getByLabelText(/action available/i)).toBeInTheDocument()
+})
+
 test('the Guide nav item opens the Info page and Tiers returns, preserving game state', async () => {
   const user = userEvent.setup()
 

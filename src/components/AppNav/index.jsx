@@ -6,6 +6,8 @@ import styled from 'styled-components'
 // during the mandatory Byte Foundry gate (Tiers stays hidden then; Guide/More stay).
 // Accessible names stay stable for tests: open tiers / open byte foundry / open storage /
 // open compute / open guide / open more menu.
+// Attention dots (green) light when that destination has a pending action — see
+// game/navAttention.js (Memory full, affordable full purchase level, redeemable disk, …).
 
 const NAV_HEIGHT = '3.25rem'
 
@@ -42,6 +44,7 @@ const NavItem = styled.button`
   max-width: 5.5rem;
   min-width: 0;
   padding: 0.35rem 0.25rem;
+  position: relative;
   transition:
     color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard},
     background ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard},
@@ -70,6 +73,19 @@ const Label = styled.span`
   width: 100%;
 `
 
+// Same affordability cue as MainPage's Upgrades NavDot — positioned on the icon corner so the
+// compact bottom bar stays readable.
+const AttentionDot = styled.span`
+  background: ${props => props.theme.color.good};
+  border-radius: 50%;
+  display: block;
+  height: 0.45rem;
+  position: absolute;
+  right: 0.3rem;
+  top: 0.25rem;
+  width: 0.45rem;
+`
+
 const AppNav = ({
   currentPage,
   onNavigate,
@@ -78,6 +94,7 @@ const AppNav = ({
   showStorage = false,
   showCompute = false,
   moreOpen = false,
+  attention = {},
 }) => {
   const items = [
     showTiers && { id: 'game', ariaLabel: 'open tiers', icon: '📶', label: 'Tiers', title: 'Tier ladder — buy and produce' },
@@ -93,6 +110,7 @@ const AppNav = ({
     <Bar aria-label="main navigation">
       {items.map(item => {
         const active = currentPage === item.id
+        const wantsAttention = Boolean(attention[item.id])
         return (
           <NavItem
             key={item.id}
@@ -103,6 +121,7 @@ const AppNav = ({
             title={item.title}
             type="button"
           >
+            {wantsAttention && <AttentionDot aria-label="action available" />}
             <Icon aria-hidden="true">{item.icon}</Icon>
             <Label>{item.label}</Label>
           </NavItem>
