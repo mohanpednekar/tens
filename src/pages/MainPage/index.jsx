@@ -2,8 +2,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
@@ -267,18 +267,51 @@ const MoneyHero = styled(Money)`
 `
 
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
-// call site) progress-to-Prestige bar living inside the money hero card. Reuses
-// getPrestigeProgressPercent's already-computed value (see MainPage) rather than recomputing it.
-const GoogolProgressTrack = styled.div`
+// call site) 8-segment progress toward the next power-of-ten Bytes, living under MoneyHero.
+// Each segment is 12.5% (1/BITS_PER_BYTE); the active segment fills progressively.
+const BytePowerSegments = styled.div`
+  display: flex;
+  gap: 3px;
+  margin-top: 0.5rem;
+  width: 100%;
+`
+
+const BytePowerSegment = styled.span`
+  background: ${props => props.theme.color.surfaceSunken};
+  border-radius: 2px;
+  flex: 1;
+  height: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+`
+
+const BytePowerSegmentFill = styled.span`
+  background: ${props => props.theme.color.accent};
+  display: block;
+  height: 100%;
+  transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
+  width: ${props => props.$fraction * 100}%;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`
+
+// Prestige progress as its own top-of-screen element (moved out of the money hero card).
+const PrestigeProgressTop = styled.div`
+  margin: 0 0 0.75rem;
+  width: 100%;
+`
+
+const PrestigeProgressTrack = styled.div`
   background: ${props => props.theme.color.surfaceSunken};
   border-radius: ${props => props.theme.radius.pill};
   height: 0.4rem;
-  margin-top: 0.5rem;
   overflow: hidden;
   width: 100%;
 `
 
-const GoogolProgressFill = styled.div`
+const PrestigeProgressFill = styled.div`
   background: ${props => props.theme.color.accent};
   height: 100%;
   transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
@@ -289,10 +322,12 @@ const GoogolProgressFill = styled.div`
   }
 `
 
-const GoogolProgressLabel = styled(HudMutedText)`
+const PrestigeProgressLabel = styled(HudMutedText)`
   font-size: ${props => props.theme.type.scale.xs.size};
   margin-top: 0.3rem;
+  text-align: center;
 `
+
 
 // Prestige Points as a secondary header line beneath the money hero — same CenteredCard base
 // (so it keeps $actionable's Prestige-button behavior once canPrestige), just flattened (no
@@ -817,6 +852,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
     : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
+  const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
@@ -1194,6 +1231,20 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         </HeaderMeta>
       </Header>
 
+      <PrestigeProgressTop aria-label="prestige progress">
+        <PrestigeProgressTrack aria-hidden="true">
+          <PrestigeProgressFill $percent={prestigeProgressPercent} />
+        </PrestigeProgressTrack>
+        <VisuallyHidden
+          role="progressbar"
+          aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
+          aria-valuenow={prestigeProgressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
+        <PrestigeProgressLabel>{prestigeProgressPercent}% to Prestige</PrestigeProgressLabel>
+      </PrestigeProgressTop>
+
       {state.intro?.computeBoostType && COMPUTE_BOOST_PRESETS[state.intro.computeBoostType] && (
         <MutedText aria-label="active compute boost">
           {`${COMPUTE_BOOST_LABELS[state.intro.computeBoostType] ?? state.intro.computeBoostType} Compute Boost active: ×${COMPUTE_BOOST_PRESETS[state.intro.computeBoostType].multiplier} production, ${formatOfflineDuration(state.intro.computeBoostRemainingSeconds)} left`}
@@ -1227,17 +1278,28 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
           {!balancesCompressed && (
             <>
-              <GoogolProgressTrack aria-hidden="true">
-                <GoogolProgressFill $percent={prestigeProgressPercent} />
-              </GoogolProgressTrack>
+              <BytePowerSegments aria-hidden="true">
+                {Array.from({ length: BITS_PER_BYTE }, (_, segmentIndex) => {
+                  const segmentStart = segmentIndex / BITS_PER_BYTE
+                  const segmentSize = 1 / BITS_PER_BYTE
+                  const fillFraction = Math.min(
+                    1,
+                    Math.max(0, (bytePowerProgressFraction - segmentStart) / segmentSize),
+                  )
+                  return (
+                    <BytePowerSegment key={segmentIndex}>
+                      <BytePowerSegmentFill $fraction={fillFraction} />
+                    </BytePowerSegment>
+                  )
+                })}
+              </BytePowerSegments>
               <VisuallyHidden
                 role="progressbar"
-                aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
-                aria-valuenow={prestigeProgressPercent}
+                aria-label="progress toward the next power of ten Bytes"
+                aria-valuenow={bytePowerProgressPercent}
                 aria-valuemin={0}
                 aria-valuemax={100}
               />
-              <GoogolProgressLabel>{prestigeProgressPercent}% to Prestige</GoogolProgressLabel>
             </>
           )}
           {showGlobalMultipliers && !balancesCompressed && (

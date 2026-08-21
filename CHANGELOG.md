@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Tier ladder row**: owned count stacks under the tier name (directly above the tickspeed
   button); production sits top-right spanning that left stack. Not a side-by-side swap.
+- **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
+  the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
+  a separate element under the page header at the top of MainPage.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk

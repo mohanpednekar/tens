@@ -479,7 +479,7 @@ not at the bottom"):
   Prestige alongside the `TopPrestigeBar`/`FullScreenOverlay` buttons. Before `canPrestige`, none of
   these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
   display card never gets `$actionable` — only the PP display can trigger Prestige.
-- **Money hero + Googol progress bar.** The Money `CenteredCard` renders a `MoneyHero`
+- **Money hero + byte-power / Prestige progress.** The Money `CenteredCard` renders a `MoneyHero`
   (`styled(Money)`, sized at `theme.type.scale.hero`) rather than plain `Money`, and carries `$raised`
   (the `surfaceRaised` elevation tier `StatCard` already supports) so it reads as the HUD's dominant,
   elevated element — Prestige Points, by contrast, render in a `PpHeaderCard` (`styled(CenteredCard)`
@@ -500,13 +500,15 @@ not at the bottom"):
   other `formatCurrency` call on this page — tier costs/production, the global tickspeed cost, the
   `FullScreenOverlay`'s "You've reached…" line, the Buy button's cost label — is unaffected and still
   shows raw Bits, its actual priced/spent denomination; `MoneyHero` is the one exception. Directly
-  beneath the hero figure (suppressed
-  while `balancesCompressed`, since the compact sticky bar has no room for it), a `GoogolProgressTrack`/
-  `GoogolProgressFill` bar shows progress toward Prestige becoming available, reusing the same
-  `prestigeProgressPercent` (`getPrestigeProgressPercent(state.resources[MONEY_ID])`) — no separate
-  economy calculation — paired with a `VisuallyHidden
-  role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
-  visible `GoogolProgressLabel` ("N% to Prestige") underneath.
+  beneath the hero figure (suppressed while `balancesCompressed`, since the compact sticky bar has no
+  room for it), an 8-segment `BytePowerSegments` bar shows progress toward the next power-of-ten
+  Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
+  segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
+  with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
+  Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
+  sits under the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
+  `PrestigeProgressFill`, the `"N% to Prestige"` label, and its own `VisuallyHidden
+  role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
