@@ -81,39 +81,33 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: name (+ compact tickspeed multiplier badge and, once unlocked, the icon-only
-// autobuyer status indicator — see MainPage — both sharing the first two tracks, the width the
-// PP-based Automate control used to occupy before it moved to the PP Upgrades page), the
-// owned count, then the production figure — owned sits left of production so the row reads
-// "how many you have" before "what it makes"; the wider track (1.3fr) follows production's
-// spot since that figure tends to run longer (e.g. currency strings) and the narrower one
-// (0.7fr) follows owned's. Middle line: just the two buttons, each spanning two of
-// the four tracks — the track pairs sum equally (col1+col2 = col3+col4) so the tickspeed
-// multiplier button and Buy each take exactly half the row's width, unaffected by how the top
-// row's own two tracks are split between them. Buy sits rightmost, not the tickspeed button — Buy
-// is clicked constantly while a tickspeed level-up is an occasional action, and the rightmost slot
-// is the natural resting spot for a thumb/mouse that's about to click again. Bottom line: a single
-// 'details' area spanning all four tracks, holding the per-tier click-to-expand disclosure's
-// content (see TierDetailsContent below) — only rendered at all while expanded, so a collapsed row
-// contributes zero height there. There is no separate visible trigger for it (no "Details" label):
-// TierName itself (wrapped in TierNameTrigger, in the 'name' area) is the trigger, and clicking
-// anywhere else on the tile that isn't a button also toggles it (see the row's own onClick below)
-// — a React-controlled disclosure rather than native <details>/<summary>, see openTierDetailIds in
-// MainPage for why. cursor: pointer signals the whole tile is clickable; Button's own cursor rule
-// overrides it for the two buttons. There used to be a dedicated 'autobuyer' grid row for the
-// per-tier autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
-// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
-// needs the extra vertical space for it.
+// Left half stacks the tier name above the owned count, both sitting directly above the
+// tickspeed (first) button; production occupies the top-right (right half, spanning the two
+// name/owned rows) so the rate hugs the row's right edge. Button row: tickspeed and Buy each
+// take exactly half the row (equal column halves) — Buy stays rightmost as the constantly-
+// clicked control. Bottom line: a single 'details' area spanning both columns, holding the
+// per-tier click-to-expand disclosure's content (see TierDetailsContent below) — only rendered
+// at all while expanded, so a collapsed row contributes zero height there. There is no separate
+// visible trigger for it (no "Details" label): TierName itself (wrapped in TierNameTrigger, in
+// the 'name' area) is the trigger, and clicking anywhere else on the tile that isn't a button
+// also toggles it (see the row's own onClick below) — a React-controlled disclosure rather than
+// native <details>/<summary>, see openTierDetailIds in MainPage for why. cursor: pointer
+// signals the whole tile is clickable; Button's own cursor rule overrides it for the two
+// buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier autobuyer status
+// badge; it's folded into the 'name' row instead now that the badge is a single icon rather
+// than a written "Active"/"Paused" line (see MainPage), so the row no longer needs the extra
+// vertical space for it.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name owned production'
-    'upgrade upgrade buy buy'
-    'details details details details';
-  grid-template-columns: 1.4fr 0.6fr 0.7fr 1.3fr;
+    'name production'
+    'owned production'
+    'upgrade buy'
+    'details details';
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
-  row-gap: 0.3rem;
+  row-gap: 0.15rem;
   padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
   cursor: pointer;
@@ -130,10 +124,7 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same row areas as desktop; only the column weights shift, still summing to equal
-       halves for the buttons. */
-    grid-template-columns: 1.35fr 0.65fr 1.25fr 0.75fr;
-    row-gap: 0.3rem;
+    /* Same areas as desktop; equal halves keep the two buttons matched. */
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
   }
@@ -595,6 +586,7 @@ const OwnedText = styled(MutedText)`
   grid-area: owned;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
+  /* Sits in the left half directly above the tickspeed button. */
   ${gridCell}
 
   @media (max-width: 40rem) {
@@ -604,6 +596,7 @@ const OwnedText = styled(MutedText)`
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
+  align-self: start;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
   text-align: right;

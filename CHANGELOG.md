@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- **Tier ladder row**: owned count sits left of production on each MainPage tier row (center /
-  top-right swapped). Production keeps the wider track and right-edge alignment.
+- **Tier ladder row**: owned count stacks under the tier name (directly above the tickspeed
+  button); production sits top-right spanning that left stack. Not a side-by-side swap.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
