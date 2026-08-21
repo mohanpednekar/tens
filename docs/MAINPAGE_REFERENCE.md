@@ -442,7 +442,7 @@ not at the bottom"):
   hover tooltip. Every other `tier.name` usage in this file (row `aria-label`s, button `aria-label`s/
   `title`s, disclosure prose) is unaffected — it's only these two visible-label render sites that switch
   to the symbol.
-- **Balances (top HUD).** Money (rendered via `MoneyHero` — see "Money hero + Googol progress bar"
+- **Balances (top HUD).** Money (rendered via `MoneyHero` — see "Money hero + byte-power / Prestige progress"
   below for its own `formatMoneyBalance` formatting, distinct from every other Money figure on this
   page) and (once `!isFirstRun`) the Prestige Point balance are the only top-of-page blocks besides
   `Header` that use a centered `CenteredCard`
