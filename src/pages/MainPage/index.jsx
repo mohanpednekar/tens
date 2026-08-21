@@ -671,15 +671,9 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Deliberately small — Reset is not a prominent action, and its own confirm() prompt (see
-// handleResetClick) is the real guard against an accidental click.
-const ResetButton = styled(Button)`
-  font-size: 0.72em;
-  padding: 0.3em 0.55em;
-`
-
 // Second-level tabs on Tiers: Ladder | Upgrades (peer tabs — no back chrome). Milestones lives
-// under AppNav → More. Shown only after a first Prestige (!isFirstRun).
+// under AppNav → More. Shown only after a first Prestige (!isFirstRun). Reset lives only under
+// Settings → Danger zone (AppNav → More → Settings), not on this page.
 const ViewNav = styled.div`
   display: flex;
   gap: 0.5rem;
@@ -815,7 +809,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
 const MainPage = ({ game, focusNonce = 0 }) => {
-  const { actions, dismissOfflineProgress, offlineProgress, resetGame, state } = game
+  const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const theme = useTheme()
   const { prestige } = state
   // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
@@ -843,18 +837,6 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   useEffect(() => {
     setView('game')
   }, [focusNonce])
-  // Reset is irreversible (wipes the whole save), so it's gated behind a native confirm() rather
-  // than firing immediately on click — there's no modal/confirm component elsewhere in this app
-  // to reuse, so window.confirm is the simplest fit.
-  const handleResetClick = () => {
-    if (window.confirm('Erase all progress and start over? This cannot be undone.')) {
-      resetGame()
-      setView('game')
-      setSpeedUpEverRevealed(false)
-      setOverclockEverRevealed(false)
-      setGlobalTickspeedCardEverRevealed(false)
-    }
-  }
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -2077,19 +2059,6 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           )}
         </UpgradesList>
       )}
-
-      <ResetButton
-        aria-describedby="reset-description"
-        aria-label="Reset game"
-        color={isFrozen ? 'darkgrey' : '#a3a3a3'}
-        disabled={isFrozen}
-        type="button"
-        onClick={handleResetClick}
-        title={isFrozen ? 'Prestige first — production is frozen at 1 Googol Bytes' : 'Erases all progress and starts over (asks for confirmation)'}
-      >
-        <ButtonContent>↺ Reset</ButtonContent>
-        <VisuallyHidden id="reset-description">Erases all progress and starts over</VisuallyHidden>
-      </ResetButton>
     </RootDiv>
   )
 }

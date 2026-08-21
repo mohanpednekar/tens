@@ -303,7 +303,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
 
   // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
   // costs more once capacity is higher) — same "no modal component to reuse, use window.confirm"
-  // rationale MainPage's own Reset button confirm already documents.
+  // rationale Settings → Danger zone's Reset confirm already documents.
   const handleSacrificeClick = () => {
     const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
     if (window.confirm(
