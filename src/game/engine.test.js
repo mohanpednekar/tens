@@ -2136,7 +2136,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeBoostRemainingSeconds).toBe(0)
   })
 
-  it('reclaims from a higher tier\'s own field, at that tier\'s own scaled duration', () => {
+  it('reclaims from a higher tier\'s own field, at that tier\'s own base duration', () => {
     const state = withIntro(createInitialGameState(), {
       computeClusters: 2, // tier 3
       computeBoostType: 'burst',
@@ -2524,7 +2524,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4)
   })
 
-  it('starts a fresh boost at the tier-scaled multiplier/duration, recording the funding tier', () => {
+  it('starts a fresh boost at the tier-scaled multiplier and base duration, recording the funding tier', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
     const after = activateComputeBoost('standard', 1)(state)
     expect(after.intro.computeBoostType).toBe('standard')
@@ -2533,7 +2533,7 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier/duration', () => {
+  it('funded from a higher tier, spends that tier\'s own field and scales up the multiplier (duration stays base)', () => {
     const state = withIntro(createInitialGameState(), { computeClusters: 1 })
     const after = activateComputeBoost('burst', 3)(state)
     expect(after.intro.computeClusters).toBe(0)
