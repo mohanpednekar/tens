@@ -8,13 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Supporter pack** (Settings): optional meta extras — extra save slots (1 free → 3), Prestige
+  museum (history + pins), and Ops dashboard sparklines. Unlock via placeholder code `TENS-SUPPORT`
+  or a **dummy checkout** button until real payment ships. Never changes Bits, PP, Disks, Compute,
+  or unlock order. Reset / Clear wipe **save progress only** (active slot, a chosen slot, or all
+  slots); Supporter unlock is never revoked from Settings.
 - **Nav attention dots** on the bottom `AppNav`: green corner indicators when a destination has a
   pending action, with **high** (larger, pulsing — Memory full, full purchase level, Prestige
   freeze, redeemable disk, combine ready) vs **normal** emphasis. Shared predicates in
   `game/navAttention.js`.
 - **More** menu (⋯ on the bottom nav) and standalone **Milestones** / **Settings** screens —
   reachable from every page, including the Byte Foundry gate, with no progress requirement.
-  Settings holds About / Appearance notes and Reset; Milestones mirrors the MainPage Milestones
+  Settings holds About / Appearance notes, Supporter pack / save slots / museum / ops, and Reset;
+  Milestones mirrors the MainPage Milestones
   view (Chapters always, prestige-gated unlock lists after a first Prestige).
 - A new **Byte Foundry** pre-game screen, shown before the main game on every fresh save: tap to generate bits, combine your first 8 into a permanent Byte generator that then produces bits passively, and grow two independent tracks each time your bit balance fills — sacrifice it all for 10x capacity, or invest in "double production" via its own independent cost ladder (1/10/100/1000/10000 Bytes, 2 claims per tier for the first three tiers and 1 for every tier after — no need to be full to claim). Once capacity reaches 1000 Bytes, a row of transfer blocks lets you convert bits into Kilobytes, each block costing whatever Kilobytes' own current per-level price is (8000 bits at first, growing from there): only the leftmost not-yet-transferred block is clickable at a time, and the very first transfer unlocks the main game immediately, but blocks stay on screen once spent, greying out to show they're consumed rather than disappearing. There's no cap on further transfers — clicking through blocks manually, or converting live, one block at a time, the instant enough Memory accumulates — the row simply mirrors the Kilobyte tier's own live purchase-block progress (8 blocks — 64,000 bits — at the start of a run, growing later), rolling over to a fresh block set the instant a level completes rather than ever running out. Replaces the old self-producing Bytes tier as the game's actual bootstrap.
 - A new **Quettabytes** tier (10^30) at the top of the tier ladder.

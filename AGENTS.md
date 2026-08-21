@@ -59,7 +59,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    storage.js             ← localStorage save/load/clear + migration logic
+    storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
+                               Supporter unlock (code / dummy checkout)
   components/
     Button/, Money/, OfflineProgressNotice/, StatCard/  ← shared styled components; see
                             docs/COMPONENTS_REFERENCE.md

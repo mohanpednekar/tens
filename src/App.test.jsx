@@ -131,6 +131,11 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/supporter pack section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/save slots section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/prestige museum section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/ops dashboard section/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
