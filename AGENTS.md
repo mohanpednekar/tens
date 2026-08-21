@@ -64,8 +64,8 @@ src/
                                Supporter unlock (code / dummy checkout)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Tiers → Guide → More) + More sheet
-    Button/, Money/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared styled
-                            components; see docs/COMPONENTS_REFERENCE.md
+    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
+                            styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
                             "Byte Foundry" below

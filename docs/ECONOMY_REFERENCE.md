@@ -170,11 +170,12 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the
    two stay in lockstep unless the player pulls ahead on one relative to the other — in practice this
    makes claiming the current Invest tier a prerequisite for Sacrificing again almost every cycle.
-   `ByteFoundryPage`'s own button asks for confirmation (`window.confirm`) before actually calling
-   `pickIntroCapacityMilestone`, spelling out that it's permanent and raises every future Compute
-   Core's cost (step 9 below); cancelling leaves Memory/capacity untouched. The engine-level gate
-   above is unaffected either way — the confirm dialog is a UI-level checkpoint on top of it, not a
-   replacement for it.
+   `ByteFoundryPage`'s own button asks for confirmation (in-game `ConfirmDialog`, not
+   `window.confirm`) before actually calling `pickIntroCapacityMilestone`, spelling out that it's
+   permanent; the extra line that higher capacity makes every future Compute Core cost more is
+   shown only once Compute Cores are unlocked (`isComputeCoreConversionUnlocked`). Cancelling
+   leaves Memory/capacity untouched. The engine-level gate above is unaffected either way — the
+   confirm dialog is a UI-level checkpoint on top of it, not a replacement for it.
    **Queued Capacity** (`queueIntroCapacityUpgrade` / `tickQueuedCapacityUpgrade`): Capacity may be
    queued before Memory is full. Once queued, the next time Memory is full and Disk Fill / Bandwidth /
    Disk Build are unavailable, the queued fire path **erases all held Compute tokens** (ladder

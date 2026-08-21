@@ -2374,7 +2374,6 @@ test('Sacrifice for 10x Capacity shows what it will drain — the current capaci
 
 test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched, once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
 
   // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
   // only offered once every other currently-possible action (Combine, Invest, a Disk
@@ -2384,7 +2383,13 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
-  expect(window.confirm).toHaveBeenCalled()
+  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
+  expect(dialog).toBeInTheDocument()
+  expect(dialog).toHaveTextContent(/empty Memory to multiply capacity/i)
+  expect(dialog).not.toHaveTextContent(/future Core/i)
+
+  await user.click(within(dialog).getByRole('button', { name: /^sacrifice$/i }))
+
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * 10))
@@ -2394,17 +2399,42 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
 
 test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouched', async () => {
   const user = userEvent.setup()
-  vi.spyOn(window, 'confirm').mockReturnValue(false)
 
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
-  expect(window.confirm).toHaveBeenCalled()
+  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
+  await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+
+  expect(screen.queryByRole('dialog', { name: /sacrifice memory/i })).not.toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
+})
+
+test('Sacrifice confirm warns that future Cores cost more only once Compute Cores are unlocked', async () => {
+  const user = userEvent.setup()
+
+  // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
+  // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either.
+  // No Compute tokens held → Boost isn't activatable, so Compute doesn't block Sacrifice.
+  seedIntroState({
+    bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    byteCreated: true,
+    productionMilestoneTier: 7,
+    productionMilestoneTierClaims: 0,
+    diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
+  })
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+
+  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
+  expect(dialog).toHaveTextContent(/every future Core will cost more/i)
+  await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
 })
 
 test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {

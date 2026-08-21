@@ -1,4 +1,5 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
+import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
@@ -281,6 +282,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
   const [foundryTab, setFoundryTab] = useState('memory')
+  const [sacrificeConfirmOpen, setSacrificeConfirmOpen] = useState(false)
   useEffect(() => {
     setFoundryTab('memory')
   }, [focusNonce])
@@ -301,18 +303,20 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const productionRate = getIntroProductionRate(intro)
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0, and every future Core conversion
-  // costs more once capacity is higher) — same "no modal component to reuse, use window.confirm"
-  // rationale Settings → Danger zone's Reset confirm already documents.
+  // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute Cores are unlocked,
+  // higher capacity also makes every future Core conversion more expensive — that warning only
+  // belongs in the confirm once Cores actually exist. Uses the in-game ConfirmDialog, not
+  // window.confirm, so the prompt matches the rest of the UI.
+  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
   const handleSacrificeClick = () => {
-    const nextCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
-    if (window.confirm(
-      `Sacrifice all of Memory to multiply capacity ×10, from ${formatBitsInNearestUnit(intro.capacity)} to ${formatBitsInNearestUnit(nextCapacity)}? ` +
-      'This is permanent and makes every future Core cost more.'
-    )) {
-      actions.pickIntroCapacityMilestone()
-    }
+    if (!canSacrifice) return
+    setSacrificeConfirmOpen(true)
   }
+  const confirmSacrifice = () => {
+    setSacrificeConfirmOpen(false)
+    actions.pickIntroCapacityMilestone()
+  }
+  const cancelSacrifice = () => setSacrificeConfirmOpen(false)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const investCostDisplay = formatBitsInNearestUnit(investCost)
@@ -650,6 +654,25 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
       )}
 
       </>)}
+
+      <ConfirmDialog
+        open={sacrificeConfirmOpen}
+        title="Sacrifice Memory?"
+        confirmLabel="Sacrifice"
+        cancelLabel="Cancel"
+        confirmVariant="prestige"
+        onConfirm={confirmSacrifice}
+        onCancel={cancelSacrifice}
+      >
+        <p>
+          Empty Memory to multiply capacity ×10, from{' '}
+          {formatBitsInNearestUnit(intro.capacity)} to{' '}
+          {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
+        </p>
+        {computeCoreRevealed && (
+          <p>Every future Core will cost more — a higher capacity means a bigger Memory flush each time.</p>
+        )}
+      </ConfirmDialog>
     </RootDiv>
   )
 }
