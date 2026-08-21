@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- **Compute Auto-Boost** (30 PP, one-time): while a reserve merge is in flight and any compute-ladder
-  tier is at cap, automatically activates (or stacks) your preferred Boost preset (default
-  **Standard**). Preference is selectable on Compute after unlock. Never forfeits an active boost
-  to switch presets.
+- **Compute Auto-Boost** (30 PP, one-time): when a compute-ladder tier is at cap and waiting on
+  its own in-flight reserve merge, automatically activates (or stacks) your preferred Boost preset
+  from the **biggest** such tier (default **Standard**). Preference is selectable on Compute after
+  unlock. Never forfeits an active boost to switch presets.
 - **Forfeit Compute Boost**: cancel an active boost with no refund, or replace it with a different
   preset/funding tier. Both paths require an explicit confirmation dialog.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via

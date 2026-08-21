@@ -2945,9 +2945,20 @@ export const tickComputeBoost = elapsedSeconds => state => {
 export const isAnyComputeMergeInFlight = state =>
   COMPUTE_MERGE_BOUNDARIES.some(boundary => (state.intro?.[boundary.timerField] ?? 0) > 0)
 
-// True when any compute-ladder entity (Core … Megacomputer) is at COMPUTE_ENTITY_CAP.
-export const isAnyComputeTierAtCap = state =>
-  COMPUTE_BOOST_TIER_FIELDS.some(field => (state.intro?.[field] ?? 0) >= COMPUTE_ENTITY_CAP)
+// Highest compute-ladder tier (1 = Core … 9 = Supercomputer) that is at COMPUTE_ENTITY_CAP while
+// THAT tier's own outbound reserve merge is in flight — i.e. tokens sitting full, waiting for the
+// merge timer to finish before another merge can start. Megacomputer has no outbound merge, so it
+// never qualifies. Returns null when nothing is waiting.
+export const getBiggestComputeTierWaitingOnMerge = state => {
+  let biggest = null
+  for (let i = 0; i < COMPUTE_MERGE_BOUNDARIES.length; i += 1) {
+    const boundary = COMPUTE_MERGE_BOUNDARIES[i]
+    if ((state.intro?.[boundary.timerField] ?? 0) <= 0) continue
+    if ((state.intro?.[boundary.inputField] ?? 0) < COMPUTE_ENTITY_CAP) continue
+    biggest = i + 1 // COMPUTE_BOOST_TIER_FIELDS index; boundary i's input is tier i+1
+  }
+  return biggest
+}
 
 // Player-facing preference for tickAutoComputeBoost — one of COMPUTE_BOOST_PRESETS' keys.
 // Same-reference no-op for an unknown key. Permanent across Prestige (see prestigeGame).
@@ -2957,37 +2968,30 @@ export const setComputeAutoBoostType = boostType => state => {
   return { ...state, intro: { ...state.intro, computeAutoBoostType: boostType } }
 }
 
-// While a reserve merge is in flight and some compute-ladder tier is at CAP, automatically spend
-// tokens via Boost so production isn't stuck waiting on the merge timer: stack the active boost
-// when its funding tier is full, otherwise start the preferred preset (intro.computeAutoBoostType,
-// default 'standard') from the lowest full tier that can fund it. Inert until
-// computeAutoBoostUnlocked (see buyComputeAutoBoost, COMPUTE_AUTO_BOOST_UNLOCK_COST = 30 PP).
-// Respects the same forced-priority turn gates as manual activate/stack (Disk Fill / Bandwidth /
-// Disk Build outrank). At most one activate-or-stack per call (one per tick from tickGame).
+// While the biggest compute-ladder tier that is full AND waiting on its own in-flight reserve
+// merge sits at CAP, automatically spend those tokens via Boost: stack the active boost when it
+// is already funded by that same tier, otherwise start the preferred preset
+// (intro.computeAutoBoostType, default 'standard') from that tier. Never forfeits a different
+// active boost. Inert until computeAutoBoostUnlocked (see buyComputeAutoBoost,
+// COMPUTE_AUTO_BOOST_UNLOCK_COST = 30 PP). Respects the same forced-priority turn gates as manual
+// activate/stack. At most one activate-or-stack per call (one per tick from tickGame).
 export const tickAutoComputeBoost = state => {
   if (!(state.computeAutoBoostUnlocked ?? false)) return state
-  if (!isAnyComputeMergeInFlight(state)) return state
-  if (!isAnyComputeTierAtCap(state)) return state
+  const waitingTierIndex = getBiggestComputeTierWaitingOnMerge(state)
+  if (waitingTierIndex === null) return state
 
   if ((state.intro.computeBoostType ?? null) !== null) {
-    const fundingField = getComputeBoostTierField(state.intro.computeBoostTierIndex)
-    if (fundingField && (state.intro[fundingField] ?? 0) >= COMPUTE_ENTITY_CAP && isStackComputeBoostTurnAvailable(state)) {
-      return stackComputeBoost(state)
-    }
-    return state
+    if ((state.intro.computeBoostTierIndex ?? 1) !== waitingTierIndex) return state
+    if (!isStackComputeBoostTurnAvailable(state)) return state
+    return stackComputeBoost(state)
   }
 
   const preference = COMPUTE_BOOST_PRESETS[state.intro?.computeAutoBoostType]
     ? state.intro.computeAutoBoostType
     : 'standard'
 
-  for (let tierIndex = 1; tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length; tierIndex += 1) {
-    const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
-    if ((state.intro[field] ?? 0) < COMPUTE_ENTITY_CAP) continue
-    if (!isComputeBoostTurnAvailable(state, preference, tierIndex)) continue
-    return activateComputeBoost(preference, tierIndex)(state)
-  }
-  return state
+  if (!isComputeBoostTurnAvailable(state, preference, waitingTierIndex)) return state
+  return activateComputeBoost(preference, waitingTierIndex)(state)
 }
 
 // Whether reclaimComputeBoost below would do anything right now — any boost currently active at

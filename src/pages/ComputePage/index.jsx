@@ -622,7 +622,7 @@ const ComputePage = ({ game }) => {
         {state.computeAutoBoostUnlocked ? (
           <>
             <AutoBoostLabel>
-              Auto when merge in flight + tokens full — preference:
+              Auto from biggest tier waiting on merge — preference:
             </AutoBoostLabel>
             <BoostRow role="group" aria-label="auto boost preference">
               {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
@@ -648,7 +648,7 @@ const ComputePage = ({ game }) => {
             aria-label={`unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
             disabled={isProductionFrozen(state) || (state.prestige?.points ?? 0) < COMPUTE_AUTO_BOOST_UNLOCK_COST}
             onClick={actions.buyComputeAutoBoost}
-            title={`Unlock Auto-Boost: while a merge is in flight and any compute tier is full, automatically activate your preferred preset (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
+            title={`Unlock Auto-Boost: while a tier is full and waiting on its own in-flight merge, automatically activate your preferred preset from the biggest such tier (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
             type="button"
             variant="prestige"
           >

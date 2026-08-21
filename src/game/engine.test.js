@@ -12,6 +12,7 @@ import {
   getNextComputeMergeDurationUpgradeIndex,
   getComputeMergeDurationSeconds,
   getCoreEarnTimeSeconds,
+  getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPrestige,
@@ -2631,23 +2632,29 @@ describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
     expect(tickAutoComputeBoost(state)).toBe(state)
   })
 
-  it('once unlocked, activates the preferred preset from the lowest full tier while a merge is in flight', () => {
+  it('once unlocked, activates the preferred preset from the biggest tier waiting on its own merge', () => {
     const state = {
       ...withIntro(createInitialGameState(), {
         computeCores: COMPUTE_ENTITY_CAP,
+        computeNodes: COMPUTE_ENTITY_CAP,
         computeCoresMergeRemainingSeconds: 10,
+        computeNodesMergeRemainingSeconds: 10,
         autoMergeCoresIntoNode: true,
+        autoMergeNodesIntoCluster: true,
         computeAutoBoostType: 'standard',
         productionMilestoneTierClaims: 2, // avoid Bandwidth priority blocking
       }),
       computeAutoBoostUnlocked: true,
     }
+    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(2) // Nodes > Cores
     const after = tickAutoComputeBoost(state)
     expect(after.intro.computeBoostType).toBe('standard')
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
+    expect(after.intro.computeBoostTierIndex).toBe(2)
+    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - 1)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP) // untouched — not the biggest waiting
   })
 
-  it('stacks the active boost when its funding tier is full and a merge is in flight', () => {
+  it('stacks the active boost when its funding tier is the biggest waiting on merge', () => {
     const state = {
       ...withIntro(createInitialGameState(), {
         computeCores: COMPUTE_ENTITY_CAP,
@@ -2663,6 +2670,41 @@ describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
     const after = tickAutoComputeBoost(state)
     expect(after.intro.computeBoostStacks).toBe(2)
     expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
+  })
+
+  it('does not stack a boost funded by a smaller tier when a bigger tier is waiting on merge', () => {
+    const state = {
+      ...withIntro(createInitialGameState(), {
+        computeCores: COMPUTE_ENTITY_CAP,
+        computeNodes: COMPUTE_ENTITY_CAP,
+        computeCoresMergeRemainingSeconds: 10,
+        computeNodesMergeRemainingSeconds: 10,
+        computeBoostType: 'standard',
+        computeBoostTierIndex: 1, // funded by Cores, but Nodes are the biggest waiting
+        computeBoostStacks: 1,
+        computeBoostRemainingSeconds: 100,
+        productionMilestoneTierClaims: 2,
+      }),
+      computeAutoBoostUnlocked: true,
+    }
+    expect(tickAutoComputeBoost(state)).toBe(state)
+  })
+
+  it('ignores a full tier whose own merge is not in flight', () => {
+    const state = {
+      ...withIntro(createInitialGameState(), {
+        computeCores: COMPUTE_ENTITY_CAP,
+        computeNodes: COMPUTE_ENTITY_CAP,
+        computeCoresMergeRemainingSeconds: 10, // only Cores are waiting
+        computeAutoBoostType: 'burst',
+        productionMilestoneTierClaims: 2,
+      }),
+      computeAutoBoostUnlocked: true,
+    }
+    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(1)
+    const after = tickAutoComputeBoost(state)
+    expect(after.intro.computeBoostTierIndex).toBe(1)
+    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP)
   })
 
   it('setComputeAutoBoostType updates the preference; unknown keys are a no-op', () => {

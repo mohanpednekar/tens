@@ -341,10 +341,11 @@ const InfoPage = () => {
             (confirmation required).
           </li>
           <li>
-            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): while a
-            reserve merge is in flight and any compute tier is full, automatically activates (or
-            stacks) your preferred preset (default Standard). Preference is selectable on Compute
-            after unlock. Never forfeits an active boost to switch presets.
+            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
+            tier is full and waiting on its own in-flight reserve merge, automatically activates
+            (or stacks) your preferred preset from the <strong>biggest</strong> such tier (default
+            Standard). Preference is selectable on Compute after unlock. Never forfeits an active
+            boost to switch presets.
           </li>
           <li>Megacomputer’s only use is funding a Boost.</li>
         </ul>

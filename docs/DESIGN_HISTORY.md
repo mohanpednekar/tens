@@ -1999,11 +1999,12 @@ Invest pacing. The locked rule: **no hardcoded absolute seconds** — Core→Nod
 sequential duration upgrade. Snapshot at merge start so mid-merge Invest/Boost changes do not
 rescale in-flight timers.
 
-Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in flight and normal
-slots refill to cap — spend via preferred preset (default Standard) instead of idling. It never
-forfeits an active boost to switch presets (that would surprise). Switching presets while one is
-active requires an **explicit forfeit confirmation** (same `window.confirm` posture as Reset /
-Sacrifice) — Stack remains the non-destructive extend path for the same type+tier.
+Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in flight and that
+tier's normal slots refill to cap — spend via preferred preset (default Standard) from the
+**biggest** such waiting tier. It never forfeits an active boost to switch presets (that would
+surprise). Switching presets while one is active requires an **explicit forfeit confirmation**
+(same `window.confirm` posture as Reset / Sacrifice) — Stack remains the non-destructive extend
+path for the same type+tier.
 
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
 interpreted as: a SINGLE boost effect (one Core spend, one active preset) that multiplies BOTH
