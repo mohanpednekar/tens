@@ -59,7 +59,9 @@ import {
   getTierBulkQuantity,
   getTierSpendableAmount,
   isBandwidthAvailable,
+  isComputeCoreClaimAvailable,
   isDiskBuildAvailable,
+  isDiskFillAvailable,
   isDiskRedeemable,
   isProductionFrozen,
   isTierUnlocked,
@@ -143,21 +145,13 @@ function actFoundry(state) {
     s = next
   }
 
-  // Capacity / Sacrifice before Core claim. Core is last-resort only when nothing else productive
-  // is available (Disk Fill / Invest / Disk Build already handled above); Capacity stays optional
-  // and preferred over minting another Core. (A future "queue Capacity → erase Compute tokens on
-  // fire" engine path isn't simulated here beyond this ordering.)
+  // Optional Capacity / Sacrifice — preferred over Core when the engine allows it (Memory full and
+  // nothing ranked above Compute+Memory). Large penalty in the real design: a queued Capacity fire
+  // erases Compute tokens; the engine wipe/queue path isn't fully wired yet, so this bot only
+  // approximates by trying Sacrifice before ever minting another Core.
   s = pickIntroCapacityMilestone(s)
 
-  const diskFillStill = Object.keys(s.intro?.disks ?? {}).map(Number).some(
-    size => (s.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(s, size),
-  )
-  const canInvest = isBandwidthAvailable(s)
-  const canBuild = isDiskBuildAvailable(s)
-  if (!diskFillStill && !canInvest && !canBuild) {
-    s = claimComputeCore(s)
-  }
-
+  // Compute Boosts spend held tokens, not Memory — fine before Core claim.
   if ((s.intro.computeBoostType ?? null) !== null) {
     s = stackComputeBoost(s)
   } else {
@@ -178,6 +172,18 @@ function actFoundry(state) {
         if ((s.intro.computeBoostType ?? null) !== null) break
       }
     }
+  }
+
+  // Core claim is LAST: only when Memory is full and nothing else Memory-affordable is available
+  // (Disk Fill / Invest / Disk Build). Capacity is the exception — optional, already attempted
+  // above; we do not mint a Core just to spend a full bar when Sacrifice was the strategic choice.
+  if (
+    isComputeCoreClaimAvailable(s) &&
+    !isDiskFillAvailable(s) &&
+    !isBandwidthAvailable(s) &&
+    !isDiskBuildAvailable(s)
+  ) {
+    s = claimComputeCore(s)
   }
 
   return s
