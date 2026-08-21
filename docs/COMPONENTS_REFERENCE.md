@@ -60,6 +60,15 @@ by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `is
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
 specific size's own array being mid-build.
 
+## `ConfirmDialog/index.jsx`
+
+styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
+dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
+Foundry actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
+confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
+`ByteFoundryPage` for Sacrifice for 10x Capacity (Core-cost warning in `children` only when Compute
+is unlocked).
+
 ## `Money/index.js`
 
 styled money/amount display; color from `theme.color.text`, with its own `font-variant-numeric: tabular-nums` (belt-and-suspenders alongside `RootDiv`'s page-wide rule, so the display reads correctly even if ever rendered outside `RootDiv`). No `defaultProps` — React 19 dropped defaultProps support for function components, and `styled.b` doesn't need it either; the old `Money.defaultProps = {}` was already a dead no-op, removed

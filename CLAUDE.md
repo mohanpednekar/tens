@@ -343,6 +343,9 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); replaces
+                               native `window.confirm` for Sacrifice on ByteFoundryPage. Full
+                               contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
                                JSX), extracted so both MainPage and ByteFoundryPage can render it —
                                offline progress already applies to the Byte Foundry mechanically
@@ -755,7 +758,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1382 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1383 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy

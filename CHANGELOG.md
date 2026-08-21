@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Compute Boost duration** scales with merge tier again: **×2 per tier**
   (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
   “effect time doubles after merge” after #363/#364 had flattened duration.
+- **Sacrifice confirm** uses an in-game `ConfirmDialog` (theme overlay) instead of
+  `window.confirm`. The “future Cores cost more” warning appears only once Compute Cores are
+  unlocked.
 - **Disk build ladder** now offers every Byte power-of-ten size (1 KB → 10 KB → 100 KB → **1 MB** →
   10 MB → …) instead of walking Kilobytes’ level-cost sequence (which skipped 1 MB). A 1 MB disk
   redeems into Megabytes at level 1; building it costs 10 MB of Memory. Saves that already own
