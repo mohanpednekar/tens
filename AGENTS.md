@@ -197,7 +197,7 @@ immediately: both coexist for now. The Cursor twins share the `claude-task` back
 added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
 double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
 slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures, conflicts,
-spec drift, backlog, process) and the same housekeeping sweep on every PR merge into `main`;
+spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
 Claude runs twice daily at 9:00am/9:00pm IST. All Cursor sessions share the ~1% Cursor Pro soft
 quota guidance (see Budget discipline).
 Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section

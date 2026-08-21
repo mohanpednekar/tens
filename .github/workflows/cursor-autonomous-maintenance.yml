@@ -10,10 +10,12 @@ name: Cursor autonomous maintenance
 # Schedule (IST = UTC+5:30): five wall-clock slots — four development (Phase 0/A/B) plus
 # one dedicated overnight housekeeping/planning run (security-first, workflow failures,
 # conflicted PRs, spec-vs-implementation consistency, backlog planning, process
-# improvement). Also runs housekeeping whenever any PR is merged into main, to sweep
-# all remaining open PRs (conflicts after main moved, failing checks, stalled
-# auto-merge). All Cursor sessions share ~1% Cursor Pro soft quota guidance — see
-# docs/AUTOMATION.md's "Cursor-powered successor engine" / Budget discipline.
+# improvement). Also runs housekeeping on every push to main (typically a merged PR), to
+# sweep all remaining open PRs (conflicts after main moved, failing checks, stalled
+# auto-merge). Uses `push` to main — not `pull_request` closed — so the workflow YAML
+# always comes from the default-branch tip. All Cursor sessions share ~1% Cursor Pro
+# soft quota guidance — see docs/AUTOMATION.md's "Cursor-powered successor engine" /
+# Budget discipline.
 #
 # Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
 # existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
@@ -28,9 +30,12 @@ on:
     # process): 1:30am IST. Matched via github.event.schedule below; do not fold into
     # the development cron or the mode split silently disappears.
     - cron: "0 20 * * *"
-  pull_request:
-    # Post-merge housekeeping: whenever any PR lands on main, sweep all open PRs.
-    types: [closed]
+  # Post-merge housekeeping: any update to main (typically a merged PR) sweeps all open
+  # PRs. Prefer `push` to main over `pull_request` closed — `pull_request` would run the
+  # PR-head workflow YAML (pwn-request if a same-repo PR edits this file then closes
+  # without merging). `push` always uses the workflow from the main tip.
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       mode:
@@ -72,27 +77,15 @@ jobs:
           EVENT_SCHEDULE: ${{ github.event.schedule }}
           # Present only on workflow_dispatch — defaults to development when unset.
           DISPATCH_MODE: ${{ github.event.inputs.mode }}
-          # Present only on pull_request closed — post-merge housekeeping when merged into main.
-          PR_MERGED: ${{ github.event.pull_request.merged }}
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # Present on push to main — used for post-merge housekeeping context.
+          PUSH_SHA: ${{ github.sha }}
         run: |
           # Resolve run mode first so skip/ceiling logic can differ for housekeeping.
           TRIGGER=scheduled
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            # Only act on merges into main. Closed-without-merge / other bases are no-ops.
-            if [ "$PR_MERGED" = "true" ] && [ "$PR_BASE_REF" = "main" ]; then
-              MODE=housekeeping
-              TRIGGER=post-merge
-            else
-              echo "pull_request closed but not a merge into main (merged=$PR_MERGED base=$PR_BASE_REF) — skipping."
-              echo "mode=housekeeping" >> "$GITHUB_OUTPUT"
-              echo "trigger=none" >> "$GITHUB_OUTPUT"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+          if [ "$EVENT_NAME" = "push" ]; then
+            # Any push to main (merged PR or direct) → housekeeping open-PR sweep.
+            MODE=housekeeping
+            TRIGGER=post-merge
           elif [ "$EVENT_NAME" = "schedule" ]; then
             if [ "$EVENT_SCHEDULE" = "0 20 * * *" ]; then
               MODE=housekeeping
@@ -109,9 +102,12 @@ jobs:
           echo "trigger=$TRIGGER" >> "$GITHUB_OUTPUT"
           echo "Resolved run mode: $MODE (event=$EVENT_NAME trigger=$TRIGGER schedule=${EVENT_SCHEDULE:-(n/a)})"
           if [ "$TRIGGER" = "post-merge" ]; then
+            # Flatten to a single line — never put raw commit subjects with newlines into
+            # GITHUB_OUTPUT delimiters.
+            subject=$(git log -1 --pretty=%s "$PUSH_SHA" 2>/dev/null | tr '\n\r' ' ' | head -c 200)
             {
               echo "merged_pr_context<<MERGE_EOF"
-              echo "PR #$PR_NUMBER ($PR_HEAD_REF) just merged into main: $PR_TITLE"
+              echo "main just advanced to ${PUSH_SHA:0:7} (${subject:-push}). Sweep all open PRs for conflicts / failing checks / stalled auto-merge."
               echo "MERGE_EOF"
             } >> "$GITHUB_OUTPUT"
           else
@@ -436,11 +432,9 @@ jobs:
              (prefer merge when review comments are tied to specific commits), fixing
              conflicts for real (never blindly take one side on a logic file), running
              `yarn test`, and pushing. Never force-push, never push to main, never merge or
-             approve your own PR (enabling GitHub auto-merge on a qualifying low-risk PR after
-             an adversarial APPROVE is allowed only when CLAUDE.md / docs/AUTOMATION.md
-             describe that ritual — force-merge is never allowed). Skip fork PRs. If several
-             need attention, pick the single highest-value one (auto-merge first, then lowest
-             issue/PR number).
+             approve your own PR. Auto-merge for low-risk bot PRs is handled by
+             `pr-auto-merge.yml`. Skip fork PRs. If several need attention, pick the single
+             highest-value one (auto-merge first, then lowest issue/PR number).
 
           4. **Spec vs implementation consistency.** Spot-check CLAUDE.md (and overlapping
              AGENTS.md / docs/*_REFERENCE.md) against the live source for drifted signatures,
@@ -505,9 +499,8 @@ jobs:
           - Never change the dev/test server host binding away from 127.0.0.1.
           - Never use `--no-verify`, never skip/delete a failing test to make it pass, never
             force-push, never push directly to main, and never merge or approve your own PR.
-            Enabling GitHub auto-merge on a qualifying low-risk PR after an adversarial APPROVE
-            (per CLAUDE.md / docs/AUTOMATION.md) is allowed when those docs describe that ritual;
-            force-merge is never allowed.
+            Auto-merge for low-risk bot PRs is handled by `pr-auto-merge.yml`, not by this agent
+            force-merging.
           - Never push your own commits to a `dependabot/*` branch (only `@dependabot rebase`).
           - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
             commit. Mirror any AGENTS.md-overlapping facts in the same commit.

@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
   findings and files `claude-task` issues for non-trivial ones. Soft budget guidance of ~1% of
   Cursor Pro quota applies to **every** Cursor session (not planning-only). The same housekeeping
-  sweep also runs whenever any PR merges into `main`, checking **all** open non-fork PRs for
-  conflicts, failing checks, and stalled auto-merge.
+  sweep also runs on every **push to `main`** (typically a merged PR), checking **all** open
+  non-fork PRs for conflicts, failing checks, and stalled auto-merge.
 - **Disk Cache** stays full as its steady state (except right after a block is released or a size
   is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
   visible between transfers; empty disks fill from Memory directly (Cache no longer pours into

@@ -231,7 +231,7 @@ While both engines are live, the maintenance twin's guard step counts both `clau
 the two never double-pick; its schedule is five IST wall-clock slots (four development + one
 dedicated 1:30am IST housekeeping/planning run for security / CI failures / conflicted PRs /
 spec-vs-implementation checks / backlog planning / process improvement, plus the same
-housekeeping sweep whenever any PR merges into `main`), offset from the Claude
+housekeeping sweep on every push to `main`), offset from the Claude
 twice-daily cron. See `docs/AUTOMATION.md`'s
 "Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
 setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
