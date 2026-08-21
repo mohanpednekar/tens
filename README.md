@@ -15,3 +15,4 @@ SKILL.md).
 ## Runs (newest last in listing; open the last path for latest)
 
 - [`runs/2026-08-21T082515Z-0248b43.md`](./runs/2026-08-21T082515Z-0248b43.md)
+- [`runs/2026-08-21T083356Z-6a3ecba.md`](./runs/2026-08-21T083356Z-6a3ecba.md)
