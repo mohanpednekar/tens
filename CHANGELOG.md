@@ -36,12 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   unlock. Never forfeits an active boost to switch presets.
 - **Forfeit Compute Boost**: cancel an active boost with no refund, or replace it with a different
   preset/funding tier. Both paths require an explicit confirmation dialog.
-- **Reset Byte Foundry** (Settings → Danger zone): wipe only Memory, the Byte generator, Disks /
-  Storage, and all Compute on the active save — Tiers progress, Prestige Points / count / upgrades,
-  and (if already unlocked) main-game access this cycle stay. Intended for when Capacity (or
-  Storage / Compute) was pushed too far and you want to rebuild Foundry without losing Prestige /
-  Tiers. Separate from full Reset / Erase all; still asks for confirmation and stays disabled while
-  production is frozen at Prestige.
+- **Reset Byte Foundry** (Settings → Danger zone): wipe Memory, Capacity, Disks / Storage, and all
+  Compute on the active save — Tiers progress, Prestige Points / count / upgrades, and (if already
+  unlocked) main-game access this cycle stay. Combine, Invest / Bandwidth, and Disk Build
+  **restart from scratch**, then convenience-auto-press again up to your pre-reset highs as each
+  becomes affordable (Capacity stays manual — you still click Sacrifice). Separate from full Reset /
+  Erase all; still asks for confirmation and stays disabled while production is frozen at Prestige.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
   available), `tickQueuedCapacityUpgrade` erases all held Compute tokens (ladder balances, active
