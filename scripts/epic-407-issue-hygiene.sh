@@ -114,7 +114,7 @@ DESIGN_LOCKIN="$(cat <<'EOF'
 
 **Award:** Eons per ascension via `getEonsAwarded()` (flat + Eon Amplifier bonus).
 
-**Milestones:** Era N unlocks the Nth Compute Flops autobuyer tier (KFlops at Era 1, scaling per `FLOPS_AUTOBUYER_ERA_*`).
+**Milestones:** Era N unlocks the Nth Compute Flops autobuyer tier (KFlops at Era 1, scaling per `FLOPS_AUTOBUYER_ERA_START` / `FLOPS_AUTOBUYER_ERA_STEP`).
 
 Sub-issues #411–#414: use Era/Eons field names and `eraAscend` — not `metaPrestige` / `actions.metaPrestige()`.
 EOF
@@ -128,11 +128,11 @@ post_comment_once 407 "$DESIGN_LOCKIN"
 
 post_comment_once 411 "**Dependency update:** Engine shipped in #410 / PR #415. Use **Era** / **Eons** naming, \`isEraEligible\`, \`actions.eraAscend()\`, \`era.count\`, \`eons.balance\` — not \`metaPrestige\`. Settings/Milestones ascend UI + Guide section. **Blocked by nothing** — ready for Phase A pickup."
 
-post_comment_once 412 "**Dependency update:** Engine in #410 / PR #415; UI trigger in #411. Integration tests + \`e2e/era-ascension.e2e.js\` (seed eligible save → Settings ascend). **Blocked by #411** for the browser e2e path."
+post_comment_once 412 "**Dependency update:** Engine in #410 / PR #415; UI trigger in #411. Integration tests + \`e2e/era-ascension.e2e.js\` (seed eligible save → Settings ascend). Engine-only integration tests can land before #411; **browser e2e is blocked by #411**."
 
 post_comment_once 413 "**Dependency update:** #410 merged — document final shipped behavior (\`eraGame\` carry/reset table in \`docs/ECONOMY_REFERENCE.md\`). Narrative *why* only; no code unless drift fix. **Blocked by #410** is satisfied."
 
-post_comment_once 414 "**Dependency update:** v1 engine awards Eons with hyperscaler spend only; full Eon shop tree still needs maintainer-approved spend design before coding. **Blocked by maintainer spend spec** — do not implement until design is recorded here."
+post_comment_once 414 "**Dependency update:** v1 engine awards Eons with hyperscaler spend only; full Eon shop tree still needs maintainer-approved spend design before coding. **Blocked by maintainer spend spec** — do not implement until design is recorded here. Phase A must skip until unblocked."
 
 for num in 411 412 413 414; do
   if [ "$(issue_state "$num")" = 'MISSING' ]; then
@@ -148,5 +148,6 @@ add_label_if_missing 412 'size:M'
 add_label_if_missing 413 'size:S'
 add_label_if_missing 414 'size:L'
 add_label_if_missing 414 'priority:low'
+add_label_if_missing 414 'blocked'
 
 echo "epic-407-issue-hygiene: done."

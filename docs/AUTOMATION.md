@@ -380,10 +380,12 @@ alongside the `claude/*` prefixes; its human-approval path was already repo-wide
 maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
 Claude workflow already owns that, and duplicating it would double-post.
 
-**Inert until opted into.** Every agent step in both Cursor workflows is gated on the `CURSOR_API_KEY`
+**Inert until opted into.** Every **agent** step in both Cursor workflows is gated on the `CURSOR_API_KEY`
 repo secret being present (surfaced into an `if:`-usable boolean via a `secrets.CURSOR_API_KEY != ''`
-env expression, since `if:` can't read secrets directly). With no secret set, each run resolves to a
-clean skip: merging these workflows spends nothing and changes no behavior until a maintainer opts in.
+env expression, since `if:` can't read secrets directly). With no secret set, compose-prompt and
+cursor-agent steps skip cleanly: merging these workflows spends no Cursor quota until a maintainer
+opts in. **Exception:** the deterministic `scripts/epic-407-issue-hygiene.sh` step on housekeeping
+runs still executes when `GH_AUTOMATION_PAT` is set (issue close/label/comment only; no agent).
 
 **One additional one-time prerequisite** (beyond the three above):
 - The `CURSOR_API_KEY` repo secret — a Cursor API key (ideally from a **service account**, so the

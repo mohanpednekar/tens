@@ -17,9 +17,10 @@ name: Cursor autonomous maintenance
 # soft quota guidance — see docs/AUTOMATION.md's "Cursor-powered successor engine" /
 # Budget discipline.
 #
-# Inert until opted into: every agent step is gated on the CURSOR_API_KEY repo secret
-# existing. Merge this workflow freely — nothing runs (and no quota is spent) until a
-# maintainer adds CURSOR_API_KEY.
+# Inert until opted into: cursor-agent steps are gated on the CURSOR_API_KEY repo secret
+# existing. Merge this workflow freely — no Cursor quota is spent until a maintainer adds
+# CURSOR_API_KEY. Housekeeping still runs scripts/epic-407-issue-hygiene.sh when
+# GH_AUTOMATION_PAT is set (deterministic issue hygiene; no agent).
 
 on:
   schedule:
@@ -639,7 +640,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         run: |
           if [ ! -x scripts/epic-407-issue-hygiene.sh ]; then
-            echo "scripts/epic-407-issue-hygiene.sh missing — skipping."
+            echo "::warning::scripts/epic-407-issue-hygiene.sh missing or not executable — skipping epic #407 hygiene."
             exit 0
           fi
           scripts/epic-407-issue-hygiene.sh
