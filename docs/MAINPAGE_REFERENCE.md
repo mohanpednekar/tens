@@ -279,9 +279,10 @@ render:
   `"<size> cache block N"`; `title` names the manual-only Factory Bits transfer once releasable;
   clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
   `resources.base` (Bits) — Cache never auto-transfers.
-- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
-  (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
-  strip read together as one progress bar, filling left-to-right:
+- A `DisksRows` wrapper (`role="group"`, `aria-label="<size> disks"`) of two `SquaresRow`s with
+  **5** `DiskSquare`s each (10 total — `DISK_ARRAY_LADDER_CAP`) — each labeled inside with the
+  array's Byte-scale face size — a fixed-length strip read together as one progress bar, filling
+  left-to-right across rows:
   **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
   `aria-label="auto-redeem <size> disk for <tier>"`;
   `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for

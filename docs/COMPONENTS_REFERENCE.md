@@ -36,7 +36,7 @@ styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a sin
 `DISK_CACHE_BLOCK_COUNT`-block cache strip of squares, each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
 full and `isDiskCacheBlockReleasable` — manual transfer to Factory Bits only; never auto), then a
-fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip, each labeled inside with the array's Byte-scale
+fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (**5 circles per row**, two rows), each labeled inside with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
 row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. Full disks
 distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`)

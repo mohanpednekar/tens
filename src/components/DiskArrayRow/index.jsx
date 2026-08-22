@@ -49,6 +49,13 @@ const RebuildingText = styled.p`
   color: ${props => props.theme.color.accent};
 `
 
+const DisksRows = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+`
+
 const SquaresRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -56,14 +63,18 @@ const SquaresRow = styled.div`
   width: 100%;
 `
 
+// Fewer disks per row than cache blocks (5 vs DISK_CACHE_BLOCK_COUNT) so each circle reads
+// larger than the cache squares above — same full width, fewer flex siblings.
+const DISK_SQUARES_PER_ROW = 5
+
 const manualPulse = keyframes`
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.25); }
 `
 
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
-// mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
-// squares always stretches to fill the full row rather than staying small and centered with
+// mechanic itself. Flexible width (like CacheBlock below), so each row's DISK_SQUARES_PER_ROW
+// circles always stretch to fill the full row rather than staying small and centered with
 // leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
 // CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
 // disk is round; a cache/memory block is square). $full takes priority over $empty over the plain
@@ -228,55 +239,66 @@ const DiskArrayRow = ({ actions, size, state }) => {
         </CacheBlocksRow>
       )}
 
-      <SquaresRow role="group" aria-label={`${sizeLabel} disks`}>
-        {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
-          const isFull = index < full
-          const isEmpty = !isFull && index < full + emptyCount
-          // Auto-eligible disks wait for tickDiskAutoRedeem — not clickable, so a tap cannot
-          // bypass the once-per-cycle auto mark or confuse "will auto" with a manual redeem.
-          const clickable = isFull && manualRedeem && !rebuilding
-          return (
-            <DiskSquare
-              key={index}
-              aria-label={
-                isFull
-                  ? (autoRedeem
-                    ? `auto-redeem ${sizeLabel} disk for ${redeemTierName}`
-                    : manualRedeem
-                      ? `redeem ${sizeLabel} disk for ${redeemTierName}`
-                      : `redeem ${sizeLabel} disk`)
-                  : isEmpty
-                    ? `empty ${sizeLabel} disk`
-                    : `not yet built ${sizeLabel} disk`
-              }
-              disabled={!clickable}
-              onClick={clickable ? () => actions.redeemDisk(size) : undefined}
-              title={
-                rebuilding
-                  ? 'This array is offline while it rebuilds'
-                  : isFull
-                    ? (autoRedeem
-                      ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
-                      : manualRedeem
-                        ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
-                        : redeemable
-                          ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
-                          : `Redeemable once some tier's level cost matches ${sizeLabel}`)
-                    : isEmpty
-                      ? 'Built, waiting for Memory to fill it'
-                      : 'Not yet built'
-              }
-              type="button"
-              $full={isFull}
-              $empty={isEmpty}
-              $autoRedeem={isFull && autoRedeem}
-              $manualRedeem={isFull && manualRedeem}
-            >
-              <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
-            </DiskSquare>
+      <DisksRows role="group" aria-label={`${sizeLabel} disks`}>
+        {Array.from(
+          { length: Math.ceil(DISK_ARRAY_LADDER_CAP / DISK_SQUARES_PER_ROW) },
+          (_, rowIndex) => (
+            <SquaresRow key={rowIndex}>
+              {Array.from({ length: DISK_SQUARES_PER_ROW }, (_, columnIndex) => {
+                const index = rowIndex * DISK_SQUARES_PER_ROW + columnIndex
+                if (index >= DISK_ARRAY_LADDER_CAP) {
+                  return null
+                }
+                const isFull = index < full
+                const isEmpty = !isFull && index < full + emptyCount
+                // Auto-eligible disks wait for tickDiskAutoRedeem — not clickable, so a tap cannot
+                // bypass the once-per-cycle auto mark or confuse "will auto" with a manual redeem.
+                const clickable = isFull && manualRedeem && !rebuilding
+                return (
+                  <DiskSquare
+                    key={index}
+                    aria-label={
+                      isFull
+                        ? (autoRedeem
+                          ? `auto-redeem ${sizeLabel} disk for ${redeemTierName}`
+                          : manualRedeem
+                            ? `redeem ${sizeLabel} disk for ${redeemTierName}`
+                            : `redeem ${sizeLabel} disk`)
+                        : isEmpty
+                          ? `empty ${sizeLabel} disk`
+                          : `not yet built ${sizeLabel} disk`
+                    }
+                    disabled={!clickable}
+                    onClick={clickable ? () => actions.redeemDisk(size) : undefined}
+                    title={
+                      rebuilding
+                        ? 'This array is offline while it rebuilds'
+                        : isFull
+                          ? (autoRedeem
+                            ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
+                            : manualRedeem
+                              ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
+                              : redeemable
+                                ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
+                                : `Redeemable once some tier's level cost matches ${sizeLabel}`)
+                          : isEmpty
+                            ? 'Built, waiting for Memory to fill it'
+                            : 'Not yet built'
+                    }
+                    type="button"
+                    $full={isFull}
+                    $empty={isEmpty}
+                    $autoRedeem={isFull && autoRedeem}
+                    $manualRedeem={isFull && manualRedeem}
+                  >
+                    <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
+                  </DiskSquare>
+                )
+              })}
+            </SquaresRow>
           )
-        })}
-      </SquaresRow>
+        )}
+      </DisksRows>
     </DiskSizeRow>
   )
 }

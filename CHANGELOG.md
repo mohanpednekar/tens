@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Disk array layout**: each size's disk circles now render **5 per row** (two rows for the full
+  10-disk ladder cap) so each disk reads larger than the cache blocks above it.
+
 ### Added
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
   (`ERA_ELIGIBILITY_PP`); awards **Eons**, increments `era.count`, wipes Foundry/Factory cycle
