@@ -816,11 +816,9 @@ All component styling resolves to **semantic design tokens** defined once in `sr
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
 on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
 at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
-bundled via `theme/fonts.js` — no runtime CDN fetch. `App.jsx` drives `<ThemeProvider mode>` from a
-persisted `tens_theme_preference` in `localStorage` when set, otherwise from
-`prefers-color-scheme: light` (OS changes apply only until the player toggles manually). Reset /
-`clearGameState` do not clear the theme preference — it is UI metadata, not game state. A fixed
-`ThemeToggle` button (top-right) switches modes.
+bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appearance drives
+`<ThemeProvider mode>` from `tens_theme_preference` (`system` default, or `light`/`dark`); System
+follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference.
 
 The full per-file token/font/GlobalStyle/ThemeProvider breakdown lives in `docs/THEMING_REFERENCE.md`.
 Read it before touching `src/theme/*`.

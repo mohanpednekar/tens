@@ -4239,13 +4239,18 @@ describe('Compute (Flops) screen', () => {
   })
 })
 
-test('theme toggle switches mode and persists across remount', async () => {
+test('theme preference in Settings switches mode and persists across remount', async () => {
   const user = userEvent.setup()
   seedMainGameState()
   const { unmount } = render(<App />)
-  await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /use light theme/i }))
   expect(localStorage.getItem('tens_theme_preference')).toBe('light')
+  expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
   unmount()
   render(<App />)
-  expect(screen.getByRole('button', { name: /switch to dark theme/i })).toBeInTheDocument()
+  await openSettings(user)
+  expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
+  await user.click(screen.getByRole('button', { name: /use system theme/i }))
+  expect(localStorage.getItem('tens_theme_preference')).toBe('system')
 })

@@ -647,16 +647,19 @@ describe('supporter unlock + save slots', () => {
 })
 
 describe('theme preference', () => {
-  it('loadThemePreference returns null when unset', () => {
-    expect(loadThemePreference()).toBeNull()
+  it('loadThemePreference returns system when unset', () => {
+    expect(loadThemePreference()).toBe('system')
   })
 
-  it('saveThemePreference persists dark/light and ignores invalid values on load', () => {
+  it('saveThemePreference persists system/light/dark and ignores invalid values on load', () => {
     saveThemePreference('light')
     expect(localStorage.getItem(THEME_PREFERENCE_KEY)).toBe('light')
     expect(loadThemePreference()).toBe('light')
+    saveThemePreference('system')
+    expect(localStorage.getItem(THEME_PREFERENCE_KEY)).toBe('system')
+    expect(loadThemePreference()).toBe('system')
     localStorage.setItem(THEME_PREFERENCE_KEY, 'sepia')
-    expect(loadThemePreference()).toBeNull()
+    expect(loadThemePreference()).toBe('system')
   })
 
   it('clearGameState does not clear theme preference', () => {

@@ -1,7 +1,6 @@
 import AppMenu from 'components/AppMenu'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
-import ThemeToggle from 'components/ThemeToggle'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
@@ -13,16 +12,11 @@ import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isProducti
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
-import { DEFAULT_MODE, GlobalStyle, ThemeProvider } from 'theme'
+import { GlobalStyle, ThemeProvider, resolveThemeMode } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-const getSystemThemeMode = () => {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return DEFAULT_MODE
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-}
-
-const resolveInitialThemeMode = () => loadThemePreference() ?? getSystemThemeMode()
+const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as the Storage tab — so it is not gate-exempt on its own.
@@ -34,6 +28,7 @@ const PageShell = styled.div`
 
 function App() {
   const game = useIncrementalGame()
+  const [themePreference, setThemePreference] = useState(loadThemePreference)
   const [themeMode, setThemeMode] = useState(resolveInitialThemeMode)
 
   // Local page toggle — not a router. Defaults to 'game'; the gate override below forces Foundry
@@ -101,24 +96,20 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
 
-  // Follow OS theme changes only until the player sets an explicit preference (#140).
+  // Follow OS theme changes while preference is System (default).
   useEffect(() => {
+    if (themePreference !== 'system') return undefined
     if (typeof window.matchMedia !== 'function') return undefined
     const mq = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = () => {
-      if (loadThemePreference()) return
-      setThemeMode(mq.matches ? 'light' : 'dark')
-    }
+    const onChange = () => setThemeMode(resolveThemeMode('system'))
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
-  }, [])
+  }, [themePreference])
 
-  const handleToggleTheme = () => {
-    setThemeMode(current => {
-      const next = current === 'dark' ? 'light' : 'dark'
-      saveThemePreference(next)
-      return next
-    })
+  const handleThemePreferenceChange = preference => {
+    saveThemePreference(preference)
+    setThemePreference(preference)
+    setThemeMode(resolveThemeMode(preference))
   }
 
   let content
@@ -133,7 +124,7 @@ function App() {
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'settings') {
-    content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} />
+    content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} onThemePreferenceChange={handleThemePreferenceChange} themePreference={themePreference} />
   } else {
     content = <MainPage focusNonce={tiersFocusNonce} game={game} />
   }
@@ -143,7 +134,6 @@ function App() {
   return (
     <ThemeProvider mode={themeMode}>
       <GlobalStyle />
-      <ThemeToggle mode={themeMode} onToggle={handleToggleTheme} />
       <PageShell>
         {content}
       </PageShell>

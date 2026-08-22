@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
+  fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
 - **Foundry tab label** — the second-level Foundry peer tab formerly labeled **Disks** is now
   **Storage** (Memory | Storage); internal tab id unchanged.
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
