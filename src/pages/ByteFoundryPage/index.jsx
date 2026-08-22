@@ -496,7 +496,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
               onClick={handleSacrificeClick}
               title={
                 isFull && !canSacrifice
-                  ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
+                  ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Boosters)'
                   : 'Empty Memory for 10x capacity'
               }
               type="button"

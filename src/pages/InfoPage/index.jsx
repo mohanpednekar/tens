@@ -471,7 +471,7 @@ const InfoPage = () => {
           </li>
           <li>
             Sends you back through the Byte Foundry gate each cycle, but permanent Foundry /
-            Storage / Compute progress carries over.
+            Storage / Boosters progress carries over.
           </li>
           <li>
             The first Prestige of a save uses a full-screen overlay; later ones use the top bar /

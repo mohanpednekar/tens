@@ -240,7 +240,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         <h2>Supporter pack</h2>
         <p>
           Optional meta extras only — extra save slots, Prestige museum pins, and the Ops
-          dashboard. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
+          dashboard. Never changes Bits, PP, Disks, Boosters, or unlock order. Real payment comes
           later; for now use a code or the dummy checkout.
         </p>
         {supporter ? (
@@ -462,7 +462,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           </VisuallyHidden>
         </Button>
         <p>
-          Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
+          Wipe Capacity, Memory, Disks / Storage, and Boosters on the active save — useful if
           Capacity was pushed too far. Combine, Invest / Bandwidth, and Disk Build restart from
           scratch, then auto-press again up to your pre-reset highs (Capacity stays manual). Factory
           progress and Prestige stay.
@@ -482,7 +482,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         >
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
-            Erases Capacity, Storage, and Compute; restarts upgrades from scratch with convenience
+            Erases Capacity, Storage, and Boosters; restarts upgrades from scratch with convenience
             auto-clicks up to pre-reset highs; Factory and Prestige stay
           </VisuallyHidden>
         </Button>

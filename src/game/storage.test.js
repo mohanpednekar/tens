@@ -994,7 +994,7 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/auto-press/i)
     expect(message).toMatch(/invest/i)
     expect(message).toMatch(/disks\/storage/i)
-    expect(message).toMatch(/compute/i)
+    expect(message).toMatch(/boosters/i)
     expect(message).toMatch(/also kept:\s*factory\b/i)
     expect(message).toMatch(/prestige points/i)
   })
