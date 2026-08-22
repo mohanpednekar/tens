@@ -177,7 +177,8 @@ sections.
   targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
   theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
   should assign **player-facing** feature/economy issues to a milestone for the next planned
-  release (currently `v0.6.0`); process/infrastructure `claude-task` issues typically stay off a
+  release (currently `v0.6.0` UI revamp, `v0.7.0` Era ascension); process/infrastructure
+  `claude-task` issues typically stay off a
   versioned milestone.
 
 ## Budget discipline

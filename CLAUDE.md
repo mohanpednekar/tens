@@ -240,8 +240,9 @@ possibly multiple releases; a Milestone answers "what's targeted for this releas
 native due-date plus automatic X/Y-closed progress. Interactive sessions and Planning (#53) should
 assign player-facing feature/economy issues to a milestone for the next planned release; process
 and infrastructure `claude-task` issues typically stay off a versioned milestone. The current
-next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140 and other player-facing work as
-it lands).
+next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140); Era ascension
+(`#407` / `#411–#414`) targets `v0.7.0`. `scripts/sync-release-milestones.sh`
+keeps both milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 

@@ -351,9 +351,8 @@ designed to coexist safely with the Claude ones during the transition:
        Trivial drift → fix; larger mismatch → file, don't guess.
     5. **Backlog plan/replan** — stale specs, Blocked-by, size/priority labels, duplicates
        (comments / labels / replacement issues only). On housekeeping runs, the workflow also
-       runs `scripts/backlog-issue-hygiene.sh` deterministically (idempotent close/label/comment
-       pass for shipped issues plus `scripts/epic-407-issue-hygiene.sh`) before the agent step —
-       do not duplicate that work unless the script failed.
+       runs `scripts/backlog-issue-hygiene.sh` and `scripts/sync-release-milestones.sh`
+       deterministically before the agent step — do not duplicate that work unless a step failed.
     6. **Process improvement (optional)** — self-edit of `cursor-autonomous-maintenance.yml` only,
        or one gap-analysis + `claude-task` issue.
 
