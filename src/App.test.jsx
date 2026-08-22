@@ -495,14 +495,14 @@ test('money balance is shown once at the top in full currency format, centered, 
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
 })
 
-test('a money-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
+test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 5 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 b')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
   expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('/sec')
 })
 
@@ -517,8 +517,8 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus shortens how often a delivery lands, it no longer inflates the amount, so this
-  // still reads +5 b, not +6 b.
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 b')
+  // still reads +5 B, not +6 B.
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
@@ -554,8 +554,8 @@ test('reaching 8 lifetime purchases of a tier doubles its displayed production a
   })
   render(<App />)
 
-  // Crossing the 8-purchase milestone doubles production: owned(5) × 1 b/tick × 2 = 10 b per tick.
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+10 b')
+  // Crossing the 8-purchase milestone doubles production: owned(5) × 1 B/tick × 2 = 10 B per tick.
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+10 B')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {
@@ -735,32 +735,31 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
 test('applies offline progress at 100% speed and shows no notice for an absence under the full-speed threshold', () => {
   seedMainGameState({
     resources: { base: 0 },
-    owned: { tier01: 5 },
+    owned: { tier01: 5, tier02: 1 },
   })
   // 100 real seconds ago, well under the 10-minute full-speed threshold → 100 simulated seconds at
-  // 100% speed (as if the screen was always on) → Kilobytes delivers every 1s, so 100 deliveries
-  // land in that window → 5 Kilobytes × 100 deliveries = +500 money, with no notice shown.
+  // 100% speed → Kilobytes delivers every 1s, so 100 deliveries land in that window → 500 Bytes,
+  // with no notice shown.
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 100_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('500 b')
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
 test('applies offline progress at 50% speed and shows a notice for an absence past the full-speed threshold', () => {
   seedMainGameState({
     resources: { base: 0 },
-    owned: { tier01: 5 },
+    owned: { tier01: 5, tier02: 1 },
   })
   // 1000 real seconds ago, past the 10-minute full-speed threshold → 500 simulated seconds at 50%
-  // speed → Kilobytes delivers every 1s, so 500 deliveries land in that window → 5 Kilobytes × 500
-  // deliveries = +2500 money
+  // speed → Kilobytes delivers every 1s, so 500 deliveries land in that window → 2,500 Bytes
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -848,7 +847,7 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
   vi.useFakeTimers()
   seedMainGameState({
     resources: { base: 0 },
-    owned: { tier01: 5 },
+    owned: { tier01: 5, tier02: 1 },
   })
   // No gap at mount — whatever notice appears below must come from the live tick loop, not
   // computeInitialGame's own check.
@@ -868,8 +867,8 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // 1000s real -> 500s simulated at 50% speed; Kilobytes' 1s tickspeed fits 500 deliveries into
-  // that window -> 5 Kilobytes x 500 deliveries = +2500 money.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
+  // that window -> 5 generators x 500 deliveries = 2,500 Bytes.
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -880,7 +879,7 @@ test('catches up a real-world gap as soon as the page becomes visible again, eve
   vi.useFakeTimers()
   seedMainGameState({
     resources: { base: 0 },
-    owned: { tier01: 5 },
+    owned: { tier01: 5, tier02: 1 },
   })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now()))
 
@@ -891,7 +890,7 @@ test('catches up a real-world gap as soon as the page becomes visible again, eve
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   act(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('2,500 b')
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -1104,14 +1103,14 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
 
   // The cumulative level/bonus only shows in the expanded description, not the button itself —
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/lv\.2/i)
+  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/lv\.2/i)
 
   await user.click(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i }))
 
   // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
   // way back to its pre-activation "Enable" state rather than staying at Lv.2.
-  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeInTheDocument()
 })
 
 test('the Speed Up button is disabled once production freezes at a googol', () => {
@@ -1211,7 +1210,7 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   // the Tickspeed upgrade's own per-level rate to 2.14% (1% × 1.1^8) — both shown on the button
   // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises the tickspeed upgrade's per-level rate to 2\.14%/i,
+    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises clock speed's per-level rate to 2\.14%/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · Lv.8/7')
 })
@@ -1230,7 +1229,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/tickspeed upgrade's per-level rate is now 2\.59% \(was 1%\) from level 10\./i)
+  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\) from level 10\./i)
 })
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
@@ -1342,7 +1341,7 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('the global tickspeed panel renders above the tier list, not below it', () => {
+test('the global clock speed panel renders above the tier list, not below it', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1 },
@@ -1350,7 +1349,7 @@ test('the global tickspeed panel renders above the tier list, not below it', () 
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('global tickspeed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
 test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 10 PP to enable it', async () => {
@@ -1422,52 +1421,52 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   vi.useRealTimers()
 })
 
-test('no Global Tickspeed Multiplier panel appears before the second tier has ever been owned', () => {
+test('no Global Clock Speed panel appears before the second tier has ever been owned', () => {
   seedMainGameState({
     resources: { base: 10 },
   })
   render(<App />)
 
-  expect(screen.queryByLabelText(/^global tickspeed panel$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^global clock speed panel$/i)).not.toBeInTheDocument()
 })
 
-test('an Enable Global Tickspeed Multiplier button appears once the second tier is owned (even during the first run), and spends 10 Money to activate level 1', async () => {
+test('an Enable Clock Speed button appears once the second tier is owned (even during the first run), and spends 10 Bytes to activate level 1', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 10 },
+    resources: { base: 10, bytes: 10 },
     owned: { tier02: 1 },
   })
   render(<App />)
 
-  const globalTickspeedButton = screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })
+  const globalTickspeedButton = screen.getByRole('button', { name: /enable clock speed for 10 b/i })
   expect(globalTickspeedButton).toBeEnabled()
 
   await user.click(globalTickspeedButton)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 100 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 100 b/i })
   expect(upgradeButton).toBeInTheDocument()
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
   expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Tickspeed' })).not.toHaveTextContent(/lv\.1|\+1%/i)
-  const panel = screen.getByLabelText(/^global tickspeed panel$/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Clock Speed' })).not.toHaveTextContent(/lv\.1|\+1%/i)
+  const panel = screen.getByLabelText(/^global clock speed panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
 })
 
-test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+test('the Clock Speed panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 999 },
+    resources: { base: 999, bytes: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
 
-  const heading = screen.getByRole('heading', { level: 2, name: 'Tickspeed' })
+  const heading = screen.getByRole('heading', { level: 2, name: 'Clock Speed' })
   const statusLine = screen.getByText(/lv\.1 —/i)
   expect(statusLine).not.toBeVisible()
 
@@ -1485,28 +1484,28 @@ test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is cl
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
+test('the Enable Clock Speed button stays disabled without enough Bytes', () => {
   seedMainGameState({
-    resources: { base: 9 },
+    resources: { base: 10, bytes: 9 },
     owned: { tier02: 1 },
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable global tickspeed multiplier for 10 b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeDisabled()
 })
 
-test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
+test('the Clock Speed Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { base: 999 },
+    resources: { base: 999, bytes: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade global tickspeed multiplier for 1,000 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 1,000 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
   expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
-  const panel = screen.getByLabelText(/^global tickspeed panel$/i)
+  const panel = screen.getByLabelText(/^global clock speed panel$/i)
   expect(panel).toHaveTextContent(/lv\.2/i)
   // Level 2 is still below the first 10-level milestone — two regular 1% levels compounded
   // (1.01^2 ≈ ×1.0201) land on a fractional percentage, shown to 2 decimal places.
@@ -1522,7 +1521,7 @@ test('the global tickspeed bonus jumps at the first 10-level milestone, compound
 
   // 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%:
   // 1.01^9 * 1.10 ≈ ×1.2031.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+20\.31%/i)
+  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+20\.31%/i)
 })
 
 test('the global tickspeed bonus still shows fractional percent precision one level before a milestone pushes it past 100%', () => {
@@ -1533,7 +1532,7 @@ test('the global tickspeed bonus still shows fractional percent precision one le
   render(<App />)
 
   // Level 39 (no milestone yet — next one is at 40) is still under 100%, so it shows 2 decimals.
-  expect(screen.getByLabelText(/^global tickspeed panel$/i)).toHaveTextContent(/\+90\.44%/i)
+  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+90\.44%/i)
 })
 
 test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses +100% at a milestone', () => {
@@ -1546,7 +1545,7 @@ test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses 
   // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses +100%
   // (×2.0948), so it's shown as a "2.09x" multiplier (formatBonusOrMultiplier) instead of a
   // percentage.
-  const panel = screen.getByLabelText(/^global tickspeed panel$/i)
+  const panel = screen.getByLabelText(/^global clock speed panel$/i)
   expect(panel).toHaveTextContent(/2\.09x/i)
   expect(panel).not.toHaveTextContent(/109%/i)
 })
@@ -2217,7 +2216,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
   expect(breakdown).toHaveTextContent(/speed up: ×4 production speed from 2 activations/i)
-  expect(breakdown).toHaveTextContent(/tickspeed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+  expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
 
@@ -2239,7 +2238,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 5 on quettabytes\)/i)
-  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
@@ -2255,7 +2254,7 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
-  expect(breakdown).toHaveTextContent(/tickspeed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
 
 test('the money balance breakdown\'s Overclock line reports the boosted per-level Tickspeed rate once active, not a standalone bonus percentage', async () => {
@@ -2272,7 +2271,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: tickspeed upgrade's per-level rate is now 1\.21% \(was 1%\) from level 2/i
+    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\) from level 2/i
   )
 })
 
