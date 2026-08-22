@@ -1237,7 +1237,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         <PrestigeProgressLabel>
           {isUnbounded && canPrestige
             ? `${prestigeProgressPercent}% to next PP (${doublePpUpgradeSummary})`
-            : `${prestigeProgressPercent}% to Prestige${isUnbounded ? ` (unlocks at Prestige ${PRESTIGE_UNBOUNDED_MIN_COUNT})` : ''}`}
+            : isUnbounded
+              ? `${prestigeProgressPercent}% to Prestige`
+              : `${prestigeProgressPercent}% to Prestige${!isUnbounded && (prestige.count ?? 0) < PRESTIGE_UNBOUNDED_MIN_COUNT ? ` (unlocks at Prestige ${PRESTIGE_UNBOUNDED_MIN_COUNT})` : ''}`}
         </PrestigeProgressLabel>
       </PrestigeProgressTop>
 

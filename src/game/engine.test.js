@@ -6975,6 +6975,12 @@ describe('speedUpGame', () => {
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
+  it('keeps prestigeDoublePpLevel permanently', () => {
+    const state = { ...eligibleState(), prestigeDoublePpLevel: 3 }
+    const after = speedUpGame(state)
+    expect(after.prestigeDoublePpLevel).toBe(3)
+  })
+
   it('keeps the Auto Speed Up flag permanently', () => {
     const state = withAutoSpeedUp(eligibleState())
     const after = speedUpGame(state)
@@ -7249,6 +7255,12 @@ describe('overclockGame', () => {
     const state = withPrestigeSpeedBonusUnlocked(eligibleState())
     const after = overclockGame(state)
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+  })
+
+  it('keeps prestigeDoublePpLevel permanently', () => {
+    const state = { ...eligibleState(), prestigeDoublePpLevel: 3 }
+    const after = overclockGame(state)
+    expect(after.prestigeDoublePpLevel).toBe(3)
   })
 
   it('keeps the Auto Speed Up flag permanently', () => {
