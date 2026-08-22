@@ -198,11 +198,13 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   // sections (Tickspeed, Speed Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^boosters$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/bits balance/i)
-  expect(screen.getByLabelText(/compute section/i)).toHaveTextContent(/stack/i)
+  expect(screen.getByLabelText(/boosters section/i)).toHaveTextContent(/stack/i)
+  expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open factory/i }))
@@ -370,7 +372,7 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(saved.intro.foundryResetCaps.byteCreated).toBe(true)
   expect(saved.intro.foundryResetCaps.productionMilestoneTier).toBe(3)
   expect(saved.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(4)
-  expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open boosters/i })).not.toBeInTheDocument()
 })
 
 test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async () => {
@@ -3238,24 +3240,24 @@ describe('Byte Foundry Storage', () => {
 })
 
 // Compute moved to its own dedicated screen (ComputePage) once revealed — reached from
-// ByteFoundryPage's own "⚡ Compute" nav button, always enabled once revealed (same posture as the
+// ByteFoundryPage's own "⚡ Boosters" nav button, always enabled once revealed (same posture as the
 // Storage nav button above). Every test below that lands on a rendered Compute element navigates
-// there first via openCompute(). Every seed here uses bits: 0, so the forced priority order's
+// there first via openBoosters(). Every seed here uses bits: 0, so the forced priority order's
 // higher-ranked actions (Disk Fill, Bandwidth, Disk Build) stay naturally
 // unavailable and don't need separate neutralizing — see the dedicated priority test below for
 // that interaction.
 describe('Byte Foundry Compute Boost', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
-  test('the "open compute" nav button appears once revealed, and the Compute Boost buttons appear once navigated there', () => {
+  test('the "open boosters" nav button appears once revealed, and the Compute Boost buttons appear once navigated there', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
     render(<App />)
 
-    const openButton = screen.getByRole('button', { name: /open compute/i })
+    const openButton = screen.getByRole('button', { name: /open boosters/i })
     expect(openButton).toBeEnabled()
-    openCompute()
+    openBoosters()
 
-    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /boosters/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate sustain compute boost/i })).toBeInTheDocument()
@@ -3264,7 +3266,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('every activation button stays disabled below 1 Compute Core', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0 })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeDisabled()
@@ -3274,7 +3276,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('activating a boost spends exactly 1 Compute Core and shows the active status line', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /activate burst compute boost/i }))
 
@@ -3292,7 +3294,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /forfeit active boost and activate standard/i })).toBeEnabled()
@@ -3312,7 +3314,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
     expect(confirmSpy).toHaveBeenCalled()
@@ -3329,7 +3331,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -3346,7 +3348,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i }))
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -3361,7 +3363,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: COMPUTE_BOOST_MAX_STACKS, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /stack the active compute boost/i })).toBeDisabled()
@@ -3370,7 +3372,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('every activation button stays disabled while a higher-priority upgrade (Bandwidth) is currently available, even with a Compute Core in hand', () => {
     seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
   })
@@ -3394,7 +3396,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('an unrecognized computeBoostType does not crash either page — the status line just stays hidden', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: 'does_not_exist', computeBoostStacks: 1 })
     const { unmount } = render(<App />)
-    openCompute()
+    openBoosters()
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
     unmount()
 
@@ -3406,19 +3408,19 @@ describe('Byte Foundry Compute Boost', () => {
   test('the armed-tier status line shows how many tokens are held for the currently armed tier (Cores by default, pre-merge-unlock)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 4 })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
   })
 
-  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Compute page, not at the bottom"', () => {
+  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
     const boostRow = screen.getByLabelText(/^compute boost$/i)
@@ -3435,7 +3437,7 @@ describe('Byte Foundry Compute Boost', () => {
   test('no Reclaim control appears while no boost is active', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: null })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
   })
@@ -3446,7 +3448,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
 
@@ -3462,7 +3464,7 @@ describe('Byte Foundry Compute Boost', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
 
@@ -3473,12 +3475,12 @@ describe('Byte Foundry Compute Boost', () => {
 })
 
 describe('ComputePage merge chain', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('the merge chain section is hidden on ComputePage until computeMergePageUnlocked', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: false })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.queryByLabelText(/^compute entities$/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
@@ -3490,9 +3492,9 @@ describe('ComputePage merge chain', () => {
       computeCores: 2, computeNodes: 9, computeClusters: 3, computeNetworks: 0, computeGrids: 0,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
-    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /boosters/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/cores.*2\/10/i)
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/nodes.*9\/10/i)
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/clusters.*3\/10/i)
@@ -3507,7 +3509,7 @@ describe('ComputePage merge chain', () => {
       computeNodes: 7, computeClusters: 0,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
   })
@@ -3518,7 +3520,7 @@ describe('ComputePage merge chain', () => {
       computeNodes: 9, computeClusters: 1,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i }))
 
@@ -3533,7 +3535,7 @@ describe('ComputePage merge chain', () => {
       computeCores: 9, computeNodes: 1,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     const mergeButton = screen.getByRole('button', { name: /merge 8 cores into 1 node/i })
     expect(mergeButton).toBeEnabled()
@@ -3550,7 +3552,7 @@ describe('ComputePage merge chain', () => {
       computeNodes: COMPUTE_ENTITY_CAP,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i }))
 
@@ -3566,7 +3568,7 @@ describe('ComputePage merge chain', () => {
       computeCores: 8, autoMergeCoresIntoNode: true,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /start merging 8 cores into 1 node/i }))
 
@@ -3581,7 +3583,7 @@ describe('ComputePage merge chain', () => {
       computeClusters: 24, computeNetworks: 10,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /merge 8 clusters into 1 network/i })).toBeDisabled()
   })
@@ -3593,7 +3595,7 @@ describe('ComputePage merge chain', () => {
       computeFabrics: 6, computeClouds: 7, computeDatacenters: 8, computeSupercomputers: 9, computeMegacomputers: 1,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     const counters = screen.getByLabelText(/^compute entities$/i)
     expect(counters).toHaveTextContent(/cores.*1\/10/i)
@@ -3623,7 +3625,7 @@ describe('ComputePage merge chain', () => {
       computeSupercomputers: 9, computeMegacomputers: 1,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /merge 8 supercomputers into 1 megacomputer/i }))
 
@@ -3638,7 +3640,7 @@ describe('ComputePage merge chain', () => {
       computeNodes: 9, computeClusters: 1,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByLabelText(/^compute entities$/i)).not.toHaveTextContent(/compute core|compute node|compute cluster/i)
     expect(screen.queryByRole('button', { name: /merge 8 compute /i })).not.toBeInTheDocument()
@@ -3673,7 +3675,7 @@ describe('Claim Core (ByteFoundryPage)', () => {
 })
 
 describe('Compute auto-merge / auto-claim automation', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('an "enable auto-merge" control is always shown for Nodes into Clusters, disabled below 10 held Clusters', () => {
     seedIntroState({
@@ -3681,7 +3683,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
       computeClusters: 9,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i })).toBeDisabled()
   })
@@ -3692,7 +3694,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
       computeClusters: 10,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i }))
 
@@ -3726,7 +3728,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
       computeNodes: 8, autoMergeNodesIntoCluster: true,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
@@ -3737,7 +3739,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: 9,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     expect(screen.getByRole('button', { name: /enable auto-claim for cores/i })).toBeDisabled()
   })
@@ -3747,7 +3749,7 @@ describe('Compute auto-merge / auto-claim automation', () => {
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: COMPUTE_ENTITY_CAP,
     })
     render(<App />)
-    openCompute()
+    openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /enable auto-claim for cores/i }))
 
@@ -3973,4 +3975,31 @@ test.each([
 
   const comingSoonRow = screen.getByLabelText(/^coming soon… chapter$/i)
   expect(comingSoonRow).toHaveTextContent('🔒')
+})
+
+describe('Compute (Flops) screen', () => {
+  test('nav stays hidden below 100 PP', () => {
+    seedMainGameState({ prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 } })
+    render(<App />)
+    expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
+  })
+
+  test('at 100 PP the screen opens with buy disabled below 1,000 PP', () => {
+    seedMainGameState({ prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/cumulative flops boost/i)).toHaveTextContent(/0 Flops/i)
+    expect(screen.getByRole('button', { name: /buy kflops for 1,000 prestige points/i })).toBeDisabled()
+  })
+
+  test('buying KFlops at 1,000 PP spends PP and increments owned', () => {
+    seedMainGameState({ prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+    fireEvent.click(screen.getByRole('button', { name: /buy kflops for 1,000 prestige points/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.prestige.points).toBe(0)
+    expect(saved.computeFlops.owned.flop01).toBe(1)
+  })
 })

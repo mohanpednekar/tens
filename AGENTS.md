@@ -8,7 +8,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Compute → Factory → Guide → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Guide → More**. Storage
 is under Foundry as **Memory | Disks** (not its own AppNav item). Factory uses **Data | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
@@ -65,14 +65,15 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
                             "Byte Foundry" below
     StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
-    ComputePage/index.jsx  ← Compute's own screen, reached via AppNav once revealed
+    ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game; Data | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
@@ -90,10 +91,10 @@ React, no side effects. `useIncrementalGame.js` is the only place holding React 
 localStorage persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
-state); `StoragePage`/`ComputePage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
-switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Compute →
+state); `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
+switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Boosters → Compute →
 Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
-`page` says, except on gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`)
+`page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
 below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Factory
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
@@ -117,7 +118,9 @@ player taps to accumulate bits into "Memory" (capacity-capped), combines the fir
 passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
 production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
 builds with a per-array always-full cache for manual tier funding, redeemable against any main-game tier whose current price matches)
-and Compute Cores/Nodes/Compute Boost (`ComputePage`). Manual transfer blocks (plus an always-on
+and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate PP **Compute (Flops)**
+screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
+Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
 and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the

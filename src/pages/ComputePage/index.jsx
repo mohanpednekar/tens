@@ -506,7 +506,7 @@ const ComputePage = ({ game }) => {
   return (
     <RootDiv>
       <Header>
-        <Title>⚡ Compute</Title>
+        <Title>⚡ Boosters</Title>
       </Header>
 
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (

@@ -586,6 +586,12 @@ const migrateState = saved => {
       pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
     },
     intro: migratedIntro,
+    computeFlops: {
+      pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
+        || Math.max(0, Number(migratedPrestige.points) || 0) >= 100,
+      owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
+      cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
+    },
   })
 }
 

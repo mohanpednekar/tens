@@ -271,5 +271,6 @@ export const maxAttention = (a, b) => {
 export const getNavAttention = state => ({
   game: getTiersAttentionLevel(state),
   foundry: maxAttention(getFoundryAttentionLevel(state), getStorageAttentionLevel(state)),
-  compute: getComputeAttentionLevel(state),
+  boosters: getComputeAttentionLevel(state),
+  compute: false,
 })
