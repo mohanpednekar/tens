@@ -108,8 +108,8 @@ payload predates the current schema (`getSaveIncompatibilityReason` in `storage.
 `{ onDismiss }` only — the incompatible save is already discarded before first render;
 `useIncrementalGame` exposes the reason code as `incompatibleSaveReason` and
 `dismissIncompatibleSaveNotice` clears it after the player acknowledges. Renders a fixed full-screen
-scrim (`role="dialog"`, `aria-modal="true"`, `aria-label="Save incompatible"`) with a **Save not
-compatible** heading, explanatory copy, and a single **Start fresh** button
+scrim (`role="dialog"`, `aria-modal="true"`, `aria-labelledby` on the **Save not
+compatible** heading), explanatory copy, and a single **Start fresh** button
 (`aria-label="Start fresh with a new save"`). Rendered once at the `App.jsx` root (not per-page).
 
 ## `StatCard/index.js`
