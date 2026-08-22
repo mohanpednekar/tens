@@ -171,6 +171,18 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Issue tracking for interactive sessions
 
+### Cursor Cloud GitHub access
+
+Interactive **Cursor Cloud Agent** VMs authenticate `gh` via a GitHub App integration that
+returns **403** on issue comments, labels, and closes. Unattended workflows use
+`GH_AUTOMATION_PAT` and are unaffected.
+
+**Fix:** add a fine-grained PAT (Issues read/write; same scopes as `GH_AUTOMATION_PAT` when
+the agent also pushes) to **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`**.
+`gh` picks it up automatically. Without it, issue hygiene must run via GHA (see
+`scripts/epic-407-issue-hygiene.sh` on housekeeping runs in
+`cursor-autonomous-maintenance.yml`) or a maintainer's local session.
+
 **Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
 Issues tab via GitHub's native pinned-issues feature and deliberately carries **no labels** — it is
 not a `claude-task` work item for the automation to implement, only a standing manual setup checklist

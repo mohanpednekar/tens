@@ -448,6 +448,9 @@ jobs:
              missing Blocked-by sequencing, wrong size/priority labels, or duplicates. Fix via
              issue comments / label edits / filing a tighter replacement issue — do not
              implement the tasks themselves. Use the file-task-issue skill conventions.
+             **Note:** this run already executed `scripts/epic-407-issue-hygiene.sh`
+             deterministically before you started — do not repeat that #407 pass unless the
+             step failed in the workflow log.
 
           6. **Process improvement (optional).** One coherent improvement only: workflow
              self-improvement scoped to THIS file (cursor-autonomous-maintenance.yml) without
@@ -629,6 +632,17 @@ jobs:
           prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}
           # Hand the composed prompt to the run step via a file (avoids any interpolation limits).
           printf '%s\n' "$prompt_text" > "$RUNNER_TEMP/cursor-prompt.txt"
+
+      - name: Epic #407 issue hygiene (housekeeping)
+        if: steps.guard.outputs.mode == 'housekeeping'
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          if [ ! -x scripts/epic-407-issue-hygiene.sh ]; then
+            echo "scripts/epic-407-issue-hygiene.sh missing — skipping."
+            exit 0
+          fi
+          scripts/epic-407-issue-hygiene.sh
 
       - name: Run autonomous maintenance task
         if: steps.guard.outputs.skip != 'true'
