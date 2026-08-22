@@ -267,7 +267,7 @@ that defaults to squash, including Cursor's merge UI — see issue #343):
    Repo-wide, not just autonomous PRs.
 2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`)
    — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-main-*`, `dependabot/*`; never a fork),
+   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
    implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
    the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
@@ -375,7 +375,8 @@ repo/org **variable** (not a secret) — unset means the account default.
 both `claude/auto-*` and `cursor/auto-*` open PRs toward the shared 5-PR ceiling and treats a task
 covered by either prefix as in flight, so the two engines never double-pick the same `claude-task`.
 `pr-auto-merge.yml`'s approval-free low-risk path recognizes `cursor/auto-*` and `cursor/heal-main-*`
-alongside the `claude/*` prefixes; its human-approval path was already repo-wide. The Cursor
+(Path 2); `scripts/pr-low-risk-eligible.sh` also accepts broader `cursor/heal-*` for Path 3
+(post-adversarial APPROVE). Both sit alongside the `claude/*` prefixes. The Cursor
 maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
 Claude workflow already owns that, and duplicating it would double-post.
 
