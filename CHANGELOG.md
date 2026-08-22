@@ -82,11 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
   `IncompatibleSaveNotice`.
 
-- **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
-  **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
-  game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings
-  danger-zone copy use **Factory**. Peer tabs stay **Data | Upgrades**.
-
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
