@@ -4,7 +4,6 @@ import StatCard from 'components/StatCard'
 import { formatCurrency, formatMoneyBalance, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
-import { version } from '../../../package.json'
 import styled from 'styled-components'
 
 // Always-reachable Settings screen (via AppNav → More). Holds app meta, Supporter pack
@@ -30,12 +29,6 @@ const Header = styled.header`
     font-size: 1.5rem;
     font-weight: 700;
   }
-`
-
-const VersionText = styled.p`
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.75rem;
-  margin: 0;
 `
 
 const Section = styled(StatCard)`
@@ -228,7 +221,6 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
     <RootDiv>
       <Header>
         <h1>Settings</h1>
-        <VersionText>v{version}</VersionText>
       </Header>
 
       <Section aria-label="about section">

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
+  from the global corner overlay and Settings header.
+
 ### Added
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
   (`ERA_ELIGIBILITY_PP`); awards **Eons**, increments `era.count`, wipes Foundry/Factory cycle
