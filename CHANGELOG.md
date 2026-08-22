@@ -22,9 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
 
 ### Changed
-- **Save migration layout**: schema transforms live in `src/save-migration/` and run on every load via
-  `migrateSavePayload` (called from `storage.js` before `mergeState`). Legacy steps not yet
-  reimplemented still discard + `IncompatibleSaveNotice`.
+- **Save migration layout**: the game offloads every load to `src/save-migration/`
+  (`adaptSaveForCurrentSchema` → current-compatible state or failure); `storage.js` only persists and
+  mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
+  `IncompatibleSaveNotice`.
 
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
   **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the

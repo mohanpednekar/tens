@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SAVE_SCHEMA_VERSION, getSaveIncompatibilityReason, migrateSavePayload } from 'save-migration'
+import { SAVE_SCHEMA_VERSION, adaptSaveForCurrentSchema, getSaveIncompatibilityReason } from 'save-migration'
 
 describe('getSaveIncompatibilityReason', () => {
   it('accepts a save stamped with the current schema version', () => {
@@ -22,18 +22,18 @@ describe('getSaveIncompatibilityReason', () => {
   })
 })
 
-describe('migrateSavePayload', () => {
-  it('strips the envelope from a save already at the current schema version', () => {
-    const result = migrateSavePayload({ saveSchemaVersion: SAVE_SCHEMA_VERSION, intro: { mainGameUnlocked: true } })
+describe('adaptSaveForCurrentSchema', () => {
+  it('returns current-schema game state stripped of the envelope', () => {
+    const result = adaptSaveForCurrentSchema({ saveSchemaVersion: SAVE_SCHEMA_VERSION, intro: { mainGameUnlocked: true } })
     expect(result).toEqual({ ok: true, payload: { intro: { mainGameUnlocked: true } } })
   })
 
-  it('passes through an unstamped partial save that matches the current shape', () => {
+  it('passes through an unstamped partial save that already matches the current shape', () => {
     const partial = { intro: { mainGameUnlocked: true } }
-    expect(migrateSavePayload(partial)).toEqual({ ok: true, payload: partial })
+    expect(adaptSaveForCurrentSchema(partial)).toEqual({ ok: true, payload: partial })
   })
 
-  it('returns a reason when no migration step reaches the current schema', () => {
-    expect(migrateSavePayload({ resources: { Ones: 1 } })).toEqual({ ok: false, reason: 'legacy_money_id' })
+  it('returns a reason when it cannot produce a current-compatible save', () => {
+    expect(adaptSaveForCurrentSchema({ resources: { Ones: 1 } })).toEqual({ ok: false, reason: 'legacy_money_id' })
   })
 })

@@ -62,8 +62,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    save-migration/        ← save-schema migration only; runs on every load via migrateSavePayload
-    storage.js             ← localStorage persistence + mergeState forward-fill (see save-migration/)
+    save-migration/        ← offloads save adaptation; adaptSaveForCurrentSchema returns current-compatible state
+    storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared

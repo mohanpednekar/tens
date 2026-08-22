@@ -2276,12 +2276,13 @@ and have no implemented step yet are **discarded on load** with `IncompatibleSav
 fresh**). Current-schema saves (including unstamped partial saves that already match today's shape)
 load via `mergeState` forward-fill only.
 
-**Going forward: dedicated `src/save-migration/` folder.** Schema transforms live **only** there —
-not in `storage.js`, not in `engine.js`, not on pages. **`migrateSavePayload` runs on every game
-load** (called from `storage.js`'s `loadGameState` and `discardIncompatibleActiveSaveIfNeeded`
-before `mergeState`). The game runtime always sees the **latest save structure** after that step;
-persistence (`storage.js`) only reads/writes localStorage, stamps `saveSchemaVersion`, and merges
-missing fields from `createInitialGameState()`.
+**Going forward: dedicated `src/save-migration/` assistant.** The game **offloads** every on-disk
+payload to this folder on load — it does not implement schema transforms itself. The assistant's
+only job is: raw parsed JSON in → **current-schema-compatible game state out** (or `{ ok: false,
+reason }` when no version-chain step can get there). Called from `storage.js`'s `loadGameState` and
+`discardIncompatibleActiveSaveIfNeeded` before `mergeState`. Persistence (`storage.js`) reads/writes
+localStorage, stamps `saveSchemaVersion`, forwards to the assistant, then merges missing fields from
+`createInitialGameState()`. Engine, pages, and hooks never import legacy shapes.
 
 When the shape changes again:
 

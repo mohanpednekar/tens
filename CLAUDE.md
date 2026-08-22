@@ -364,14 +364,15 @@ src/
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
                                Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear, stamps `saveSchemaVersion` on write,
-                               calls `save-migration/` on every load, then forward field merge
-                               (`mergeState`); multi-slot saves + Supporter entitlement (unlock code /
-                               dummy checkout), clearSaveSlot / clearAllSaveProgress (never revokes
-                               unlock), plus the separately keyed last-save timestamp used to compute
-                               offline progress (slot 0 keeps legacy `tens_game_state` keys).
-    save-migration/         ← save-schema migration only — `migrateSavePayload` runs on every load
-                               before mergeState; version chain lives here (see DESIGN_HISTORY.md).
+    storage.js              ← localStorage read/write; offloads every load to save-migration/, then
+                               forward field merge (`mergeState`); multi-slot saves + Supporter
+                               entitlement (unlock code / dummy checkout), clearSaveSlot /
+                               clearAllSaveProgress (never revokes unlock), plus the separately keyed
+                               last-save timestamp used to compute offline progress (slot 0 keeps
+                               legacy `tens_game_state` keys).
+    save-migration/         ← save-schema assistant only — `adaptSaveForCurrentSchema(raw)` returns
+                               current-compatible game state (or failure); runs on every load; see
+                               DESIGN_HISTORY.md "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Factory → Guide → More
                                (progression order); Factory omits during the Foundry gate
@@ -790,7 +791,7 @@ already cover the genuinely useful items on that checklist.
 ## Testing
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
-  `navAttention.test.js`, `App.test.jsx`.
+  `save-migration/index.test.js`, `navAttention.test.js`, `App.test.jsx`.
 - Environment: jsdom, globals enabled (`describe`/`it`/`expect` without imports), setup file
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text rather
@@ -821,7 +822,7 @@ already cover the genuinely useful items on that checklist.
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). Saves
   must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
-  `save-migration/migrateSavePayload` runs on every load; `storage.js`'s `mergeState` only fills in
+  `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills in
   missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
   discarded and surfaced via `IncompatibleSaveNotice`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and

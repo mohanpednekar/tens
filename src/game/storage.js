@@ -1,5 +1,5 @@
 import { createInitialGameState } from './engine'
-import { migrateSavePayload, SAVE_SCHEMA_VERSION } from 'save-migration'
+import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
@@ -310,12 +310,12 @@ const readActiveSavePayload = () => {
   }
 }
 
-/** Clears the active slot when migration cannot reach the current schema; returns the reason or null. */
+/** Clears the active slot when save-migration cannot return a current-compatible payload. */
 export const discardIncompatibleActiveSaveIfNeeded = () => {
   const slotId = getActiveSlotId()
   const parsed = readActiveSavePayload()
   if (!parsed) return null
-  const result = migrateSavePayload(parsed)
+  const result = adaptSaveForCurrentSchema(parsed)
   if (result.ok) return null
   removeSlotStorage(slotId)
   return result.reason
@@ -376,7 +376,7 @@ export const loadGameState = () => {
   try {
     const parsed = readActiveSavePayload()
     if (!parsed) return null
-    const result = migrateSavePayload(parsed)
+    const result = adaptSaveForCurrentSchema(parsed)
     if (!result.ok) return null
     return mergeState(result.payload)
   } catch {
