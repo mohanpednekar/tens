@@ -1649,8 +1649,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
-    // If the produced resource is also a tier (generator), add to owned count
-    if (tier.producesResourceId !== MONEY_ID) {
+    // If the produced resource is also a tier (generator), add to owned count — not for the
+    // separate Factory Bytes pool (BYTES_ID) or other non-tier resources.
+    if (TIER_DEFINITIONS.some(t => t.id === tier.producesResourceId)) {
       newOwned[tier.producesResourceId] = clampNonNegative((newOwned[tier.producesResourceId] ?? 0) + production)
     }
   })

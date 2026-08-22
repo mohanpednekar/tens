@@ -5054,6 +5054,7 @@ describe('tickGame', () => {
     expect(after.resources[BYTES_ID]).toBe(
       state.resources[BYTES_ID] + 5
     )
+    expect(after.owned[BYTES_ID]).toBeUndefined()
   })
 
   it('produces nothing when no generators are owned', () => {
