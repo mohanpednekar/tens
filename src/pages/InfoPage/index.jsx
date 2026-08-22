@@ -19,6 +19,10 @@ import {
   COMPUTE_MERGE_RESERVE_CAP,
   COMPUTE_MERGE_STEP_MULTIPLIER,
   COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
+  COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC,
+  COMPUTE_FLOPS_FIRST_TIER_COST_PP,
+  COMPUTE_FLOPS_LAST_TIER_COST_PP,
+  COMPUTE_FLOPS_REVEAL_PP,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_MULTIPLIER,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -261,12 +265,12 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="compute section">
-        <h2>Compute</h2>
+      <Section aria-label="boosters section">
+        <h2>Boosters</h2>
         <p>
           Unlocks once Memory capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
-          nav’s Compute item.
+          nav’s Boosters item.
         </p>
 
         <h3>Cores</h3>
@@ -354,10 +358,42 @@ const InfoPage = () => {
             <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
             tier is full and waiting on its own in-flight reserve merge, automatically activates
             (or stacks) your preferred preset from the <strong>biggest</strong> such tier (default
-            Standard). Preference is selectable on Compute after unlock. Never forfeits an active
+            Standard). Preference is selectable on Boosters after unlock. Never forfeits an active
             boost to switch presets.
           </li>
           <li>Megacomputer’s only use is funding a Boost.</li>
+        </ul>
+      </Section>
+
+      <Section aria-label="compute flops section">
+        <h2>Compute</h2>
+        <p>
+          A separate PP-funded screen (nav <strong>Compute</strong>) with ten tiers{' '}
+          <strong>KFlops → QFlops</strong>, each boosting the matching Factory tier. Reveals once
+          you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
+          {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} PP, so the screen is visible before
+          you can buy anything.
+        </p>
+        <ul>
+          <li>
+            Base costs follow the same 10³ ladder as Factory tiers (
+            {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} –{' '}
+            {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP). Per-unit price
+            then rises on <strong>every</strong> purchase via the triangular power-of-ten epoch (same
+            curve as Factory, but not gated behind 8-purchase level blocks).
+          </li>
+          <li>
+            Each owned unit adds{' '}
+            {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per real second to its
+            matching Factory tier — linear in owned count, applied as production multiplier{' '}
+            <strong>(1 + cumulative boost)</strong>.
+          </li>
+          <li>
+            Cumulative boost per tier displays in the hero as <strong>Flops</strong> using{' '}
+            <strong>E = k + 10M + 100G + 1000T + … + 10⁹Q</strong> (each tier's boost weighted by
+            10<sup>n</sup>, K = 10⁰ through Q = 10⁹). Production still uses the unweighted per-tier
+            boost. Totals reset each Prestige; owned unit counts are permanent.
+          </li>
         </ul>
       </Section>
 

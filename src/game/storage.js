@@ -1,4 +1,5 @@
 import { createInitialGameState } from './engine'
+import { COMPUTE_FLOPS_REVEAL_PP } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
@@ -352,6 +353,12 @@ const mergeState = saved => {
       pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
     },
     intro: { ...fresh.intro, ...(saved.intro ?? {}) },
+    computeFlops: {
+      pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
+        || Math.max(0, Number(saved.prestige?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
+      owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
+      cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
+    },
   }
 }
 
