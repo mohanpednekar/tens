@@ -92,10 +92,10 @@ localStorage persistence), called once in `App.jsx` and shared by every page via
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
 state); `StoragePage`/`ComputePage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
 switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Compute →
-Tiers → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
+Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Tiers
+below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 

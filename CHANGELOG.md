@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Settings danger-zone copy follow the same name.
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Ladder). Settings / Guide may still mention version in page body.
-- **Tier ladder row**: owned count stacks under the tier name (directly above the tickspeed
-  button); production sits top-right spanning that left stack. Not a side-by-side swap.
+- **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
+  (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
   the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
   a separate element under the page header at the top of MainPage.

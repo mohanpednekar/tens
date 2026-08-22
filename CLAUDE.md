@@ -360,7 +360,7 @@ src/
                                offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Ladder → Guide → More
-                               (progression order); Tiers omits during the Foundry gate
+                               (progression order); Ladder omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
                                Byte Foundry are Settings → Danger zone only)
@@ -450,7 +450,7 @@ src/
                                Gate-exempt pages stay reachable during the gate so Guide / Compute
                                (once capacity reveals it) / More utilities are never yanked away; the
                                gate picks back up the instant the player navigates to `'game'`
-                               (Tiers). Since `page` is independent of `intro.mainGameUnlocked`, no
+                               (Ladder). Since `page` is independent of `intro.mainGameUnlocked`, no
                                syncing effect is needed at all: the gate resolving just reveals
                                whatever `page` already was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
