@@ -198,7 +198,7 @@ test('the Guide nav item opens the Info page and Tiers returns, preserving game 
   // sections (Tickspeed, Speed Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^boosters$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/bits balance/i)
@@ -3255,7 +3255,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(openButton).toBeEnabled()
     openCompute()
 
-    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /boosters/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate standard compute boost/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /activate sustain compute boost/i })).toBeInTheDocument()
@@ -3492,7 +3492,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openCompute()
 
-    expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /boosters/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/cores.*2\/10/i)
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/nodes.*9\/10/i)
     expect(screen.getByLabelText(/^compute entities$/i)).toHaveTextContent(/clusters.*3\/10/i)
