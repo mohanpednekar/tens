@@ -3861,9 +3861,9 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
 // item reopens it at any time. Unlike the old completed-gated design, nothing here ever goes
 // read-only: Tap/Sacrifice/Invest stay live indefinitely, and Convert stays live too as long as
 // this cycle's shared transfer budget isn't exhausted. Before mainGameUnlocked, it's still the
-// same mandatory gate as always — AppNav omits Ladder/Guide, so there's no way onto MainPage.
+// same mandatory gate as always — AppNav omits Ladder, so there's no way onto MainPage.
 
-test('AppNav\'s Foundry item navigates to the always-interactive screen; Tiers returns to MainPage', async () => {
+test('AppNav\'s Foundry item navigates to the always-interactive screen; Ladder returns to MainPage', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({

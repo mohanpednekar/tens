@@ -21,8 +21,9 @@ see "Byte Foundry page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" sec
 simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, actions, ... }` from
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
-renders identically whether reached as the mandatory gate or voluntarily; AppNav is hidden (or
-omits Tiers/Guide) during the gate so there is still no escape hatch.
+renders identically whether reached as the mandatory gate or voluntarily; AppNav
+omits Ladder during the gate so there is still no escape hatch via the production screen
+(Guide and More stay reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
@@ -572,13 +573,15 @@ not at the bottom"):
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Version display.** A `VersionText` (`styled(MutedText).attrs({ as: 'span' })`) shows the app's
-  current version (`v{version}`, e.g. `v0.5.0`) inside a `HeaderMeta` row directly beneath the
-  `<h1>Tens</h1>` — always visible, no disclosure involved. Top-level destinations (Tiers / Foundry /
-  Storage / Compute / Guide) live in `App.jsx`'s shared `AppNav`, not as header buttons here.
+- **Page title.** The MainPage header is `<h1>Ladder</h1>` (the screen name — not the game name
+  “Tens”). Top-level destinations (Ladder / Foundry / Storage / Compute / Guide) live in
+  `App.jsx`'s shared `AppNav`, not as header buttons here.
+- **Version display.** App version (`v{version}`, e.g. `v0.5.0`) is a fixed corner overlay in
+  `App.jsx` (`VersionBadge`: `position: fixed`, `pointer-events: none`, `aria-hidden`, above the
+  nav bar via `APP_NAV_BOTTOM_PAD`) — no header row / dedicated vertical real estate on Ladder.
   Sourced from `package.json`'s `"version"` field via a build-time JSON import
-  (`import { version } from '../../../package.json'`) — the single source of truth; no separate
-  constant duplicates it.
+  (`import { version } from '../package.json'` in `App.jsx`) — the single source of truth; no
+  separate constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an
