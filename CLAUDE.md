@@ -180,7 +180,7 @@ returns **403** on issue comments, labels, and closes. Unattended workflows use
 **Fix:** add a fine-grained PAT (Issues read/write; same scopes as `GH_AUTOMATION_PAT` when
 the agent also pushes) to **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`**.
 `gh` picks it up automatically. Without it, issue hygiene must run via GHA (see
-`scripts/epic-407-issue-hygiene.sh` on housekeeping runs in
+`scripts/backlog-issue-hygiene.sh` on housekeeping runs in
 `cursor-autonomous-maintenance.yml`) or a maintainer's local session.
 
 **Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
