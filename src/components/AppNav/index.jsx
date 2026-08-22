@@ -2,7 +2,7 @@ import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
 // Bottom bar order follows play progression: Foundry → Boosters → Compute → Factory, then Guide / More.
-// Storage is folded into Foundry as a Memory | Storage second-level tab (same Memory pool +
+// Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; Guide/More stay available during the Foundry gate.
 // Accessible names: open byte foundry / open boosters / open compute / open factory / open guide / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).

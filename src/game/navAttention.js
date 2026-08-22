@@ -268,7 +268,7 @@ export const maxAttention = (a, b) => {
 
 /**
  * Map of AppNav page id → 'high' | 'normal' | false.
- * Storage attention folds into Foundry (Memory | Storage second-level tabs).
+ * Storage attention folds into Foundry (continuous Memory + Disk sections).
  */
 export const getNavAttention = state => ({
   game: getTiersAttentionLevel(state),

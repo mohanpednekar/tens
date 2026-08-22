@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
+  Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**
+  swap positions (Claim Core beside Bandwidth; Memory ×10 below the disk section). Each disk
+  array always shows all 10 disk slots in one unbroken row (no mobile wrap).
 - **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
   fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
 - **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
@@ -15,10 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Light theme** — improved surface hierarchy (buttons/nav no longer blend into the page),
   stronger card shadows, and peer-tab / milestone badges now use theme tokens instead of
   dark-mode-only hardcoded colors.
-- **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`); mobile disk rows
-  are always five per row (desktop stays ten), never four.
-- **Foundry tab label** — the second-level Foundry peer tab formerly labeled **Disks** is now
-  **Storage** (Memory | Storage); internal tab id unchanged.
+- **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`).
+- **Foundry tab label** — *(superseded by the continuous Foundry layout above)* the second-level
+  Foundry peer tab formerly labeled **Disks** was briefly **Storage** (Memory | Storage).
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
   size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
   size, or from the size below via **write cache** (10 timed segments + one flush equal to a target
