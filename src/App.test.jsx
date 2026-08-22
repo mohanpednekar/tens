@@ -114,7 +114,7 @@ test('shows a blocking notice and starts fresh when an incompatible save is dete
   expect(screen.getByRole('heading', { name: /save not compatible/i })).toBeInTheDocument()
   const persisted = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(persisted.resources.Ones).toBeUndefined()
-  expect(persisted.saveSchemaVersion).toBe(1)
+  expect(persisted.saveSchemaVersion).toBe(2)
 
   await user.click(screen.getByRole('button', { name: /start fresh with a new save/i }))
 

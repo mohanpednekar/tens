@@ -662,9 +662,20 @@ directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, 
 the tier immediately below it, cascading production down to the base currency; `tier01` is the special
 case where cost and production resource are both the base currency. Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
-the economy except for Prestige — unless `prestige.count` has reached `PRESTIGE_UNBOUNDED_MIN_COUNT`
-(100), in which case production continues and Prestige is optional (see `isUnboundedPrestigeUnlocked`/
-`isProductionFrozen`). Prestige Points are awarded by `getPrestigePointsAwarded`: 1 base PP at 1 Googol
+the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` is true (permanent
+`prestige.unboundedUnlocked` latch set the first time `prestige.count` reaches
+`PRESTIGE_UNBOUNDED_MIN_COUNT` (100), or carried through Era ascension), in which case production
+continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a
+separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
+**Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
+resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
+ordinary Factory cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
+`computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
+(except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
+museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
+free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with
+Eons in #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
+`getHyperscalerFlopsBoostRate`. Prestige Points are awarded by `getPrestigePointsAwarded`: 1 base PP at 1 Googol
 Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
 Googol's own 10^100 exponent, scaled by permanent Double PP upgrades (`prestigeDoublePpLevel` — each
 halves powers-per-PP until 1, then doubles PP-per-power; cost `100^(level+1)` PP). `GOOGOL` (1e100)
@@ -841,7 +852,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1422 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1433 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -849,7 +860,8 @@ already cover the genuinely useful items on that checklist.
   must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
   `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills in
   missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
-  discarded and surfaced via `IncompatibleSaveNotice`. `src/theme/contrast.js` (a
+  discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 2`
+  on every write (v1 saves forward-fill via `mergeState`). `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.

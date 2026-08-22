@@ -22,6 +22,10 @@ export const adaptSaveForCurrentSchema = raw => {
     return { ok: true, payload: stripSaveEnvelope(raw) }
   }
 
+  if (raw.saveSchemaVersion === 1) {
+    return { ok: true, payload: stripSaveEnvelope(raw) }
+  }
+
   const legacyReason = getSaveIncompatibilityReason(raw)
   if (legacyReason) {
     // Future: compose migrateV0ToV1, migrateV1ToV2, … until SAVE_SCHEMA_VERSION or give up.

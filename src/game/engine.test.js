@@ -19,6 +19,8 @@ import {
   buyAutoPrestigeAutobuyer,
   buyAutoSpeedUp,
   buyGlobalTickspeedMultiplier,
+  buyComputeFlopsTier,
+  buyHyperscaler,
   buyPrestigeDoublePp,
   buyPrestigeSpeedBonus,
   buySmartAutobuyer,
@@ -34,6 +36,7 @@ import {
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
   createInitialGameState,
+  eraGame,
   enableAutoClaimCore,
   enableAutoMergeClustersIntoNetwork,
   enableAutoMergeCloudsIntoDatacenter,
@@ -45,6 +48,7 @@ import {
   enableAutoMergeNodesIntoCluster,
   enableAutoMergeSupercomputersIntoMegacomputer,
   getIntroProductionRate,
+  isEraEligible,
   isIntroConversionUnlocked,
   isStorageUnlocked,
   pickIntroCapacityMilestone,
@@ -84,6 +88,9 @@ import {
   getDiskSizesToShow,
   getRelevantDiskSizesForFoundry,
   getEffectiveTierTickSpeedSeconds,
+  getEonsAwarded,
+  getFlopsAutobuyerUnlockEra,
+  getHyperscalerFlopsBoostRate,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getIntroKilobyteConversionCost,
@@ -207,7 +214,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -7825,5 +7832,144 @@ describe('consumeXpForLastTierTickspeed', () => {
     )
     const after = consumeXpForLastTierTickspeed(20)(state)
     expect(after.lastTierXpConsumed).toBe(20)
+  })
+})
+
+// ─── Era ascension (#407/#410) ───────────────────────────────────────────────
+
+const eraEligibleState = (overrides = {}) => {
+  let state = withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP)
+  state = withIntro(state, {
+    byteCreated: true,
+    mainGameUnlocked: true,
+    capacity: INTRO_STARTING_CAPACITY * 100,
+    computeCores: 5,
+    disks: { [FIRST_DISK_SIZE]: 3 },
+    foundryResetCaps: { combineCount: 2 },
+    ...overrides.intro,
+  })
+  state = {
+    ...state,
+    resources: { ...state.resources, [MONEY_ID]: PRESTIGE_THRESHOLD },
+    owned: { ...state.owned, [TIER_DEFINITIONS[0].id]: 10 },
+    autobuyers: { ...state.autobuyers, [TIER_DEFINITIONS[0].id]: 1 },
+    smartAutobuyer: { ...state.smartAutobuyer, [TIER_DEFINITIONS[0].id]: true },
+    prestigeDoublePpLevel: 2,
+    computeFlops: {
+      pageUnlocked: true,
+      owned: { [COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]: 5 },
+      cumulativeBoost: { [TIER_DEFINITIONS[0].id]: 0.01 },
+    },
+    hyperscalerCount: 2,
+    eons: { balance: 3 },
+    eonsUpgrades: { ...createInitialGameState().eonsUpgrades, eonAmplifierLevel: 1 },
+    era: { count: 0 },
+    prestige: { ...state.prestige, count: 50 },
+    ...overrides,
+  }
+  return state
+}
+
+describe('isEraEligible', () => {
+  it('requires unspent PP >= ERA_ELIGIBILITY_PP (1 Googol PP)', () => {
+    expect(isEraEligible(withPrestigePoints(createInitialGameState(), 0))).toBe(false)
+    expect(isEraEligible(withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP))).toBe(true)
+  })
+})
+
+describe('getEonsAwarded / buyHyperscaler / getHyperscalerFlopsBoostRate', () => {
+  it('awards 1 + eonAmplifierLevel Eons per Era', () => {
+    const state = withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP)
+    expect(getEonsAwarded(state)).toBe(1)
+    expect(getEonsAwarded({
+      ...state,
+      eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: 2 },
+    })).toBe(3)
+  })
+
+  it('buyHyperscaler spends escalating Eons and increases hyperscaler boost rate', () => {
+    const state = { ...createInitialGameState(), eons: { balance: 11 }, hyperscalerCount: 0 }
+    const afterFirst = buyHyperscaler(state)
+    expect(afterFirst.eons.balance).toBe(10)
+    expect(afterFirst.hyperscalerCount).toBe(1)
+    expect(getHyperscalerFlopsBoostRate(afterFirst)).toBeGreaterThan(0)
+    const broke = { ...createInitialGameState(), eons: { balance: 0 }, hyperscalerCount: 0 }
+    expect(buyHyperscaler(broke)).toBe(broke)
+  })
+})
+
+describe('eraGame', () => {
+  it('is a no-op when PP balance is below ERA_ELIGIBILITY_PP', () => {
+    const state = withPrestigePoints(createInitialGameState(), 0)
+    expect(eraGame(state)).toBe(state)
+  })
+
+  it('resets Factory cycle fields and prestige PP/count/doublePpLevel', () => {
+    const state = eraEligibleState()
+    const after = eraGame(state)
+    expect(after.resources[MONEY_ID]).toBe(1)
+    expect(after.owned[TIER_DEFINITIONS[0].id]).toBe(0)
+    expect(after.prestige.points).toBe(0)
+    expect(after.prestige.count).toBe(0)
+    expect(after.prestigeDoublePpLevel).toBe(0)
+  })
+
+  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and automation unlock prefs', () => {
+    const state = eraEligibleState()
+    const after = eraGame(state)
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.mainGameUnlocked).toBe(false)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.computeCores).toBe(0)
+    expect(after.intro.disks).toEqual({})
+    expect(after.intro.foundryResetCaps).toEqual({})
+    expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(after.smartAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
+  })
+
+  it('resets computeFlops owned and cumulativeBoost but keeps pageUnlocked', () => {
+    const state = eraEligibleState()
+    const after = eraGame(state)
+    expect(after.computeFlops.pageUnlocked).toBe(true)
+    expect(after.computeFlops.owned[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(0)
+    expect(after.computeFlops.cumulativeBoost[TIER_DEFINITIONS[0].id]).toBe(0)
+  })
+
+  it('persists hyperscalers, Eons balance (+ award), and increments era.count', () => {
+    const state = eraEligibleState()
+    const after = eraGame(state)
+    expect(after.hyperscalerCount).toBe(2)
+    expect(after.eons.balance).toBe(3 + getEonsAwarded(state))
+    expect(after.era.count).toBe(1)
+  })
+
+  it('latches unboundedUnlocked from prestige.count before reset', () => {
+    const below = eraEligibleState({ prestige: { ...eraEligibleState().prestige, count: 50 } })
+    expect(eraGame(below).prestige.unboundedUnlocked).toBe(false)
+
+    const atThreshold = eraEligibleState({ prestige: { ...eraEligibleState().prestige, count: 100 } })
+    expect(eraGame(atThreshold).prestige.unboundedUnlocked).toBe(true)
+  })
+
+  it('unlocks KFlops autobuyer at Era 1 via applyFlopsAutobuyerMilestones', () => {
+    const after = eraGame(eraEligibleState())
+    expect(after.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(after.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[1].id]).toBeNull()
+    expect(getFlopsAutobuyerUnlockEra(COMPUTE_FLOPS_TIER_DEFINITIONS[0].id)).toBe(1)
+    expect(getFlopsAutobuyerUnlockEra(COMPUTE_FLOPS_TIER_DEFINITIONS[1].id)).toBe(2)
+  })
+})
+
+describe('prestigeGame unboundedUnlocked latch', () => {
+  it('sets prestige.unboundedUnlocked when count crosses PRESTIGE_UNBOUNDED_MIN_COUNT', () => {
+    const state = withMoney(
+      withPrestigeCount(createInitialGameState(), PRESTIGE_UNBOUNDED_MIN_COUNT - 1),
+      PRESTIGE_THRESHOLD,
+    )
+    const after = prestigeGame(state)
+    expect(after.prestige.count).toBe(PRESTIGE_UNBOUNDED_MIN_COUNT)
+    expect(after.prestige.unboundedUnlocked).toBe(true)
+    expect(isUnboundedPrestigeUnlocked(after)).toBe(true)
   })
 })

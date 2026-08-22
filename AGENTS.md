@@ -105,8 +105,8 @@ theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, displa
 produces the tier below it; `tier01` is the special case where cost and production resource are both
 the base currency. Bytes are **not** a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
-**Do not guess at cost/production formulas, the purchase-level system, prestige, or tickspeed
-mechanics here** — they're intricate and have changed shape multiple times (see
+**Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
+or tickspeed mechanics here** — they're intricate and have changed shape multiple times (see
 `docs/DESIGN_HISTORY.md`). Read `docs/ECONOMY_REFERENCE.md` (or the matching section of `CLAUDE.md`)
 before touching `src/game/engine.js`, `src/game/layers.js`, or any economy constant.
 
