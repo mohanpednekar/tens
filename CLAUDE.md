@@ -445,9 +445,10 @@ src/
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
                                Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
                                takes no navigation props (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer status. Reached via
-                               AppNav → More; always reachable (including during the Foundry gate);
-                               takes `{ game }`
+    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer / Compute-autobuyer
+                               status. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
+                               Ascend an Era. Reached via AppNav → More; always reachable (including
+                               during the Foundry gate); takes `{ game }`
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Ops dashboard,
                                and Reset (Danger zone only). Reached via AppNav → More; always
                                reachable; takes `{ game, onReset }`
@@ -661,8 +662,9 @@ Strict three-layer separation:
    `package.json` via build-time import) — the **only** in-app version surface. Reached via AppNav's
    Guide item; `App.jsx` toggles between these pages locally; there is still no routing library or
    backend involved.
-6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer
-   status screen. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
+6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer /
+   Compute-autobuyer status screen. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
+   Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
    during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
    Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Ops dashboard,
@@ -867,7 +869,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1456 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1458 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

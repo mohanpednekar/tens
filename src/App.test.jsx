@@ -4009,12 +4009,11 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   vi.useRealTimers()
 })
 
-// --- Chapters (inside the Milestones view) ---
-// Every chapter row is a plain boolean read of state.intro.mainGameUnlocked / state.prestige.count
-// — see CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is
-// reachable at all (MainPage only ever renders once intro.mainGameUnlocked is true), so it isn't varied
-// here — the meaningful coverage is "Go Googol" tracking prestige.count, and that Chapters itself
-// is reachable before a first Prestige at all (see the "reachable both before and after" test above).
+// --- Chapters (Milestones page) ---
+// Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
+// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
+// is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
+// Open Compute / Go Unbounded / Ascend an Era and the Compute autobuyer category.
 test.each([
   { prestigeCount: 0, reached: false },
   { prestigeCount: 1, reached: true },
@@ -4036,9 +4035,44 @@ test.each([
 
   const goGoogolRow = screen.getByLabelText(/^go googol chapter$/i)
   expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
+})
 
-  const comingSoonRow = screen.getByLabelText(/^coming soon… chapter$/i)
-  expect(comingSoonRow).toHaveTextContent('🔒')
+test('Chapters track Compute, Unbounded, and Era milestones', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    prestige: { xp: 0, points: 0, count: 100, highestMilestone: 1, unboundedUnlocked: true },
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    era: { count: 2 },
+  })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+
+  expect(screen.getByLabelText(/^open compute chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^go unbounded chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
+  expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
+})
+
+test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    era: { count: 1 },
+    computeFlopsAutobuyers: { flop01: 1, flop02: null, flop03: null, flop04: null, flop05: null, flop06: null, flop07: null, flop08: null, flop09: null, flop10: null },
+  })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+
+  expect(screen.getByLabelText(/^compute autobuyer unlock milestones category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kflops autobuyer unlock milestone$/i)).toHaveTextContent('✅ Era 1')
+  expect(screen.getByLabelText(/^mflops autobuyer unlock milestone$/i)).toHaveTextContent('🔒 Era 2')
 })
 
 describe('Compute (Flops) screen', () => {

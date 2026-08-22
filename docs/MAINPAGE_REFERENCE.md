@@ -818,7 +818,7 @@ until `!isFirstRun`, which meant a Chapters list living there would only ever be
 the very milestone ("Go Googol," a first Prestige) it was meant to track — permanently pre-checked, not
 a real tracker. Lifting the whole `ViewNav` tab bar's Game/Milestones tabs out of that gate (see "Game
 view vs. PP Upgrades view vs. Milestones view" above) fixes this for "Go Googol" specifically: it can
-now genuinely be seen 🔒 before a first Prestige. Three static rows, no `role="progressbar"` on any of
+now genuinely be seen 🔒 before a first Prestige. Five static rows, no `role="progressbar"` on any of
 them (booleans, not counts — nothing to show numeric progress toward):
 1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.mainGameUnlocked`
    is true. Because `MainPage` (and this tab) is only reachable *after* `intro.mainGameUnlocked` in the
@@ -828,15 +828,25 @@ them (booleans, not counts — nothing to show numeric progress toward):
    below); that's an acknowledged, deliberate scope boundary, not an oversight.
 2. **"Go Googol"** (`aria-label="Go Googol chapter"`) — ✅ once `state.prestige.count > 0`. The row this
    whole visibility fix was for — genuinely observable as 🔒 now.
-3. **"Coming soon…"** (`aria-label="Coming soon… chapter"`) — permanently 🔒, no unlock condition, a
-   placeholder for future chapters.
+3. **"Open Compute"** (`aria-label="Open Compute chapter"`) — ✅ once `state.computeFlops.pageUnlocked`
+   latches true (first time unspent PP reaches `COMPUTE_FLOPS_REVEAL_PP`, 100 — the **Compute** nav
+   item, formerly the Flops screen; distinct from **Boosters**, the merge-chain / Compute Boost page).
+4. **"Go Unbounded"** (`aria-label="Go Unbounded chapter"`) — ✅ once `isUnboundedPrestigeUnlocked(state)`
+   (`prestige.unboundedUnlocked` latch — set at `PRESTIGE_UNBOUNDED_MIN_COUNT` (100) prestiges, carried
+   through Era ascension).
+5. **"Ascend an Era"** (`aria-label="Ascend an Era chapter"`) — ✅ once `state.era.count > 0`.
 
 Each row shows a `PpUpgradeBadge` with `✅`/`🔒` plus the label; the `aria-label` on the badge itself
 spells out `"{label} chapter complete"`/`"{label} chapter not yet complete"` for assistive tech. Zero
-new `engine.js` logic backs this category — it reads `state.intro.mainGameUnlocked` and the existing
-`state.prestige.count` only.
+new `engine.js` logic backs this category — it reads `state.intro.mainGameUnlocked`, `state.prestige.count`,
+`isUnboundedPrestigeUnlocked(state)`, `state.computeFlops.pageUnlocked`, and `state.era.count`.
 
-Below Chapters, two more categories, each listing all ten tiers via `getAutobuyerUnlockMilestone`/
+Below Chapters, up to three more categories — tier autobuyer unlocks and tier tickspeed autobuyers
+(both gated on `!isFirstRun`), plus **Compute Autobuyer Unlocks** once `state.computeFlops.pageUnlocked`
+(revealed at 100 PP — nav **Compute**, the PP Flops tiers screen). The Compute autobuyer category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
+`getFlopsAutobuyerUnlockEra` / `state.computeFlopsAutobuyers` — green `✅ Era {N}` once unlocked,
+dimmed `🔒 Era {N}` otherwise, with the same `VisuallyHidden role="progressbar"` shape as the tier
+tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Factory tiers via `getAutobuyerUnlockMilestone`/
 `getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md) — these two (unlike Chapters) **do**
 stay gated on `!isFirstRun`, since both are keyed entirely off Prestige count, a meaningless concept
 before a first Prestige:

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
+  Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
+  **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
