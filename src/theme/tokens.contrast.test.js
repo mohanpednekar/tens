@@ -10,12 +10,13 @@ import { themes } from './tokens'
 // reasoning rather than testing a plain token pair.
 describe('theme token AA contrast', () => {
   // Normal text (WCAG 4.5:1): body copy, tier names, owned/production labels, the tickspeed-bonus
-  // GreenText line, and unblended button text/borders (Button's `color`/`border` share one value).
+  // body copy, tier names, owned labels, and unblended button text/borders (Button's `color`/`border`
+  // share one value). Production figures use `text` (stronger); owned counts use `textMuted`.
   const normalTextPairs = {
     'text on page (GlobalStyle body text)': ['text', 'page'],
     'text on surface (StatCard / tier row default text)': ['text', 'surface'],
     'textMuted on surface (owned/production labels, details list)': ['textMuted', 'surface'],
-    'good on surface (GreenText tickspeed-bonus label)': ['good', 'surface'],
+    'good on surface (semantic positive / affordability accents)': ['good', 'surface'],
     'text on surfaceSunken (unblended Buy/Upgrade button text)': ['text', 'surfaceSunken'],
     'good on surfaceSunken (unblended tickspeed-upgrade button text)': ['good', 'surfaceSunken'],
     'violet on surfaceSunken (unblended XP-consume button text)': ['violet', 'surfaceSunken'],
