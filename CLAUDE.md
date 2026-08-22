@@ -805,18 +805,14 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1406 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1373 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
-  purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). A legacy
-  save's `resources.Ones` balance is migrated to `resources.base` on load, and a save from before the tier
-  ladder shifted has its per-tier data shifted down one slot (old `tier02`/Kilobytes → new `tier01`, …,
-  old `tier01`/Bytes dropped entirely) — gated on the same one-time `intro === undefined` signal that
-  also backfills `intro.mainGameUnlocked: true` for such a save (see `storage.js`'s
-  `migrateState`/`shiftOldTierIds`); a separate, narrower backward-compat case backfills
-  `mainGameUnlocked` from an old boolean `intro.completed` field for a save that predates the
-  `mainGameUnlocked` field but already has its own `intro`. `src/theme/contrast.js` (a
+  purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). Saves
+  must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
+  `storage.js`'s `mergeState` only fills in missing fields from `createInitialGameState()` and does not
+  transform legacy save formats. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
@@ -840,14 +836,13 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
 - Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
   `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
   manually — the same state-seeding convention `App.test.jsx` already uses for the Vitest suite. A seeded
-  object only needs the fields a given test cares about; `storage.js`'s `migrateState` fills in the rest
-  from `createInitialGameState()` on load — including `intro: { completed: true }`, needed by every spec
+  object only needs the fields a given test cares about; `storage.js`'s `mergeState` fills in the rest
+  from `createInitialGameState()` on load — including `intro: { mainGameUnlocked: true }`, needed by every spec
   that seeds state to land directly on MainPage rather than the Byte Foundry intro screen.
-- Current specs: `e2e/golden-path.e2e.js` (fresh state with the intro pre-completed, buying Kilobytes via
+- Current specs: `e2e/golden-path.e2e.js` (fresh state with the main game already unlocked, buying Kilobytes via
   the real Buy button, Owned count and money balance updating including across a real production tick),
   `e2e/autobuyer-reload.e2e.js` (a save with a tier's autobuyer already unlocked survives a real reload
-  without being silently relocked — a regression class guarded by `migrateState`'s
-  legacy-boolean-vs-numeric handling), and `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
+  without being silently relocked), and `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
   prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
   are awarded).
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on

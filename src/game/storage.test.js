@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInitialGameState, getDiskSize } from './engine'
-import { DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { createInitialGameState } from './engine'
+import { MONEY_ID, TIER_DEFINITIONS } from './layers'
 import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
-const thousandsTier = TIER_DEFINITIONS[1]
 
 beforeEach(() => {
   localStorage.clear()
@@ -81,28 +80,7 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().autobuyers[tensTier.id]).toBe(2)
   })
 
-  it('migrates legacy boolean autobuyer true to level 1', () => {
-    const rawState = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: true },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers[tensTier.id]).toBe(1)
-  })
-
-  it('migrates legacy boolean autobuyer false to null (locked)', () => {
-    const rawState = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: false },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autobuyers[tensTier.id]).toBeNull()
-  })
-
-  it('preserves a numeric autobuyer level of 0 (unlocked but idle) rather than relocking it', () => {
-    // Regression test: level 0 is a legitimate current-schema value (unlocked, not yet
-    // upgraded, or reset to 0 by a prestige) — it must survive a save/load round-trip
-    // unchanged, not be conflated with the legacy boolean `false` and remapped to null.
+  it('preserves a numeric autobuyer level of 0 (unlocked but idle)', () => {
     const rawState = {
       ...createInitialGameState(),
       autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 0 },
@@ -139,7 +117,7 @@ describe('saveGameState / loadGameState round-trip', () => {
   })
 })
 
-describe('schema migration', () => {
+describe('schema merge on load', () => {
   it('adds missing autobuyers field from an older save', () => {
     const { autobuyers: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
@@ -168,30 +146,6 @@ describe('schema migration', () => {
     })
   })
 
-  it('retroactively unlocks tier autobuyers a save\'s prestige.count already qualifies for under the new milestone-based unlock', () => {
-    const saved = {
-      ...createInitialGameState(),
-      prestige: { ...createInitialGameState().prestige, count: 3 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(saved))
-    const loaded = loadGameState()
-    expect(loaded.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
-    expect(loaded.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
-    expect(loaded.autobuyers[TIER_DEFINITIONS[2].id]).toBe(1)
-    expect(loaded.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
-  })
-
-  it('never revokes a tier autobuyer already unlocked via the old PP-cost purchase', () => {
-    const saved = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [TIER_DEFINITIONS[5].id]: 1 },
-      prestige: { ...createInitialGameState().prestige, count: 0 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(saved))
-    const loaded = loadGameState()
-    expect(loaded.autobuyers[TIER_DEFINITIONS[5].id]).toBe(1)
-  })
-
   it('fills in missing resource keys from newer tiers', () => {
     const partial = {
       ...createInitialGameState(),
@@ -217,117 +171,11 @@ describe('schema migration', () => {
     expect(loaded.owned[tensTier.id]).toBe(5) // existing value preserved
   })
 
-  it('adds purchased from owned for older saves missing purchased', () => {
-    const { purchased: _removedForTest, ...oldSave } = {
-      ...createInitialGameState(),
-      owned: { ...createInitialGameState().owned, [tensTier.id]: 7 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.purchased[tensTier.id]).toBe(7)
-  })
-
-  it('derives purchaseLevels/purchaseLevelProgress from owned when both purchased and the new fields predate the save', () => {
-    const { purchased: _droppedPurchased, purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
-      ...createInitialGameState(),
-      owned: { ...createInitialGameState().owned, [tensTier.id]: 19 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    // Same derivation as the purchased-count case above, fed through the saved.purchased ??
-    // saved.owned fallback since this save has no purchased field at all.
-    expect(loaded.purchaseLevels[tensTier.id]).toBe(3)
-    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(3)
-  })
-
-  it('derives purchaseLevels/purchaseLevelProgress from a legacy purchased count on a save that predates those fields', () => {
-    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
-      ...createInitialGameState(),
-      purchased: { ...createInitialGameState().purchased, [tensTier.id]: 19 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    // 19 purchased at the default block size of 8: two full levels (16) completed, 3 left over —
-    // level 3 (1-indexed), progress 3.
-    expect(loaded.purchaseLevels[tensTier.id]).toBe(3)
-    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(3)
-  })
-
-  it('derives level 1 / progress 0 from a legacy purchased count of 0', () => {
-    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = createInitialGameState()
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(loaded.purchaseLevels[tier.id]).toBe(1)
-      expect(loaded.purchaseLevelProgress[tier.id]).toBe(0)
-    })
-  })
-
-  it('derives exactly level 2 / progress 0 from a legacy purchased count equal to one full block size', () => {
-    const { purchaseLevels: _droppedLevels, purchaseLevelProgress: _droppedProgress, ...oldSave } = {
-      ...createInitialGameState(),
-      purchased: { ...createInitialGameState().purchased, [tensTier.id]: DEFAULT_PURCHASE_BLOCK_SIZE },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.purchaseLevels[tensTier.id]).toBe(2)
-    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(0)
-  })
-
-  it('prefers an explicit purchaseLevels/purchaseLevelProgress value over deriving one from purchased, per tier', () => {
-    const base = createInitialGameState()
+  it('defaults prestige.points to 0, smartAutobuyer/tierTickspeedAutobuyer to false, and autoPrestige to null for saves missing those fields', () => {
     const oldSave = {
-      ...base,
-      purchased: { ...base.purchased, [tensTier.id]: 19, [thousandsTier.id]: 19 },
-      // Only tensTier carries an explicit (current-schema) value — thousandsTier has none, so it
-      // must still be derived from its own purchased count instead of falling back to a default.
-      purchaseLevels: { [tensTier.id]: 99 },
-      purchaseLevelProgress: { [tensTier.id]: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.purchaseLevels[tensTier.id]).toBe(99)
-    expect(loaded.purchaseLevelProgress[tensTier.id]).toBe(1)
-    expect(loaded.purchaseLevels[thousandsTier.id]).toBe(3)
-    expect(loaded.purchaseLevelProgress[thousandsTier.id]).toBe(3)
-  })
-
-  it('migrates a legacy save\'s prestige.pp into prestige.xp, and level into count', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      prestige: { pp: 5, level: 2, highestMilestone: 3 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.prestige.xp).toBe(5)
-    expect(loaded.prestige.count).toBe(2)
-  })
-
-  it('prefers an explicit xp value over a legacy pp value when both are present', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      prestige: { pp: 5, xp: 9, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.prestige.xp).toBe(9)
-  })
-
-  it('prefers an explicit count value over a legacy level value when both are present', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      prestige: { xp: 0, level: 5, count: 9, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.prestige.count).toBe(9)
-  })
-
-  it('defaults prestige.points to 0, smartAutobuyer/tierTickspeedAutobuyer to false, and autoPrestige to null for saves that predate them', () => {
-    const oldSave = {
-      resources: { Ones: 10 },
+      resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -341,13 +189,13 @@ describe('schema migration', () => {
     })
   })
 
-  it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves that predate the pause/resume feature', () => {
+  it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
     const oldSave = {
-      resources: { Ones: 10 },
+      resources: { [MONEY_ID]: 10 },
       autoSpeedUp: true,
       autoGlobalTickspeed: true,
       autoPrestige: 2,
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -373,12 +221,12 @@ describe('schema migration', () => {
     expect(loaded.autoPrestigeEnabled).toBe(false)
   })
 
-  it('backfills autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save that predates the per-tier pause/resume feature', () => {
+  it('defaults autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save missing those fields', () => {
     const oldSave = {
-      resources: { Ones: 10 },
+      resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
       tierTickspeedAutobuyer: { [tensTier.id]: true },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -448,173 +296,24 @@ describe('schema migration', () => {
     })
   })
 
-  it('recovers a legacy per-tier tickspeed level that used to be stored directly in autobuyers, before tickspeedLevels existed as its own field', () => {
-    // Before this schema change, a tier's tickspeed level lived in autobuyers[tierId] itself
-    // (autobuyer unlock and the tickspeed level were the same field) — a pre-migration save with
-    // autobuyers.tensTier = 3 must recover that 3 into the new tickspeedLevels field rather than
-    // silently resetting the player's tickspeed progress back to the baseline.
-    const oldSave = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 3 },
-    }
-    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
-    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
-    const loaded = loadGameState()
-    expect(loaded.tickspeedLevels[tensTier.id]).toBe(3)
-    expect(loaded.autobuyers[tensTier.id]).not.toBeNull()
-  })
-
-  it('recovers a legacy per-tier tickspeed level of exactly 2, the lowest value above the v > 1 baseline', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 2 },
-    }
-    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
-    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
-    const loaded = loadGameState()
-    expect(loaded.tickspeedLevels[tensTier.id]).toBe(2)
-  })
-
-  it('does not recover a legacy tickspeed level from a legacy autobuyer value of exactly 1, since 1 is the baseline, not a level above it', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 1 },
-    }
-    const { tickspeedLevels: _dropped, ...rawSave } = oldSave
-    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
-    const loaded = loadGameState()
-    expect(loaded.tickspeedLevels[tensTier.id]).toBe(1)
-  })
-
-  it('prefers an explicit current-schema tickspeedLevels value over a legacy level recovered from autobuyers, when a save somehow has both', () => {
-    const rawSave = {
-      ...createInitialGameState(),
-      autobuyers: { ...createInitialGameState().autobuyers, [tensTier.id]: 3 },
-      tickspeedLevels: { ...createInitialGameState().tickspeedLevels, [tensTier.id]: 5 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(rawSave))
-    const loaded = loadGameState()
-    expect(loaded.tickspeedLevels[tensTier.id]).toBe(5)
-  })
-
   it('preserves a saved Auto-Prestige level', () => {
     const state = { ...createInitialGameState(), autoPrestige: 3 }
     saveGameState(state)
     expect(loadGameState().autoPrestige).toBe(3)
   })
 
-  it('migrates a legacy boolean autoPrestige true to level 1', () => {
-    const rawState = { ...createInitialGameState(), autoPrestige: true }
-    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autoPrestige).toBe(1)
-  })
-
-  it('migrates a legacy boolean autoPrestige false to null (not yet bought)', () => {
-    const rawState = { ...createInitialGameState(), autoPrestige: false }
-    localStorage.setItem('tens_game_state', JSON.stringify(rawState))
-    expect(loadGameState().autoPrestige).toBeNull()
-  })
-
-  it('forwards a legacy resources.Ones balance to resources.base (MONEY_ID renamed from Ones to base)', () => {
-    const oldSave = {
-      resources: { Ones: 12345 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.resources[MONEY_ID]).toBe(12345)
-    expect(loaded.resources.Ones).toBeUndefined()
-  })
-
-  it('forwards a legacy resources.Ones balance of exactly 0 (not just a truthy amount)', () => {
-    // The migration guard is `migratedResourcesRaw.base === undefined && legacyOnes !== undefined`
-    // — an explicit undefined check, not a truthy check — so a legacy balance of exactly 0 must
-    // still forward to resources.base rather than falling through to the fresh default.
-    const oldSave = {
-      resources: { Ones: 0 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.resources[MONEY_ID]).toBe(0)
-  })
-
   it('does not crash when resources is missing from the save entirely, falling back to fresh defaults', () => {
     const oldSave = {
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
   })
 
-  it('prefers an explicit resources.base value over a legacy resources.Ones value when both are present', () => {
-    const oldSave = {
-      resources: { Ones: 5, base: 999 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.resources[MONEY_ID]).toBe(999)
-  })
-
-  it('remaps legacy name-based tier ids to the new tier0N ids, shifted down one slot (Tens was old Bytes/tier01, now dropped; Thousands was old Kilobytes/tier02, now tier01)', () => {
-    const oldSave = {
-      resources: { Ones: 10, Tens: 3, Thousands: 1, Millions: 2 },
-      owned: { Tens: 3, Thousands: 1, Millions: 2 },
-      purchased: { Tens: 6, Thousands: 1, Millions: 2 },
-      autobuyers: { Tens: 2, Thousands: null, Millions: 1 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    // Tens (old tier01/Bytes) has no successor — dropped, not carried to new tier01.
-    expect(loaded.resources.tier01).toBe(1) // from Thousands (old tier02/Kilobytes), not Tens' 3
-    expect(loaded.resources.tier02).toBe(2) // from Millions (old tier03/Megabytes)
-    expect(loaded.owned.tier01).toBe(1)
-    expect(loaded.owned.tier02).toBe(2)
-    expect(loaded.purchased.tier01).toBe(1)
-    expect(loaded.purchased.tier02).toBe(2)
-    expect(loaded.autobuyers.tier01).toBeNull() // from Thousands
-    expect(loaded.autobuyers.tier02).toBe(1) // from Millions
-  })
-
-  it('shifts already-current-scheme tierNN keys down one slot too (old tier02/Kilobytes data becomes new tier01, old tier10/Ronnabytes data has no new home and is dropped)', () => {
-    const oldSave = {
-      resources: { base: 10, tier01: 999, tier02: 5, tier10: 7 },
-      owned: { tier01: 999, tier02: 5, tier10: 7 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    // Old tier01 (Bytes) data (999) is dropped, not misread as new tier01 (Kilobytes).
-    expect(loaded.owned.tier01).toBe(5) // from old tier02 (Kilobytes)
-    // Old tier10 (Ronnabytes) has no new tier11 to move to — dropped, new tier10 (Quettabytes)
-    // starts fresh at 0, not misread as 7.
-    expect(loaded.owned.tier10).toBe(0)
-  })
-
-  it('drops data under removed legacy tier ids (Nonillions/Decillions) without error', () => {
-    const oldSave = {
-      resources: { Ones: 10, Nonillions: 5, Decillions: 2 },
-      owned: { Nonillions: 5, Decillions: 2 },
-      purchased: { Nonillions: 5, Decillions: 2 },
-      autobuyers: { Nonillions: 1, Decillions: null },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.resources.Nonillions).toBeUndefined()
-    expect(loaded.resources.Decillions).toBeUndefined()
-    expect(loaded.owned.Nonillions).toBeUndefined()
-    TIER_DEFINITIONS.forEach(tier => {
-      expect(loaded.owned).toHaveProperty(tier.id)
-    })
-  })
-
   it('strips a stale lastTierTickspeedXpUnlocked flag from an older save (replaced by a live owned >= 10 check)', () => {
     const oldSave = {
-      resources: { Ones: 10 },
+      resources: { [MONEY_ID]: 10 },
       lastTierTickspeedXpUnlocked: true,
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
@@ -622,18 +321,7 @@ describe('schema migration', () => {
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
 
-  it('backfills mainGameUnlocked to true for a save from before the Byte Foundry intro existed (no intro field at all)', () => {
-    const oldSave = {
-      resources: { base: 5000 },
-      owned: { [tensTier.id]: 3 },
-      prestige: { xp: 0, level: 0, highestMilestone: 1 },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.intro.mainGameUnlocked).toBe(true)
-  })
-
-  it('preserves a save\'s own in-progress intro state rather than backfilling it', () => {
+  it('preserves a save\'s own in-progress intro state', () => {
     const state = {
       ...createInitialGameState(),
       intro: {
@@ -667,128 +355,6 @@ describe('schema migration', () => {
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.intro).toEqual(state.intro)
-  })
-
-  it('forwards a pre-rename save\'s storageBanks/storageBanksBuiltTotal/storageAutoRedeemedSizes to the new disks/disksBuiltTotal/diskAutoRedeemedSizes field names', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      intro: {
-        ...createInitialGameState().intro,
-        mainGameUnlocked: true,
-        storageBanks: { 1000: 2 },
-        storageBanksBuiltTotal: { 1000: 3 },
-        storageAutoRedeemedSizes: { 1000: true },
-      },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.intro.disks).toEqual({ 1000: 2 })
-    expect(loaded.intro.disksBuiltTotal).toEqual({ 1000: 3 })
-    expect(loaded.intro.diskAutoRedeemedSizes).toEqual({ 1000: true })
-    // diskCache/diskBuild are brand-new fields with no legacy equivalent — they fall through to
-    // fresh's {}/null defaults rather than throwing on the old save's absence of either.
-    expect(loaded.intro.diskCache).toEqual({})
-    expect(loaded.intro.diskBuild).toBeNull()
-  })
-
-  it('marks every new-ladder size below an already-owned larger disk as fully built so getDiskSize does not rewind (issue #368)', () => {
-    // Old ladder jumped 100 KB → 10 MB. A save that already has 10 MB disks must not be offered
-    // 1 MB on load after the gapless ladder lands.
-    const size10MB = 80_000_000
-    const oldSave = {
-      ...createInitialGameState(),
-      intro: {
-        ...createInitialGameState().intro,
-        mainGameUnlocked: true,
-        disks: { [size10MB]: 2 },
-        disksBuiltTotal: { [size10MB]: 4 },
-      },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.intro.disksBuiltTotal[8000]).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(loaded.intro.disksBuiltTotal[80_000]).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(loaded.intro.disksBuiltTotal[800_000]).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(loaded.intro.disksBuiltTotal[8_000_000]).toBe(DISK_ARRAY_LADDER_CAP) // 1 MB filled in
-    expect(loaded.intro.disksBuiltTotal[size10MB]).toBe(4)
-    expect(getDiskSize(loaded)).toBe(size10MB)
-  })
-
-  it('backfills mainGameUnlocked from an old boolean intro.completed field for a save that predates the mainGameUnlocked field', () => {
-    const unlockedOldSave = {
-      ...createInitialGameState(),
-      intro: { bits: 0, capacity: 8000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1, completed: true },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(unlockedOldSave))
-    const loadedUnlocked = loadGameState()
-    expect(loadedUnlocked.intro.mainGameUnlocked).toBe(true)
-
-    const midGateOldSave = {
-      ...createInitialGameState(),
-      intro: { bits: 3, capacity: 8, byteCreated: false, tickSpeedSeconds: 1, productionMultiplier: 1, completed: false },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(midGateOldSave))
-    const loadedMidGate = loadGameState()
-    expect(loadedMidGate.intro.mainGameUnlocked).toBe(false)
-  })
-
-  it('backfills computeCoresEverEarned for a save that predates it but already has computeCores/computeNodes, so it does not have to re-earn Cores from scratch to unlock the merge chain', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      intro: {
-        bits: 0, capacity: 8000000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
-        mainGameUnlocked: true, computeCores: 3, computeNodes: 2,
-      },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    // 2 Nodes implies 16 Cores were once minted to create them, plus the 3 still held live.
-    expect(loaded.intro.computeCoresEverEarned).toBe(2 * 8 + 3)
-    expect(loaded.intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('backfills computeMergePageUnlocked to true for a save that already holds a Cluster/Network/Grid, even with no Nodes currently held', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      intro: {
-        bits: 0, capacity: 8000000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
-        mainGameUnlocked: true, computeCores: 0, computeNodes: 0, computeClusters: 1,
-      },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('does not backfill computeCoresEverEarned/computeMergePageUnlocked for a save that already has its own values (post-migration save)', () => {
-    const state = {
-      ...createInitialGameState(),
-      intro: {
-        ...createInitialGameState().intro,
-        bits: 0, capacity: 8000000, byteCreated: true, mainGameUnlocked: true,
-        computeCores: 3, computeNodes: 2, computeCoresEverEarned: 5, computeMergePageUnlocked: false,
-      },
-    }
-    saveGameState(state)
-    const loaded = loadGameState()
-    // Would backfill to 19/true if the migration ran again — it must not, since the save already
-    // has its own (lower, still-locked) values.
-    expect(loaded.intro.computeCoresEverEarned).toBe(5)
-    expect(loaded.intro.computeMergePageUnlocked).toBe(false)
-  })
-
-  it('resets the removed productionMilestoneClaimedAtCapacity marker to a fresh tier 0 rather than misreading it', () => {
-    const oldSave = {
-      ...createInitialGameState(),
-      intro: {
-        bits: 0, capacity: 8000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1,
-        productionMilestoneClaimedAtCapacity: 800, mainGameUnlocked: true,
-      },
-    }
-    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
-    const loaded = loadGameState()
-    expect(loaded.intro.productionMilestoneTier).toBe(0)
-    expect(loaded.intro.productionMilestoneTierClaims).toBe(0)
   })
 
 })
