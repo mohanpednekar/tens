@@ -3107,6 +3107,33 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
   })
 
+  test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      disks: { [currentBankSize]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /transfer 1 kb cache block/i })).not.toBeInTheDocument()
+    screen.getAllByRole('button', { name: /^1 kb cache block \d+$/i }).forEach(block => {
+      expect(block).toBeDisabled()
+    })
+  })
+
+  test('cache blocks become manually releasable once the matching full disk is gone', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /transfer 1 kb cache block 1 to Factory Bits/i })).toBeEnabled()
+  })
+
   test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
     vi.useFakeTimers()
 
