@@ -267,7 +267,7 @@ that defaults to squash, including Cursor's merge UI — see issue #343):
    Repo-wide, not just autonomous PRs.
 2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`)
    — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-*`, `dependabot/*`; never a fork),
+   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-main-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
    implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
    the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
