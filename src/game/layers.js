@@ -65,6 +65,16 @@ export const BITS_PER_BYTE = 8
 // keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
 // constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
 export const PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
+// After this many lifetime prestiges, Money may exceed PRESTIGE_THRESHOLD without freezing
+// production — the player keeps earning and may Prestige voluntarily to claim accumulated PP.
+export const PRESTIGE_UNBOUNDED_MIN_COUNT = 100
+// Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
+// (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
+// until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
+// getPrestigePpPerPower in engine.js).
+export const PRESTIGE_POWERS_PER_PP_BASE = 64
+// Each Double PP upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
+export const PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE = 100
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
 // and every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets) is explicitly

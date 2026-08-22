@@ -124,10 +124,9 @@ Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
 and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
-main-game-unlock gate reset each cycle. **This summary is intentionally thin — do not extrapolate
-specific numbers/gates from it.** Full mechanics, the forced-priority-order ranking recurring upgrade
-actions, and every constant: `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" section (or `CLAUDE.md`'s
-condensed version, which this file mirrors).
+main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
+freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
+beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.

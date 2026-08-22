@@ -31,6 +31,7 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
+  PRESTIGE_UNBOUNDED_MIN_COUNT,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
 } from 'game/layers'
@@ -494,12 +495,20 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Production freezes until you
-            Prestige.
+            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Before Prestige{' '}
+            {PRESTIGE_UNBOUNDED_MIN_COUNT}, production freezes until you Prestige; after{' '}
+            {PRESTIGE_UNBOUNDED_MIN_COUNT} lifetime prestiges, production continues and Prestige
+            is optional.
           </li>
           <li>
-            Awards Prestige Points from how far your money exponent climbed; spend PP on
-            automations and upgrades on the Upgrades tab.
+            Awards Prestige Points from how far your money exponent climbed beyond Googol — 1 base
+            PP at 1 Googol Bytes, then 1 PP per 64 additional money-exponent powers (halved by
+            each Double PP upgrade until 1 power per PP, then doubled PP per power). Claimable only
+            once you reach at least 1 Googol Bytes.
+          </li>
+          <li>
+            Double PP upgrades cost 100^(level+1) PP (100, 10,000, 1,000,000, …) on the Upgrades
+            tab — permanent across Prestige.
           </li>
           <li>
             Resets resources, owned counts, and run-scoped progress. Unlocked autobuyers stay
