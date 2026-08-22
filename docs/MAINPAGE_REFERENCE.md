@@ -265,19 +265,22 @@ tallies stay visual on the strips. The row branches on whether that size's array
 that size (cache release, redeem) is disallowed for the build's duration; otherwise, two strips
 render:
 
-- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
+- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
   or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
-  independently **releasable** (`$releasable`, accent border, clickable) once
-  `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and** some tier's
-  current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
-  `"transfer <size> cache block N to Ladder Bits"` when releasable, else the plain
-  `"<size> cache block N"`; `title` names the manual-only Ladder Bits transfer once releasable;
-  clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
-  `resources.base` (Bits) — Cache never auto-transfers.
+  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled. While full and
+  **no full redeemable disk** of that size exists, a block can be **manually released**
+  (`$manualRelease`, accent border, clickable) when `isDiskCacheBlockManualReleaseAvailable(state,
+  size)` — or **auto-released** (`$autoRelease`, info styling, disabled) when
+  `isDiskCacheBlockAutoReleaseEligible(state, size)` (matching tier's Smart autobuyer on). Disks
+  always take priority: when a full redeemable disk exists, cache blocks stay non-interactive with a
+  title explaining to use the disk first. `aria-label` is `"transfer <size> cache block N to Ladder
+  Bits"` when manually releasable, `"auto-release … to Ladder Bits"` when auto-eligible, else the
+  plain `"<size> cache block N"`; clicking a manually releasable block calls
+  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits). Smart
+  autobuyers also auto-release via `tickDiskAutoReleaseCache` when eligible.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
   strip read together as one progress bar, filling left-to-right (on viewports below 40rem the row
