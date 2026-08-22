@@ -2261,6 +2261,70 @@ The always-on auto-convert (`tickIntroAutoInvest`) is completely unaffected eith
 depended on the manual row being rendered, so once auto-convert and Disk redemption are both doing
 the job, the manual row really is the redundant piece being described.
 
+### Era ascension and Eons — meta-prestige above Unbounded (#407 / #405)
+
+After **Unbounded Prestige** (#405) removed the production freeze at 100 lifetime prestiges, the
+endgame needed a deeper reset layer that still felt voluntary rather than another hard wall.
+**Era ascension** is that layer: when unspent Prestige Points reach **1 Googol PP**
+(`ERA_ELIGIBILITY_PP = GOOGOL`), the player may voluntarily ascend from Settings, earn **Eons**
+(meta currency), and take a Foundry/Factory wipe far deeper than ordinary Prestige — without
+re-freezing production at the threshold.
+
+**Motivation.** Unbounded Prestige solved “stuck at 1 Googol Bytes until you Prestige” but left no
+long-horizon sink once PP accumulation itself became the grind. Era ascension reuses the Byte Foundry
+gate as a familiar rhythm (every ascend sends you back through Foundry before Factory) while wiping
+holdings that ordinary Prestige deliberately kept permanent — generator upgrades, Disks, compute
+ladder entities, owned Compute (Flops) units, Double PP level — so each Era feels like a genuine
+ascension, not a cosmetic counter.
+
+**Why balance threshold, not lifetime earned or prestige count.** Eligibility keys off **unspent
+`prestige.points >= GOOGOL`**, not `prestige.count` or lifetime PP earned:
+- **Count** would fire immediately for anyone who already passed Unbounded’s 100-prestige latch,
+  skipping the intended “hold a Googol PP bank” moment.
+- **Lifetime earned** is not tracked as a first-class field and would conflate spending (Double PP,
+  Flops buys, automation unlocks) with readiness — a player who *spent* down after earning Googol PP
+  would still read “eligible” under a lifetime metric, or vice versa, depending on implementation.
+- **Balance** matches the player-visible “I am holding Googol PP right now” decision and mirrors how
+  other PP gates (Compute reveal at 100 PP) already work.
+
+**Why voluntary, not a freeze.** Unbounded Prestige’s whole point is that production continues past
+1 Googol Bytes; adding a second hard freeze at Googol PP would undo that UX. Era ascension is
+opt-in from Settings (with confirmation) — same posture as Prestige after Unbounded unlocks.
+
+**Why `byteCreated` persists but Sacrifice/Invest/Disks/Compute/Flops holdings wipe.** The Byte
+generator’s *existence* (`intro.byteCreated`) is the permanent “you’ve combined once” marker; wiping
+it would force re-tapping through the very first combine on every Era, which reads as a tutorial
+replay rather than a meta reset. Everything *built on top* of that generator — capacity/production
+tracks, Disk arrays, compute entities, Flops owned counts, `foundryResetCaps` convenience state — is
+cycle-scoped progress that Era is meant to clear. Ordinary Prestige already reset Memory and the
+main-game gate each cycle while keeping those Foundry assets; Era extends that wipe to the assets
+Prestige had made permanent.
+
+**What persists vs. resets (shipped in #410 / UI in #411).** Automation unlock flags and pause
+states, tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum,
+`computeFlops.pageUnlocked`, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and
+Eons balance (+ award) carry through. Factory resources/owned, `prestige.points`/`count`,
+`prestigeDoublePpLevel`, `computeFlops.owned`/`cumulativeBoost`, in-flight `diskBuild`, and full
+Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s autobuyer via
+`applyFlopsAutobuyerMilestones` — a permanent unlock track that survives the wipe.
+
+**Rejected alternatives.**
+- **Skip the Foundry gate after Era** — rejected; the gate is the pacing rhythm every Prestige cycle
+  already uses, and bypassing it would make Era ascension feel like a cheat code rather than a deeper
+  cycle.
+- **Keep unspent PP balance across Era** — rejected; Googol PP is the eligibility key; carrying the
+  bank forward would collapse Era into a label with no economic reset.
+- **Reset `prestige.count` without latching Unbounded** — rejected; `prestige.unboundedUnlocked` is
+  latched from count ≥ 100 (or the flag itself) *before* count zeroes so Unbounded production never
+  re-locks after an Era.
+- **Reset automation unlocks** — rejected; players already earned those milestones across many
+  prestiges; wiping them would punish long saves without adding a new decision.
+- **Eon spend tree in the same PR** — deferred to #414 (`blocked` until spend design lands); engine
+  ships hyperscaler/`buyHyperscaler` hooks but shop UI waits.
+
+See `docs/ECONOMY_REFERENCE.md` “Era ascension and Eons” for the live constant table; issues #407
+(parent epic), #405 (Unbounded), #410 (engine), #411 (UI).
+
 ## Save persistence
 
 ### Migration in `src/save-migration/`, runs on every load — 2026-08-22
