@@ -2939,10 +2939,11 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    // Size identity is on the groups / Cache meta; built/full stay visual (no count captions).
+    // One identity line (face size + cache pack); no Cache/Disks row titles; counts stay visual.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
-    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
+    expect(screen.getByText('8×1 Kb')).toBeInTheDocument()
+    expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^\d+ full$/)).not.toBeInTheDocument()
   })
@@ -2955,16 +2956,39 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
   })
 
-  test('the Cache and Disks rows each show their own size in their own correct unit scale — bits for Cache, Bytes for Disks', () => {
+  test('each array identity line pairs Byte-scale face size with bit-scale cache pack meta', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
-    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Array / group
-    // labels carry the Byte-scale size; Cache meta carries the bit-scale block size.
+    // shown as "8×1 Kb" (bit-scale), not the disk's own Byte-scale "1 KB" alone.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
-    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
+    expect(screen.getByText('8×1 Kb')).toBeInTheDocument()
+  })
+
+  test('Foundry Disks tab stacks multiple size arrays with one identity line each and no Cache/Disks row titles', () => {
+    const size10kb = currentBankSize * 10
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: {
+        [currentBankSize]: DISK_ARRAY_LADDER_CAP,
+        [size10kb]: 2,
+      },
+      disks: { [currentBankSize]: 1, [size10kb]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize, [size10kb]: size10kb },
+    })
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByText('8×1 Kb')).toBeInTheDocument()
+    expect(screen.getByText('8×10 Kb')).toBeInTheDocument()
+    expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
+    // Disks tab control still says "Disks"; array rows themselves must not add a second title.
+    expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()
   })
 
   test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
