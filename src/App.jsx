@@ -37,8 +37,8 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Bumped when AppNav selects Factory so MainPage resets to the Data tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
-  // Bumped when AppNav selects Foundry so ByteFoundryPage can reset to Memory (or open Disks when
-  // preferredFoundryTab is set from a deep-link style navigate — currently always 'memory').
+  // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
+  // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
   const [foundryFocusNonce, setFoundryFocusNonce] = useState(0)
 
   const mainGameUnlocked = game.state.intro.mainGameUnlocked
