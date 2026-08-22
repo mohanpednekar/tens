@@ -9,10 +9,10 @@ import {
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
-// One size's Cache+Disks strip: a single identity line (Byte-scale face size + quiet bit-scale
-// cache pack), then unlabeled squares (cache) and circles (disks). Row titles are omitted — shapes
-// already distinguish the two strips; built/full counts stay visual-only. Sizes stack cleanly when
-// Foundry Disks / StoragePage lists every array. (smallest→largest across sizes is the caller's job.)
+// One size's Cache+Disks strip: size identity lives INSIDE each cell (bit-scale on cache
+// squares, Byte-scale on disk circles) — no external Cache/Disks titles or array header.
+// Built/full counts stay visual. Sizes stack cleanly when Foundry Disks / StoragePage lists
+// every array. (smallest→largest across sizes is the caller's job.)
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -21,43 +21,26 @@ const DiskSizeRow = styled.div`
   width: 100%;
 `
 
-// One identity line for the whole array — face size first, cache pack as quiet meta so Kb (bits)
-// vs KB (Bytes) stays intentional without a second section header. No text-transform: uppercase.
-const ArrayHeader = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
-const ArraySize = styled.span`
+// Size text painted inside each square/circle. No text-transform: uppercase — would collapse
+// Cache's lowercase "b" (bits) into Disks' uppercase "B" (Bytes).
+const CellLabel = styled.span`
+  pointer-events: none;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
+  font-size: 0.55rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: ${props => props.theme.color.text};
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: ${props => (props.$emphasis ? props.theme.color.text : props.theme.color.textMuted)};
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
 `
 
-const ArrayMeta = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-`
-
-// Short status under the Disks strip when a full disk is actionable — makes auto vs manual redeem
-// obvious without relying on square color alone (Cache never auto-transfers; only Disks do).
-const ActionHint = styled.p`
-  align-self: flex-start;
-  margin: 0;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => (props.$auto ? props.theme.color.info : props.theme.color.good)};
-`
-
-// Shown in place of the cache/disk strips while this size's array is mid-build (see intro.diskBuild
+// Shown in place of the cache strip while this size's array is mid-build (see intro.diskBuild
 // in engine.js) — every IO operation against it is disallowed for the build's duration, so the
-// interactive rows are replaced by a plain status line rather than rendered disabled-but-visible.
+// interactive cache row is replaced by a plain status line rather than rendered disabled-but-visible.
 const RebuildingText = styled.p`
   margin: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
@@ -89,6 +72,10 @@ const DiskSquare = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border-radius: 50%;
   border: 1.5px solid ${props =>
     props.$full
@@ -143,6 +130,10 @@ const CacheBlock = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props => (props.$releasable ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
@@ -187,19 +178,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
   const blockLabel = formatCacheSize(blockBits)
-  // Quiet pack line: "8×1 Kb" — block count × bit-scale block size (not restated as a Cache title).
-  const cachePackLabel = `${DISK_CACHE_BLOCK_COUNT}×${blockLabel}`
 
   return (
     <DiskSizeRow>
-      <ArrayHeader>
-        <ArraySize>{sizeLabel}</ArraySize>
-        {!rebuilding ? <ArrayMeta>{cachePackLabel}</ArrayMeta> : null}
-      </ArrayHeader>
-
       {rebuilding ? (
         <RebuildingText>
-          {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (every disk in this array is offline until it finishes)`}
+          {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (${sizeLabel}; every disk in this array is offline until it finishes)`}
         </RebuildingText>
       ) : (
         <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
@@ -227,7 +211,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 type="button"
                 $full={isFull}
                 $releasable={releasable}
-              />
+              >
+                <CellLabel $emphasis={isFull || releasable}>{blockLabel}</CellLabel>
+              </CacheBlock>
             )
           })}
         </CacheBlocksRow>
@@ -276,21 +262,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
               $empty={isEmpty}
               $autoRedeem={isFull && autoRedeem}
               $manualRedeem={isFull && manualRedeem}
-            />
+            >
+              <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
+            </DiskSquare>
           )
         })}
       </SquaresRow>
-
-      {!rebuilding && autoRedeem && (
-        <ActionHint $auto>
-          {`Auto-redeem → ${redeemTierName} (autobuyer on)`}
-        </ActionHint>
-      )}
-      {!rebuilding && manualRedeem && (
-        <ActionHint>
-          {`Tap a full disk → 1 free ${redeemTierName}`}
-        </ActionHint>
-      )}
     </DiskSizeRow>
   )
 }

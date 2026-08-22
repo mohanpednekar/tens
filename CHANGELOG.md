@@ -13,10 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
   the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
   a separate element under the page header at the top of MainPage.
-- **DiskArrayRow labels**: one identity line per array — Byte-scale face size (e.g. `1 KB`) plus
-  quiet bit-scale cache pack (`8×1 Kb`). No `"Cache"` / `"Disks"` row titles (squares vs circles
-  distinguish the strips); built/full counts stay visual. Instructional copy stays in
-  `title`/`aria`/action hints.
+- **DiskArrayRow labels**: size identity is painted inside each cell — bit-scale on cache squares
+  (e.g. `1 Kb`), Byte-scale on disk circles (e.g. `1 KB`). No external array header, no
+  `"Cache"` / `"Disks"` row titles, and no under-strip redeem ActionHint (green/blue fill +
+  `title`/`aria` carry redeem state).
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.

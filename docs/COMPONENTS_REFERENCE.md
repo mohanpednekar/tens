@@ -32,22 +32,21 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a single
-identity line pairing Byte-scale face size (`formatDiskSize` — e.g. `1 KB`) with quiet bit-scale
-cache-pack meta (`"<n>×<block>"` via `DISK_CACHE_BLOCK_COUNT` × `formatCacheSize` — e.g. `8×1 Kb`),
-then an unlabeled `DISK_CACHE_BLOCK_COUNT`-block cache strip (squares; each block clickable via
-`actions.releaseDiskCacheBlock` once full and `isDiskCacheBlockReleasable` — manual transfer to
-Tiers Bits only; never auto; instructional copy lives in `title`/`aria`/`ActionHint`) and an
-unlabeled fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip — no `"Cache"` / `"Disks"` row titles
-(shapes distinguish the strips; built/full counts stay visual). Full disks distinguish
-**auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`, hint
-`"Auto-redeem → <tier> (autobuyer on)"`) from **manual redeem** (`isDiskManualRedeemAvailable` —
-good/green pulsing fill, aria `"redeem … for <tier>"`, hint `"Tap a full disk → 1 free <tier>"`)
-via `actions.redeemDisk` once full and `isDiskRedeemable` — or, while `intro.diskBuild?.size`
-matches this size, a plain "Array rebuilding — Ns left" status line in place of the cache strip
-(disk circles stay, disabled). Neither size label uses `text-transform: uppercase` — deliberately,
-so lowercase `b` (bits, cache pack) never visually collapses into uppercase `B` (Bytes, face size);
-see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
+styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
+`DISK_CACHE_BLOCK_COUNT`-block cache strip of squares, each labeled inside with its bit-scale
+block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
+full and `isDiskCacheBlockReleasable` — manual transfer to Tiers Bits only; never auto), then a
+fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip, each labeled inside with the array's Byte-scale
+face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
+row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. Full disks
+distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`)
+from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fill, aria
+`"redeem … for <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable`; instructional
+copy lives in `title`/`aria` only (no under-strip ActionHint). While `intro.diskBuild?.size`
+matches this size, a plain "Array rebuilding — Ns left" status line replaces the cache strip (disk
+circles stay, disabled). Neither size label uses `text-transform: uppercase` — deliberately, so
+lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes, Disks); see
+CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
 Extracted so both `ByteFoundryPage` (every currently-matching size from
