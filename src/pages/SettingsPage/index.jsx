@@ -6,7 +6,7 @@ import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled from 'styled-components'
 
-// Always-reachable Settings screen (via AppNav → More). Holds app meta, Supporter pack
+// Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
 // (unlock code / dummy checkout), save slots, Prestige museum, Ops dashboard, and Reset —
 // utilities that must not depend on unlocking Factory or any other progress gate.
 
