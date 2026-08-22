@@ -8,7 +8,7 @@ import {
   isUnboundedPrestigeUnlocked,
 } from 'game/engine'
 import { COMPUTE_FLOPS_TIER_DEFINITIONS, ERA_ELIGIBILITY_PP, TIER_DEFINITIONS } from 'game/layers'
-import styled from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 
 // Standalone Milestones screen — Chapters, tier-autobuyer, tickspeed-autobuyer, and Compute-autobuyer
 // status; reachable from every screen via AppNav → More without requiring the main game to be unlocked
@@ -86,6 +86,7 @@ const RowControls = styled.div`
 
 const MilestonesPage = ({ game }) => {
   const { state } = game
+  const theme = useTheme()
   const { prestige } = state
   const isFirstRun = (prestige.count ?? 0) === 0
   const eraCount = state.era?.count ?? 0
@@ -112,7 +113,7 @@ const MilestonesPage = ({ game }) => {
             <Row key={chapter.label} aria-label={`${chapter.label} chapter`}>
               <span>{chapter.label}</span>
               <Badge
-                $color={chapter.reached ? '#4ade80' : 'darkgrey'}
+                $color={chapter.reached ? theme.color.good : theme.color.disabled}
                 $dimmed={!chapter.reached}
                 aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
               >
@@ -126,25 +127,25 @@ const MilestonesPage = ({ game }) => {
           <CategoryHeading>Era ascension</CategoryHeading>
           <Row aria-label="eras ascended status">
             <span>Eras ascended</span>
-            <Badge $color="#4ade80" aria-label={`${eraCount} eras ascended`}>
+            <Badge $color={theme.color.good} aria-label={`${eraCount} eras ascended`}>
               {eraCount}
             </Badge>
           </Row>
           <Row aria-label="eons balance status">
             <span>Eons</span>
-            <Badge $color="#4ade80" aria-label={`${eonsBalance} eons held`}>
+            <Badge $color={theme.color.good} aria-label={`${eonsBalance} eons held`}>
               {eonsBalance}
             </Badge>
           </Row>
           <Row aria-label="era ascension eligibility">
             <span>Ascend when ready</span>
             {eraEligible ? (
-              <Badge $color="#4ade80" aria-label="era ascension eligible now">
+              <Badge $color={theme.color.good} aria-label="era ascension eligible now">
                 ✅ Eligible
               </Badge>
             ) : (
               <Badge
-                $color="darkgrey"
+                $color={theme.color.disabled}
                 $dimmed
                 aria-label={`era ascension locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Prestige Points`}
               >
@@ -168,13 +169,13 @@ const MilestonesPage = ({ game }) => {
                       <span aria-hidden="true">{tier.symbol}</span>
                     </TierNameLabel>
                     {reached ? (
-                      <Badge $color="#4ade80" aria-label={`${tier.name}'s autobuyer unlocked at Prestige ${milestone}`}>
+                      <Badge $color={theme.color.good} aria-label={`${tier.name}'s autobuyer unlocked at Prestige ${milestone}`}>
                         ✅ Prestige {milestone}
                       </Badge>
                     ) : (
                       <RowControls>
                         <Badge
-                          $color="darkgrey"
+                          $color={theme.color.disabled}
                           $dimmed
                           aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
                           title={`You're at Prestige ${prestige.count}`}
@@ -208,7 +209,7 @@ const MilestonesPage = ({ game }) => {
                     </TierNameLabel>
                     {reached ? (
                       <Badge
-                        $color="#4ade80"
+                        $color={theme.color.good}
                         aria-label={`${tier.name}'s tickspeed autobuyer unlocked at Prestige ${milestone}`}
                       >
                         ✅ Prestige {milestone}
@@ -216,7 +217,7 @@ const MilestonesPage = ({ game }) => {
                     ) : (
                       <RowControls>
                         <Badge
-                          $color="darkgrey"
+                          $color={theme.color.disabled}
                           $dimmed
                           aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
                           title={`You're at Prestige ${prestige.count}`}
@@ -251,7 +252,7 @@ const MilestonesPage = ({ game }) => {
                       </TierNameLabel>
                       {reached ? (
                         <Badge
-                          $color="#4ade80"
+                          $color={theme.color.good}
                           aria-label={`${flopTier.name}'s autobuyer unlocked at Era ${milestone}`}
                         >
                           ✅ Era {milestone}
@@ -259,7 +260,7 @@ const MilestonesPage = ({ game }) => {
                       ) : (
                         <RowControls>
                           <Badge
-                            $color="darkgrey"
+                            $color={theme.color.disabled}
                             $dimmed
                             aria-label={`${flopTier.name}'s autobuyer unlocks at Era ${milestone}, currently at Era ${eraCount}`}
                             title={`You're at Era ${eraCount}`}
