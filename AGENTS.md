@@ -62,7 +62,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
+    storage.js             ← localStorage save/load/clear + save-schema version stamp,
+                              incompatible-save discard, forward field merge, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet

@@ -129,16 +129,18 @@ describe('getSaveIncompatibilityReason', () => {
       .toBeNull()
   })
 
-  it('flags legacy resources.Ones', () => {
-    expect(getSaveIncompatibilityReason({ resources: { Ones: 1 } })).toBe('legacy_money_id')
-  })
-
-  it('flags intro.completed without mainGameUnlocked', () => {
-    expect(getSaveIncompatibilityReason({ intro: { completed: true } })).toBe('legacy_intro_gate')
-  })
-
-  it('flags tier progress without intro', () => {
-    expect(getSaveIncompatibilityReason({ resources: { base: 1 } })).toBe('missing_intro')
+  it.each([
+    ['legacy_money_id', { resources: { Ones: 1 } }],
+    ['missing_intro', { resources: { base: 1 } }],
+    ['legacy_intro_gate', { intro: { completed: true } }],
+    ['legacy_storage_fields', { intro: { storageBanks: {} } }],
+    ['legacy_prestige_xp', { intro: { mainGameUnlocked: true }, prestige: { pp: 1 } }],
+    ['legacy_prestige_count', { intro: { mainGameUnlocked: true }, prestige: { level: 2 } }],
+    ['legacy_boolean_autobuyers', { intro: { mainGameUnlocked: true }, autobuyers: { tier01: true } }],
+    ['legacy_boolean_auto_prestige', { intro: { mainGameUnlocked: true }, autoPrestige: true }],
+    ['legacy_tier_ids', { intro: { mainGameUnlocked: true }, owned: { Tens: 1 } }],
+  ])('flags %s', (reason, payload) => {
+    expect(getSaveIncompatibilityReason(payload)).toBe(reason)
   })
 })
 

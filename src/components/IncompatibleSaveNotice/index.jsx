@@ -51,7 +51,7 @@ const IncompatibleSaveNotice = ({ onDismiss }) => {
   }, [])
 
   return (
-    <Overlay role="dialog" aria-modal="true" aria-labelledby={titleId} aria-label="Save incompatible">
+    <Overlay role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <Card $raised>
         <Title id={titleId}>Save not compatible</Title>
         <Body>

@@ -251,6 +251,7 @@ export const useIncrementalGame = () => {
     clearGameState()
     setState(createInitialGameState())
     setOfflineProgress(null)
+    setIncompatibleSaveReason(null)
     setOpsSamples([])
     refreshSavesUi()
   }, [refreshSavesUi])
@@ -267,6 +268,7 @@ export const useIncrementalGame = () => {
     if (result.clearedActive) {
       setState(createInitialGameState())
       setOfflineProgress(null)
+      setIncompatibleSaveReason(null)
       setOpsSamples([])
     }
     refreshSavesUi()
@@ -277,6 +279,7 @@ export const useIncrementalGame = () => {
     clearAllSaveProgress()
     setState(createInitialGameState())
     setOfflineProgress(null)
+    setIncompatibleSaveReason(null)
     setOpsSamples([])
     refreshSavesUi()
     return { ok: true }
