@@ -967,9 +967,10 @@ export const buyPrestigeDoublePp = state => {
   const cost = getPrestigeDoublePpUpgradeCost(currentLevel)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
     prestigeDoublePpLevel: currentLevel + 1,
   }
 }
