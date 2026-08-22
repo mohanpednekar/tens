@@ -5,7 +5,6 @@ import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
-import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -45,20 +44,6 @@ const Header = styled.header`
   }
 `
 
-// The app version sits directly beneath the title. Top-level destinations (Tiers / Foundry /
-// Storage / Compute / Guide) live in App.jsx's shared AppNav once the main game is unlocked —
-// not as header buttons here. The Guide page (InfoPage — all the static "how it works" prose
-// that used to live inline here as click-to-expand disclosures, see CLAUDE.md's Architecture
-// section) no longer needs an InfoDetails/summary wrapper, since there's no longer any collapsed
-// body to reveal.
-const HeaderMeta = styled.div`
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  justify-content: center;
-  margin-top: 0.4rem;
-`
 
 const TierList = styled.div`
   display: flex;
@@ -545,14 +530,6 @@ const MutedText = styled.p`
 // each other.
 const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
 
-// The app version, always visible beside the page title. Reuses MutedText's muted-text
-// convention rather than a one-off color, rendered `as` a span rather than MutedText's default
-// block-level `<p>` so it sits inline with the title inside HeaderMeta.
-const VersionText = styled(MutedText).attrs({ as: 'span' })`
-  display: block;
-  font-size: 0.7rem;
-  margin-top: 0.15rem;
-`
 
 // Occupies the top line's first track. Used to also share this line with a compact tickspeed
 // bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
@@ -704,7 +681,7 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Second-level tabs on Tiers: Ladder | Upgrades (peer tabs — no back chrome). Milestones lives
+// Second-level tabs on Byte Factory: Data | Upgrades (peer tabs — no back chrome). Milestones lives
 // under AppNav → More. Shown only after a first Prestige (!isFirstRun). Reset lives only under
 // Settings → Danger zone (AppNav → More → Settings), not on this page.
 const ViewNav = styled.div`
@@ -865,8 +842,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
   const prestigeLabel = 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
-  // Ladder vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
-  // the ladder is the default Tiers screen, and Milestones lives under AppNav → More. Upgrades
+  // Data vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
+  // the ladder is the default Byte Factory screen, and Milestones lives under AppNav → More. Upgrades
   // stays here because it's the only PP-purchase surface and isn't elsewhere in AppNav/More.
   const [view, setView] = useState('game')
   useEffect(() => {
@@ -1119,7 +1096,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   }, [globalTickspeedUnlocked])
 
   // Lights the Upgrades control whenever unspent PP can afford at least one purchase — see
-  // hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Tiers attention level).
+  // hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Factory attention level).
   const showPpUpgradeAttention = hasAffordablePpUpgrade(state)
 
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
@@ -1230,10 +1207,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       )}
 
       <Header>
-        <h1>Tens</h1>
-        <HeaderMeta>
-          <VersionText>v{version}</VersionText>
-        </HeaderMeta>
+        <h1>Byte Factory</h1>
       </Header>
 
       <PrestigeProgressTop aria-label="prestige progress">
@@ -1363,19 +1337,18 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         )}
       </StickyBalances>
 
-      {/* Second-level Tiers tabs: Ladder | Upgrades (no back button). Milestones is under More.
+      {/* Second-level Byte Factory tabs: Data | Upgrades (no back button). Milestones is under More.
           Upgrades gated on !isFirstRun — PP upgrades don't exist before a first Prestige. */}
       {!isFirstRun && (
-        <ViewNav role="tablist" aria-label="tiers view">
+        <ViewNav role="tablist" aria-label="factory view">
           <ViewTabButton
-            aria-label="open ladder"
             aria-selected={view === 'game'}
             color={view === 'game' ? 'white' : 'darkgrey'}
             onClick={() => setView('game')}
             role="tab"
             type="button"
           >
-            Ladder
+            Data
           </ViewTabButton>
           <ViewTabButton
             aria-label="open upgrades"

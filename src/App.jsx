@@ -13,6 +13,7 @@ import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage
 import { GlobalStyle, ThemeProvider } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
+import { version } from '../package.json'
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as the Disks tab — so it is not gate-exempt on its own.
@@ -22,6 +23,21 @@ const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
 `
 
+// Ambient build label — fixed corner, pointer-events none, no layout reservation.
+const VersionBadge = styled.span`
+  bottom: calc(${APP_NAV_BOTTOM_PAD} + 0.35rem);
+  color: ${props => props.theme.color.textFaint};
+  font-family: ${props => props.theme.font.body};
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  left: calc(0.55rem + env(safe-area-inset-left, 0px));
+  line-height: 1;
+  opacity: 0.75;
+  pointer-events: none;
+  position: fixed;
+  z-index: 30;
+`
+
 function App() {
   const game = useIncrementalGame()
 
@@ -29,7 +45,7 @@ function App() {
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Tiers so MainPage resets to the Ladder tab (not Upgrades).
+  // Bumped when AppNav selects Factory so MainPage resets to the Data tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
   // Bumped when AppNav selects Foundry so ByteFoundryPage can reset to Memory (or open Disks when
   // preferredFoundryTab is set from a deep-link style navigate — currently always 'memory').
@@ -42,7 +58,7 @@ function App() {
   const currentNavPage = showingFoundry ? 'foundry' : page
 
   const showCompute = isComputeCoreConversionUnlocked(game.state)
-  // Tiers is the only progress-gated primary destination — utilities (Guide / More) stay available
+  // Factory is the only progress-gated primary destination — utilities (Guide / More) stay available
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
 
@@ -112,6 +128,7 @@ function App() {
       <PageShell>
         {content}
       </PageShell>
+      <VersionBadge aria-hidden="true">v{version}</VersionBadge>
       <AppNav
         attention={navAttention}
         currentPage={currentNavPage}
