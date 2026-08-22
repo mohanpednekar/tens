@@ -119,8 +119,8 @@ const DiskSquare = styled.button`
 // refills whole blocks when a block was just released or the size was just unlocked (see
 // tickDiskAutoFill). A full block ($full) can be manually released ($releasable — accent border,
 // clickable) only while some tier's current per-unit cost matches this array's size, crediting
-// that block's bits straight into resources.base (the shared Bits currency on Tiers) — never
-// auto-transferred; Cache → Tiers is always a manual tap. Cache does not pour into disks.
+// that block's bits straight into resources.base (the shared Bits currency on Factory) — never
+// auto-transferred; Cache → Factory is always a manual tap. Cache does not pour into disks.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -205,7 +205,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 key={index}
                 aria-label={
                   releasable
-                    ? `transfer ${sizeLabel} cache block ${index + 1} to Tiers Bits`
+                    ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
                     : `${sizeLabel} cache block ${index + 1}`
                 }
                 disabled={!releasable}
@@ -213,8 +213,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 title={
                   isFull
                     ? (releasable
-                      ? `Transfer this block's ${blockLabel} to Tiers as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                      : `Transferable to Tiers only once some tier's level cost matches ${sizeLabel}`)
+                      ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
+                      : `Transferable to Factory only once some tier's level cost matches ${sizeLabel}`)
                     : 'Filling from Memory'
                 }
                 type="button"

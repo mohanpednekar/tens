@@ -1,10 +1,10 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Boosters → Tiers, then Guide / More.
+// Bottom bar order follows play progression: Foundry → Boosters → Factory, then Guide / More.
 // Storage is folded into Foundry as a Memory | Disks second-level tab (same Memory pool +
-// DiskArrayRow). Tiers stays progress-gated; Guide/More stay available during the Foundry gate.
-// Accessible names: open byte foundry / open boosters / open tiers / open guide / open more menu.
+// DiskArrayRow). Factory stays progress-gated; Guide/More stay available during the Foundry gate.
+// Accessible names: open byte foundry / open boosters / open factory / open guide / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
@@ -108,12 +108,12 @@ const AppNav = ({
   moreOpen = false,
   attention = {},
 }) => {
-  // Progression order: Foundry family → Boosters → Tiers → utilities.
+  // Progression order: Foundry family → Boosters → Factory → utilities.
   // Page id stays `'compute'` (engine/state); the player-facing name is Boosters.
   const items = [
     { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry — Memory and Disks' },
     showCompute && { id: 'compute', ariaLabel: 'open boosters', icon: '⚡', label: 'Boosters', title: 'Boosters' },
-    showTiers && { id: 'game', ariaLabel: 'open tiers', icon: '📶', label: 'Tiers', title: 'Tier ladder — buy and produce' },
+    showTiers && { id: 'game', ariaLabel: 'open factory', icon: '📶', label: 'Factory', title: 'Byte Factory — buy and produce' },
     { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
   ].filter(Boolean)
 

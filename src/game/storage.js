@@ -233,7 +233,7 @@ export const buildResetActiveSlotConfirmMessage = () => {
 
 /**
  * Confirm copy for wiping only Byte Foundry / Storage / Compute on the active save.
- * Tiers ladder + Prestige progress stay; other slots and Supporter unlock are untouched.
+ * Factory + Prestige progress stay; other slots and Supporter unlock are untouched.
  */
 export const buildResetByteFoundryConfirmMessage = () => {
   const name = getActiveSlotDisplayName()
@@ -242,7 +242,7 @@ export const buildResetByteFoundryConfirmMessage = () => {
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Memory, Capacity, Combine / Invest / Bandwidth progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
     `Convenience: Combine, Invest / Bandwidth, and Disk Build auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity stays manual.\n\n` +
-    `Also kept: Tiers ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
+    `Also kept: Factory, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
   )

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **Boosters** screen (formerly Compute): AppNav label, page header, Guide section, and helper copy now say Boosters. Internal page id / engine APIs stay `compute*`.
+- **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
+  **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
+  game name “Tens”). Avoids confusion with Boosters’ entity tiers. Cache-transfer and Settings
+  danger-zone copy use **Factory**. Peer tabs stay **Data | Upgrades**.
+
+- **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
+  dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
   (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
@@ -18,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (e.g. `1 Kb`), Byte-scale on disk circles (e.g. `1 KB`). No external array header, no
   `"Cache"` / `"Disks"` row titles, and no under-strip redeem ActionHint (green/blue fill +
   `title`/`aria` carry redeem state). Mid-build status (centered):
-  `Rebuilding 1 KB x 6 array - Ready in 6s`.
+  `Rebuilding 1 KB x 6 array - Ready in 6s`. Instructional copy (tap cache → Factory Bits)
+  stays in `title`/`aria`.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.
@@ -122,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play
   progression). **Storage** is no longer a top-level tab — it lives under Foundry as a second-level
   **Memory | Disks** peer tab pair (same Memory pool + shared `DiskArrayRow`). Tiers uses
-  **Ladder | Upgrades** peer tabs after the first Prestige (no back chrome; Milestones only under
+  **Data | Upgrades** peer tabs after the first Prestige (no back chrome; Milestones only under
   More). Attention dots fold Storage cues into Foundry.
 - **App navigation** is a shared fixed bottom bar (`components/AppNav`): active destination marked via
   `aria-current`. Compute appears once revealed; **Tiers** stays hidden during the mandatory Byte

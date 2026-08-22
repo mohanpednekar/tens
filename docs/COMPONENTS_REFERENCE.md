@@ -8,7 +8,7 @@ state each is currently in.
 ## `AppNav/index.jsx`
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
-**Boosters** (`open boosters`, page id `'compute'`, once revealed) → **Tiers** (`open tiers`, page id `'game'`, only once
+**Boosters** (`open boosters`, page id `'compute'`, once revealed) → **Factory** (`open factory`, page id `'game'`, only once
 `mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
 opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Disks.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
@@ -21,7 +21,7 @@ high = larger pulsing green dot).
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Tiers: **Milestones** and **Settings**. Destructive **Reset** / **Reset
+must not depend on unlocking Factory: **Milestones** and **Settings**. Destructive **Reset** / **Reset
 Byte Foundry** live only under Settings → Danger zone (not duplicated in this sheet or on MainPage).
 Closes on backdrop
 click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
@@ -35,7 +35,7 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
 `DISK_CACHE_BLOCK_COUNT`-block cache strip of squares, each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockReleasable` — manual transfer to Tiers Bits only; never auto), then a
+full and `isDiskCacheBlockReleasable` — manual transfer to Factory Bits only; never auto), then a
 fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip, each labeled inside with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
 row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. Full disks
