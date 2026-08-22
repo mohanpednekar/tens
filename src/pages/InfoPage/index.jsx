@@ -399,17 +399,18 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="tickspeed section">
-        <h2>Tickspeed</h2>
+      <Section aria-label="clock speed section">
+        <h2>Clock Speed</h2>
         <ul>
           <li>
-            Spend Bits to permanently speed up every tier’s production ticks by another 1% at once —
+            Spend Bytes to permanently speed up every tier’s production ticks by another 1% at once —
             more frequent deliveries, not bigger ones.
           </li>
-          <li>Each level costs another power of ten.</li>
+          <li>Each level costs another power of ten (10 B, 100 B, 1,000 B, …).</li>
           <li>Unlocks once you own {secondTierName}.</li>
           <li>
-            There’s also a per-tier tickspeed track on each unlocked tier row, funded the same way.
+            Kilobytes produce Bytes; there’s also a per-tier tickspeed track on each unlocked tier
+            row, funded from that tier’s own resource.
           </li>
         </ul>
       </Section>
@@ -445,7 +446,7 @@ const InfoPage = () => {
             Also wipes Speed Up’s stacking bonus back to zero.
           </li>
           <li>
-            In exchange, permanently multiplies the Tickspeed upgrade’s per-level rate by ×1.1 each
+            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 each
             claim (1% → 1.1% → 1.21% → …), including its every-10th-level milestone bonus.
           </li>
           <li>

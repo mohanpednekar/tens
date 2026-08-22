@@ -2,8 +2,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpEarnProgressPercent, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpEarnProgressPercent, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -782,7 +782,9 @@ const PauseToggleButton = styled(Button)`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
-    : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
+    : resourceId === BYTES_ID
+      ? formatBytes(amount)
+      : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
 // Live "how close am I" fill percent for a progress meter (PP/tickspeed/Speed Up buttons, XP
 // consumption) — how much of `denominator` the current `numerator` already covers, capped at 100.
@@ -1083,11 +1085,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // frequency by another getGlobalTickspeedProductionMultiplier's own regular step (1% by default,
   // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
-  // automation upgrade on this page, it's Money-funded (not PP) and lives on the Game view instead
+  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Game view instead
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
-  // purchasable once at least 1 of the second tier is owned, so a player can't accidentally spend
-  // their only Money on it before they have a second income source (tier01's own cost/production
-  // resource is Money itself). The level itself resets to not-yet-bought on both Prestige and Speed
+  // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
+  // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
   // Up (see prestigeGame/speedUpGame in engine.js), same as tier02's owned count, so re-unlocking
   // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
   // reset by Speed Up — its boost to the per-level step survives across a re-unlock within the
@@ -1097,8 +1098,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
-  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
-  const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID], globalTickspeedCost)
+  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && (state.resources[BYTES_ID] ?? 0) >= globalTickspeedCost
+  const globalTickspeedProgressPercent = progressPercent(state.resources[BYTES_ID] ?? 0, globalTickspeedCost)
   // Progressive disclosure, same pattern as speedUpEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
@@ -1318,7 +1319,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Tickspeed: {isGlobalTickspeedActive
+                  Clock Speed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1326,7 +1327,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
                     : `not yet claimed (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
                 </li>
               )}
@@ -1385,9 +1386,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {view === 'game' && (<>
 
       {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global tickspeed panel">
+        <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure onClick={collapseDisclosure}>
-            <summary><h2>Tickspeed</h2></summary>
+            <summary><h2>Clock Speed</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
                 Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
@@ -1397,23 +1398,23 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
+                ? `Upgrade Clock Speed for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Clock Speed for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Bits to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
+            title="Spend Bytes to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
             $pulse={canBuyGlobalTickspeed}
           >
             <ButtonIcon>🌐 </ButtonIcon>
-            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}</ButtonLabel>
+            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Global tickspeed multiplier progress"
+              aria-label="Clock Speed progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1605,7 +1606,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               <ProductionText>
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
-                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+                  : tier.producesResourceId === BYTES_ID
+                    ? formatBytes(production)
+                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
               </ProductionText>
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
@@ -1714,16 +1717,16 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
+                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            title={`Resets tiers (and Speed Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
