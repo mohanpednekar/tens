@@ -997,9 +997,10 @@ milestones" below), spending no PP at all.
   elapsedSeconds` (`getAutoPrestigeAttemptRate(level) = 1.1^(level - 1) /
   AUTO_PRESTIGE_BASE_INTERVAL_SECONDS`, `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — level 1 fires
   roughly every 1000 real seconds, each level 10% sooner, compounding) — but the completed attempt
-  (budget ≥ 1) only actually calls `prestigeGame` once Money has *also* reached `PRESTIGE_THRESHOLD`
-  (`isProductionFrozen`); until then it banks past 1 rather than losing the attempt. No-op if PP is
-  short or already frozen. `state.autoPrestige` (the level) is permanent; `autoPrestigeAttemptBudget`
+  (budget ≥ 1) only actually calls `prestigeGame` once Money has *also* reached `PRESTIGE_THRESHOLD`.
+  While production is frozen (`isProductionFrozen`), the attempt banks past 1 rather than losing it.
+  At/after 100 lifetime prestiges (`isUnboundedPrestigeUnlocked`), a separate end-of-tick branch
+  fires Auto-Prestige while production keeps running. No-op if PP is short or already frozen. `state.autoPrestige` (the level) is permanent; `autoPrestigeAttemptBudget`
   resets to 0 on every prestige (manual or automatic), same as `autobuyerAttemptBudgets`.
 - **Active — Auto-Prestige Autobuyer:** `buyAutoPrestigeAutobuyer(state)` permanently spends
   `AUTO_PRESTIGE_AUTOBUYER_COST` PP (`100` — a "meta-automation" that automates RE-LEVELING
