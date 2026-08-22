@@ -546,12 +546,13 @@ Strict three-layer separation:
    shared `components/DiskArrayRow` (see "Repo layout" above), ascending
    smallest→largest with Cache of a row immediately above that row's Disks. The Build button always
    stays visible/usable regardless of eligibility (building ahead of every tier's current cost is a
-   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` only renders while that
-   size is actually redeemable by some tier right now (`getRelevantDiskSizesForFoundry` —
-   `getDiskRedeemTierName(state, size) !== null` for sizes from `getDiskSizesToShow`) — including an
-   older array the ladder has moved past that still matches. Once no size is transferable, the
-   detail rows hide (full history stays on the Disks tab / `StoragePage`). Every action — here or on
-   either dedicated screen — stays gated by the forced priority order (see "Economy model" below).
+   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` renders for every size
+   that currently matches a tier (`getRelevantDiskSizesForFoundry` — matching sizes from
+   `getDiskSizesToShow`) **plus always the highest shown size** even when that size is not yet
+   redeemable (usually the ladder's current / incomplete array — the most useful row to keep
+   tracking while building ahead). Full history stays on the Disks tab / `StoragePage`. Every
+   action — here or on either dedicated screen — stays gated by the forced priority order (see
+   "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
    rendering one `components/DiskArrayRow` per size ever reached (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes

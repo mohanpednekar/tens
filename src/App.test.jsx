@@ -2939,16 +2939,20 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    expect(screen.getByText('Disks — 1 KB each (1 full, 3/10 built)')).toBeInTheDocument()
+    // Size identity is on the groups / Cache meta; built/full stay visual (no count captions).
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
+    expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^\d+ full$/)).not.toBeInTheDocument()
   })
 
   test('the current size\'s array preview shows even before anything has ever been built or held, rather than staying hidden', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
   })
 
   test('the Cache and Disks rows each show their own size in their own correct unit scale — bits for Cache, Bytes for Disks', () => {
@@ -2956,15 +2960,17 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
-    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Cache caption
-    // also names the manual-only Tiers Bits transfer path.
-    expect(screen.getByText('Cache — 1 Kb each (tap full → Tiers Bits)')).toBeInTheDocument()
-    expect(screen.getByText('Disks — 1 KB each (0 full, 0/10 built)')).toBeInTheDocument()
+    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Array / group
+    // labels carry the Byte-scale size; Cache meta carries the bit-scale block size.
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
   })
 
   test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
     // 10 built at 1 KB advances the Build offer to 10 KB (not yet matching any tier at level 1),
     // but the 1 KB array still matches Kilobytes — it must stay on Foundry Memory while relevant.
+    // The highest (10 KB) offer is also kept so the incomplete next array stays visible.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
@@ -2973,13 +2979,15 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
-    expect(screen.getByText(/Disks — 1 KB each/)).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
     expect(screen.getByText(/Tap a full disk → 1 free Kilobytes/i)).toBeInTheDocument()
   })
 
-  test('the Cache/Disks detail rows hide on ByteFoundryPage once no shown size is redeemable by any tier — the Build button stays visible/usable regardless', () => {
+  test('Foundry Memory keeps the highest Disk row even when no shown size is redeemable — the incomplete ladder size stays trackable', () => {
     // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    // Highest (level-2 / current offer) must still render so the player can track the incomplete array.
     seedIntroState(
       {
         bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -2990,9 +2998,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: /disk array cache/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Cache —/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Disks —/)).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
   })
 
   test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
