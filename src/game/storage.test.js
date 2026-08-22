@@ -410,6 +410,7 @@ describe('schema merge on load', () => {
         capacityUpgradeQueued: false,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
+        diskWriteCache: {},
         diskAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
         computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
         computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
@@ -646,16 +647,19 @@ describe('supporter unlock + save slots', () => {
 })
 
 describe('theme preference', () => {
-  it('loadThemePreference returns null when unset', () => {
-    expect(loadThemePreference()).toBeNull()
+  it('loadThemePreference returns system when unset', () => {
+    expect(loadThemePreference()).toBe('system')
   })
 
-  it('saveThemePreference persists dark/light and ignores invalid values on load', () => {
+  it('saveThemePreference persists system/light/dark and ignores invalid values on load', () => {
     saveThemePreference('light')
     expect(localStorage.getItem(THEME_PREFERENCE_KEY)).toBe('light')
     expect(loadThemePreference()).toBe('light')
+    saveThemePreference('system')
+    expect(localStorage.getItem(THEME_PREFERENCE_KEY)).toBe('system')
+    expect(loadThemePreference()).toBe('system')
     localStorage.setItem(THEME_PREFERENCE_KEY, 'sepia')
-    expect(loadThemePreference()).toBeNull()
+    expect(loadThemePreference()).toBe('system')
   })
 
   it('clearGameState does not clear theme preference', () => {

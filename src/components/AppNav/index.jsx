@@ -2,7 +2,7 @@ import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
 // Bottom bar order follows play progression: Foundry → Boosters → Compute → Factory, then Guide / More.
-// Storage is folded into Foundry as a Memory | Disks second-level tab (same Memory pool +
+// Storage is folded into Foundry as a Memory | Storage second-level tab (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; Guide/More stay available during the Foundry gate.
 // Accessible names: open byte foundry / open boosters / open compute / open factory / open guide / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
@@ -111,7 +111,7 @@ const AppNav = ({
 }) => {
   // Progression order: Foundry family → Boosters → Compute (Flops) → Factory → utilities.
   const items = [
-    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry — Memory and Disks' },
+    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry — Memory and Storage' },
     showBoosters && { id: 'boosters', ariaLabel: 'open boosters', icon: '⚡', label: 'Boosters', title: 'Boosters — Cores, merge chain, Compute Boost' },
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Factory production' },
     showTiers && { id: 'game', ariaLabel: 'open factory', icon: '📶', label: 'Factory', title: 'Byte Factory — buy and produce' },

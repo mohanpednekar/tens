@@ -433,15 +433,18 @@ export const THEME_PREFERENCE_KEY = 'tens_theme_preference'
 export const loadThemePreference = () => {
   try {
     const raw = localStorage.getItem(THEME_PREFERENCE_KEY)
-    return raw === 'dark' || raw === 'light' ? raw : null
+    if (raw === 'dark' || raw === 'light' || raw === 'system') return raw
+    return 'system'
   } catch {
-    return null
+    return 'system'
   }
 }
 
 export const saveThemePreference = mode => {
   try {
-    localStorage.setItem(THEME_PREFERENCE_KEY, mode)
+    if (mode === 'dark' || mode === 'light' || mode === 'system') {
+      localStorage.setItem(THEME_PREFERENCE_KEY, mode)
+    }
   } catch {
     // Silently ignore (quota / private browsing)
   }

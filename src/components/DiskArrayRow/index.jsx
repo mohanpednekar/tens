@@ -2,9 +2,14 @@ import {
   formatCacheSize,
   formatDiskSize,
   getDiskRedeemTierName,
+  getDiskWriteCacheFlushFill,
+  getDiskWriteCacheMerge,
+  getDiskWriteCacheSegmentFill,
   isDiskAutoRedeemEligible,
-  isDiskCacheBlockReleasable,
+  isDiskCacheBlockAutoReleaseEligible,
+  isDiskCacheBlockManualReleaseAvailable,
   isDiskManualRedeemAvailable,
+  isDiskWriteCacheCollectPaused,
 } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
@@ -136,10 +141,9 @@ const DiskSquare = styled.button`
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
 // formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
 // refills whole blocks when a block was just released or the size was just unlocked (see
-// tickDiskAutoFill). A full block ($full) can be manually released ($releasable — accent border,
-// clickable) only while some tier's current per-unit cost matches this array's size, crediting
-// that block's bits straight into resources.base (the shared Bits currency on Factory) — never
-// auto-transferred; Cache → Factory is always a manual tap. Cache does not pour into disks.
+// tickDiskAutoFill). A full block ($full) can be manually released ($manualRelease — accent border,
+// clickable) or auto-released ($autoRelease — info styling) when Smart is on, but ONLY while no
+// full redeemable disk of that size exists — disks always take priority. Cache does not pour into disks.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -156,9 +160,15 @@ const CacheBlock = styled.button`
   justify-content: center;
   padding: 0;
   border-radius: ${props => props.theme.radius.sm};
-  border: 1.5px solid ${props => (props.$releasable ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
-  cursor: ${props => (props.$releasable ? 'pointer' : 'default')};
+  border: 1.5px solid ${props =>
+    props.$manualRelease || props.$autoRelease
+      ? props.theme.color.accent
+      : props.theme.color.surfaceSunken};
+  background: ${props =>
+    props.$full
+      ? (props.$autoRelease ? props.theme.color.info : props.theme.color.surfaceRaised)
+      : 'transparent'};
+  cursor: ${props => (props.$manualRelease ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
@@ -172,6 +182,36 @@ const CacheBlock = styled.button`
   &:disabled {
     cursor: not-allowed;
   }
+`
+
+// Write cache — per-array upward merge buffer (empty at rest). Collect shows DISK_ARRAY_LADDER_CAP
+// segments; once full the same bar renders solid and drains left-to-right during flush.
+const WriteCacheRow = styled.div`
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  width: 100%;
+`
+
+const WriteCacheSegment = styled.div`
+  flex: 1 1 1.2rem;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.5px solid ${props =>
+    props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken};
+  background: ${props =>
+    props.$filled ? props.theme.color.surfaceRaised : 'transparent'};
+  overflow: hidden;
+  position: relative;
+`
+
+const WriteCacheFlushFill = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${props => props.theme.color.info};
+  transform-origin: left center;
+  transform: scaleX(${props => props.$fill});
 `
 
 // One Disk array's full interactive detail (cache release, redeem) for a single `size` — shared by
@@ -207,6 +247,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const rebuildReadySeconds = rebuilding
     ? Math.ceil(intro.diskBuild.remainingSeconds)
     : null
+  const writeMerge = getDiskWriteCacheMerge(state, size)
+  const writeCollectPaused = writeMerge ? isDiskWriteCacheCollectPaused(state, size) : false
+  const writeCollectFill = writeMerge ? getDiskWriteCacheSegmentFill(writeMerge) : 0
+  const writeFlushFill = writeMerge ? getDiskWriteCacheFlushFill(writeMerge) : 0
+  const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_ARRAY_LADDER_CAP
+  const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_ARRAY_LADDER_CAP
 
   return (
     <DiskSizeRow>
@@ -215,38 +261,87 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : (
-        <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
+        <CacheBlocksRow role="group" aria-label={`${sizeLabel} read cache`}>
           {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
             const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
             const isFull = blockFilledBits >= blockBits
-            const releasable = isFull && isDiskCacheBlockReleasable(state, size)
+            const autoRelease = isFull && isDiskCacheBlockAutoReleaseEligible(state, size)
+            const manualRelease = isFull && isDiskCacheBlockManualReleaseAvailable(state, size)
             return (
               <CacheBlock
                 key={index}
                 aria-label={
-                  releasable
-                    ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                    : `${sizeLabel} cache block ${index + 1}`
+                  autoRelease
+                    ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                    : manualRelease
+                      ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                      : `${sizeLabel} cache block ${index + 1}`
                 }
-                disabled={!releasable}
-                onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
+                disabled={!manualRelease}
+                onClick={manualRelease ? () => actions.releaseDiskCacheBlock(size) : undefined}
                 title={
                   isFull
-                    ? (releasable
-                      ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                      : `Transferable to Factory only once some tier's level cost matches ${sizeLabel}`)
+                    ? (autoRelease
+                      ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
+                      : manualRelease
+                        ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
+                        : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
                     : 'Filling from Memory'
                 }
                 type="button"
                 $full={isFull}
-                $releasable={releasable}
+                $manualRelease={manualRelease}
+                $autoRelease={autoRelease}
               >
-                <CellLabel $emphasis={isFull || releasable}>{blockLabel}</CellLabel>
+                <CellLabel $emphasis={isFull || manualRelease || autoRelease}>{blockLabel}</CellLabel>
               </CacheBlock>
             )
           })}
         </CacheBlocksRow>
       )}
+
+      {writeMerge && !rebuilding ? (
+        <WriteCacheRow
+          role="progressbar"
+          aria-label={
+            writeFlushing
+              ? `${sizeLabel} write cache flushing to disk`
+              : `${sizeLabel} write cache collecting${writeCollectPaused ? ' paused for tier match' : ''}`
+          }
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round((writeFlushing ? writeFlushFill : writeCollectFill) * 100)}
+        >
+          {writeCollecting ? (
+            Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
+              const filledSegments = writeMerge.segmentsCollected
+              const partial = getDiskWriteCacheSegmentFill(writeMerge)
+              const isFilled = index < filledSegments
+              const isActive = index === filledSegments && partial > 0
+              return (
+                <WriteCacheSegment
+                  key={index}
+                  $filled={isFilled || isActive}
+                  $active={isActive || (index === filledSegments && !writeCollectPaused)}
+                  title={
+                    writeCollectPaused
+                      ? 'Collect paused — matching tier claims disks at the source size first'
+                      : isFilled
+                        ? 'Collected from source disk'
+                        : isActive
+                          ? 'Collecting from source disk'
+                          : 'Waiting for next source disk'
+                  }
+                />
+              )
+            })
+          ) : (
+            <WriteCacheSegment $filled $active style={{ flex: '1 1 100%' }}>
+              <WriteCacheFlushFill $fill={writeFlushFill} />
+            </WriteCacheSegment>
+          )}
+        </WriteCacheRow>
+      ) : null}
 
       <SquaresRow
         role="group"
@@ -287,7 +382,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                           ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
                           : `Redeemable once some tier's level cost matches ${sizeLabel}`)
                     : isEmpty
-                      ? 'Built, waiting for Memory to fill it'
+                      ? 'Built, waiting to fill from read cache or the size below'
                       : 'Not yet built'
               }
               type="button"

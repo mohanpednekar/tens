@@ -144,6 +144,12 @@ const LockedNote = styled.p`
   margin: 0;
 `
 
+const ThemeOptionRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+`
+
 const buildSparklinePath = (samples, key) => {
   if (!samples.length) return ''
   const values = samples.map(s => Math.max(0, Number(s[key]) || 0))
@@ -161,7 +167,7 @@ const buildSparklinePath = (samples, key) => {
     .join(' ')
 }
 
-const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
+const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }) => {
   const frozen = isProductionFrozen(game.state)
   const supporter = Boolean(game.savesMeta?.supporterUnlocked)
   const [code, setCode] = useState('')
@@ -475,7 +481,25 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
 
       <Section aria-label="appearance section">
         <h2>Appearance</h2>
-        <p>Dark theme (system preference + light-mode toggle coming later).</p>
+        <p>Choose light or dark mode, or match your device (System).</p>
+        <ThemeOptionRow role="group" aria-label="theme preference">
+          {[
+            { id: 'system', label: 'System' },
+            { id: 'light', label: 'Light' },
+            { id: 'dark', label: 'Dark' },
+          ].map(({ id, label }) => (
+            <Button
+              key={id}
+              aria-label={`use ${label.toLowerCase()} theme`}
+              aria-pressed={themePreference === id}
+              onClick={() => onThemePreferenceChange?.(id)}
+              type="button"
+              variant={themePreference === id ? 'primary' : 'neutral'}
+            >
+              <ButtonContent>{label}</ButtonContent>
+            </Button>
+          ))}
+        </ThemeOptionRow>
       </Section>
 
       <Section aria-label="danger zone">

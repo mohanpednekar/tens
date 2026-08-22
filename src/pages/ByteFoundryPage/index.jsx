@@ -34,8 +34,8 @@ const Header = styled.header`
   width: 100%;
 `
 
-// Second-level Foundry tabs: Memory | Disks (peer tabs — Storage is no longer a top-level AppNav
-// destination). Shown once Storage unlocks.
+// Second-level Foundry tabs: Memory | Storage (peer tabs — not a top-level AppNav destination).
+// Shown once Storage unlocks.
 const SubNav = styled.div`
   display: flex;
   gap: 0.5rem;
@@ -405,14 +405,14 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
             Memory
           </SubNavButton>
           <SubNavButton
-            aria-label="open disks"
+            aria-label="open storage"
             aria-selected={foundryTab === 'disks'}
             color={foundryTab === 'disks' ? 'white' : 'darkgrey'}
             onClick={() => setFoundryTab('disks')}
             role="tab"
             type="button"
           >
-            Disks
+            Storage
           </SubNavButton>
         </SubNav>
       )}
