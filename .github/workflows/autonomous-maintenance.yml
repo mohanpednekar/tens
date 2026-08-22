@@ -167,15 +167,17 @@ jobs:
           # is needed here (unlike the GH_AUTOMATION_PAT prerequisites in docs/AUTOMATION.md).
           # Falls back to empty on any API error (e.g. alerts disabled) rather than failing
           # the run — Phase 0(c) below treats an empty list the same as "no open alerts".
-          dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts" \
-            --paginate -f state=open --jq '
+          if ! dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
+            --paginate --jq '
               def sevrank: if .security_advisory.severity == "critical" then 0
                            elif .security_advisory.severity == "high" then 1
                            elif .security_advisory.severity == "medium" then 2
                            else 3 end;
               sort_by(sevrank)[]
               | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
-            ' 2>/dev/null || true)
+            ' 2>/dev/null); then
+            dependabot_alerts=""
+          fi
           {
             echo "dependabot_alerts<<DEPALERT_EOF"
             echo "$dependabot_alerts"

@@ -177,7 +177,8 @@ sections.
   targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
   theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
   should assign **player-facing** feature/economy issues to a milestone for the next planned
-  release (currently `v0.6.0`); process/infrastructure `claude-task` issues typically stay off a
+  release (currently `v0.6.0` UI revamp, `v0.7.0` Era ascension); process/infrastructure
+  `claude-task` issues typically stay off a
   versioned milestone.
 
 ## Budget discipline
@@ -193,6 +194,25 @@ Applies to every session, not just automation:
 See `CLAUDE.md`'s "Budget discipline" paragraph and `docs/AUTOMATION.md` Cost implications for the
 full soft-target/overshoot/partial-slice policy — not restated here to avoid drift between the two
 copies.
+
+## Cursor Cloud GitHub access
+
+Interactive **Cursor Cloud Agent** runs authenticate `gh` with a GitHub App integration
+(`ghs_*`) that **cannot** comment on, label, or close issues (403 on those REST endpoints).
+Unattended GitHub Actions workflows use the `GH_AUTOMATION_PAT` repo secret instead and
+work normally.
+
+To let Cloud Agents perform issue hygiene (comments, labels, closes) from the VM:
+
+1. Create or reuse a fine-grained PAT with **Issues: read/write** (same scope as
+   `GH_AUTOMATION_PAT`; Contents + Pull requests if the agent also pushes branches).
+2. Add it in **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`** (exact name —
+   `gh` reads this env var automatically).
+3. Re-run the agent session; verify with `gh issue comment` on a test issue or run
+   `scripts/backlog-issue-hygiene.sh --dry-run`.
+
+Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (deterministic step in
+`cursor-autonomous-maintenance.yml`) or a maintainer's local `gh` session.
 
 ## Automation engines (Claude now, Cursor successor)
 

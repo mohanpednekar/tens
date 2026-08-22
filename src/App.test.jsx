@@ -97,11 +97,18 @@ test('renders the game title and the Kilobytes tier', () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
 })
 
-test('renders the current app version in the corner', () => {
+test('shows the app version only on the Guide page', async () => {
+  const user = userEvent.setup()
   seedMainGameState()
   render(<App />)
 
+  expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /guide/i }))
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
+
+  await openSettings(user)
+  expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
 })
 
 test('shows a blocking notice and starts fresh when an incompatible save is detected on load', async () => {

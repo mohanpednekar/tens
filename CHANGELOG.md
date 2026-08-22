@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
+- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
+  from the global corner overlay and Settings header.
 
 ### Added
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
@@ -29,8 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Incompatible save handling**: on load, saves that predate the current schema (legacy `resources.Ones`,
   `intro.completed`, missing `intro` with tier progress, legacy tier ids, boolean autobuyers, etc.) are
   cleared automatically and a blocking **Save not compatible** notice offers a single **Start fresh**
-  action. Current saves are stamped with `saveSchemaVersion: 1` on every write; stamped saves skip
-  heuristic checks. `mergeState` still forward-fills missing fields for compatible partial saves.
+  action. Current saves are stamped with `saveSchemaVersion: 2` on every write; v1 saves
+  forward-fill via `mergeState`. Stamped saves skip heuristic checks. `mergeState` still
+  forward-fills missing fields for compatible partial saves.
 
 ### Removed
 - **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier

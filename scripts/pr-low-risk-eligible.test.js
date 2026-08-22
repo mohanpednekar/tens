@@ -82,6 +82,19 @@ describe('pr-low-risk-eligible.sh', () => {
     ).toBe(1);
   });
 
+  it('accepts cursor/heal-* housekeeping branches', () => {
+    const r = run({
+      branch: 'cursor/heal-changelog-save-schema-version',
+      title: 'Fix CHANGELOG saveSchemaVersion drift',
+      isCrossRepository: false,
+      additions: 3,
+      deletions: 2,
+      files: ['CHANGELOG.md'],
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/small diff|docs\/tests-only/);
+  });
+
   it('accepts Dependabot patch/minor and rejects major', () => {
     const patch = run({
       branch: 'dependabot/npm_and_yarn/foo-1.2.4',

@@ -171,6 +171,18 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Issue tracking for interactive sessions
 
+### Cursor Cloud GitHub access
+
+Interactive **Cursor Cloud Agent** VMs authenticate `gh` via a GitHub App integration that
+returns **403** on issue comments, labels, and closes. Unattended workflows use
+`GH_AUTOMATION_PAT` and are unaffected.
+
+**Fix:** add a fine-grained PAT (Issues read/write; same scopes as `GH_AUTOMATION_PAT` when
+the agent also pushes) to **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`**.
+`gh` picks it up automatically. Without it, issue hygiene must run via GHA (see
+`scripts/backlog-issue-hygiene.sh` on housekeeping runs in
+`cursor-autonomous-maintenance.yml`) or a maintainer's local session.
+
 **Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
 Issues tab via GitHub's native pinned-issues feature and deliberately carries **no labels** — it is
 not a `claude-task` work item for the automation to implement, only a standing manual setup checklist
@@ -228,8 +240,9 @@ possibly multiple releases; a Milestone answers "what's targeted for this releas
 native due-date plus automatic X/Y-closed progress. Interactive sessions and Planning (#53) should
 assign player-facing feature/economy issues to a milestone for the next planned release; process
 and infrastructure `claude-task` issues typically stay off a versioned milestone. The current
-next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140 and other player-facing work as
-it lands).
+next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140); Era ascension
+(`#407` / `#411–#414`) targets `v0.7.0`. `scripts/sync-release-milestones.sh`
+keeps both milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
@@ -435,7 +448,7 @@ src/
     MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer status. Reached via
                                AppNav → More; always reachable (including during the Foundry gate);
                                takes `{ game }`
-    SettingsPage/index.jsx  ← app meta, Supporter pack, save slots, Prestige museum, Ops dashboard,
+    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Ops dashboard,
                                and Reset (Danger zone only). Reached via AppNav → More; always
                                reachable; takes `{ game, onReset }`
   theme/
@@ -644,14 +657,16 @@ Strict three-layer separation:
    Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
-   can drift out of sync with a live run. Reached via AppNav's Guide item; `App.jsx` toggles
-   between these pages locally; there is still no routing library or backend involved.
+   can drift out of sync with a live run. Header shows the app version (`v{version}` from
+   `package.json` via build-time import) — the **only** in-app version surface. Reached via AppNav's
+   Guide item; `App.jsx` toggles between these pages locally; there is still no routing library or
+   backend involved.
 6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer
    status screen. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
    during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
-   app meta/version, Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige
-   museum, Ops dashboard, and Reset under Danger zone only. Takes `{ game, onReset }` (`onReset`
+   Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Ops dashboard,
+   and Reset under Danger zone only. Takes `{ game, onReset }` (`onReset`
    is the confirm-guarded callback owned by `App.jsx`). Pure renderer aside from local form state.
 
 ## Economy model
@@ -852,7 +867,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1455 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1456 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
