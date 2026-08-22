@@ -152,8 +152,7 @@ on whether some tier currently matches this size (`diskRedeemTierName`, from
 {size} container; its cache auto-fills it, redeemable right away for a free {tierName} once full"` or
 the same sentence ending `"…but it won't be redeemable until some tier's level cost matches it"`; and
 **mid-build** — `aria-label="disk array rebuilding"`, always `disabled`, visible text `"🏦 Building
-{size} Disk — {ceil(remainingSeconds)}s"`, `title="Array rebuilding — {ceil(remainingSeconds)}s left
-(every disk in this array is offline until it finishes)"`. `$progress` (`diskBuildProgress`) reads
+{size} Disk — {ceil(remainingSeconds)}s"`, `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`. `$progress` (`diskBuildProgress`) reads
 differently in each state: mid-build, `100 - (remainingSeconds / totalSeconds) * 100` (a genuine "%
 built" fill, using `totalSeconds` as the fixed denominator so the fill only ever climbs toward 100 as
 `remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
