@@ -77,7 +77,7 @@ src/
     MainPage/index.jsx     ← the game; Data | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
-    SettingsPage/index.jsx ← Supporter / saves / museum / Ops / Reset; via AppNav → More
+    SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry

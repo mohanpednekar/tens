@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   from the global corner overlay and Settings header.
 
 ### Added
+- **Era ascension UI** (#411): Settings → Era ascension shows Eras/Eons, eligibility, and a
+  confirm-guarded **Ascend Era** action; Milestones adds an Era ascension status panel; Guide
+  documents threshold, award, and reset/persist rules.
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
   (`ERA_ELIGIBILITY_PP`); awards **Eons**, increments `era.count`, wipes Foundry/Factory cycle
   (including Flops owned counts and `prestigeDoublePpLevel`) while keeping automation unlocks,
