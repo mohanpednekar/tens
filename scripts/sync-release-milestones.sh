@@ -24,10 +24,6 @@ if ! command -v gh >/dev/null 2>&1; then
   echo "gh is required" >&2
   exit 2
 fi
-if ! command -v jq >/dev/null 2>&1; then
-  echo "jq is required" >&2
-  exit 2
-fi
 
 run() {
   if [ "$DRY_RUN" = true ]; then
