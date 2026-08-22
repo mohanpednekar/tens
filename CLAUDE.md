@@ -738,8 +738,8 @@ permanent across every real Prestige; only Memory itself, the main-game-unlock g
 own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
 
-**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` in `createInitialGameState`,
-`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
+`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
@@ -752,13 +752,19 @@ size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size f
 scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
-array has its own always-full **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
+array has its own always-full **read cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
 `size / 8` bits each, totaling one disk's worth — e.g. a 1 MB array → 8 × 1 Mb; displayed in the
 bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
 Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
 full; Memory refills whole blocks when a block was just released or the size was just unlocked
-(so Memory visibly fills between transfers). Cache does not pour into disks — empty disks fill
-from Memory directly. **Disks always take priority over cache** for matching level costs: while a
+(so Memory visibly fills between transfers). Read cache pours instantly into an empty disk when all
+8 blocks are full and no tier claim blocks that size. Disks above the smallest built size also fill
+via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
+N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
+disk emptied per segment; collect pauses while the source size has an active tier match), then
+flushes for one target build duration into one disk at N+1. `tickGame` runs
+`tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so write-cache ripple refills source
+slots same tick. **Disks always take priority over read cache** for matching level costs: while a
 full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
 (`releaseDiskCacheBlock`) only when no full redeemable disk of that size exists — crediting the
 block's bits into `resources.base` (Bits). Smart autobuyers also auto-release cache via
@@ -877,7 +883,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1474 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1485 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

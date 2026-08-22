@@ -2922,7 +2922,7 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
 // tickDiskBuild); Memory then keeps each array's Cache full (whole-block transfers) and
-// auto-fills empty disks directly from Memory on a later tick (see tickDiskAutoFill), smallest
+// auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
 // size first. A FULL disk's redeemability is
 // separately gated on SOME tier's CURRENT per-unit level cost catching up to that disk's size, and
 // auto-redeeming it is further gated on that matching tier's own unit-buying autobuyer being
@@ -3016,7 +3016,7 @@ describe('Byte Foundry Storage', () => {
 
     // Size identity is painted inside each cell; no external header / Cache/Disks titles.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
@@ -3029,7 +3029,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
   })
 
   test('cache squares and disk circles carry bit-scale vs Byte-scale size labels inside each cell', () => {
@@ -3039,7 +3039,7 @@ describe('Byte Foundry Storage', () => {
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
     // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale).
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
@@ -3103,7 +3103,7 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^10 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
   })
 
@@ -3190,30 +3190,29 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Memory keeps Cache full then auto-fills an empty disk on a later tick — fill and build are separate steps', () => {
+  test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {
     vi.useFakeTimers()
 
-    // A disk already built (empty) plus enough Memory for Cache (always-full reserve) and one
-    // disk fill. Capacity must also clear INTRO_DISK_UNLOCK_CAPACITY for the Storage nav button
-    // to even render.
-    seedIntroState({
-      bits: currentBankSize * 2,
-      capacity: INTRO_DISK_UNLOCK_CAPACITY,
-      byteCreated: true,
-      disksBuiltTotal: { [currentBankSize]: 1 },
-    })
+    // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
+    // level 1 so read cache may pour into the empty disk without an active tier claim at this size.
+    seedIntroState(
+      {
+        bits: currentBankSize * 2,
+        capacity: INTRO_DISK_UNLOCK_CAPACITY,
+        byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: 1 },
+      },
+      { purchaseLevels: { [tier01.id]: 2 } }
+    )
     const { unmount } = render(<App />)
     openStorage()
     expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Cache topped up and the empty disk filled from Memory in the same tick. No autobuyer is
-    // unlocked for tier01 in this seed, so it is NOT auto-redeemed away (see the dedicated
-    // auto-redeem tests below) — it stays full, ready for a manual redeem. Auto-fill is
-    // unaffected by the forced priority order — that only gates manual clicks
-    // (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background automation.
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    // Read cache topped up and poured into the empty disk in the same tick. At tier level 2 the
+    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
+    expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)

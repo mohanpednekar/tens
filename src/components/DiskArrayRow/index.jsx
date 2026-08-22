@@ -2,10 +2,14 @@ import {
   formatCacheSize,
   formatDiskSize,
   getDiskRedeemTierName,
+  getDiskWriteCacheFlushFill,
+  getDiskWriteCacheMerge,
+  getDiskWriteCacheSegmentFill,
   isDiskAutoRedeemEligible,
   isDiskCacheBlockAutoReleaseEligible,
   isDiskCacheBlockManualReleaseAvailable,
   isDiskManualRedeemAvailable,
+  isDiskWriteCacheCollectPaused,
 } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
@@ -180,6 +184,36 @@ const CacheBlock = styled.button`
   }
 `
 
+// Write cache — per-array upward merge buffer (empty at rest). Collect shows DISK_ARRAY_LADDER_CAP
+// segments; once full the same bar renders solid and drains left-to-right during flush.
+const WriteCacheRow = styled.div`
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  width: 100%;
+`
+
+const WriteCacheSegment = styled.div`
+  flex: 1 1 1.2rem;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1.5px solid ${props =>
+    props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken};
+  background: ${props =>
+    props.$filled ? props.theme.color.surfaceRaised : 'transparent'};
+  overflow: hidden;
+  position: relative;
+`
+
+const WriteCacheFlushFill = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${props => props.theme.color.info};
+  transform-origin: left center;
+  transform: scaleX(${props => props.$fill});
+`
+
 // One Disk array's full interactive detail (cache release, redeem) for a single `size` — shared by
 // ByteFoundryPage (matching sizes + always the highest shown size, ascending) and StoragePage
 // (every size ever reached), so the detail reads and behaves identically wherever it's shown. See
@@ -213,6 +247,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const rebuildReadySeconds = rebuilding
     ? Math.ceil(intro.diskBuild.remainingSeconds)
     : null
+  const writeMerge = getDiskWriteCacheMerge(state, size)
+  const writeCollectPaused = writeMerge ? isDiskWriteCacheCollectPaused(state, size) : false
+  const writeCollectFill = writeMerge ? getDiskWriteCacheSegmentFill(writeMerge) : 0
+  const writeFlushFill = writeMerge ? getDiskWriteCacheFlushFill(writeMerge) : 0
+  const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_ARRAY_LADDER_CAP
+  const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_ARRAY_LADDER_CAP
 
   return (
     <DiskSizeRow>
@@ -221,7 +261,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : (
-        <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
+        <CacheBlocksRow role="group" aria-label={`${sizeLabel} read cache`}>
           {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
             const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
             const isFull = blockFilledBits >= blockBits
@@ -259,6 +299,49 @@ const DiskArrayRow = ({ actions, size, state }) => {
           })}
         </CacheBlocksRow>
       )}
+
+      {writeMerge && !rebuilding ? (
+        <WriteCacheRow
+          role="progressbar"
+          aria-label={
+            writeFlushing
+              ? `${sizeLabel} write cache flushing to disk`
+              : `${sizeLabel} write cache collecting${writeCollectPaused ? ' paused for tier match' : ''}`
+          }
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round((writeFlushing ? writeFlushFill : writeCollectFill) * 100)}
+        >
+          {writeCollecting ? (
+            Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
+              const filledSegments = writeMerge.segmentsCollected
+              const partial = getDiskWriteCacheSegmentFill(writeMerge)
+              const isFilled = index < filledSegments
+              const isActive = index === filledSegments && partial > 0
+              return (
+                <WriteCacheSegment
+                  key={index}
+                  $filled={isFilled || isActive}
+                  $active={isActive || (index === filledSegments && !writeCollectPaused)}
+                  title={
+                    writeCollectPaused
+                      ? 'Collect paused — matching tier claims disks at the source size first'
+                      : isFilled
+                        ? 'Collected from source disk'
+                        : isActive
+                          ? 'Collecting from source disk'
+                          : 'Waiting for next source disk'
+                  }
+                />
+              )
+            })
+          ) : (
+            <WriteCacheSegment $filled $active style={{ flex: '1 1 100%' }}>
+              <WriteCacheFlushFill $fill={writeFlushFill} />
+            </WriteCacheSegment>
+          )}
+        </WriteCacheRow>
+      ) : null}
 
       <SquaresRow
         role="group"
@@ -299,7 +382,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                           ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
                           : `Redeemable once some tier's level cost matches ${sizeLabel}`)
                     : isEmpty
-                      ? 'Built, waiting for Memory to fill it'
+                      ? 'Built, waiting to fill from read cache or the size below'
                       : 'Not yet built'
               }
               type="button"

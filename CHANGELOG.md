@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
+  size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
+  size, or from the size below via **write cache** (10 timed segments + one flush equal to a target
+  build duration). Write-cache collect pauses while the source size has an active tier match;
+  flush never pauses. Tier match still gives full disks first claim over read cache.
 - **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
   immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
   matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no

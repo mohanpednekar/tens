@@ -33,10 +33,13 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 ## `DiskArrayRow/index.jsx`
 
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block cache strip of squares, each labeled inside with its bit-scale
+`DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares (`aria-label="… read cache"`), each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockReleasable` — manual transfer to Factory Bits only; never auto), then a
-fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (all ten inline on desktop; below 40rem wraps to
+full and `isDiskCacheBlockReleasable` — manual transfer to Factory Bits only; Smart autobuyers may
+auto-release when no matching disk exists), then an optional **write cache** progress row when
+`intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
+below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
+does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (all ten inline on desktop; below 40rem wraps to
 five per row, **four when the in-cell label is six characters** such as "100 KB"), each labeled
 inside with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
