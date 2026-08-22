@@ -51,9 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Light mode activation** (#140): `ThemeProvider` follows persisted `tens_theme_preference` or OS
   `prefers-color-scheme`; fixed `ThemeToggle` (top-right) switches and persists; reset does not
   clear theme preference. Prestige overlay AA pairs added to `tokens.contrast.test.js`.
-- **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
-  (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
-  and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
+- **Disk array layout (mobile)** — *(superseded by the continuous Foundry layout / always-one-row
+  disk strip above)* previously wrapped disk circles below 40rem; they now always stay ten inline.
 - **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
   label only (no unbounded-unlock hint or next-PP detail).
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
