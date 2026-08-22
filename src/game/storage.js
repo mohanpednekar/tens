@@ -295,6 +295,90 @@ export const clearAllSaveProgress = () => {
   return { ok: true, meta }
 }
 
+/** Current on-disk save envelope version — stamped by saveGameState on every write. */
+export const SAVE_SCHEMA_VERSION = 1
+
+const LEGACY_TIER_IDS = new Set([
+  'Tens', 'Thousands', 'Millions', 'Billions', 'Trillions', 'Quadrillions', 'Pentillions',
+  'Hexillions', 'Septillions', 'Octillions', 'Nonillions', 'Decillions',
+])
+
+const TIER_MAP_FIELDS = [
+  'resources', 'owned', 'purchased', 'purchaseLevels', 'purchaseLevelProgress', 'autobuyers',
+  'autobuyersEnabled', 'tickspeedLevels', 'autobuyerAttemptBudgets', 'tierProductionAccumulators',
+  'smartAutobuyer', 'tierTickspeedAutobuyer', 'tierTickspeedAutobuyerEnabled', 'everUnlockedTierIds',
+]
+
+const mapHasLegacyTierId = map =>
+  map && typeof map === 'object' && Object.keys(map).some(k => LEGACY_TIER_IDS.has(k))
+
+/**
+ * Returns a short reason code when a parsed save payload predates the current schema and cannot
+ * be loaded without the removed migration path — null when compatible (including saves already
+ * stamped with SAVE_SCHEMA_VERSION).
+ */
+export const getSaveIncompatibilityReason = saved => {
+  if (!saved || typeof saved !== 'object') return null
+  if (saved.saveSchemaVersion === SAVE_SCHEMA_VERSION) return null
+
+  if (saved.resources?.Ones !== undefined) return 'legacy_money_id'
+
+  const intro = saved.intro
+  if (intro === undefined) {
+    const hasTierProgress = TIER_MAP_FIELDS.some(field => {
+      const map = saved[field]
+      return map && typeof map === 'object' && Object.keys(map).length > 0
+    })
+    if (hasTierProgress) return 'missing_intro'
+  } else {
+    if (intro.completed !== undefined && intro.mainGameUnlocked === undefined) return 'legacy_intro_gate'
+    if (
+      intro.storageBanks !== undefined ||
+      intro.storageBanksBuiltTotal !== undefined ||
+      intro.storageAutoRedeemedSizes !== undefined
+    ) return 'legacy_storage_fields'
+  }
+
+  if (saved.prestige?.pp !== undefined && saved.prestige?.xp === undefined) return 'legacy_prestige_xp'
+  if (saved.prestige?.level !== undefined && saved.prestige?.count === undefined) return 'legacy_prestige_count'
+
+  if (saved.autobuyers && Object.values(saved.autobuyers).some(v => v === true || v === false)) {
+    return 'legacy_boolean_autobuyers'
+  }
+  if (saved.autoPrestige === true || saved.autoPrestige === false) return 'legacy_boolean_auto_prestige'
+
+  if (TIER_MAP_FIELDS.some(field => mapHasLegacyTierId(saved[field]))) return 'legacy_tier_ids'
+
+  return null
+}
+
+const readActiveSavePayload = () => {
+  const slotId = getActiveSlotId()
+  try {
+    const raw = localStorage.getItem(slotStateKey(slotId))
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+/** Clears the active slot when its on-disk payload is incompatible; returns the reason code or null. */
+export const discardIncompatibleActiveSaveIfNeeded = () => {
+  const slotId = getActiveSlotId()
+  const parsed = readActiveSavePayload()
+  if (!parsed) return null
+  const reason = getSaveIncompatibilityReason(parsed)
+  if (!reason) return null
+  removeSlotStorage(slotId)
+  return reason
+}
+
+const stripSaveEnvelope = saved => {
+  const { saveSchemaVersion: _version, ...gameState } = saved
+  return gameState
+}
+
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
 // Merge a saved state with fresh defaults so newly added fields are present on load.
@@ -336,7 +420,10 @@ const mergeState = saved => {
 export const saveGameState = state => {
   const slotId = getActiveSlotId()
   try {
-    localStorage.setItem(slotStateKey(slotId), JSON.stringify(state))
+    localStorage.setItem(slotStateKey(slotId), JSON.stringify({
+      saveSchemaVersion: SAVE_SCHEMA_VERSION,
+      ...state,
+    }))
     localStorage.setItem(slotTimestampKey(slotId), String(Date.now()))
   } catch {
     // Silently ignore (storage quota exceeded, private-browsing restrictions, etc.)
@@ -344,11 +431,11 @@ export const saveGameState = state => {
 }
 
 export const loadGameState = () => {
-  const slotId = getActiveSlotId()
   try {
-    const raw = localStorage.getItem(slotStateKey(slotId))
-    if (!raw) return null
-    return mergeState(JSON.parse(raw))
+    const parsed = readActiveSavePayload()
+    if (!parsed) return null
+    if (getSaveIncompatibilityReason(parsed)) return null
+    return mergeState(stripSaveEnvelope(parsed))
   } catch {
     return null
   }

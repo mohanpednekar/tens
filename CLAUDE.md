@@ -364,8 +364,9 @@ src/
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
                                Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema migration, multi-slot
-                               saves + Supporter entitlement (unlock code / dummy checkout),
+    storage.js              ← localStorage save/load/clear + save-schema version stamp (`saveSchemaVersion`),
+                               incompatible-save detection/discard, forward field merge (`mergeState`),
+                               multi-slot saves + Supporter entitlement (unlock code / dummy checkout),
                                clearSaveSlot / clearAllSaveProgress (never revokes unlock),
                                plus the separately keyed last-save timestamp used to compute
                                offline progress (slot 0 keeps legacy `tens_game_state` keys)
@@ -395,6 +396,10 @@ src/
                                offline progress already applies to the Byte Foundry mechanically
                                regardless of page, this just makes the notice itself page-agnostic
                                too. Full contract: `docs/COMPONENTS_REFERENCE.md`
+    IncompatibleSaveNotice/index.jsx ← blocking overlay when an on-disk save was cleared on load
+                               because it predates the current schema; single **Start fresh**
+                               acknowledge action. Rendered by `App.jsx` when
+                               `useIncrementalGame`'s `incompatibleSaveReason` is set.
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
@@ -503,7 +508,8 @@ Strict three-layer separation:
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (not in
    MainPage — lifted up so `ByteFoundryPage` can share the same save/tick loop). Owns the `setInterval`
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
-   resetByteFoundry, offlineProgress, dismissOfflineProgress, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
+   dismissIncompatibleSaveNotice, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
    redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
@@ -512,7 +518,9 @@ Strict three-layer separation:
    value as invalid and clamps it to 0, which silently turned every purchase into a no-op during this
    feature's development) passed into `tickGame` as `autobuyerBatchSize` and into `actions.buyTierQuantity` (this replaced a
    removed player-facing ×1/×10 "Bulk" toggle — no persisted preference to manage). On mount, a
-   one-time `computeInitialGame` helper loads any saved state, reads `loadLastSaveTimestamp()`, and —
+   one-time `computeInitialGame` helper calls `discardIncompatibleActiveSaveIfNeeded()` (clears the
+   active slot when its on-disk payload fails `getSaveIncompatibilityReason`), then loads any saved
+   state, reads `loadLastSaveTimestamp()`, and —
    if elapsed real time registers at least one simulated second — folds in offline progress via
    `applyOfflineProgress` before the first render, always applied to `state` at whichever speed
    applies (100% at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` — 10 minutes — 50% beyond
@@ -812,7 +820,8 @@ already cover the genuinely useful items on that checklist.
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). Saves
   must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
   `storage.js`'s `mergeState` only fills in missing fields from `createInitialGameState()` and does not
-  transform legacy save formats. `src/theme/contrast.js` (a
+  transform legacy save formats — incompatible payloads are discarded on load and surfaced via
+  `IncompatibleSaveNotice`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.

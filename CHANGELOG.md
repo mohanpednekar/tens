@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Incompatible save handling**: on load, saves that predate the current schema (legacy `resources.Ones`,
+  `intro.completed`, missing `intro` with tier progress, legacy tier ids, boolean autobuyers, etc.) are
+  cleared automatically and a blocking **Save not compatible** notice offers a single **Start fresh**
+  action. Current saves are stamped with `saveSchemaVersion: 1` on every write; stamped saves skip
+  heuristic checks. `mergeState` still forward-fills missing fields for compatible partial saves.
+
 ### Removed
 - **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier
   name/id remapping, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage

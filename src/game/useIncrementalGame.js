@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyComputeAutoBoost, buyGlobalTickspeedMultiplier, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, getOfflineEffectiveSeconds, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, reclaimComputeBoost, forfeitComputeBoost, redeemDisk, releaseDiskCacheBlock, resetByteFoundry, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setComputeAutoBoostType, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry, upgradeComputeMergeDuration } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -51,13 +51,24 @@ const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
 // separate, more common case of a tab/app merely backgrounded or suspended without a remount.
 const computeInitialGame = () => {
   loadSavesMeta()
+  const incompatibleSaveReason = discardIncompatibleActiveSaveIfNeeded()
   const loaded = loadGameState()
-  if (!loaded) return { state: createInitialGameState(), offlineProgress: null }
+  if (!loaded) {
+    return {
+      state: createInitialGameState(),
+      offlineProgress: null,
+      incompatibleSaveReason,
+    }
+  }
 
   const lastSaveTimestamp = loadLastSaveTimestamp()
   const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
+  const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded)
 
-  return computeOfflineCatchUp(elapsedRealSeconds, loaded) ?? { state: loaded, offlineProgress: null }
+  return {
+    ...(caughtUp ?? { state: loaded, offlineProgress: null }),
+    incompatibleSaveReason: null,
+  }
 }
 
 export const useIncrementalGame = () => {
@@ -67,6 +78,7 @@ export const useIncrementalGame = () => {
   const [initial] = useState(computeInitialGame)
   const [state, setState] = useState(initial.state)
   const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
+  const [incompatibleSaveReason, setIncompatibleSaveReason] = useState(initial.incompatibleSaveReason)
   const [savesMeta, setSavesMeta] = useState(() => loadSavesMeta())
   const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
   // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
@@ -272,6 +284,8 @@ export const useIncrementalGame = () => {
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
+  const dismissIncompatibleSaveNotice = useCallback(() => setIncompatibleSaveReason(null), [])
+
   const switchSaveSlot = useCallback(slotId => {
     saveGameState(stateRef.current)
     const result = setActiveSaveSlot(slotId)
@@ -280,6 +294,7 @@ export const useIncrementalGame = () => {
       refreshSavesUi()
       return result
     }
+    const incompatibleReason = discardIncompatibleActiveSaveIfNeeded()
     const loaded = loadGameState()
     const nextState = loaded ?? createInitialGameState()
     const lastSaveTimestamp = loadLastSaveTimestamp()
@@ -287,6 +302,7 @@ export const useIncrementalGame = () => {
     const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState)
     setState(caughtUp?.state ?? nextState)
     setOfflineProgress(caughtUp?.offlineProgress ?? null)
+    setIncompatibleSaveReason(incompatibleReason)
     setOpsSamples([])
     refreshSavesUi()
     return result
@@ -313,8 +329,10 @@ export const useIncrementalGame = () => {
   return {
     actions,
     clearSlot,
+    dismissIncompatibleSaveNotice,
     dismissOfflineProgress,
     eraseAllSaveProgress,
+    incompatibleSaveReason,
     offlineProgress,
     opsSamples,
     purchaseSupporterDummy,

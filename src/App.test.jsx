@@ -104,6 +104,24 @@ test('renders the current app version in the corner', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
+test('shows a blocking notice and starts fresh when an incompatible save is detected on load', async () => {
+  const user = userEvent.setup()
+  localStorage.setItem('tens_game_state', JSON.stringify({ resources: { Ones: 100 } }))
+
+  render(<App />)
+
+  expect(screen.getByRole('dialog', { name: /save not compatible/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /save not compatible/i })).toBeInTheDocument()
+  const persisted = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(persisted.resources.Ones).toBeUndefined()
+  expect(persisted.saveSchemaVersion).toBe(1)
+
+  await user.click(screen.getByRole('button', { name: /start fresh with a new save/i }))
+
+  expect(screen.queryByRole('dialog', { name: /save not compatible/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+})
+
 // Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
 // buttons once the main game is unlocked — this only asserts the accessible surface
 // (role + aria-label), since jsdom doesn't render CSS for a visual check.

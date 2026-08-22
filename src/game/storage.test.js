@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getSaveIncompatibilityReason, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -115,6 +115,46 @@ describe('saveGameState / loadGameState round-trip', () => {
     saveGameState(state)
     expect(loadGameState().tierProductionAccumulators[tensTier.id]).toBeCloseTo(0.4)
   })
+  it('stamps saveSchemaVersion on every save', () => {
+    saveGameState(createInitialGameState())
+    const raw = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(raw.saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
+    expect(loadGameState().resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
+  })
+})
+
+describe('getSaveIncompatibilityReason', () => {
+  it('accepts a save stamped with the current schema version', () => {
+    expect(getSaveIncompatibilityReason({ saveSchemaVersion: SAVE_SCHEMA_VERSION, resources: { Ones: 5 } }))
+      .toBeNull()
+  })
+
+  it('flags legacy resources.Ones', () => {
+    expect(getSaveIncompatibilityReason({ resources: { Ones: 1 } })).toBe('legacy_money_id')
+  })
+
+  it('flags intro.completed without mainGameUnlocked', () => {
+    expect(getSaveIncompatibilityReason({ intro: { completed: true } })).toBe('legacy_intro_gate')
+  })
+
+  it('flags tier progress without intro', () => {
+    expect(getSaveIncompatibilityReason({ resources: { base: 1 } })).toBe('missing_intro')
+  })
+})
+
+describe('discardIncompatibleActiveSaveIfNeeded', () => {
+  it('removes an incompatible save and returns the reason code', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({ resources: { Ones: 10 } }))
+    expect(discardIncompatibleActiveSaveIfNeeded()).toBe('legacy_money_id')
+    expect(loadGameState()).toBeNull()
+    expect(localStorage.getItem('tens_game_state')).toBeNull()
+  })
+
+  it('is a no-op for a compatible partial save', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true } }))
+    expect(discardIncompatibleActiveSaveIfNeeded()).toBeNull()
+    expect(loadGameState()?.intro.mainGameUnlocked).toBe(true)
+  })
 })
 
 describe('schema merge on load', () => {
@@ -173,6 +213,7 @@ describe('schema merge on load', () => {
 
   it('defaults prestige.points to 0, smartAutobuyer/tierTickspeedAutobuyer to false, and autoPrestige to null for saves missing those fields', () => {
     const oldSave = {
+      intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
       prestige: { xp: 0, count: 0, highestMilestone: 1 },
@@ -191,6 +232,7 @@ describe('schema merge on load', () => {
 
   it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
     const oldSave = {
+      intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       autoSpeedUp: true,
       autoGlobalTickspeed: true,
@@ -223,6 +265,7 @@ describe('schema merge on load', () => {
 
   it('defaults autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save missing those fields', () => {
     const oldSave = {
+      intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
       tierTickspeedAutobuyer: { [tensTier.id]: true },
@@ -313,6 +356,7 @@ describe('schema merge on load', () => {
 
   it('strips a stale lastTierTickspeedXpUnlocked flag from an older save (replaced by a live owned >= 10 check)', () => {
     const oldSave = {
+      intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       lastTierTickspeedXpUnlocked: true,
     }
@@ -321,22 +365,22 @@ describe('schema merge on load', () => {
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
 
-  it('does not map legacy resources.Ones to resources.base', () => {
+  it('discards legacy resources.Ones instead of loading them', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       resources: { Ones: 12345 },
       prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }))
-    const loaded = loadGameState()
-    expect(loaded.resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
-    expect(loaded.resources.Ones).toBe(12345)
+    expect(discardIncompatibleActiveSaveIfNeeded()).toBe('legacy_money_id')
+    expect(loadGameState()).toBeNull()
   })
 
-  it('does not backfill mainGameUnlocked from intro.completed', () => {
+  it('discards intro.completed saves instead of backfilling mainGameUnlocked', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       intro: { completed: true },
       prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }))
-    expect(loadGameState().intro.mainGameUnlocked).toBe(false)
+    expect(discardIncompatibleActiveSaveIfNeeded()).toBe('legacy_intro_gate')
+    expect(loadGameState()).toBeNull()
   })
 
   it('preserves a save\'s own in-progress intro state', () => {
