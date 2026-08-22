@@ -171,6 +171,11 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Issue tracking for interactive sessions
 
+**Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
+Issues tab via GitHub's native pinned-issues feature and deliberately carries **no labels** — it is
+not a `claude-task` work item for the automation to implement, only a standing manual setup checklist
+that #63 keeps auto-verified. Do not add `claude-task` to it or unpin it without understanding why.
+
 Every session that does non-trivial work — interactive sessions, not only `autonomous-maintenance.yml`
 runs — files a GitHub issue to track that work and keeps it updated as the session progresses, giving
 interactive work the same at-a-glance visibility the automation's `claude-task` backlog already has.
