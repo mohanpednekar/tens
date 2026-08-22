@@ -997,6 +997,20 @@ export const getPrestigeProgressPercent = money => {
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
+// Progress (0–1) toward the next power-of-ten Bytes threshold, measured in Bits.
+// Money is stored in Bits; dividing by BITS_PER_BYTE yields whole Bytes, then the next 10^n
+// Bytes ceiling is the target. Equivalent to (currentBits) / (nextPowerBytes * BITS_PER_BYTE).
+// MainPage renders this as BITS_PER_BYTE (8) visual segments of 12.5% each — e.g. 5e7 Bytes
+// (= 4e8 Bits) → next 1e8 Bytes (= 8e8 Bits) → 0.5 → four of eight segments filled.
+export const getNextBytePowerProgressFraction = moneyBits => {
+  const safeBits = clampNonNegative(moneyBits)
+  if (safeBits <= 0) return 0
+  const bytes = safeBits / BITS_PER_BYTE
+  const nextPowerBytes = 10 ** (Math.floor(Math.log10(bytes)) + 1)
+  if (!Number.isFinite(nextPowerBytes) || nextPowerBytes <= 0) return 0
+  return Math.min(1, bytes / nextPowerBytes)
+}
+
 // A tier's actual production period after both tickspeed multipliers shrink it (see "Tier
 // production tickspeed" in CLAUDE.md) — the per-tier tickspeed level and the global tickspeed
 // multiplier both speed up how *often* a tier delivers a batch, not how much lands each time (see

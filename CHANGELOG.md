@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Tier ladder row**: owned count stacks under the tier name (directly above the tickspeed
+  button); production sits top-right spanning that left stack. Not a side-by-side swap.
+- **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
+  the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
+  a separate element under the page header at the top of MainPage.
 - **DiskArrayRow labels**: each array opens with a clear Byte-scale size header (e.g. `1 KB`);
   Cache shows short `"Cache"` + bit-scale `"1 Kb each"` meta; Disks is just `"Disks"`. Built/full
   counts are no longer restated in text — the square/circle strip already shows them. Instructional

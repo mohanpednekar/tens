@@ -98,6 +98,7 @@ import {
   getPrestigePointsAwarded,
   getPrestigeProductionMultiplier,
   getPrestigeProgressPercent,
+  getNextBytePowerProgressFraction,
   getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
   getSmartAutobuyerCost,
@@ -4482,6 +4483,37 @@ describe('getPrestigeProgressPercent', () => {
   it('scales linearly with the exponent (Googol is exponent 100)', () => {
     expect(getPrestigeProgressPercent(1e50)).toBe(50)
     expect(getPrestigeProgressPercent(1e25)).toBe(25)
+  })
+})
+
+// ─── getNextBytePowerProgressFraction ─────────────────────────────────────────
+// MainPage's 8-segment bar under MoneyHero — progress toward the next 10^n Bytes, in Bits.
+
+describe('getNextBytePowerProgressFraction', () => {
+  it('is 0 for empty / non-positive balances', () => {
+    expect(getNextBytePowerProgressFraction(0)).toBe(0)
+    expect(getNextBytePowerProgressFraction(-10)).toBe(0)
+  })
+
+  it('matches the 5e7 Bytes → 4/8 (0.5) example toward 1e8 Bytes', () => {
+    // 5e7 Bytes = 4e8 Bits; next power is 1e8 Bytes = 8e8 Bits → 4e8/8e8 = 0.5
+    expect(getNextBytePowerProgressFraction(5e7 * BITS_PER_BYTE)).toBe(0.5)
+  })
+
+  it('progresses within a Bytes order of magnitude toward the next power of ten', () => {
+    // 2e6 Bytes → next 1e7 → 0.2
+    expect(getNextBytePowerProgressFraction(2e6 * BITS_PER_BYTE)).toBeCloseTo(0.2)
+    // Exactly 1e6 Bytes → next 1e7 → 0.1
+    expect(getNextBytePowerProgressFraction(1e6 * BITS_PER_BYTE)).toBeCloseTo(0.1)
+  })
+
+  it('treats sub-Byte balances as progress toward 1 Byte', () => {
+    // 4 Bits = 0.5 Bytes → next power 10^0 = 1 Byte → 0.5
+    expect(getNextBytePowerProgressFraction(4)).toBe(0.5)
+  })
+
+  it('never exceeds 1', () => {
+    expect(getNextBytePowerProgressFraction(PRESTIGE_THRESHOLD)).toBeLessThanOrEqual(1)
   })
 })
 

@@ -2,8 +2,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { version } from '../../../package.json'
 import { useEffect, useRef, useState } from 'react'
@@ -81,39 +81,33 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: name (+ compact tickspeed multiplier badge and, once unlocked, the icon-only
-// autobuyer status indicator — see MainPage — both sharing the first two tracks, the width the
-// PP-based Automate control used to occupy before it moved to the PP Upgrades page), the
-// production figure, then the owned count — production sits left of owned (not the other way
-// around) so the row reads "what it makes" before "how many you have"; the wider track (1.3fr)
-// follows production's spot since that figure tends to run longer (e.g. currency strings) and the
-// narrower one (0.7fr) follows owned's. Middle line: just the two buttons, each spanning two of
-// the four tracks — the track pairs sum equally (col1+col2 = col3+col4) so the tickspeed
-// multiplier button and Buy each take exactly half the row's width, unaffected by how the top
-// row's own two tracks are split between them. Buy sits rightmost, not the tickspeed button — Buy
-// is clicked constantly while a tickspeed level-up is an occasional action, and the rightmost slot
-// is the natural resting spot for a thumb/mouse that's about to click again. Bottom line: a single
-// 'details' area spanning all four tracks, holding the per-tier click-to-expand disclosure's
-// content (see TierDetailsContent below) — only rendered at all while expanded, so a collapsed row
-// contributes zero height there. There is no separate visible trigger for it (no "Details" label):
-// TierName itself (wrapped in TierNameTrigger, in the 'name' area) is the trigger, and clicking
-// anywhere else on the tile that isn't a button also toggles it (see the row's own onClick below)
-// — a React-controlled disclosure rather than native <details>/<summary>, see openTierDetailIds in
-// MainPage for why. cursor: pointer signals the whole tile is clickable; Button's own cursor rule
-// overrides it for the two buttons. There used to be a dedicated 'autobuyer' grid row for the
-// per-tier autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
-// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
-// needs the extra vertical space for it.
+// Left half stacks the tier name above the owned count, both sitting directly above the
+// tickspeed (first) button; production occupies the top-right (right half, spanning the two
+// name/owned rows) so the rate hugs the row's right edge. Button row: tickspeed and Buy each
+// take exactly half the row (equal column halves) — Buy stays rightmost as the constantly-
+// clicked control. Bottom line: a single 'details' area spanning both columns, holding the
+// per-tier click-to-expand disclosure's content (see TierDetailsContent below) — only rendered
+// at all while expanded, so a collapsed row contributes zero height there. There is no separate
+// visible trigger for it (no "Details" label): TierName itself (wrapped in TierNameTrigger, in
+// the 'name' area) is the trigger, and clicking anywhere else on the tile that isn't a button
+// also toggles it (see the row's own onClick below) — a React-controlled disclosure rather than
+// native <details>/<summary>, see openTierDetailIds in MainPage for why. cursor: pointer
+// signals the whole tile is clickable; Button's own cursor rule overrides it for the two
+// buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier autobuyer status
+// badge; it's folded into the 'name' row instead now that the badge is a single icon rather
+// than a written "Active"/"Paused" line (see MainPage), so the row no longer needs the extra
+// vertical space for it.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name name production owned'
-    'upgrade upgrade buy buy'
-    'details details details details';
-  grid-template-columns: 1.4fr 0.6fr 1.3fr 0.7fr;
+    'name production'
+    'owned production'
+    'upgrade buy'
+    'details details';
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
-  row-gap: 0.3rem;
+  row-gap: 0.15rem;
   padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
   cursor: pointer;
@@ -130,10 +124,7 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same row areas as desktop; only the column weights shift, still summing to equal
-       halves for the buttons. */
-    grid-template-columns: 1.35fr 0.65fr 1.25fr 0.75fr;
-    row-gap: 0.3rem;
+    /* Same areas as desktop; equal halves keep the two buttons matched. */
     column-gap: 0.35rem;
     padding: 0.4rem 0.55rem;
   }
@@ -276,18 +267,51 @@ const MoneyHero = styled(Money)`
 `
 
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
-// call site) progress-to-Prestige bar living inside the money hero card. Reuses
-// getPrestigeProgressPercent's already-computed value (see MainPage) rather than recomputing it.
-const GoogolProgressTrack = styled.div`
+// call site) 8-segment progress toward the next power-of-ten Bytes, living under MoneyHero.
+// Each segment is 12.5% (1/BITS_PER_BYTE); the active segment fills progressively.
+const BytePowerSegments = styled.div`
+  display: flex;
+  gap: 3px;
+  margin-top: 0.5rem;
+  width: 100%;
+`
+
+const BytePowerSegment = styled.span`
+  background: ${props => props.theme.color.surfaceSunken};
+  border-radius: 2px;
+  flex: 1;
+  height: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+`
+
+const BytePowerSegmentFill = styled.span`
+  background: ${props => props.theme.color.accent};
+  display: block;
+  height: 100%;
+  transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
+  width: ${props => props.$fraction * 100}%;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`
+
+// Prestige progress as its own top-of-screen element (moved out of the money hero card).
+const PrestigeProgressTop = styled.div`
+  margin: 0 0 0.75rem;
+  width: 100%;
+`
+
+const PrestigeProgressTrack = styled.div`
   background: ${props => props.theme.color.surfaceSunken};
   border-radius: ${props => props.theme.radius.pill};
   height: 0.4rem;
-  margin-top: 0.5rem;
   overflow: hidden;
   width: 100%;
 `
 
-const GoogolProgressFill = styled.div`
+const PrestigeProgressFill = styled.div`
   background: ${props => props.theme.color.accent};
   height: 100%;
   transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
@@ -298,10 +322,12 @@ const GoogolProgressFill = styled.div`
   }
 `
 
-const GoogolProgressLabel = styled(HudMutedText)`
+const PrestigeProgressLabel = styled(HudMutedText)`
   font-size: ${props => props.theme.type.scale.xs.size};
   margin-top: 0.3rem;
+  text-align: center;
 `
+
 
 // Prestige Points as a secondary header line beneath the money hero — same CenteredCard base
 // (so it keeps $actionable's Prestige-button behavior once canPrestige), just flattened (no
@@ -595,7 +621,7 @@ const OwnedText = styled(MutedText)`
   grid-area: owned;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
-  text-align: right;
+  /* Sits in the left half directly above the tickspeed button. */
   ${gridCell}
 
   @media (max-width: 40rem) {
@@ -605,8 +631,10 @@ const OwnedText = styled(MutedText)`
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
+  align-self: start;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
@@ -824,6 +852,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
     : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
   const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
+  const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
@@ -1201,6 +1231,20 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         </HeaderMeta>
       </Header>
 
+      <PrestigeProgressTop aria-label="prestige progress">
+        <PrestigeProgressTrack aria-hidden="true">
+          <PrestigeProgressFill $percent={prestigeProgressPercent} />
+        </PrestigeProgressTrack>
+        <VisuallyHidden
+          role="progressbar"
+          aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
+          aria-valuenow={prestigeProgressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
+        <PrestigeProgressLabel>{prestigeProgressPercent}% to Prestige</PrestigeProgressLabel>
+      </PrestigeProgressTop>
+
       {state.intro?.computeBoostType && COMPUTE_BOOST_PRESETS[state.intro.computeBoostType] && (
         <MutedText aria-label="active compute boost">
           {`${COMPUTE_BOOST_LABELS[state.intro.computeBoostType] ?? state.intro.computeBoostType} Compute Boost active: ×${COMPUTE_BOOST_PRESETS[state.intro.computeBoostType].multiplier} production, ${formatOfflineDuration(state.intro.computeBoostRemainingSeconds)} left`}
@@ -1234,17 +1278,28 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
           {!balancesCompressed && (
             <>
-              <GoogolProgressTrack aria-hidden="true">
-                <GoogolProgressFill $percent={prestigeProgressPercent} />
-              </GoogolProgressTrack>
+              <BytePowerSegments aria-hidden="true">
+                {Array.from({ length: BITS_PER_BYTE }, (_, segmentIndex) => {
+                  const segmentStart = segmentIndex / BITS_PER_BYTE
+                  const segmentSize = 1 / BITS_PER_BYTE
+                  const fillFraction = Math.min(
+                    1,
+                    Math.max(0, (bytePowerProgressFraction - segmentStart) / segmentSize),
+                  )
+                  return (
+                    <BytePowerSegment key={segmentIndex}>
+                      <BytePowerSegmentFill $fraction={fillFraction} />
+                    </BytePowerSegment>
+                  )
+                })}
+              </BytePowerSegments>
               <VisuallyHidden
                 role="progressbar"
-                aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
-                aria-valuenow={prestigeProgressPercent}
+                aria-label="progress toward the next power of ten Bytes"
+                aria-valuenow={bytePowerProgressPercent}
                 aria-valuemin={0}
                 aria-valuemax={100}
               />
-              <GoogolProgressLabel>{prestigeProgressPercent}% to Prestige</GoogolProgressLabel>
             </>
           )}
           {showGlobalMultipliers && !balancesCompressed && (

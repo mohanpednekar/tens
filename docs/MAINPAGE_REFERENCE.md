@@ -444,7 +444,7 @@ not at the bottom"):
   hover tooltip. Every other `tier.name` usage in this file (row `aria-label`s, button `aria-label`s/
   `title`s, disclosure prose) is unaffected — it's only these two visible-label render sites that switch
   to the symbol.
-- **Balances (top HUD).** Money (rendered via `MoneyHero` — see "Money hero + Googol progress bar"
+- **Balances (top HUD).** Money (rendered via `MoneyHero` — see "Money hero + byte-power / Prestige progress"
   below for its own `formatMoneyBalance` formatting, distinct from every other Money figure on this
   page) and (once `!isFirstRun`) the Prestige Point balance are the only top-of-page blocks besides
   `Header` that use a centered `CenteredCard`
@@ -481,7 +481,7 @@ not at the bottom"):
   Prestige alongside the `TopPrestigeBar`/`FullScreenOverlay` buttons. Before `canPrestige`, none of
   these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
   display card never gets `$actionable` — only the PP display can trigger Prestige.
-- **Money hero + Googol progress bar.** The Money `CenteredCard` renders a `MoneyHero`
+- **Money hero + byte-power / Prestige progress.** The Money `CenteredCard` renders a `MoneyHero`
   (`styled(Money)`, sized at `theme.type.scale.hero`) rather than plain `Money`, and carries `$raised`
   (the `surfaceRaised` elevation tier `StatCard` already supports) so it reads as the HUD's dominant,
   elevated element — Prestige Points, by contrast, render in a `PpHeaderCard` (`styled(CenteredCard)`
@@ -502,13 +502,15 @@ not at the bottom"):
   other `formatCurrency` call on this page — tier costs/production, the global tickspeed cost, the
   `FullScreenOverlay`'s "You've reached…" line, the Buy button's cost label — is unaffected and still
   shows raw Bits, its actual priced/spent denomination; `MoneyHero` is the one exception. Directly
-  beneath the hero figure (suppressed
-  while `balancesCompressed`, since the compact sticky bar has no room for it), a `GoogolProgressTrack`/
-  `GoogolProgressFill` bar shows progress toward Prestige becoming available, reusing the same
-  `prestigeProgressPercent` (`getPrestigeProgressPercent(state.resources[MONEY_ID])`) — no separate
-  economy calculation — paired with a `VisuallyHidden
-  role="progressbar"` (`aria-valuenow`/`aria-valuemin`/`aria-valuemax`) for assistive tech and a small
-  visible `GoogolProgressLabel` ("N% to Prestige") underneath.
+  beneath the hero figure (suppressed while `balancesCompressed`, since the compact sticky bar has no
+  room for it), an 8-segment `BytePowerSegments` bar shows progress toward the next power-of-ten
+  Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
+  segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
+  with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
+  Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
+  sits under the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
+  `PrestigeProgressFill`, the `"N% to Prestige"` label, and its own `VisuallyHidden
+  role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
@@ -952,25 +954,23 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 `docs/COMPONENTS_REFERENCE.md`'s `Button/index.jsx` entry for the general mechanism).
 
 Each row is a CSS
-Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: name (just
-`TierName`'s tier symbol now — see "No per-tier automation icon on the Game view row" above for the
-two badges that used to also share this area), then the production figure and the owned count — in
-that order, production first — on the
-top line, then the tickspeed multiplier button and Buy (each spanning two of four equal-width tracks) on
-the middle line, then a third `details`-area line spanning all four tracks. There is no separate
-`autobuyer` grid row/line — an earlier version gave the autobuyer status badge its own row, then later
-folded it into the icon-only badge sharing the `name` area (freeing that vertical space, since a
-single glyph needs no row of its own) before removing the badge from this view entirely.
-`ProductionText` sits in the wider (1.3fr) track and `OwnedText`
-in the narrower (0.7fr) one, matching their typical content length, with `text-align: right` on
-whichever one is currently rightmost (`OwnedText`) so it hugs the row's edge. Below `40rem`, only
-fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`)
-— assert via `toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width:
-0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets
-`font-variant-numeric: tabular-nums`. Each row is also registered (via a stable per-tier ref callback,
-`registerTierRowRef`) with a single shared `IntersectionObserver` in `MainPage` that auto-collapses that
-tier's Details disclosure the instant the row scrolls fully out of the viewport — see "Auto-collapsing
-expanded disclosures on scroll" below.
+Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
+layout where the left half stacks the tier name (`TierName`'s symbol — see "No per-tier automation
+icon on the Game view row" above for the two badges that used to also share this area) above the
+owned count — so owned sits directly above the tickspeed (first) button — and the right half holds
+the production figure (`ProductionText`, `text-align: right`, `align-self: start`) spanning those
+two rows at the top-right. Below that, the tickspeed multiplier button and Buy each take one equal
+half, then a `details`-area line spanning both columns. There is no separate `autobuyer` grid
+row/line — an earlier version gave the autobuyer status badge its own row, then later folded it
+into the icon-only badge sharing the `name` area (freeing that vertical space, since a single
+glyph needs no row of its own) before removing the badge from this view entirely. Below `40rem`,
+only fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus
+`title="Owned"`) — assert via `toHaveTextContent`, not `getByText`. Grid cells use a shared
+`gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`).
+`RootDiv` sets `font-variant-numeric: tabular-nums`. Each row is also registered (via a stable
+per-tier ref callback, `registerTierRowRef`) with a single shared `IntersectionObserver` in
+`MainPage` that auto-collapses that tier's Details disclosure the instant the row scrolls fully
+out of the viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName`, `OwnedText`/`ProductionText`, `BuyButton`/
 `UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
