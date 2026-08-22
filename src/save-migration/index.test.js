@@ -36,4 +36,12 @@ describe('adaptSaveForCurrentSchema', () => {
   it('returns a reason when it cannot produce a current-compatible save', () => {
     expect(adaptSaveForCurrentSchema({ resources: { Ones: 1 } })).toEqual({ ok: false, reason: 'legacy_money_id' })
   })
+
+  it('passes through saveSchemaVersion 1 for mergeState forward-fill', () => {
+    const payload = { intro: { mainGameUnlocked: true }, prestige: { count: 5, points: 0 } }
+    expect(adaptSaveForCurrentSchema({ saveSchemaVersion: 1, ...payload })).toEqual({
+      ok: true,
+      payload,
+    })
+  })
 })

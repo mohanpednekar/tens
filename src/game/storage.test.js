@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
-import { MONEY_ID, TIER_DEFINITIONS } from './layers'
+import { MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -209,6 +209,21 @@ describe('schema merge on load', () => {
       // smartAutobuyer: this is a new purchase requirement for every save going forward.
       expect(loaded.tierTickspeedAutobuyer[tier.id]).toBe(false)
     })
+  })
+
+  it('forward-fills Era/Eons fields and Flops autobuyer milestones from a v1 save', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      saveSchemaVersion: 1,
+      intro: { mainGameUnlocked: true },
+      prestige: { count: PRESTIGE_UNBOUNDED_MIN_COUNT, points: 0, xp: 0, highestMilestone: 0 },
+      era: { count: 2 },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.prestige.unboundedUnlocked).toBe(true)
+    expect(loaded.era.count).toBe(2)
+    expect(loaded.eons.balance).toBe(0)
+    expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[1].id]).toBe(1)
   })
 
   it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {

@@ -1,4 +1,4 @@
-import { createInitialGameState } from './engine'
+import { applyFlopsAutobuyerMilestones, createInitialGameState } from './engine'
 import { COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -330,7 +330,7 @@ const mergeState = saved => {
   const fresh = createInitialGameState()
   const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
 
-  return {
+  return applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     resources: mergeTierMap(fresh.resources, saved.resources),
@@ -374,7 +374,7 @@ const mergeState = saved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  }
+  })
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

@@ -65,6 +65,7 @@ import {
   setAutoPrestigeAutobuyerEnabled,
   setAutoPrestigeEnabled,
   setAutoSpeedUpEnabled,
+  setComputeFlopsAutobuyerEnabled,
   setTierTickspeedAutobuyerEnabled,
   formatAmount,
   formatBitsInNearestUnit,
@@ -7958,6 +7959,101 @@ describe('eraGame', () => {
     expect(after.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[1].id]).toBeNull()
     expect(getFlopsAutobuyerUnlockEra(COMPUTE_FLOPS_TIER_DEFINITIONS[0].id)).toBe(1)
     expect(getFlopsAutobuyerUnlockEra(COMPUTE_FLOPS_TIER_DEFINITIONS[1].id)).toBe(2)
+  })
+
+  it('unlocks MFlops autobuyer when ascending to Era 2', () => {
+    const state = eraEligibleState({ era: { count: 1 } })
+    const after = eraGame(state)
+    expect(after.era.count).toBe(2)
+    expect(after.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)
+    expect(after.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[1].id]).toBe(1)
+  })
+})
+
+describe('eraGame carry/reset matrix (#407)', () => {
+  const flop0 = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+  const tier0 = TIER_DEFINITIONS[0].id
+
+  const richState = () => eraEligibleState({
+    autoPrestige: 2,
+    autoPrestigeEnabled: false,
+    tierTickspeedAutobuyer: { ...createInitialGameState().tierTickspeedAutobuyer, [tier0]: true },
+    computeAutoBoostUnlocked: true,
+    prestigeMuseum: { history: [{ id: 'p1-1', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 }], pinnedIds: [] },
+    intro: {
+      byteCreated: true,
+      mainGameUnlocked: true,
+      autoClaimCoreEnabled: true,
+      autoMergeCoresIntoNode: true,
+    },
+    prestige: {
+      ...eraEligibleState().prestige,
+      unboundedUnlocked: true,
+    },
+  })
+
+  it.each([
+    ['prestigeMuseum.history', s => s.prestigeMuseum.history],
+    ['autoPrestige level', s => s.autoPrestige],
+    ['autoPrestigeEnabled pause flag', s => s.autoPrestigeEnabled],
+    ['tierTickspeedAutobuyer unlock', s => s.tierTickspeedAutobuyer[tier0]],
+    ['computeAutoBoostUnlocked', s => s.computeAutoBoostUnlocked],
+    ['autoClaimCoreEnabled', s => s.intro.autoClaimCoreEnabled],
+    ['autoMergeCoresIntoNode', s => s.intro.autoMergeCoresIntoNode],
+    ['hyperscalerCount', s => s.hyperscalerCount],
+    ['prestige.unboundedUnlocked latch', s => s.prestige.unboundedUnlocked],
+    ['computeFlops.pageUnlocked', s => s.computeFlops.pageUnlocked],
+  ])('carries %s through Era ascension', (_label, pick) => {
+    const state = richState()
+    const after = eraGame(state)
+    expect(pick(after)).toEqual(pick(state))
+  })
+
+  it.each([
+    ['prestige.points', s => s.prestige.points, 0],
+    ['prestige.count', s => s.prestige.count, 0],
+    ['prestigeDoublePpLevel', s => s.prestigeDoublePpLevel, 0],
+    ['owned tier0', s => s.owned[tier0], 0],
+    ['computeFlops owned', s => s.computeFlops.owned[flop0], 0],
+    ['intro.computeCores', s => s.intro.computeCores, 0],
+    ['intro.foundryResetCaps', s => s.intro.foundryResetCaps, {}],
+  ])('resets %s on Era ascension', (_label, pick, expected) => {
+    const after = eraGame(richState())
+    expect(pick(after)).toEqual(expected)
+  })
+})
+
+describe('tickComputeFlopsAutobuyers via tickGame', () => {
+  it('spends PP and increments owned when a Flops autobuyer is unlocked and budgeted', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const initial = createInitialGameState()
+    const state = {
+      ...withPrestigePoints(initial, 5000),
+      computeFlops: {
+        ...initial.computeFlops,
+        pageUnlocked: true,
+      },
+      computeFlopsAutobuyers: { ...initial.computeFlopsAutobuyers, [flopId]: 1 },
+      computeFlopsAutobuyerAttemptBudgets: { ...initial.computeFlopsAutobuyerAttemptBudgets, [flopId]: 1 },
+    }
+    const after = tickGame(0.1)(state)
+    expect(after.computeFlops.owned[flopId]).toBe(1)
+    expect(after.prestige.points).toBeLessThan(5000)
+  })
+
+  it('does not buy when the Flops autobuyer is paused', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const initial = createInitialGameState()
+    let state = {
+      ...withPrestigePoints(initial, 5000),
+      computeFlops: { ...initial.computeFlops, pageUnlocked: true },
+      computeFlopsAutobuyers: { ...initial.computeFlopsAutobuyers, [flopId]: 1 },
+      computeFlopsAutobuyerAttemptBudgets: { ...initial.computeFlopsAutobuyerAttemptBudgets, [flopId]: 1 },
+    }
+    state = setComputeFlopsAutobuyerEnabled(flopId, false)(state)
+    const after = tickGame(0.1)(state)
+    expect(after.computeFlops.owned[flopId]).toBe(0)
+    expect(after.prestige.points).toBe(5000)
   })
 })
 
