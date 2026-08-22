@@ -15,7 +15,6 @@ import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage
 import { GlobalStyle, ThemeProvider } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { version } from '../package.json'
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as the Disks tab — so it is not gate-exempt on its own.
@@ -23,21 +22,6 @@ const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
-`
-
-// Ambient build label — fixed corner, pointer-events none, no layout reservation.
-const VersionBadge = styled.span`
-  bottom: calc(${APP_NAV_BOTTOM_PAD} + 0.35rem);
-  color: ${props => props.theme.color.textFaint};
-  font-family: ${props => props.theme.font.body};
-  font-size: 0.65rem;
-  letter-spacing: 0.02em;
-  left: calc(0.55rem + env(safe-area-inset-left, 0px));
-  line-height: 1;
-  opacity: 0.75;
-  pointer-events: none;
-  position: fixed;
-  z-index: 30;
 `
 
 function App() {
@@ -133,7 +117,6 @@ function App() {
       <PageShell>
         {content}
       </PageShell>
-      <VersionBadge aria-hidden="true">v{version}</VersionBadge>
       <AppNav
         attention={navAttention}
         currentPage={currentNavPage}

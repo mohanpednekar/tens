@@ -576,12 +576,6 @@ not at the bottom"):
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
   “Tens”). Top-level destinations (Factory / Foundry / Storage / Compute / Guide) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
-- **Version display.** App version (`v{version}`, e.g. `v0.5.0`) is a fixed corner overlay in
-  `App.jsx` (`VersionBadge`: `position: fixed`, `pointer-events: none`, `aria-hidden`, above the
-  nav bar via `APP_NAV_BOTTOM_PAD`) — no header row / dedicated vertical real estate on Factory.
-  Sourced from `package.json`'s `"version"` field via a build-time JSON import
-  (`import { version } from '../package.json'` in `App.jsx`) — the single source of truth; no
-  separate constant duplicates it.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an
