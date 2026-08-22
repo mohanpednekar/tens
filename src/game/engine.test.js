@@ -1739,10 +1739,11 @@ describe('getRelevantDiskSizesForFoundry', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(state)).toBe(level2Size)
-    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
+    // 1 KB still matches Kilobytes; highest (10 KB offer) is also kept even though it does not match.
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, level2Size])
   })
 
-  it('returns empty once no shown size matches any tier\'s current cost', () => {
+  it('still keeps the highest shown size once no shown size matches any tier\'s current cost', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
       withIntro(createInitialGameState(), {
@@ -1752,7 +1753,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
       3
     )
     expect(getDiskSize(state)).toBe(level2Size)
-    expect(getRelevantDiskSizesForFoundry(state)).toEqual([])
+    expect(getRelevantDiskSizesForFoundry(state)).toEqual([level2Size])
   })
 
   it('lists multiple matching sizes ascending (smallest first)', () => {

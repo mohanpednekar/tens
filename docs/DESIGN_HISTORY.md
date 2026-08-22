@@ -2214,8 +2214,17 @@ state, so an emptied container's cache can start topping up the same tick when M
 without a trailing fill on every no-op pass, and without sync-filling inside manual `redeemDisk`
 (that would steal Memory Forced Priority just freed for Bandwidth). Foundry Memory lists every
 currently transferable size via `getRelevantDiskSizesForFoundry` (not only the ladder's current
-build size), with DiskArrayRow making Cache → Tiers Bits (manual-only) and Disks auto vs manual
+build size), and always keeps the highest shown size even when unmatched (issue #389), with
+DiskArrayRow making Cache → Tiers Bits (manual-only) and Disks auto vs manual
 redeem visually distinct (auto-eligible disks are not clickable).
+
+### Foundry Memory always keeps the highest Disk row (issue #389)
+
+Earlier Foundry Memory hid every `DiskArrayRow` once no shown size matched a tier cost
+(`getRelevantDiskSizesForFoundry` returned `[]`). That removed the most useful row: the highest
+ladder size, which is usually the incomplete array the player is still filling. Now the helper
+always appends the largest size from `getDiskSizesToShow` when it is not already in the matching
+set — matching sizes stay ascending; Disks tab / StoragePage remain the full-history view.
 
 ### ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight
 
@@ -2229,10 +2238,11 @@ before touching code.
 included, whenever the current size isn't currently redeemable — would have broken a documented,
 intentional strategy: "a player can build ahead of or fall behind tier01's actual price" (see
 "Economy model"). Confirmed narrower: only `components/DiskArrayRow`'s own cache-blocks/disk-
-squares detail hides when `getDiskRedeemTierName(state, diskSize) === null`; the Build button stays
+squares detail for non-matching sizes hid (later relaxed by #389 to always keep the highest shown
+size); the Build button stays
 visible and usable regardless, since building ahead of the curve is still exactly the point. The
 row's full history remains reviewable on StoragePage either way, so nothing is actually lost by
-hiding it here — only the redundant, non-actionable detail on the Foundry screen itself.
+hiding older unmatched detail on the Foundry screen itself.
 
 **The Transfer-to-Main-Game row.** "Transfer to main is redundant section" reads, taken literally,
 as removing the ONLY guaranteed way a fresh cycle ever unlocks the main game — `redeemDisk` never
