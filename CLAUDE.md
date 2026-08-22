@@ -445,9 +445,10 @@ src/
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
                                Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
                                takes no navigation props (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer status. Reached via
-                               AppNav → More; always reachable (including during the Foundry gate);
-                               takes `{ game }`
+    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer / Compute-autobuyer
+                               status. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
+                               Ascend an Era. Reached via AppNav → More; always reachable (including
+                               during the Foundry gate); takes `{ game }`
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Ops dashboard,
                                and Reset (Danger zone only). Reached via AppNav → More; always
                                reachable; takes `{ game, onReset }`

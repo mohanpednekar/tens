@@ -4009,12 +4009,11 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   vi.useRealTimers()
 })
 
-// --- Chapters (inside the Milestones view) ---
-// Every chapter row is a plain boolean read of state.intro.mainGameUnlocked / state.prestige.count
-// — see CLAUDE.md's Chapters section. "The first KiloByte" is always ✅ the instant this view is
-// reachable at all (MainPage only ever renders once intro.mainGameUnlocked is true), so it isn't varied
-// here — the meaningful coverage is "Go Googol" tracking prestige.count, and that Chapters itself
-// is reachable before a first Prestige at all (see the "reachable both before and after" test above).
+// --- Chapters (Milestones page) ---
+// Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
+// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
+// is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
+// Open Compute / Go Unbounded / Ascend an Era and the Compute autobuyer category.
 test.each([
   { prestigeCount: 0, reached: false },
   { prestigeCount: 1, reached: true },

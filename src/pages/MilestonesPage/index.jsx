@@ -9,9 +9,9 @@ import {
 import { COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
-// Standalone Milestones screen — same Chapters / tier-autobuyer / tickspeed-autobuyer status
-// MainPage's Milestones view shows, but reachable from every screen via AppNav → More without
-// requiring the main game to be unlocked first (Chapters in particular is useful during the gate).
+// Standalone Milestones screen — Chapters, tier-autobuyer, tickspeed-autobuyer, and Compute-autobuyer
+// status; reachable from every screen via AppNav → More without requiring the main game to be unlocked
+// first (Chapters in particular is useful during the Foundry gate).
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));

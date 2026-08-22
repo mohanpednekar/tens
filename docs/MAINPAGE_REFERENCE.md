@@ -815,7 +815,7 @@ until `!isFirstRun`, which meant a Chapters list living there would only ever be
 the very milestone ("Go Googol," a first Prestige) it was meant to track — permanently pre-checked, not
 a real tracker. Lifting the whole `ViewNav` tab bar's Game/Milestones tabs out of that gate (see "Game
 view vs. PP Upgrades view vs. Milestones view" above) fixes this for "Go Googol" specifically: it can
-now genuinely be seen 🔒 before a first Prestige. Three static rows, no `role="progressbar"` on any of
+now genuinely be seen 🔒 before a first Prestige. Five static rows, no `role="progressbar"` on any of
 them (booleans, not counts — nothing to show numeric progress toward):
 1. **"The first KiloByte"** (`aria-label="The first KiloByte chapter"`) — ✅ once `state.intro.mainGameUnlocked`
    is true. Because `MainPage` (and this tab) is only reachable *after* `intro.mainGameUnlocked` in the
