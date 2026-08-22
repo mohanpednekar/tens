@@ -91,10 +91,9 @@ activation, level 7/displayed 6 for the second, …) rather than a lifetime-purc
 a given level boundary corresponds to now depends on the current block size, while the level number
 itself doesn't.
 
-A save predating `purchaseLevels`/`purchaseLevelProgress` (from before this mechanic existed) is
-migrated on load (`storage.js`) by deriving an equivalent level/progress from its legacy `purchased`
-count using `DEFAULT_PURCHASE_BLOCK_SIZE` — a one-time interpretation of old data, not an ongoing
-engine mechanism.
+Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current schema —
+`storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
+from legacy `purchased` counts.
 
 ### Adding a new tier
 
@@ -599,10 +598,9 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    any moment, but 8 total earned) would never trip a check against the live balance at all, even
    though they've obviously earned enough. `computeCoresEverEarned` only ever increases, so merging
    Nodes back down, spending a Core on a Boost, or hitting `COMPUTE_ENTITY_CAP` with no room left to
-   convert into can never re-hide or prevent the merge section once it's genuinely been earned. A
-   save from before this counter existed but already has `computeCores`/`computeNodes` from Phase 1
-   (`intro.computeCoresEverEarned === undefined`) has it backfilled on load — see `storage.js`'s
-   `migrateState`.
+   convert into can never re-hide or prevent the merge section once it's genuinely been earned.
+   Saves must already include `intro.computeCoresEverEarned` in the current schema — `mergeState`
+   does not backfill it from live balances on load.
 10. **Compute Boost** (`intro.computeBoostType`/`computeBoostTierIndex`/`computeBoostStacks`/
    `computeBoostRemainingSeconds`, all run-scoped — reset to inactive on every real Prestige, unlike
    `computeCores`/`computeNodes`/etc. themselves, but carried through untouched by Speed Up/Overclock
@@ -993,10 +991,8 @@ per-tier milestone, no PP spent, no button to click:
   `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true`. Never revokes anything
   already unlocked (by this or the historical PP-cost path some saves may still carry), and returns
   the same state reference if nothing newly qualifies — safe to call repeatedly since
-  `prestige.count` only ever grows. Called from two places: `prestigeGame`, right after incrementing
-  `count` (so the very prestige that crosses a milestone unlocks it immediately), and
-  `storage.js`'s `migrateState` on load (so a save from before this feature existed retroactively
-  receives whatever it's already earned, without needing another prestige to trigger it).
+  `prestige.count` only ever grows. Called from `prestigeGame` right after incrementing `count` (so
+  the very prestige that crosses a milestone unlocks it immediately).
 - `getAutobuyerUnlockCost(tierId)` still exists (`AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)`,
   `AUTOBUYER_UNLOCK_BASE_COST = 1` — 1 PP-equivalent for the first tier, up through 10 for the
   10th/last) but is no longer an actual purchase cost — it's kept purely as the pricing benchmark
@@ -1060,9 +1056,9 @@ step; manual `buyTickspeedMultiplier`/the "🧬 XP" button are unaffected either
 `autobuyers`/`tierTickspeedAutobuyer` themselves. **Smart (`smartAutobuyer[tierId]`) has no pause
 toggle** — it's a batch-size behavior modifier for the unit autobuyer (buy singly until a level
 completes, then in full blocks), not something that independently "acts" each tick, so "pausing" it
-has no clean meaning distinct from "temporarily not being smart." `storage.js`'s `migrateState`
-backfills both new fields to `true` for every tier on a save predating this feature (see below). See
-"Unit autobuyer status (Game view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
+has no clean meaning distinct from "temporarily not being smart." `mergeState` merges missing
+`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
+but does not transform legacy save formats. See "Unit autobuyer status (Game view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
 view" above for where each toggle renders.
 
 XP (`prestige.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
@@ -1980,7 +1976,7 @@ purchases were manual or automatic.
 | `getDiskSize` | `state → number` | Byte Foundry Disks: walks the gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` × `DISK_LADDER_SIZE_MULTIPLIER^(n-1)` — 1 KB, 10 KB, 100 KB, **1 MB**, 10 MB, …; see `getDiskLadderSizeBits`) rather than tier01's level-cost sequence, advancing every time `DISK_ARRAY_LADDER_CAP` disks have ever been built at the current size (read from `intro.disksBuiltTotal`, cumulative — never decremented by redeeming) — the size `startDiskBuild` currently builds at. Issue #368 replaced the tier01-cost walk, which skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB). Uncapped. Deliberately decoupled from tier01's own CURRENT level cost. |
 | `getDiskCost` | `capacityBits → number` | Byte Foundry Disks: `capacityBits * DISK_BUILD_COST_MULTIPLIER` — 10x the array's own face value, already in bits (`capacityBits`, from `getDiskSize`, is already Byte-accurate — no further `BITS_PER_BYTE` conversion needed, unlike an earlier "kilobit"-scaled version of this ladder — see `docs/DESIGN_HISTORY.md`): a real 1 KB (8000-bit) array costs 80,000 bits to build. Pays only for the empty container — not what fills it |
 | `formatDiskSize` | `bits → string` | Byte Foundry Disks: `formatBitsInNearestUnit` — a thin, semantically-named alias, kept so call sites read "format this disk's size" rather than reaching for the more general Memory-balance helper directly. Disk sizes are real, Byte-accurate bit counts, the exact same scale Memory's own balance/capacity already renders in — there is no longer a separate "kilobit" formatting scale for Disk sizes (see `docs/DESIGN_HISTORY.md` for the bug that separate scale caused) |
-| `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a migrated pre-ladder save missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by ByteFoundryPage's own brief per-size summary chip row and StoragePage's fuller per-size squares rows |
+| `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by ByteFoundryPage's own brief per-size summary chip row and StoragePage's fuller per-size squares rows |
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Byte Foundry Disks: Foundry Memory's DiskArrayRow sizes — every size from `getDiskSizesToShow` whose tier cost currently matches, plus always the highest shown size even when unmatched (issue #389), ascending. Build button independent; full history on Disks tab / StoragePage |
 | `startDiskBuild` | `state → state` | Byte Foundry Disks: requires `isDiskBuildTurnAvailable(state)` (see its own row above); spends `getDiskCost(getDiskSize(state))` bits from `intro.bits` immediately and sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }` — a real TIMED construction rather than an instant grant (an earlier version completed instantly — see `docs/DESIGN_HISTORY.md`). `totalSeconds = getDiskBuildBaseSeconds(size) * ordinal`, where `getDiskBuildBaseSeconds(size) = size / (getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE)` (1 second per real "KB" of size) and `ordinal = disksBuiltTotal[size] + 1` at the moment the build starts (so a size's Nth disk takes N times its own base build time). The array itself only gains the new EMPTY container, and starts accepting IO again, once `tickDiskBuild` finishes the countdown. No-op below cost, or if an array is already mid-build. Only ever queues ONE build at a time |
 | `tickDiskBuild` | `elapsedSeconds → state → state` | Byte Foundry Disks: same-reference no-op when no build is in progress (`intro.diskBuild` is `null`); otherwise counts `remainingSeconds` down by `elapsedSeconds`. Once it crosses (or reaches) 0, increments `intro.disksBuiltTotal[size]` (the container now exists, empty, ready for `tickDiskAutoFill`) and clears `diskBuild` back to `null`, re-enabling every IO operation against that size's array. Called from `tickGame` right after `tickIntroProduction` and before `tickDiskAutoFill` — unconditional, bypasses nothing |
@@ -2014,7 +2010,7 @@ purchases were manual or automatic.
 | `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own gate; otherwise the exact inverse of one `activateComputeBoost`/`stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field (capped at `COMPUTE_ENTITY_CAP`, in case more were earned while the boost was running) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1; clears the boost fully back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once the last stack is reclaimed rather than leaving a 0-stack "active" boost around |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
-| `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.prestige.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `prestigeGame` (right after incrementing `count`) and from `storage.js`'s `migrateState` on load |
+| `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.prestige.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `prestigeGame` (right after incrementing `count`) |
 | `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`) — **except the last tier once `isLastTierTickspeedXpUnlocked` holds**, where `tickGame` calls `consumeXpForLastTierTickspeed` instead of this function (see "The last tier's XP-funded tickspeed" in CLAUDE.md); manually clicking this button for the last tier while that holds is still simply a no-op, resuming once owned drops back below a full level |
 | `buyPrestigeSpeedBonus` | `state → state` | Returns the same state if `isProductionFrozen`, if `prestigeSpeedBonusUnlocked` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` PP and permanently sets `prestigeSpeedBonusUnlocked = true`, activating `getPrestigeProductionMultiplier`'s passive bonus in `tickGame` |
 | `buySmartAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if the tier's autobuyer isn't unlocked yet (`autobuyers[tierId] == null`), if already smart, or if there aren't enough unspent Prestige Points; otherwise spends `getSmartAutobuyerCost(tierId)` PP and permanently sets `smartAutobuyer[tierId] = true` |

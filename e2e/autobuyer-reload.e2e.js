@@ -1,14 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-// Regression test for the storage-schema migration class of bug where a reload could silently
-// relock an already-unlocked autobuyer (see storage.js's migrateState and its handling of
-// legacy boolean vs. numeric autobuyer values). Seeds a save with tier01's autobuyer already
-// unlocked and confirms that state survives a real browser reload/load cycle.
+// Regression test: an already-unlocked autobuyer must survive a real browser reload/load cycle.
 const seededState = {
-  // intro.completed: true marks this as a current-schema save (not a pre-Byte-Foundry one) so
-  // storage.js's migrateState does NOT apply its one-time tier-id shift to the tier01 data below
-  // — see storage.js's shiftOldTierIds/isPreByteFoundrySave.
-  intro: { completed: true },
+  intro: { mainGameUnlocked: true },
   resources: { base: 100000 },
   owned: { tier01: 50 },
   purchased: { tier01: 50 },

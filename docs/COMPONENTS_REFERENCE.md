@@ -101,6 +101,17 @@ on the card) with a "Dismiss" button (`aria-label="Dismiss offline progress noti
 and `ByteFoundryPage` (right after the page title), each supplying its own slice of the `game` prop
 they already receive.
 
+## `IncompatibleSaveNotice/index.jsx`
+
+Blocking overlay (`.jsx`) shown when the active save slot was cleared on load because its on-disk
+payload predates the current schema (`getSaveIncompatibilityReason` in `storage.js`). Takes
+`{ onDismiss }` only — the incompatible save is already discarded before first render;
+`useIncrementalGame` exposes the reason code as `incompatibleSaveReason` and
+`dismissIncompatibleSaveNotice` clears it after the player acknowledges. Renders a fixed full-screen
+scrim (`role="dialog"`, `aria-modal="true"`, `aria-labelledby` on the **Save not
+compatible** heading), explanatory copy, and a single **Start fresh** button
+(`aria-label="Start fresh with a new save"`). Rendered once at the `App.jsx` root (not per-page).
+
 ## `StatCard/index.js`
 
 styled card container used for every panel; background/border/text/ `border-radius`/elevation all resolve from theme tokens (`theme.color.surface`/`surfaceRaised` per `$raised`, `theme.color.border`, `theme.color.text`, `theme.radius.md`, `theme.shadow.sm`) rather than hardcoded hex — see "Theming" below. `$raised` is a boolean prop switching the base `surface` fill for the lighter `surfaceRaised` panel tone (dark mode) / relying on `shadow.sm` for depth (light mode, where both surface tokens are white) — unused by any call site yet, added as the minimal elevation seam later hero/elevated-panel work (e.g. the top-HUD/prestige redesign issues) can consume without another StatCard change. Every `styled(StatCard)` caller in `MainPage` (tier rows, Speed Up/Global Tickspeed cards, the sticky balance cards, PP Upgrades categories) still layers its own hardcoded accent overrides (e.g. `SpeedUpCard`'s `border-color: #0e7490`) on top — migrating those call sites onto tokens is later token-migration sub-issue work, not done here
