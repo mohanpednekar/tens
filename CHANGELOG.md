@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
+  the **Bytes** pool (matching the buy button), not Bits.
+
 ### Changed
 - **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
   fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
