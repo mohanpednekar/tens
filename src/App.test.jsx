@@ -165,7 +165,7 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
 
   const tiersButton = screen.getByRole('button', { name: /open factory/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Ladder tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
+  // Data tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
   expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
 })
 
@@ -174,7 +174,7 @@ test('no redundant Game or Milestones tabs on the Factory screen', () => {
   render(<App />)
 
   expect(screen.getByRole('tablist', { name: /factory view/i })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /^data$/i })).toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /^game$/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /milestones/i })).not.toBeInTheDocument()
   // Upgrades stays as a peer tab — it's the only PP-purchase surface (not in AppNav/More).
@@ -1356,7 +1356,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   // regardless of which view is currently rendered.
   fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /resume auto speed up automation/i }))
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^data$/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 6.
@@ -2062,14 +2062,14 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
   // (10 ticks) so a paused autobuyer's lack of purchases is a meaningful assertion, not just "not
   // enough time has passed yet".
   act(() => { vi.advanceTimersByTime(1000) })
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^data$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
 
   fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /resume kilobytes's autobuyer/i }))
   act(() => { vi.advanceTimersByTime(1000) })
 
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^data$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
 
   unmount()
@@ -2099,7 +2099,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   expect(screen.getByRole('button', { name: /pause ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^data$/i }))
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()

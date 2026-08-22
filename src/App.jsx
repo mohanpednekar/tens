@@ -45,7 +45,7 @@ function App() {
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Factory so MainPage resets to the Ladder tab (not Upgrades).
+  // Bumped when AppNav selects Factory so MainPage resets to the Data tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
   // Bumped when AppNav selects Foundry so ByteFoundryPage can reset to Memory (or open Disks when
   // preferredFoundryTab is set from a deep-link style navigate — currently always 'memory').

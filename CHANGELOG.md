@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
   **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
   game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings
-  danger-zone copy use **Factory**. Peer tabs stay **Ladder | Upgrades**.
+  danger-zone copy use **Factory**. Peer tabs stay **Data | Upgrades**.
 
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
@@ -129,7 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **App navigation** bottom bar order is **Foundry → Compute → Tiers → Guide → More** (play
   progression). **Storage** is no longer a top-level tab — it lives under Foundry as a second-level
   **Memory | Disks** peer tab pair (same Memory pool + shared `DiskArrayRow`). Tiers uses
-  **Ladder | Upgrades** peer tabs after the first Prestige (no back chrome; Milestones only under
+  **Data | Upgrades** peer tabs after the first Prestige (no back chrome; Milestones only under
   More). Attention dots fold Storage cues into Foundry.
 - **App navigation** is a shared fixed bottom bar (`components/AppNav`): active destination marked via
   `aria-current`. Compute appears once revealed; **Tiers** stays hidden during the mandatory Byte

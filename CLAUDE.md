@@ -411,7 +411,7 @@ src/
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Second-
-                               level tabs: Ladder | Upgrades (after first Prestige). Full
+                               level tabs: Data | Upgrades (after first Prestige). Full
                                field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
                                Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
@@ -447,7 +447,7 @@ src/
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
-                               MainPage's own Ladder | Upgrades tabs and Foundry's Memory | Disks
+                               MainPage's own Data | Upgrades tabs and Foundry's Memory | Disks
                                tabs already use. Which screen actually renders is a derived
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
                                (!intro.mainGameUnlocked || page === 'foundry')` check (where

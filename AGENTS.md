@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Compute → Factory → Guide → More**. Storage
-is under Foundry as **Memory | Disks** (not its own AppNav item). Factory uses **Ladder | Upgrades**
+is under Foundry as **Memory | Disks** (not its own AppNav item). Factory uses **Data | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
@@ -73,7 +73,7 @@ src/
                             "Byte Foundry" below
     StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
     ComputePage/index.jsx  ← Compute's own screen, reached via AppNav once revealed
-    MainPage/index.jsx     ← the game; Ladder | Upgrades; data-driven from TIER_DEFINITIONS
+    MainPage/index.jsx     ← the game; Data | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Ops / Reset; via AppNav → More
