@@ -7,8 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Incompatible save handling**: on load, saves that predate the current schema (legacy `resources.Ones`,
+  `intro.completed`, missing `intro` with tier progress, legacy tier ids, boolean autobuyers, etc.) are
+  cleared automatically and a blocking **Save not compatible** notice offers a single **Start fresh**
+  action. Current saves are stamped with `saveSchemaVersion: 1` on every write; stamped saves skip
+  heuristic checks. `mergeState` still forward-fills missing fields for compatible partial saves.
+
+### Removed
+- **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier
+  name/id remapping, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage
+  bank field renames, purchase-level derivation, autobuyer milestone backfill on load, etc.). Saves
+  must match the current schema; `mergeState` only merges missing fields from fresh defaults. Meta
+  no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
+
 ### Changed
 - **Boosters** screen (formerly Compute): AppNav label, page header, Guide section, and helper copy now say Boosters. Internal page id / engine APIs stay `compute*`.
+- **Save migration layout**: the game offloads every load to `src/save-migration/`
+  (`adaptSaveForCurrentSchema` → current-compatible state or failure); `storage.js` only persists and
+  mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
+  `IncompatibleSaveNotice`.
+
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
   **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
   game name “Tens”). Avoids confusion with Boosters’ entity tiers. Cache-transfer and Settings

@@ -2261,6 +2261,43 @@ The always-on auto-convert (`tickIntroAutoInvest`) is completely unaffected eith
 depended on the manual row being rendered, so once auto-convert and Disk redemption are both doing
 the job, the manual row really is the redundant piece being described.
 
+## Save persistence
+
+### Migration in `src/save-migration/`, runs on every load — 2026-08-22
+
+Through mid-2026, `storage.js` carried a large `migrateState` path inline on **every** load (tier-id
+remaps, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage bank renames,
+boolean→numeric autobuyers, purchase-level derivation, autobuyer-milestone backfill, disk-ladder gap
+fill, …). That kept old saves playable, but mixed persistence, schema evolution, and game logic in
+one file — hard to reason about and impossible to test migration in isolation.
+
+**PR #403 split.** Legacy inline migration was removed. Saves that still carry pre-schema markers
+and have no implemented step yet are **discarded on load** with `IncompatibleSaveNotice` (**Start
+fresh**). Current-schema saves (including unstamped partial saves that already match today's shape)
+load via `mergeState` forward-fill only.
+
+**Going forward: dedicated `src/save-migration/` assistant.** The game **offloads** every on-disk
+payload to this folder on load — it does not implement schema transforms itself. The assistant's
+only job is: raw parsed JSON in → **current-schema-compatible game state out** (or `{ ok: false,
+reason }` when no version-chain step can get there). Called from `storage.js`'s `loadGameState` and
+`discardIncompatibleActiveSaveIfNeeded` before `mergeState`. Persistence (`storage.js`) reads/writes
+localStorage, stamps `saveSchemaVersion`, forwards to the assistant, then merges missing fields from
+`createInitialGameState()`. Engine, pages, and hooks never import legacy shapes.
+
+When the shape changes again:
+
+1. Bump `SAVE_SCHEMA_VERSION` in `save-migration/constants.js`.
+2. Add `save-migration/steps/migrateVnToVnPlus1.js` and wire it into the version chain in
+   `save-migration/index.js`.
+3. Teach `mergeState` any new defaults — forward-fill only, never legacy transforms.
+
+Until a step exists for a legacy marker, migration returns `{ ok: false, reason }` and the slot is
+cleared — same player-visible behavior as today. Restoring v0→v1 means reimplementing the deleted
+`migrateState` logic inside `save-migration/steps/`, not re-inlining it into `storage.js`.
+
+Historical sections elsewhere in this file that mention `migrateState`, `shiftOldTierIds`, or inline
+on-load backfills describe **removed** behavior kept for incident context only.
+
 ## Distribution
 
 ### Why a PWA instead of Capacitor/native app-store distribution
