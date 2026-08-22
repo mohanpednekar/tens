@@ -516,8 +516,10 @@ not at the bottom"):
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
   Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
   sits above the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
-  `PrestigeProgressFill`, the `"N% to Prestige"` label only, and its own `VisuallyHidden
-  role="progressbar"` reusing `getPrestigeProgressPercent`.
+  `PrestigeProgressFill`, a label (`"N% to Prestige"`, with unbounded-unlock hint before 100
+  lifetime prestiges and `"N% to next PP (…)"` once unbounded and at Googol), and its own
+  `VisuallyHidden role="progressbar"` driven by `getPrestigeProgressPercent` or
+  `getPrestigePpEarnProgressPercent` when unbounded and eligible to Prestige.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`) — token-driven

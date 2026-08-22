@@ -33,8 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
-- **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
-  label only (no unbounded-unlock hint or next-PP detail).
+- **Prestige progress bar**: sits above the **Ladder** page title (formerly Factory). Label still
+  shows unbounded-unlock hint and next-PP detail when applicable; fill uses
+  `getPrestigePpEarnProgressPercent` past Googol in unbounded mode.
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
   from the global corner overlay and Settings header.
 
