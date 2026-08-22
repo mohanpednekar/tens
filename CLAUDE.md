@@ -448,7 +448,7 @@ src/
     MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer status. Reached via
                                AppNav → More; always reachable (including during the Foundry gate);
                                takes `{ game }`
-    SettingsPage/index.jsx  ← app meta, Supporter pack, save slots, Prestige museum, Ops dashboard,
+    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Ops dashboard,
                                and Reset (Danger zone only). Reached via AppNav → More; always
                                reachable; takes `{ game, onReset }`
   theme/
