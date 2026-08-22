@@ -952,8 +952,8 @@ explanation, so nothing about the accessible name/description regressed.
 by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
 colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
-`ul`, `OwnedText`/`ProductionText` (each overriding the color `MutedText` — still hardcoded, #139
-scope — would otherwise pass down), and the
+`ul`, `OwnedText`/`ProductionText` (token-native spans — `textMuted` for owned, `text`/`font-weight: 500`
+for production), and the
 Buy/tickspeed/XP-consume buttons all migrated in the same pass; the PP Upgrades page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
@@ -987,16 +987,20 @@ callback, `registerTierRowRef`) with a single shared `IntersectionObserver` in `
 auto-collapses that tier's Details disclosure the instant the row scrolls fully out of the
 viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
-**Tier row type scale.** `TierName`, `OwnedText`/`ProductionText`, `BuyButton`/
-`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
-(`theme/tokens.js`) rather than hand-tuned `em` values — `TierName` steps from `lg` (desktop) to `md`
-(below `40rem`), the muted production/owned text steps from `sm` to `xs`, the two
-buttons from `sm` to `xs`, and the details disclosure body sits at `xs`. This gives the row two clear
-type steps (name, then everything else) instead of a single flat size, and `BuyButton` additionally
+**Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
+(below `40rem`); `OwnedText`/`ProductionText`, `BuyButton`/
+`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size`/`line-height` from
+`theme.type.scale`
+(`theme/tokens.js`) rather than hand-tuned `em` values — owned count stays at `textMuted`/`sm→xs`,
+production reads stronger at `text`/`font-weight: 500`, the two
+buttons from `sm` to `xs`, and the details disclosure body sits at `xs` with a `border-top` divider
+when expanded. This gives the row three clear type/weight steps (name, production, owned/metrics)
+instead of a single flat size, and `BuyButton` additionally
 sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
 already the rightmost, affordability-fill-colored control — reads as the visually heavier of the two,
-per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
-is unchanged; only these components' own `font-size`/`font-weight` moved.
+per its "stays the visually dominant control" requirement. Gaps/padding resolve from `theme.space`;
+the upgrade/Buy row separates from the stats line via `margin-top`. Layout (grid areas/columns) is
+unchanged; only typography, spacing, and the details divider moved.
 
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
