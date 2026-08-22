@@ -369,7 +369,9 @@ src/
                                multi-slot saves + Supporter entitlement (unlock code / dummy checkout),
                                clearSaveSlot / clearAllSaveProgress (never revokes unlock),
                                plus the separately keyed last-save timestamp used to compute
-                               offline progress (slot 0 keeps legacy `tens_game_state` keys)
+                               offline progress (slot 0 keeps legacy `tens_game_state` keys).
+                               Legacy schema transforms live in a future **separate migration assistant**
+                               (not this repo's `src/`) — see `docs/DESIGN_HISTORY.md` "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Factory → Guide → More
                                (progression order); Factory omits during the Foundry gate

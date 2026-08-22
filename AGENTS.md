@@ -64,7 +64,8 @@ src/
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
     storage.js             ← localStorage save/load/clear + save-schema version stamp,
                               incompatible-save discard, forward field merge, multi-slot saves +
-                               Supporter unlock (code / dummy checkout)
+                              Supporter unlock (code / dummy checkout). Schema upgrades belong in a
+                              separate migration assistant — game runs latest structure only.
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
