@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInitialGameState } from './engine'
-import { MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { createInitialGameState, eraGame } from './engine'
+import { ERA_ELIGIBILITY_PP, MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -224,6 +224,27 @@ describe('schema merge on load', () => {
     expect(loaded.eons.balance).toBe(0)
     expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)
     expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[1].id]).toBe(1)
+  })
+
+  it('preserves Era ascension and automation flags after save round-trip', () => {
+    const tier0 = TIER_DEFINITIONS[0].id
+    let state = createInitialGameState()
+    state = {
+      ...state,
+      intro: { ...state.intro, mainGameUnlocked: true, byteCreated: true },
+      prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP, count: 3 },
+      autobuyers: { ...state.autobuyers, [tier0]: 1 },
+      autobuyersEnabled: { ...state.autobuyersEnabled, [tier0]: false },
+    }
+    state = eraGame(state)
+    saveGameState(state)
+
+    const loaded = loadGameState()
+    expect(loaded.era.count).toBe(1)
+    expect(loaded.eons.balance).toBe(1)
+    expect(loaded.autobuyers[tier0]).toBe(1)
+    expect(loaded.autobuyersEnabled[tier0]).toBe(false)
+    expect(loaded.intro.mainGameUnlocked).toBe(false)
   })
 
   it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {

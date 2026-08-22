@@ -507,6 +507,7 @@ e2e/
   golden-path.e2e.js          ← buying Bytes via the real Buy button; Owned/money-balance updates
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
   prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
+  meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
 scripts/
   generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
                                PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
@@ -870,7 +871,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1459 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1465 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -910,9 +911,10 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
 - Current specs: `e2e/golden-path.e2e.js` (fresh state with the main game already unlocked, buying Kilobytes via
   the real Buy button, Owned count and money balance updating including across a real production tick),
   `e2e/autobuyer-reload.e2e.js` (a save with a tier's autobuyer already unlocked survives a real reload
-  without being silently relocked), and `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
+  without being silently relocked), `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
   prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
-  are awarded).
+  are awarded), and `e2e/meta-prestige.e2e.js` (seed at 1 Googol PP → Settings Era ascension → assert
+  `era.count`, Eons award, and Foundry gate reset).
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
   the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
   to `autonomous-maintenance.yml` (see docs/AUTOMATION.md) — a human needs to do that wiring
