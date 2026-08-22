@@ -111,7 +111,7 @@ const AppNav = ({
 }) => {
   // Progression order: Foundry family → Boosters → Compute (Flops) → Ladder → utilities.
   const items = [
-    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '⚙️', label: 'Foundry', title: 'Byte Foundry — Memory and Storage' },
+    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '🔥', label: 'Foundry', title: 'Byte Foundry — Memory and Storage' },
     showBoosters && { id: 'boosters', ariaLabel: 'open boosters', icon: '⚡', label: 'Boosters', title: 'Boosters — Cores, merge chain, Compute Boost' },
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Ladder production' },
     showTiers && { id: 'game', ariaLabel: 'open ladder', icon: '📶', label: 'Ladder', title: 'Ladder — buy and produce' },

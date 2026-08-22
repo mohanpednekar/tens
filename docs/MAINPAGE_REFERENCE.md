@@ -284,9 +284,8 @@ render:
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
   strip read together as one progress bar, filling left-to-right (on viewports below 40rem the row
-  wraps — five disks per line by default, **four for six-character labels like "100 KB"** — so
-  in-cell size text is not cramped and each circle reads larger than the cache blocks above;
-  desktop keeps all ten inline):
+  wraps — five disks per line on viewports below 40rem (desktop keeps all ten inline); in-cell labels
+  use `0.65rem` font:
   **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
   `aria-label="auto-redeem <size> disk for <tier>"`;
   `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for

@@ -31,12 +31,12 @@ const palette = {
     disabled: '#7d8595', // replaces the old `darkgrey` for disabled controls
   },
   light: {
-    page: '#eef1f6', // cool paper — the grey ground white surfaces sit on
+    page: '#e8ecf2', // cool paper — grey ground white surfaces sit on
     surface: '#ffffff',
     surfaceRaised: '#ffffff', // elevation carried by shadow in light mode, not a lighter fill
-    surfaceSunken: '#eef1f6',
-    border: '#dde2ea',
-    borderStrong: '#c7ceda',
+    surfaceSunken: '#dfe4ec', // distinct from page so buttons/nav active states read clearly
+    border: '#d4dae4',
+    borderStrong: '#bec7d4',
     text: '#171a21',
     textMuted: '#5c6675',
     textFaint: '#808a99',
@@ -44,8 +44,7 @@ const palette = {
     good: '#0a6b30', // darkened from #12a150 — that shade only cleared 3.37:1 against `surface`,
     // below WCAG AA's 4.5:1 normal-text threshold (see tokens.contrast.test.js); this shade clears
     // both `surface` and `surfaceSunken` with margin.
-    warn: '#966100', // darkened from #b7791f — that shade only cleared ~3.2:1 against light
-    // `surfaceSunken` (prestige buttons); this clears 4.5:1+ for normal button text.
+    warn: '#875600', // darkened from #966100 — #dfe4ec surfaceSunken dropped prestige button text to ~4.1:1
     info: '#1f7ac0',
     violet: '#7048c4',
     danger: '#d64545',
@@ -61,8 +60,8 @@ const shadow = {
     md: '0 6px 18px rgba(0, 0, 0, 0.55)',
   },
   light: {
-    sm: '0 1px 2px rgba(20, 30, 60, 0.06)',
-    md: '0 6px 18px rgba(20, 30, 60, 0.10)',
+    sm: '0 1px 3px rgba(20, 30, 60, 0.08)',
+    md: '0 8px 24px rgba(20, 30, 60, 0.12)',
   },
 }
 

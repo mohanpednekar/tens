@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
   fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
+- **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
+  (was 🎚️). Byte Foundry page title matches the nav icon.
+- **Light theme** — improved surface hierarchy (buttons/nav no longer blend into the page),
+  stronger card shadows, and peer-tab / milestone badges now use theme tokens instead of
+  dark-mode-only hardcoded colors.
+- **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`); mobile disk rows
+  are always five per row (desktop stays ten), never four.
 - **Foundry tab label** — the second-level Foundry peer tab formerly labeled **Disks** is now
   **Storage** (Memory | Storage); internal tab id unchanged.
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest

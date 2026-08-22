@@ -41,8 +41,8 @@ matching disk is available), then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
 does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (all ten inline on desktop; below 40rem wraps to
-five per row, **four when the in-cell label is six characters** such as "100 KB"), each labeled
-inside with the array's Byte-scale
+five per row on viewports below 40rem; desktop keeps all ten inline), each labeled inside at
+`0.65rem` with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
 row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. Full disks
 distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`)
