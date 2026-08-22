@@ -180,8 +180,6 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
   const blockLabel = formatCacheSize(blockBits)
-  // Compact face size for the rebuild line ("1KB" not "1 KB") — matches the denser in-cell labels.
-  const sizeLabelCompact = sizeLabel.replace(/\s+/g, '')
   // Nth disk currently under construction (1-indexed); disksBuiltTotal hasn't incremented yet.
   const buildOrdinal = rebuilding
     ? (intro.disksBuiltTotal?.[size] ?? 0) + 1
@@ -194,7 +192,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
     <DiskSizeRow>
       {rebuilding ? (
         <RebuildingText>
-          {`Rebuilding ${sizeLabelCompact} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
+          {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : (
         <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>

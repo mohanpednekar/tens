@@ -44,9 +44,9 @@ from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fil
 `"redeem … for <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable`; instructional
 copy lives in `title`/`aria` only (no under-strip ActionHint). While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
-replaces the cache strip (disk circles stay, disabled; `<size>` is compact e.g. `1KB`, `<N>` is
-the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase` —
-deliberately, so lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes,
+replaces the cache strip (disk circles stay, disabled; `<size>` via `formatDiskSize` e.g. `1 KB`,
+`<N>` is the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase`
+— deliberately, so lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes,
 Disks); see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
