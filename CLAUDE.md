@@ -810,8 +810,11 @@ All component styling resolves to **semantic design tokens** defined once in `sr
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
 on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
 at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
-bundled via `theme/fonts.js` — no runtime CDN fetch. `mode` is currently a plain prop defaulting to
-`dark` on `<ThemeProvider>`; system-preference detection + a persisted toggle is deferred to #140.
+bundled via `theme/fonts.js` — no runtime CDN fetch. `App.jsx` drives `<ThemeProvider mode>` from a
+persisted `tens_theme_preference` in `localStorage` when set, otherwise from
+`prefers-color-scheme: light` (OS changes apply only until the player toggles manually). Reset /
+`clearGameState` do not clear the theme preference — it is UI metadata, not game state. A fixed
+`ThemeToggle` button (top-right) switches modes.
 
 The full per-file token/font/GlobalStyle/ThemeProvider breakdown lives in `docs/THEMING_REFERENCE.md`.
 Read it before touching `src/theme/*`.
@@ -874,7 +877,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1466 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1473 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

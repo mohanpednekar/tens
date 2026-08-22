@@ -38,6 +38,14 @@ const FRESH_CYCLE_BLOCK_BITS = DEFAULT_PURCHASE_BLOCK_SIZE * INTRO_BITS_PER_KILO
 
 beforeEach(() => {
   localStorage.clear()
+  window.matchMedia = vi.fn().mockImplementation(query => ({
+    matches: query.includes('light') ? false : false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
 })
 
 afterEach(() => {
@@ -4203,4 +4211,15 @@ describe('Compute (Flops) screen', () => {
     expect(saved.prestige.points).toBe(0)
     expect(saved.computeFlops.owned.flop01).toBe(1)
   })
+})
+
+test('theme toggle switches mode and persists across remount', async () => {
+  const user = userEvent.setup()
+  seedMainGameState()
+  const { unmount } = render(<App />)
+  await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
+  expect(localStorage.getItem('tens_theme_preference')).toBe('light')
+  unmount()
+  render(<App />)
+  expect(screen.getByRole('button', { name: /switch to dark theme/i })).toBeInTheDocument()
 })

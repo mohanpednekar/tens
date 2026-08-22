@@ -43,9 +43,10 @@ components migrate onto these tokens one at a time in later sub-issues.
   page background + text color (so the whole page repaints on a mode change).
 - **`theme/index.jsx`** exports `<ThemeProvider mode>` (wrapping styled-components' `ThemeProvider`) and
   re-exports `GlobalStyle`/`themes`/`buildTheme`/`MODES`/`DEFAULT_MODE`. `App.jsx` renders
-  `<ThemeProvider><GlobalStyle/><MainPage/></ThemeProvider>`. **`mode` is a plain prop defaulting to
-  `dark`** — the system-preference detection + persisted user toggle that drives it is deferred to the
-  light-mode activation sub-issue (#140); until then the app stays dark, now token-driven.
+  `<ThemeProvider mode={…}><GlobalStyle/><ThemeToggle/>…</ThemeProvider>`. **`mode`** comes from
+  `loadThemePreference()` (`tens_theme_preference` in `localStorage`) when set; otherwise
+  `prefers-color-scheme: light` (defaulting to `dark`). OS theme changes apply only until the player
+  uses the toggle, which persists the choice. `clearGameState` / reset do **not** clear the theme key.
 - **`contrast.js`** is a standalone WCAG 2.x relative-luminance contrast-ratio utility
   (`getContrastRatio(hexA, hexB)`, plus the `AA_NORMAL_TEXT`/`AA_LARGE_TEXT`/`AA_UI_COMPONENT`
   threshold constants — 4.5/3/3), not test-only, so future token or component work can reuse it.

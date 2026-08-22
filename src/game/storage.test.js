@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame } from './engine'
 import { ERA_ELIGIBILITY_PP, MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -642,5 +642,26 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/compute/i)
     expect(message).toMatch(/also kept:\s*factory\b/i)
     expect(message).toMatch(/prestige points/i)
+  })
+})
+
+describe('theme preference', () => {
+  it('loadThemePreference returns null when unset', () => {
+    expect(loadThemePreference()).toBeNull()
+  })
+
+  it('saveThemePreference persists dark/light and ignores invalid values on load', () => {
+    saveThemePreference('light')
+    expect(localStorage.getItem(THEME_PREFERENCE_KEY)).toBe('light')
+    expect(loadThemePreference()).toBe('light')
+    localStorage.setItem(THEME_PREFERENCE_KEY, 'sepia')
+    expect(loadThemePreference()).toBeNull()
+  })
+
+  it('clearGameState does not clear theme preference', () => {
+    saveThemePreference('dark')
+    saveGameState(createInitialGameState())
+    clearGameState()
+    expect(loadThemePreference()).toBe('dark')
   })
 })
