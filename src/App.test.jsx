@@ -12,6 +12,7 @@ import {
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
+  DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -2939,12 +2940,14 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    // Size identity is on the groups / Cache meta; built/full stay visual (no count captions).
+    // Size identity is painted inside each cell; no external header / Cache/Disks titles.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
-    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
+    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^\d+ full$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
   })
 
   test('the current size\'s array preview shows even before anything has ever been built or held, rather than staying hidden', () => {
@@ -2955,16 +2958,42 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
   })
 
-  test('the Cache and Disks rows each show their own size in their own correct unit scale — bits for Cache, Bytes for Disks', () => {
+  test('cache squares and disk circles carry bit-scale vs Byte-scale size labels inside each cell', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits,
-    // shown in the bit-scale unit (1 Kb), not the disk's own Byte-scale one (1 KB). Array / group
-    // labels carry the Byte-scale size; Cache meta carries the bit-scale block size.
+    // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
+    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale).
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
-    expect(screen.getByText('1 Kb each')).toBeInTheDocument()
+    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+  })
+
+  test('Foundry Disks tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
+    const size10kb = currentBankSize * 10
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: {
+        [currentBankSize]: DISK_ARRAY_LADDER_CAP,
+        [size10kb]: 2,
+      },
+      disks: { [currentBankSize]: 1, [size10kb]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize, [size10kb]: size10kb },
+    })
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
+    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('10 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(screen.getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()
   })
 
   test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
@@ -2982,7 +3011,8 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
-    expect(screen.getByText(/Tap a full disk → 1 free Kilobytes/i)).toBeInTheDocument()
+    // Redeem affordance is the green pulsing disk itself — no under-strip ActionHint copy.
+    expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
   })
 
   test('Foundry Memory keeps the highest Disk row even when no shown size is redeemable — the incomplete ladder size stays trackable', () => {
@@ -3018,7 +3048,8 @@ describe('Byte Foundry Storage', () => {
 
     const autoButton = screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })
     expect(autoButton).toBeDisabled()
-    expect(screen.getByText(/Auto-redeem → Kilobytes \(autobuyer on\)/i)).toBeInTheDocument()
+    // Auto vs manual is color + aria on the disk itself — no under-strip ActionHint.
+    expect(screen.queryByText(/Auto-redeem →/i)).not.toBeInTheDocument()
 
     unmount()
     vi.useRealTimers()

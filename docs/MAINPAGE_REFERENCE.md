@@ -152,8 +152,7 @@ on whether some tier currently matches this size (`diskRedeemTierName`, from
 {size} container; its cache auto-fills it, redeemable right away for a free {tierName} once full"` or
 the same sentence ending `"…but it won't be redeemable until some tier's level cost matches it"`; and
 **mid-build** — `aria-label="disk array rebuilding"`, always `disabled`, visible text `"🏦 Building
-{size} Disk — {ceil(remainingSeconds)}s"`, `title="Array rebuilding — {ceil(remainingSeconds)}s left
-(every disk in this array is offline until it finishes)"`. `$progress` (`diskBuildProgress`) reads
+{size} Disk — {ceil(remainingSeconds)}s"`, `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`. `$progress` (`diskBuildProgress`) reads
 differently in each state: mid-build, `100 - (remainingSeconds / totalSeconds) * 100` (a genuine "%
 built" fill, using `totalSeconds` as the fixed denominator so the fill only ever climbs toward 100 as
 `remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
@@ -255,34 +254,37 @@ a full disk.
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
-ascending, smallest first), a `DiskSizeRow` renders a prominent Byte-scale `ArraySize` header
-(`formatDiskSize` — e.g. `1 KB`). Built/full tallies are not restated in text — the disk strip
-already shows them. Below the header, the row branches on whether that size's array is mid-build
-(`rebuilding = intro.diskBuild?.size === size`): while rebuilding, a single `RebuildingText` line
-replaces both rows below — `"Array rebuilding — <ceil(remainingSeconds)>s left (every disk in this
-array is offline until it finishes)"` — since every IO operation against that size (cache release,
-redeem) is disallowed for the build's duration; otherwise, two rows render:
+ascending, smallest first), a `DiskSizeRow` paints size identity **inside** each cell — bit-scale
+`formatCacheSize` on cache squares (e.g. `1 Kb`), Byte-scale `formatDiskSize` on disk circles
+(e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"` row titles; built/full
+tallies stay visual on the strips. The row branches on whether that size's array is mid-build
+(`rebuilding = intro.diskBuild?.size === size`): while rebuilding, a single centered
+`RebuildingText` line replaces the cache strip — `"Rebuilding <size> x <N> array - Ready in
+<ceil(remainingSeconds)>s"` (`<size>` via `formatDiskSize` e.g. `1 KB`; `<N>` =
+`(disksBuiltTotal[size] ?? 0) + 1`, the disk under construction) — since every IO operation against
+that size (cache release, redeem) is disallowed for the build's duration; otherwise, two strips
+render:
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Caption is `"Cache"` plus
-  muted `"<block> each"` bit-scale meta (`formatCacheSize`); tap-to-transfer copy lives in
-  `title`/`aria`/`ActionHint`. A block reads **full** (`$full` — a raised fill) once its own share
-  of `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`, accent
-  border, clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't
-  mid-build, **and** some tier's current per-unit cost matches this size (`isDiskRedeemable`).
-  `aria-label` is `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain
+  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
+  size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
+  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
+  independently **releasable** (`$releasable`, accent border, clickable) once
+  `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and** some tier's
+  current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
+  `"transfer <size> cache block N to Tiers Bits"` when releasable, else the plain
   `"<size> cache block N"`; `title` names the manual-only Tiers Bits transfer once releasable;
   clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
   `resources.base` (Bits) — Cache never auto-transfers.
-- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) under a plain `"Disks"` caption, of
-  exactly `DISK_ARRAY_LADDER_CAP`
-  (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
+- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
+  (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
+  strip read together as one progress bar, filling left-to-right:
   **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
-  `aria-label="auto-redeem <size> disk for <tier>"`, hint `"Auto-redeem → <tier> (autobuyer on)"`;
+  `aria-label="auto-redeem <size> disk for <tier>"`;
   `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for
-  <tier>"`, hint `"Tap a full disk → 1 free <tier>"`; both call `actions.redeemDisk(size)` and are
+  <tier>"`; both call `actions.redeemDisk(size)` and are
   never blocked by the forced priority order (Disk Fill ranks highest) — **empty** (built but not
   yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
   **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
@@ -292,7 +294,8 @@ redeem) is disallowed for the build's duration; otherwise, two rows render:
   `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
   rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
-  empty again, re-entering the fillable pool.
+  empty again, re-entering the fillable pool. No under-strip ActionHint — color + `title`/`aria`
+  carry redeem state.
 
 There is no pause/resume control for auto-redeem on this page, and no
 `storageAutoRedeemEnabled`-style toggle exists in state at all any more — `tickDiskAutoRedeem` is

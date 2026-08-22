@@ -9,13 +9,10 @@ import {
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
-// One size's own cache-blocks-plus-disk-squares detail: a clear array-size header (Byte-scale),
-// then a Cache row and a Disks row of the same size — Cache first, Disks right after
-// (smallest→largest across sizes is the caller's job). A fixed DISK_ARRAY_LADDER_CAP-long strip
-// reads as one progress bar: FULL (leftmost, clickable once redeemable), then built-but-EMPTY,
-// then not-yet-built placeholders. Built/full counts stay visual-only (the squares already show
-// them) — captions carry size identity, not status tallies. Shapes differ on purpose (round disks
-// vs. square cache blocks) so the two rows read apart at a glance.
+// One size's Cache+Disks strip: size identity lives INSIDE each cell (bit-scale on cache
+// squares, Byte-scale on disk circles) — no external Cache/Disks titles or array header.
+// Built/full counts stay visual. Sizes stack cleanly when Foundry Disks / StoragePage lists
+// every array. (smallest→largest across sizes is the caller's job.)
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -24,55 +21,30 @@ const DiskSizeRow = styled.div`
   width: 100%;
 `
 
-// Array identity — the Disk face value in Byte-scale (KB/MB/…). One prominent size for the whole
-// Cache+Disks pair. No text-transform: uppercase — would collapse Cache's lowercase "b" (bits) if
-// it ever appeared here, and would shout the size harder than the rest of Foundry's labels.
-const ArraySize = styled.span`
+// Size text painted inside each square/circle. No text-transform: uppercase — would collapse
+// Cache's lowercase "b" (bits) into Disks' uppercase "B" (Bytes).
+const CellLabel = styled.span`
+  pointer-events: none;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
+  font-size: 0.55rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: ${props => props.theme.color.text};
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: ${props => (props.$emphasis ? props.theme.color.text : props.theme.color.textMuted)};
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
 `
 
-// Sub-row caption: short name ("Cache" / "Disks"); Cache also shows bit-scale block size on the
-// right (not readable from the squares alone). Built/full tallies and instructions live in the
-// strip / title / aria / ActionHint — not crammed into this line.
-const RowHeader = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
-const RowName = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-`
-
-const RowMeta = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-  opacity: 0.85;
-`
-
-// Short status under the Disks row when a full disk is actionable — makes auto vs manual redeem
-// obvious without relying on square color alone (Cache never auto-transfers; only Disks do).
-const ActionHint = styled.p`
-  align-self: flex-start;
-  margin: 0;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => (props.$auto ? props.theme.color.info : props.theme.color.good)};
-`
-
-// Shown in place of the cache/disk rows while this size's array is mid-build (see intro.diskBuild
+// Shown in place of the cache strip while this size's array is mid-build (see intro.diskBuild
 // in engine.js) — every IO operation against it is disallowed for the build's duration, so the
-// interactive rows are replaced by a plain status line rather than rendered disabled-but-visible.
+// interactive cache row is replaced by a plain status line rather than rendered disabled-but-visible.
 const RebuildingText = styled.p`
   margin: 0;
+  width: 100%;
+  text-align: center;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.accent};
 `
@@ -102,6 +74,10 @@ const DiskSquare = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border-radius: 50%;
   border: 1.5px solid ${props =>
     props.$full
@@ -156,6 +132,10 @@ const CacheBlock = styled.button`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props => (props.$releasable ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
@@ -200,56 +180,53 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
   const blockLabel = formatCacheSize(blockBits)
+  // Nth disk currently under construction (1-indexed); disksBuiltTotal hasn't incremented yet.
+  const buildOrdinal = rebuilding
+    ? (intro.disksBuiltTotal?.[size] ?? 0) + 1
+    : null
+  const rebuildReadySeconds = rebuilding
+    ? Math.ceil(intro.diskBuild.remainingSeconds)
+    : null
 
   return (
     <DiskSizeRow>
-      <ArraySize>{sizeLabel}</ArraySize>
-
       {rebuilding ? (
         <RebuildingText>
-          {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (every disk in this array is offline until it finishes)`}
+          {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : (
-        <>
-          <RowHeader>
-            <RowName>Cache</RowName>
-            <RowMeta>{`${blockLabel} each`}</RowMeta>
-          </RowHeader>
-          <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
-            {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
-              const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
-              const isFull = blockFilledBits >= blockBits
-              const releasable = isFull && isDiskCacheBlockReleasable(state, size)
-              return (
-                <CacheBlock
-                  key={index}
-                  aria-label={
-                    releasable
-                      ? `transfer ${sizeLabel} cache block ${index + 1} to Tiers Bits`
-                      : `${sizeLabel} cache block ${index + 1}`
-                  }
-                  disabled={!releasable}
-                  onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
-                  title={
-                    isFull
-                      ? (releasable
-                        ? `Transfer this block's ${blockLabel} to Tiers as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                        : `Transferable to Tiers only once some tier's level cost matches ${sizeLabel}`)
-                      : 'Filling from Memory'
-                  }
-                  type="button"
-                  $full={isFull}
-                  $releasable={releasable}
-                />
-              )
-            })}
-          </CacheBlocksRow>
-        </>
+        <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
+          {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
+            const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
+            const isFull = blockFilledBits >= blockBits
+            const releasable = isFull && isDiskCacheBlockReleasable(state, size)
+            return (
+              <CacheBlock
+                key={index}
+                aria-label={
+                  releasable
+                    ? `transfer ${sizeLabel} cache block ${index + 1} to Tiers Bits`
+                    : `${sizeLabel} cache block ${index + 1}`
+                }
+                disabled={!releasable}
+                onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
+                title={
+                  isFull
+                    ? (releasable
+                      ? `Transfer this block's ${blockLabel} to Tiers as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
+                      : `Transferable to Tiers only once some tier's level cost matches ${sizeLabel}`)
+                    : 'Filling from Memory'
+                }
+                type="button"
+                $full={isFull}
+                $releasable={releasable}
+              >
+                <CellLabel $emphasis={isFull || releasable}>{blockLabel}</CellLabel>
+              </CacheBlock>
+            )
+          })}
+        </CacheBlocksRow>
       )}
-
-      <RowHeader>
-        <RowName>Disks</RowName>
-      </RowHeader>
 
       <SquaresRow role="group" aria-label={`${sizeLabel} disks`}>
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
@@ -294,21 +271,12 @@ const DiskArrayRow = ({ actions, size, state }) => {
               $empty={isEmpty}
               $autoRedeem={isFull && autoRedeem}
               $manualRedeem={isFull && manualRedeem}
-            />
+            >
+              <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
+            </DiskSquare>
           )
         })}
       </SquaresRow>
-
-      {!rebuilding && autoRedeem && (
-        <ActionHint $auto>
-          {`Auto-redeem → ${redeemTierName} (autobuyer on)`}
-        </ActionHint>
-      )}
-      {!rebuilding && manualRedeem && (
-        <ActionHint>
-          {`Tap a full disk → 1 free ${redeemTierName}`}
-        </ActionHint>
-      )}
     </DiskSizeRow>
   )
 }
