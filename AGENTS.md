@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Ladder → Guide → More**. Storage
-is under Foundry as **Memory | Disks** (not its own AppNav item). Ladder uses **Ladder | Upgrades**
+is under Foundry as **Memory | Storage** (not its own AppNav item). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
@@ -69,16 +69,16 @@ src/
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Storage tabs; see
                             "Byte Foundry" below
-    StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
+    StoragePage/index.jsx  ← Disks list (also Foundry's Storage tab; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game; Ladder | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More
-  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle + ThemeToggle
+  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
 vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
@@ -96,7 +96,7 @@ switches pages via a local `page` `useState` and a shared bottom `AppNav` (Found
 Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Ladder
+below). Storage is a Foundry second-level tab (Memory | Storage), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 
@@ -117,7 +117,9 @@ cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onw
 player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
 passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
 production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full cache for manual tier funding, redeemable against any main-game tier whose current price matches)
+builds with a per-array always-full **read cache** (Memory → read cache → disk when tier allows;
+write-cache upward merges from the size below) as fallback tier funding when no matching disk exists;
+Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on

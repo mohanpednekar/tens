@@ -10,7 +10,7 @@ state each is currently in.
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Compute** (`open compute`, once revealed) → **Ladder** (`open ladder`, page id `'game'`, only once
 `mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
-opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Disks.
+opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Storage.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
 occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
@@ -33,10 +33,14 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 ## `DiskArrayRow/index.jsx`
 
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block cache strip of squares, each labeled inside with its bit-scale
+`DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares (`aria-label="… read cache"`), each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockReleasable` — manual transfer to Ladder Bits only; never auto), then a
-fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (all ten inline on desktop; below 40rem wraps to
+full and `isDiskCacheBlockManualReleaseAvailable` — manual transfer to Ladder Bits when no matching
+disk exists; Smart autobuyers may auto-release via `isDiskCacheBlockAutoReleaseEligible` when no
+matching disk is available), then an optional **write cache** progress row when
+`intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
+below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
+does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip (all ten inline on desktop; below 40rem wraps to
 five per row, **four when the in-cell label is six characters** such as "100 KB"), each labeled
 inside with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
@@ -54,7 +58,7 @@ Takes `{ actions, size, state }` (a slice of the `game` object each caller alrea
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
 Extracted so both `ByteFoundryPage` (every currently-matching size from
 `getRelevantDiskSizesForFoundry`, plus always the highest shown size even when unmatched,
-ascending) and `StoragePage` / Foundry Disks tab (every size ever
+ascending) and `StoragePage` / Foundry Storage tab (every size ever
 reached, via `getDiskSizesToShow`) render this detail identically. Every action here is unaffected
 by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this

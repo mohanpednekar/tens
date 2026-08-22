@@ -149,7 +149,7 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
 
   const foundryButton = screen.getByRole('button', { name: /open byte foundry/i })
   expect(foundryButton).toHaveTextContent(/foundry/i)
-  expect(foundryButton).toHaveAttribute('title', 'Byte Foundry — Memory and Disks')
+  expect(foundryButton).toHaveAttribute('title', 'Byte Foundry — Memory and Storage')
 
   const tiersButton = screen.getByRole('button', { name: /open ladder/i })
   expect(tiersButton).toHaveTextContent(/ladder/i)
@@ -2922,7 +2922,7 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
 // tickDiskBuild); Memory then keeps each array's Cache full (whole-block transfers) and
-// auto-fills empty disks directly from Memory on a later tick (see tickDiskAutoFill), smallest
+// auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
 // size first. A FULL disk's redeemability is
 // separately gated on SOME tier's CURRENT per-unit level cost catching up to that disk's size, and
 // auto-redeeming it is further gated on that matching tier's own unit-buying autobuyer being
@@ -2949,7 +2949,7 @@ describe('Byte Foundry Storage', () => {
     // Storage is under Foundry → Disks (no top-level Storage AppNav item).
     const foundry = screen.queryByRole('button', { name: /open byte foundry/i })
     if (foundry) fireEvent.click(foundry)
-    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
   }
   const openStorage = openDisks
 
@@ -2957,7 +2957,7 @@ describe('Byte Foundry Storage', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY - 1, byteCreated: true })
     const { unmount } = render(<App />)
     expect(screen.queryByRole('button', { name: /build disk/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /open disks/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
     unmount()
 
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
@@ -2965,16 +2965,16 @@ describe('Byte Foundry Storage', () => {
     // Building the next disk stays on ByteFoundryPage itself — no navigation needed to reach it.
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
 
-    const openButton = screen.getByRole('tab', { name: /open disks/i })
+    const openButton = screen.getByRole('tab', { name: /open storage/i })
     expect(openButton).toBeInTheDocument()
     // Always enabled once revealed — unlike Build/Fill themselves, reaching the screen to check on
     // it never requires anything currently being affordable.
     expect(openButton).toBeEnabled()
 
     openStorage()
-    // Disks tab stays on Byte Foundry — no separate Storage page heading.
+    // Storage tab stays on Byte Foundry — no separate Storage page heading.
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /open disks/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /open storage/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   test('Build Disk is disabled below its cost, starting at 1 KB', () => {
@@ -3016,7 +3016,7 @@ describe('Byte Foundry Storage', () => {
 
     // Size identity is painted inside each cell; no external header / Cache/Disks titles.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
@@ -3029,7 +3029,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
   })
 
   test('cache squares and disk circles carry bit-scale vs Byte-scale size labels inside each cell', () => {
@@ -3039,12 +3039,12 @@ describe('Byte Foundry Storage', () => {
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
     // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale).
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  test('Foundry Disks tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
+  test('Foundry Storage tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
     const size10kb = currentBankSize * 10
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3057,7 +3057,7 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
@@ -3103,8 +3103,35 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^10 kb disk array cache$/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
+  })
+
+  test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      disks: { [currentBankSize]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /transfer 1 kb cache block/i })).not.toBeInTheDocument()
+    screen.getAllByRole('button', { name: /^1 kb cache block \d+$/i }).forEach(block => {
+      expect(block).toBeDisabled()
+    })
+  })
+
+  test('cache blocks become manually releasable once the matching full disk is gone', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: /transfer 1 kb cache block 1 to Ladder Bits/i })).toBeEnabled()
   })
 
   test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
@@ -3163,30 +3190,29 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Memory keeps Cache full then auto-fills an empty disk on a later tick — fill and build are separate steps', () => {
+  test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {
     vi.useFakeTimers()
 
-    // A disk already built (empty) plus enough Memory for Cache (always-full reserve) and one
-    // disk fill. Capacity must also clear INTRO_DISK_UNLOCK_CAPACITY for the Storage nav button
-    // to even render.
-    seedIntroState({
-      bits: currentBankSize * 2,
-      capacity: INTRO_DISK_UNLOCK_CAPACITY,
-      byteCreated: true,
-      disksBuiltTotal: { [currentBankSize]: 1 },
-    })
+    // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
+    // level 1 so read cache may pour into the empty disk without an active tier claim at this size.
+    seedIntroState(
+      {
+        bits: currentBankSize * 2,
+        capacity: INTRO_DISK_UNLOCK_CAPACITY,
+        byteCreated: true,
+        disksBuiltTotal: { [currentBankSize]: 1 },
+      },
+      { purchaseLevels: { [tier01.id]: 2 } }
+    )
     const { unmount } = render(<App />)
     openStorage()
     expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Cache topped up and the empty disk filled from Memory in the same tick. No autobuyer is
-    // unlocked for tier01 in this seed, so it is NOT auto-redeemed away (see the dedicated
-    // auto-redeem tests below) — it stays full, ready for a manual redeem. Auto-fill is
-    // unaffected by the forced priority order — that only gates manual clicks
-    // (Fill/Build/Bandwidth/Compute/Memory), not tickGame's own background automation.
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    // Read cache topped up and poured into the empty disk in the same tick. At tier level 2 the
+    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
+    expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
@@ -4213,13 +4239,18 @@ describe('Compute (Flops) screen', () => {
   })
 })
 
-test('theme toggle switches mode and persists across remount', async () => {
+test('theme preference in Settings switches mode and persists across remount', async () => {
   const user = userEvent.setup()
   seedMainGameState()
   const { unmount } = render(<App />)
-  await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /use light theme/i }))
   expect(localStorage.getItem('tens_theme_preference')).toBe('light')
+  expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
   unmount()
   render(<App />)
-  expect(screen.getByRole('button', { name: /switch to dark theme/i })).toBeInTheDocument()
+  await openSettings(user)
+  expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
+  await user.click(screen.getByRole('button', { name: /use system theme/i }))
+  expect(localStorage.getItem('tens_theme_preference')).toBe('system')
 })

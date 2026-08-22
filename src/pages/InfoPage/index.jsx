@@ -252,7 +252,12 @@ const InfoPage = () => {
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
             into Memory) — but only while some tier’s current per-unit cost matches that array’s
-            size. That is Cache’s only use: manually funding matching main-game level blocks.
+            size <strong>and no full redeemable disk of that size exists</strong>. Disks always
+            take priority; cache is fallback only.
+          </li>
+          <li>
+            With <strong>Smart</strong> on, the matching tier’s autobuyer auto-releases cache
+            blocks when no disk is available; otherwise release cache by hand.
           </li>
           <li>
             A full disk <strong>redeems</strong> for 1 free unit of whichever tier’s current price

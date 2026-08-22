@@ -15,7 +15,7 @@ app switches between top-level screens via a plain `useState` toggle in `App.jsx
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
-`StoragePage` is not an AppNav destination — Disks live under Foundry as Memory | Disks.
+`StoragePage` is not an AppNav destination — disk arrays live under Foundry as Memory | Storage.
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
 Foundry gate; only Ladder stays progress-gated.
 
@@ -428,8 +428,8 @@ src/
                                model" below). Takes `{ game, focusNonce }` — top-level navigation
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
-                               same as MainPage; Memory | Disks second-level tabs live here
-    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
+                               same as MainPage; Memory | Storage second-level tabs live here
+    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Storage tab);
                                Build stays on Foundry Memory tab. File kept as a thin reusable
                                wrapper — not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -477,7 +477,7 @@ src/
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
-                               MainPage's own Ladder | Upgrades tabs and Foundry's Memory | Disks
+                               MainPage's own Ladder | Upgrades tabs and Foundry's Memory | Storage
                                tabs already use. Which screen actually renders is a derived
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
                                (!intro.mainGameUnlocked || page === 'foundry')` check (where
@@ -583,7 +583,7 @@ Strict three-layer separation:
    `as="button"` swap on the same styled `FillableStatCard`, calling the identical
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
-   detail (see 4a) is a Foundry Disks tab (and the reusable `StoragePage` wrapper), not a separate
+   detail (see 4a) is a Foundry Storage tab (and the reusable `StoragePage` wrapper), not a separate
    AppNav item. Starting the next Disk's build (its own core-loop action, alongside Sacrifice/Invest)
    and every currently-relevant size's full interactive detail — cache blocks, disk squares,
    releasing (Disk Fill's manual-release half → Ladder Bits only), and redeeming (Disk Fill itself;
@@ -595,13 +595,13 @@ Strict three-layer separation:
    that currently matches a tier (`getRelevantDiskSizesForFoundry` — matching sizes from
    `getDiskSizesToShow`) **plus always the highest shown size** even when that size is not yet
    redeemable (usually the ladder's current / incomplete array — the most useful row to keep
-   tracking while building ahead). Full history stays on the Disks tab / `StoragePage`. Every
+   tracking while building ahead). Full history stays on the Storage tab / `StoragePage`. Every
    action — here or on either dedicated screen — stays gated by the forced priority order (see
    "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
    rendering one `components/DiskArrayRow` per size ever reached (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-   `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
+   `{ game }`. Also rendered as Foundry's Storage second-level tab. A pure renderer, same "engine
    re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
    Reached via AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
@@ -738,8 +738,8 @@ permanent across every real Prestige; only Memory itself, the main-game-unlock g
 own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
 
-**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` in `createInitialGameState`,
-`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
+`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
@@ -752,17 +752,23 @@ size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size f
 scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
-array has its own always-full **cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
+array has its own always-full **read cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
 `size / 8` bits each, totaling one disk's worth — e.g. a 1 MB array → 8 × 1 Mb; displayed in the
 bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
 Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
 full; Memory refills whole blocks when a block was just released or the size was just unlocked
-(so Memory visibly fills between transfers). Cache does not pour into disks — empty disks fill
-from Memory directly. A full block can be released by hand (`releaseDiskCacheBlock`) to fund
-matching main-game tier level blocks — but only while some tier's current per-unit cost matches
-this array's size (same eligibility `isDiskRedeemable` already gates a full disk's own redeem on),
-crediting the block's bits directly into `resources.base` (the shared Bits currency any unlocked
-tier is bought with) rather than into Memory itself. A full disk redeems
+(so Memory visibly fills between transfers). Read cache pours instantly into an empty disk when all
+8 blocks are full and no tier claim blocks that size. Disks above the smallest built size also fill
+via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
+N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
+disk emptied per segment; collect pauses while the source size has an active tier match), then
+flushes for one target build duration into one disk at N+1. `tickGame` runs
+`tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so write-cache ripple refills source
+slots same tick. **Disks always take priority over read cache** for matching level costs: while a
+full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
+(`releaseDiskCacheBlock`) only when no full redeemable disk of that size exists — crediting the
+block's bits into `resources.base` (Bits). Smart autobuyers also auto-release cache via
+`tickDiskAutoReleaseCache` when no matching disk is available. A full disk redeems
 (`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
 **any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
 tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in
@@ -810,11 +816,9 @@ All component styling resolves to **semantic design tokens** defined once in `sr
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
 on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
 at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
-bundled via `theme/fonts.js` — no runtime CDN fetch. `App.jsx` drives `<ThemeProvider mode>` from a
-persisted `tens_theme_preference` in `localStorage` when set, otherwise from
-`prefers-color-scheme: light` (OS changes apply only until the player toggles manually). Reset /
-`clearGameState` do not clear the theme preference — it is UI metadata, not game state. A fixed
-`ThemeToggle` button (top-right) switches modes.
+bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appearance drives
+`<ThemeProvider mode>` from `tens_theme_preference` (`system` default, or `light`/`dark`); System
+follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference.
 
 The full per-file token/font/GlobalStyle/ThemeProvider breakdown lives in `docs/THEMING_REFERENCE.md`.
 Read it before touching `src/theme/*`.
@@ -877,7 +881,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1474 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1486 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
