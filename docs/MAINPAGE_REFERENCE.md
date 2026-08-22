@@ -2,7 +2,7 @@
 
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
-reference for the compact tier-row grid, the sticky HUD balances, the Game/PP-Upgrades view
+reference for the compact tier-row grid, the sticky HUD balances, the Ladder/Upgrades view
 toggle, and every disclosure/badge/accessibility convention `MainPage` follows. Also covers
 `ByteFoundryPage` and the two dedicated screens split out of it, `StoragePage`/`ComputePage` (see
 below), since all four pages are tightly coupled around the same `game` prop and Byte Foundry
@@ -597,27 +597,23 @@ not at the bottom"):
   carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
   to the icon rather than folded into the centered cost label.
 
-**Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
-by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
-toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
-rendered (`MainPage` is only ever reached once the Byte Foundry's main-game gate is unlocked, see
-"Byte Foundry page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
-genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
-first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
-"Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
-Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
-of the tab bar to save space, since every purchase on that page already costs Prestige Points, so
-spelling that out on the tab itself is redundant); "PP Upgrades" remains the term used throughout this
-doc/the codebase's own comments for the view/page as a concept. That tab shows a `NavDot`
-(`aria-label="PP upgrade available"`) whenever `hasAffordablePpUpgrade` is true — since a tier's
-autobuyer unlock and its tier tickspeed autobuyer are both free milestone unlocks now (see "Tier
-Autobuyers" below), this only checks tier Smart purchases plus the global automations' PP costs, not
-the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
-since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
-tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and
-`OverclockCard` are Game-view-only; every PP-spending control lives on the
-Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
+**Ladder view vs. Upgrades view.** `MainPage` renders one of two views, toggled by a local
+`useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
+block renders. The player-facing first tab is labeled **Ladder** (internal `view === 'game'`). The
+`ViewNav` tab bar (`role="tablist"`, `aria-label="ladder view"`) renders only once `!isFirstRun` — before
+a first Prestige the ladder view shows with no tab bar, since PP upgrades genuinely don't exist yet. The
+**Upgrades** tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out of the tab bar
+to save space, since every purchase on that page already costs Prestige Points, so spelling that out on
+the tab itself is redundant); "PP Upgrades" remains the term used throughout this doc/the codebase's own
+comments for the view/page as a concept. That tab shows a `NavDot` (`aria-label="PP upgrade available"`)
+whenever `hasAffordablePpUpgrade` is true — since a tier's autobuyer unlock and its tier tickspeed
+autobuyer are both free milestone unlocks now (see "Tier Autobuyers" below), this only checks tier Smart
+purchases plus the global automations' PP costs, not the two free unlocks (the Money-funded global
+tickspeed multiplier *itself* doesn't factor in either, since it's not a PP purchase — only its
+automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible across both views;
+`GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and `OverclockCard` are Ladder-view-only; every
+PP-spending control lives on the Upgrades view. Milestones/Chapters status lives on
+`MilestonesPage` under AppNav → More (see "Milestones view" below) — not a MainPage tab anymore.
 Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
@@ -846,7 +842,7 @@ Below Chapters, up to three more categories — tier autobuyer unlocks and tier 
 (revealed at 100 PP — nav **Compute**, the PP Flops tiers screen). The Compute autobuyer category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
 `getFlopsAutobuyerUnlockEra` / `state.computeFlopsAutobuyers` — green `✅ Era {N}` once unlocked,
 dimmed `🔒 Era {N}` otherwise, with the same `VisuallyHidden role="progressbar"` shape as the tier
-tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Factory tiers via `getAutobuyerUnlockMilestone`/
+tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Ladder tiers via `getAutobuyerUnlockMilestone`/
 `getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md) — these two (unlike Chapters) **do**
 stay gated on `!isFirstRun`, since both are keyed entirely off Prestige count, a meaningless concept
 before a first Prestige:
