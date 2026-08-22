@@ -852,9 +852,10 @@ export const buyPrestigeSpeedBonus = state => {
   if (state.prestigeSpeedBonusUnlocked) return state
   if (clampNonNegative(state.prestige.points) < PRESTIGE_SPEED_BONUS_UNLOCK_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
     prestigeSpeedBonusUnlocked: true,
   }
 }
@@ -886,15 +887,16 @@ export const buyComputeFlopsTier = flopId => state => {
   const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
   if (!flopTier) return state
   if (!canBuyComputeFlopsTier(state, flopId)) return state
+  const latched = latchComputeFlopsPageUnlocked(state)
   const cost = getComputeFlopsTierCost(flopTier)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
     computeFlops: {
-      ...state.computeFlops,
+      ...latched.computeFlops,
       owned: {
-        ...state.computeFlops.owned,
-        [flopId]: clampNonNegative((state.computeFlops.owned[flopId] ?? 0) + 1),
+        ...latched.computeFlops.owned,
+        [flopId]: clampNonNegative((latched.computeFlops.owned[flopId] ?? 0) + 1),
       },
     },
   }
@@ -3360,10 +3362,11 @@ export const buySmartAutobuyer = tierId => state => {
   const cost = getSmartAutobuyerCost(tierId)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
-    smartAutobuyer: { ...state.smartAutobuyer, [tierId]: true },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    smartAutobuyer: { ...latched.smartAutobuyer, [tierId]: true },
   }
 }
 
@@ -3392,9 +3395,10 @@ export const buyAutoPrestige = state => {
   const cost = getAutoPrestigeCost(currentLevel ?? 0)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
     autoPrestige: (currentLevel ?? 0) + 1,
   }
 }
@@ -3423,9 +3427,10 @@ export const buyAutoPrestigeAutobuyer = state => {
   if (state.autoPrestigeAutobuyer) return state
   if (clampNonNegative(state.prestige.points) < AUTO_PRESTIGE_AUTOBUYER_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - AUTO_PRESTIGE_AUTOBUYER_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - AUTO_PRESTIGE_AUTOBUYER_COST },
     autoPrestigeAutobuyer: true,
   }
 }
@@ -3894,6 +3899,12 @@ export const speedUpGame = state => {
     // change what a full Prestige/Speed Up reset does.
     // Museum is permanent per save — Speed Up must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
+      owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
     // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Speed Up
@@ -3956,6 +3967,12 @@ export const overclockGame = state => {
     // see there.
     // Museum is permanent per save — Overclock must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
+      owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     // speedUpCount is deliberately NOT carried over (unlike speedUpGame's own self-increment) —
     // resets to 0 (initial.speedUpCount), wiping Speed Up's own stacking bonus. This is Overclock's
@@ -3977,9 +3994,10 @@ export const buyAutoSpeedUp = state => {
   if (state.autoSpeedUp) return state
   if (clampNonNegative(state.prestige.points) < AUTO_SPEED_UP_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - AUTO_SPEED_UP_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - AUTO_SPEED_UP_COST },
     autoSpeedUp: true,
   }
 }
@@ -3993,9 +4011,10 @@ export const buyComputeAutoBoost = state => {
   if (state.computeAutoBoostUnlocked) return state
   if (clampNonNegative(state.prestige.points) < COMPUTE_AUTO_BOOST_UNLOCK_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
     computeAutoBoostUnlocked: true,
   }
 }
@@ -4019,9 +4038,10 @@ export const buyTickspeedAutobuyer = state => {
   if (state.autoGlobalTickspeed) return state
   if (clampNonNegative(state.prestige.points) < TICKSPEED_AUTOBUYER_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - TICKSPEED_AUTOBUYER_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - TICKSPEED_AUTOBUYER_COST },
     autoGlobalTickspeed: true,
   }
 }

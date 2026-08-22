@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, createInitialGameState } from './engine'
-import { COMPUTE_CORES_PER_NODE, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER } from './layers'
+import { COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER } from './layers'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
@@ -588,7 +588,7 @@ const migrateState = saved => {
     intro: migratedIntro,
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
-        || Math.max(0, Number(migratedPrestige.points) || 0) >= 100,
+        || Math.max(0, Number(migratedPrestige.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },

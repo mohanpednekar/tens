@@ -94,8 +94,7 @@ function App() {
     if (isProductionFrozen(game.state)) return
     if (!window.confirm(buildResetByteFoundryConfirmMessage())) return
     game.resetByteFoundry()
-    // Compute may no longer be revealed after the wipe — leave Settings (or fall back to Foundry
-    // if somehow still on the Compute page).
+    // Flops Compute reveal is PP-based — Byte Foundry reset does not hide it.
     if (page === 'boosters') setPage('foundry')
   }
 

@@ -1,4 +1,5 @@
 import {
+  buyAutoSpeedUp,
   buyComputeFlopsTier,
   createInitialGameState,
   getComputeFlopsTotal,
@@ -6,10 +7,11 @@ import {
   isComputeFlopsPageRevealed,
   latchComputeFlopsPageUnlocked,
   prestigeGame,
+  speedUpGame,
   tickComputeFlops,
   tickGame,
 } from './engine'
-import { COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+import { AUTO_SPEED_UP_COST, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
 
 const elapsed = TICK_RATE_MS / 1000
 
@@ -92,5 +94,38 @@ describe('Compute Flops screen', () => {
     expect(after.computeFlops.owned.flop01).toBe(1)
     expect(after.computeFlops.cumulativeBoost.tier01).toBe(0)
     expect(getComputeFlopsTotal(after)).toBe(0)
+  })
+
+  it('speedUpGame preserves owned Flops units and resets cumulativeBoost', () => {
+    let state = buyComputeFlopsTier('flop01')({
+      ...createInitialGameState(),
+      prestige: { xp: 0, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP, count: 1, highestMilestone: 1 },
+    })
+    state = tickComputeFlops(5)(state)
+    state = {
+      ...state,
+      purchaseLevels: {
+        ...state.purchaseLevels,
+        tier10: 10,
+      },
+      speedUpCount: 0,
+    }
+    const after = speedUpGame(state)
+    expect(after).not.toBe(state)
+    expect(after.computeFlops.owned.flop01).toBe(1)
+    expect(after.computeFlops.cumulativeBoost.tier01).toBe(0)
+  })
+
+  it('buyAutoSpeedUp latches pageUnlocked so reveal survives spending below reveal PP', () => {
+    let state = {
+      ...createInitialGameState(),
+      prestige: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
+    }
+    expect(isComputeFlopsPageRevealed(state)).toBe(true)
+    expect(state.computeFlops.pageUnlocked).toBe(false)
+    state = buyAutoSpeedUp(state)
+    expect(state.computeFlops.pageUnlocked).toBe(true)
+    expect(isComputeFlopsPageRevealed(state)).toBe(true)
+    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - AUTO_SPEED_UP_COST)
   })
 })
