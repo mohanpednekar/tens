@@ -23,6 +23,8 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
+  EON_AMPLIFIER_AWARD_PER_LEVEL,
+  ERA_ELIGIBILITY_PP,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_MULTIPLIER,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -521,6 +523,36 @@ const InfoPage = () => {
           <li>
             The first Prestige of a save uses a full-screen overlay; later ones use the top bar /
             PP header control.
+          </li>
+        </ul>
+      </Section>
+
+      <Section aria-label="era ascension section">
+        <h2>Era ascension</h2>
+        <ul>
+          <li>
+            Voluntary meta-prestige when unspent PP reaches{' '}
+            {ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} (1 Googol PP) — no production
+            freeze at the threshold.
+          </li>
+          <li>
+            Each ascension awards 1 Eon plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Eon Amplifier level
+            (shop upgrades deferred).
+          </li>
+          <li>
+            Trigger from Settings → Era ascension (with confirmation). Milestones shows Eras, Eons,
+            and eligibility.
+          </li>
+          <li>
+            <strong>Resets:</strong> Foundry generator upgrades, Memory and the main-game gate,
+            Disks, Compute entities, ordinary Factory cycle (resources, owned tiers, Double PP
+            level), unspent PP and prestige count, and Compute owned units.
+          </li>
+          <li>
+            <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
+            museum, Compute page reveal, Flops autobuyer unlock flags, Eons (+ award), and
+            hyperscalers. Era <em>N</em> free-unlocks the <em>N</em>th Compute tier&apos;s
+            autobuyer.
           </li>
         </ul>
       </Section>

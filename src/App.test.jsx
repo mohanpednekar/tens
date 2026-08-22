@@ -15,6 +15,7 @@ import {
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
+  ERA_ELIGIBILITY_PP,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -4073,6 +4074,45 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
   expect(screen.getByLabelText(/^compute autobuyer unlock milestones category$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^kflops autobuyer unlock milestone$/i)).toHaveTextContent('✅ Era 1')
   expect(screen.getByLabelText(/^mflops autobuyer unlock milestone$/i)).toHaveTextContent('🔒 Era 2')
+})
+
+test('Settings Era ascension confirms, resets Foundry assets, and keeps automation', async () => {
+  const user = userEvent.setup()
+  const tier0 = TIER_DEFINITIONS[0].id
+  const diskSize = INTRO_BITS_PER_KILOBYTE_CONVERSION
+
+  seedMainGameState({
+    prestige: { xp: 0, points: ERA_ELIGIBILITY_PP, count: 5, highestMilestone: 1 },
+    intro: {
+      mainGameUnlocked: true,
+      byteCreated: true,
+      capacity: INTRO_STARTING_CAPACITY * 100,
+      disks: { [diskSize]: 2 },
+    },
+    autobuyers: { [tier0]: 1 },
+  })
+  render(<App />)
+  await openSettings(user)
+
+  expect(screen.getByLabelText(/^era ascension section$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /ascend an era — open confirmation/i }))
+  await user.click(screen.getByRole('button', { name: /^ascend era$/i }))
+
+  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('1 Eon')
+  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('Eras ascended')
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.autobuyers[tier0]).toBe(1)
+  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+  expect(saved.intro.disks).toEqual({})
+  expect(saved.era.count).toBe(1)
+
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
+
+  await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 })
 
 describe('Compute (Flops) screen', () => {

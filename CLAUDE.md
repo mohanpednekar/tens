@@ -449,9 +449,9 @@ src/
                                status. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
                                Ascend an Era. Reached via AppNav → More; always reachable (including
                                during the Foundry gate); takes `{ game }`
-    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Ops dashboard,
-                               and Reset (Danger zone only). Reached via AppNav → More; always
-                               reachable; takes `{ game, onReset }`
+    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension (confirm +
+                               Ascend), Ops dashboard, and Reset (Danger zone only). Reached via
+                               AppNav → More; always reachable; takes `{ game, onReset }`
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -655,7 +655,7 @@ Strict three-layer separation:
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
    `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Tickspeed, Speed Up,
-   Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
+   Overclock, Tier Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
    can drift out of sync with a live run. Header shows the app version (`v{version}` from
@@ -663,13 +663,14 @@ Strict three-layer separation:
    Guide item; `App.jsx` toggles between these pages locally; there is still no routing library or
    backend involved.
 6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer /
-   Compute-autobuyer status screen. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
-   Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
-   during the Foundry gate. Takes `{ game }`. Pure renderer.
+   Compute-autobuyer / Era ascension status screen. Chapters: first Kilobyte, Go Googol, Open Compute,
+   Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always reachable,
+   including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
-   Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Ops dashboard,
-   and Reset under Danger zone only. Takes `{ game, onReset }` (`onReset`
-   is the confirm-guarded callback owned by `App.jsx`). Pure renderer aside from local form state.
+    Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
+    (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Ops dashboard, and Reset under
+    Danger zone only. Takes `{ game, onReset }` (`onReset` is the confirm-guarded callback owned
+    by `App.jsx`). Pure renderer aside from local form state.
 
 ## Economy model
 
@@ -869,7 +870,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1458 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1459 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

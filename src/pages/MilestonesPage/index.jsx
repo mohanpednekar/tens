@@ -4,9 +4,10 @@ import {
   getAutobuyerUnlockMilestone,
   getFlopsAutobuyerUnlockEra,
   getTierTickspeedAutobuyerMilestone,
+  isEraEligible,
   isUnboundedPrestigeUnlocked,
 } from 'game/engine'
-import { COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
+import { COMPUTE_FLOPS_TIER_DEFINITIONS, ERA_ELIGIBILITY_PP, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 // Standalone Milestones screen — Chapters, tier-autobuyer, tickspeed-autobuyer, and Compute-autobuyer
@@ -88,6 +89,8 @@ const MilestonesPage = ({ game }) => {
   const { prestige } = state
   const isFirstRun = (prestige.count ?? 0) === 0
   const eraCount = state.era?.count ?? 0
+  const eonsBalance = state.eons?.balance ?? 0
+  const eraEligible = isEraEligible(state)
   const chapters = [
     { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
     { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
@@ -117,6 +120,38 @@ const MilestonesPage = ({ game }) => {
               </Badge>
             </Row>
           ))}
+        </Category>
+
+        <Category aria-label="era ascension category">
+          <CategoryHeading>Era ascension</CategoryHeading>
+          <Row aria-label="eras ascended status">
+            <span>Eras ascended</span>
+            <Badge $color="#4ade80" aria-label={`${eraCount} eras ascended`}>
+              {eraCount}
+            </Badge>
+          </Row>
+          <Row aria-label="eons balance status">
+            <span>Eons</span>
+            <Badge $color="#4ade80" aria-label={`${eonsBalance} eons held`}>
+              {eonsBalance}
+            </Badge>
+          </Row>
+          <Row aria-label="era ascension eligibility">
+            <span>Ascend when ready</span>
+            {eraEligible ? (
+              <Badge $color="#4ade80" aria-label="era ascension eligible now">
+                ✅ Eligible
+              </Badge>
+            ) : (
+              <Badge
+                $color="darkgrey"
+                $dimmed
+                aria-label={`era ascension locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Prestige Points`}
+              >
+                🔒 1 Googol PP
+              </Badge>
+            )}
+          </Row>
         </Category>
 
         {!isFirstRun && (

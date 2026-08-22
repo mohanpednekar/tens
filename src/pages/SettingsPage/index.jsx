@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
+import ConfirmDialog from 'components/ConfirmDialog'
 import StatCard from 'components/StatCard'
-import { formatCurrency, formatMoneyBalance, isProductionFrozen } from 'game/engine'
-import { MUSEUM_PIN_CAP } from 'game/layers'
+import { formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
+import { ERA_ELIGIBILITY_PP, MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled from 'styled-components'
 
@@ -165,6 +166,14 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
   const supporter = Boolean(game.savesMeta?.supporterUnlocked)
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)
+  const [eraConfirmOpen, setEraConfirmOpen] = useState(false)
+
+  const eraCount = game.state.era?.count ?? 0
+  const eonsBalance = game.state.eons?.balance ?? 0
+  const eraEligible = isEraEligible(game.state)
+  const eonsAwarded = getEonsAwarded(game.state)
+  const unspentPp = game.state.prestige?.points ?? 0
+  const eonWord = count => (count === 1 ? 'Eon' : 'Eons')
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
   const pinnedSet = new Set(museum.pinnedIds ?? [])
@@ -212,6 +221,11 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
     if (frozen) return
     if (!window.confirm(buildEraseAllSavesConfirmMessage())) return
     game.eraseAllSaveProgress()
+  }
+
+  const confirmEraAscend = () => {
+    game.actions.eraAscend()
+    setEraConfirmOpen(false)
   }
 
   const moneyPath = buildSparklinePath(game.opsSamples ?? [], 'money')
@@ -405,6 +419,40 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         )}
       </Section>
 
+      <Section aria-label="era ascension section">
+        <h2>Era ascension</h2>
+        <p>
+          Voluntary meta-prestige when you hold enough unspent Prestige Points — no production
+          freeze. Awards Eons for future upgrades.
+        </p>
+        <Row>
+          <span>Eras ascended</span>
+          <strong>{eraCount}</strong>
+        </Row>
+        <Row>
+          <span>Eons</span>
+          <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
+        </Row>
+        <p>
+          {eraEligible
+            ? `Ready — next ascension awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
+            : `Requires ${formatCurrency(ERA_ELIGIBILITY_PP)} unspent PP (you have ${formatCurrency(unspentPp)}).`}
+        </p>
+        <Button
+          aria-label={
+            eraEligible
+              ? 'Ascend an Era — open confirmation'
+              : `Ascend an Era — requires ${formatCurrency(ERA_ELIGIBILITY_PP)} unspent Prestige Points`
+          }
+          disabled={!eraEligible}
+          onClick={() => setEraConfirmOpen(true)}
+          type="button"
+          variant="prestige"
+        >
+          <ButtonContent>Ascend Era…</ButtonContent>
+        </Button>
+      </Section>
+
       <Section aria-label="ops dashboard section">
         <h2>Ops dashboard</h2>
         {!supporter ? (
@@ -494,6 +542,30 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           <ButtonContent>Erase all save progress…</ButtonContent>
         </Button>
       </Section>
+
+      <ConfirmDialog
+        cancelLabel="Cancel"
+        confirmLabel="Ascend Era"
+        confirmVariant="prestige"
+        onCancel={() => setEraConfirmOpen(false)}
+        onConfirm={confirmEraAscend}
+        open={eraConfirmOpen}
+        title="Ascend an Era?"
+      >
+        <p>
+          Awards {eonsAwarded} {eonWord(eonsAwarded)} and sends you back through the Byte Foundry
+          gate for a deep reset.
+        </p>
+        <p>
+          <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
+          Factory tiers and resources, unspent PP and prestige count, Double PP level, and Compute
+          owned units.
+        </p>
+        <p>
+          <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
+          museum, Compute page reveal, Flops autobuyer unlocks, Eons (+ award), and hyperscalers.
+        </p>
+      </ConfirmDialog>
     </RootDiv>
   )
 }
