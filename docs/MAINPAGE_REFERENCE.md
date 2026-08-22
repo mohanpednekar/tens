@@ -260,9 +260,9 @@ ascending, smallest first), a `DiskSizeRow` paints size identity **inside** each
 (e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"` row titles; built/full
 tallies stay visual on the strips. The row branches on whether that size's array is mid-build
 (`rebuilding = intro.diskBuild?.size === size`): while rebuilding, a single `RebuildingText` line
-replaces the cache strip — `"Array rebuilding — <ceil(remainingSeconds)>s left (<size>; every disk
-in this array is offline until it finishes)"` — since every IO operation against that size (cache
-release, redeem) is disallowed for the build's duration; otherwise, two strips render:
+replaces the cache strip — `"Rebuilding <size> — <ceil(remainingSeconds)>s"` — since every IO
+operation against that size (cache release, redeem) is disallowed for the build's duration;
+otherwise, two strips render:
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the

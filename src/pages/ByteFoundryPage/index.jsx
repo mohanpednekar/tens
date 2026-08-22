@@ -566,7 +566,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
             onClick={actions.startDiskBuild}
             title={
               diskBuildInProgress
-                ? `Array rebuilding — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s left (every disk in this array is offline until it finishes)`
+                ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
                 : diskBuildBlockedByPriority
                   ? 'Take Bandwidth (or redeem a full Disk) first'
                   : diskRedeemTierName

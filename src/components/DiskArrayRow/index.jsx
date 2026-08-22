@@ -183,7 +183,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
     <DiskSizeRow>
       {rebuilding ? (
         <RebuildingText>
-          {`Array rebuilding — ${Math.ceil(intro.diskBuild.remainingSeconds)}s left (${sizeLabel}; every disk in this array is offline until it finishes)`}
+          {`Rebuilding ${sizeLabel} — ${Math.ceil(intro.diskBuild.remainingSeconds)}s`}
         </RebuildingText>
       ) : (
         <CacheBlocksRow role="group" aria-label={`${sizeLabel} disk array cache`}>
