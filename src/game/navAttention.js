@@ -1,5 +1,6 @@
 import {
   AUTO_SPEED_UP_COST,
+  BYTES_ID,
   COMPUTE_ENTITY_CAP,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -143,7 +144,7 @@ export const hasAffordableGlobalTickspeed = state => {
   if (isProductionFrozen(state)) return false
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return false
   const cost = getGlobalTickspeedMultiplierCost(state.globalTickspeedMultiplier ?? 0)
-  return (state.resources[MONEY_ID] ?? 0) >= cost
+  return (state.resources[BYTES_ID] ?? 0) >= cost
 }
 
 export const hasSpeedUpAvailable = state => {
