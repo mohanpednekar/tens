@@ -49,11 +49,22 @@ const RebuildingText = styled.p`
   color: ${props => props.theme.color.accent};
 `
 
+// Longer in-cell labels (e.g. "100 KB") need fewer disks per mobile row so the text isn't clipped.
+const getMobileDisksPerRow = sizeLabel => (sizeLabel.length >= 6 ? 4 : 5)
+
 const SquaresRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
   gap: 3px;
   width: 100%;
+
+  /* Below 40rem — same mobile breakpoint as MainPage — wrap disks so each circle reads larger
+     than the cache squares above (primary goal: "100 KB" in-cell labels must not look cramped).
+     Desktop keeps all ten inline. Per-row count comes from --mobile-disks-per-row (4 for six-char
+     labels like "100 KB", 5 otherwise). */
+  @media (max-width: 40rem) {
+    flex-wrap: wrap;
+  }
 `
 
 const manualPulse = keyframes`
@@ -63,9 +74,12 @@ const manualPulse = keyframes`
 
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
 // mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
-// squares always stretches to fill the full row rather than staying small and centered with
-// leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
-// CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
+// circles always stretches to fill the full row rather than staying small and centered with
+// leftover space around it. On mobile (max-width: 40rem) each circle caps at one row-share of the
+// full width (--mobile-disks-per-row, usually five but four for labels like "100 KB") so in-cell
+// size text is not clipped — while desktop keeps all ten inline. Fully round (border-radius: 50%)
+// — deliberately distinct from CacheBlock's square, chip-like shape below, so the two rows read
+// apart at a glance (a physical
 // disk is round; a cache/memory block is square). $full takes priority over $empty over the plain
 // not-yet-built placeholder. Among full disks: $autoRedeem (info/blue — matching tier autobuyer
 // will take it) vs $manualRedeem (good/green + pulse — player must tap) vs merely redeemable-
@@ -98,6 +112,11 @@ const DiskSquare = styled.button`
   cursor: ${props => (props.$full && props.$manualRedeem ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
   animation: ${props => (props.$manualRedeem ? manualPulse : 'none')} 1.4s ease-in-out infinite;
+
+  @media (max-width: 40rem) {
+    flex: 1 1 calc((100% - (var(--mobile-disks-per-row, 5) - 1) * 3px) / var(--mobile-disks-per-row, 5));
+    max-width: calc((100% - (var(--mobile-disks-per-row, 5) - 1) * 3px) / var(--mobile-disks-per-row, 5));
+  }
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -180,6 +199,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
   const blockLabel = formatCacheSize(blockBits)
+  const mobileDisksPerRow = getMobileDisksPerRow(sizeLabel)
   // Nth disk currently under construction (1-indexed); disksBuiltTotal hasn't incremented yet.
   const buildOrdinal = rebuilding
     ? (intro.disksBuiltTotal?.[size] ?? 0) + 1
@@ -228,7 +248,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
         </CacheBlocksRow>
       )}
 
-      <SquaresRow role="group" aria-label={`${sizeLabel} disks`}>
+      <SquaresRow
+        role="group"
+        aria-label={`${sizeLabel} disks`}
+        style={{ '--mobile-disks-per-row': mobileDisksPerRow }}
+      >
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
