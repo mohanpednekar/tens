@@ -2,7 +2,7 @@
 
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
-reference for the compact tier-row grid, the sticky HUD balances, the Game/PP-Upgrades view
+reference for the compact tier-row grid, the sticky HUD balances, the Ladder/Upgrades view
 toggle, and every disclosure/badge/accessibility convention `MainPage` follows. Also covers
 `ByteFoundryPage` and the two dedicated screens split out of it, `StoragePage`/`ComputePage` (see
 below), since all four pages are tightly coupled around the same `game` prop and Byte Foundry
@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Factory / Foundry / Storage / Compute / Guide) — pages
+`App.jsx`'s shared `components/AppNav` (Ladder / Foundry / Storage / Compute / Guide) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
 true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
@@ -22,7 +22,7 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
-omits Factory during the gate so there is still no escape hatch via the production screen
+omits Ladder during the gate so there is still no escape hatch via the production screen
 (Guide and More stay reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
@@ -265,19 +265,22 @@ tallies stay visual on the strips. The row branches on whether that size's array
 that size (cache release, redeem) is disallowed for the build's duration; otherwise, two strips
 render:
 
-- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
+- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
   or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
-  independently **releasable** (`$releasable`, accent border, clickable) once
-  `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and** some tier's
-  current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
-  `"transfer <size> cache block N to Factory Bits"` when releasable, else the plain
-  `"<size> cache block N"`; `title` names the manual-only Factory Bits transfer once releasable;
-  clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
-  `resources.base` (Bits) — Cache never auto-transfers.
+  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled. While full and
+  **no full redeemable disk** of that size exists, a block can be **manually released**
+  (`$manualRelease`, accent border, clickable) when `isDiskCacheBlockManualReleaseAvailable(state,
+  size)` — or **auto-released** (`$autoRelease`, info styling, disabled) when
+  `isDiskCacheBlockAutoReleaseEligible(state, size)` (matching tier's Smart autobuyer on). Disks
+  always take priority: when a full redeemable disk exists, cache blocks stay non-interactive with a
+  title explaining to use the disk first. `aria-label` is `"transfer <size> cache block N to Ladder
+  Bits"` when manually releasable, `"auto-release … to Ladder Bits"` when auto-eligible, else the
+  plain `"<size> cache block N"`; clicking a manually releasable block calls
+  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits). Smart
+  autobuyers also auto-release via `tickDiskAutoReleaseCache` when eligible.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
   strip read together as one progress bar, filling left-to-right (on viewports below 40rem the row
@@ -574,8 +577,8 @@ not at the bottom"):
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Factory / Foundry / Storage / Compute / Guide) live in
+- **Page title.** The MainPage header is `<h1>Ladder</h1>` (screen name; AppNav short label **Ladder** — not the game name
+  “Tens”). Top-level destinations (Ladder / Foundry / Storage / Compute / Guide) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
@@ -595,27 +598,23 @@ not at the bottom"):
   carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
   to the icon rather than folded into the centered cost label.
 
-**Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
-by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
-toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
-rendered (`MainPage` is only ever reached once the Byte Foundry's main-game gate is unlocked, see
-"Byte Foundry page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
-genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
-first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
-"Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
-Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
-of the tab bar to save space, since every purchase on that page already costs Prestige Points, so
-spelling that out on the tab itself is redundant); "PP Upgrades" remains the term used throughout this
-doc/the codebase's own comments for the view/page as a concept. That tab shows a `NavDot`
-(`aria-label="PP upgrade available"`) whenever `hasAffordablePpUpgrade` is true — since a tier's
-autobuyer unlock and its tier tickspeed autobuyer are both free milestone unlocks now (see "Tier
-Autobuyers" below), this only checks tier Smart purchases plus the global automations' PP costs, not
-the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
-since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
-tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and
-`OverclockCard` are Game-view-only; every PP-spending control lives on the
-Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
+**Ladder view vs. Upgrades view.** `MainPage` renders one of two views, toggled by a local
+`useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
+block renders. The player-facing first tab is labeled **Ladder** (internal `view === 'game'`). The
+`ViewNav` tab bar (`role="tablist"`, `aria-label="ladder view"`) renders only once `!isFirstRun` — before
+a first Prestige the ladder view shows with no tab bar, since PP upgrades genuinely don't exist yet. The
+**Upgrades** tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out of the tab bar
+to save space, since every purchase on that page already costs Prestige Points, so spelling that out on
+the tab itself is redundant); "PP Upgrades" remains the term used throughout this doc/the codebase's own
+comments for the view/page as a concept. That tab shows a `NavDot` (`aria-label="PP upgrade available"`)
+whenever `hasAffordablePpUpgrade` is true — since a tier's autobuyer unlock and its tier tickspeed
+autobuyer are both free milestone unlocks now (see "Tier Autobuyers" below), this only checks tier Smart
+purchases plus the global automations' PP costs, not the two free unlocks (the Money-funded global
+tickspeed multiplier *itself* doesn't factor in either, since it's not a PP purchase — only its
+automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible across both views;
+`GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and `OverclockCard` are Ladder-view-only; every
+PP-spending control lives on the Upgrades view. Milestones/Chapters status lives on
+`MilestonesPage` under AppNav → More (see "Milestones view" below) — not a MainPage tab anymore.
 Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
 **Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
@@ -844,7 +843,7 @@ Below Chapters, up to three more categories — tier autobuyer unlocks and tier 
 (revealed at 100 PP — nav **Compute**, the PP Flops tiers screen). The Compute autobuyer category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
 `getFlopsAutobuyerUnlockEra` / `state.computeFlopsAutobuyers` — green `✅ Era {N}` once unlocked,
 dimmed `🔒 Era {N}` otherwise, with the same `VisuallyHidden role="progressbar"` shape as the tier
-tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Factory tiers via `getAutobuyerUnlockMilestone`/
+tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Ladder tiers via `getAutobuyerUnlockMilestone`/
 `getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md) — these two (unlike Chapters) **do**
 stay gated on `!isFirstRun`, since both are keyed entirely off Prestige count, a meaningless concept
 before a first Prestige:

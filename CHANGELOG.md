@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
 - **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead
   of Bits; Bits remain the purchase currency for every tier.
+- **Ladder screen** (formerly **Factory** / **Byte Factory**): AppNav label **Ladder** /
+  accessible name `open ladder`; MainPage header is **Ladder** (not the game name “Tens”). Peer
+  tabs are **Ladder | Upgrades**. Cache-transfer hints, Settings danger-zone copy, and confirm
+  dialogs use **Ladder** instead of **Factory**.
 - **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
   Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
   **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
@@ -51,8 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
-- **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
-  label only (no unbounded-unlock hint or next-PP detail).
+- **Prestige progress bar**: sits above the **Ladder** page title (formerly Factory) with a
+  simplified `"N% to Prestige"` label only (no unbounded-unlock hint or next-PP detail).
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
   from the global corner overlay and Settings header.
 
@@ -97,11 +101,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`adaptSaveForCurrentSchema` → current-compatible state or failure); `storage.js` only persists and
   mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
   `IncompatibleSaveNotice`.
-
-- **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
-  **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
-  game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings
-  danger-zone copy use **Factory**. Peer tabs stay **Data | Upgrades**.
 
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
