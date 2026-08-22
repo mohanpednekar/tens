@@ -25,7 +25,7 @@ const getSystemThemeMode = () => {
 const resolveInitialThemeMode = () => loadThemePreference() ?? getSystemThemeMode()
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
-// it lives under Foundry as the Disks tab — so it is not gate-exempt on its own.
+// it lives under Foundry as the Storage tab — so it is not gate-exempt on its own.
 const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings'])
 
 const PageShell = styled.div`
@@ -62,7 +62,7 @@ function App() {
     if (nextPage === 'boosters' && !showBoosters) return
     if (nextPage === 'compute' && !showComputeFlops) return
     if (nextPage === 'game' && !mainGameUnlocked) return
-    // Legacy 'storage' deep-links → Foundry (Disks tab is chosen inside ByteFoundryPage when
+    // Legacy 'storage' deep-links → Foundry (Storage tab is chosen inside ByteFoundryPage when
     // storage attention is the reason; default Memory is fine for a plain Foundry open).
     if (nextPage === 'storage') {
       setMenuOpen(false)

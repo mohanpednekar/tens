@@ -149,7 +149,7 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
 
   const foundryButton = screen.getByRole('button', { name: /open byte foundry/i })
   expect(foundryButton).toHaveTextContent(/foundry/i)
-  expect(foundryButton).toHaveAttribute('title', 'Byte Foundry — Memory and Disks')
+  expect(foundryButton).toHaveAttribute('title', 'Byte Foundry — Memory and Storage')
 
   const tiersButton = screen.getByRole('button', { name: /open factory/i })
   expect(tiersButton).toHaveTextContent(/factory/i)
@@ -2949,7 +2949,7 @@ describe('Byte Foundry Storage', () => {
     // Storage is under Foundry → Disks (no top-level Storage AppNav item).
     const foundry = screen.queryByRole('button', { name: /open byte foundry/i })
     if (foundry) fireEvent.click(foundry)
-    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
   }
   const openStorage = openDisks
 
@@ -2957,7 +2957,7 @@ describe('Byte Foundry Storage', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY - 1, byteCreated: true })
     const { unmount } = render(<App />)
     expect(screen.queryByRole('button', { name: /build disk/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /open disks/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
     unmount()
 
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
@@ -2965,16 +2965,16 @@ describe('Byte Foundry Storage', () => {
     // Building the next disk stays on ByteFoundryPage itself — no navigation needed to reach it.
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
 
-    const openButton = screen.getByRole('tab', { name: /open disks/i })
+    const openButton = screen.getByRole('tab', { name: /open storage/i })
     expect(openButton).toBeInTheDocument()
     // Always enabled once revealed — unlike Build/Fill themselves, reaching the screen to check on
     // it never requires anything currently being affordable.
     expect(openButton).toBeEnabled()
 
     openStorage()
-    // Disks tab stays on Byte Foundry — no separate Storage page heading.
+    // Storage tab stays on Byte Foundry — no separate Storage page heading.
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /open disks/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /open storage/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   test('Build Disk is disabled below its cost, starting at 1 KB', () => {
@@ -3044,7 +3044,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  test('Foundry Disks tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
+  test('Foundry Storage tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
     const size10kb = currentBankSize * 10
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3057,7 +3057,7 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    fireEvent.click(screen.getByRole('tab', { name: /open disks/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()

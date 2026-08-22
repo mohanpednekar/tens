@@ -15,7 +15,7 @@ app switches between top-level screens via a plain `useState` toggle in `App.jsx
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
-`StoragePage` is not an AppNav destination — Disks live under Foundry as Memory | Disks.
+`StoragePage` is not an AppNav destination — disk arrays live under Foundry as Memory | Storage.
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
 Foundry gate; only Factory stays progress-gated.
 
@@ -428,8 +428,8 @@ src/
                                model" below). Takes `{ game, focusNonce }` — top-level navigation
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
-                               same as MainPage; Memory | Disks second-level tabs live here
-    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
+                               same as MainPage; Memory | Storage second-level tabs live here
+    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Storage tab);
                                Build stays on Foundry Memory tab. File kept as a thin reusable
                                wrapper — not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -477,7 +477,7 @@ src/
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
-                               MainPage's own Data | Upgrades tabs and Foundry's Memory | Disks
+                               MainPage's own Data | Upgrades tabs and Foundry's Memory | Storage
                                tabs already use. Which screen actually renders is a derived
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
                                (!intro.mainGameUnlocked || page === 'foundry')` check (where
@@ -583,7 +583,7 @@ Strict three-layer separation:
    `as="button"` swap on the same styled `FillableStatCard`, calling the identical
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
-   detail (see 4a) is a Foundry Disks tab (and the reusable `StoragePage` wrapper), not a separate
+   detail (see 4a) is a Foundry Storage tab (and the reusable `StoragePage` wrapper), not a separate
    AppNav item. Starting the next Disk's build (its own core-loop action, alongside Sacrifice/Invest)
    and every currently-relevant size's full interactive detail — cache blocks, disk squares,
    releasing (Disk Fill's manual-release half → Factory Bits only), and redeeming (Disk Fill itself;
@@ -595,13 +595,13 @@ Strict three-layer separation:
    that currently matches a tier (`getRelevantDiskSizesForFoundry` — matching sizes from
    `getDiskSizesToShow`) **plus always the highest shown size** even when that size is not yet
    redeemable (usually the ladder's current / incomplete array — the most useful row to keep
-   tracking while building ahead). Full history stays on the Disks tab / `StoragePage`. Every
+   tracking while building ahead). Full history stays on the Storage tab / `StoragePage`. Every
    action — here or on either dedicated screen — stays gated by the forced priority order (see
    "Economy model" below).
 4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
    rendering one `components/DiskArrayRow` per size ever reached (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-   `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
+   `{ game }`. Also rendered as Foundry's Storage second-level tab. A pure renderer, same "engine
    re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
    Reached via AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where

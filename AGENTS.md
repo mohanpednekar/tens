@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Guide → More**. Storage
-is under Foundry as **Memory | Disks** (not its own AppNav item). Factory uses **Data | Upgrades**
+is under Foundry as **Memory | Storage** (not its own AppNav item). Factory uses **Data | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
@@ -69,9 +69,9 @@ src/
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Storage tabs; see
                             "Byte Foundry" below
-    StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
+    StoragePage/index.jsx  ← Disks list (also Foundry's Storage tab; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game; Data | Upgrades; data-driven from TIER_DEFINITIONS
@@ -96,7 +96,7 @@ switches pages via a local `page` `useState` and a shared bottom `AppNav` (Found
 Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Factory
+below). Storage is a Foundry second-level tab (Memory | Storage), not gate-exempt on its own. Factory
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 

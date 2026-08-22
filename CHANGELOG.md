@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Foundry tab label** — the second-level Foundry peer tab formerly labeled **Disks** is now
+  **Storage** (Memory | Storage); internal tab id unchanged.
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
   size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
   size, or from the size below via **write cache** (10 timed segments + one flush equal to a target

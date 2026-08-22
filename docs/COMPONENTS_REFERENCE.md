@@ -10,7 +10,7 @@ state each is currently in.
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Compute** (`open compute`, once revealed) → **Factory** (`open factory`, page id `'game'`, only once
 `mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
-opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Disks.
+opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Storage.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
 occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
@@ -57,7 +57,7 @@ Takes `{ actions, size, state }` (a slice of the `game` object each caller alrea
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
 Extracted so both `ByteFoundryPage` (every currently-matching size from
 `getRelevantDiskSizesForFoundry`, plus always the highest shown size even when unmatched,
-ascending) and `StoragePage` / Foundry Disks tab (every size ever
+ascending) and `StoragePage` / Foundry Storage tab (every size ever
 reached, via `getDiskSizesToShow`) render this detail identically. Every action here is unaffected
 by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
