@@ -103,10 +103,12 @@ function App() {
 
   // Follow OS theme changes only until the player sets an explicit preference (#140).
   useEffect(() => {
-    if (loadThemePreference()) return undefined
     if (typeof window.matchMedia !== 'function') return undefined
     const mq = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = () => setThemeMode(mq.matches ? 'light' : 'dark')
+    const onChange = () => {
+      if (loadThemePreference()) return
+      setThemeMode(mq.matches ? 'light' : 'dark')
+    }
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])

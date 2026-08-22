@@ -20,6 +20,7 @@ describe('theme token AA contrast', () => {
     'good on surface (GreenText tickspeed-bonus label)': ['good', 'surface'],
     'text on surfaceSunken (unblended Buy/Upgrade button text)': ['text', 'surfaceSunken'],
     'good on surfaceSunken (unblended tickspeed-upgrade button text)': ['good', 'surfaceSunken'],
+    'warn on surfaceSunken (prestige button text)': ['warn', 'surfaceSunken'],
     'violet on surfaceSunken (unblended XP-consume button text)': ['violet', 'surfaceSunken'],
   }
 
