@@ -215,6 +215,17 @@ Link each phase sub-issue back to the parent epic (and to each other where relev
 session picking up "testing" or "documentation" has the coding sub-issue's context — what shipped,
 what was deliberately deferred and why — without re-deriving it from the diff alone.
 
+### GitHub Milestones (release grouping)
+
+GitHub Milestones group player-facing work toward a named release target; they complement (do not
+replace) the Project's `Track` field from #53. A `Track` answers "what's related to what" across
+possibly multiple releases; a Milestone answers "what's targeted for this release" and gives a
+native due-date plus automatic X/Y-closed progress. Interactive sessions and Planning (#53) should
+assign player-facing feature/economy issues to a milestone for the next planned release; process
+and infrastructure `claude-task` issues typically stay off a versioned milestone. The current
+next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140 and other player-facing work as
+it lands).
+
 ## Automation workflows
 
 Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, opening,

@@ -168,8 +168,12 @@ sections.
 - Whoever files a `claude-task` issue should also apply a `size:S`/`size:M`/`size:L` label (S = a
   single small focused change; M = a normal run-sized task; L = large, likely needs a partial
   `Part of #N` slice) — Phase A weighs this against its own remaining budget when picking a task.
-- Milestones and the Project's `Track` field are complementary: a Milestone targets one planned
-  release; `Track` groups issues by theme/dependency chain and can span multiple releases.
+- **GitHub Milestones vs Project `Track`:** complementary axes, not duplicates. A Milestone
+  targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
+  theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
+  should assign **player-facing** feature/economy issues to a milestone for the next planned
+  release (currently `v0.6.0`); process/infrastructure `claude-task` issues typically stay off a
+  versioned milestone.
 
 ## Budget discipline
 
