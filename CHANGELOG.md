@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Unbounded Prestige** (after 100 lifetime prestiges): production no longer freezes at 1 Googol
+  Bytes — keep earning and Prestige voluntarily to claim accumulated PP.
+- **New PP earning rate**: 1 base PP at 1 Googol Bytes, then 1 PP per 64 additional money-exponent
+  powers beyond Googol (claimable only once you reach at least 1 Googol Bytes).
+- **Double PP upgrade** (Upgrades tab): each purchase costs 100^(level+1) PP, halves powers needed
+  per PP until 1 power per PP, then doubles PP per power instead — permanent across Prestige.
 - **Compute (Flops) screen** — new PP-funded screen (nav **Compute**, page id `'compute'`) with ten tiers **KFlops → QFlops** (base costs **1,000 – 10³⁰ PP** on the same 10³ ladder as Factory tiers; per-unit price scales every purchase on the triangular power-of-ten epoch). Reveals at **100 PP**; first purchase needs **1,000 PP**. Each owned unit adds **0.01%/s** (linear in owned count) to the matching Factory tier; cumulative boost displays as **Flops** at the top and applies to production. Owned units persist across Prestige; per-cycle boost resets.
 - Foundry **Boosters** screen (formerly nav **Compute**) now uses page id `'boosters'` and label **Boosters** so the new Compute screen can take the Compute name.
 - **Incompatible save handling**: on load, saves that predate the current schema (legacy `resources.Ones`,

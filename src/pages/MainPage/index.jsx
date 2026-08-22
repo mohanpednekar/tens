@@ -2,8 +2,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpEarnProgressPercent, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -827,20 +827,29 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // already covers.
   const ppProgressPercent = cost => progressPercent(prestige.points, cost)
   const canPrestige = state.resources[MONEY_ID] >= PRESTIGE_THRESHOLD
+  const isUnbounded = isUnboundedPrestigeUnlocked(state)
+  const doublePpLevel = state.prestigeDoublePpLevel ?? 0
+  const doublePpCost = getPrestigeDoublePpUpgradeCost(doublePpLevel)
+  const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
+  const ppPerPower = getPrestigePpPerPower(doublePpLevel)
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
   const prestigeBonus = state.prestigeSpeedBonusUnlocked
     ? getPrestigeProductionMultiplier(prestige.points)
     : 1
-  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID])
-  const prestigeProgressPercent = getPrestigeProgressPercent(state.resources[MONEY_ID])
+  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
+  const prestigeProgressPercent = isUnbounded && canPrestige
+    ? getPrestigePpEarnProgressPercent(state.resources[MONEY_ID], doublePpLevel)
+    : getPrestigeProgressPercent(state.resources[MONEY_ID])
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
-  const prestigeLabel = 'Prestige (requires 1 Googol Bytes)'
+  const prestigeLabel = isUnbounded && canPrestige
+    ? 'Prestige (optional — claim accumulated PP)'
+    : 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Data vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
   // the ladder is the default Byte Factory screen, and Milestones lives under AppNav → More. Upgrades
@@ -1038,6 +1047,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // engine.js) — before this is bought, prestigeBonus above is a flat ×1 regardless of balance.
   // Shown as soon as the PP Upgrades page itself is reachable (!isFirstRun) — no separate
   // "revealed one by one" teaser gate on top of that.
+  const canBuyDoublePp = !isFirstRun && prestige.points >= doublePpCost
+  const doublePpUpgradeSummary = ppPerPower > 1
+    ? `${formatAmount(ppPerPower)} PP per power`
+    : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && prestige.points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
   // Auto-Prestige is a single global (not per-tier) leveled upgrade, mirroring the tier autobuyer
@@ -1221,7 +1234,13 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           aria-valuemin={0}
           aria-valuemax={100}
         />
-        <PrestigeProgressLabel>{prestigeProgressPercent}% to Prestige</PrestigeProgressLabel>
+        <PrestigeProgressLabel>
+          {isUnbounded && canPrestige
+            ? `${prestigeProgressPercent}% to next PP (${doublePpUpgradeSummary})`
+            : isUnbounded
+              ? `${prestigeProgressPercent}% to Prestige`
+              : `${prestigeProgressPercent}% to Prestige${!isUnbounded && (prestige.count ?? 0) < PRESTIGE_UNBOUNDED_MIN_COUNT ? ` (unlocks at Prestige ${PRESTIGE_UNBOUNDED_MIN_COUNT})` : ''}`}
+        </PrestigeProgressLabel>
       </PrestigeProgressTop>
 
       {state.intro?.computeBoostType && COMPUTE_BOOST_PRESETS[state.intro.computeBoostType] && (
@@ -2090,6 +2109,48 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               </UpgradeRow>
             </UpgradeCategory>
           )}
+
+          <UpgradeCategory aria-label="prestige upgrades category">
+            <CategoryHeading>Prestige</CategoryHeading>
+            <UpgradeRow aria-label="double PP upgrade">
+              <TierNameLabel>
+                Double PP
+                {doublePpLevel > 0 && ` (Lv.${doublePpLevel})`}
+              </TierNameLabel>
+              <MutedText>{doublePpUpgradeSummary}</MutedText>
+              <PpUpgradeButton
+                aria-label={`Buy Double PP level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Prestige Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
+                color={canBuyDoublePp ? '#fbbf24' : 'darkgrey'}
+                disabled={!canBuyDoublePp}
+                onClick={actions.buyPrestigeDoublePp}
+                title={doublePpLevel < 6
+                  ? 'Halves how many money-exponent powers are needed per Prestige Point (claimable once you reach 1 Googol Bytes)'
+                  : 'Doubles how many Prestige Points each power earns (claimable once you reach 1 Googol Bytes)'}
+                type="button"
+                $progress={ppProgressPercent(doublePpCost)}
+                $progressColor="#fbbf24"
+              >
+                <ButtonIcon>✦ </ButtonIcon>
+                <ButtonLabel>Upgrade for {formatAmount(doublePpCost)} PP</ButtonLabel>
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="Double PP upgrade Prestige Point progress"
+                  aria-valuenow={Math.min(prestige.points, doublePpCost)}
+                  aria-valuemin={0}
+                  aria-valuemax={doublePpCost}
+                />
+              </PpUpgradeButton>
+            </UpgradeRow>
+            {isUnbounded ? (
+              <MutedText>
+                Unbounded Prestige unlocked — production continues past 1 Googol Bytes; Prestige when you choose to claim accumulated PP.
+              </MutedText>
+            ) : (
+              <MutedText>
+                Unlocks at Prestige {PRESTIGE_UNBOUNDED_MIN_COUNT}: earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP.
+              </MutedText>
+            )}
+          </UpgradeCategory>
         </UpgradesList>
       )}
     </RootDiv>
