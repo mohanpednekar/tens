@@ -980,7 +980,8 @@ per-cycle `cumulativeBoost`. Hyperscaler Efficiency levels add
 `HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler (shop deferred to #414).
 
 **Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
-in `useIncrementalGame.js`. UI trigger deferred to #411.
+in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
+`applyFlopsAutobuyerMilestones` on load so `era.count` backfills Flops autobuyer unlocks.
 
 Unspent PP has one passive effect (gated behind a one-time unlock) and five active uses. Tier
 autobuyer unlock and the tier tickspeed autobuyer are **not** among them any more — they unlock

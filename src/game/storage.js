@@ -1,5 +1,5 @@
 import { applyFlopsAutobuyerMilestones, createInitialGameState } from './engine'
-import { COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
