@@ -351,7 +351,7 @@ designed to coexist safely with the Claude ones during the transition:
        Trivial drift → fix; larger mismatch → file, don't guess.
     5. **Backlog plan/replan** — stale specs, Blocked-by, size/priority labels, duplicates
        (comments / labels / replacement issues only). On housekeeping runs, the workflow also
-       runs `scripts/epic-407-issue-hygiene.sh` and `scripts/sync-release-milestones.sh`
+       runs `scripts/backlog-issue-hygiene.sh` and `scripts/sync-release-milestones.sh`
        deterministically before the agent step — do not duplicate that work unless a step failed.
     6. **Process improvement (optional)** — self-edit of `cursor-autonomous-maintenance.yml` only,
        or one gap-analysis + `claude-task` issue.
@@ -383,7 +383,7 @@ Claude workflow already owns that, and duplicating it would double-post.
 repo secret being present (surfaced into an `if:`-usable boolean via a `secrets.CURSOR_API_KEY != ''`
 env expression, since `if:` can't read secrets directly). With no secret set, compose-prompt and
 cursor-agent steps skip cleanly: merging these workflows spends no Cursor quota until a maintainer
-opts in. **Exception:** the deterministic `scripts/epic-407-issue-hygiene.sh` step on housekeeping
+opts in. **Exception:** the deterministic `scripts/backlog-issue-hygiene.sh` step on housekeeping
 runs still executes when `GH_AUTOMATION_PAT` is set (issue close/label/comment only; no agent).
 
 **One additional one-time prerequisite** (beyond the three above):
@@ -397,7 +397,7 @@ integration token (`ghs_*`) that **cannot** write issues (403 on comment/label/c
 separate from `GH_AUTOMATION_PAT` (GHA only). To let interactive Cloud Agents run `gh issue …`
 from the VM, add the same fine-grained PAT (Issues read/write) to **Cursor Dashboard → Cloud
 Agents → Secrets** as **`GH_TOKEN`** — `gh` reads it automatically. Without it, issue-only
-hygiene runs deterministically in housekeeping GHA via `scripts/epic-407-issue-hygiene.sh`
+hygiene runs deterministically in housekeeping GHA via `scripts/backlog-issue-hygiene.sh`
 (`GH_AUTOMATION_PAT`-authenticated), or from a maintainer's local `gh` session.
 
 | Runtime | Token location | Issue write |

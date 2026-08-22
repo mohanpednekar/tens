@@ -209,7 +209,7 @@ To let Cloud Agents perform issue hygiene (comments, labels, closes) from the VM
 2. Add it in **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`** (exact name —
    `gh` reads this env var automatically).
 3. Re-run the agent session; verify with `gh issue comment` on a test issue or run
-   `scripts/epic-407-issue-hygiene.sh --dry-run`.
+   `scripts/backlog-issue-hygiene.sh --dry-run`.
 
 Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (deterministic step in
 `cursor-autonomous-maintenance.yml`) or a maintainer's local `gh` session.

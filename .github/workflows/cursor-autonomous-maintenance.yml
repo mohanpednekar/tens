@@ -251,15 +251,17 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           # Phase 0(c): open Dependabot security alerts, severity-sorted.
-          dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts" \
-            --paginate -f state=open --jq '
+          if ! dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
+            --paginate --jq '
               def sevrank: if .security_advisory.severity == "critical" then 0
                            elif .security_advisory.severity == "high" then 1
                            elif .security_advisory.severity == "medium" then 2
                            else 3 end;
               sort_by(sevrank)[]
               | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
-            ' 2>/dev/null || true)
+            ' 2>/dev/null); then
+            dependabot_alerts=""
+          fi
           {
             echo "dependabot_alerts<<DEPALERT_EOF"
             echo "$dependabot_alerts"
@@ -634,16 +636,16 @@ jobs:
           # Hand the composed prompt to the run step via a file (avoids any interpolation limits).
           printf '%s\n' "$prompt_text" > "$RUNNER_TEMP/cursor-prompt.txt"
 
-      - name: Epic #407 issue hygiene (housekeeping)
+      - name: Backlog issue hygiene (housekeeping)
         if: steps.guard.outputs.mode == 'housekeeping'
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         run: |
-          if [ ! -x scripts/epic-407-issue-hygiene.sh ]; then
-            echo "::warning::scripts/epic-407-issue-hygiene.sh missing or not executable — skipping epic #407 hygiene."
+          if [ ! -x scripts/backlog-issue-hygiene.sh ]; then
+            echo "::warning::scripts/backlog-issue-hygiene.sh missing or not executable — skipping backlog hygiene."
             exit 0
           fi
-          scripts/epic-407-issue-hygiene.sh
+          scripts/backlog-issue-hygiene.sh
 
       - name: Sync release milestones (housekeeping)
         if: steps.guard.outputs.mode == 'housekeeping'
