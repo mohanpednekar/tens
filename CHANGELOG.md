@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **DiskArrayRow labels**: size identity is painted inside each cell — bit-scale on cache squares
   (e.g. `1 Kb`), Byte-scale on disk circles (e.g. `1 KB`). No external array header, no
   `"Cache"` / `"Disks"` row titles, and no under-strip redeem ActionHint (green/blue fill +
-  `title`/`aria` carry redeem state). Mid-build status is terse: `Rebuilding 1 KB — 6s`.
+  `title`/`aria` carry redeem state). Mid-build status (centered):
+  `Rebuilding 1KB x 6 array - Ready in 6s`.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.
