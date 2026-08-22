@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
+  immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
+  matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no
+  disk is available.
 - **Clock Speed** — the global tickspeed upgrade (MainPage card + Guide) is renamed from "Tickspeed" and
   now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
 - **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead

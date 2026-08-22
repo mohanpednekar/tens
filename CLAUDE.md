@@ -758,11 +758,11 @@ bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits,
 Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
 full; Memory refills whole blocks when a block was just released or the size was just unlocked
 (so Memory visibly fills between transfers). Cache does not pour into disks — empty disks fill
-from Memory directly. A full block can be released by hand (`releaseDiskCacheBlock`) to fund
-matching main-game tier level blocks — but only while some tier's current per-unit cost matches
-this array's size (same eligibility `isDiskRedeemable` already gates a full disk's own redeem on),
-crediting the block's bits directly into `resources.base` (the shared Bits currency any unlocked
-tier is bought with) rather than into Memory itself. A full disk redeems
+from Memory directly. **Disks always take priority over cache** for matching level costs: while a
+full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
+(`releaseDiskCacheBlock`) only when no full redeemable disk of that size exists — crediting the
+block's bits into `resources.base` (Bits). Smart autobuyers also auto-release cache via
+`tickDiskAutoReleaseCache` when no matching disk is available. A full disk redeems
 (`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
 **any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
 tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in

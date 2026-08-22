@@ -3,7 +3,8 @@ import {
   formatDiskSize,
   getDiskRedeemTierName,
   isDiskAutoRedeemEligible,
-  isDiskCacheBlockReleasable,
+  isDiskCacheBlockAutoReleaseEligible,
+  isDiskCacheBlockManualReleaseAvailable,
   isDiskManualRedeemAvailable,
 } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
@@ -136,10 +137,9 @@ const DiskSquare = styled.button`
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
 // formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
 // refills whole blocks when a block was just released or the size was just unlocked (see
-// tickDiskAutoFill). A full block ($full) can be manually released ($releasable — accent border,
-// clickable) only while some tier's current per-unit cost matches this array's size, crediting
-// that block's bits straight into resources.base (the shared Bits currency on Factory) — never
-// auto-transferred; Cache → Factory is always a manual tap. Cache does not pour into disks.
+// tickDiskAutoFill). A full block ($full) can be manually released ($manualRelease — accent border,
+// clickable) or auto-released ($autoRelease — info styling) when Smart is on, but ONLY while no
+// full redeemable disk of that size exists — disks always take priority. Cache does not pour into disks.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -156,9 +156,15 @@ const CacheBlock = styled.button`
   justify-content: center;
   padding: 0;
   border-radius: ${props => props.theme.radius.sm};
-  border: 1.5px solid ${props => (props.$releasable ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
-  cursor: ${props => (props.$releasable ? 'pointer' : 'default')};
+  border: 1.5px solid ${props =>
+    props.$manualRelease || props.$autoRelease
+      ? props.theme.color.accent
+      : props.theme.color.surfaceSunken};
+  background: ${props =>
+    props.$full
+      ? (props.$autoRelease ? props.theme.color.info : props.theme.color.surfaceRaised)
+      : 'transparent'};
+  cursor: ${props => (props.$manualRelease ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
 
   &:hover:not(:disabled) {
@@ -219,29 +225,35 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
             const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
             const isFull = blockFilledBits >= blockBits
-            const releasable = isFull && isDiskCacheBlockReleasable(state, size)
+            const autoRelease = isFull && isDiskCacheBlockAutoReleaseEligible(state, size)
+            const manualRelease = isFull && isDiskCacheBlockManualReleaseAvailable(state, size)
             return (
               <CacheBlock
                 key={index}
                 aria-label={
-                  releasable
-                    ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                    : `${sizeLabel} cache block ${index + 1}`
+                  autoRelease
+                    ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                    : manualRelease
+                      ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                      : `${sizeLabel} cache block ${index + 1}`
                 }
-                disabled={!releasable}
-                onClick={releasable ? () => actions.releaseDiskCacheBlock(size) : undefined}
+                disabled={!manualRelease}
+                onClick={manualRelease ? () => actions.releaseDiskCacheBlock(size) : undefined}
                 title={
                   isFull
-                    ? (releasable
-                      ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                      : `Transferable to Factory only once some tier's level cost matches ${sizeLabel}`)
+                    ? (autoRelease
+                      ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
+                      : manualRelease
+                        ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
+                        : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
                     : 'Filling from Memory'
                 }
                 type="button"
                 $full={isFull}
-                $releasable={releasable}
+                $manualRelease={manualRelease}
+                $autoRelease={autoRelease}
               >
-                <CellLabel $emphasis={isFull || releasable}>{blockLabel}</CellLabel>
+                <CellLabel $emphasis={isFull || manualRelease || autoRelease}>{blockLabel}</CellLabel>
               </CacheBlock>
             )
           })}

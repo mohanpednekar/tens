@@ -156,6 +156,8 @@ import {
   isDiskBuildAvailable,
   isDiskBuildTurnAvailable,
   isDiskCacheBlockReleasable,
+  isDiskCacheBlockAutoReleaseEligible,
+  isDiskCacheBlockManualReleaseAvailable,
   isDiskAutoRedeemEligible,
   isDiskManualRedeemAvailable,
   isDiskFillAvailable,
@@ -210,6 +212,7 @@ import {
   tickComputeCoreConversion,
   tickDiskAutoFill,
   tickDiskAutoRedeem,
+  tickDiskAutoReleaseCache,
   tickDiskBuild,
   tickGame,
   tickIntroAutoInvest,
@@ -1968,7 +1971,8 @@ describe('Disk array IO lockout during a build', () => {
     )
     const afterBuild = tickDiskBuild(1)(state)
     expect(afterBuild.intro.diskBuild).toBeNull()
-    expect(isDiskCacheBlockReleasable(afterBuild, FIRST_DISK_SIZE)).toBe(true)
+    // Disk takes priority — cache stays blocked while the full redeemable disk exists.
+    expect(isDiskCacheBlockReleasable(afterBuild, FIRST_DISK_SIZE)).toBe(false)
     expect(tickDiskAutoRedeem(afterBuild)).not.toBe(afterBuild)
   })
 })
@@ -2149,9 +2153,18 @@ describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
     expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
   })
 
-  it('is true once the cache holds at least one full block, with an eligible tier still matching this size', () => {
+  it('is true once the cache holds at least one full block, with an eligible tier still matching this size and no full redeemable disk', () => {
     const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } })
     expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(true)
+  })
+
+  it('is false while a full redeemable disk of the same size exists — disks take priority over cache', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: blockBits },
+    })
+    expect(isDiskCacheBlockReleasable(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
   })
 
   it('is false — and releaseDiskCacheBlock is a same-reference no-op — once no tier\'s current cost matches this size any more', () => {
@@ -2175,6 +2188,72 @@ describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
   it('is a same-reference no-op below one full block', () => {
     const state = withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits - 1 } })
     expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
+  })
+})
+
+describe('isDiskCacheBlockAutoReleaseEligible / isDiskCacheBlockManualReleaseAvailable / tickDiskAutoReleaseCache', () => {
+  const blockBits = FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
+
+  it('manual release is available when cache is releasable but the matching tier is not Smart', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } }),
+      tensTier.id,
+      1
+    )
+    expect(isDiskCacheBlockManualReleaseAvailable(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskCacheBlockAutoReleaseEligible(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('auto-release is eligible once Smart is on, autobuyer is active, and no matching disk exists', () => {
+    const state = withSmartAutobuyer(
+      withAutobuyer(
+        withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } }),
+        tensTier.id,
+        1
+      ),
+      tensTier.id
+    )
+    expect(isDiskCacheBlockAutoReleaseEligible(state, FIRST_DISK_SIZE)).toBe(true)
+    expect(isDiskCacheBlockManualReleaseAvailable(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('auto-release is blocked while a full redeemable disk of the same size exists, even with Smart on', () => {
+    const state = withSmartAutobuyer(
+      withAutobuyer(
+        withIntro(createInitialGameState(), {
+          disks: { [FIRST_DISK_SIZE]: 1 },
+          diskCache: { [FIRST_DISK_SIZE]: blockBits },
+        }),
+        tensTier.id,
+        1
+      ),
+      tensTier.id
+    )
+    expect(isDiskCacheBlockAutoReleaseEligible(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(isDiskCacheBlockManualReleaseAvailable(state, FIRST_DISK_SIZE)).toBe(false)
+  })
+
+  it('tickDiskAutoReleaseCache releases one block when Smart autobuyer is active and no disk is available', () => {
+    const state = withSmartAutobuyer(
+      withAutobuyer(
+        withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits * 2 } }),
+        tensTier.id,
+        1
+      ),
+      tensTier.id
+    )
+    const after = tickDiskAutoReleaseCache(state)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + blockBits)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits)
+  })
+
+  it('tickDiskAutoReleaseCache is a no-op without Smart, leaving cache for manual release', () => {
+    const state = withAutobuyer(
+      withIntro(createInitialGameState(), { diskCache: { [FIRST_DISK_SIZE]: blockBits } }),
+      tensTier.id,
+      1
+    )
+    expect(tickDiskAutoReleaseCache(state)).toBe(state)
   })
 })
 

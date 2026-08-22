@@ -1523,12 +1523,15 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
   // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
   // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
+  // tickDiskAutoReleaseCache runs after auto-redeem: a Smart tier's autobuyer may release cache
+  // blocks into Bits only when no full redeemable disk of that size exists (disks always win).
   // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
   // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
   // docs/DESIGN_HISTORY.md).
   const tickStorage = state => {
     const afterRedeem = tickDiskAutoRedeem(state)
-    return afterRedeem === state ? state : tickDiskAutoFill(afterRedeem)
+    const afterCache = tickDiskAutoReleaseCache(afterRedeem)
+    return afterCache === state ? state : tickDiskAutoFill(afterCache)
   }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
@@ -2682,14 +2685,23 @@ export const tickDiskAutoFill = state => {
   return { ...state, intro: { ...state.intro, bits, disks, diskCache } }
 }
 
+// True when a size currently has at least one FULL disk that could redeem right now — Cache is
+// always blocked while this holds (disks take priority over cache for matching level costs).
+const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
+  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
+  state.intro?.diskBuild?.size !== capacityBits &&
+  isDiskRedeemable(state, capacityBits)
+
 // Whether a size's cache currently has at least one full, releasable block (see
 // DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickDiskBuild), or while no tier's current per-unit cost matches capacityBits at all (see
+// — see tickDiskBuild), while no tier's current per-unit cost matches capacityBits at all (see
 // isDiskRedeemable below — a released block is only ever spendable toward an eligible tier's own
-// level, so with none eligible there's nothing for it to fund).
+// level, so with none eligible there's nothing for it to fund), OR while a full redeemable disk of
+// that same size exists (disks always take priority — cache is fallback only).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
   isDiskRedeemable(state, capacityBits) &&
+  !hasFullRedeemableDiskAtSize(state, capacityBits) &&
   (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
 
 // Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
@@ -2790,8 +2802,9 @@ const isTierAutobuyerActive = (state, tierId) =>
 // tickGame pass: currently full, not mid-build, not already auto-redeemed this Prestige cycle,
 // and the matching tier's unit-buying autobuyer is unlocked and unpaused. DiskArrayRow uses this
 // to visually distinguish "will auto-redeem" from "tap to redeem" (manual — matching tier has no
-// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks are
-// never auto-transferred — only manual releaseDiskCacheBlock moves them into Bits for Tiers.
+// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks auto-
+// transfer only via tickDiskAutoReleaseCache when the matching tier's Smart autobuyer is active
+// and no full redeemable disk of that size exists (see isDiskCacheBlockAutoReleaseEligible).
 export const isDiskAutoRedeemEligible = (state, capacityBits) => {
   if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
   if (state.intro?.diskBuild?.size === capacityBits) return false
@@ -2807,6 +2820,24 @@ export const isDiskManualRedeemAvailable = (state, capacityBits) =>
   state.intro?.diskBuild?.size !== capacityBits &&
   isDiskRedeemable(state, capacityBits) &&
   !isDiskAutoRedeemEligible(state, capacityBits)
+
+// True when a cache block of `capacityBits` will auto-release on the next tickDiskAutoReleaseCache
+// / tickGame pass: releasable right now (no full redeemable disk of that size), and the matching
+// tier's unit autobuyer is active AND Smart. DiskArrayRow uses this to distinguish auto cache
+// release from manual-only release (non-Smart tiers, or Smart with a disk still available).
+export const isDiskCacheBlockAutoReleaseEligible = (state, capacityBits) => {
+  if (!isDiskCacheBlockReleasable(state, capacityBits)) return false
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  return tier !== undefined &&
+    isTierAutobuyerActive(state, tier.id) &&
+    Boolean(state.smartAutobuyer?.[tier.id])
+}
+
+// True when a cache block is releasable right now but will NOT auto-release — the player must
+// click (see releaseDiskCacheBlock). Complementary to isDiskCacheBlockAutoReleaseEligible.
+export const isDiskCacheBlockManualReleaseAvailable = (state, capacityBits) =>
+  isDiskCacheBlockReleasable(state, capacityBits) &&
+  !isDiskCacheBlockAutoReleaseEligible(state, capacityBits)
 
 // Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
 // whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
@@ -2865,6 +2896,23 @@ export const tickDiskAutoRedeem = state => {
       diskAutoRedeemedSizes: { ...redeemed.intro.diskAutoRedeemedSizes, [eligibleSize]: true },
     },
   }
+}
+
+// Auto-release convenience for Smart autobuyers — a no-op unless there's an eligible size whose
+// cache holds at least one full block, no full redeemable disk of that size exists, and the
+// currently-matching tier's own unit-buying autobuyer is active AND Smart. Non-Smart tiers (or
+// Smart tiers while a matching disk is still full) leave cache for manual release only. Releases
+// the smallest eligible size per call — same cadence as tickDiskAutoRedeem. Called from every
+// branch of tickGame via tickStorage, frozen or not.
+export const tickDiskAutoReleaseCache = state => {
+  const buildingSize = state.intro?.diskBuild?.size
+  const eligibleSize = Object.keys(state.intro.diskCache ?? {})
+    .map(Number)
+    .filter(size => size !== buildingSize)
+    .filter(size => isDiskCacheBlockAutoReleaseEligible(state, size))
+    .sort((a, b) => a - b)[0]
+  if (eligibleSize === undefined) return state
+  return releaseDiskCacheBlock(eligibleSize)(state)
 }
 
 // --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
