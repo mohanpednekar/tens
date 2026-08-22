@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
 - **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
   label only (no unbounded-unlock hint or next-PP detail).
+- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
+  from the global corner overlay and Settings header.
 
 ### Added
 - **Era ascension UI** (#411): Settings → Era ascension shows Eras/Eons, eligibility, and a
