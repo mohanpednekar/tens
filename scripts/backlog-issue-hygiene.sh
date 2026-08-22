@@ -119,6 +119,10 @@ close_if_open 347 "**Shipped.** Shared bottom \`AppNav\` (Foundry → Boosters �
 
 # --- Epic #321 compute chain (close sub-issues + epic) ---
 
+close_if_open 322 "**Shipped.** Reserve-slot timed merge system (engine) + ComputePage two-row UI landed on \`main\`."
+
+close_if_open 323 "**Shipped.** Bandwidth ×2 claims fundable by sacrificing compute tokens when Invest bit cost exceeds Memory capacity."
+
 close_if_open 324 "**Shipped.** Sacrifice once Compute is unlocked wipes all compute tokens + merge timers, rolls back compute-funded Bandwidth only (\`rollbackComputeFundedBandwidth\` / \`eraseAllComputeTokens\`), and keeps \`autoMerge*\` unlock flags permanent. Covered in \`engine.test.js\`."
 
 close_if_open 367 "**Shipped.** Nine sequential one-time \`upgradeComputeMergeDuration\` sacrifices (10 of each input tier) permanently halve that boundary's step multiplier (\`COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED\`). Engine + tests landed on \`main\`."
