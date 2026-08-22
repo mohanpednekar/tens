@@ -11,10 +11,10 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
-`AppNav` (Foundry → Compute → Factory → Guide → More) — not a router (see "Architecture" below):
+`AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture" below):
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
-`ComputePage` (once revealed), plus `MilestonesPage`/`SettingsPage` via AppNav → More.
+`ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
 `StoragePage` is not an AppNav destination — Disks live under Foundry as Memory | Disks.
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
 Foundry gate; only Factory stays progress-gated.
@@ -379,7 +379,7 @@ src/
                                current-compatible game state (or failure); runs on every load; see
                                DESIGN_HISTORY.md "Save persistence".
   components/
-    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Factory → Guide → More
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Boosters → Compute → Factory → Guide → More
                                (progression order); Factory omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
@@ -419,8 +419,11 @@ src/
     StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
                                Build stays on Foundry Memory tab. File kept as a thin reusable
                                wrapper — not a top-level AppNav destination
-    ComputePage/index.jsx   ← Compute's dedicated screen (merge chain + Boost). Reached via AppNav
-                               once revealed; takes `{ game }`
+    ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
+                               once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
+                               boosting matching Factory tiers. Reached via AppNav once
+                               `isComputeFlopsPageRevealed` (100 PP); page id `'compute'`. Takes `{ game }`
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Second-
@@ -453,10 +456,10 @@ src/
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
                                <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<ComputePage/>/
-                               <MilestonesPage/>/<SettingsPage/> via a local `page` useState
-                               (`'game'`/`'info'`/`'foundry'`/`'compute'`/`'milestones'`/`'settings'`,
+                               <ComputeFlopsPage/>/<MilestonesPage/>/<SettingsPage/> via a local `page` useState
+                               (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`,
                                default `'game'`) — not a routing library — plus a shared fixed bottom
-                               `AppNav` (Foundry → Compute → Factory → Guide → More) and `AppMenu`
+                               `AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) and `AppMenu`
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
@@ -464,15 +467,15 @@ src/
                                tabs already use. Which screen actually renders is a derived
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
                                (!intro.mainGameUnlocked || page === 'foundry')` check (where
-                               `GATE_EXEMPT_PAGES` = `'info'`/`'compute'`/`'milestones'`/`'settings'`),
+                               `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`),
                                not `page` directly: ByteFoundryPage is both a *mandatory gate*
                                (whenever `intro.mainGameUnlocked` is false — no fresh Kilobytes
                                without tapping through it, see "Economy model" below) and, once
                                unlocked, a *permanent, voluntarily-revisitable screen* reachable at
                                any time via AppNav's Foundry item (`page = 'foundry'`) to review the
                                current cycle's stats — it no longer disappears once passed.
-                               Gate-exempt pages stay reachable during the gate so Guide / Compute
-                               (once capacity reveals it) / More utilities are never yanked away; the
+                               Gate-exempt pages stay reachable during the gate so Guide / Boosters
+                               (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away; the
                                gate picks back up the instant the player navigates to `'game'`
                                (Factory). Since `page` is independent of `intro.mainGameUnlocked`, no
                                syncing effect is needed at all: the gate resolving just reveals
@@ -585,8 +588,8 @@ Strict three-layer separation:
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
    re-validates, UI just mirrors it" posture as every other page here.
-4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game }`. Reached via
-   AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
+4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
+   Reached via AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
    the nine-boundary merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud →
    Datacenter → Supercomputer → Megacomputer — see "Economy model" below and issues #280/#316/#321)
    lives, behind its own later, one-time `intro.computeMergePageUnlocked` reveal nested inside this
@@ -626,9 +629,18 @@ Strict three-layer separation:
    a Megacomputer has any use at all. Cores' own row 1 also carries a small badge for the separate,
    unrelated Memory → Core auto-claim unlock control — its manual counterpart (Claim Core) still
    lives on ByteFoundryPage instead — see "Economy model" below.
+4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
+   `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
+   `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
+   with PP on the same 10³ base ladder as Factory tiers (1,000 – 10³⁰ PP). Per-unit price scales on
+   every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
+   costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
+   matching Factory tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
+   10⁹Q**. Owned counts permanent across Prestige; per-cycle boost resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
+   "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
@@ -664,7 +676,10 @@ every real Prestige cycle after that — must pass through before the main game 
 onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
 into a permanent, passively-producing Byte generator, then grows via Sacrifice (10x capacity) and
 Invest (double production) on independent cost ladders, plus — once far enough along — Disks
-(`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`). Five recurring "upgrade"
+(`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
+**PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
+KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Factory tier;
+owned counts persist across Prestige, cumulative boost resets each cycle. Five recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
 Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
@@ -821,7 +836,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1392 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1404 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
@@ -833,6 +848,7 @@ already cover the genuinely useful items on that checklist.
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
+  `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics.
 
 ### End-to-end testing
 

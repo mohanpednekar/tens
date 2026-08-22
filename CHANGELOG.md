@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Compute (Flops) screen** — new PP-funded screen (nav **Compute**, page id `'compute'`) with ten tiers **KFlops → QFlops** (base costs **1,000 – 10³⁰ PP** on the same 10³ ladder as Factory tiers; per-unit price scales every purchase on the triangular power-of-ten epoch). Reveals at **100 PP**; first purchase needs **1,000 PP**. Each owned unit adds **0.01%/s** (linear in owned count) to the matching Factory tier; cumulative boost displays as **Flops** at the top and applies to production. Owned units persist across Prestige; per-cycle boost resets.
+- Foundry **Boosters** screen (formerly nav **Compute**) now uses page id `'boosters'` and label **Boosters** so the new Compute screen can take the Compute name.
 - **Incompatible save handling**: on load, saves that predate the current schema (legacy `resources.Ones`,
   `intro.completed`, missing `intro` with tier progress, legacy tier ids, boolean autobuyers, etc.) are
   cleared automatically and a blocking **Save not compatible** notice offers a single **Start fresh**
@@ -22,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
 
 ### Changed
+- **Compute (Flops) cumulative total** — hero displays **E = k + 10M + 100G + 1000T + … + 10⁹Q**
+  (each tier's cumulative boost weighted by 10<sup>n</sup>); production multipliers stay unweighted.
+- **Compute (Flops) costs** — per-unit PP price now rises after every purchase on the triangular
+  power-of-ten epoch (same formula as Factory tiers via `getTierCost`, but one epoch step per buy
+  instead of every 8-purchase level block).
 - **Save migration layout**: the game offloads every load to `src/save-migration/`
   (`adaptSaveForCurrentSchema` → current-compatible state or failure); `storage.js` only persists and
   mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +

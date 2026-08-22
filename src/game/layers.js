@@ -535,3 +535,30 @@ export const LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1
 // gives that first action (and any other case the percentage still rounds to 0) a real minimum of
 // 1 XP instead.
 export const LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1
+
+// --- PP Compute (Flops) screen — see docs/ECONOMY_REFERENCE.md "PP Compute (Flops)" ---
+// Revealed once spendable PP balance first reaches COMPUTE_FLOPS_REVEAL_PP; first tier costs
+// COMPUTE_FLOPS_FIRST_TIER_COST_PP so the screen is visible but unusable until then.
+export const COMPUTE_FLOPS_REVEAL_PP = 100
+export const COMPUTE_FLOPS_FIRST_TIER_COST_PP = 1E3
+export const COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30
+// Each owned unit of a Flops tier adds this fraction per real second to that tier's cumulative
+// boost on the matching main-game tier (0.01% = 0.0001). Production uses (1 + cumulativeBoost).
+// The hero total E = k + 10M + 100G + … + 10^9Q weights each tier's cumulativeBoost by 10^index.
+export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
+// Ten Flops tiers (KFlops → QFlops), 1:1 with main-game tiers. Each tier's base PP cost matches
+// TIER_DEFINITIONS' baseCost ladder (1000 PP … 10^30 PP); per-unit price then scales on every
+// purchase via the same triangular 10-power epoch as Factory tiers (getCostEpochExponent), not
+// Factory's 8-purchase level blocks.
+export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
+  { id: 'flop01', name: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
+  { id: 'flop02', name: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },
+  { id: 'flop03', name: 'GFlops', symbol: 'GF', baseCostPP: 1E9,  boostsTierId: 'tier03' },
+  { id: 'flop04', name: 'TFlops', symbol: 'TF', baseCostPP: 1E12, boostsTierId: 'tier04' },
+  { id: 'flop05', name: 'PFlops', symbol: 'PF', baseCostPP: 1E15, boostsTierId: 'tier05' },
+  { id: 'flop06', name: 'EFlops', symbol: 'EF', baseCostPP: 1E18, boostsTierId: 'tier06' },
+  { id: 'flop07', name: 'ZFlops', symbol: 'ZF', baseCostPP: 1E21, boostsTierId: 'tier07' },
+  { id: 'flop08', name: 'YFlops', symbol: 'YF', baseCostPP: 1E24, boostsTierId: 'tier08' },
+  { id: 'flop09', name: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
+  { id: 'flop10', name: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
+]
