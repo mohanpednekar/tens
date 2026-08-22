@@ -908,7 +908,7 @@ Error generating stack: `+e.message+`
 `,bd=N.div`
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: ${e=>e.theme.space.sm};
 `,xd=Zn`
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -920,12 +920,12 @@ Error generating stack: `+e.message+`
     'details details';
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  column-gap: 0.5rem;
-  row-gap: 0.3rem;
-  padding: 0.4rem 0.7rem;
+  column-gap: ${e=>e.theme.space.sm};
+  row-gap: ${e=>e.theme.space.xs};
+  padding: ${e=>e.theme.space.sm} ${e=>e.theme.space.md};
   border-left: 3px solid ${e=>e.$accent};
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color ${e=>e.theme.motion.duration.base} ${e=>e.theme.motion.easing.standard};
   animation: ${e=>e.$animateReveal?Wn`${xd} 0.4s ease-out`:`none`};
 
   &:hover {
@@ -939,8 +939,8 @@ Error generating stack: `+e.message+`
 
   @media (max-width: 40rem) {
     /* Same areas as desktop; equal halves keep the two buttons matched. */
-    column-gap: 0.35rem;
-    padding: 0.4rem 0.55rem;
+    column-gap: ${e=>e.theme.space.xs};
+    padding: ${e=>e.theme.space.sm} ${e=>e.theme.space.sm};
   }
 `,Cd=N(Nl)`
   border-color: #0e7490;
@@ -1125,7 +1125,7 @@ Error generating stack: `+e.message+`
   margin-top: calc(-0.85rem - 1px);
 `,Ud=N.div`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${e=>e.theme.space.sm};
   cursor: pointer;
   display: flex;
   grid-area: name;
@@ -1134,10 +1134,14 @@ Error generating stack: `+e.message+`
 `,Wd=N.div`
   grid-area: details;
   font-size: ${e=>e.theme.type.scale.xs.size};
+  line-height: ${e=>e.theme.type.scale.xs.lineHeight};
+  margin-top: ${e=>e.theme.space.xs};
+  padding-top: ${e=>e.theme.space.xs};
+  border-top: 1px solid ${e=>e.theme.color.border};
 
   ul {
     color: ${e=>e.theme.color.textMuted};
-    margin: 0.3rem 0 0;
+    margin: ${e=>e.theme.space.xs} 0 0;
     padding-left: 1.1rem;
   }
 
@@ -1201,15 +1205,18 @@ Error generating stack: `+e.message+`
   margin: 0;
 `,Xd={burst:`Burst`,standard:`Standard`,sustain:`Sustain`},Zd=N.h3`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${e=>e.theme.space.sm};
   display: flex;
+  font-family: ${e=>e.theme.font.display};
   font-size: ${e=>e.theme.type.scale.lg.size};
+  line-height: ${e=>e.theme.type.scale.lg.lineHeight};
   font-weight: 700;
   margin: 0;
   min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: ${e=>e.theme.type.scale.md.size};
+    line-height: ${e=>e.theme.type.scale.md.lineHeight};
   }
 `,Qd=N.span`
   flex-shrink: 0;
@@ -1233,33 +1240,41 @@ Error generating stack: `+e.message+`
   p {
     margin-top: 0.3rem;
   }
-`,ef=e=>{e.target.closest(`summary`)||(e.currentTarget.open=!1)},tf=N(Yd).attrs({as:`span`})`
+`,ef=e=>{e.target.closest(`summary`)||(e.currentTarget.open=!1)},tf=N.span`
   color: ${e=>e.theme.color.textMuted};
   flex-shrink: 0;
   font-size: ${e=>e.theme.type.scale.sm.size};
+  line-height: ${e=>e.theme.type.scale.sm.lineHeight};
   font-weight: 400;
+  margin: 0;
   margin-left: auto;
   text-align: right;
   ${yd}
 
   @media (max-width: 40rem) {
     font-size: ${e=>e.theme.type.scale.xs.size};
+    line-height: ${e=>e.theme.type.scale.xs.lineHeight};
   }
-`,nf=N(Yd)`
+`,nf=N.span`
   grid-area: production;
-  color: ${e=>e.theme.color.textMuted};
+  color: ${e=>e.theme.color.text};
   font-size: ${e=>e.theme.type.scale.sm.size};
+  line-height: ${e=>e.theme.type.scale.sm.lineHeight};
+  font-weight: 500;
+  margin: 0;
   text-align: right;
   ${yd}
 
   @media (max-width: 40rem) {
     font-size: ${e=>e.theme.type.scale.xs.size};
+    line-height: ${e=>e.theme.type.scale.xs.lineHeight};
   }
 `,rf=N(U)`
   grid-area: buy;
   width: 100%;
   font-size: ${e=>e.theme.type.scale.sm.size};
   font-weight: 700;
+  margin-top: ${e=>e.theme.space.xs};
   padding: 0.4em 0.45em;
   ${yd}
 
@@ -1281,6 +1296,7 @@ Error generating stack: `+e.message+`
   grid-area: upgrade;
   width: 100%;
   font-size: ${e=>e.theme.type.scale.sm.size};
+  margin-top: ${e=>e.theme.space.xs};
   padding: 0.4em 0.45em;
   ${yd}
 
