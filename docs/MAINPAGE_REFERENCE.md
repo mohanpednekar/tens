@@ -832,7 +832,8 @@ them (booleans, not counts — nothing to show numeric progress toward):
 2. **"Go Googol"** (`aria-label="Go Googol chapter"`) — ✅ once `state.prestige.count > 0`. The row this
    whole visibility fix was for — genuinely observable as 🔒 now.
 3. **"Open Compute"** (`aria-label="Open Compute chapter"`) — ✅ once `state.computeFlops.pageUnlocked`
-   latches true (first time unspent PP reaches `COMPUTE_FLOPS_REVEAL_PP`, 100).
+   latches true (first time unspent PP reaches `COMPUTE_FLOPS_REVEAL_PP`, 100 — the **Compute** nav
+   item, formerly the Flops screen; distinct from **Boosters**, the merge-chain / Compute Boost page).
 4. **"Go Unbounded"** (`aria-label="Go Unbounded chapter"`) — ✅ once `isUnboundedPrestigeUnlocked(state)`
    (`prestige.unboundedUnlocked` latch — set at `PRESTIGE_UNBOUNDED_MIN_COUNT` (100) prestiges, carried
    through Era ascension).
@@ -844,8 +845,8 @@ new `engine.js` logic backs this category — it reads `state.intro.mainGameUnlo
 `isUnboundedPrestigeUnlocked(state)`, `state.computeFlops.pageUnlocked`, and `state.era.count`.
 
 Below Chapters, up to three more categories — tier autobuyer unlocks and tier tickspeed autobuyers
-(both gated on `!isFirstRun`), plus **Flops Autobuyer Unlocks** once `state.computeFlops.pageUnlocked`
-(revealed at 100 PP). The Flops category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
+(both gated on `!isFirstRun`), plus **Compute Autobuyer Unlocks** once `state.computeFlops.pageUnlocked`
+(revealed at 100 PP — nav **Compute**, the PP Flops tiers screen). The Compute autobuyer category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
 `getFlopsAutobuyerUnlockEra` / `state.computeFlopsAutobuyers` — green `✅ Era {N}` once unlocked,
 dimmed `🔒 Era {N}` otherwise, with the same `VisuallyHidden role="progressbar"` shape as the tier
 tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Factory tiers via `getAutobuyerUnlockMilestone`/

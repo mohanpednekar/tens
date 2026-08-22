@@ -4050,7 +4050,7 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
-test('Flops autobuyer milestones list Era unlocks once Compute is revealed', async () => {
+test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -4064,7 +4064,7 @@ test('Flops autobuyer milestones list Era unlocks once Compute is revealed', asy
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^flops autobuyer unlock milestones category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^compute autobuyer unlock milestones category$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^kflops autobuyer unlock milestone$/i)).toHaveTextContent('✅ Era 1')
   expect(screen.getByLabelText(/^mflops autobuyer unlock milestone$/i)).toHaveTextContent('🔒 Era 2')
 })

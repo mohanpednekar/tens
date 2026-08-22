@@ -203,8 +203,8 @@ const MilestonesPage = ({ game }) => {
             </Category>
 
             {state.computeFlops?.pageUnlocked && (
-              <Category aria-label="flops autobuyer unlock milestones category">
-                <CategoryHeading>Flops Autobuyer Unlocks</CategoryHeading>
+              <Category aria-label="compute autobuyer unlock milestones category">
+                <CategoryHeading>Compute Autobuyer Unlocks</CategoryHeading>
                 {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
                   const milestone = getFlopsAutobuyerUnlockEra(flopTier.id)
                   const reached = (state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null
