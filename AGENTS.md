@@ -8,12 +8,12 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Compute → Ladder → Guide → More**. Storage
-is under Foundry as **Memory | Disks** (not its own AppNav item). Ladder uses **Ladder | Upgrades**
+shared bottom `AppNav` in progression order: **Foundry → Compute → Factory → Guide → More**. Storage
+is under Foundry as **Memory | Disks** (not its own AppNav item). Factory uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
-highs; Capacity stays manual; Ladder + Prestige kept) live under Settings → Danger zone. No backend
+highs; Capacity stays manual; Factory + Prestige kept) live under Settings → Danger zone. No backend
 — state
 lives in React and persists to `localStorage`.
 
@@ -65,7 +65,7 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Ladder → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
@@ -92,10 +92,10 @@ localStorage persistence), called once in `App.jsx` and shared by every page via
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
 state); `StoragePage`/`ComputePage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
 switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Compute →
-Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
+Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Ladder
+below). Storage is a Foundry second-level tab (Memory | Disks), not gate-exempt on its own. Factory
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 

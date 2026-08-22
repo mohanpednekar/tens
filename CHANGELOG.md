@@ -8,12 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- **Ladder screen** (formerly **Tiers**): AppNav label / accessible name and the MainPage
-  header now say **Ladder** instead of the game name “Tens” / nav “Tiers”, so the destination
-  isn’t confused with Compute’s entity tiers (or other “tier” language). Cache-transfer and
-  Settings danger-zone copy follow the same name.
+- **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
+  **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
+  game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings
+  danger-zone copy use **Factory**. Peer tabs stay **Ladder | Upgrades**.
+
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
-  dedicated vertical space on Ladder). Settings / Guide may still mention version in page body.
+  dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
   (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
@@ -23,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (e.g. `1 Kb`), Byte-scale on disk circles (e.g. `1 KB`). No external array header, no
   `"Cache"` / `"Disks"` row titles, and no under-strip redeem ActionHint (green/blue fill +
   `title`/`aria` carry redeem state). Mid-build status (centered):
-  `Rebuilding 1 KB x 6 array - Ready in 6s`. Instructional copy (tap cache → Ladder Bits)
+  `Rebuilding 1 KB x 6 array - Ready in 6s`. Instructional copy (tap cache → Factory Bits)
   stays in `title`/`aria`.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array

@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Ladder / Foundry / Storage / Compute / Guide) — pages
+`App.jsx`'s shared `components/AppNav` (Factory / Foundry / Storage / Compute / Guide) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
 true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
@@ -22,7 +22,7 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
-omits Ladder during the gate so there is still no escape hatch via the production screen
+omits Factory during the gate so there is still no escape hatch via the production screen
 (Guide and More stay reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
@@ -275,8 +275,8 @@ render:
   independently **releasable** (`$releasable`, accent border, clickable) once
   `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and** some tier's
   current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
-  `"transfer <size> cache block N to Ladder Bits"` when releasable, else the plain
-  `"<size> cache block N"`; `title` names the manual-only Ladder Bits transfer once releasable;
+  `"transfer <size> cache block N to Factory Bits"` when releasable, else the plain
+  `"<size> cache block N"`; `title` names the manual-only Factory Bits transfer once releasable;
   clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
   `resources.base` (Bits) — Cache never auto-transfers.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
@@ -573,12 +573,12 @@ not at the bottom"):
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Page title.** The MainPage header is `<h1>Ladder</h1>` (the screen name — not the game name
-  “Tens”). Top-level destinations (Ladder / Foundry / Storage / Compute / Guide) live in
+- **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
+  “Tens”). Top-level destinations (Factory / Foundry / Storage / Compute / Guide) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Version display.** App version (`v{version}`, e.g. `v0.5.0`) is a fixed corner overlay in
   `App.jsx` (`VersionBadge`: `position: fixed`, `pointer-events: none`, `aria-hidden`, above the
-  nav bar via `APP_NAV_BOTTOM_PAD`) — no header row / dedicated vertical real estate on Ladder.
+  nav bar via `APP_NAV_BOTTOM_PAD`) — no header row / dedicated vertical real estate on Factory.
   Sourced from `package.json`'s `"version"` field via a build-time JSON import
   (`import { version } from '../package.json'` in `App.jsx`) — the single source of truth; no
   separate constant duplicates it.
