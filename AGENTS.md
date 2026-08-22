@@ -78,7 +78,7 @@ src/
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More
-  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
+  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle + ThemeToggle
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
 vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
@@ -102,8 +102,8 @@ main game. Once unlocked, Foundry is just another AppNav destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
-produces the tier below it; `tier01` is the special case where cost and production resource are both
-the base currency. Bytes are **not** a purchasable tier — the ladder starts at Kilobytes; a fresh
+produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`), not
+Bits. Bytes are **not** a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
 **Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
 or tickspeed mechanics here** — they're intricate and have changed shape multiple times (see

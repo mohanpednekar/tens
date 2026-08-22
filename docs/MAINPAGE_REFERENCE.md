@@ -520,9 +520,9 @@ not at the bottom"):
   role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
-  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
+  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
-  migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
+  migrating those other regions out of turn (tier rows in #138; prestige surfaces below in #139).
   `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
   surface measures roughly 3.6:1 — below the 4.5:1 AA floor for normal text — but a `styled.b` renders
   bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also >=14pt (18.66px);
@@ -952,8 +952,8 @@ explanation, so nothing about the accessible name/description regressed.
 by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
 colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
-`ul`, `OwnedText`/`ProductionText` (each overriding the color `MutedText` — still hardcoded, #139
-scope — would otherwise pass down), and the
+`ul`, `OwnedText`/`ProductionText` (token-native spans — `textMuted` for owned, `text`/`font-weight: 500`
+for production), and the
 Buy/tickspeed/XP-consume buttons all migrated in the same pass; the PP Upgrades page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
@@ -987,16 +987,20 @@ callback, `registerTierRowRef`) with a single shared `IntersectionObserver` in `
 auto-collapses that tier's Details disclosure the instant the row scrolls fully out of the
 viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
-**Tier row type scale.** `TierName`, `OwnedText`/`ProductionText`, `BuyButton`/
-`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
-(`theme/tokens.js`) rather than hand-tuned `em` values — `TierName` steps from `lg` (desktop) to `md`
-(below `40rem`), the muted production/owned text steps from `sm` to `xs`, the two
-buttons from `sm` to `xs`, and the details disclosure body sits at `xs`. This gives the row two clear
-type steps (name, then everything else) instead of a single flat size, and `BuyButton` additionally
+**Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
+(below `40rem`); `OwnedText`/`ProductionText`, `BuyButton`/
+`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size`/`line-height` from
+`theme.type.scale`
+(`theme/tokens.js`) rather than hand-tuned `em` values — owned count stays at `textMuted`/`sm→xs`,
+production reads stronger at `text`/`font-weight: 500`, the two
+buttons from `sm` to `xs`, and the details disclosure body sits at `xs` with a `border-top` divider
+when expanded. This gives the row three clear type/weight steps (name, production, owned/metrics)
+instead of a single flat size, and `BuyButton` additionally
 sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
 already the rightmost, affordability-fill-colored control — reads as the visually heavier of the two,
-per its "stays the visually dominant control" requirement. Layout (grid areas/columns, gaps, padding)
-is unchanged; only these components' own `font-size`/`font-weight` moved.
+per its "stays the visually dominant control" requirement. Gaps/padding resolve from `theme.space`;
+the upgrade/Buy row separates from the stats line via `margin-top`. Layout (grid areas/columns) is
+unchanged; only typography, spacing, and the details divider moved.
 
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
@@ -1104,6 +1108,15 @@ stacks in `StatCard`'s own flex-column, centered via `align-items`/`text-align: 
 Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's
 `$progress` fill, then an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before
 `dismissOfflineProgress` removes it.
+
+**Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
+`aria-modal="true"` `aria-label="Prestige required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
+token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
+`PrestigeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPrestigeBar`
+(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PrestigeMutedText` + a
+`variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
+full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /
+`showTopPrestigeBar`) are unchanged.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.

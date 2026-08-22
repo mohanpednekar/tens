@@ -655,7 +655,7 @@ Strict three-layer separation:
    "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Tickspeed, Speed Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
@@ -678,8 +678,11 @@ Strict three-layer separation:
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). Every tier is bought
 directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces
-the tier immediately below it, cascading production down to the base currency; `tier01` is the special
-case where cost and production resource are both the base currency. Reaching Money ≥ `PRESTIGE_THRESHOLD`
+the tier immediately below it, cascading production down the ladder; `tier01` (Kilobytes) is the special
+case where cost is still Bits but production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`,
+displayed as whole `B`) rather than Bits. **Clock Speed** (the global tickspeed multiplier on MainPage,
+formerly "Tickspeed") is funded from that Bytes pool — initial activation costs **10 Bytes** — not Bits.
+Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
 the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` is true (permanent
 `prestige.unboundedUnlocked` latch set the first time `prestige.count` reaches
@@ -807,8 +810,11 @@ All component styling resolves to **semantic design tokens** defined once in `sr
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
 on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
 at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
-bundled via `theme/fonts.js` — no runtime CDN fetch. `mode` is currently a plain prop defaulting to
-`dark` on `<ThemeProvider>`; system-preference detection + a persisted toggle is deferred to #140.
+bundled via `theme/fonts.js` — no runtime CDN fetch. `App.jsx` drives `<ThemeProvider mode>` from a
+persisted `tens_theme_preference` in `localStorage` when set, otherwise from
+`prefers-color-scheme: light` (OS changes apply only until the player toggles manually). Reset /
+`clearGameState` do not clear the theme preference — it is UI metadata, not game state. A fixed
+`ThemeToggle` button (top-right) switches modes.
 
 The full per-file token/font/GlobalStyle/ThemeProvider breakdown lives in `docs/THEMING_REFERENCE.md`.
 Read it before touching `src/theme/*`.
@@ -871,12 +877,13 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1465 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1474 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
-  (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
+  (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
+  tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). Saves
-  must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
+  must use the current schema (`resources.base`, `resources.bytes`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
   `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills in
   missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
   discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 2`

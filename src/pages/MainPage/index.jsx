@@ -2,8 +2,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from '
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -48,7 +48,7 @@ const Header = styled.header`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: ${props => props.theme.space.sm};
 `
 
 // One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
@@ -90,12 +90,12 @@ const TierLine = styled(StatCard)`
     'details details';
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  column-gap: 0.5rem;
-  row-gap: 0.3rem;
-  padding: 0.4rem 0.7rem;
+  column-gap: ${props => props.theme.space.sm};
+  row-gap: ${props => props.theme.space.xs};
+  padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
   &:hover {
@@ -109,8 +109,8 @@ const TierLine = styled(StatCard)`
 
   @media (max-width: 40rem) {
     /* Same areas as desktop; equal halves keep the two buttons matched. */
-    column-gap: 0.35rem;
-    padding: 0.4rem 0.55rem;
+    column-gap: ${props => props.theme.space.xs};
+    padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm};
   }
 `
 
@@ -422,7 +422,7 @@ const BalancesSentinel = styled.div`
 // ARIA only overrides an element's OWN implicit role, never a nested descendant's.
 const TierNameTrigger = styled.div`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${props => props.theme.space.sm};
   cursor: pointer;
   display: flex;
   grid-area: name;
@@ -436,10 +436,14 @@ const TierNameTrigger = styled.div`
 const TierDetailsContent = styled.div`
   grid-area: details;
   font-size: ${props => props.theme.type.scale.xs.size};
+  line-height: ${props => props.theme.type.scale.xs.lineHeight};
+  margin-top: ${props => props.theme.space.xs};
+  padding-top: ${props => props.theme.space.xs};
+  border-top: 1px solid ${props => props.theme.color.border};
 
   ul {
     color: ${props => props.theme.color.textMuted};
-    margin: 0.3rem 0 0;
+    margin: ${props => props.theme.space.xs} 0 0;
     padding-left: 1.1rem;
   }
 
@@ -454,13 +458,15 @@ const TierDetailsContent = styled.div`
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
   align-items: center;
-  background: rgba(0, 0, 0, 0.96);
+  background: rgba(0, 0, 0, 0.92);
   bottom: 0;
   display: flex;
   justify-content: center;
   left: 0;
-  padding: calc(2rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
-    calc(2rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
+  padding: calc(${props => props.theme.space['2xl']} + env(safe-area-inset-top))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-right))
+    calc(${props => props.theme.space['2xl']} + env(safe-area-inset-bottom))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -468,20 +474,30 @@ const FullScreenOverlay = styled.div`
 `
 
 const FullScreenCard = styled.div`
-  color: white;
+  background: ${props => props.theme.color.surfaceRaised};
+  border: 1px solid ${props => props.theme.color.borderStrong};
+  border-radius: ${props => props.theme.radius.lg};
+  box-shadow: ${props => props.theme.shadow.md};
+  color: ${props => props.theme.color.text};
   max-width: 28rem;
+  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg};
   text-align: center;
   width: 100%;
 
   h2 {
-    color: #fbbf24;
-    font-size: 1.6rem;
-    margin: 0 0 0.75rem;
+    color: ${props => props.theme.color.warn};
+    font-family: ${props => props.theme.font.display};
+    font-size: ${props => props.theme.type.scale.xl.size};
+    font-weight: 700;
+    line-height: ${props => props.theme.type.scale.xl.lineHeight};
+    margin: 0 0 ${props => props.theme.space.md};
   }
 
   ul {
-    color: #d4d4d4;
-    margin: 1rem 0 1.5rem;
+    color: ${props => props.theme.color.textMuted};
+    font-size: ${props => props.theme.type.scale.sm.size};
+    line-height: ${props => props.theme.type.scale.sm.lineHeight};
+    margin: ${props => props.theme.space.lg} 0 ${props => props.theme.space.xl};
     padding-left: 1.25rem;
     text-align: left;
   }
@@ -496,15 +512,19 @@ const FullScreenCard = styled.div`
 // does, so a persistent-but-unobtrusive reminder is enough.
 const TopPrestigeBar = styled.div`
   align-items: center;
-  background: #1c1206;
-  border-bottom: 2px solid #854d0e;
+  background: ${props => props.theme.color.surfaceRaised};
+  border-bottom: 2px solid ${props => props.theme.color.warn};
+  box-shadow: ${props => props.theme.shadow.sm};
+  color: ${props => props.theme.color.text};
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: ${props => props.theme.space.md};
   justify-content: center;
   left: 0;
-  padding: calc(0.6rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right)) 0.6rem
-    calc(1rem + env(safe-area-inset-left));
+  padding: calc(${props => props.theme.space.sm} + env(safe-area-inset-top))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-right))
+    ${props => props.theme.space.sm}
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -518,6 +538,15 @@ const TopPrestigeBar = styled.div`
 // hardcoded single-line height would silently let the taller bar overlap the Header below it.
 const TopPrestigeBarSpacer = styled.div`
   height: ${props => props.$height}px;
+`
+
+// Prestige-surface copy only — forked from the app-wide MutedText (still hardcoded elsewhere) so
+// this region's AA audit stays meaningful without migrating TierList/SpeedUpCard in #138's scope.
+const PrestigeMutedText = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  margin: 0;
 `
 
 const MutedText = styled.p`
@@ -538,15 +567,18 @@ const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'S
 // the PP Upgrades page.
 const TierName = styled.h3`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${props => props.theme.space.sm};
   display: flex;
+  font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.lg.size};
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
   margin: 0;
   min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.md.size};
+    line-height: ${props => props.theme.type.scale.md.lineHeight};
   }
 `
 
@@ -596,31 +628,38 @@ const collapseDisclosure = event => {
 
 // Owned count lives on the first line, right-aligned to the row center (pushed to the end of
 // the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
-// in the h3 (nesting would pollute the heading's accessible name). `as="span"` matches
-// VersionText's pattern of avoiding MutedText's default block `<p>`.
-const OwnedText = styled(MutedText).attrs({ as: 'span' })`
+// in the h3 (nesting would pollute the heading's accessible name).
+const OwnedText = styled.span`
   color: ${props => props.theme.color.textMuted};
   flex-shrink: 0;
   font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 400;
+  margin: 0;
   margin-left: auto;
   text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
+    line-height: ${props => props.theme.type.scale.xs.lineHeight};
   }
 `
 
-const ProductionText = styled(MutedText)`
+// Production reads slightly stronger than owned — the live output figure on the stats line.
+const ProductionText = styled.span`
   grid-area: production;
-  color: ${props => props.theme.color.textMuted};
+  color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-weight: 500;
+  margin: 0;
   text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
+    line-height: ${props => props.theme.type.scale.xs.lineHeight};
   }
 `
 
@@ -631,6 +670,7 @@ const BuyButton = styled(Button)`
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 700;
+  margin-top: ${props => props.theme.space.xs};
   padding: 0.4em 0.45em;
   ${gridCell}
 
@@ -672,6 +712,7 @@ const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
+  margin-top: ${props => props.theme.space.xs};
   padding: 0.4em 0.45em;
   ${gridCell}
 
@@ -782,7 +823,9 @@ const PauseToggleButton = styled(Button)`
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
-    : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
+    : resourceId === BYTES_ID
+      ? formatBytes(amount)
+      : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
 // Live "how close am I" fill percent for a progress meter (PP/tickspeed/Speed Up buttons, XP
 // consumption) — how much of `denominator` the current `numerator` already covers, capped at 100.
@@ -1081,11 +1124,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // frequency by another getGlobalTickspeedProductionMultiplier's own regular step (1% by default,
   // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
-  // automation upgrade on this page, it's Money-funded (not PP) and lives on the Game view instead
+  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Game view instead
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
-  // purchasable once at least 1 of the second tier is owned, so a player can't accidentally spend
-  // their only Money on it before they have a second income source (tier01's own cost/production
-  // resource is Money itself). The level itself resets to not-yet-bought on both Prestige and Speed
+  // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
+  // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
   // Up (see prestigeGame/speedUpGame in engine.js), same as tier02's owned count, so re-unlocking
   // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
   // reset by Speed Up — its boost to the per-level step survives across a re-unlock within the
@@ -1095,8 +1137,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
-  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && state.resources[MONEY_ID] >= globalTickspeedCost
-  const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID], globalTickspeedCost)
+  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && (state.resources[BYTES_ID] ?? 0) >= globalTickspeedCost
+  const globalTickspeedProgressPercent = progressPercent(state.resources[BYTES_ID] ?? 0, globalTickspeedCost)
   // Progressive disclosure, same pattern as speedUpEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
@@ -1166,10 +1208,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
         <FullScreenCard>
           <h2>✦ Prestige Available!</h2>
-          <MutedText>
+          <PrestigeMutedText>
             You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
-          </MutedText>
+          </PrestigeMutedText>
           <ul>
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
@@ -1182,7 +1224,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <Button
             ref={fullScreenPrestigeButtonRef}
             aria-label="Prestige now"
-            color="#fbbf24"
+            variant="prestige"
             onClick={actions.prestige}
             title="Awards Prestige Points and resets your resources"
             type="button"
@@ -1200,10 +1242,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
-            <MutedText>1 Googol Bytes reached — production has stopped.</MutedText>
+            <PrestigeMutedText>1 Googol Bytes reached — production has stopped.</PrestigeMutedText>
             <Button
               aria-label={prestigeAriaLabel}
-              color="#fbbf24"
+              variant="prestige"
               onClick={actions.prestige}
               title="Awards Prestige Points and resets your resources"
               type="button"
@@ -1312,7 +1354,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               )}
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Tickspeed: {isGlobalTickspeedActive
+                  Clock Speed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1320,7 +1362,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `Tickspeed upgrade's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
                     : `not yet claimed (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
                 </li>
               )}
@@ -1379,9 +1421,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {view === 'game' && (<>
 
       {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global tickspeed panel">
+        <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure onClick={collapseDisclosure}>
-            <summary><h2>Tickspeed</h2></summary>
+            <summary><h2>Clock Speed</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
                 Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
@@ -1391,23 +1433,23 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable global tickspeed multiplier for ${formatCurrency(globalTickspeedCost)}`
+                ? `Upgrade Clock Speed for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Clock Speed for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Bits to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
+            title="Spend Bytes to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
             $pulse={canBuyGlobalTickspeed}
           >
             <ButtonIcon>🌐 </ButtonIcon>
-            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatCurrency(globalTickspeedCost)}</ButtonLabel>
+            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Global tickspeed multiplier progress"
+              aria-label="Clock Speed progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1599,7 +1641,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               <ProductionText>
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
-                  : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+                  : tier.producesResourceId === BYTES_ID
+                    ? formatBytes(production)
+                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
               </ProductionText>
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
@@ -1708,16 +1752,16 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                Tickspeed upgrade's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
+                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and raises the Tickspeed upgrade's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            title={`Resets tiers (and Speed Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
