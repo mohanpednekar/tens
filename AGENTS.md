@@ -161,6 +161,9 @@ sections.
 
 ## Issue tracking conventions
 
+- **Maintainer checklist (#62):** pinned at the top of the Issues tab, deliberately **unlabeled** (not
+  a `claude-task` work item — see `CLAUDE.md`'s Issue tracking section). Do not add labels or unpin
+  without understanding why.
 - `claude-task`-labeled issues are the work backlog for the scheduled automation (see `CLAUDE.md`'s
   Orchestration model / `docs/AUTOMATION.md`). Order: `priority:high` first, then normal (unlabeled)
   issues by lowest issue number, then `priority:low` last (only picked once nothing higher-tier is
