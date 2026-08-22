@@ -1,5 +1,6 @@
 import AppMenu from 'components/AppMenu'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
+import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputePage from 'pages/ComputePage'
 import InfoPage from 'pages/InfoPage'
@@ -143,6 +144,9 @@ function App() {
         onNavigate={navigate}
         open={menuOpen}
       />
+      {game.incompatibleSaveReason ? (
+        <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
+      ) : null}
     </ThemeProvider>
   )
 }

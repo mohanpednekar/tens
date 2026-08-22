@@ -5,9 +5,9 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => {
     window.localStorage.clear()
     // Bytes are no longer a purchasable tier — they're earned via the separate Byte Foundry
-    // pre-game tap screen (see CLAUDE.md's Economy model section). Seed intro.completed so this
+    // pre-game tap screen (see CLAUDE.md's Economy model section). Seed mainGameUnlocked so this
     // spec lands directly on MainPage, same as every other seeded e2e spec.
-    window.localStorage.setItem('tens_game_state', JSON.stringify({ intro: { completed: true } }))
+    window.localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true } }))
   })
   await page.reload()
 })
