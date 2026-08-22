@@ -2234,6 +2234,27 @@ describe('tickDiskWriteCache', () => {
     expect(getDiskWriteCacheMerge(afterFlush, level2Size)).toBeNull()
     expect(afterFlush.intro.disks[level2Size]).toBe(1)
   })
+
+  it('clears write cache on flush without overfilling when read cache already filled the target slot', () => {
+    const flushTotalSeconds = 10
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 0, [level2Size]: 1 },
+      diskWriteCache: {
+        [level2Size]: {
+          sourceSize: FIRST_DISK_SIZE,
+          segmentsCollected: DISK_ARRAY_LADDER_CAP,
+          segmentRemainingSeconds: 0,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 0,
+          flushTotalSeconds,
+        },
+      },
+    })
+    const afterFlush = tickDiskWriteCache(0)(state)
+    expect(getDiskWriteCacheMerge(afterFlush, level2Size)).toBeNull()
+    expect(afterFlush.intro.disks[level2Size]).toBe(1)
+  })
 })
 
 describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {

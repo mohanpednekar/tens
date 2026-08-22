@@ -441,14 +441,15 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    auto-filled again. UI helpers `isDiskAutoRedeemEligible` / `isDiskManualRedeemAvailable` /
    `getRelevantDiskSizesForFoundry` expose Foundry Memory’s DiskArrayRow list: every currently
    matching size plus always the highest shown size (even when unmatched — issue #389), so the
-   incomplete current array stays trackable (Cache → Factory Bits is always manual-only via
-   `releaseDiskCacheBlock`; auto-eligible disks are
+   incomplete current array stays trackable (read cache → Factory Bits via manual
+   `releaseDiskCacheBlock` or Smart auto-release when no matching disk exists; auto-eligible disks are
    shown but not clickable).
 
    `disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` are all **PERMANENT**, carried through
    `prestigeGame` unchanged exactly like the Byte generator itself — a disk already FULL when
    Prestige fires stays full, its contents intact even though Memory itself resets to 0, letting
-   banked-up Disks give a fresh cycle a head start. `diskAutoRedeemedSizes` is the one exception,
+   banked-up Disks give a fresh cycle a head start. `diskWriteCache` resets to `{}` each Prestige
+   (in-flight ladder merges do not survive). `diskAutoRedeemedSizes` is the one exception,
    resetting to `{}` every real Prestige.
 9. **Compute Cores/Nodes** (`intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`,
    all PERMANENT, carried over every real Prestige exactly like the Byte generator/Disks above) — an earlier version of this

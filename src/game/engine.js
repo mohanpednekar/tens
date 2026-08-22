@@ -2739,7 +2739,11 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       continue
     }
 
-    disks = { ...disks, [targetSize]: (disks[targetSize] ?? 0) + 1 }
+    const builtTotalAtTarget = intro.disksBuiltTotal?.[targetSize] ?? 0
+    const fullAtTarget = disks[targetSize] ?? 0
+    if (builtTotalAtTarget > fullAtTarget) {
+      disks = { ...disks, [targetSize]: fullAtTarget + 1 }
+    }
     const { [targetSize]: _removed, ...remainingWriteCache } = diskWriteCache
     diskWriteCache = remainingWriteCache
     changed = true
@@ -2798,7 +2802,9 @@ export const tickDiskAutoFill = state => {
 
   // Pass 2 — instant read-cache → empty disk (all blocks at once) when tier isn't reserving this
   // size for Factory funding — ripple-friendly; write-cache collect frees slots same tick.
+  // Skip sizes with an active write-cache merge so read-cache pour cannot race flush.
   for (const size of sizes) {
+    if (getDiskWriteCacheMerge(state, size)) continue
     const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
     const cached = diskCache[size] ?? 0
     if (!hasEmptyContainer || cached < size) continue
