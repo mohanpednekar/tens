@@ -62,10 +62,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
-    storage.js             ← localStorage save/load/clear + save-schema version stamp,
-                              incompatible-save discard, forward field merge, multi-slot saves +
-                              Supporter unlock (code / dummy checkout). Schema upgrades belong in a
-                              separate migration assistant — game runs latest structure only.
+    save-migration/        ← save-schema migration only; runs on every load via migrateSavePayload
+    storage.js             ← localStorage persistence + mergeState forward-fill (see save-migration/)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
@@ -144,7 +142,7 @@ in the sequence). No other file needs changing.
 ### Path aliases (`vite.config.js`)
 
 `components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`,
-`theme/X` → `src/theme/X`. Use these aliases in imports, not relative paths. Directory imports
+`theme/X` → `src/theme/X`, `save-migration/X` → `src/save-migration/X`. Use these aliases in imports, not relative paths. Directory imports
 resolve to that dir's `index.jsx`/`index.js`.
 
 ## Testing

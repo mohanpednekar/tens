@@ -364,14 +364,14 @@ src/
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
                                Storage cues fold into Foundry)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage save/load/clear + save-schema version stamp (`saveSchemaVersion`),
-                               incompatible-save detection/discard, forward field merge (`mergeState`),
-                               multi-slot saves + Supporter entitlement (unlock code / dummy checkout),
-                               clearSaveSlot / clearAllSaveProgress (never revokes unlock),
-                               plus the separately keyed last-save timestamp used to compute
+    storage.js              ← localStorage save/load/clear, stamps `saveSchemaVersion` on write,
+                               calls `save-migration/` on every load, then forward field merge
+                               (`mergeState`); multi-slot saves + Supporter entitlement (unlock code /
+                               dummy checkout), clearSaveSlot / clearAllSaveProgress (never revokes
+                               unlock), plus the separately keyed last-save timestamp used to compute
                                offline progress (slot 0 keeps legacy `tens_game_state` keys).
-                               Legacy schema transforms live in a future **separate migration assistant**
-                               (not this repo's `src/`) — see `docs/DESIGN_HISTORY.md` "Save persistence".
+    save-migration/         ← save-schema migration only — `migrateSavePayload` runs on every load
+                               before mergeState; version chain lives here (see DESIGN_HISTORY.md).
   components/
     AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Factory → Guide → More
                                (progression order); Factory omits during the Foundry gate
@@ -740,7 +740,7 @@ into `main`, and do not rename it with an agent/session suffix.
 ## Path aliases
 
 `components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`, `theme/X` →
-`src/theme/X`. Use these bare aliases in imports (as the existing code does), not relative paths like
+`src/theme/X`, `save-migration/X` → `src/save-migration/X`. Use these bare aliases in imports (as the existing code does), not relative paths like
 `../../game/engine`. Directory imports resolve to that directory's `index.jsx`/`index.js` (e.g.
 `import { ThemeProvider } from 'theme'` → `src/theme/index.jsx`, same as `pages/MainPage` → its `index.jsx`).
 
@@ -815,15 +815,15 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1389 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1392 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
   purchasable Bytes tier) left behind by prior renames/removals (see `docs/DESIGN_HISTORY.md`). Saves
   must use the current schema (`resources.base`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
-  `storage.js`'s `mergeState` only fills in missing fields from `createInitialGameState()` and does not
-  transform legacy save formats — incompatible payloads are discarded on load and surfaced via
-  `IncompatibleSaveNotice`. `src/theme/contrast.js` (a
+  `save-migration/migrateSavePayload` runs on every load; `storage.js`'s `mergeState` only fills in
+  missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
+  discarded and surfaced via `IncompatibleSaveNotice`. `src/theme/contrast.js` (a
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add the other two files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.

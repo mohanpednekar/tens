@@ -1,4 +1,5 @@
 import { createInitialGameState } from './engine'
+import { migrateSavePayload, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
@@ -295,62 +296,8 @@ export const clearAllSaveProgress = () => {
   return { ok: true, meta }
 }
 
-/** Current on-disk save envelope version — stamped by saveGameState on every write. */
-export const SAVE_SCHEMA_VERSION = 1
-
-const LEGACY_TIER_IDS = new Set([
-  'Tens', 'Thousands', 'Millions', 'Billions', 'Trillions', 'Quadrillions', 'Pentillions',
-  'Hexillions', 'Septillions', 'Octillions', 'Nonillions', 'Decillions',
-])
-
-const TIER_MAP_FIELDS = [
-  'resources', 'owned', 'purchased', 'purchaseLevels', 'purchaseLevelProgress', 'autobuyers',
-  'autobuyersEnabled', 'tickspeedLevels', 'autobuyerAttemptBudgets', 'tierProductionAccumulators',
-  'smartAutobuyer', 'tierTickspeedAutobuyer', 'tierTickspeedAutobuyerEnabled', 'everUnlockedTierIds',
-]
-
-const mapHasLegacyTierId = map =>
-  map && typeof map === 'object' && Object.keys(map).some(k => LEGACY_TIER_IDS.has(k))
-
-/**
- * Returns a short reason code when a parsed save payload predates the current schema and cannot
- * be loaded without the removed migration path — null when compatible (including saves already
- * stamped with SAVE_SCHEMA_VERSION).
- */
-export const getSaveIncompatibilityReason = saved => {
-  if (!saved || typeof saved !== 'object') return null
-  if (saved.saveSchemaVersion === SAVE_SCHEMA_VERSION) return null
-
-  if (saved.resources?.Ones !== undefined) return 'legacy_money_id'
-
-  const intro = saved.intro
-  if (intro === undefined) {
-    const hasTierProgress = TIER_MAP_FIELDS.some(field => {
-      const map = saved[field]
-      return map && typeof map === 'object' && Object.keys(map).length > 0
-    })
-    if (hasTierProgress) return 'missing_intro'
-  } else {
-    if (intro.completed !== undefined && intro.mainGameUnlocked === undefined) return 'legacy_intro_gate'
-    if (
-      intro.storageBanks !== undefined ||
-      intro.storageBanksBuiltTotal !== undefined ||
-      intro.storageAutoRedeemedSizes !== undefined
-    ) return 'legacy_storage_fields'
-  }
-
-  if (saved.prestige?.pp !== undefined && saved.prestige?.xp === undefined) return 'legacy_prestige_xp'
-  if (saved.prestige?.level !== undefined && saved.prestige?.count === undefined) return 'legacy_prestige_count'
-
-  if (saved.autobuyers && Object.values(saved.autobuyers).some(v => v === true || v === false)) {
-    return 'legacy_boolean_autobuyers'
-  }
-  if (saved.autoPrestige === true || saved.autoPrestige === false) return 'legacy_boolean_auto_prestige'
-
-  if (TIER_MAP_FIELDS.some(field => mapHasLegacyTierId(saved[field]))) return 'legacy_tier_ids'
-
-  return null
-}
+/** Re-exported for callers/tests — canonical definitions live in save-migration/. */
+export { SAVE_SCHEMA_VERSION, getSaveIncompatibilityReason } from 'save-migration'
 
 const readActiveSavePayload = () => {
   const slotId = getActiveSlotId()
@@ -363,26 +310,21 @@ const readActiveSavePayload = () => {
   }
 }
 
-/** Clears the active slot when its on-disk payload is incompatible; returns the reason code or null. */
+/** Clears the active slot when migration cannot reach the current schema; returns the reason or null. */
 export const discardIncompatibleActiveSaveIfNeeded = () => {
   const slotId = getActiveSlotId()
   const parsed = readActiveSavePayload()
   if (!parsed) return null
-  const reason = getSaveIncompatibilityReason(parsed)
-  if (!reason) return null
+  const result = migrateSavePayload(parsed)
+  if (result.ok) return null
   removeSlotStorage(slotId)
-  return reason
-}
-
-const stripSaveEnvelope = saved => {
-  const { saveSchemaVersion: _version, ...gameState } = saved
-  return gameState
+  return result.reason
 }
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
 // Merge a saved state with fresh defaults so newly added fields are present on load.
-// Legacy save formats are not transformed — only current-schema saves are supported.
+// Schema transforms run in save-migration/ on every load before this runs.
 const mergeState = saved => {
   const fresh = createInitialGameState()
   const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
@@ -434,8 +376,9 @@ export const loadGameState = () => {
   try {
     const parsed = readActiveSavePayload()
     if (!parsed) return null
-    if (getSaveIncompatibilityReason(parsed)) return null
-    return mergeState(stripSaveEnvelope(parsed))
+    const result = migrateSavePayload(parsed)
+    if (!result.ok) return null
+    return mergeState(result.payload)
   } catch {
     return null
   }

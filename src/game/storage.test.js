@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState } from './engine'
 import { MONEY_ID, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getSaveIncompatibilityReason, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, SAVE_SCHEMA_VERSION, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -120,27 +120,6 @@ describe('saveGameState / loadGameState round-trip', () => {
     const raw = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(raw.saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
     expect(loadGameState().resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
-  })
-})
-
-describe('getSaveIncompatibilityReason', () => {
-  it('accepts a save stamped with the current schema version', () => {
-    expect(getSaveIncompatibilityReason({ saveSchemaVersion: SAVE_SCHEMA_VERSION, resources: { Ones: 5 } }))
-      .toBeNull()
-  })
-
-  it.each([
-    ['legacy_money_id', { resources: { Ones: 1 } }],
-    ['missing_intro', { resources: { base: 1 } }],
-    ['legacy_intro_gate', { intro: { completed: true } }],
-    ['legacy_storage_fields', { intro: { storageBanks: {} } }],
-    ['legacy_prestige_xp', { intro: { mainGameUnlocked: true }, prestige: { pp: 1 } }],
-    ['legacy_prestige_count', { intro: { mainGameUnlocked: true }, prestige: { level: 2 } }],
-    ['legacy_boolean_autobuyers', { intro: { mainGameUnlocked: true }, autobuyers: { tier01: true } }],
-    ['legacy_boolean_auto_prestige', { intro: { mainGameUnlocked: true }, autoPrestige: true }],
-    ['legacy_tier_ids', { intro: { mainGameUnlocked: true }, owned: { Tens: 1 } }],
-  ])('flags %s', (reason, payload) => {
-    expect(getSaveIncompatibilityReason(payload)).toBe(reason)
   })
 })
 

@@ -2263,44 +2263,38 @@ the job, the manual row really is the redundant piece being described.
 
 ## Save persistence
 
-### In-game migration removed; future migrator lives outside the game — 2026-08-22
+### Migration in `src/save-migration/`, runs on every load — 2026-08-22
 
-Through mid-2026, `storage.js` carried a large `migrateState` path that ran on **every** load:
-tier-id remaps (`Tens` → `tier01`, …), `resources.Ones` → `base`, `intro.completed` →
-`mainGameUnlocked`, Storage bank field renames, boolean→numeric autobuyer conversion, purchase-level
-derivation from legacy `purchased` counts, autobuyer-milestone backfill, disk-ladder gap fill, and
-more. That kept old saves playable silently, but it meant the shipped game permanently owned every
-superseded schema the project had ever written — growing complexity, hiding corruption, and making
-“what shape does the game actually run on?” ambiguous.
+Through mid-2026, `storage.js` carried a large `migrateState` path inline on **every** load (tier-id
+remaps, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage bank renames,
+boolean→numeric autobuyers, purchase-level derivation, autobuyer-milestone backfill, disk-ladder gap
+fill, …). That kept old saves playable, but mixed persistence, schema evolution, and game logic in
+one file — hard to reason about and impossible to test migration in isolation.
 
-**Current posture (PR #403 onward).** The game runs on the **latest save structure only**:
+**PR #403 split.** Legacy inline migration was removed. Saves that still carry pre-schema markers
+and have no implemented step yet are **discarded on load** with `IncompatibleSaveNotice` (**Start
+fresh**). Current-schema saves (including unstamped partial saves that already match today's shape)
+load via `mergeState` forward-fill only.
 
-- `saveGameState` stamps `saveSchemaVersion: 1` on every write.
-- `loadGameState` / `mergeState` **forward-fill** missing fields from `createInitialGameState()` for
-  compatible partial saves, but **do not transform** legacy payloads.
-- `getSaveIncompatibilityReason` + `discardIncompatibleActiveSaveIfNeeded` detect pre-schema saves
-  (legacy markers or tier progress without `intro`) and clear the active slot before merge.
-- `IncompatibleSaveNotice` blocks the UI once with a single **Start fresh** acknowledge — the save
-  is already gone; there is no in-game “try to fix it” path.
+**Going forward: dedicated `src/save-migration/` folder.** Schema transforms live **only** there —
+not in `storage.js`, not in `engine.js`, not on pages. **`migrateSavePayload` runs on every game
+load** (called from `storage.js`'s `loadGameState` and `discardIncompatibleActiveSaveIfNeeded`
+before `mergeState`). The game runtime always sees the **latest save structure** after that step;
+persistence (`storage.js`) only reads/writes localStorage, stamps `saveSchemaVersion`, and merges
+missing fields from `createInitialGameState()`.
 
-**Going forward: dedicated migration assistant, separate codebase.** Schema upgrades belong in a
-**standalone migrator** (its own repo or a `tools/save-migrator/` package that is not imported by
-`src/`). That tool’s only job is read old JSON → emit current-schema JSON via an explicit version
-chain (`migrateV0ToV1`, `migrateV1ToV2`, …). The deleted in-game migration logic is the reference
-for what v0→v1 must do; it must not be reintroduced into `storage.js`.
+When the shape changes again:
 
-When the game’s shape changes again:
+1. Bump `SAVE_SCHEMA_VERSION` in `save-migration/constants.js`.
+2. Add `save-migration/steps/migrateVnToVnPlus1.js` and wire it into the version chain in
+   `save-migration/index.js`.
+3. Teach `mergeState` any new defaults — forward-fill only, never legacy transforms.
 
-1. Bump `SAVE_SCHEMA_VERSION` in `storage.js` and teach `mergeState` any new defaults.
-2. Add the corresponding step to the migrator’s chain (not to the game).
-3. Saves with `saveSchemaVersion !== SAVE_SCHEMA_VERSION` are treated as incompatible in-game
-   (discard + notice) unless/until the player runs them through the migrator and re-imports.
+Until a step exists for a legacy marker, migration returns `{ ok: false, reason }` and the slot is
+cleared — same player-visible behavior as today. Restoring v0→v1 means reimplementing the deleted
+`migrateState` logic inside `save-migration/steps/`, not re-inlining it into `storage.js`.
 
-Optional follow-ups (not required for the split itself): Settings export/import of raw JSON so
-players can migrate without DevTools; a link from `IncompatibleSaveNotice` to the migrator. The
-game itself should never grow another load-time migration reducer.
-
-Historical sections elsewhere in this file that mention `migrateState`, `shiftOldTierIds`, or
+Historical sections elsewhere in this file that mention `migrateState`, `shiftOldTierIds`, or inline
 on-load backfills describe **removed** behavior kept for incident context only.
 
 ## Distribution
