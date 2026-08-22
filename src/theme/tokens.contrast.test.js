@@ -9,9 +9,8 @@ import { themes } from './tokens'
 // `src/components/Button/index.jsx`; recomputing that blended contrast here would duplicate that
 // reasoning rather than testing a plain token pair.
 describe('theme token AA contrast', () => {
-  // Normal text (WCAG 4.5:1): body copy, tier names, owned/production labels, the tickspeed-bonus
-  // body copy, tier names, owned labels, and unblended button text/borders (Button's `color`/`border`
-  // share one value). Production figures use `text` (stronger); owned counts use `textMuted`.
+  // Normal text (WCAG 4.5:1): body copy, tier names, owned labels, production figures, and
+  // unblended button text/borders (Button's `color`/`border` share one value).
   const normalTextPairs = {
     'text on page (GlobalStyle body text)': ['text', 'page'],
     'text on surface (StatCard / tier row default text)': ['text', 'surface'],
