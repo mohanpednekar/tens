@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `IncompatibleSaveNotice`.
 
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
-  dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
+  dedicated vertical space on Data). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
   (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward

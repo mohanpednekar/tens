@@ -233,8 +233,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 title={
                   isFull
                     ? (releasable
-                      ? `Transfer this block's ${blockLabel} to the Data as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                      : `Transferable to the Data only once some tier's level cost matches ${sizeLabel}`)
+                      ? `Transfer this block's ${blockLabel} to Data as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
+                      : `Transferable to Data only once some tier's level cost matches ${sizeLabel}`)
                     : 'Filling from Memory'
                 }
                 type="button"
