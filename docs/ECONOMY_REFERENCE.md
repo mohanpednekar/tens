@@ -916,7 +916,8 @@ ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
 `computeFlops.cumulativeBoost[boostsTierId]`. Also latches page unlock when PP threshold is met.
 
 **Production:** `getComputeFlopsTierProductionMultiplier(state, tierId)` returns
-`1 + cumulativeBoost[tierId]`, multiplied into each tier's production batch in `tickGame`.
+`1 + cumulativeBoost[tierId] + getHyperscalerFlopsBoostRate(state)`, multiplied into each tier's
+production batch in `tickGame`.
 
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
 **E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
@@ -943,7 +944,44 @@ level halves powers-per-PP until 1, then doubles PP-per-power; cost `100^(level+
 Before `prestige.count` reaches `PRESTIGE_UNBOUNDED_MIN_COUNT` (100), reaching `PRESTIGE_THRESHOLD`
 freezes production until Prestige (`isProductionFrozen`). At/after 100 lifetime prestiges,
 `isUnboundedPrestigeUnlocked` — production continues past 1 Googol Bytes and Prestige is voluntary to
-claim accumulated PP.
+claim accumulated PP. The latch is stored permanently on `prestige.unboundedUnlocked` (set by
+`prestigeGame` the first time `prestige.count` crosses 100, never cleared by Era ascension — full
+save Reset only).
+
+### Era ascension and Eons (#407)
+
+**Era** is the meta-prestige layer above ordinary Prestige. **Eons** are the meta currency (display
+"1 Eon", "2 Eons"). Era ascension is **voluntary** — no production freeze at the threshold.
+
+**Eligibility:** `isEraEligible(state)` when unspent `prestige.points >= ERA_ELIGIBILITY_PP`
+(`GOOGOL` — 1 Googol PP balance, not lifetime earned).
+
+**Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
+(Eon Amplifier shop upgrade deferred to #414).
+
+**On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, compute ladder
+entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `prestigeGame`),
+`prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
+`computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined.
+
+**On `eraGame` — persists:** automation unlocks + pause flags (except Double PP level, which resets),
+tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum, `era.count` (+1),
+Eons balance (+ award), hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags,
+`computeFlops.pageUnlocked`.
+
+**Flops autobuyer milestones:** Era *N* free-unlocks the *N*th Flops tier's autobuyer
+(`getFlopsAutobuyerUnlockEra`, applied in `eraGame` via `applyFlopsAutobuyerMilestones`).
+`tickComputeFlopsAutobuyers` runs inside `tickGame` after `tickComputeFlops`.
+
+**Hyperscalers:** `buyHyperscaler` spends escalating Eons (`HYPERSCALER_EON_COST_BASE` ×
+`HYPERSCALER_EON_COST_MULTIPLIER^owned`). Each adds permanent rate via
+`getHyperscalerFlopsBoostRate`, folded into `getComputeFlopsTierProductionMultiplier` alongside
+per-cycle `cumulativeBoost`. Hyperscaler Efficiency levels add
+`HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler (shop deferred to #414).
+
+**Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
+in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
+`applyFlopsAutobuyerMilestones` on load so `era.count` backfills Flops autobuyer unlocks.
 
 Unspent PP has one passive effect (gated behind a one-time unlock) and five active uses. Tier
 autobuyer unlock and the tier tickspeed autobuyer are **not** among them any more — they unlock
@@ -2105,7 +2143,14 @@ purchases were manual or automatic.
 | `getPrestigePpPerPower` | `doublePpLevel → number` | `2^max(0, level - log2(64))` — 1 until level 7, then 2, 4, … |
 | `getPrestigeDoublePpUpgradeCost` | `currentLevel → number` | `100^(currentLevel + 1)` PP |
 | `buyPrestigeDoublePp` | `state → state` | Spends `getPrestigeDoublePpUpgradeCost(prestigeDoublePpLevel)` PP and increments `prestigeDoublePpLevel`; not blocked by production freeze |
-| `isUnboundedPrestigeUnlocked` | `state → boolean` | `prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT` (100) |
+| `isUnboundedPrestigeUnlocked` | `state → boolean` | `prestige.unboundedUnlocked` OR `prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT` (100) |
+| `isEraEligible` | `state → boolean` | `prestige.points >= ERA_ELIGIBILITY_PP` (1 Googol PP balance) |
+| `getEonsAwarded` | `state → number` | `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL` Eons awarded on Era ascension |
+| `eraGame` | `state → state` | Requires `isEraEligible`; meta-prestige reset/carry per "Era ascension and Eons" above; same-reference no-op when ineligible |
+| `getHyperscalerFlopsBoostRate` | `state → number` | Permanent hyperscaler Flops rate (0.01%/s each at base, +efficiency levels) |
+| `buyHyperscaler` | `state → state` | Spends escalating Eons; increments `hyperscalerCount`; no-op if unaffordable |
+| `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
+| `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
 | `prestigeGame` | `state → state` | Requires Money ≥ `PRESTIGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), `speedUpCount` back to 0 (run-scoped — unlike every other flag/level listed next, the stacking Speed Up multiplier does NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits`/`intro.productionAccumulator` ("Memory") and `intro.mainGameUnlocked` (the gate) back to `createInitialGameState()`'s fresh defaults — the transfer-block row's own progress resets too, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.capacity`/`intro.byteCreated`/`intro.tickSpeedSeconds`/`intro.productionMultiplier`/`intro.productionMilestoneTier`/`intro.productionMilestoneTierClaims` (the Byte generator and its upgrades) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoClaimCoreEnabled`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige sends the player back through the gate every cycle, but not through a from-scratch replay of the generator itself, keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoSpeedUp` is the automation *toggle* only — it carries over even though the `speedUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
 | `speedUpGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`prestige.xp`/`lastTierXpConsumed` (both back to 0, same as `prestigeGame`)/`everUnlockedTierIds` (back to the fresh default, same as `prestigeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `prestigeGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`prestige.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and now also `overclockCount`** (carried over unchanged — see "Overclock" below) — and — same as `prestigeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `prestige.points`/`count`/`highestMilestone` untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `speedUpCount` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto Speed Up is bought |

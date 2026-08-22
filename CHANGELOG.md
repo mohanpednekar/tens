@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
+  (`ERA_ELIGIBILITY_PP`); awards **Eons**, increments `era.count`, wipes Foundry/Factory cycle
+  (including Flops owned counts and `prestigeDoublePpLevel`) while keeping automation unlocks,
+  museum, hyperscalers, and page latches. `prestige.unboundedUnlocked` latches at 100 lifetime
+  prestiges and survives Era ascension. Save schema bumped to **version 2** (v1 saves forward-fill).
 - **Unbounded Prestige** (after 100 lifetime prestiges): production no longer freezes at 1 Googol
   Bytes — keep earning and Prestige voluntarily to claim accumulated PP.
 - **New PP earning rate**: 1 base PP at 1 Googol Bytes, then 1 PP per 64 additional money-exponent

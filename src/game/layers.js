@@ -572,3 +572,17 @@ export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
   { id: 'flop09', name: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
   { id: 'flop10', name: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
 ]
+
+// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Era ascension" ---
+// Era ascension requires this many unspent Prestige Points (1 Googol PP).
+export const ERA_ELIGIBILITY_PP = GOOGOL
+// Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
+export const FLOPS_AUTOBUYER_ERA_START = 1
+export const FLOPS_AUTOBUYER_ERA_STEP = 1
+// Hyperscaler generator costs in Eons: 1, 10, 100, … (×10 per purchase).
+export const HYPERSCALER_EON_COST_BASE = 1
+export const HYPERSCALER_EON_COST_MULTIPLIER = 10
+// Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
+export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
+// Each Eon Amplifier level adds this many extra Eons awarded per Era ascension.
+export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1

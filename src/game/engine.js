@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -272,7 +272,31 @@ export const createInitialGameState = () => ({
     // grants points instead of directly doubling production.
     count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
+    // Permanent latch: once true (first prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT, or carried
+    // through Era ascension), production never freezes at PRESTIGE_THRESHOLD again — see
+    // isUnboundedPrestigeUnlocked. Full save Reset only.
+    unboundedUnlocked: false,
   },
+  // Era ascension count — meta layer above Prestige (#407). Never reset except full save Reset.
+  era: {
+    count: 0,
+  },
+  // Eons — meta currency from Era ascension; spent on hyperscalers and Eon upgrades (#407/#414).
+  eons: {
+    balance: 0,
+  },
+  // Permanent hyperscaler generators bought with Eons — each adds +0.01%/s (before efficiency).
+  hyperscalerCount: 0,
+  eonsUpgrades: {
+    autoHyperscalerUnlocked: false,
+    autoHyperscalerEnabled: true,
+    eonAmplifierLevel: 0,
+    hyperscalerEfficiencyLevel: 0,
+  },
+  // Flops autobuyers unlocked free at Era milestones (see getFlopsAutobuyerUnlockEra) — null = locked.
+  computeFlopsAutobuyers: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: null }), {}),
+  computeFlopsAutobuyersEnabled: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: true }), {}),
+  computeFlopsAutobuyerAttemptBudgets: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   // Prestige museum — permanent per save slot. Every real Prestige appends one history entry
   // (see prestigeGame); players may pin a subset for the Supporter museum UI. Meta QoL only —
   // never affects production, costs, or unlocks.
@@ -919,8 +943,19 @@ export const getComputeFlopsTotal = state =>
     return sum + boost * getComputeFlopsTierWeight(tierIndex)
   }, 0)
 
+// Permanent hyperscaler Flops boost rate (0.01%/s each at base; +efficiency levels) — never resets
+// on ordinary Prestige; persists across Era ascension. Added to every Factory tier's Flops multiplier.
+export const getHyperscalerFlopsBoostRate = state => {
+  const count = clampNonNegative(state.hyperscalerCount ?? 0)
+  if (count <= 0) return 0
+  const efficiencyLevel = clampNonNegative(state.eonsUpgrades?.hyperscalerEfficiencyLevel ?? 0)
+  const ratePerHyperscaler = COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC
+    + efficiencyLevel * HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL
+  return count * ratePerHyperscaler
+}
+
 export const getComputeFlopsTierProductionMultiplier = (state, tierId) =>
-  1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0)
+  1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0) + getHyperscalerFlopsBoostRate(state)
 
 export const formatComputeFlopsBoost = value => {
   const safe = clampNonNegative(value)
@@ -957,6 +992,162 @@ export const tickComputeFlops = elapsedSeconds => state => {
     ...latched,
     computeFlops: { ...latched.computeFlops, cumulativeBoost },
   }
+}
+
+// --- Era / Eons meta layer (#407) ---
+
+export const isEraEligible = state =>
+  clampNonNegative(state.prestige?.points ?? 0) >= ERA_ELIGIBILITY_PP
+
+export const getEonsAwarded = state => {
+  const amplifierLevel = clampNonNegative(state.eonsUpgrades?.eonAmplifierLevel ?? 0)
+  return 1 + amplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL
+}
+
+export const getHyperscalerEonCost = ownedCount =>
+  HYPERSCALER_EON_COST_BASE * (HYPERSCALER_EON_COST_MULTIPLIER ** clampNonNegative(ownedCount))
+
+export const canBuyHyperscaler = state =>
+  clampNonNegative(state.eons?.balance ?? 0) >= getHyperscalerEonCost(state.hyperscalerCount ?? 0)
+
+export const buyHyperscaler = state => {
+  if (!canBuyHyperscaler(state)) return state
+  const cost = getHyperscalerEonCost(state.hyperscalerCount ?? 0)
+  return {
+    ...state,
+    eons: { ...state.eons, balance: clampNonNegative(state.eons.balance) - cost },
+    hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0) + 1,
+  }
+}
+
+export const getFlopsAutobuyerUnlockEra = flopId => {
+  const tierIndex = Math.max(0, COMPUTE_FLOPS_TIER_DEFINITIONS.findIndex(t => t.id === flopId))
+  return FLOPS_AUTOBUYER_ERA_START + tierIndex * FLOPS_AUTOBUYER_ERA_STEP
+}
+
+export const applyFlopsAutobuyerMilestones = state => {
+  const eraCount = clampNonNegative(state.era?.count ?? 0)
+  let changed = false
+  const nextAutobuyers = { ...state.computeFlopsAutobuyers }
+  COMPUTE_FLOPS_TIER_DEFINITIONS.forEach(flopTier => {
+    if ((nextAutobuyers[flopTier.id] ?? null) === null && eraCount >= getFlopsAutobuyerUnlockEra(flopTier.id)) {
+      nextAutobuyers[flopTier.id] = 1
+      changed = true
+    }
+  })
+  if (!changed) return state
+  return { ...state, computeFlopsAutobuyers: nextAutobuyers }
+}
+
+export const setComputeFlopsAutobuyerEnabled = (flopId, enabled) => state => {
+  if (!COMPUTE_FLOPS_TIER_DEFINITIONS.some(t => t.id === flopId)) return state
+  if ((state.computeFlopsAutobuyers?.[flopId] ?? null) === null) return state
+  return {
+    ...state,
+    computeFlopsAutobuyersEnabled: {
+      ...state.computeFlopsAutobuyersEnabled,
+      [flopId]: enabled,
+    },
+  }
+}
+
+const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
+  if (elapsedSeconds <= 0) return state
+  let result = state
+  COMPUTE_FLOPS_TIER_DEFINITIONS.forEach(flopTier => {
+    if ((result.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return
+    if (!(result.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true)) return
+    let budget = (result.computeFlopsAutobuyerAttemptBudgets?.[flopTier.id] ?? 0) + elapsedSeconds
+    while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+      if (!canBuyComputeFlopsTier(result, flopTier.id)) break
+      const next = buyComputeFlopsTier(flopTier.id)(result)
+      if (next === result) break
+      result = next
+      budget -= 1
+    }
+    result = {
+      ...result,
+      computeFlopsAutobuyerAttemptBudgets: {
+        ...result.computeFlopsAutobuyerAttemptBudgets,
+        [flopTier.id]: budget,
+      },
+    }
+  })
+  return result
+}
+
+const buildEraIntroReset = (state, initial) => ({
+  ...initial.intro,
+  byteCreated: Boolean(state.intro?.byteCreated),
+  bits: 0,
+  productionAccumulator: 0,
+  mainGameUnlocked: false,
+  foundryResetCaps: {},
+  autoClaimCoreEnabled: state.intro?.autoClaimCoreEnabled ?? initial.intro.autoClaimCoreEnabled,
+  autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
+  autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
+  autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
+  autoMergeNetworksIntoGrid: state.intro?.autoMergeNetworksIntoGrid ?? initial.intro.autoMergeNetworksIntoGrid,
+  autoMergeGridsIntoFabric: state.intro?.autoMergeGridsIntoFabric ?? initial.intro.autoMergeGridsIntoFabric,
+  autoMergeFabricsIntoCloud: state.intro?.autoMergeFabricsIntoCloud ?? initial.intro.autoMergeFabricsIntoCloud,
+  autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
+  autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
+  autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
+  computeMergeDurationUpgrades: state.intro?.computeMergeDurationUpgrades ?? initial.intro.computeMergeDurationUpgrades,
+  computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
+  computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
+})
+
+export const eraGame = state => {
+  if (!isEraEligible(state)) return state
+
+  const initial = createInitialGameState()
+  const eonsAwarded = getEonsAwarded(state)
+  const nextEraCount = clampNonNegative(state.era?.count ?? 0) + 1
+  const unboundedUnlocked = Boolean(state.prestige?.unboundedUnlocked)
+    || clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
+
+  const base = {
+    ...initial,
+    prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    intro: buildEraIntroReset(state, initial),
+    autobuyers: state.autobuyers ?? initial.autobuyers,
+    autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
+    smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
+    tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
+    tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
+    autoPrestige: state.autoPrestige ?? initial.autoPrestige,
+    autoPrestigeEnabled: state.autoPrestigeEnabled ?? initial.autoPrestigeEnabled,
+    autoPrestigeAutobuyer: state.autoPrestigeAutobuyer ?? initial.autoPrestigeAutobuyer,
+    autoPrestigeAutobuyerEnabled: state.autoPrestigeAutobuyerEnabled ?? initial.autoPrestigeAutobuyerEnabled,
+    prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
+    autoSpeedUpEnabled: state.autoSpeedUpEnabled ?? initial.autoSpeedUpEnabled,
+    computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
+    autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
+    autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
+      owned: initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
+    computeFlopsAutobuyers: state.computeFlopsAutobuyers ?? initial.computeFlopsAutobuyers,
+    computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
+    computeFlopsAutobuyerAttemptBudgets: initial.computeFlopsAutobuyerAttemptBudgets,
+    era: { count: nextEraCount },
+    eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
+    hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0),
+    eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
+    prestige: {
+      ...initial.prestige,
+      unboundedUnlocked,
+      points: 0,
+      count: 0,
+    },
+    prestigeDoublePpLevel: initial.prestigeDoublePpLevel,
+  }
+
+  return applyFlopsAutobuyerMilestones(base)
 }
 
 // Leveled PP upgrade: each purchase halves powers-per-PP until 1, then doubles PP-per-power
@@ -1064,7 +1255,8 @@ export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
 // UI can drive the same gate (disabling every other control) that the engine itself enforces on
 // tickGame/buyTier/buyAutobuyer below.
 export const isUnboundedPrestigeUnlocked = state =>
-  clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
+  Boolean(state.prestige?.unboundedUnlocked)
+  || clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
 
 export const isProductionFrozen = state =>
   !isUnboundedPrestigeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
@@ -1299,7 +1491,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickAutoComputeBoost) — countdown first so an expired boost can be replaced the same tick.
   const stateAfterComputeBoost = tickAutoComputeBoost(tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges))
   const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
-  const stateAfterFlops = tickComputeFlops(elapsedSeconds)(stateAfterIntro)
+  const stateAfterFlops = tickComputeFlopsAutobuyers(elapsedSeconds)(
+    tickComputeFlops(elapsedSeconds)(stateAfterIntro),
+  )
 
   const autoPrestigeLevel = stateAfterFlops.autoPrestige ?? null
   // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
@@ -3725,6 +3919,8 @@ export const prestigeGame = state => {
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const initial = createInitialGameState()
   const nextPrestigeNumber = state.prestige.count + 1
+  const unboundedUnlocked = Boolean(state.prestige?.unboundedUnlocked)
+    || nextPrestigeNumber >= PRESTIGE_UNBOUNDED_MIN_COUNT
   const museumEntry = {
     id: `p${nextPrestigeNumber}-${Date.now()}`,
     at: Date.now(),
@@ -3890,6 +4086,7 @@ export const prestigeGame = state => {
       ...initial.prestige,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
       count: nextPrestigeNumber,
+      unboundedUnlocked,
     },
   })
 }

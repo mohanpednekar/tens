@@ -1,5 +1,5 @@
-import { createInitialGameState } from './engine'
-import { COMPUTE_FLOPS_REVEAL_PP } from './layers'
+import { applyFlopsAutobuyerMilestones, createInitialGameState } from './engine'
+import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
@@ -330,7 +330,7 @@ const mergeState = saved => {
   const fresh = createInitialGameState()
   const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
 
-  return {
+  return applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     resources: mergeTierMap(fresh.resources, saved.resources),
@@ -347,7 +347,22 @@ const mergeState = saved => {
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
     everUnlockedTierIds: mergeTierMap(fresh.everUnlockedTierIds, saved.everUnlockedTierIds),
-    prestige: { ...fresh.prestige, ...(saved.prestige ?? {}) },
+    prestige: {
+      ...fresh.prestige,
+      ...(saved.prestige ?? {}),
+      unboundedUnlocked: Boolean(saved.prestige?.unboundedUnlocked)
+        || Math.max(0, Number(saved.prestige?.count) || 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT,
+    },
+    era: { ...fresh.era, ...(saved.era ?? {}) },
+    eons: { ...fresh.eons, ...(saved.eons ?? {}) },
+    hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,
+    eonsUpgrades: { ...fresh.eonsUpgrades, ...(saved.eonsUpgrades ?? {}) },
+    computeFlopsAutobuyers: mergeTierMap(fresh.computeFlopsAutobuyers, saved.computeFlopsAutobuyers),
+    computeFlopsAutobuyersEnabled: mergeTierMap(fresh.computeFlopsAutobuyersEnabled, saved.computeFlopsAutobuyersEnabled),
+    computeFlopsAutobuyerAttemptBudgets: mergeTierMap(
+      fresh.computeFlopsAutobuyerAttemptBudgets,
+      saved.computeFlopsAutobuyerAttemptBudgets,
+    ),
     prestigeMuseum: {
       history: Array.isArray(saved.prestigeMuseum?.history) ? saved.prestigeMuseum.history : fresh.prestigeMuseum.history,
       pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
@@ -359,7 +374,7 @@ const mergeState = saved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  }
+  })
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't
