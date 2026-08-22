@@ -6,7 +6,7 @@ import StatCard from 'components/StatCard'
 import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -280,6 +280,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // Compute > Memory.
 const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
+  const theme = useTheme()
   const { intro } = state
   const [foundryTab, setFoundryTab] = useState('memory')
   const [sacrificeConfirmOpen, setSacrificeConfirmOpen] = useState(false)
@@ -389,7 +390,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
       <Header>
-        <Title>⚙️ Byte Foundry</Title>
+        <Title>🔥 Byte Foundry</Title>
       </Header>
 
       {storageRevealed && (
@@ -397,7 +398,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
           <SubNavButton
             aria-label="open memory"
             aria-selected={foundryTab === 'memory'}
-            color={foundryTab === 'memory' ? 'white' : 'darkgrey'}
+            color={foundryTab === 'memory' ? theme.color.text : theme.color.textMuted}
             onClick={() => setFoundryTab('memory')}
             role="tab"
             type="button"
@@ -407,7 +408,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
           <SubNavButton
             aria-label="open storage"
             aria-selected={foundryTab === 'disks'}
-            color={foundryTab === 'disks' ? 'white' : 'darkgrey'}
+            color={foundryTab === 'disks' ? theme.color.text : theme.color.textMuted}
             onClick={() => setFoundryTab('disks')}
             role="tab"
             type="button"

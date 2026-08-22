@@ -61,5 +61,5 @@ components migrate onto these tokens one at a time in later sub-issues.
   alpha choices next to `progressFill` in `src/components/Button/index.jsx`, not a plain token pair.
   This audit is what caught light mode's original `good` (`#12a150`, 3.37:1 against `surface`) failing
   AA — it's now `#0a6b30` (6.65:1 against `surface`, 5.87:1 against `surfaceSunken`). Light `warn`
-  was similarly darkened to `#966100` so prestige (`variant="prestige"`) button text clears 4.5:1 on
-  `surfaceSunken`.
+  was darkened to `#875600` so prestige (`variant="prestige"`) button text clears 4.5:1 on light
+  `surfaceSunken` (`#dfe4ec`).
