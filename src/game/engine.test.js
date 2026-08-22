@@ -6430,6 +6430,14 @@ describe('buyPrestigeDoublePp', () => {
     expect(after.prestigeDoublePpLevel).toBe(1)
   })
 
+  it('latches Compute Flops pageUnlocked so reveal survives spending exactly 100 PP', () => {
+    const state = withPrestigePoints(createInitialGameState(), 100)
+    expect(state.computeFlops.pageUnlocked).toBe(false)
+    const after = buyPrestigeDoublePp(state)
+    expect(after.computeFlops.pageUnlocked).toBe(true)
+    expect(after.prestige.points).toBe(0)
+  })
+
   it('carries prestigeDoublePpLevel across prestige', () => {
     const state = withPrestigePoints(
       { ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), prestigeDoublePpLevel: 2 },
