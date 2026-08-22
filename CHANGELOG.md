@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
   Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
   **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
+- **Tier row hierarchy polish** (#138): tier rows use `theme.space`/`theme.motion` tokens for
+  gaps and padding; `OwnedText`/`ProductionText` are token-native spans (no `MutedText` inheritance);
+  production reads at `theme.color.text`/`font-weight: 500` vs muted owned count; tier symbol uses
+  `font.display`; controls row separates from stats via top margin; expanded details get a border-top
+  divider.
 - **Prestige surfaces token migration** (#139): `FullScreenOverlay`/`FullScreenCard` and
   `TopPrestigeBar` use design tokens (`surfaceRaised`, `warn`, `text`/`textMuted`, type scale,
   `shadow`/`radius`/`space`); prestige buttons use `variant="prestige"`; copy via `PrestigeMutedText`.

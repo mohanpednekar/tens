@@ -48,7 +48,7 @@ const Header = styled.header`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: ${props => props.theme.space.sm};
 `
 
 // One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
@@ -90,12 +90,12 @@ const TierLine = styled(StatCard)`
     'details details';
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  column-gap: 0.5rem;
-  row-gap: 0.3rem;
-  padding: 0.4rem 0.7rem;
+  column-gap: ${props => props.theme.space.sm};
+  row-gap: ${props => props.theme.space.xs};
+  padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
   &:hover {
@@ -109,8 +109,8 @@ const TierLine = styled(StatCard)`
 
   @media (max-width: 40rem) {
     /* Same areas as desktop; equal halves keep the two buttons matched. */
-    column-gap: 0.35rem;
-    padding: 0.4rem 0.55rem;
+    column-gap: ${props => props.theme.space.xs};
+    padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm};
   }
 `
 
@@ -422,7 +422,7 @@ const BalancesSentinel = styled.div`
 // ARIA only overrides an element's OWN implicit role, never a nested descendant's.
 const TierNameTrigger = styled.div`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${props => props.theme.space.sm};
   cursor: pointer;
   display: flex;
   grid-area: name;
@@ -436,10 +436,14 @@ const TierNameTrigger = styled.div`
 const TierDetailsContent = styled.div`
   grid-area: details;
   font-size: ${props => props.theme.type.scale.xs.size};
+  line-height: ${props => props.theme.type.scale.xs.lineHeight};
+  margin-top: ${props => props.theme.space.xs};
+  padding-top: ${props => props.theme.space.xs};
+  border-top: 1px solid ${props => props.theme.color.border};
 
   ul {
     color: ${props => props.theme.color.textMuted};
-    margin: 0.3rem 0 0;
+    margin: ${props => props.theme.space.xs} 0 0;
     padding-left: 1.1rem;
   }
 
@@ -563,15 +567,18 @@ const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'S
 // the PP Upgrades page.
 const TierName = styled.h3`
   align-items: baseline;
-  column-gap: 0.4rem;
+  column-gap: ${props => props.theme.space.sm};
   display: flex;
+  font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.lg.size};
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
   margin: 0;
   min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.md.size};
+    line-height: ${props => props.theme.type.scale.md.lineHeight};
   }
 `
 
@@ -621,31 +628,38 @@ const collapseDisclosure = event => {
 
 // Owned count lives on the first line, right-aligned to the row center (pushed to the end of
 // the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
-// in the h3 (nesting would pollute the heading's accessible name). `as="span"` matches
-// VersionText's pattern of avoiding MutedText's default block `<p>`.
-const OwnedText = styled(MutedText).attrs({ as: 'span' })`
+// in the h3 (nesting would pollute the heading's accessible name).
+const OwnedText = styled.span`
   color: ${props => props.theme.color.textMuted};
   flex-shrink: 0;
   font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 400;
+  margin: 0;
   margin-left: auto;
   text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
+    line-height: ${props => props.theme.type.scale.xs.lineHeight};
   }
 `
 
-const ProductionText = styled(MutedText)`
+// Production reads slightly stronger than owned — the live output figure on the stats line.
+const ProductionText = styled.span`
   grid-area: production;
-  color: ${props => props.theme.color.textMuted};
+  color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-weight: 500;
+  margin: 0;
   text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
+    line-height: ${props => props.theme.type.scale.xs.lineHeight};
   }
 `
 
@@ -656,6 +670,7 @@ const BuyButton = styled(Button)`
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 700;
+  margin-top: ${props => props.theme.space.xs};
   padding: 0.4em 0.45em;
   ${gridCell}
 
@@ -697,6 +712,7 @@ const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
+  margin-top: ${props => props.theme.space.xs};
   padding: 0.4em 0.45em;
   ${gridCell}
 

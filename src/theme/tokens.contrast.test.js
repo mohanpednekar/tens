@@ -9,15 +9,15 @@ import { themes } from './tokens'
 // `src/components/Button/index.jsx`; recomputing that blended contrast here would duplicate that
 // reasoning rather than testing a plain token pair.
 describe('theme token AA contrast', () => {
-  // Normal text (WCAG 4.5:1): body copy, tier names, owned/production labels, the tickspeed-bonus
-  // GreenText line, and unblended button text/borders (Button's `color`/`border` share one value).
+  // Normal text (WCAG 4.5:1): body copy, tier names, owned labels, production figures, and
+  // unblended button text/borders (Button's `color`/`border` share one value).
   const normalTextPairs = {
     'text on page (GlobalStyle body text)': ['text', 'page'],
     'text on surface (StatCard / tier row default text)': ['text', 'surface'],
     'textMuted on surface (owned/production labels, details list)': ['textMuted', 'surface'],
     'text on surfaceRaised (prestige full-screen card body)': ['text', 'surfaceRaised'],
     'textMuted on surfaceRaised (prestige overlay copy)': ['textMuted', 'surfaceRaised'],
-    'good on surface (GreenText tickspeed-bonus label)': ['good', 'surface'],
+    'good on surface (semantic positive / affordability accents)': ['good', 'surface'],
     'text on surfaceSunken (unblended Buy/Upgrade button text)': ['text', 'surfaceSunken'],
     'good on surfaceSunken (unblended tickspeed-upgrade button text)': ['good', 'surfaceSunken'],
     'warn on surfaceSunken (prestige button text)': ['warn', 'surfaceSunken'],
