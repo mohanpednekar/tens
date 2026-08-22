@@ -414,7 +414,7 @@ src/
                                level tabs: Data | Upgrades (after first Prestige). Full
                                field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
-                               Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
+                               Foundry/Storage/Boosters sections. Reached via AppNav's Guide item;
                                takes no navigation props (AppNav is the exit)
     MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer status. Reached via
                                AppNav → More; always reachable (including during the Foundry gate);
@@ -458,7 +458,7 @@ src/
                                unlocked, a *permanent, voluntarily-revisitable screen* reachable at
                                any time via AppNav's Foundry item (`page = 'foundry'`) to review the
                                current cycle's stats — it no longer disappears once passed.
-                               Gate-exempt pages stay reachable during the gate so Guide / Compute
+                               Gate-exempt pages stay reachable during the gate so Guide / Boosters
                                (once capacity reveals it) / More utilities are never yanked away; the
                                gate picks back up the instant the player navigates to `'game'`
                                (Factory). Since `page` is independent of `intro.mainGameUnlocked`, no
@@ -614,7 +614,7 @@ Strict three-layer separation:
    lives on ByteFoundryPage instead — see "Economy model" below.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Compute, Tickspeed, Speed Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Tickspeed, Speed Up,
    Overclock, Tier Autobuyers, Milestones, Prestige). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here

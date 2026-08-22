@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Factory / Foundry / Storage / Compute / Guide) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Factory → Guide → More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
 true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
@@ -574,7 +574,7 @@ not at the bottom"):
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Factory / Foundry / Storage / Compute / Guide) live in
+  “Tens”). Top-level destinations (Foundry → Boosters → Factory → Guide → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Version display.** App version (`v{version}`, e.g. `v0.5.0`) is a fixed corner overlay in
   `App.jsx` (`VersionBadge`: `position: fixed`, `pointer-events: none`, `aria-hidden`, above the
