@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
   the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
   a separate element under the page header at the top of MainPage.
+- **DiskArrayRow labels**: each array opens with a clear Byte-scale size header (e.g. `1 KB`);
+  Cache shows short `"Cache"` + bit-scale `"1 Kb each"` meta; Disks is just `"Disks"`. Built/full
+  counts are no longer restated in text — the square/circle strip already shows them. Instructional
+  copy (tap cache → Tiers Bits, redeem hints) stays in `title`/`aria`/action hints.
+- **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
+  (even when that size is not currently redeemable), so the ladder’s current / incomplete array
+  stays trackable. Matching/redeemable sizes are still listed ascending as before.
 - **Cursor housekeeping / planning run** now checks security (fix immediately when safe),
   workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
   findings and files `claude-task` issues for non-trivial ones. Soft budget guidance of ~1% of

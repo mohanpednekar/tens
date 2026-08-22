@@ -343,10 +343,12 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   // Every currently-relevant size (tier cost matches — Cache releasable / Disks redeemable),
-  // ascending smallest→largest — not only the ladder's current build size. An older array that
-  // still matches stays visible here until it stops being transferable; the Build button itself
-  // stays visible/usable regardless (building ahead of the curve is deliberate — see "Economy
-  // model" in CLAUDE.md). Disks tab / StoragePage keep the full history either way.
+  // ascending smallest→largest — plus always the highest shown size even when it does not match
+  // (usually the ladder's current / incomplete array — see getRelevantDiskSizesForFoundry). Not
+  // only the ladder's current build size among matching rows: an older array that still matches
+  // stays visible here until it stops being transferable. The Build button itself stays
+  // visible/usable regardless (building ahead of the curve is deliberate — see "Economy model"
+  // in CLAUDE.md). Disks tab / StoragePage keep the full history either way.
   const relevantDiskSizes = storageRevealed ? getRelevantDiskSizesForFoundry(state) : []
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
