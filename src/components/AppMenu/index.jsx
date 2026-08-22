@@ -102,7 +102,7 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
           Milestones
         </MenuButton>
         <MenuButton aria-label="open settings" onClick={() => go('settings')} type="button">
-          <Icon aria-hidden="true">🎚️</Icon>
+          <Icon aria-hidden="true">⚙️</Icon>
           Settings
         </MenuButton>
       </Sheet>
