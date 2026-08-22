@@ -81,8 +81,8 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: tier name + owned count share the left half (same line — owned sits beside the
-// symbol as a sibling inside TierNameTrigger's flex row, not on a second grid row), production
+// Top line: tier symbol on the left of the left half; owned count on the same line but
+// right-aligned to the row center (end of the left half via margin-left: auto); production
 // on the right. Button row: tickspeed
 // and Buy each take exactly half the row (equal column halves) — Buy stays rightmost as the
 // constantly-clicked control. Bottom line: a single 'details' area spanning both columns,
@@ -442,6 +442,7 @@ const TierNameTrigger = styled.div`
   display: flex;
   grid-area: name;
   min-width: 0;
+  width: 100%;
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -616,14 +617,17 @@ const collapseDisclosure = event => {
   event.currentTarget.open = false
 }
 
-// Owned count lives on the first line beside the tier symbol as a flex sibling of TierName
-// inside TierNameTrigger (not nested in the h3 — nesting would pollute the heading's
-// accessible name). `as="span"` matches VersionText's pattern of avoiding MutedText's
-// default block `<p>`.
+// Owned count lives on the first line, right-aligned to the row center (pushed to the end of
+// the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
+// in the h3 (nesting would pollute the heading's accessible name). `as="span"` matches
+// VersionText's pattern of avoiding MutedText's default block `<p>`.
 const OwnedText = styled(MutedText).attrs({ as: 'span' })`
   color: ${props => props.theme.color.textMuted};
+  flex-shrink: 0;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 400;
+  margin-left: auto;
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {

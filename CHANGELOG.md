@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- **Tier ladder row**: owned count sits on the first line beside the tier symbol (same row as
-  the name); production stays top-right. No extra line for owned above the buttons.
+- **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
+  (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
   the next power-of-ten Bytes (in Bits; e.g. 5e7 Bytes → 4/8). Prestige “N% to Prestige” moves to
   a separate element under the page header at the top of MainPage.

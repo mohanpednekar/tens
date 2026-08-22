@@ -702,8 +702,8 @@ this slot back to the normal Money-funded button until the player buys back up t
 "The last tier's XP-funded tickspeed" below for why.
 
 **No per-tier automation icon on the Game view row.** A tier row's `name` grid area (shared by
-`TierNameTrigger` / `TierName`) holds the tier's symbol plus the owned count on the same first
-line — no tickspeed-bonus badge (see "Tickspeed multiplier"
+`TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
+same first line, right-aligned to the row center — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
@@ -956,10 +956,11 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 
 Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
-layout where the top line is the tier name + owned count on the left (`OwnedText` sits beside the
-symbol as a sibling inside `TierNameTrigger`'s flex row — same first line, not a second grid row;
-see "No per-tier automation icon on the Game view row" above for the two badges that used to also
-share this area) and the production figure on the right (`ProductionText`, `text-align: right`). Below that, the
+layout where the top line is the tier symbol on the left and the owned count on the same line
+right-aligned to the row center (`OwnedText` uses `margin-left: auto` at the end of the left half
+inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Game view
+row" above for the two badges that used to also share this area) and the production figure on the
+right (`ProductionText`, `text-align: right`). Below that, the
 tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
 both columns. There is no separate `autobuyer` grid row/line — an earlier version gave the
 autobuyer status badge its own row, then later folded it into the icon-only badge sharing the
