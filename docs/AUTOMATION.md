@@ -350,7 +350,9 @@ designed to coexist safely with the Claude ones during the transition:
        live source (signatures, constants, state shape, test counts, nav/mechanic summaries).
        Trivial drift → fix; larger mismatch → file, don't guess.
     5. **Backlog plan/replan** — stale specs, Blocked-by, size/priority labels, duplicates
-       (comments / labels / replacement issues only).
+       (comments / labels / replacement issues only). On housekeeping runs, the workflow also
+       runs `scripts/backlog-issue-hygiene.sh` and `scripts/sync-release-milestones.sh`
+       deterministically before the agent step — do not duplicate that work unless a step failed.
     6. **Process improvement (optional)** — self-edit of `cursor-autonomous-maintenance.yml` only,
        or one gap-analysis + `claude-task` issue.
 
@@ -373,20 +375,37 @@ repo/org **variable** (not a secret) — unset means the account default.
 both `claude/auto-*` and `cursor/auto-*` open PRs toward the shared 5-PR ceiling and treats a task
 covered by either prefix as in flight, so the two engines never double-pick the same `claude-task`.
 `pr-auto-merge.yml`'s approval-free low-risk path recognizes `cursor/auto-*` and `cursor/heal-main-*`
-alongside the `claude/*` prefixes; its human-approval path was already repo-wide. The Cursor
+(Path 2); `scripts/pr-low-risk-eligible.sh` also accepts broader `cursor/heal-*` for Path 3
+(post-adversarial APPROVE). Both sit alongside the `claude/*` prefixes. The Cursor
 maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
 Claude workflow already owns that, and duplicating it would double-post.
 
-**Inert until opted into.** Every agent step in both Cursor workflows is gated on the `CURSOR_API_KEY`
+**Inert until opted into.** Every **agent** step in both Cursor workflows is gated on the `CURSOR_API_KEY`
 repo secret being present (surfaced into an `if:`-usable boolean via a `secrets.CURSOR_API_KEY != ''`
-env expression, since `if:` can't read secrets directly). With no secret set, each run resolves to a
-clean skip: merging these workflows spends nothing and changes no behavior until a maintainer opts in.
+env expression, since `if:` can't read secrets directly). With no secret set, compose-prompt and
+cursor-agent steps skip cleanly: merging these workflows spends no Cursor quota until a maintainer
+opts in. **Exception:** the deterministic `scripts/backlog-issue-hygiene.sh` step on housekeeping
+runs still executes when `GH_AUTOMATION_PAT` is set (issue close/label/comment only; no agent).
 
 **One additional one-time prerequisite** (beyond the three above):
 - The `CURSOR_API_KEY` repo secret — a Cursor API key (ideally from a **service account**, so the
   automation isn't tied to a personal login), generated from the Cursor dashboard and added via
   `gh secret set CURSOR_API_KEY --repo <owner>/<repo>` or repo Settings → Secrets and variables →
   Actions. Optionally also set a `CURSOR_MODEL` **variable** to pin a model.
+
+**Cursor Cloud Agent GitHub access (interactive sessions).** Cloud Agent VMs use a GitHub App
+integration token (`ghs_*`) that **cannot** write issues (403 on comment/label/close). This is
+separate from `GH_AUTOMATION_PAT` (GHA only). To let interactive Cloud Agents run `gh issue …`
+from the VM, add the same fine-grained PAT (Issues read/write) to **Cursor Dashboard → Cloud
+Agents → Secrets** as **`GH_TOKEN`** — `gh` reads it automatically. Without it, issue-only
+hygiene runs deterministically in housekeeping GHA via `scripts/backlog-issue-hygiene.sh`
+(`GH_AUTOMATION_PAT`-authenticated), or from a maintainer's local `gh` session.
+
+| Runtime | Token location | Issue write |
+|---------|----------------|-------------|
+| GitHub Actions (Claude/Cursor workflows) | `GH_AUTOMATION_PAT` repo secret → `GH_TOKEN` env | Yes |
+| Cursor Cloud Agent (interactive) | `GH_TOKEN` Cloud Agents secret | Yes (when secret set) |
+| Cursor Cloud Agent (default) | GitHub App integration | No (403) |
 
 **Staged cutover (Cursor replaces Claude).** The intended path, in order:
 1. **Coexist (now):** merge the Cursor workflows. They stay inert until `CURSOR_API_KEY` is added; the
