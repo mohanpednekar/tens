@@ -8,12 +8,12 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Compute → Tiers → Guide → More**. Storage
-is under Foundry as **Memory | Disks** (not its own AppNav item). Tiers uses **Ladder | Upgrades**
+shared bottom `AppNav` in progression order: **Foundry → Compute → Ladder → Guide → More**. Storage
+is under Foundry as **Memory | Disks** (not its own AppNav item). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
-highs; Capacity stays manual; Tiers + Prestige kept) live under Settings → Danger zone. No backend
+highs; Capacity stays manual; Ladder + Prestige kept) live under Settings → Danger zone. No backend
 — state
 lives in React and persists to `localStorage`.
 
@@ -65,7 +65,7 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Tiers → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Ladder → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/

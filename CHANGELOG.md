@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Ladder screen** (formerly **Tiers**): AppNav label / accessible name and the MainPage
+  header now say **Ladder** instead of the game name “Tens” / nav “Tiers”, so the destination
+  isn’t confused with Compute’s entity tiers (or other “tier” language). Cache-transfer and
+  Settings danger-zone copy follow the same name.
+- **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
+  dedicated vertical space on Ladder). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count stacks under the tier name (directly above the tickspeed
   button); production sits top-right spanning that left stack. Not a side-by-side swap.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
@@ -16,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **DiskArrayRow labels**: each array opens with a clear Byte-scale size header (e.g. `1 KB`);
   Cache shows short `"Cache"` + bit-scale `"1 Kb each"` meta; Disks is just `"Disks"`. Built/full
   counts are no longer restated in text — the square/circle strip already shows them. Instructional
-  copy (tap cache → Tiers Bits, redeem hints) stays in `title`/`aria`/action hints.
+  copy (tap cache → Ladder Bits, redeem hints) stays in `title`/`aria`/action hints.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.

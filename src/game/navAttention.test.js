@@ -103,7 +103,7 @@ describe('navAttention', () => {
     expect(hasFoundryAttention(state)).toBe(false)
   })
 
-  it('lights Tiers when a full purchase level is affordable', () => {
+  it('lights Ladder when a full purchase level is affordable', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const unitCost = 1000 // tier01 baseCost
     const state = {
@@ -121,7 +121,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe('high')
   })
 
-  it('lights Tiers when prestige is required (production frozen)', () => {
+  it('lights Ladder when prestige is required (production frozen)', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true },
@@ -131,7 +131,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe('high')
   })
 
-  it('does not light Tiers on a fresh unlocked save with almost no money', () => {
+  it('does not light Ladder on a fresh unlocked save with almost no money', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -247,7 +247,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).compute).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Tiers when Speed Up is available on the last tier', () => {
+  it('lights Ladder when Speed Up is available on the last tier', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -260,7 +260,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Tiers when Overclock is available on the last tier', () => {
+  it('lights Ladder when Overclock is available on the last tier', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -275,7 +275,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Tiers (Upgrades) when an affordable PP automation unlock is available', () => {
+  it('lights Ladder (Upgrades) when an affordable PP automation unlock is available', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },

@@ -427,7 +427,7 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    auto-filled again. UI helpers `isDiskAutoRedeemEligible` / `isDiskManualRedeemAvailable` /
    `getRelevantDiskSizesForFoundry` expose Foundry Memory’s DiskArrayRow list: every currently
    matching size plus always the highest shown size (even when unmatched — issue #389), so the
-   incomplete current array stays trackable (Cache → Tiers Bits is always manual-only via
+   incomplete current array stays trackable (Cache → Ladder Bits is always manual-only via
    `releaseDiskCacheBlock`; auto-eligible disks are
    shown but not clickable).
 

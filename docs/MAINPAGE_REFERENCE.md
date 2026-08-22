@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Tiers / Foundry / Storage / Compute / Guide) — pages
+`App.jsx`'s shared `components/AppNav` (Ladder / Foundry / Storage / Compute / Guide) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
 true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —

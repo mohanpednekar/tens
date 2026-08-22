@@ -11,13 +11,13 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
-`AppNav` (Foundry → Compute → Tiers → Guide → More) — not a router (see "Architecture" below):
+`AppNav` (Foundry → Compute → Ladder → Guide → More) — not a router (see "Architecture" below):
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage` (once revealed), plus `MilestonesPage`/`SettingsPage` via AppNav → More.
 `StoragePage` is not an AppNav destination — Disks live under Foundry as Memory | Disks.
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
-Foundry gate; only Tiers stays progress-gated.
+Foundry gate; only Ladder stays progress-gated.
 
 ## Tech stack
 
@@ -359,7 +359,7 @@ src/
                                plus the separately keyed last-save timestamp used to compute
                                offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
-    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Ladder → Guide → More
                                (progression order); Tiers omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
@@ -432,7 +432,7 @@ src/
                                <MilestonesPage/>/<SettingsPage/> via a local `page` useState
                                (`'game'`/`'info'`/`'foundry'`/`'compute'`/`'milestones'`/`'settings'`,
                                default `'game'`) — not a routing library — plus a shared fixed bottom
-                               `AppNav` (Foundry → Compute → Tiers → Guide → More) and `AppMenu`
+                               `AppNav` (Foundry → Compute → Ladder → Guide → More) and `AppMenu`
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
@@ -524,12 +524,12 @@ Strict three-layer separation:
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
    controls, numbers, and status text only; top-level destinations live in `App.jsx`'s shared `AppNav`
-   (Tiers is this page), so MainPage itself carries no page-to-page open-* links. See
+   (Ladder is this page), so MainPage itself carries no page-to-page open-* links. See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
    taking `{ game, focusNonce }` as props. It's the only way any Prestige cycle ever earns its first
    Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Tiers during
+   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Ladder during
    the gate; Guide and More stay). Once that cycle's `intro.mainGameUnlocked` flips true (the first
    bits ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent
    screen the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just
@@ -541,7 +541,7 @@ Strict three-layer separation:
    detail (see 4a) is a Foundry Disks tab (and the reusable `StoragePage` wrapper), not a separate
    AppNav item. Starting the next Disk's build (its own core-loop action, alongside Sacrifice/Invest)
    and every currently-relevant size's full interactive detail — cache blocks, disk squares,
-   releasing (Disk Fill's manual-release half → Tiers Bits only), and redeeming (Disk Fill itself;
+   releasing (Disk Fill's manual-release half → Ladder Bits only), and redeeming (Disk Fill itself;
    auto when the matching tier's autobuyer is on, else manual) — both stay here, rendered via the
    shared `components/DiskArrayRow` (see "Repo layout" above), ascending
    smallest→largest with Cache of a row immediately above that row's Disks. The Build button always

@@ -8,7 +8,7 @@ state each is currently in.
 ## `AppNav/index.jsx`
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
-**Compute** (`open compute`, once revealed) → **Tiers** (`open tiers`, page id `'game'`, only once
+**Compute** (`open compute`, once revealed) → **Ladder** (`open ladder`, page id `'game'`, only once
 `mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
 opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as Memory | Disks.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
