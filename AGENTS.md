@@ -78,7 +78,7 @@ src/
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More
-  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
+  theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle + ThemeToggle
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
 vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
