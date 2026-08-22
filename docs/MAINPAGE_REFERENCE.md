@@ -955,22 +955,22 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 
 Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
-layout where the left half stacks the tier name (`TierName`'s symbol — see "No per-tier automation
-icon on the Game view row" above for the two badges that used to also share this area) above the
-owned count — so owned sits directly above the tickspeed (first) button — and the right half holds
-the production figure (`ProductionText`, `text-align: right`, `align-self: start`) spanning those
-two rows at the top-right. Below that, the tickspeed multiplier button and Buy each take one equal
-half, then a `details`-area line spanning both columns. There is no separate `autobuyer` grid
-row/line — an earlier version gave the autobuyer status badge its own row, then later folded it
-into the icon-only badge sharing the `name` area (freeing that vertical space, since a single
-glyph needs no row of its own) before removing the badge from this view entirely. Below `40rem`,
-only fonts/spacing shrink. The owned cell's "Owned: " label is a `VisuallyHidden` span (plus
-`title="Owned"`) — assert via `toHaveTextContent`, not `getByText`. Grid cells use a shared
-`gridCell` mixin (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`).
-`RootDiv` sets `font-variant-numeric: tabular-nums`. Each row is also registered (via a stable
-per-tier ref callback, `registerTierRowRef`) with a single shared `IntersectionObserver` in
-`MainPage` that auto-collapses that tier's Details disclosure the instant the row scrolls fully
-out of the viewport — see "Auto-collapsing expanded disclosures on scroll" below.
+layout where the top line is the tier name + owned count on the left (`OwnedText` sits beside the
+symbol as a sibling inside `TierNameTrigger`'s flex row — same first line, not a second grid row;
+see "No per-tier automation icon on the Game view row" above for the two badges that used to also
+share this area) and the production figure on the right (`ProductionText`, `text-align: right`). Below that, the
+tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
+both columns. There is no separate `autobuyer` grid row/line — an earlier version gave the
+autobuyer status badge its own row, then later folded it into the icon-only badge sharing the
+`name` area (freeing that vertical space, since a single glyph needs no row of its own) before
+removing the badge from this view entirely. Below `40rem`, only fonts/spacing shrink. The owned
+cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
+`toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width: 0;
+overflow: hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets
+`font-variant-numeric: tabular-nums`. Each row is also registered (via a stable per-tier ref
+callback, `registerTierRowRef`) with a single shared `IntersectionObserver` in `MainPage` that
+auto-collapses that tier's Details disclosure the instant the row scrolls fully out of the
+viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName`, `OwnedText`/`ProductionText`, `BuyButton`/
 `UpgradeButton`, and `TierDetailsContent` all resolve their `font-size` from `theme.type.scale`
