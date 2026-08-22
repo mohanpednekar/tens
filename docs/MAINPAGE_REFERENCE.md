@@ -520,9 +520,9 @@ not at the bottom"):
   role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
-  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`/`TopPrestigeBar`/`FullScreenCard`) — token-driven
+  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
-  migrating those other regions out of turn (their own token migration is later sub-issues #138/#139).
+  migrating those other regions out of turn (tier rows in #138; prestige surfaces below in #139).
   `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
   surface measures roughly 3.6:1 — below the 4.5:1 AA floor for normal text — but a `styled.b` renders
   bold by default, and WCAG's bold-text AA floor drops to 3:1 once the text is also >=14pt (18.66px);
@@ -1108,6 +1108,15 @@ stacks in `StatCard`'s own flex-column, centered via `align-items`/`text-align: 
 Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving the Dismiss button's
 `$progress` fill, then an opacity fade (`OFFLINE_NOTICE_FADE_MS`, 400ms) before
 `dismissOfflineProgress` removes it.
+
+**Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
+`aria-modal="true"` `aria-label="Prestige required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
+token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
+`PrestigeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPrestigeBar`
+(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PrestigeMutedText` + a
+`variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
+full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /
+`showTopPrestigeBar`) are unchanged.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.

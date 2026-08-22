@@ -426,3 +426,23 @@ export const loadLastSaveTimestamp = () => {
 export const clearGameState = () => {
   clearSaveSlot(getActiveSlotId())
 }
+
+/** UI theme preference — separate from game save data; survives reset/clearGameState. */
+export const THEME_PREFERENCE_KEY = 'tens_theme_preference'
+
+export const loadThemePreference = () => {
+  try {
+    const raw = localStorage.getItem(THEME_PREFERENCE_KEY)
+    return raw === 'dark' || raw === 'light' ? raw : null
+  } catch {
+    return null
+  }
+}
+
+export const saveThemePreference = mode => {
+  try {
+    localStorage.setItem(THEME_PREFERENCE_KEY, mode)
+  } catch {
+    // Silently ignore (quota / private browsing)
+  }
+}

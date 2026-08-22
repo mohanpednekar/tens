@@ -1,4 +1,4 @@
-import { getContrastRatio, AA_NORMAL_TEXT, AA_UI_COMPONENT } from './contrast'
+import { getContrastRatio, AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT } from './contrast'
 import { themes } from './tokens'
 
 // AA audit for the design-token color pairs actually rendered as plain (unblended) text/UI
@@ -15,9 +15,12 @@ describe('theme token AA contrast', () => {
     'text on page (GlobalStyle body text)': ['text', 'page'],
     'text on surface (StatCard / tier row default text)': ['text', 'surface'],
     'textMuted on surface (owned/production labels, details list)': ['textMuted', 'surface'],
+    'text on surfaceRaised (prestige full-screen card body)': ['text', 'surfaceRaised'],
+    'textMuted on surfaceRaised (prestige overlay copy)': ['textMuted', 'surfaceRaised'],
     'good on surface (semantic positive / affordability accents)': ['good', 'surface'],
     'text on surfaceSunken (unblended Buy/Upgrade button text)': ['text', 'surfaceSunken'],
     'good on surfaceSunken (unblended tickspeed-upgrade button text)': ['good', 'surfaceSunken'],
+    'warn on surfaceSunken (prestige button text)': ['warn', 'surfaceSunken'],
     'violet on surfaceSunken (unblended XP-consume button text)': ['violet', 'surfaceSunken'],
   }
 
@@ -25,6 +28,17 @@ describe('theme token AA contrast', () => {
     for (const mode of ['dark', 'light']) {
       const c = themes[mode].color
       expect(getContrastRatio(c[fg], c[bg])).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+    }
+  })
+
+  const largeTextPairs = {
+    'warn on surfaceRaised (prestige overlay h2 — type.scale.xl, bold)': ['warn', 'surfaceRaised'],
+  }
+
+  test.each(Object.entries(largeTextPairs))('%s meets 3:1 in both themes', (_label, [fg, bg]) => {
+    for (const mode of ['dark', 'light']) {
+      const c = themes[mode].color
+      expect(getContrastRatio(c[fg], c[bg])).toBeGreaterThanOrEqual(AA_LARGE_TEXT)
     }
   })
 

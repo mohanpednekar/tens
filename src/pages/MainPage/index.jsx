@@ -458,13 +458,15 @@ const TierDetailsContent = styled.div`
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
   align-items: center;
-  background: rgba(0, 0, 0, 0.96);
+  background: rgba(0, 0, 0, 0.92);
   bottom: 0;
   display: flex;
   justify-content: center;
   left: 0;
-  padding: calc(2rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
-    calc(2rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
+  padding: calc(${props => props.theme.space['2xl']} + env(safe-area-inset-top))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-right))
+    calc(${props => props.theme.space['2xl']} + env(safe-area-inset-bottom))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -472,20 +474,30 @@ const FullScreenOverlay = styled.div`
 `
 
 const FullScreenCard = styled.div`
-  color: white;
+  background: ${props => props.theme.color.surfaceRaised};
+  border: 1px solid ${props => props.theme.color.borderStrong};
+  border-radius: ${props => props.theme.radius.lg};
+  box-shadow: ${props => props.theme.shadow.md};
+  color: ${props => props.theme.color.text};
   max-width: 28rem;
+  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg};
   text-align: center;
   width: 100%;
 
   h2 {
-    color: #fbbf24;
-    font-size: 1.6rem;
-    margin: 0 0 0.75rem;
+    color: ${props => props.theme.color.warn};
+    font-family: ${props => props.theme.font.display};
+    font-size: ${props => props.theme.type.scale.xl.size};
+    font-weight: 700;
+    line-height: ${props => props.theme.type.scale.xl.lineHeight};
+    margin: 0 0 ${props => props.theme.space.md};
   }
 
   ul {
-    color: #d4d4d4;
-    margin: 1rem 0 1.5rem;
+    color: ${props => props.theme.color.textMuted};
+    font-size: ${props => props.theme.type.scale.sm.size};
+    line-height: ${props => props.theme.type.scale.sm.lineHeight};
+    margin: ${props => props.theme.space.lg} 0 ${props => props.theme.space.xl};
     padding-left: 1.25rem;
     text-align: left;
   }
@@ -500,15 +512,19 @@ const FullScreenCard = styled.div`
 // does, so a persistent-but-unobtrusive reminder is enough.
 const TopPrestigeBar = styled.div`
   align-items: center;
-  background: #1c1206;
-  border-bottom: 2px solid #854d0e;
+  background: ${props => props.theme.color.surfaceRaised};
+  border-bottom: 2px solid ${props => props.theme.color.warn};
+  box-shadow: ${props => props.theme.shadow.sm};
+  color: ${props => props.theme.color.text};
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: ${props => props.theme.space.md};
   justify-content: center;
   left: 0;
-  padding: calc(0.6rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right)) 0.6rem
-    calc(1rem + env(safe-area-inset-left));
+  padding: calc(${props => props.theme.space.sm} + env(safe-area-inset-top))
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-right))
+    ${props => props.theme.space.sm}
+    calc(${props => props.theme.space.lg} + env(safe-area-inset-left));
   position: fixed;
   right: 0;
   top: 0;
@@ -522,6 +538,15 @@ const TopPrestigeBar = styled.div`
 // hardcoded single-line height would silently let the taller bar overlap the Header below it.
 const TopPrestigeBarSpacer = styled.div`
   height: ${props => props.$height}px;
+`
+
+// Prestige-surface copy only — forked from the app-wide MutedText (still hardcoded elsewhere) so
+// this region's AA audit stays meaningful without migrating TierList/SpeedUpCard in #138's scope.
+const PrestigeMutedText = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  margin: 0;
 `
 
 const MutedText = styled.p`
@@ -1185,10 +1210,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
         <FullScreenCard>
           <h2>✦ Prestige Available!</h2>
-          <MutedText>
+          <PrestigeMutedText>
             You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
-          </MutedText>
+          </PrestigeMutedText>
           <ul>
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
@@ -1201,7 +1226,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <Button
             ref={fullScreenPrestigeButtonRef}
             aria-label="Prestige now"
-            color="#fbbf24"
+            variant="prestige"
             onClick={actions.prestige}
             title="Awards Prestige Points and resets your resources"
             type="button"
@@ -1219,10 +1244,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {showTopPrestigeBar && (
         <>
           <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
-            <MutedText>1 Googol Bytes reached — production has stopped.</MutedText>
+            <PrestigeMutedText>1 Googol Bytes reached — production has stopped.</PrestigeMutedText>
             <Button
               aria-label={prestigeAriaLabel}
-              color="#fbbf24"
+              variant="prestige"
               onClick={actions.prestige}
               title="Awards Prestige Points and resets your resources"
               type="button"

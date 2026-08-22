@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   production reads at `theme.color.text`/`font-weight: 500` vs muted owned count; tier symbol uses
   `font.display`; controls row separates from stats via top margin; expanded details get a border-top
   divider.
+- **Prestige surfaces token migration** (#139): `FullScreenOverlay`/`FullScreenCard` and
+  `TopPrestigeBar` use design tokens (`surfaceRaised`, `warn`, `text`/`textMuted`, type scale,
+  `shadow`/`radius`/`space`); prestige buttons use `variant="prestige"`; copy via `PrestigeMutedText`.
+- **Light mode activation** (#140): `ThemeProvider` follows persisted `tens_theme_preference` or OS
+  `prefers-color-scheme`; fixed `ThemeToggle` (top-right) switches and persists; reset does not
+  clear theme preference. Prestige overlay AA pairs added to `tokens.contrast.test.js`.
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.

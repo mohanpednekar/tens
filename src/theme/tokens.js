@@ -44,7 +44,8 @@ const palette = {
     good: '#0a6b30', // darkened from #12a150 — that shade only cleared 3.37:1 against `surface`,
     // below WCAG AA's 4.5:1 normal-text threshold (see tokens.contrast.test.js); this shade clears
     // both `surface` and `surfaceSunken` with margin.
-    warn: '#b7791f',
+    warn: '#966100', // darkened from #b7791f — that shade only cleared ~3.2:1 against light
+    // `surfaceSunken` (prestige buttons); this clears 4.5:1+ for normal button text.
     info: '#1f7ac0',
     violet: '#7048c4',
     danger: '#d64545',
