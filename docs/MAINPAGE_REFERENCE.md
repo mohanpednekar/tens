@@ -11,8 +11,9 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Factory / Foundry / Storage / Compute / Guide) — pages
-themselves take `{ game }` only and carry no Back / open-* navigation props. `MainPage` is only
+`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — pages
+themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
+top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
 true and the player hasn't voluntarily navigated to `ByteFoundryPage` via AppNav's Foundry item —
 see "Byte Foundry page" below and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section.
@@ -30,8 +31,9 @@ Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
-`Header` with the page title (top-level navigation lives in AppNav, not here); a `SubNav` (Memory |
-Disks tabs, shown once Storage unlocks); a `TilesRow` (flex row)
+`Header` with the page title (top-level navigation lives in AppNav, not here); **no** second-level
+Memory | Storage tabs — Memory controls and every DiskArrayRow share one continuous scroll; a
+`TilesRow` (flex row)
 holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
@@ -113,9 +115,13 @@ above already computes) renders on THIS page once `computeCoreRevealed` AND
 (see issue #316). `disabled={!canClaimComputeCore}` where `canClaimComputeCore =
 isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores under
 `COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that Memory
-needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled.
+needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled. **After Boosts
+unlocks** (`computeCoreRevealed`), Claim Core and Memory ×10 **swap positions**: Claim Core takes
+Memory ×10's former milestones-row slot beside Bandwidth (while manual claim is still shown), and
+Memory ×10 moves below the disk section. Before Boosts unlocks, Memory ×10 stays beside Bandwidth
+and Claim Core is absent.
 
-Storage split differently: **Build Disk** stays on this page — its own core-loop action, alongside
+Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
 capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
 more deliberate reveal than `revealed`'s own 8000-bit gate above). Its visible label always tracks
@@ -129,6 +135,10 @@ a cumulative, never-decremented count), decoupled from tier01's own CURRENT pric
 disk still costs 80,000 bits ("10 KB"), unchanged numerically from an earlier, buggy "kilobit"-scaled
 version of this ladder at level 1, just computed without a separate `BITS_PER_BYTE` factor now that
 `capacityBits` is already Byte-accurate (see docs/DESIGN_HISTORY.md).
+
+Below Build, every size from `getDiskSizesToShow(state)` renders a full interactive
+`components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
+not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
 Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
 immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
@@ -160,21 +170,12 @@ build), paired with a hidden `role="progressbar"` (`aria-label="byte foundry dis
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size via `formatDiskSize` and the cost via
 `formatBitsInNearestUnit` (see "Numbers are formatted" below). Building only ever constructs an EMPTY
-container — it does not fill it (see "Storage page" below).
+container — Memory / read cache / write cache fill it afterward (see DiskArrayRow continuous
+sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
+split — every shown size's full interactive DiskArrayRow already lives on this page.
 
-Right below Build, once anything has ever been built or is held (`diskSizesWithHistory` —
-`getDiskSizesToShow(state)` filtered back down to sizes with `disksBuiltTotal[size] > 0 ||
-intro.disks[size] > 0`, since `getDiskSizesToShow` on its own always includes the currently-offered
-size even at 0 built), a brief `StorageSummaryRow` (`role="group"`, `aria-label="storage summary"`)
-shows one small `StorageSummaryChip` per size, each reading `"<size> <full>/<built>"` (e.g. `"10 KB
-3/8"` — 8 disks of 10 KB ever built, 3 currently full via `Math.max(disksBuiltTotal[size], full)`) —
-a compact, at-a-glance readout, deliberately not the fuller square-by-square grid StoragePage itself
-renders (see below); visiting StoragePage is still how a full disk actually gets redeemed.
-
-`StoragePage` (reached via AppNav once Storage is revealed) holds the fuller per-size detail and
-redeeming for every size ever reached; Build stays on ByteFoundryPage.
-
-Below Build / Claim Core, once `isIntroConversionUnlocked(state)`, a **transfer-block row**
+Below Build (and, after Boosts unlocks, below Memory ×10 when it has moved under the disk section),
+once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
 `getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
@@ -244,13 +245,11 @@ to carry over or reset in the first place. Once unlocked, the page also persists
 player can return to at any time via AppNav's Foundry item rather than disappearing for the rest of
 the cycle — and stays just as interactive there as on the gate itself.
 
-**Storage page** (`src/pages/StoragePage/index.jsx`). Storage's fuller detail screen, split out of
-ByteFoundryPage (see "Byte Foundry" section above) — reached via AppNav once Storage is revealed.
-Takes `{ game }`. A centered title `🏦 Storage` is all the page-chrome it has — **no Build button
-and no Memory balance readout here**: building the next disk stays on ByteFoundryPage itself (see
-above); this page holds only the fuller per-size cache/squares grid and the two Storage actions that
-live only here, releasing a full cache block into the Bits balance (`resources.base`) and redeeming
-a full disk.
+**Storage page** (`src/pages/StoragePage/index.jsx`). Thin reusable every-size DiskArrayRow wrapper
+kept for reuse/tests — the **primary** UI path is Foundry's continuous Memory + Disk sections
+(see "Byte Foundry" section above). Not a top-level AppNav destination. Takes `{ game }`. A
+centered title `🏦 Storage` is all the page-chrome it has — **no Build button and no Memory balance
+readout here**: building the next disk stays on ByteFoundryPage itself (see above).
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
@@ -280,9 +279,8 @@ render:
   `resources.base` (Bits) — Cache never auto-transfers.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
-  strip read together as one progress bar, filling left-to-right (on viewports below 40rem the row
-  wraps — five disks per line on viewports below 40rem (desktop keeps all ten inline); in-cell labels
-  use `0.65rem` font:
+  strip that **always** keeps all ten circles on one unbroken row (circles flex-shrink; never wraps
+  on mobile); in-cell labels use `0.65rem` font:
   **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
   `aria-label="auto-redeem <size> disk for <tier>"`;
   `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for
@@ -575,7 +573,7 @@ not at the bottom"):
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Factory / Foundry / Storage / Compute / Guide) live in
+  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Guide → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against

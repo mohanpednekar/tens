@@ -27,8 +27,9 @@ const Title = styled.h1`
 `
 
 // Storage's every-size detail — kept as a thin wrapper for reuse/tests. Primary UI path is now
-// ByteFoundryPage's Disks second-level tab (Storage is no longer a top-level AppNav destination).
-// Starting the next disk's build stays on the Foundry Memory tab.
+// ByteFoundryPage's continuous Memory + Storage sections (Storage is no longer a top-level AppNav
+// destination and no longer a Foundry second-level tab). Starting the next disk's build stays on
+// ByteFoundryPage itself.
 const StoragePage = ({ game }) => {
   const { actions, state } = game
   const diskSizesToShow = getDiskSizesToShow(state)
