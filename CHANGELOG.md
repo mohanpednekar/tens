@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Ladder screen** (formerly **Factory** / **Byte Factory**): AppNav label **Ladder** /
+  accessible name `open ladder`; MainPage header is **Ladder** (not the game name “Tens”). Peer
+  tabs are **Ladder | Upgrades**. Cache-transfer hints, Settings danger-zone copy, and confirm
+  dialogs use **Ladder** instead of **Factory**.
 - **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
   Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
   **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).

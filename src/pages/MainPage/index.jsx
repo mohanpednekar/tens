@@ -1220,7 +1220,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       )}
 
       <Header>
-        <h1>Byte Factory</h1>
+        <h1>Ladder</h1>
       </Header>
 
       <PrestigeProgressTop aria-label="prestige progress">
@@ -1359,7 +1359,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {/* Second-level Byte Factory tabs: Data | Upgrades (no back button). Milestones is under More.
           Upgrades gated on !isFirstRun — PP upgrades don't exist before a first Prestige. */}
       {!isFirstRun && (
-        <ViewNav role="tablist" aria-label="factory view">
+        <ViewNav role="tablist" aria-label="ladder view">
           <ViewTabButton
             aria-selected={view === 'game'}
             color={view === 'game' ? 'white' : 'darkgrey'}
@@ -1367,7 +1367,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             role="tab"
             type="button"
           >
-            Data
+            Ladder
           </ViewTabButton>
           <ViewTabButton
             aria-label="open upgrades"
