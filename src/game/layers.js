@@ -2,13 +2,12 @@
 // through `producesResourceId` into the tier below's owned/resource count.
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
-// 'tier01' intentionally has costResourceId === producesResourceId: it is the
-// entry-level money generator, bought with Bits to produce more Bits. Bytes themselves are no
-// longer a purchasable tier here — they're produced entirely within the Byte Foundry pre-game
-// screen (see the "Byte Foundry" constants section and `intro` state below), which hands the
-// player their first Kilobytes directly once its own bit economy crosses a threshold, replacing
-// the old cheap self-producing tier01 as the game's actual bootstrap. See docs/DESIGN_HISTORY.md
-// for why Bytes was pulled out of this ladder.
+// 'tier01' is bought with Bits but produces Bytes (see BYTES_ID below) — the Factory's
+// byte-scale output currency, distinct from the bit-scale Money pool. Bytes themselves are still
+// not a purchasable tier here; the Byte Foundry pre-game screen (see the "Byte Foundry" constants
+// section and `intro` state below) hands the player their first Kilobytes directly once its own
+// bit economy crosses a threshold, replacing the old cheap self-producing tier01 as the game's
+// actual bootstrap. See docs/DESIGN_HISTORY.md for why Bytes was pulled out of this ladder.
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
@@ -22,7 +21,7 @@
 // meant to be sped back up by investing in those rather than being structurally unable to keep pace
 // — see docs/DESIGN_HISTORY.md for both the original revert and this reintroduction.
 export const TIER_DEFINITIONS = [
-  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'base',   baseTickSpeedSeconds: 1  },
+  { id: 'tier01', name: 'Kilobytes',   symbol: 'KB', baseCost: 1E3,  costResourceId: 'base', producesResourceId: 'bytes', baseTickSpeedSeconds: 1  },
   { id: 'tier02', name: 'Megabytes',   symbol: 'MB', baseCost: 1E6,  costResourceId: 'base', producesResourceId: 'tier01', baseTickSpeedSeconds: 2  },
   { id: 'tier03', name: 'Gigabytes',   symbol: 'GB', baseCost: 1E9,  costResourceId: 'base', producesResourceId: 'tier02', baseTickSpeedSeconds: 3  },
   { id: 'tier04', name: 'Terabytes',   symbol: 'TB', baseCost: 1E12, costResourceId: 'base', producesResourceId: 'tier03', baseTickSpeedSeconds: 4  },
@@ -35,9 +34,12 @@ export const TIER_DEFINITIONS = [
 ]
 
 
-// Falls back to 'b' (lowercase — a bit) for MONEY_ID/an unrecognized resource id. No tier owns a
-// bare 'B' (Byte) symbol any more — Bytes live only in the Byte Foundry intro, not this list.
-export const RESOURCE_SYMBOL = tierId => TIER_DEFINITIONS.find(t => t.id === tierId)?.symbol || 'b'
+// Falls back to 'b' (lowercase — a bit) for MONEY_ID/an unrecognized resource id.
+export const BYTES_ID = 'bytes'
+export const RESOURCE_SYMBOL = resourceId => {
+  if (resourceId === BYTES_ID) return 'B'
+  return TIER_DEFINITIONS.find(t => t.id === resourceId)?.symbol || 'b'
+}
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
 // continuously every global tick (see engine.js's tickGame / tierProductionAccumulators) —
@@ -439,10 +441,11 @@ export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // unit-buying autobuyer above. Also no longer PP-funded.
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 12
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
-// The global tickspeed multiplier (see engine.js's getGlobalTickspeedProductionMultiplier/
-// buyGlobalTickspeedMultiplier) speeds up *every* tier's production at once — unlike the per-tier
-// tickspeed multiplier, this is a single global upgrade track (mirroring Auto-Prestige's
-// null/level pattern), not something bought separately per tier. Every level compounds this rate
+// Clock Speed (the global tickspeed multiplier — see engine.js's
+// getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
+// production at once — unlike the per-tier tickspeed multiplier, this is a single global upgrade
+// track (mirroring Auto-Prestige's null/level pattern), not something bought separately per tier.
+// Funded from the Bytes pool (see BYTES_ID), not Bits. Every level compounds this rate
 // (1%) — the same ×1.01-per-level growth the design always had — except a milestone level (see
 // GLOBAL_TICKSPEED_MILESTONE_STEP below) compounds by that larger rate instead, for that one level
 // only.

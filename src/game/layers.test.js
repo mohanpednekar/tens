@@ -5,6 +5,7 @@ import {
   AUTO_PRESTIGE_COST_MULTIPLIER,
   AUTO_SPEED_UP_COST,
   BITS_PER_BYTE,
+  BYTES_ID,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_DURATION_STEP,
@@ -89,11 +90,11 @@ describe('TIER_DEFINITIONS', () => {
     })
   })
 
-  it('first tier is Kilobytes and both costs and produces the base currency (Bits)', () => {
+  it('first tier is Kilobytes, costs Bits, and produces Bytes', () => {
     expect(TIER_DEFINITIONS[0].id).toBe('tier01')
     expect(TIER_DEFINITIONS[0].name).toBe('Kilobytes')
     expect(TIER_DEFINITIONS[0].costResourceId).toBe(MONEY_ID)
-    expect(TIER_DEFINITIONS[0].producesResourceId).toBe(MONEY_ID)
+    expect(TIER_DEFINITIONS[0].producesResourceId).toBe(BYTES_ID)
   })
 
   it('last tier is Quettabytes', () => {
@@ -126,6 +127,10 @@ describe('RESOURCE_SYMBOL', () => {
 
   it('falls back to b for MONEY_ID', () => {
     expect(RESOURCE_SYMBOL(MONEY_ID)).toBe('b')
+  })
+
+  it('returns B for BYTES_ID', () => {
+    expect(RESOURCE_SYMBOL(BYTES_ID)).toBe('B')
   })
 
   it('falls back to b for an unknown resource id', () => {
