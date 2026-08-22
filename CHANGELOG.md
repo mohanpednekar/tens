@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- **Disk array layout**: each size's disk circles now render **5 per row** (two rows for the full
-  10-disk ladder cap) so each disk reads larger than the cache blocks above it.
+- **Disk array layout (mobile)**: below the 40rem breakpoint, each size's disk circles wrap to
+  **5 per row** (two rows for the full 10-disk ladder cap) so each disk reads larger than the
+  cache blocks above it; desktop keeps all ten in one row.
 
 ### Added
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
