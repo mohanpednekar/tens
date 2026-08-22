@@ -30,9 +30,8 @@ Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
-`Header` with the page title (top-level navigation lives in AppNav, not here); a one-line status
-explainer below that (two variants — pre-unlock instructions, or a post-unlock acknowledgment that
-transfers keep working indefinitely, with no per-cycle cap to run into); a `TilesRow` (flex row)
+`Header` with the page title (top-level navigation lives in AppNav, not here); a `SubNav` (Memory |
+Disks tabs, shown once Storage unlocks); a `TilesRow` (flex row)
 holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
@@ -515,8 +514,8 @@ not at the bottom"):
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
   Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
-  sits under the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
-  `PrestigeProgressFill`, the `"N% to Prestige"` label, and its own `VisuallyHidden
+  sits above the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
+  `PrestigeProgressFill`, the `"N% to Prestige"` label only, and its own `VisuallyHidden
   role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by

@@ -391,11 +391,6 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
       <Header>
         <Title>⚙️ Byte Foundry</Title>
       </Header>
-      <StatusText>
-        {!intro.mainGameUnlocked
-          ? 'Tap to fill Memory. Combine 8 bits into a Byte to auto-produce.'
-          : 'Main game unlocked — keep transferring Memory into Kilobytes any time.'}
-      </StatusText>
 
       {storageRevealed && (
         <SubNav role="tablist" aria-label="foundry view">

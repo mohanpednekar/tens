@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
   matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no
   disk is available.
+- **Byte Foundry header**: removed the instructional subtitle under the page title — the on-screen
+  controls and unlock flow carry the guidance instead.
 - **Clock Speed** — the global tickspeed upgrade (MainPage card + Guide) is renamed from "Tickspeed" and
   now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
 - **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead
@@ -33,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
+- **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
+  label only (no unbounded-unlock hint or next-PP detail).
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
   from the global corner overlay and Settings header.
 
