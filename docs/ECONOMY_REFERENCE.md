@@ -920,8 +920,11 @@ ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
 **Production:** `getComputeFlopsTierProductionMultiplier(state, tierId)` returns
 `1 + cumulativeBoost[tierId]`, multiplied into each tier's production batch in `tickGame`.
 
-**Display:** `getComputeFlopsTotal(state)` sums all per-tier cumulative boosts; `formatComputeFlopsBoost`
-renders the hero line (e.g. `0 Flops`, `1.5 Flops (+150%)`).
+**Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
+**E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
+Factory tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
+renders the hero line; per-tier rows still use `formatComputeFlopsBoost` on the unweighted boost.
+Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
 
 **Prestige:** `prestigeGame` keeps `computeFlops.owned` and `pageUnlocked`; resets
 `cumulativeBoost` to fresh zeros (same as Memory — per-cycle boost, permanent ownership).

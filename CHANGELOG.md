@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Foundry **Boosters** screen (formerly nav **Compute**) now uses page id `'boosters'` and label **Boosters** so the new Compute screen can take the Compute name.
 
 ### Changed
+- **Compute (Flops) cumulative total** — hero displays **E = k + 10M + 100G + 1000T + … + 10⁹Q**
+  (each tier's cumulative boost weighted by 10<sup>n</sup>); production multipliers stay unweighted.
 - **Compute (Flops) costs** — per-unit PP price now rises after every purchase on the triangular
   power-of-ten epoch (same formula as Factory tiers via `getTierCost`, but one epoch step per buy
   instead of every 8-purchase level block).

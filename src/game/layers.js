@@ -544,6 +544,7 @@ export const COMPUTE_FLOPS_FIRST_TIER_COST_PP = 1E3
 export const COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30
 // Each owned unit of a Flops tier adds this fraction per real second to that tier's cumulative
 // boost on the matching main-game tier (0.01% = 0.0001). Production uses (1 + cumulativeBoost).
+// The hero total E = k + 10M + 100G + … + 10^9Q weights each tier's cumulativeBoost by 10^index.
 export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // Ten Flops tiers (KFlops → QFlops), 1:1 with main-game tiers. Each tier's base PP cost matches
 // TIER_DEFINITIONS' baseCost ladder (1000 PP … 10^30 PP); per-unit price then scales on every

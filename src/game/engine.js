@@ -908,11 +908,15 @@ export const buyComputeFlopsTier = flopId => state => {
   }
 }
 
+export const getComputeFlopsTierWeight = tierIndex => 10 ** clampNonNegative(tierIndex)
+
+// Cumulative Flops display: E = k + 10M + 100G + 1000T + … + 10^9Q — each tier's
+// cumulativeBoost on its matching Factory tier, weighted by 10^tierIndex (K=10^0 … Q=10^9).
 export const getComputeFlopsTotal = state =>
-  TIER_DEFINITIONS.reduce(
-    (sum, tier) => sum + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tier.id] ?? 0),
-    0,
-  )
+  COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((sum, flopTier, tierIndex) => {
+    const boost = clampNonNegative(state.computeFlops?.cumulativeBoost?.[flopTier.boostsTierId] ?? 0)
+    return sum + boost * getComputeFlopsTierWeight(tierIndex)
+  }, 0)
 
 export const getComputeFlopsTierProductionMultiplier = (state, tierId) =>
   1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0)
@@ -924,6 +928,12 @@ export const formatComputeFlopsBoost = value => {
   if (pct >= 100) return `${formatAmount(safe)} Flops (+${formatAmount(pct)}%)`
   if (pct >= 0.01) return `${formatAmount(safe)} Flops (+${pct.toFixed(2)}%)`
   return `${formatAmount(safe)} Flops (+${pct.toExponential(2)}%)`
+}
+
+export const formatComputeFlopsTotal = value => {
+  const safe = clampNonNegative(value)
+  if (safe === 0) return '0 Flops'
+  return `${formatAmount(safe)} Flops`
 }
 
 export const tickComputeFlops = elapsedSeconds => state => {

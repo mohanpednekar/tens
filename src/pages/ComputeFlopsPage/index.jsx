@@ -5,6 +5,7 @@ import {
   canBuyComputeFlopsTier,
   formatAmount,
   formatComputeFlopsBoost,
+  formatComputeFlopsTotal,
   getComputeFlopsTierCost,
   getComputeFlopsTierProductionMultiplier,
   getComputeFlopsTotal,
@@ -96,7 +97,7 @@ const ComputeFlopsPage = ({ game }) => {
       <Header>
         <h1>🖥 Compute</h1>
         <FlopsHero aria-label="cumulative flops boost">
-          {formatComputeFlopsBoost(totalFlops)}
+          {formatComputeFlopsTotal(totalFlops)}
         </FlopsHero>
       </Header>
 

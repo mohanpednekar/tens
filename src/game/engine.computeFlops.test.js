@@ -63,6 +63,24 @@ describe('Compute Flops screen', () => {
     expect(after.prestige.points).toBe(0)
   })
 
+  it('weights cumulative Flops total as k + 10M + 100G + … + 10^9 Q', () => {
+    const state = {
+      ...createInitialGameState(),
+      computeFlops: {
+        pageUnlocked: true,
+        owned: {},
+        cumulativeBoost: {
+          ...createInitialGameState().computeFlops.cumulativeBoost,
+          tier01: 1,
+          tier02: 1,
+          tier03: 2,
+        },
+      },
+    }
+    // E = 1*k + 10*M + 100*G = 1 + 10 + 200 = 211
+    expect(getComputeFlopsTotal(state)).toBe(211)
+  })
+
   it('accumulates Flops boost linearly with owned count and elapsed time', () => {
     let state = createInitialGameState()
     state = buyComputeFlopsTier('flop01')({

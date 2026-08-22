@@ -388,8 +388,10 @@ const InfoPage = () => {
             <strong>(1 + cumulative boost)</strong>.
           </li>
           <li>
-            Cumulative boost per tier displays as <strong>Flops</strong> at the top of the screen
-            and resets each Prestige; owned unit counts are permanent across Prestige.
+            Cumulative boost per tier displays in the hero as <strong>Flops</strong> using{' '}
+            <strong>E = k + 10M + 100G + 1000T + … + 10⁹Q</strong> (each tier's boost weighted by
+            10<sup>n</sup>, K = 10⁰ through Q = 10⁹). Production still uses the unweighted per-tier
+            boost. Totals reset each Prestige; owned unit counts are permanent.
           </li>
         </ul>
       </Section>
