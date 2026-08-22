@@ -645,6 +645,17 @@ jobs:
           fi
           scripts/epic-407-issue-hygiene.sh
 
+      - name: Sync release milestones (housekeeping)
+        if: steps.guard.outputs.mode == 'housekeeping'
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          if [ ! -x scripts/sync-release-milestones.sh ]; then
+            echo "::warning::scripts/sync-release-milestones.sh missing or not executable — skipping."
+            exit 0
+          fi
+          scripts/sync-release-milestones.sh
+
       - name: Run autonomous maintenance task
         if: steps.guard.outputs.skip != 'true'
         env:
