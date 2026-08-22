@@ -375,7 +375,8 @@ repo/org **variable** (not a secret) — unset means the account default.
 both `claude/auto-*` and `cursor/auto-*` open PRs toward the shared 5-PR ceiling and treats a task
 covered by either prefix as in flight, so the two engines never double-pick the same `claude-task`.
 `pr-auto-merge.yml`'s approval-free low-risk path recognizes `cursor/auto-*` and `cursor/heal-main-*`
-alongside the `claude/*` prefixes; its human-approval path was already repo-wide. The Cursor
+(Path 2); `scripts/pr-low-risk-eligible.sh` also accepts broader `cursor/heal-*` for Path 3
+(post-adversarial APPROVE). Both sit alongside the `claude/*` prefixes. The Cursor
 maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
 Claude workflow already owns that, and duplicating it would double-post.
 

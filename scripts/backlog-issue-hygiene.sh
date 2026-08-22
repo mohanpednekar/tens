@@ -159,8 +159,9 @@ for spec in \
   fi
 done
 
-# #138 stays blocked until #139 prestige surfaces land (UI revamp sequencing).
-post_comment_once 138 "**Backlog hygiene note:** Still **blocked** pending #139 (Prestige surfaces redesign) — tier-row token/grid work should not race the prestige overlay revamp. Revisit \`blocked\` removal once #139 merges."
+# #138: tier-row redesign — blockers #134/#137 are closed; #139 is blocked *by* #138 (not the reverse).
+remove_label_if_present 138 'blocked'
+post_comment_once 138 "**Backlog hygiene:** Removed stale \`blocked\` label — dependencies #134 and #137 are closed. #139 (Prestige surfaces) is sequenced **after** this issue; ready for Phase A pickup."
 
 # --- Delegate epic-specific hygiene ---
 
