@@ -702,7 +702,8 @@ this slot back to the normal Money-funded button until the player buys back up t
 "The last tier's XP-funded tickspeed" below for why.
 
 **No per-tier automation icon on the Game view row.** A tier row's `name` grid area (shared by
-`TierName`) holds only the tier's symbol now — no tickspeed-bonus badge (see "Tickspeed multiplier"
+`TierNameTrigger` / `TierName`) holds the tier's symbol plus the owned count on the same first
+line — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still

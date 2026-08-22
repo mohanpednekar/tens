@@ -616,8 +616,10 @@ const collapseDisclosure = event => {
   event.currentTarget.open = false
 }
 
-// Owned count lives on the first line beside the tier symbol (inside TierName's flex row),
-// not on its own grid row. `as="span"` keeps it valid inside the h3.
+// Owned count lives on the first line beside the tier symbol as a flex sibling of TierName
+// inside TierNameTrigger (not nested in the h3 — nesting would pollute the heading's
+// accessible name). `as="span"` matches VersionText's pattern of avoiding MutedText's
+// default block `<p>`.
 const OwnedText = styled(MutedText).attrs({ as: 'span' })`
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
