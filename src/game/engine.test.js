@@ -8021,6 +8021,23 @@ describe('eraGame carry/reset matrix (#407)', () => {
     const after = eraGame(richState())
     expect(pick(after)).toEqual(expected)
   })
+
+  it('clears in-flight disk build on Era ascension', () => {
+    const state = eraEligibleState({
+      intro: {
+        ...eraEligibleState().intro,
+        diskBuild: { size: 8000, remainingSeconds: 5, totalSeconds: 10 },
+      },
+    })
+    expect(eraGame(state).intro.diskBuild).toBeNull()
+  })
+
+  it('carries paused tier autobuyer flags through Era ascension', () => {
+    const state = eraEligibleState({
+      autobuyersEnabled: { ...eraEligibleState().autobuyersEnabled, [tier0]: false },
+    })
+    expect(eraGame(state).autobuyersEnabled[tier0]).toBe(false)
+  })
 })
 
 describe('tickComputeFlopsAutobuyers via tickGame', () => {

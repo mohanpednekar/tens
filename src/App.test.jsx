@@ -4115,6 +4115,70 @@ test('Settings Era ascension confirms, resets Foundry assets, and keeps automati
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 })
 
+test('full Reset clears Era and Eons meta progress', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true },
+    era: { count: 3 },
+    eons: { balance: 12 },
+    hyperscalerCount: 2,
+  })
+  render(<App />)
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset game/i }))
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.era.count).toBe(0)
+  expect(saved.eons.balance).toBe(0)
+  expect(saved.hyperscalerCount).toBe(0)
+})
+
+test('Reset Byte Foundry preserves Era and Eons', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true,
+      byteCreated: true,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      disks: { 8000: 1 },
+    },
+    era: { count: 2 },
+    eons: { balance: 5 },
+    hyperscalerCount: 1,
+  })
+  render(<App />)
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.era.count).toBe(2)
+  expect(saved.eons.balance).toBe(5)
+  expect(saved.hyperscalerCount).toBe(1)
+  expect(saved.intro.disks).toEqual({})
+})
+
+test('Era ascension survives a page reload', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    prestige: { xp: 0, points: ERA_ELIGIBILITY_PP, count: 1, highestMilestone: 1 },
+    intro: { mainGameUnlocked: true, byteCreated: true },
+  })
+  const { unmount } = render(<App />)
+  await openSettings(user)
+  await user.click(screen.getByRole('button', { name: /ascend an era — open confirmation/i }))
+  await user.click(screen.getByRole('button', { name: /^ascend era$/i }))
+  unmount()
+
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('1 Eon')
+})
+
 describe('Compute (Flops) screen', () => {
   test('nav stays hidden below 100 PP', () => {
     seedMainGameState({ prestige: { xp: 0, points: 99, count: 1, highestMilestone: 1 } })
