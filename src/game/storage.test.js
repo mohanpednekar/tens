@@ -321,6 +321,24 @@ describe('schema merge on load', () => {
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
 
+  it('does not map legacy resources.Ones to resources.base', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      resources: { Ones: 12345 },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
+    expect(loaded.resources.Ones).toBe(12345)
+  })
+
+  it('does not backfill mainGameUnlocked from intro.completed', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      intro: { completed: true },
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }))
+    expect(loadGameState().intro.mainGameUnlocked).toBe(false)
+  })
+
   it('preserves a save\'s own in-progress intro state', () => {
     const state = {
       ...createInitialGameState(),

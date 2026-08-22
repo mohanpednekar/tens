@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier
   name/id remapping, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage
   bank field renames, purchase-level derivation, autobuyer milestone backfill on load, etc.). Saves
-  must match the current schema; `mergeState` only merges missing fields from fresh defaults.
+  must match the current schema; `mergeState` only merges missing fields from fresh defaults. Meta
+  no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
 
 ### Changed
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
