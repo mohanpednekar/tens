@@ -16,8 +16,8 @@ import styled, { keyframes } from 'styled-components'
 
 // One size's Cache+Disks strip: size identity lives INSIDE each cell (bit-scale on cache
 // squares, Byte-scale on disk circles) — no external Cache/Disks titles or array header.
-// Built/full counts stay visual. Sizes stack cleanly when Foundry Disks / StoragePage lists
-// every array. (smallest→largest across sizes is the caller's job.)
+// Built/full counts stay visual. Sizes stack cleanly when Foundry lists every array
+// (smallest→largest across sizes is the caller's job).
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -54,20 +54,13 @@ const RebuildingText = styled.p`
   color: ${props => props.theme.color.accent};
 `
 
-// Mobile disk rows always use five per row; desktop keeps all ten inline (see SquaresRow).
-const MOBILE_DISKS_PER_ROW = 5
-
+// Always one unbroken row of DISK_ARRAY_LADDER_CAP disks — never wraps on mobile. Circles
+// flex-shrink together so longer in-cell labels still fit without a second row.
 const SquaresRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
   gap: 3px;
   width: 100%;
-
-  /* Below 40rem — same mobile breakpoint as MainPage — wrap disks five per row so each circle
-     reads larger than the cache squares above. Desktop keeps all ten inline. */
-  @media (max-width: 40rem) {
-    flex-wrap: wrap;
-  }
 `
 
 const manualPulse = keyframes`
@@ -78,10 +71,8 @@ const manualPulse = keyframes`
 // A single discrete, all-or-nothing disk container — never partially filled, matching the
 // mechanic itself. Flexible width (like CacheBlock below), so the row of DISK_ARRAY_LADDER_CAP
 // circles always stretches to fill the full row rather than staying small and centered with
-// leftover space around it. On mobile (max-width: 40rem) each circle caps at one fifth of the
-// row width (five disks per row) — desktop keeps all ten inline. Fully round (border-radius: 50%)
-// — deliberately distinct from CacheBlock's square, chip-like shape below, so the two rows read
-// apart at a glance (a physical
+// leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
+// CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
 // disk is round; a cache/memory block is square). $full takes priority over $empty over the plain
 // not-yet-built placeholder. Among full disks: $autoRedeem (info/blue — matching tier autobuyer
 // will take it) vs $manualRedeem (good/green + pulse — player must tap) vs merely redeemable-
@@ -114,11 +105,6 @@ const DiskSquare = styled.button`
   cursor: ${props => (props.$full && props.$manualRedeem ? 'pointer' : 'default')};
   transition: filter 0.15s ease, transform 0.05s ease;
   animation: ${props => (props.$manualRedeem ? manualPulse : 'none')} 1.4s ease-in-out infinite;
-
-  @media (max-width: 40rem) {
-    flex: 1 1 calc((100% - (${MOBILE_DISKS_PER_ROW} - 1) * 3px) / ${MOBILE_DISKS_PER_ROW});
-    max-width: calc((100% - (${MOBILE_DISKS_PER_ROW} - 1) * 3px) / ${MOBILE_DISKS_PER_ROW});
-  }
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -211,13 +197,13 @@ const WriteCacheFlushFill = styled.div`
   transform: scaleX(${props => props.$fill});
 `
 
-// One Disk array's full interactive detail (cache release, redeem) for a single `size` — shared by
-// ByteFoundryPage (matching sizes + always the highest shown size, ascending) and StoragePage
-// (every size ever reached), so the detail reads and behaves identically wherever it's shown. See
-// CLAUDE.md's "Byte Foundry"/"Economy model" sections. Redeeming/releasing are both unaffected by
-// the Byte Foundry's forced priority order (Disk Fill ranks highest — see isDiskFillAvailable in
-// engine.js), so nothing here is ever disabled by anything elsewhere in that chain — only by this
-// specific size's own array being mid-build (see intro.diskBuild).
+// One Disk array's full interactive detail (cache release, redeem) for a single `size` — used by
+// ByteFoundryPage (every size from getDiskSizesToShow, ascending continuous sections) and the
+// thin StoragePage wrapper. See CLAUDE.md's "Byte Foundry"/"Economy model" sections. Redeeming/
+// releasing are both unaffected by the Byte Foundry's forced priority order (Disk Fill ranks
+// highest — see isDiskFillAvailable in engine.js), so nothing here is ever disabled by anything
+// elsewhere in that chain — only by this specific size's own array being mid-build (see
+// intro.diskBuild).
 const DiskArrayRow = ({ actions, size, state }) => {
   const { intro } = state
   const full = intro.disks?.[size] ?? 0

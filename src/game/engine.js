@@ -2972,13 +2972,12 @@ export const isDiskCacheBlockManualReleaseAvailable = (state, capacityBits) =>
   isDiskCacheBlockReleasable(state, capacityBits) &&
   !isDiskCacheBlockAutoReleaseEligible(state, capacityBits)
 
-// Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
-// whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
-// that tier), PLUS always the highest size in that list — even when it does not currently match.
-// The highest row is usually the ladder's current / incomplete array, which is the most useful
-// one to keep tracking on Foundry even while building ahead of redeemability. Ascending — Cache
-// then Disks of each row render smallest→largest. The Build button stays independent of this list;
-// full history stays on the Disks tab / StoragePage.
+// Every Disk size currently "relevant" for a matching-tier Foundry subset: any size from
+// getDiskSizesToShow whose current per-unit tier cost matches right now (cache releasable / disk
+// redeemable toward that tier), PLUS always the highest size in that list — even when it does not
+// currently match (usually the ladder's current / incomplete array). Ascending. The live Foundry
+// UI lists every getDiskSizesToShow size as continuous sections instead; this helper remains for
+// the narrower matching subset (issue #389).
 export const getRelevantDiskSizesForFoundry = state => {
   const shown = getDiskSizesToShow(state)
   if (shown.length === 0) return []

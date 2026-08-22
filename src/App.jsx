@@ -19,7 +19,7 @@ import styled from 'styled-components'
 const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
-// it lives under Foundry as the Storage tab — so it is not gate-exempt on its own.
+// it lives under Foundry as continuous sections — so it is not gate-exempt on its own.
 const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings'])
 
 const PageShell = styled.div`
@@ -37,8 +37,8 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Bumped when AppNav selects Factory so MainPage resets to the Data tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
-  // Bumped when AppNav selects Foundry so ByteFoundryPage can reset to Memory (or open Disks when
-  // preferredFoundryTab is set from a deep-link style navigate — currently always 'memory').
+  // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
+  // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
   const [foundryFocusNonce, setFoundryFocusNonce] = useState(0)
 
   const mainGameUnlocked = game.state.intro.mainGameUnlocked
@@ -57,8 +57,7 @@ function App() {
     if (nextPage === 'boosters' && !showBoosters) return
     if (nextPage === 'compute' && !showComputeFlops) return
     if (nextPage === 'game' && !mainGameUnlocked) return
-    // Legacy 'storage' deep-links → Foundry (Storage tab is chosen inside ByteFoundryPage when
-    // storage attention is the reason; default Memory is fine for a plain Foundry open).
+    // Legacy 'storage' deep-links → Foundry (Disks are continuous Foundry sections now).
     if (nextPage === 'storage') {
       setMenuOpen(false)
       setFoundryFocusNonce(n => n + 1)
