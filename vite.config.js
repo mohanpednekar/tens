@@ -39,6 +39,7 @@ export default defineConfig({
       game: path.join(srcPath, 'game'),
       pages: path.join(srcPath, 'pages'),
       theme: path.join(srcPath, 'theme'),
+      'save-migration': path.join(srcPath, 'save-migration'),
     },
   },
   server: {

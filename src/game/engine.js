@@ -700,9 +700,7 @@ export const getTierTickspeedAutobuyerMilestone = tierId => {
 
 // Auto-unlocks every tier's autobuyer/tier-tickspeed-autobuyer whose milestone (see
 // getAutobuyerUnlockMilestone/getTierTickspeedAutobuyerMilestone) is met by state.prestige.count —
-// called from prestigeGame right after count is incremented, and also from storage.js's
-// migrateState on load (so a save from before this feature existed retroactively receives whatever
-// it's already earned, without needing another prestige to trigger it). Never revokes an
+// called from prestigeGame right after count is incremented. Never revokes an
 // already-unlocked tier and returns the same state reference if nothing newly qualifies, matching
 // every other engine function's no-op convention — safe to call as often as needed since
 // prestige.count only ever grows.

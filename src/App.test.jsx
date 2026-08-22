@@ -2,12 +2,13 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
@@ -45,13 +46,39 @@ afterEach(() => {
 // Every test exercising MainPage (the vast majority of this file) needs the Byte Foundry's
 // main-game gate already unlocked, or <App /> lands on ByteFoundryPage instead (see App.jsx's page
 // routing — `intro.mainGameUnlocked` is the only thing that decides which page a fresh/seeded save
-// opens on). `migrateState` backfills the rest of the `intro` shape from
+// opens on). `mergeState` backfills the rest of the `intro` shape from
 // `createInitialGameState()`'s own defaults regardless (see storage.js), so
 // `{ mainGameUnlocked: true }` alone is always sufficient here — no need to spell out
 // bits/capacity/etc. by hand. Pass `overrides.intro` to seed a specific (still-gated) intro state
 // instead, e.g. for ByteFoundryPage's own tests below.
-const seedMainGameState = (overrides = {}) =>
-  localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true }, ...overrides }))
+const derivePurchaseFieldsFromCounts = (owned = {}, purchased = {}, existing = {}) => {
+  const nextPurchased = { ...(existing.purchased ?? {}), ...purchased }
+  const purchaseLevels = { ...(existing.purchaseLevels ?? {}) }
+  const purchaseLevelProgress = { ...(existing.purchaseLevelProgress ?? {}) }
+  TIER_DEFINITIONS.forEach(tier => {
+    const count = nextPurchased[tier.id] ?? owned[tier.id]
+    if (count === undefined || purchaseLevels[tier.id] !== undefined) return
+    nextPurchased[tier.id] = count
+    const level = Math.floor(count / DEFAULT_PURCHASE_BLOCK_SIZE) + 1
+    purchaseLevels[tier.id] = level
+    purchaseLevelProgress[tier.id] = count - (level - 1) * DEFAULT_PURCHASE_BLOCK_SIZE
+  })
+  return { purchased: nextPurchased, purchaseLevels, purchaseLevelProgress }
+}
+
+const seedMainGameState = (overrides = {}) => {
+  const { owned, purchased, ...rest } = overrides
+  const purchaseDerived = (owned || purchased)
+    ? derivePurchaseFieldsFromCounts(owned ?? {}, purchased ?? {}, overrides)
+    : {}
+  const state = applyAutobuyerMilestones({
+    intro: { mainGameUnlocked: true },
+    ...rest,
+    ...(owned ? { owned } : {}),
+    ...purchaseDerived,
+  })
+  localStorage.setItem('tens_game_state', JSON.stringify(state))
+}
 
 // Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
 // More sheet itself. Tests that click Reset must open Settings first.
@@ -75,6 +102,24 @@ test('renders the current app version in the corner', () => {
   render(<App />)
 
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
+})
+
+test('shows a blocking notice and starts fresh when an incompatible save is detected on load', async () => {
+  const user = userEvent.setup()
+  localStorage.setItem('tens_game_state', JSON.stringify({ resources: { Ones: 100 } }))
+
+  render(<App />)
+
+  expect(screen.getByRole('dialog', { name: /save not compatible/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /save not compatible/i })).toBeInTheDocument()
+  const persisted = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(persisted.resources.Ones).toBeUndefined()
+  expect(persisted.saveSchemaVersion).toBe(1)
+
+  await user.click(screen.getByRole('button', { name: /start fresh with a new save/i }))
+
+  expect(screen.queryByRole('dialog', { name: /save not compatible/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 })
 
 // Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
@@ -160,7 +205,7 @@ test('AppNav Foundry attention dot lights when Memory is full while on Factory',
 
 test('AppNav Factory attention dot lights when a full purchase level is affordable', () => {
   // Kilobytes costs 1,000/unit; a fresh block is 8 units → 8,000 Bits buys a full level.
-  seedMainGameState({ resources: { Ones: DEFAULT_PURCHASE_BLOCK_SIZE * 1000 } })
+  seedMainGameState({ resources: { base: DEFAULT_PURCHASE_BLOCK_SIZE * 1000 } })
   render(<App />)
 
   const tiersButton = screen.getByRole('button', { name: /open factory/i })
@@ -185,7 +230,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   const user = userEvent.setup()
 
   // Kilobytes now costs 1,000/unit (baseCost) — seed enough Money for exactly 1 unit.
-  seedMainGameState({ resources: { Ones: 1000 } })
+  seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
@@ -217,7 +262,7 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   const user = userEvent.setup()
 
   // Money=1,000, per-unit cost 1,000 — manual Buy grabs as many as affordable, which is just 1 unit.
-  seedMainGameState({ resources: { Ones: 1000 } })
+  seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
@@ -249,7 +294,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-  seedMainGameState({ resources: { Ones: 1000 } })
+  seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
   // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
@@ -273,7 +318,7 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-  seedMainGameState({ resources: { Ones: 1000 } })
+  seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
@@ -292,7 +337,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(false)
 
-  seedMainGameState({ resources: { Ones: 1000 } })
+  seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
   // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
@@ -403,7 +448,7 @@ test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async ()
 
 test('Megabytes tier appears and is purchasable once Kilobytes has fully purchased two levels (16 owned)', () => {
   seedMainGameState({
-    resources: { Ones: 8_000_000 },
+    resources: { base: 8_000_000 },
     owned: { tier01: 16 },
   })
   render(<App />)
@@ -421,7 +466,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 8_000_000 },
+    resources: { base: 8_000_000 },
     owned: { tier01: 16 },
   })
   render(<App />)
@@ -444,7 +489,7 @@ test('money balance is shown once at the top in full currency format, centered, 
 
 test('a money-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 5 },
   })
   render(<App />)
@@ -455,7 +500,7 @@ test('a money-producing tier shows its per-tick production amount with the curre
 
 test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 5 },
     tickspeedLevels: { tier01: 3 },
@@ -478,7 +523,7 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
   // a testable 10 of its own resource — matching engine.test.js's convention for this ladder.
   seedMainGameState({
-    resources: { Ones: 10, tier10: 11 },
+    resources: { base: 10, tier10: 11 },
     owned: { tier09: 10, tier10: 1 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
@@ -495,7 +540,7 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
 
 test('reaching 8 lifetime purchases of a tier doubles its displayed production amount', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 5 },
     purchased: { tier01: 8 },
   })
@@ -507,7 +552,7 @@ test('reaching 8 lifetime purchases of a tier doubles its displayed production a
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 },
   })
   render(<App />)
@@ -523,7 +568,7 @@ test('a tier row has no separate "Details" label — clicking its name reveals b
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Megabytes (base tickspeed 2s)
   })
   render(<App />)
@@ -553,12 +598,12 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   // the global tickspeed multiplier itself, so both figures below must agree by construction.
   const user = userEvent.setup()
 
-  localStorage.setItem('tens_game_state', JSON.stringify({
-    resources: { Ones: 10 },
+  seedMainGameState({
+    resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
     overclockCount: 1, // boosts the regular step from 1% to 1.1% per level
-  }))
+  })
 
   render(<App />)
 
@@ -575,7 +620,7 @@ test('clicking anywhere else on a tier row\'s tile (not a button) also expands i
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 },
   })
   render(<App />)
@@ -600,7 +645,7 @@ test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its deta
   // Enough Money to make the Buy button genuinely clickable (Megabytes costs 1,000,000/unit) —
   // an actually-disabled button would swallow the click entirely, making this assertion trivial.
   seedMainGameState({
-    resources: { Ones: 2_000_000 },
+    resources: { base: 2_000_000 },
     owned: { tier01: 10, tier02: 4 },
   })
   render(<App />)
@@ -616,7 +661,7 @@ test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its deta
 
 test('the Buy button shows a cost-block progress bar reflecting purchases so far', () => {
   seedMainGameState({
-    resources: { Ones: 10_000 },
+    resources: { base: 10_000 },
     purchased: { tier01: 4 },
   })
   render(<App />)
@@ -638,7 +683,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 100_000 },
+    resources: { base: 100_000 },
   })
   render(<App />)
 
@@ -659,7 +704,7 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 3000 }, // affords 3 at $1,000/unit, not the full block of 8
+    resources: { base: 3000 }, // affords 3 at $1,000/unit, not the full block of 8
   })
   render(<App />)
 
@@ -681,7 +726,7 @@ test('each tier name is rendered as a heading for screen-reader navigation', () 
 
 test('applies offline progress at 100% speed and shows no notice for an absence under the full-speed threshold', () => {
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   // 100 real seconds ago, well under the 10-minute full-speed threshold → 100 simulated seconds at
@@ -697,7 +742,7 @@ test('applies offline progress at 100% speed and shows no notice for an absence 
 
 test('applies offline progress at 50% speed and shows a notice for an absence past the full-speed threshold', () => {
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   // 1000 real seconds ago, past the 10-minute full-speed threshold → 500 simulated seconds at 50%
@@ -715,7 +760,7 @@ test('dismissing the offline progress notice hides it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
@@ -731,7 +776,7 @@ test('dismissing the offline progress notice hides it', async () => {
 test('the offline progress notice shows a countdown on its Dismiss button and fades/auto-dismisses after 10 seconds', () => {
   vi.useFakeTimers()
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
@@ -762,7 +807,7 @@ test('the offline progress notice shows a countdown on its Dismiss button and fa
 test('clicking Dismiss removes the offline progress notice immediately, without waiting for the fade', () => {
   vi.useFakeTimers()
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
@@ -780,7 +825,7 @@ test('clicking Dismiss removes the offline progress notice immediately, without 
 
 test('shows no offline progress notice when there is no recorded last-save timestamp', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
   })
   render(<App />)
 
@@ -794,7 +839,7 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
   // BACKGROUND_TICK_GAP_THRESHOLD_SECONDS in useIncrementalGame.js).
   vi.useFakeTimers()
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   // No gap at mount — whatever notice appears below must come from the live tick loop, not
@@ -826,7 +871,7 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
 test('catches up a real-world gap as soon as the page becomes visible again, even before the tick interval next fires', () => {
   vi.useFakeTimers()
   seedMainGameState({
-    resources: { Ones: 0 },
+    resources: { base: 0 },
     owned: { tier01: 5 },
   })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now()))
@@ -849,7 +894,7 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
   })
   render(<App />)
 
@@ -868,7 +913,7 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
   render(<App />)
@@ -882,7 +927,7 @@ test('the sticky PP display doubles as a Prestige button once Prestige is availa
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
   render(<App />)
@@ -894,7 +939,7 @@ test('the sticky PP display doubles as a Prestige button once Prestige is availa
 
 test('the sticky PP display is not a clickable button before Prestige is available', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 5, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -906,7 +951,7 @@ test('the sticky PP display is not a clickable button before Prestige is availab
 test('production and every other control freeze once money reaches a googol', async () => {
   const user = userEvent.setup()
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier01: 5 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
@@ -919,7 +964,7 @@ test('production and every other control freeze once money reaches a googol', as
 
 test('the Speed Up panel stays hidden before the last tier unlocks', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
   })
   render(<App />)
 
@@ -928,7 +973,7 @@ test('the Speed Up panel stays hidden before the last tier unlocks', () => {
 
 test('the Speed Up panel appears once the last tier unlocks, with the button disabled below the required level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 1 },
   })
@@ -940,7 +985,7 @@ test('the Speed Up panel appears once the last tier unlocks, with the button dis
 
 test('the Speed Up button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 6 },
   })
@@ -951,7 +996,7 @@ test('the Speed Up button is enabled once the last tier reaches the required lev
 
 test('the second Speed Up requires one more level than the first, not the same level 5', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 6 },
     speedUpCount: 1,
@@ -965,7 +1010,7 @@ test('the second Speed Up requires one more level than the first, not the same l
 
 test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 2 },
     speedUpCount: 2,
@@ -982,7 +1027,7 @@ test('the Speed Up button shows the next multiplier and requirement progress on 
 
 test('the speed up and overclock panels render below the tier list, not above it', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3 },
   })
@@ -995,7 +1040,7 @@ test('the speed up and overclock panels render below the tier list, not above it
 
 test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {
   seedMainGameState({
-    resources: { Ones: 12345 },
+    resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier09: 3, tier10: 2 },
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
@@ -1018,7 +1063,7 @@ test('clicking Speed Up once eligible resets resources but keeps the panel visib
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 12345 },
+    resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier09: 3, tier10: 6 },
   })
@@ -1042,7 +1087,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 12345 },
+    resources: { base: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
     purchaseLevels: { tier09: 3, tier10: 6 },
     globalTickspeedMultiplier: 2,
@@ -1063,7 +1108,7 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
 
 test('the Speed Up button is disabled once production freezes at a googol', () => {
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 2 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
@@ -1075,7 +1120,7 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
 
 test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
   })
   render(<App />)
@@ -1086,7 +1131,7 @@ test('no Auto Speed Up control appears during the first run, even with the last 
 
 test('the Overclock panel stays hidden before the last tier unlocks', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
   })
   render(<App />)
 
@@ -1095,7 +1140,7 @@ test('the Overclock panel stays hidden before the last tier unlocks', () => {
 
 test('the Overclock panel appears once the last tier unlocks, with the button disabled below the required level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 3 },
     overclockCount: 3,
@@ -1108,7 +1153,7 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
 
 test('the Overclock button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 5 },
     overclockCount: 3,
@@ -1120,7 +1165,7 @@ test('the Overclock button is enabled once the last tier reaches the required le
 
 test('the first Overclock claim of a cycle is never free — a completely untouched last tier (level 1) is not enough', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3 },
   })
@@ -1131,7 +1176,7 @@ test('the first Overclock claim of a cycle is never free — a completely untouc
 
 test('the second Overclock requires one more level than the first, not the same level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 2 },
     overclockCount: 1,
@@ -1145,7 +1190,7 @@ test('the second Overclock requires one more level than the first, not the same 
 
 test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 8 },
     overclockCount: 5,
@@ -1168,7 +1213,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   // while collapsed by default — same convention every other live-state disclosure on this page
   // follows — so no expand click is needed here.
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 12 },
     overclockCount: 10,
@@ -1182,7 +1227,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 1 },
   })
@@ -1197,7 +1242,7 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 12345 },
+    resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 8 },
     speedUpCount: 5,
@@ -1227,7 +1272,7 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
 
 test('the Overclock button is disabled once production freezes at a googol', () => {
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
@@ -1241,7 +1286,7 @@ test('the PP Upgrades page groups purchases into labeled categories', async () =
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1258,7 +1303,7 @@ test('the PP Upgrades page groups purchases into labeled categories', async () =
 
 test('the Production Bonuses category disappears once the speed bonus is bought (nothing left to show)', async () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestigeSpeedBonusUnlocked: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -1272,7 +1317,7 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
   })
@@ -1291,7 +1336,7 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
 
 test('the global tickspeed panel renders above the tier list, not below it', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1 },
   })
   render(<App />)
@@ -1304,7 +1349,7 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
@@ -1325,7 +1370,7 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up h
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier09: 10 },
     autoSpeedUp: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
@@ -1341,7 +1386,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   vi.useFakeTimers()
 
   seedMainGameState({
-    resources: { Ones: 12345 },
+    resources: { base: 12345 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 6 },
     autoSpeedUp: true,
@@ -1371,7 +1416,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
 
 test('no Global Tickspeed Multiplier panel appears before the second tier has ever been owned', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
   })
   render(<App />)
 
@@ -1382,7 +1427,7 @@ test('an Enable Global Tickspeed Multiplier button appears once the second tier 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1 },
   })
   render(<App />)
@@ -1409,7 +1454,7 @@ test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is cl
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
@@ -1434,7 +1479,7 @@ test('the Tickspeed panel\'s Lv./bonus line is collapsed until the heading is cl
 
 test('the Enable Global Tickspeed Multiplier button stays disabled without enough Money', () => {
   seedMainGameState({
-    resources: { Ones: 9 },
+    resources: { base: 9 },
     owned: { tier02: 1 },
   })
   render(<App />)
@@ -1444,7 +1489,7 @@ test('the Enable Global Tickspeed Multiplier button stays disabled without enoug
 
 test('the Global Tickspeed Multiplier Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { Ones: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -1462,7 +1507,7 @@ test('the Global Tickspeed Multiplier Upgrade button costs another power of ten 
 
 test('the global tickspeed bonus jumps at the first 10-level milestone, compounding the 10% milestone step on top of the regular 1% levels before it', () => {
   seedMainGameState({
-    resources: { Ones: 1e15 },
+    resources: { base: 1e15 },
     globalTickspeedMultiplier: 10,
   })
   render(<App />)
@@ -1474,7 +1519,7 @@ test('the global tickspeed bonus jumps at the first 10-level milestone, compound
 
 test('the global tickspeed bonus still shows fractional percent precision one level before a milestone pushes it past 100%', () => {
   seedMainGameState({
-    resources: { Ones: 1e15 },
+    resources: { base: 1e15 },
     globalTickspeedMultiplier: 39,
   })
   render(<App />)
@@ -1485,7 +1530,7 @@ test('the global tickspeed bonus still shows fractional percent precision one le
 
 test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses +100% at a milestone', () => {
   seedMainGameState({
-    resources: { Ones: 1e15 },
+    resources: { base: 1e15 },
     globalTickspeedMultiplier: 40,
   })
   render(<App />)
@@ -1551,7 +1596,7 @@ test.each([
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...seed,
   })
   render(<App />)
@@ -1598,7 +1643,7 @@ test.each([
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
     ...seed,
   })
@@ -1626,7 +1671,7 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1640,7 +1685,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
@@ -1661,7 +1706,7 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
@@ -1675,7 +1720,7 @@ test('the Auto-Prestige Upgrade button costs double the previous level, and stay
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     autoPrestige: 1,
     prestige: { xp: 0, points: 1999, count: 1, highestMilestone: 1 },
@@ -1691,7 +1736,7 @@ test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
@@ -1705,7 +1750,7 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     autoPrestige: 1,
     prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST, count: 1, highestMilestone: 1 },
@@ -1724,7 +1769,7 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestigeSpeedBonusUnlocked: true,
     prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
   })
@@ -1738,7 +1783,7 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1764,7 +1809,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1786,7 +1831,7 @@ test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     // tier01's autobuyer unlocks automatically at Prestige 1, so it's already unlocked the moment
     // the PP Upgrades page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
     // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
@@ -1806,7 +1851,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier01: 16 },
     prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
@@ -1824,7 +1869,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
 test('no PP Upgrades tab or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 5, count: 0, highestMilestone: 1 },
   })
@@ -1843,7 +1888,7 @@ test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
@@ -1869,7 +1914,7 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
     prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
   })
@@ -1883,7 +1928,7 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 10, count: 12, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (12)
   })
@@ -1897,7 +1942,7 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
 
 test('a tier\'s row disappears only once both Smart and its tier tickspeed autobuyer are bought', async () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     smartAutobuyer: { tier01: true },
     tierTickspeedAutobuyer: { tier01: true },
@@ -1911,7 +1956,7 @@ test('a tier\'s row disappears only once both Smart and its tier tickspeed autob
 
 test('a tier\'s row on the PP Upgrades page does not appear before that tier itself is reachable, regardless of prestige count', async () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     // tier02 isn't unlocked yet: tier01 is owned below the 8-unit unlock threshold.
     owned: { tier01: 3 },
     // A high enough prestige count to have already met every milestone up through tier02 — still
@@ -1927,7 +1972,7 @@ test('a tier\'s row on the PP Upgrades page does not appear before that tier its
 
 test('the PP Upgrades tab NavDot lights up when a tier\'s Smart purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
@@ -1938,7 +1983,7 @@ test('the PP Upgrades tab NavDot lights up when a tier\'s Smart purchase is affo
 
 test('the PP Upgrades tab NavDot stays dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     // tier01's autobuyer is already unlocked (milestone 1, met by count 1) but there's no PP to
     // spend on anything — not Smart, not any of the global automations — so nothing here is
     // "affordable" despite later tiers' autobuyer/tickspeed-autobuyer rows still showing locked.
@@ -1951,7 +1996,7 @@ test('the PP Upgrades tab NavDot stays dark when only a locked (milestone-gated)
 
 test('the PP Upgrades tab NavDot goes dark once a tier is fully done and nothing else is affordable', () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     smartAutobuyer: { tier01: true },
     tierTickspeedAutobuyer: { tier01: true },
@@ -1966,7 +2011,7 @@ test('Milestones is reachable via More both before and after the first prestige 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
   })
   render(<App />)
@@ -1982,7 +2027,7 @@ test('the Milestones page lists every tier\'s autobuyer/tier-tickspeed-autobuyer
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
   })
   render(<App />)
@@ -2009,7 +2054,7 @@ test('an autobuyer active/paused badge appears on the PP Upgrades page once its 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     autobuyers: { tier01: 1 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -2036,7 +2081,7 @@ test('no autobuyer pause button appears on the PP Upgrades page before its autob
   // enough to leave isFirstRun and reach the Upgrades tab, but not enough to unlock it, unlike
   // Kilobytes (milestone 1) which would already be unlocked at this same count.
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -2051,7 +2096,7 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
   vi.useFakeTimers()
 
   seedMainGameState({
-    resources: { Ones: 10000 },
+    resources: { base: 10000 },
     autobuyers: { tier01: 1 },
     autobuyersEnabled: { tier01: false },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
@@ -2085,7 +2130,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
   // an earlier tier, keeping the seeded resource amount small; owned > 0 already satisfies
   // isTierUnlocked for this tier directly, with no dependency on any other tier's state.
   seedMainGameState({
-    resources: { Ones: 10, tier09: 101 },
+    resources: { base: 10, tier09: 101 },
     owned: { tier09: 101 },
     tierTickspeedAutobuyer: { tier09: true },
     tierTickspeedAutobuyerEnabled: { tier09: false },
@@ -2112,7 +2157,7 @@ test('once every tier is smart and tickspeed-automated, a single notice replaces
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     ...allTiersSmartSeed(),
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -2127,7 +2172,7 @@ test('once every tier is smart and tickspeed-automated, a single notice replaces
 
 test('a tier fully Smart but not yet tickspeed-automated does not trigger the "every tier" notice', async () => {
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
     autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
     smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
@@ -2145,7 +2190,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
     prestigeSpeedBonusUnlocked: true,
     speedUpCount: 2,
@@ -2176,7 +2221,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -2193,7 +2238,7 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
   })
   render(<App />)
@@ -2209,7 +2254,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
     overclockCount: 2,
   })
@@ -2226,23 +2271,35 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 // --- ByteFoundryPage (the pre-game intro) ---
 // A completely empty localStorage (cleared in beforeEach) loads createInitialGameState()'s own
 // fresh defaults directly (no migration involved at all — computeInitialGame only calls
-// migrateState when loadGameState() finds something saved) — intro.mainGameUnlocked is false
+// mergeState when loadGameState() finds something saved) — intro.mainGameUnlocked is false
 // there, so <App /> lands on ByteFoundryPage. Seeding tens_game_state with an explicit (still-
 // gated) `intro` object below reproduces later Byte Foundry states without tapping/combining/
 // investing by hand.
-const seedIntroState = (introOverrides = {}, otherOverrides = {}) =>
+const seedIntroState = (introOverrides = {}, otherOverrides = {}) => {
+  const intro = {
+    bits: 0,
+    productionAccumulator: 0,
+    capacity: INTRO_STARTING_CAPACITY,
+    byteCreated: false,
+    productionMultiplier: 1,
+    mainGameUnlocked: false,
+    ...introOverrides,
+  }
+  if (
+    intro.computeMergePageUnlocked === undefined &&
+    ((intro.computeNodes ?? 0) > 0 ||
+      (intro.computeCores ?? 0) >= COMPUTE_CORES_PER_NODE ||
+      intro.computeClusters ||
+      intro.computeNetworks ||
+      intro.computeGrids)
+  ) {
+    intro.computeMergePageUnlocked = true
+  }
   localStorage.setItem('tens_game_state', JSON.stringify({
-    intro: {
-      bits: 0,
-      productionAccumulator: 0,
-      capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: false,
-      productionMultiplier: 1,
-      mainGameUnlocked: false,
-      ...introOverrides,
-    },
+    intro,
     ...otherOverrides,
   }))
+}
 
 test('tapping increments the bit balance and stops once capacity is reached', async () => {
   const user = userEvent.setup()
@@ -3774,7 +3831,7 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
     intro: { mainGameUnlocked: true, bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
   })
@@ -3831,7 +3888,7 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   // time pushes it over, firing Auto-Prestige immediately without needing to simulate 1000s of
   // gameplay — same "budget already at threshold" trick as the existing auto-invest test above.
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
     autoPrestige: 1,
     autoPrestigeAttemptBudget: 1,
@@ -3913,7 +3970,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   vi.useFakeTimers()
 
   seedMainGameState({
-    resources: { Ones: PRESTIGE_THRESHOLD },
+    resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
     autoPrestige: 1,
     autoPrestigeAttemptBudget: 1,
@@ -3959,7 +4016,7 @@ test.each([
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { Ones: 10 },
+    resources: { base: 10 },
     prestige: { xp: 0, points: 0, count: prestigeCount, highestMilestone: 1 },
   })
   render(<App />)
