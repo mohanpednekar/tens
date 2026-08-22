@@ -81,33 +81,32 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Left half stacks the tier name above the owned count, both sitting directly above the
-// tickspeed (first) button; production occupies the top-right (right half, spanning the two
-// name/owned rows) so the rate hugs the row's right edge. Button row: tickspeed and Buy each
-// take exactly half the row (equal column halves) — Buy stays rightmost as the constantly-
-// clicked control. Bottom line: a single 'details' area spanning both columns, holding the
-// per-tier click-to-expand disclosure's content (see TierDetailsContent below) — only rendered
-// at all while expanded, so a collapsed row contributes zero height there. There is no separate
-// visible trigger for it (no "Details" label): TierName itself (wrapped in TierNameTrigger, in
-// the 'name' area) is the trigger, and clicking anywhere else on the tile that isn't a button
-// also toggles it (see the row's own onClick below) — a React-controlled disclosure rather than
-// native <details>/<summary>, see openTierDetailIds in MainPage for why. cursor: pointer
-// signals the whole tile is clickable; Button's own cursor rule overrides it for the two
-// buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier autobuyer status
-// badge; it's folded into the 'name' row instead now that the badge is a single icon rather
-// than a written "Active"/"Paused" line (see MainPage), so the row no longer needs the extra
-// vertical space for it.
+// Top line: tier symbol on the left of the left half; owned count on the same line but
+// right-aligned to the row center (end of the left half via margin-left: auto); production
+// on the right. Button row: tickspeed
+// and Buy each take exactly half the row (equal column halves) — Buy stays rightmost as the
+// constantly-clicked control. Bottom line: a single 'details' area spanning both columns,
+// holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
+// only rendered at all while expanded, so a collapsed row contributes zero height there. There
+// is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
+// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
+// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
+// disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
+// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it
+// for the two buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier
+// autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
+// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
+// needs the extra vertical space for it.
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
     'name production'
-    'owned production'
     'upgrade buy'
     'details details';
   grid-template-columns: 1fr 1fr;
   align-items: center;
   column-gap: 0.5rem;
-  row-gap: 0.15rem;
+  row-gap: 0.3rem;
   padding: 0.4rem 0.7rem;
   border-left: 3px solid ${props => props.$accent};
   cursor: pointer;
@@ -437,9 +436,13 @@ const BalancesSentinel = styled.div`
 // for free; TierName (the h3 inside it) keeps its own heading semantics, since applying role via
 // ARIA only overrides an element's OWN implicit role, never a nested descendant's.
 const TierNameTrigger = styled.div`
+  align-items: baseline;
+  column-gap: 0.4rem;
+  cursor: pointer;
+  display: flex;
   grid-area: name;
   min-width: 0;
-  cursor: pointer;
+  width: 100%;
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -614,14 +617,17 @@ const collapseDisclosure = event => {
   event.currentTarget.open = false
 }
 
-// A deliberate per-component override of the color MutedText's own (still-hardcoded, #139 scope
-// — see the HudMutedText comment above) definition would otherwise inherit, so the tier row's own
-// two grid cells read from theme.color.textMuted without migrating MutedText itself.
-const OwnedText = styled(MutedText)`
-  grid-area: owned;
+// Owned count lives on the first line, right-aligned to the row center (pushed to the end of
+// the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
+// in the h3 (nesting would pollute the heading's accessible name). `as="span"` matches
+// VersionText's pattern of avoiding MutedText's default block `<p>`.
+const OwnedText = styled(MutedText).attrs({ as: 'span' })`
   color: ${props => props.theme.color.textMuted};
+  flex-shrink: 0;
   font-size: ${props => props.theme.type.scale.sm.size};
-  /* Sits in the left half directly above the tickspeed button. */
+  font-weight: 400;
+  margin-left: auto;
+  text-align: right;
   ${gridCell}
 
   @media (max-width: 40rem) {
@@ -631,7 +637,6 @@ const OwnedText = styled(MutedText)`
 
 const ProductionText = styled(MutedText)`
   grid-area: production;
-  align-self: start;
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
   text-align: right;
@@ -1578,6 +1583,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
                 </TierName>
+                  <OwnedText title="Owned">
+                    <VisuallyHidden>Owned: </VisuallyHidden>
+                    {formatAmount(owned)}
+                  </OwnedText>
               </TierNameTrigger>
               {isDetailsOpen && (
                 <TierDetailsContent id={detailsId}>
@@ -1601,10 +1610,6 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   </ul>
                 </TierDetailsContent>
               )}
-              <OwnedText title="Owned">
-                <VisuallyHidden>Owned: </VisuallyHidden>
-                {formatAmount(owned)}
-              </OwnedText>
               <ProductionText>
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
