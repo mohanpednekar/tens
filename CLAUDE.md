@@ -659,8 +659,9 @@ Strict three-layer separation:
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
    can drift out of sync with a live run. Reached via AppNav's Guide item; `App.jsx` toggles
    between these pages locally; there is still no routing library or backend involved.
-6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer
-   status screen. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
+6. **`MilestonesPage/index.jsx`** — standalone Chapters / tier-autobuyer / tickspeed-autobuyer /
+   Flops-autobuyer status screen. Chapters: first Kilobyte, Go Googol, Open Compute, Go Unbounded,
+   Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always reachable, including
    during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
    app meta/version, Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige

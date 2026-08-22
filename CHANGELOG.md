@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
+  Flops reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a **Flops
+  Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
+
 ### Added
 - **Era ascension engine** (#407/#410): voluntary meta-prestige at **1 Googol unspent PP**
   (`ERA_ELIGIBILITY_PP`); awards **Eons**, increments `era.count`, wipes Foundry/Factory cycle
