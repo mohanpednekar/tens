@@ -140,7 +140,7 @@ for num in 411 412 413 414; do
     continue
   fi
   add_label_if_missing "$num" 'claude-task'
-  set_milestone_if_missing "$num" 'v0.6.0'
+  set_milestone_if_missing "$num" 'v0.7.0'
 done
 
 add_label_if_missing 411 'size:M'
