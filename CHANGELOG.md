@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   production reads at `theme.color.text`/`font-weight: 500` vs muted owned count; tier symbol uses
   `font.display`; controls row separates from stats via top margin; expanded details get a border-top
   divider.
+- **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
