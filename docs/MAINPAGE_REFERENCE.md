@@ -515,8 +515,8 @@ not at the bottom"):
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
   Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
-  sits under the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
-  `PrestigeProgressFill`, the `"N% to Prestige"` label, and its own `VisuallyHidden
+  sits above the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
+  `PrestigeProgressFill`, the `"N% to Prestige"` label only, and its own `VisuallyHidden
   role="progressbar"` reusing `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
