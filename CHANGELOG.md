@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- **DiskArrayRow labels**: each array opens with a clear Byte-scale size header (e.g. `1 KB`);
-  Cache shows short `"Cache"` + bit-scale `"1 Kb each"` meta; Disks is just `"Disks"`. Built/full
-  counts are no longer restated in text — the square/circle strip already shows them. Instructional
-  copy (tap cache → Tiers Bits, redeem hints) stays in `title`/`aria`/action hints.
+- **DiskArrayRow labels**: one identity line per array — Byte-scale face size (e.g. `1 KB`) plus
+  quiet bit-scale cache pack (`8×1 Kb`). No `"Cache"` / `"Disks"` row titles (squares vs circles
+  distinguish the strips); built/full counts stay visual. Instructional copy stays in
+  `title`/`aria`/action hints.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.

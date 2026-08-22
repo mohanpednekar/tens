@@ -255,19 +255,20 @@ a full disk.
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
 whatever's currently offered even at 0 built, so its goal is visible before the first one is banked —
-ascending, smallest first), a `DiskSizeRow` renders a prominent Byte-scale `ArraySize` header
-(`formatDiskSize` — e.g. `1 KB`). Built/full tallies are not restated in text — the disk strip
-already shows them. Below the header, the row branches on whether that size's array is mid-build
+ascending, smallest first), a `DiskSizeRow` renders a single identity line: Byte-scale `ArraySize`
+(`formatDiskSize` — e.g. `1 KB`) plus quiet bit-scale `ArrayMeta` cache pack
+(`"<DISK_CACHE_BLOCK_COUNT>×<block>"` via `formatCacheSize` — e.g. `8×1 Kb`). Built/full tallies
+and `"Cache"` / `"Disks"` row titles are omitted — shapes (squares vs circles) distinguish the
+strips. Below the header, the row branches on whether that size's array is mid-build
 (`rebuilding = intro.diskBuild?.size === size`): while rebuilding, a single `RebuildingText` line
-replaces both rows below — `"Array rebuilding — <ceil(remainingSeconds)>s left (every disk in this
+replaces the cache strip — `"Array rebuilding — <ceil(remainingSeconds)>s left (every disk in this
 array is offline until it finishes)"` — since every IO operation against that size (cache release,
-redeem) is disallowed for the build's duration; otherwise, two rows render:
+redeem) is disallowed for the build's duration; otherwise, two unlabeled strips render:
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Caption is `"Cache"` plus
-  muted `"<block> each"` bit-scale meta (`formatCacheSize`); tap-to-transfer copy lives in
+  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Tap-to-transfer copy lives in
   `title`/`aria`/`ActionHint`. A block reads **full** (`$full` — a raised fill) once its own share
   of `intro.diskCache[size]` is filled, and independently **releasable** (`$releasable`, accent
   border, clickable) once `isDiskCacheBlockReleasable(state, size)` — full, that size isn't
@@ -276,8 +277,7 @@ redeem) is disallowed for the build's duration; otherwise, two rows render:
   `"<size> cache block N"`; `title` names the manual-only Tiers Bits transfer once releasable;
   clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
   `resources.base` (Bits) — Cache never auto-transfers.
-- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) under a plain `"Disks"` caption, of
-  exactly `DISK_ARRAY_LADDER_CAP`
+- A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — a fixed-length strip read together as one progress bar, filling left-to-right:
   **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
   `aria-label="auto-redeem <size> disk for <tier>"`, hint `"Auto-redeem → <tier> (autobuyer on)"`;
