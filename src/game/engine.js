@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -279,6 +279,13 @@ export const createInitialGameState = () => ({
   prestigeMuseum: {
     history: [],
     pinnedIds: [],
+  },
+  // PP-funded Flops Compute screen (nav "Compute") — owned counts are permanent; cumulativeBoost
+  // per main-game tier resets each Prestige cycle. pageUnlocked latches true once PP >= reveal.
+  computeFlops: {
+    pageUnlocked: false,
+    owned: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
+    cumulativeBoost: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   },
   // The Byte Foundry pre-game intro's own state — a currency pool entirely separate from
   // resources.base (see the "Byte Foundry" constants in layers.js) until the manual/auto
@@ -846,10 +853,109 @@ export const buyPrestigeSpeedBonus = state => {
   if (state.prestigeSpeedBonusUnlocked) return state
   if (clampNonNegative(state.prestige.points) < PRESTIGE_SPEED_BONUS_UNLOCK_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
+  return {
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
+    prestigeSpeedBonusUnlocked: true,
+  }
+}
+
+// --- PP Compute (Flops) screen --- see COMPUTE_FLOPS_* in layers.js
+
+export const isComputeFlopsPageRevealed = state =>
+  Boolean(state.computeFlops?.pageUnlocked)
+  || clampNonNegative(state.prestige?.points ?? 0) >= COMPUTE_FLOPS_REVEAL_PP
+
+export const latchComputeFlopsPageUnlocked = state => {
+  if (state.computeFlops?.pageUnlocked) return state
+  if (clampNonNegative(state.prestige?.points ?? 0) < COMPUTE_FLOPS_REVEAL_PP) return state
   return {
     ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
-    prestigeSpeedBonusUnlocked: true,
+    computeFlops: { ...state.computeFlops, pageUnlocked: true },
+  }
+}
+
+export const getComputeFlopsTierCost = (flopTier, ownedCount = 0) => {
+  const level = clampNonNegative(ownedCount) + 1
+  return getTierCost({ baseCost: flopTier.baseCostPP }, level)
+}
+
+export const canBuyComputeFlopsTier = (state, flopId) => {
+  const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
+  if (!flopTier) return false
+  const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
+  const cost = getComputeFlopsTierCost(flopTier, owned)
+  return clampNonNegative(state.prestige?.points ?? 0) >= cost
+}
+
+export const buyComputeFlopsTier = flopId => state => {
+  const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
+  if (!flopTier) return state
+  if (!canBuyComputeFlopsTier(state, flopId)) return state
+  const latched = latchComputeFlopsPageUnlocked(state)
+  const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
+  const cost = getComputeFlopsTierCost(flopTier, owned)
+  return {
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    computeFlops: {
+      ...latched.computeFlops,
+      owned: {
+        ...latched.computeFlops.owned,
+        [flopId]: clampNonNegative((latched.computeFlops.owned[flopId] ?? 0) + 1),
+      },
+    },
+  }
+}
+
+export const getComputeFlopsTierWeight = tierIndex => 10 ** clampNonNegative(tierIndex)
+
+// Cumulative Flops display: E = k + 10M + 100G + 1000T + … + 10^9Q — each tier's
+// cumulativeBoost on its matching Factory tier, weighted by 10^tierIndex (K=10^0 … Q=10^9).
+export const getComputeFlopsTotal = state =>
+  COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((sum, flopTier, tierIndex) => {
+    const boost = clampNonNegative(state.computeFlops?.cumulativeBoost?.[flopTier.boostsTierId] ?? 0)
+    return sum + boost * getComputeFlopsTierWeight(tierIndex)
+  }, 0)
+
+export const getComputeFlopsTierProductionMultiplier = (state, tierId) =>
+  1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0)
+
+export const formatComputeFlopsBoost = value => {
+  const safe = clampNonNegative(value)
+  if (safe === 0) return '0 Flops'
+  const pct = safe * 100
+  if (pct >= 100) return `${formatAmount(safe)} Flops (+${formatAmount(pct)}%)`
+  if (pct >= 0.01) return `${formatAmount(safe)} Flops (+${pct.toFixed(2)}%)`
+  return `${formatAmount(safe)} Flops (+${pct.toExponential(2)}%)`
+}
+
+export const formatComputeFlopsTotal = value => {
+  const safe = clampNonNegative(value)
+  if (safe === 0) return '0 Flops'
+  return `${formatAmount(safe)} Flops`
+}
+
+export const tickComputeFlops = elapsedSeconds => state => {
+  if (elapsedSeconds <= 0) return latchComputeFlopsPageUnlocked(state)
+  const latched = latchComputeFlopsPageUnlocked(state)
+  const owned = latched.computeFlops?.owned ?? {}
+  let changed = false
+  const cumulativeBoost = { ...latched.computeFlops.cumulativeBoost }
+  COMPUTE_FLOPS_TIER_DEFINITIONS.forEach(flopTier => {
+    const count = clampNonNegative(owned[flopTier.id] ?? 0)
+    if (count <= 0) return
+    const delta = count * COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * elapsedSeconds
+    if (delta <= 0) return
+    const tierId = flopTier.boostsTierId
+    cumulativeBoost[tierId] = clampNonNegative((cumulativeBoost[tierId] ?? 0) + delta)
+    changed = true
+  })
+  if (!changed) return latched
+  return {
+    ...latched,
+    computeFlops: { ...latched.computeFlops, cumulativeBoost },
   }
 }
 
@@ -1192,13 +1298,14 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickAutoComputeBoost) — countdown first so an expired boost can be replaced the same tick.
   const stateAfterComputeBoost = tickAutoComputeBoost(tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges))
   const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
+  const stateAfterFlops = tickComputeFlops(elapsedSeconds)(stateAfterIntro)
 
-  const autoPrestigeLevel = stateAfterIntro.autoPrestige ?? null
+  const autoPrestigeLevel = stateAfterFlops.autoPrestige ?? null
   // Paused (see setAutoPrestigeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
   // "never bought" for every automation purpose below — the level and any PP already spent stay
   // untouched, and the manual Prestige button keeps working regardless, but tickGame itself
   // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
-  const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterIntro.autoPrestigeEnabled ?? true)
+  const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterFlops.autoPrestigeEnabled ?? true)
 
   // Storage's own auto-redeem (full disks -> whichever tier currently matches each one's size —
   // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
@@ -1229,27 +1336,27 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // pool and deliberately bypass this freeze entirely, so a player who's crossed the Prestige
   // threshold but hasn't manually prestiged yet doesn't have to wait for that click to
   // fill/redeem a disk.
-  if (isProductionFrozen(stateAfterIntro)) {
-    if (!autoPrestigeActive) return tickStorage(stateAfterIntro)
-    const nextBudget = (stateAfterIntro.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
+  if (isProductionFrozen(stateAfterFlops)) {
+    if (!autoPrestigeActive) return tickStorage(stateAfterFlops)
+    const nextBudget = (stateAfterFlops.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
     // only actually prestiges once Money has reached PRESTIGE_THRESHOLD — which it already has,
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
     // prestigeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(prestigeGame(stateAfterIntro))
-    return tickStorage({ ...stateAfterIntro, autoPrestigeAttemptBudget: nextBudget })
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(prestigeGame(stateAfterFlops))
+    return tickStorage({ ...stateAfterFlops, autoPrestigeAttemptBudget: nextBudget })
   }
 
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus) —
   // before that, every tier produces at the flat ×1 baseline regardless of unspent PP balance.
-  const multiplier = stateAfterIntro.prestigeSpeedBonusUnlocked
-    ? getPrestigeProductionMultiplier(stateAfterIntro.prestige.points)
+  const multiplier = stateAfterFlops.prestigeSpeedBonusUnlocked
+    ? getPrestigeProductionMultiplier(stateAfterFlops.prestige.points)
     : 1
   // Speed Up's multiplier, unlike the PP bonus above, needs no unlock step — it applies as soon
   // as speedUpCount > 0 (see getSpeedUpMultiplier/speedUpGame).
-  const speedUpMultiplier = getSpeedUpMultiplier(stateAfterIntro.speedUpCount ?? 0)
+  const speedUpMultiplier = getSpeedUpMultiplier(stateAfterFlops.speedUpCount ?? 0)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
@@ -1292,7 +1399,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
       ...result,
       autobuyerAttemptBudgets: { ...result.autobuyerAttemptBudgets, [tier.id]: budget },
     }
-  }, stateAfterIntro)
+  }, stateAfterFlops)
 
   const newResources = { ...stateAfterAutobuyers.resources }
   const newOwned = { ...stateAfterAutobuyers.owned }
@@ -1333,7 +1440,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // to tier01 specifically — "the base production tier of each screen," Memory being the other
     // (see tickIntroProduction) — every other tier's own multiplier stays 1 regardless.
     const computeBoostMultiplier = tier.id === TIER_DEFINITIONS[0].id ? getComputeBoostMultiplier(stateAfterAutobuyers.intro) : 1
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier)
+    const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     // If the produced resource is also a tier (generator), add to owned count
@@ -3345,10 +3453,11 @@ export const buySmartAutobuyer = tierId => state => {
   const cost = getSmartAutobuyerCost(tierId)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
-    smartAutobuyer: { ...state.smartAutobuyer, [tierId]: true },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    smartAutobuyer: { ...latched.smartAutobuyer, [tierId]: true },
   }
 }
 
@@ -3377,9 +3486,10 @@ export const buyAutoPrestige = state => {
   const cost = getAutoPrestigeCost(currentLevel ?? 0)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
     autoPrestige: (currentLevel ?? 0) + 1,
   }
 }
@@ -3408,9 +3518,10 @@ export const buyAutoPrestigeAutobuyer = state => {
   if (state.autoPrestigeAutobuyer) return state
   if (clampNonNegative(state.prestige.points) < AUTO_PRESTIGE_AUTOBUYER_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - AUTO_PRESTIGE_AUTOBUYER_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - AUTO_PRESTIGE_AUTOBUYER_COST },
     autoPrestigeAutobuyer: true,
   }
 }
@@ -3768,6 +3879,12 @@ export const prestigeGame = state => {
     // exactly like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Speed Up reset does.
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked)
+        || clampNonNegative(state.prestige.points) + pointsAwarded >= COMPUTE_FLOPS_REVEAL_PP,
+      owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
     prestige: {
       ...initial.prestige,
       points: clampNonNegative(state.prestige.points) + pointsAwarded,
@@ -3876,6 +3993,12 @@ export const speedUpGame = state => {
     // change what a full Prestige/Speed Up reset does.
     // Museum is permanent per save — Speed Up must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
+      owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     speedUpCount: (state.speedUpCount ?? 0) + 1,
     // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Speed Up
@@ -3939,6 +4062,12 @@ export const overclockGame = state => {
     // see there.
     // Museum is permanent per save — Overclock must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
+    computeFlops: {
+      pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
+      owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
+      cumulativeBoost: initial.computeFlops.cumulativeBoost,
+    },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     // speedUpCount is deliberately NOT carried over (unlike speedUpGame's own self-increment) —
     // resets to 0 (initial.speedUpCount), wiping Speed Up's own stacking bonus. This is Overclock's
@@ -3960,9 +4089,10 @@ export const buyAutoSpeedUp = state => {
   if (state.autoSpeedUp) return state
   if (clampNonNegative(state.prestige.points) < AUTO_SPEED_UP_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - AUTO_SPEED_UP_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - AUTO_SPEED_UP_COST },
     autoSpeedUp: true,
   }
 }
@@ -3976,9 +4106,10 @@ export const buyComputeAutoBoost = state => {
   if (state.computeAutoBoostUnlocked) return state
   if (clampNonNegative(state.prestige.points) < COMPUTE_AUTO_BOOST_UNLOCK_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
     computeAutoBoostUnlocked: true,
   }
 }
@@ -4002,9 +4133,10 @@ export const buyTickspeedAutobuyer = state => {
   if (state.autoGlobalTickspeed) return state
   if (clampNonNegative(state.prestige.points) < TICKSPEED_AUTOBUYER_COST) return state
 
+  const latched = latchComputeFlopsPageUnlocked(state)
   return {
-    ...state,
-    prestige: { ...state.prestige, points: state.prestige.points - TICKSPEED_AUTOBUYER_COST },
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - TICKSPEED_AUTOBUYER_COST },
     autoGlobalTickspeed: true,
   }
 }

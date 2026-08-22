@@ -2,12 +2,13 @@ import AppMenu from 'components/AppMenu'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
+import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
 import MilestonesPage from 'pages/MilestonesPage'
 import SettingsPage from 'pages/SettingsPage'
-import { isComputeCoreConversionUnlocked, isProductionFrozen } from 'game/engine'
+import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage } from 'game/storage'
@@ -18,7 +19,7 @@ import { version } from '../package.json'
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as the Disks tab — so it is not gate-exempt on its own.
-const GATE_EXEMPT_PAGES = new Set(['info', 'compute', 'milestones', 'settings'])
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -58,13 +59,15 @@ function App() {
 
   const currentNavPage = showingFoundry ? 'foundry' : page
 
-  const showCompute = isComputeCoreConversionUnlocked(game.state)
+  const showBoosters = isComputeCoreConversionUnlocked(game.state)
+  const showComputeFlops = isComputeFlopsPageRevealed(game.state)
   // Factory is the only progress-gated primary destination — utilities (Guide / More) stay available
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
 
   const navigate = nextPage => {
-    if (nextPage === 'compute' && !showCompute) return
+    if (nextPage === 'boosters' && !showBoosters) return
+    if (nextPage === 'compute' && !showComputeFlops) return
     if (nextPage === 'game' && !mainGameUnlocked) return
     // Legacy 'storage' deep-links → Foundry (Disks tab is chosen inside ByteFoundryPage when
     // storage attention is the reason; default Memory is fine for a plain Foundry open).
@@ -92,9 +95,8 @@ function App() {
     if (isProductionFrozen(game.state)) return
     if (!window.confirm(buildResetByteFoundryConfirmMessage())) return
     game.resetByteFoundry()
-    // Compute may no longer be revealed after the wipe — leave Settings (or fall back to Foundry
-    // if somehow still on the Compute page).
-    if (page === 'compute') setPage('foundry')
+    // Flops Compute reveal is PP-based — Byte Foundry reset does not hide it.
+    if (page === 'boosters') setPage('foundry')
   }
 
   useEffect(() => {
@@ -111,8 +113,10 @@ function App() {
     content = <ByteFoundryPage focusNonce={foundryFocusNonce} game={game} />
   } else if (page === 'info') {
     content = <InfoPage />
-  } else if (page === 'compute') {
+  } else if (page === 'boosters') {
     content = <ComputePage game={game} />
+  } else if (page === 'compute') {
+    content = <ComputeFlopsPage game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'settings') {
@@ -136,7 +140,8 @@ function App() {
         moreOpen={menuOpen}
         onNavigate={navigate}
         onOpenMore={() => setMenuOpen(open => !open)}
-        showCompute={showCompute}
+        showBoosters={showBoosters}
+        showComputeFlops={showComputeFlops}
         showTiers={showTiers}
       />
       <AppMenu

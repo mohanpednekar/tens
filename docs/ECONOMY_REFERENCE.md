@@ -887,7 +887,47 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   actually one-shot per app lifetime — a single mount can produce a fresh `offlineProgress` object
   (and re-show the "Welcome back!" notice) any number of times across a session, once per detected
   gap; `components/OfflineProgressNotice` re-arms its own countdown/fade timing via an effect keyed
-  on the `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
+  on the   `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
+
+### PP Compute (Flops)
+
+A separate top-level screen (nav **Compute**, page id `'compute'`, `ComputeFlopsPage`) from the
+Foundry **Boosters** screen (nav **Boosters**, page id `'boosters'`, `ComputePage` — Cores/merge/Boost).
+Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `layers.js`, ids
+`flop01`…`flop10`), each 1:1 with a Factory tier via `boostsTierId`. Constants:
+
+- `COMPUTE_FLOPS_REVEAL_PP = 100` — nav item appears once spendable PP first reaches this (latched in
+  `computeFlops.pageUnlocked` via `latchComputeFlopsPageUnlocked` / `isComputeFlopsPageRevealed`).
+- `COMPUTE_FLOPS_FIRST_TIER_COST_PP = 1E3` … `COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30` — same 10³
+  triangular ladder as `TIER_DEFINITIONS` `baseCost`.
+- `COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001` — each owned unit adds 0.01%/real-second to
+  that tier's cumulative boost on the matching Factory tier (linear in owned count).
+
+**Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's current
+per-unit price. Unlike Factory tiers (same `getTierCost` / `getCostEpochExponent` formula but
+level advances only after each 8-purchase block), Flops uses **one cost epoch per owned unit** —
+the price for the next purchase is `getComputeFlopsTierCost(flopTier, owned)` =
+`getTierCost({ baseCost: flopTier.baseCostPP }, owned + 1)`. No-op if unaffordable. Owned counts
+live in `computeFlops.owned` and are **permanent across Prestige** (carried by `prestigeGame`).
+
+**Ticking:** `tickComputeFlops(elapsedSeconds)` runs inside `tickGame` (after intro/disk/compute-core
+ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
+`owned × COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC × elapsedSeconds` to
+`computeFlops.cumulativeBoost[boostsTierId]`. Also latches page unlock when PP threshold is met.
+
+**Production:** `getComputeFlopsTierProductionMultiplier(state, tierId)` returns
+`1 + cumulativeBoost[tierId]`, multiplied into each tier's production batch in `tickGame`.
+
+**Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
+**E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
+Factory tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
+renders the hero line; per-tier rows still use `formatComputeFlopsBoost` on the unweighted boost.
+Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
+
+**Prestige:** `prestigeGame` keeps `computeFlops.owned` and `pageUnlocked`; resets
+`cumulativeBoost` to fresh zeros (same as Memory — per-cycle boost, permanent ownership).
+
+Gate-exempt alongside Boosters/Guide/More (`GATE_EXEMPT_PAGES` includes `'compute'`).
 
 ### Prestige Points, autobuyer unlock, and the tickspeed multiplier
 
@@ -1737,6 +1777,14 @@ disabled while production is frozen at the Prestige threshold.
                                                           // with Money itself resetting) but is left untouched
                                                           // by speedUpGame — a pre-existing asymmetry, unrelated
                                                           // to xp's own reset above
+  computeFlops: {                                         // PP Compute (Flops) screen — see "PP Compute (Flops)"
+                                                          // above. pageUnlocked latches true once PP >= reveal;
+                                                          // owned counts permanent across Prestige; cumulativeBoost
+                                                          // per Factory tierId resets each Prestige cycle
+    pageUnlocked: false,
+    owned:      { flop01: 0, … flop10: 0 },
+    cumulativeBoost: { tier01: 0, … tier10: 0 },
+  },
   intro: {                                                // the Byte Foundry screen's own state — see "Byte
                                                           // Foundry" below. A currency pool entirely separate
                                                           // from resources.base until the manual/auto
