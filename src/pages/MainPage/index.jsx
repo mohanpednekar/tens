@@ -681,7 +681,7 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Second-level tabs on Byte Factory: Data | Upgrades (peer tabs — no back chrome). Milestones lives
+// Second-level tabs on Data: Data | Upgrades (peer tabs — no back chrome). Milestones lives
 // under AppNav → More. Shown only after a first Prestige (!isFirstRun). Reset lives only under
 // Settings → Danger zone (AppNav → More → Settings), not on this page.
 const ViewNav = styled.div`
@@ -852,7 +852,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
     : 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Data vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
-  // the ladder is the default Byte Factory screen, and Milestones lives under AppNav → More. Upgrades
+  // Data view is the default Data screen, and Milestones lives under AppNav → More. Upgrades
   // stays here because it's the only PP-purchase surface and isn't elsewhere in AppNav/More.
   const [view, setView] = useState('game')
   useEffect(() => {
@@ -1109,7 +1109,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   }, [globalTickspeedUnlocked])
 
   // Lights the Upgrades control whenever unspent PP can afford at least one purchase — see
-  // hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Factory attention level).
+  // hasAffordablePpUpgrade in game/navAttention.js (shared with AppNav's Data attention level).
   const showPpUpgradeAttention = hasAffordablePpUpgrade(state)
 
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
@@ -1220,7 +1220,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       )}
 
       <Header>
-        <h1>Byte Factory</h1>
+        <h1>Data</h1>
       </Header>
 
       <PrestigeProgressTop aria-label="prestige progress">
@@ -1356,10 +1356,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         )}
       </StickyBalances>
 
-      {/* Second-level Byte Factory tabs: Data | Upgrades (no back button). Milestones is under More.
+      {/* Second-level Data tabs: Data | Upgrades (no back button). Milestones is under More.
           Upgrades gated on !isFirstRun — PP upgrades don't exist before a first Prestige. */}
       {!isFirstRun && (
-        <ViewNav role="tablist" aria-label="factory view">
+        <ViewNav role="tablist" aria-label="data view">
           <ViewTabButton
             aria-selected={view === 'game'}
             color={view === 'game' ? 'white' : 'darkgrey'}

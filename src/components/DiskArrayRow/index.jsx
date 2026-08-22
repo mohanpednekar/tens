@@ -225,7 +225,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 key={index}
                 aria-label={
                   releasable
-                    ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                    ? `transfer ${sizeLabel} cache block ${index + 1} to Data Bits`
                     : `${sizeLabel} cache block ${index + 1}`
                 }
                 disabled={!releasable}
@@ -233,8 +233,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 title={
                   isFull
                     ? (releasable
-                      ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
-                      : `Transferable to Factory only once some tier's level cost matches ${sizeLabel}`)
+                      ? `Transfer this block's ${blockLabel} to the Data as Bits (toward ${redeemTierName}) — manual only; cache never auto-transfers`
+                      : `Transferable to the Data only once some tier's level cost matches ${sizeLabel}`)
                     : 'Filling from Memory'
                 }
                 type="button"

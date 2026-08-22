@@ -14,8 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
   (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
   and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
-- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
-  from the global corner overlay and Settings header.
+- **Main production screen renamed to Data** (#399): AppNav label/accessible name **Data**
+  (`open data`); MainPage header and **Data | Upgrades** tabs; player-facing copy that named
+  the destination **Factory** / **Byte Factory** (cache transfer hints, Settings danger zone, Guide)
+  updated. Internal page ids unchanged (`page === 'game'`).
 
 ### Added
 - **Era ascension UI** (#411): Settings → Era ascension shows Eras/Eons, eligibility, and a
@@ -59,11 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
   `IncompatibleSaveNotice`.
 
-- **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
-  **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
-  game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings
-  danger-zone copy use **Factory**. Peer tabs stay **Data | Upgrades**.
-
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
@@ -75,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (e.g. `1 Kb`), Byte-scale on disk circles (e.g. `1 KB`). No external array header, no
   `"Cache"` / `"Disks"` row titles, and no under-strip redeem ActionHint (green/blue fill +
   `title`/`aria` carry redeem state). Mid-build status (centered):
-  `Rebuilding 1 KB x 6 array - Ready in 6s`. Instructional copy (tap cache → Factory Bits)
+  `Rebuilding 1 KB x 6 array - Ready in 6s`. Instructional copy (tap cache → Data Bits)
   stays in `title`/`aria`.
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array

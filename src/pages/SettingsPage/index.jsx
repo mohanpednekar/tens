@@ -505,7 +505,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         <p>
           Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
           Capacity was pushed too far. Combine, Invest / Bandwidth, and Disk Build restart from
-          scratch, then auto-press again up to your pre-reset highs (Capacity stays manual). Factory
+          scratch, then auto-press again up to your pre-reset highs (Capacity stays manual). Data
           progress and Prestige stay.
         </p>
         <Button
@@ -524,7 +524,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
             Erases Capacity, Storage, and Compute; restarts upgrades from scratch with convenience
-            auto-clicks up to pre-reset highs; Factory and Prestige stay
+            auto-clicks up to pre-reset highs; Data and Prestige stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
@@ -559,7 +559,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         </p>
         <p>
           <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
-          Factory tiers and resources, unspent PP and prestige count, Double PP level, and Compute
+          Data tiers and resources, unspent PP and prestige count, Double PP level, and Compute
           owned units.
         </p>
         <p>
