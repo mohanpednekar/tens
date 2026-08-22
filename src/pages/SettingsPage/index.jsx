@@ -2,8 +2,8 @@ import { useState } from 'react'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
 import StatCard from 'components/StatCard'
-import { formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
-import { ERA_ELIGIBILITY_PP, MUSEUM_PIN_CAP } from 'game/layers'
+import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
+import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled from 'styled-components'
 
@@ -224,6 +224,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
   }
 
   const confirmEraAscend = () => {
+    if (!isEraEligible(game.state)) return
     game.actions.eraAscend()
     setEraConfirmOpen(false)
   }
@@ -436,13 +437,13 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry }) => {
         <p>
           {eraEligible
             ? `Ready — next ascension awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
-            : `Requires ${formatCurrency(ERA_ELIGIBILITY_PP)} unspent PP (you have ${formatCurrency(unspentPp)}).`}
+            : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
         </p>
         <Button
           aria-label={
             eraEligible
               ? 'Ascend an Era — open confirmation'
-              : `Ascend an Era — requires ${formatCurrency(ERA_ELIGIBILITY_PP)} unspent Prestige Points`
+              : 'Ascend an Era — requires 1 Googol unspent Prestige Points'
           }
           disabled={!eraEligible}
           onClick={() => setEraConfirmOpen(true)}
