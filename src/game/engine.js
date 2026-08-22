@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -191,6 +191,9 @@ export const createInitialGameState = () => ({
   // buyPrestigeSpeedBonus. Never reset by prestige, like smartAutobuyer/
   // autoPrestige above.
   prestigeSpeedBonusUnlocked: false,
+  // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
+  // Prestige or Speed Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
+  prestigeDoublePpLevel: 0,
   // RUN-SCOPED count of how many times Speed Up has been triggered (see speedUpGame) — drives
   // getSpeedUpMultiplier's unconditional production-speed multiplier. Never reset by Speed Up
   // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
@@ -852,6 +855,21 @@ export const buyPrestigeSpeedBonus = state => {
   }
 }
 
+// Leveled PP upgrade: each purchase halves powers-per-PP until 1, then doubles PP-per-power
+// (see getPrestigePowersPerPp/getPrestigePpPerPower). Cost is 100^(level+1) PP. Not blocked by
+// production freeze — buying before an optional Prestige is the point. Permanent once bought.
+export const buyPrestigeDoublePp = state => {
+  const currentLevel = state.prestigeDoublePpLevel ?? 0
+  const cost = getPrestigeDoublePpUpgradeCost(currentLevel)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  return {
+    ...state,
+    prestige: { ...state.prestige, points: state.prestige.points - cost },
+    prestigeDoublePpLevel: currentLevel + 1,
+  }
+}
+
 // PP cost to permanently make a tier's autobuyer "smart" (see buySmartAutobuyer) —
 // SMART_AUTOBUYER_COST_MULTIPLIER times the cost of unlocking that same tier's autobuyer
 // (getAutobuyerUnlockCost), since it's a separate, more powerful capability bought after unlock.
@@ -935,10 +953,16 @@ export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
   (1.1 ** clampNonNegative((autoPrestigeLevel ?? 1) - 1)) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS
 
 // Once Money reaches PRESTIGE_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
-// production and purchasing (manual and automatic) freezes — the only action left is to Prestige.
-// Exported so the UI can drive the same gate (disabling every other control) that the engine
-// itself enforces on tickGame/buyTier/buyAutobuyer below.
-export const isProductionFrozen = state => clampNonNegative(state.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
+// production and purchasing (manual and automatic) freezes — the only action left is to Prestige —
+// unless the player has prestiged at least PRESTIGE_UNBOUNDED_MIN_COUNT times, in which case
+// production continues and Prestige is optional (see isUnboundedPrestigeUnlocked). Exported so the
+// UI can drive the same gate (disabling every other control) that the engine itself enforces on
+// tickGame/buyTier/buyAutobuyer below.
+export const isUnboundedPrestigeUnlocked = state =>
+  clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
+
+export const isProductionFrozen = state =>
+  !isUnboundedPrestigeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
 
 // The previous tier's LEVEL that "two fully purchased levels" corresponds to: completing level 1
 // advances purchaseLevels from 1 to 2, and completing level 2 advances it from 2 to 3 — so a tier
@@ -1055,15 +1079,52 @@ export const getTierProductionProgressPercent = (state, tierId, previousAccumula
   return Math.min(100, Math.max(0, Math.round((accumulated / tickSpeed) * 100)))
 }
 
-// How many Prestige Points a prestige action awards: the log, base GOOGOL, of the money balance
-// reached before production froze, rounded down — always at least 1, since prestiging requires
-// money >= GOOGOL in the first place. The tick that crosses GOOGOL can overshoot substantially in
-// one step (see isProductionFrozen), so waiting for a much higher production rate before
-// prestiging can still pay off in extra points, just at a much larger scale (every further
-// GOOGOL-exponent's-worth of orders of magnitude) than a flat per-order-of-magnitude bonus would.
-export const getPrestigePointsAwarded = money => {
+// How many Prestige Points a prestige action awards at the current money balance, given how many
+// Double PP upgrades have been bought. Requires at least PRESTIGE_THRESHOLD money (1 Googol
+// Bytes) — below that, returns 0. At exactly Googol-scale money the award is always at least 1 PP
+// (× getPrestigePpPerPower when past the halving phase). Beyond Googol, each additional block of
+// getPrestigePowersPerPp money-exponent "powers" adds another PP unit, scaled by getPrestigePpPerPower.
+export const getPrestigeDoublePpHalvingLevels = () => Math.log2(PRESTIGE_POWERS_PER_PP_BASE)
+
+export const getPrestigePowersPerPp = (doublePpLevel = 0) => {
+  const level = clampNonNegative(doublePpLevel)
+  const halvingLevels = Math.min(level, getPrestigeDoublePpHalvingLevels())
+  return PRESTIGE_POWERS_PER_PP_BASE / (2 ** halvingLevels)
+}
+
+export const getPrestigePpPerPower = (doublePpLevel = 0) => {
+  const level = clampNonNegative(doublePpLevel)
+  const halvingCap = getPrestigeDoublePpHalvingLevels()
+  return level > halvingCap ? 2 ** (level - halvingCap) : 1
+}
+
+export const getPrestigeDoublePpUpgradeCost = (currentLevel = 0) =>
+  PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE ** (clampNonNegative(currentLevel) + 1)
+
+export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
   const safeMoney = clampNonNegative(money)
-  return safeMoney < 1 ? 0 : Math.floor(Math.log10(safeMoney) / Math.log10(GOOGOL))
+  if (safeMoney < PRESTIGE_THRESHOLD) return 0
+
+  const googolExponent = Math.floor(Math.log10(GOOGOL))
+  const excessPowers = Math.max(0, getMoneyExponent(safeMoney) - googolExponent)
+  const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
+  const ppPerPower = getPrestigePpPerPower(doublePpLevel)
+  const units = 1 + Math.floor(excessPowers / powersPerPp)
+  return units * ppPerPower
+}
+
+// Progress (0–100) toward the next PP-earning step once Googol-scale money is reached — within
+// the current powers-per-PP block. Below Googol, falls back to getPrestigeProgressPercent.
+export const getPrestigePpEarnProgressPercent = (money, doublePpLevel = 0) => {
+  const safeMoney = clampNonNegative(money)
+  const googolExponent = Math.floor(Math.log10(GOOGOL))
+  const moneyExponent = getMoneyExponent(safeMoney)
+  if (moneyExponent < googolExponent) return getPrestigeProgressPercent(safeMoney)
+
+  const excessPowers = moneyExponent - googolExponent
+  const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
+  const remainder = excessPowers % powersPerPp
+  return Math.round((remainder / powersPerPp) * 100)
 }
 
 const checkMilestones = (resources, prestige) => {
@@ -1357,7 +1418,22 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Runs last, against this tick's final tier01 level (post autobuyer/Speed Up), so a Disk
   // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
-  return tickStorage(stateAfterSpeedUp)
+  let stateBeforeStorage = stateAfterSpeedUp
+
+  // Unbounded Prestige (PRESTIGE_UNBOUNDED_MIN_COUNT+ lifetime prestiges): Auto-Prestige fires
+  // here while production keeps running — the frozen branch above is skipped entirely.
+  if (
+    isUnboundedPrestigeUnlocked(stateBeforeStorage)
+    && autoPrestigeActive
+    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
+  ) {
+    const budget = stateBeforeStorage.autoPrestigeAttemptBudget ?? 0
+    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+      stateBeforeStorage = prestigeGame(stateBeforeStorage)
+    }
+  }
+
+  return tickStorage(stateBeforeStorage)
 }
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
@@ -3534,7 +3610,8 @@ export const resetByteFoundry = state => {
 export const prestigeGame = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < PRESTIGE_THRESHOLD) return state
 
-  const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID])
+  const doublePpLevel = state.prestigeDoublePpLevel ?? 0
+  const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const initial = createInitialGameState()
   const nextPrestigeNumber = state.prestige.count + 1
   const museumEntry = {
@@ -3666,6 +3743,7 @@ export const prestigeGame = state => {
     autoPrestigeAutobuyer: state.autoPrestigeAutobuyer ?? initial.autoPrestigeAutobuyer,
     autoPrestigeAutobuyerEnabled: state.autoPrestigeAutobuyerEnabled ?? initial.autoPrestigeAutobuyerEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoSpeedUp: state.autoSpeedUp ?? initial.autoSpeedUp,
     autoSpeedUpEnabled: state.autoSpeedUpEnabled ?? initial.autoSpeedUpEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Unbounded Prestige** (after 100 lifetime prestiges): production no longer freezes at 1 Googol
+  Bytes — keep earning and Prestige voluntarily to claim accumulated PP.
+- **New PP earning rate**: 1 base PP at 1 Googol Bytes, then 1 PP per 64 additional money-exponent
+  powers beyond Googol (claimable only once you reach at least 1 Googol Bytes).
+- **Double PP upgrade** (Upgrades tab): each purchase costs 100^(level+1) PP, halves powers needed
+  per PP until 1 power per PP, then doubles PP per power instead — permanent across Prestige.
+
 ### Changed
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
   **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the

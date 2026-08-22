@@ -634,10 +634,15 @@ directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, 
 the tier immediately below it, cascading production down to the base currency; `tier01` is the special
 case where cost and production resource are both the base currency. Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
-the economy except for Prestige. `GOOGOL` (1e100) itself is still exported and used as-is by the
-exponent-based formulas (`getPrestigePointsAwarded`/`getMoneyExponent`/`getPrestigeProgressPercent`) —
-only the live freeze/Prestige trigger moved to the messier `PRESTIGE_THRESHOLD` value; see
-`docs/DESIGN_HISTORY.md` for why. MainPage's own headline balance display (`MoneyHero`) switches
+the economy except for Prestige — unless `prestige.count` has reached `PRESTIGE_UNBOUNDED_MIN_COUNT`
+(100), in which case production continues and Prestige is optional (see `isUnboundedPrestigeUnlocked`/
+`isProductionFrozen`). Prestige Points are awarded by `getPrestigePointsAwarded`: 1 base PP at 1 Googol
+Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
+Googol's own 10^100 exponent, scaled by permanent Double PP upgrades (`prestigeDoublePpLevel` — each
+halves powers-per-PP until 1, then doubles PP-per-power; cost `100^(level+1)` PP). `GOOGOL` (1e100)
+itself is still exported and used as-is by the exponent-based formulas (`getMoneyExponent`/
+`getPrestigeProgressPercent`) — only the live freeze/Prestige trigger moved to the messier
+`PRESTIGE_THRESHOLD` value; see `docs/DESIGN_HISTORY.md` for why. MainPage's own headline balance display (`MoneyHero`) switches
 from Bits to whole Bytes once the balance reaches 8000 Bits (`formatMoneyBalance` in `engine.js`,
 `MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call (costs, production numbers, the
 Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denomination.
@@ -805,7 +810,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1406 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1421 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a

@@ -14,6 +14,7 @@ import {
   getGlobalTickspeedMultiplierCost,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
+  getPrestigeDoublePpUpgradeCost,
   getPurchaseBlockSize,
   getSmartAutobuyerCost,
   getSpeedUpRequirement,
@@ -171,9 +172,10 @@ export const hasTiersGameAttention = state =>
 
 /** PP Upgrades view — unspent PP can buy at least one upgrade. */
 export const hasAffordablePpUpgrade = state => {
-  if (isProductionFrozen(state)) return false
   if ((state.prestige?.count ?? 0) < 1) return false
   const points = state.prestige?.points ?? 0
+  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
+  if (isProductionFrozen(state)) return false
   const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
     Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )

@@ -19,6 +19,7 @@ import {
   buyAutoPrestigeAutobuyer,
   buyAutoSpeedUp,
   buyGlobalTickspeedMultiplier,
+  buyPrestigeDoublePp,
   buyPrestigeSpeedBonus,
   buySmartAutobuyer,
   buyTickspeedAutobuyer,
@@ -95,7 +96,10 @@ import {
   getOfflineEffectiveSeconds,
   getOverclockMultiplier,
   getOverclockRequirement,
+  getPrestigeDoublePpUpgradeCost,
   getPrestigePointsAwarded,
+  getPrestigePowersPerPp,
+  getPrestigePpPerPower,
   getPrestigeProductionMultiplier,
   getPrestigeProgressPercent,
   getNextBytePowerProgressFraction,
@@ -152,6 +156,7 @@ import {
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
+  isUnboundedPrestigeUnlocked,
   isTierUnlocked,
   mergeComputeClustersIntoNetwork,
   mergeComputeCloudsIntoDatacenter,
@@ -4195,32 +4200,39 @@ describe('getPrestigeProductionMultiplier', () => {
 // ─── getPrestigePointsAwarded ─────────────────────────────────────────────────
 
 describe('getPrestigePointsAwarded', () => {
-  // This formula deliberately keys off GOOGOL's own clean 10^100 exponent, not the live
-  // PRESTIGE_THRESHOLD (GOOGOL * BITS_PER_BYTE) the game actually gates Prestige on — an 8x
-  // constant factor is negligible at this scale (see layers.js/docs/DESIGN_HISTORY.md), so these
-  // tests intentionally exercise the formula at GOOGOL itself, not PRESTIGE_THRESHOLD.
-  it('awards exactly 1 point at exactly GOOGOL', () => {
-    expect(getPrestigePointsAwarded(GOOGOL)).toBe(1)
+  it('awards exactly 1 point at exactly PRESTIGE_THRESHOLD', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD)).toBe(1)
   })
 
-  it('stays at 1 point until a full further 100 orders of magnitude are reached', () => {
-    expect(getPrestigePointsAwarded(GOOGOL * 10)).toBe(1)
-    expect(getPrestigePointsAwarded(GOOGOL * 1e9)).toBe(1)
-    expect(getPrestigePointsAwarded(GOOGOL * 1e99)).toBe(1)
+  it('stays at 1 point until a full 64 excess money-exponent powers are reached', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 10)).toBe(1)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e9)).toBe(1)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e63)).toBe(1)
   })
 
-  it('awards 2 points once the exponent reaches 200 (double the Googol exponent)', () => {
-    expect(getPrestigePointsAwarded(GOOGOL * 1e100)).toBe(2)
+  it('awards 2 points once 64 excess powers beyond Googol are reached', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64)).toBe(2)
   })
 
-  it('awards 3 points at exponent 300', () => {
-    expect(getPrestigePointsAwarded(GOOGOL * 1e200)).toBe(3)
+  it('awards 4 points at 192 excess powers (three full 64-power blocks beyond base)', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e192)).toBe(4)
   })
 
-  it('awards 0 points below 1 money, including negative input clamped to 0', () => {
+  it('halves powers-per-PP with each Double PP upgrade through level 6', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 1)).toBe(3)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e32, 1)).toBe(2)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 6)).toBe(65)
+  })
+
+  it('doubles PP-per-power after level 6 instead of halving further', () => {
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD, 7)).toBe(2)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 7)).toBe(130)
+  })
+
+  it('returns 0 below PRESTIGE_THRESHOLD, including at GOOGOL alone', () => {
     expect(getPrestigePointsAwarded(0)).toBe(0)
-    expect(getPrestigePointsAwarded(0.5)).toBe(0)
-    expect(getPrestigePointsAwarded(-100)).toBe(0)
+    expect(getPrestigePointsAwarded(GOOGOL)).toBe(0)
+    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD / 10)).toBe(0)
   })
 })
 
@@ -4376,9 +4388,10 @@ describe('isProductionFrozen', () => {
     expect(isProductionFrozen(state)).toBe(true)
   })
 
-  it('is true above PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
-    expect(isProductionFrozen(state)).toBe(true)
+  it('is false at/above PRESTIGE_THRESHOLD once unbounded Prestige is unlocked (100+ prestiges)', () => {
+    const state = withPrestigeCount(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2), 100)
+    expect(isProductionFrozen(state)).toBe(false)
+    expect(isUnboundedPrestigeUnlocked(state)).toBe(true)
   })
 })
 
@@ -5062,6 +5075,25 @@ describe('tickGame', () => {
     expect(after.prestige.count).toBe(0)
     expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD)
     expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+  })
+
+  it('does not freeze production at PRESTIGE_THRESHOLD when unbounded Prestige is unlocked', () => {
+    const state = withPrestigeCount(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5), 100)
+    const after = tickGame(1)(state)
+    expect(after).not.toBe(state)
+    expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(PRESTIGE_THRESHOLD)
+  })
+
+  it('automatically prestiges in unbounded mode when Auto-Prestige budget crosses 1 at PRESTIGE_THRESHOLD', () => {
+    const state = withPrestigeCount(
+      withAutoPrestigeBudget(
+        withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
+        1,
+      ),
+      100,
+    )
+    const after = tickGame(0)(state)
+    expect(after.prestige.count).toBe(101)
   })
 
   it('automatically prestiges the instant its attempt budget crosses 1, once Money is at PRESTIGE_THRESHOLD', () => {
@@ -6352,6 +6384,62 @@ describe('buyPrestigeSpeedBonus', () => {
   })
 })
 
+// ─── buyPrestigeDoublePp / getPrestigeDoublePpUpgradeCost ────────────────────
+
+describe('getPrestigeDoublePpUpgradeCost', () => {
+  it('costs 100 PP for the first upgrade', () => {
+    expect(getPrestigeDoublePpUpgradeCost(0)).toBe(100)
+  })
+
+  it('costs 100^(level+1) PP for each subsequent level', () => {
+    expect(getPrestigeDoublePpUpgradeCost(1)).toBe(10_000)
+    expect(getPrestigeDoublePpUpgradeCost(2)).toBe(1_000_000)
+  })
+})
+
+describe('getPrestigePowersPerPp / getPrestigePpPerPower', () => {
+  it('halves powers-per-PP for the first six upgrades', () => {
+    expect(getPrestigePowersPerPp(0)).toBe(64)
+    expect(getPrestigePowersPerPp(1)).toBe(32)
+    expect(getPrestigePowersPerPp(6)).toBe(1)
+  })
+
+  it('doubles PP-per-power after the sixth upgrade', () => {
+    expect(getPrestigePpPerPower(6)).toBe(1)
+    expect(getPrestigePpPerPower(7)).toBe(2)
+    expect(getPrestigePpPerPower(8)).toBe(4)
+  })
+})
+
+describe('buyPrestigeDoublePp', () => {
+  it('spends the upgrade cost and increments prestigeDoublePpLevel', () => {
+    const state = withPrestigePoints(createInitialGameState(), 100)
+    const after = buyPrestigeDoublePp(state)
+    expect(after.prestigeDoublePpLevel).toBe(1)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('is a no-op without enough PP', () => {
+    const state = withPrestigePoints(createInitialGameState(), 99)
+    expect(buyPrestigeDoublePp(state)).toBe(state)
+  })
+
+  it('is not blocked by production freeze at PRESTIGE_THRESHOLD', () => {
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 100), PRESTIGE_THRESHOLD)
+    const after = buyPrestigeDoublePp(state)
+    expect(after.prestigeDoublePpLevel).toBe(1)
+  })
+
+  it('carries prestigeDoublePpLevel across prestige', () => {
+    const state = withPrestigePoints(
+      { ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), prestigeDoublePpLevel: 2 },
+      0,
+    )
+    const after = prestigeGame(state)
+    expect(after.prestigeDoublePpLevel).toBe(2)
+  })
+})
+
 // ─── prestigeGame ────────────────────────────────────────────────────────────
 
 describe('prestigeGame', () => {
@@ -6417,8 +6505,8 @@ describe('prestigeGame', () => {
     expect(after.prestige.points).toBe(1)
   })
 
-  it('awards more Prestige Points once the exponent reaches a further full multiple of 100', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 1e100)
+  it('awards more Prestige Points once 64 excess money-exponent powers beyond Googol are reached', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 1e64)
     const after = prestigeGame(state)
     expect(after.prestige.points).toBe(2)
   })
