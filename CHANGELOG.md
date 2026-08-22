@@ -8,10 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- **Compute (Flops) screen** — new PP-funded screen (nav **Compute**, page id `'compute'`) with ten tiers **KFlops → QFlops** (costs **1,000 – 10³⁰ PP** on the same 10³ ladder as Factory tiers). Reveals at **100 PP**; first purchase needs **1,000 PP**. Each owned unit adds **0.01%/s** (linear in owned count) to the matching Factory tier; cumulative boost displays as **Flops** at the top and applies to production. Owned units persist across Prestige; per-cycle boost resets.
+- **Compute (Flops) screen** — new PP-funded screen (nav **Compute**, page id `'compute'`) with ten tiers **KFlops → QFlops** (base costs **1,000 – 10³⁰ PP** on the same 10³ ladder as Factory tiers; per-unit price scales every purchase on the triangular power-of-ten epoch). Reveals at **100 PP**; first purchase needs **1,000 PP**. Each owned unit adds **0.01%/s** (linear in owned count) to the matching Factory tier; cumulative boost displays as **Flops** at the top and applies to production. Owned units persist across Prestige; per-cycle boost resets.
 - Foundry **Boosters** screen (formerly nav **Compute**) now uses page id `'boosters'` and label **Boosters** so the new Compute screen can take the Compute name.
 
 ### Changed
+- **Compute (Flops) costs** — per-unit PP price now rises after every purchase on the triangular
+  power-of-ten epoch (same formula as Factory tiers via `getTierCost`, but one epoch step per buy
+  instead of every 8-purchase level block).
 - **Byte Factory screen** (formerly **Tiers**, briefly **Ladder**): AppNav short label
   **Factory** / accessible name `open factory`; MainPage header is **Byte Factory** (not the
   game name “Tens”). Avoids confusion with Compute’s entity tiers. Cache-transfer and Settings

@@ -3,6 +3,7 @@ import {
   buyComputeFlopsTier,
   createInitialGameState,
   getComputeFlopsTotal,
+  getComputeFlopsTierCost,
   getComputeFlopsTierProductionMultiplier,
   isComputeFlopsPageRevealed,
   latchComputeFlopsPageUnlocked,
@@ -40,6 +41,25 @@ describe('Compute Flops screen', () => {
     const after = buyComputeFlopsTier('flop01')(state)
     expect(after).not.toBe(state)
     expect(after.computeFlops.owned.flop01).toBe(1)
+    expect(after.prestige.points).toBe(0)
+  })
+
+  it('raises KFlops cost after every purchase on the triangular power-of-ten curve', () => {
+    const flopTier = { baseCostPP: COMPUTE_FLOPS_FIRST_TIER_COST_PP }
+    expect(getComputeFlopsTierCost(flopTier, 0)).toBe(1_000)
+    expect(getComputeFlopsTierCost(flopTier, 1)).toBe(10_000)
+    expect(getComputeFlopsTierCost(flopTier, 2)).toBe(100_000)
+
+    let state = buyComputeFlopsTier('flop01')({
+      ...createInitialGameState(),
+      prestige: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
+    })
+    state = {
+      ...state,
+      prestige: { ...state.prestige, points: 10_000 },
+    }
+    const after = buyComputeFlopsTier('flop01')(state)
+    expect(after.computeFlops.owned.flop01).toBe(2)
     expect(after.prestige.points).toBe(0)
   })
 

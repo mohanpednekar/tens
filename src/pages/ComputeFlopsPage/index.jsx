@@ -106,8 +106,9 @@ const ComputeFlopsPage = ({ game }) => {
           <> First tier costs {formatAmount(COMPUTE_FLOPS_FIRST_TIER_COST_PP)} PP.</>
         )}
         {' '}Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
-        second to the matching Factory tier (linear in owned count). Boost resets each Prestige;
-        owned units are permanent.
+        second to the matching Factory tier (linear in owned count). Per-unit PP cost rises every
+        purchase on the same triangular power-of-ten curve as Factory tiers (not every 8 buys).
+        Boost resets each Prestige; owned units are permanent.
       </Hint>
 
       <TierList aria-label="compute flops tiers">
@@ -115,7 +116,7 @@ const ComputeFlopsPage = ({ game }) => {
           const owned = state.computeFlops?.owned?.[flopTier.id] ?? 0
           const tierBoost = (state.computeFlops?.cumulativeBoost?.[flopTier.boostsTierId] ?? 0)
           const liveMultiplier = getComputeFlopsTierProductionMultiplier(state, flopTier.boostsTierId)
-          const cost = getComputeFlopsTierCost(flopTier)
+          const cost = getComputeFlopsTierCost(flopTier, owned)
           const canBuy = canBuyComputeFlopsTier(state, flopTier.id)
           const factoryTier = tierNameById[flopTier.boostsTierId] ?? flopTier.boostsTierId
 

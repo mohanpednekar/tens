@@ -875,12 +875,17 @@ export const latchComputeFlopsPageUnlocked = state => {
   }
 }
 
-export const getComputeFlopsTierCost = flopTier => flopTier.baseCostPP
+export const getComputeFlopsTierCost = (flopTier, ownedCount = 0) => {
+  const level = clampNonNegative(ownedCount) + 1
+  return getTierCost({ baseCost: flopTier.baseCostPP }, level)
+}
 
 export const canBuyComputeFlopsTier = (state, flopId) => {
   const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
   if (!flopTier) return false
-  return clampNonNegative(state.prestige?.points ?? 0) >= getComputeFlopsTierCost(flopTier)
+  const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
+  const cost = getComputeFlopsTierCost(flopTier, owned)
+  return clampNonNegative(state.prestige?.points ?? 0) >= cost
 }
 
 export const buyComputeFlopsTier = flopId => state => {
@@ -888,7 +893,8 @@ export const buyComputeFlopsTier = flopId => state => {
   if (!flopTier) return state
   if (!canBuyComputeFlopsTier(state, flopId)) return state
   const latched = latchComputeFlopsPageUnlocked(state)
-  const cost = getComputeFlopsTierCost(flopTier)
+  const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
+  const cost = getComputeFlopsTierCost(flopTier, owned)
   return {
     ...latched,
     prestige: { ...latched.prestige, points: latched.prestige.points - cost },

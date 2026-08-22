@@ -905,9 +905,12 @@ Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `
 - `COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001` — each owned unit adds 0.01%/real-second to
   that tier's cumulative boost on the matching Factory tier (linear in owned count).
 
-**Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's fixed
-`baseCostPP`; no-op if unaffordable. Owned counts live in `computeFlops.owned` and are **permanent
-across Prestige** (carried by `prestigeGame`).
+**Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's current
+per-unit price. Unlike Factory tiers (same `getTierCost` / `getCostEpochExponent` formula but
+level advances only after each 8-purchase block), Flops uses **one cost epoch per owned unit** —
+the price for the next purchase is `getComputeFlopsTierCost(flopTier, owned)` =
+`getTierCost({ baseCost: flopTier.baseCostPP }, owned + 1)`. No-op if unaffordable. Owned counts
+live in `computeFlops.owned` and are **permanent across Prestige** (carried by `prestigeGame`).
 
 **Ticking:** `tickComputeFlops(elapsedSeconds)` runs inside `tickGame` (after intro/disk/compute-core
 ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds

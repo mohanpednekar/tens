@@ -616,8 +616,9 @@ Strict three-layer separation:
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
-   with PP on the same 10³ ladder as Factory tiers (1,000 – 10³⁰ PP). First tier costs 1,000 PP so the
-   screen is visible but unusable until then. Each owned unit adds 0.01%/s (linear in count) to the
+   with PP on the same 10³ base ladder as Factory tiers (1,000 – 10³⁰ PP). Per-unit price scales on
+   every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
+   costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
    matching Factory tier's cumulative boost; hero displays total **Flops**. Owned counts permanent across
    Prestige; per-cycle `cumulativeBoost` resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
    "PP Compute (Flops)".
@@ -819,7 +820,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1416 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1417 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; tier ids `tier01`/`tier02`/… with display names
   `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme (`'Ones'`, `'money'`, `'hundreds'`, or a
