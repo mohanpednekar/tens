@@ -2931,12 +2931,9 @@ test('Memory tile no longer shows a separate "bits this cycle" transfer-block tr
 // specifically exercising a tick boundary) rather than real userEvent delays — with byteCreated
 // true and Memory's own passive production live, a real tick landing between a click and its
 // assertions would non-deterministically shift Memory's balance and could trip the Byte Foundry's
-// own bulk transfer-budget auto-convert. Storage moved to its own dedicated screen (StoragePage)
-// once revealed — reached from ByteFoundryPage's own "🏦 Storage" nav button, always enabled once
-// revealed (a permanent, voluntarily-revisitable screen, same posture as MainPage's own "⚙️ Byte
-// Foundry" link) so the player can check on held/built disks even when nothing there is currently
-// actionable. Every test below that lands on a rendered Storage element navigates there first via
-// openStorage().
+// own bulk transfer-budget auto-convert. Storage lives as continuous DiskArrayRow sections on
+// ByteFoundryPage once revealed (no second-level Memory | Storage tabs). Every test below that
+// needs Foundry open after MainPage may call openFoundry().
 describe('Byte Foundry Storage', () => {
   const tier01 = TIER_DEFINITIONS[0]
   const currentBankSize = getTierCost(tier01, 1) * BITS_PER_BYTE // 8000 — the ladder's starting, Byte-accurate size
@@ -2945,15 +2942,15 @@ describe('Byte Foundry Storage', () => {
   // some tier's level catches up to it" path independent of what the Build button currently offers.
   const futureBankSize = getTierCost(tier01, 2) * BITS_PER_BYTE
 
-  const openDisks = () => {
-    // Storage is under Foundry → Disks (no top-level Storage AppNav item).
+  const openFoundry = () => {
+    // Disk arrays live on Foundry as continuous sections (no Storage tab / top-level Storage AppNav).
     const foundry = screen.queryByRole('button', { name: /open byte foundry/i })
     if (foundry) fireEvent.click(foundry)
-    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
   }
-  const openStorage = openDisks
+  const openStorage = openFoundry
+  const openDisks = openFoundry
 
-  test('Build Disk stays hidden on ByteFoundryPage, and the "open storage" nav button stays hidden too, until Memory capacity reaches 10 KB (INTRO_DISK_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+  test('Build Disk stays hidden on ByteFoundryPage until Memory capacity reaches 10 KB (INTRO_DISK_UNLOCK_CAPACITY), even with the Byte generator built', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY - 1, byteCreated: true })
     const { unmount } = render(<App />)
     expect(screen.queryByRole('button', { name: /build disk/i })).not.toBeInTheDocument()
@@ -2962,19 +2959,12 @@ describe('Byte Foundry Storage', () => {
 
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
-    // Building the next disk stays on ByteFoundryPage itself — no navigation needed to reach it.
+    // Building the next disk stays on ByteFoundryPage itself — Memory + Storage are continuous.
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
-
-    const openButton = screen.getByRole('tab', { name: /open storage/i })
-    expect(openButton).toBeInTheDocument()
-    // Always enabled once revealed — unlike Build/Fill themselves, reaching the screen to check on
-    // it never requires anything currently being affordable.
-    expect(openButton).toBeEnabled()
-
-    openStorage()
-    // Storage tab stays on Byte Foundry — no separate Storage page heading.
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: /foundry view/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /open storage/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   test('Build Disk is disabled below its cost, starting at 1 KB', () => {
@@ -3044,7 +3034,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  test('Foundry Storage tab stacks multiple size arrays with in-cell size labels and no redeem ActionHint', () => {
+  test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
     const size10kb = currentBankSize * 10
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3057,23 +3047,20 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    fireEvent.click(screen.getByRole('tab', { name: /open storage/i }))
-
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
     expect(screen.getAllByText('10 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(screen.getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()
   })
 
-  test('Foundry Memory keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
+  test('Foundry keeps an older built size\'s DiskArrayRow while it is still redeemable, even after the ladder advances past it', () => {
     // 10 built at 1 KB advances the Build offer to 10 KB (not yet matching any tier at level 1),
-    // but the 1 KB array still matches Kilobytes — it must stay on Foundry Memory while relevant.
-    // The highest (10 KB) offer is also kept so the incomplete next array stays visible.
+    // but the 1 KB array still matches Kilobytes — both sizes stay on the continuous Foundry screen.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
@@ -3089,9 +3076,9 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
   })
 
-  test('Foundry Memory keeps the highest Disk row even when no shown size is redeemable — the incomplete ladder size stays trackable', () => {
+  test('Foundry keeps every previously-built Disk size plus the highest offer even when no shown size is redeemable', () => {
     // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
-    // Highest (level-2 / current offer) must still render so the player can track the incomplete array.
+    // Previously-built 1 KB and the incomplete 10 KB offer both stay on the continuous Foundry screen.
     seedIntroState(
       {
         bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3102,9 +3089,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
   })
 
   test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
@@ -3751,6 +3738,37 @@ describe('Claim Core (ByteFoundryPage)', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: /claim a compute core/i })).toBeDisabled()
+  })
+
+  test('after Boosts unlocks, Claim Core sits in Memory ×10\'s former milestones slot and Memory ×10 moves below disks', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE]: 1 },
+    })
+    render(<App />)
+
+    const claim = screen.getByRole('button', { name: /claim a compute core/i })
+    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
+    const build = screen.getByRole('button', { name: /build disk/i })
+
+    // Claim Core + Bandwidth share the milestones row (Claim before Bandwidth); Memory ×10 is
+    // after the disk Build control — the swap that happens once Boosts / Compute unlocks.
+    expect(claim.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(build.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(claim.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  test('before Boosts unlocks, Memory ×10 stays beside Bandwidth and Claim Core is absent', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
+    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
+    expect(sacrifice.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   test('clicking Claim Core mints exactly 1 Core and flushes Memory', () => {

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
+  Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**
+  swap positions (Claim Core beside Bandwidth; Memory ×10 below the disk section). Each disk
+  array always shows all 10 disk slots in one unbroken row (no mobile wrap).
 - **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
   fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
 - **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
@@ -15,10 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Light theme** — improved surface hierarchy (buttons/nav no longer blend into the page),
   stronger card shadows, and peer-tab / milestone badges now use theme tokens instead of
   dark-mode-only hardcoded colors.
-- **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`); mobile disk rows
-  are always five per row (desktop stays ten), never four.
-- **Foundry tab label** — the second-level Foundry peer tab formerly labeled **Disks** is now
-  **Storage** (Memory | Storage); internal tab id unchanged.
+- **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`).
+- **Foundry tab label** — *(superseded by the continuous Foundry layout above)* the second-level
+  Foundry peer tab formerly labeled **Disks** was briefly **Storage** (Memory | Storage).
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
   size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
   size, or from the size below via **write cache** (10 timed segments + one flush equal to a target
@@ -48,9 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Light mode activation** (#140): `ThemeProvider` follows persisted `tens_theme_preference` or OS
   `prefers-color-scheme`; fixed `ThemeToggle` (top-right) switches and persists; reset does not
   clear theme preference. Prestige overlay AA pairs added to `tokens.contrast.test.js`.
-- **Disk array layout (mobile)**: below the 40rem breakpoint, disk circles wrap to fewer per row
-  (five by default, **four for longer labels like "100 KB"**) so in-cell size text is not cramped
-  and each disk reads larger than the cache blocks above; desktop keeps all ten in one row.
+- **Disk array layout (mobile)** — *(superseded by the continuous Foundry layout / always-one-row
+  disk strip above)* previously wrapped disk circles below 40rem; they now always stay ten inline.
 - **Prestige progress bar**: sits above the Factory page title with a simplified `"N% to Prestige"`
   label only (no unbounded-unlock hint or next-PP detail).
 - **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
