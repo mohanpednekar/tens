@@ -198,7 +198,7 @@ describe('navAttention', () => {
   it('lights Compute when a Compute Boost turn is available', () => {
     const state = withIntro(computeBoostReadyIntro)
     expect(hasComputeAttention(state)).toBe(true)
-    expect(getNavAttention(state).compute).toBe(ATTENTION_HIGH)
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
   })
 
   it('does not light Compute before Compute unlocks', () => {
@@ -208,7 +208,7 @@ describe('navAttention', () => {
       computeCores: 1,
     })
     expect(hasComputeAttention(state)).toBe(false)
-    expect(getNavAttention(state).compute).toBe(false)
+    expect(getNavAttention(state).boosters).toBe(false)
   })
 
   it('lights Compute at high when an instant Core→Node merge is available', () => {
@@ -222,7 +222,7 @@ describe('navAttention', () => {
       autoMergeCoresIntoNode: false,
     })
     expect(hasComputeAttention(state)).toBe(true)
-    expect(getNavAttention(state).compute).toBe(ATTENTION_HIGH)
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
   })
 
   it('lights Compute at normal when Core→Node auto-merge unlock is available', () => {
@@ -244,7 +244,7 @@ describe('navAttention', () => {
       computeBoostRemainingSeconds: 60,
     })
     expect(hasComputeAttention(state)).toBe(true)
-    expect(getNavAttention(state).compute).toBe(ATTENTION_NORMAL)
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_NORMAL)
   })
 
   it('lights Factory when Speed Up is available on the last tier', () => {
