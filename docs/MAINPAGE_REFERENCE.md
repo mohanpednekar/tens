@@ -30,9 +30,8 @@ Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
-`Header` with the page title (top-level navigation lives in AppNav, not here); a one-line status
-explainer below that (two variants — pre-unlock instructions, or a post-unlock acknowledgment that
-transfers keep working indefinitely, with no per-cycle cap to run into); a `TilesRow` (flex row)
+`Header` with the page title (top-level navigation lives in AppNav, not here); a `SubNav` (Memory |
+Disks tabs, shown once Storage unlocks); a `TilesRow` (flex row)
 holding a single `FillableStatCard`
 — a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same

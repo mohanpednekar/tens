@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Byte Foundry header**: removed the instructional subtitle under the page title — the on-screen
+  controls and unlock flow carry the guidance instead.
 - **Clock Speed** — the global tickspeed upgrade (MainPage card + Guide) is renamed from "Tickspeed" and
   now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
 - **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead
