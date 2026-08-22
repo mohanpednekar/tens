@@ -286,13 +286,12 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
 8. **Disks** (`disks: { [capacityBits]: currentlyFullCount }`, `disksBuiltTotal:
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskBuild: null | { size, remainingSeconds, totalSeconds }`, `diskAutoRedeemedSizes:
-   { [capacityBits]: true }`) has its own dedicated screen, `StoragePage` — reached via a "🏦
-   Storage" nav button on `ByteFoundryPage`, which stays hidden until `isStorageUnlocked(state)`,
-   i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale,
-   80,000 bits — a deliberately later, more advanced-game reveal than step 6's own 8000-bit
-   `isIntroConversionUnlocked` gate); unlike Disks' own two actions below (Fill/Build), the nav
-   button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
-   posture as MainPage's own "⚙️ Byte Foundry" link. A Disk is a genuine storage **medium**, not a
+   { [capacityBits]: true }`) live as continuous sections on `ByteFoundryPage` once
+   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (10 KB in Memory's
+   own B/KB/MB/… scale, 80,000 bits — a deliberately later, more advanced-game reveal than step 6's
+   own 8000-bit `isIntroConversionUnlocked` gate). Build Disk and every shown size's DiskArrayRow
+   appear on that same Foundry screen (no second-level Storage tab; the thin `StoragePage` wrapper
+   remains for reuse/tests). A Disk is a genuine storage **medium**, not a
    one-shot pre-paid item: building one only constructs a permanent, EMPTY container (after a real
    build TIME — see below); Memory then auto-fills any empty container as it accumulates — via that
    array's own cache first (see below), smallest size first — and redeeming a full disk empties it
