@@ -550,7 +550,7 @@ const PrestigeMutedText = styled.p`
 `
 
 const MutedText = styled.p`
-  color: #a3a3a3;
+  color: ${props => props.theme.color.textMuted};
   margin: 0;
 `
 
@@ -737,7 +737,7 @@ const ViewTabButton = styled(Button)`
 
 // Affordability cue on the Upgrades tab — same green as AppNav attention dots.
 const NavDot = styled.span`
-  background: #4ade80;
+  background: ${props => props.theme.color.good};
   border-radius: 50%;
   display: inline-block;
   height: 0.5em;
@@ -761,7 +761,7 @@ const UpgradeCategory = styled(StatCard)`
 `
 
 const CategoryHeading = styled.h2`
-  color: #a3a3a3;
+  color: ${props => props.theme.color.textMuted};
   font-size: 0.85rem;
   letter-spacing: 0.04em;
   margin: 0;
@@ -784,7 +784,7 @@ const UpgradeRow = styled.div`
   padding: 0.4rem 0;
 
   & + & {
-    border-top: 1px solid #262626;
+    border-top: 1px solid ${props => props.theme.color.border};
   }
 `
 
@@ -1398,7 +1398,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         <ViewNav role="tablist" aria-label="factory view">
           <ViewTabButton
             aria-selected={view === 'game'}
-            color={view === 'game' ? 'white' : 'darkgrey'}
+            color={view === 'game' ? theme.color.text : theme.color.textMuted}
             onClick={() => setView('game')}
             role="tab"
             type="button"
@@ -1408,7 +1408,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <ViewTabButton
             aria-label="open upgrades"
             aria-selected={view === 'upgrades'}
-            color={view === 'upgrades' ? 'white' : 'darkgrey'}
+            color={view === 'upgrades' ? theme.color.text : theme.color.textMuted}
             onClick={() => setView('upgrades')}
             role="tab"
             type="button"
