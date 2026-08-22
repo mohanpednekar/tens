@@ -8,7 +8,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Compute → Tiers → Guide → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Boosters → Tiers → Guide → More**. Storage
 is under Foundry as **Memory | Disks** (not its own AppNav item). Tiers uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
@@ -65,14 +65,14 @@ src/
     storage.js             ← localStorage save/load/clear + migration, multi-slot saves +
                                Supporter unlock (code / dummy checkout)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Compute → Tiers → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Tiers → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory | Disks tabs; see
                             "Byte Foundry" below
     StoragePage/index.jsx  ← Disks list (also Foundry's Disks tab; not top-level AppNav)
-    ComputePage/index.jsx  ← Compute's own screen, reached via AppNav once revealed
+    ComputePage/index.jsx  ← Boosters screen (module still ComputePage), via AppNav once revealed
     MainPage/index.jsx     ← the game; Ladder | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
@@ -91,7 +91,7 @@ localStorage persistence), called once in `App.jsx` and shared by every page via
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
 `InfoPage/index.jsx` is a separate static page (evergreen mechanic explanations only, reads no game
 state); `StoragePage`/`ComputePage`/`MilestonesPage`/`SettingsPage` are pure renderers. `App.jsx`
-switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Compute →
+switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Boosters →
 Tiers → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'compute'`/`'milestones'`/`'settings'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"

@@ -472,12 +472,13 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 // COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's live duration
 // (Core earn time ×10 chain, or ×5 after a duration upgrade — see getComputeMergeDurationSeconds)
 // before granting 1 of the output entity.
-// "Compute" names the page/feature only — individual entities drop the word (Core, Node,
-// Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
-// `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
-// (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
-// hidden behind its own later, one-time latch until the player has actually earned enough Cores to
-// use it (see engine.js's tickComputeCoreConversion for where that latch flips).
+// "Boosters" is the player-facing page name (nav + header); internal ids stay `compute*`.
+// Individual entities drop any prefix (Core, Node, Cluster, … not "Compute Core"/…). The merge
+// section itself only renders once `intro.computeMergePageUnlocked` — the page reveals as soon as
+// Boosters is unlocked (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but
+// the merge chain stays hidden behind its own later, one-time latch until the player has actually
+// earned enough Cores to use it (see engine.js's tickComputeCoreConversion for where that latch
+// flips).
 // ENTITY_ROWS' own labels are always plural ("Cores", "Nodes", …) — strip the trailing "s" for a
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
@@ -506,7 +507,7 @@ const ComputePage = ({ game }) => {
   return (
     <RootDiv>
       <Header>
-        <Title>⚡ Compute</Title>
+        <Title>⚡ Boosters</Title>
       </Header>
 
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (

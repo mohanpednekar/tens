@@ -605,7 +605,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
           title={
             canClaimComputeCore
               ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
-              : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
+              : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Boosters screen to automate this'
           }
           type="button"
           variant={canClaimComputeCore ? 'prestige' : 'neutral'}

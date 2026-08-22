@@ -77,7 +77,7 @@ test('renders the current app version beside the title', () => {
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 })
 
-// Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
+// Regression: AppNav exposes Foundry/Guide (and later Storage/Boosters) as accessibly-labeled
 // buttons once the main game is unlocked — this only asserts the accessible surface
 // (role + aria-label), since jsdom doesn't render CSS for a visual check.
 test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked', () => {
@@ -202,7 +202,7 @@ test('the Guide nav item opens the Info page and Tiers returns, preserving game 
   expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/bits balance/i)
-  expect(screen.getByLabelText(/compute section/i)).toHaveTextContent(/stack/i)
+  expect(screen.getByLabelText(/boosters section/i)).toHaveTextContent(/stack/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open tiers/i }))
@@ -370,7 +370,7 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(saved.intro.foundryResetCaps.byteCreated).toBe(true)
   expect(saved.intro.foundryResetCaps.productionMilestoneTier).toBe(3)
   expect(saved.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(4)
-  expect(screen.queryByRole('button', { name: /open compute/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open boosters/i })).not.toBeInTheDocument()
 })
 
 test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async () => {
@@ -3238,20 +3238,20 @@ describe('Byte Foundry Storage', () => {
 })
 
 // Compute moved to its own dedicated screen (ComputePage) once revealed — reached from
-// ByteFoundryPage's own "⚡ Compute" nav button, always enabled once revealed (same posture as the
+// AppNav's "⚡ Boosters" nav button, always enabled once revealed (same posture as the
 // Storage nav button above). Every test below that lands on a rendered Compute element navigates
 // there first via openCompute(). Every seed here uses bits: 0, so the forced priority order's
 // higher-ranked actions (Disk Fill, Bandwidth, Disk Build) stay naturally
 // unavailable and don't need separate neutralizing — see the dedicated priority test below for
 // that interaction.
 describe('Byte Foundry Compute Boost', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
-  test('the "open compute" nav button appears once revealed, and the Compute Boost buttons appear once navigated there', () => {
+  test('the "open boosters" nav button appears once revealed, and the Compute Boost buttons appear once navigated there', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
     render(<App />)
 
-    const openButton = screen.getByRole('button', { name: /open compute/i })
+    const openButton = screen.getByRole('button', { name: /open boosters/i })
     expect(openButton).toBeEnabled()
     openCompute()
 
@@ -3411,7 +3411,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
   })
 
-  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Compute page, not at the bottom"', () => {
+  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
@@ -3473,7 +3473,7 @@ describe('Byte Foundry Compute Boost', () => {
 })
 
 describe('ComputePage merge chain', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('the merge chain section is hidden on ComputePage until computeMergePageUnlocked', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: false })
@@ -3673,7 +3673,7 @@ describe('Claim Core (ByteFoundryPage)', () => {
 })
 
 describe('Compute auto-merge / auto-claim automation', () => {
-  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
+  const openCompute = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('an "enable auto-merge" control is always shown for Nodes into Clusters, disabled below 10 held Clusters', () => {
     seedIntroState({

@@ -11,7 +11,7 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
-`AppNav` (Foundry → Compute → Tiers → Guide → More) — not a router (see "Architecture" below):
+`AppNav` (Foundry → Boosters → Tiers → Guide → More) — not a router (see "Architecture" below):
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage` (once revealed), plus `MilestonesPage`/`SettingsPage` via AppNav → More.
@@ -370,7 +370,7 @@ src/
                                plus the separately keyed last-save timestamp used to compute
                                offline progress (slot 0 keeps legacy `tens_game_state` keys)
   components/
-    AppNav/index.jsx        ← fixed bottom bar: Foundry → Compute → Tiers → Guide → More
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Boosters → Tiers → Guide → More
                                (progression order); Tiers omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
@@ -406,7 +406,7 @@ src/
     StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Disks tab);
                                Build stays on Foundry Memory tab. File kept as a thin reusable
                                wrapper — not a top-level AppNav destination
-    ComputePage/index.jsx   ← Compute's dedicated screen (merge chain + Boost). Reached via AppNav
+    ComputePage/index.jsx   ← Boosters screen (merge chain + Boost; module still ComputePage). Reached via AppNav
                                once revealed; takes `{ game }`
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
@@ -443,7 +443,7 @@ src/
                                <MilestonesPage/>/<SettingsPage/> via a local `page` useState
                                (`'game'`/`'info'`/`'foundry'`/`'compute'`/`'milestones'`/`'settings'`,
                                default `'game'`) — not a routing library — plus a shared fixed bottom
-                               `AppNav` (Foundry → Compute → Tiers → Guide → More) and `AppMenu`
+                               `AppNav` (Foundry → Boosters → Tiers → Guide → More) and `AppMenu`
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
                                top-level page). Same "local toggle, not real routing" convention
@@ -569,13 +569,15 @@ Strict three-layer separation:
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Also rendered as Foundry's Disks second-level tab. A pure renderer, same "engine
    re-validates, UI just mirrors it" posture as every other page here.
-4b. **`ComputePage/index.jsx`** — Compute's own dedicated screen, taking `{ game }`. Reached via
+4b. **`ComputePage/index.jsx`** — Boosters (player-facing name; module/page id still `compute` /
+   `ComputePage`), taking `{ game }`. Reached via
    AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
    the nine-boundary merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud →
    Datacenter → Supercomputer → Megacomputer — see "Economy model" below and issues #280/#316/#321)
    lives, behind its own later, one-time `intro.computeMergePageUnlocked` reveal nested inside this
-   same page — not a separate page/nav link. "Compute" names the page/feature only — individual
-   entities drop the word (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every
+   same page — not a separate page/nav link. "Boosters" is the player-facing page name (internal
+   ids stay `compute*`) — individual
+   entities drop any prefix (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every
    player-visible label.
    Deliberately terse: every control is icon-only (no or single-word visible labels), the full
    sentence living in `title`/`aria-label` instead — and the prose explanation of each mechanic
@@ -583,7 +585,7 @@ Strict three-layer separation:
    Boost's status (effect, countdown, current stack count) renders at the TOP of the page, right
    after the header, so it stays visible regardless of what else is on screen; right below that is
    the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
-   Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
+   Boosters page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
    how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
    enhancement — see "Economy model" below), disabled
@@ -664,7 +666,7 @@ been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer d
 never hidden while it's still the only way out of the gate.
 The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
-tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
+tier, once unlocked — "Boosters" is the player-facing page name, not any individual entity) — are all
 permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
 own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.

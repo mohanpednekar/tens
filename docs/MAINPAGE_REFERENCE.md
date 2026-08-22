@@ -310,17 +310,17 @@ current purchase-block progress — removed as redundant once ByteFoundryPage's 
 started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
 the only place this progress is shown.
 
-**Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
-ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title
-`⚡ Compute` is the page chrome (top-level navigation lives in AppNav).
+**Boosters page** (`src/pages/ComputePage/index.jsx`). Player-facing name Boosters (internal module/page id still Compute); dedicated screen, split out of
+ByteFoundryPage — reached via AppNav once Boosters is revealed. Takes `{ game }`. A centered title
+`⚡ Boosters` is the page chrome (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
 line (see issue #316's "fit every compute tier in one line ... clever symbols ... intuitive with no
 or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
-(`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
+(`InfoPage`'s "Boosters" section) — this page shows live state and controls only, not descriptions.
 
-Render order top to bottom (issue #326 — "the effects section is at the top of the Compute page,
+Render order top to bottom (issue #326 — "the effects section is at the top of the Boosters page,
 not at the bottom"):
 
 1. Right after the header — before anything else, deliberately at the TOP of the page — an
@@ -409,7 +409,7 @@ not at the bottom"):
          `aria-label`/`title` both spell out the remaining time.
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".
-     "Compute" names the page/feature only — no entity label carries a "Compute" prefix.
+     "Boosters" is the player-facing page name (internal ids stay `compute*`) — no entity label carries a "Compute" prefix.
 
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, still incremented on every purchase for display/back-compat purposes, but no

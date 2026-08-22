@@ -260,12 +260,12 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="compute section">
-        <h2>Compute</h2>
+      <Section aria-label="boosters section">
+        <h2>Boosters</h2>
         <p>
           Unlocks once Memory capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
-          nav’s Compute item.
+          nav’s Boosters item.
         </p>
 
         <h3>Cores</h3>

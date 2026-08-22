@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Boosters** screen (formerly Compute): AppNav label, page header, Guide section, and helper copy now say Boosters. Internal page id / engine APIs stay `compute*`.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
   (end of the left half); production stays top-right. No extra line for owned above the buttons.
 - **Money HUD progress**: under the main balance, an 8-segment bar shows progressive fill toward
