@@ -1531,10 +1531,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
   // FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on them, so a disk
   // whose size only just became redeemable once some tier leveled up THIS tick still redeems the
-  // same tick. Auto-fill already ran above (see stateAfterIntro), ahead of tickIntroAutoInvest,
-  // since it has no such dependency on any tier's level. A same-reference no-op when nothing
-  // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
-  // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
+  // same tick. Auto-fill already ran above (see stateAfterStorage / the storage pipeline), ahead of
+  // tickIntroAutoInvest, since it has no such dependency on any tier's level. A same-reference
+  // no-op when nothing qualifies (including whenever the matching tier's own autobuyer isn't
+  // currently active — see tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in
+  // play at all.
   // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
   // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
   // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
