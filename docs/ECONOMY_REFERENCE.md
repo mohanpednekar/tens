@@ -17,10 +17,11 @@ are not a tier here at all** — they're produced entirely within the separate B
 screen (see "Byte Foundry" below), which is what now hands a fresh save its first Kilobytes.
 **Every tier is bought directly with the base currency, displayed as "Bits"** — `costResourceId` is
 `MONEY_ID` (`'base'`) for all of them. Once owned, a tier produces the tier immediately below it
-(`producesResourceId`), cascading production down to the base currency. `tier01` (`Kilobytes`) is the
-special case where `costResourceId === producesResourceId === MONEY_ID`: it's the entry-level
-generator, bought with Bits to produce more Bits (`RESOURCE_SYMBOL(MONEY_ID)` falls back to `b`,
-lowercase — no tier owns a bare uppercase `B` symbol any more, since Bytes isn't a tier).
+(`producesResourceId`), cascading production down the ladder. `tier01` (`Kilobytes`) costs Bits
+but produces Factory Bytes (`BYTES_ID = 'bytes'`, symbol `B`) for Clock Speed funding, and
+`tickGame` mirrors each Byte produced into Bits at `production × BITS_PER_BYTE` so MoneyHero,
+Prestige, and tier Buys (still Bits-denominated) keep advancing. Higher tiers still produce the
+tier below into both `resources` and `owned`.
 
 Each tier's `baseCost` is a fixed PER-UNIT price, independent of block size: `1000^n` for `tier0n`
 (one exponent higher than the tier's own 1-indexed position, since Bytes' old `1000^0 = 1` slot was
@@ -286,13 +287,12 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
 8. **Disks** (`disks: { [capacityBits]: currentlyFullCount }`, `disksBuiltTotal:
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskBuild: null | { size, remainingSeconds, totalSeconds }`, `diskAutoRedeemedSizes:
-   { [capacityBits]: true }`) has its own dedicated screen, `StoragePage` — reached via a "🏦
-   Storage" nav button on `ByteFoundryPage`, which stays hidden until `isStorageUnlocked(state)`,
-   i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (10 KB in Memory's own B/KB/MB/… scale,
-   80,000 bits — a deliberately later, more advanced-game reveal than step 6's own 8000-bit
-   `isIntroConversionUnlocked` gate); unlike Disks' own two actions below (Fill/Build), the nav
-   button itself is always enabled once revealed — a permanent, voluntarily-revisitable screen, same
-   posture as MainPage's own "⚙️ Byte Foundry" link. A Disk is a genuine storage **medium**, not a
+   { [capacityBits]: true }`) live as continuous sections on `ByteFoundryPage` once
+   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (10 KB in Memory's
+   own B/KB/MB/… scale, 80,000 bits — a deliberately later, more advanced-game reveal than step 6's
+   own 8000-bit `isIntroConversionUnlocked` gate). Build Disk and every shown size's DiskArrayRow
+   appear on that same Foundry screen (no second-level Storage tab; the thin `StoragePage` wrapper
+   remains for reuse/tests). A Disk is a genuine storage **medium**, not a
    one-shot pre-paid item: building one only constructs a permanent, EMPTY container (after a real
    build TIME — see below); Memory then auto-fills any empty container as it accumulates — via that
    array's own cache first (see below), smallest size first — and redeeming a full disk empties it
@@ -439,11 +439,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    instead. Disks are **never lost**: nothing here ever expires, decays, or gets spent implicitly —
    only an explicit redeem (manual or auto) ever empties one, and it's immediately eligible to be
    auto-filled again. UI helpers `isDiskAutoRedeemEligible` / `isDiskManualRedeemAvailable` /
-   `getRelevantDiskSizesForFoundry` expose Foundry Memory’s DiskArrayRow list: every currently
-   matching size plus always the highest shown size (even when unmatched — issue #389), so the
-   incomplete current array stays trackable (read cache → Factory Bits via manual
-   `releaseDiskCacheBlock` or Smart auto-release when no matching disk exists; auto-eligible disks are
-   shown but not clickable).
+   `getDiskSizesToShow` drive Foundry’s continuous DiskArrayRow list (every size ever reached plus
+   the current offer). `getRelevantDiskSizesForFoundry` remains available for the narrower
+   matching-size subset (plus always the highest shown size — issue #389). Disk circles always
+   render all `DISK_ARRAY_LADDER_CAP` slots in one row.
 
    `disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` are all **PERMANENT**, carried through
    `prestigeGame` unchanged exactly like the Byte generator itself — a disk already FULL when
@@ -755,10 +754,10 @@ that button's label already names the array's *size* separately (see `formatDisk
 cost is the only other number on it. This is a display-only convention — internal state always
 stores raw bit counts.
 
-Disks' Start Build button (and its per-size summary chip row) stays on ByteFoundryPage itself; only the
-per-size full/empty/not-built squares rows (for redeeming) render on `StoragePage` (see
-"Architecture" in `CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage
-page" sections for the render-level layout. Auto-redeem has no standalone pause/resume control of
+Disks' Start Build button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
+continuous sections; the thin `StoragePage` wrapper remains for reuse/tests (see "Architecture" in
+`CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage page" sections for
+the render-level layout. Auto-redeem has no standalone pause/resume control of
 its own any more — it's gated per-matched-tier's own autobuyer instead, see the "Auto-redeem"
 paragraph above.
 
@@ -2058,7 +2057,7 @@ purchases were manual or automatic.
 | `isBitFundedBandwidthAvailable` | `state → bool` | Bit-cost Invest affordable and claims remain |
 | `isComputeFundedBandwidthAvailable` | `state → bool` | Issue #323: Invest bit cost exceeds `capacity`, next compute tier holds ≥ `COMPUTE_ENTITY_CAP`, sequential index in range |
 | `isBandwidthTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isBandwidthAvailable(state) && !isDiskFillAvailable(state)` — `pickIntroProductionMilestone`'s own actual gate |
-| `isDiskBuildAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `!state.intro.diskBuild && intro.bits >= getDiskCost(getDiskSize(state))` — matches `startDiskBuild`'s own actual gate (also requiring no build already in progress), which has never itself required `isStorageUnlocked` (that only governs the Storage nav button's own reveal) |
+| `isDiskBuildAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `!state.intro.diskBuild && intro.bits >= getDiskCost(getDiskSize(state))` — matches `startDiskBuild`'s own actual gate (also requiring no build already in progress), which has never itself required `isStorageUnlocked` (that only governs when Foundry shows Build + DiskArrayRows) |
 | `isDiskBuildTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isDiskBuildAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)` — `startDiskBuild`'s own actual gate |
 | `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
 | `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)` — `activateComputeBoost`'s own actual gate |
@@ -2077,7 +2076,7 @@ purchases were manual or automatic.
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry Bandwidth ×2 — requires `isBandwidthTurnAvailable`. Prefers bit-funded Invest when affordable; otherwise compute-funded overflow (#323): spends `COMPUTE_ENTITY_CAP` of the next `COMPUTE_BOOST_TIER_FIELDS` tier, advances `computeBandwidthSacrificeIndex`, increments `computeFundedBandwidthClaims`, and applies the same rate doubling as bit Invest. No-op while Disk Fill ranks higher |
 | `rollbackComputeFundedBandwidth` | `state → state` | Issue #324: rewinds exactly `computeFundedBandwidthClaims` Invest doubles and resets sacrifice index to 0 |
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
-| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 — 10 KB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "🏦 Storage" nav button to `StoragePage` at all, a later reveal than `isIntroConversionUnlocked`'s own |
+| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 — 10 KB in Memory's own scale) — reveals Foundry's Build Disk control and continuous DiskArrayRow sections |
 | `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KB/MB/…/QB unit a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits) |
 | `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null` |
 | `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Memory-denominated cost (Sacrifice/Invest/Disk build) in whichever unit best fits that specific amount |
@@ -2088,8 +2087,8 @@ purchases were manual or automatic.
 | `getDiskSize` | `state → number` | Byte Foundry Disks: walks the gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` × `DISK_LADDER_SIZE_MULTIPLIER^(n-1)` — 1 KB, 10 KB, 100 KB, **1 MB**, 10 MB, …; see `getDiskLadderSizeBits`) rather than tier01's level-cost sequence, advancing every time `DISK_ARRAY_LADDER_CAP` disks have ever been built at the current size (read from `intro.disksBuiltTotal`, cumulative — never decremented by redeeming) — the size `startDiskBuild` currently builds at. Issue #368 replaced the tier01-cost walk, which skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB). Uncapped. Deliberately decoupled from tier01's own CURRENT level cost. |
 | `getDiskCost` | `capacityBits → number` | Byte Foundry Disks: `capacityBits * DISK_BUILD_COST_MULTIPLIER` — 10x the array's own face value, already in bits (`capacityBits`, from `getDiskSize`, is already Byte-accurate — no further `BITS_PER_BYTE` conversion needed, unlike an earlier "kilobit"-scaled version of this ladder — see `docs/DESIGN_HISTORY.md`): a real 1 KB (8000-bit) array costs 80,000 bits to build. Pays only for the empty container — not what fills it |
 | `formatDiskSize` | `bits → string` | Byte Foundry Disks: `formatBitsInNearestUnit` — a thin, semantically-named alias, kept so call sites read "format this disk's size" rather than reaching for the more general Memory-balance helper directly. Disk sizes are real, Byte-accurate bit counts, the exact same scale Memory's own balance/capacity already renders in — there is no longer a separate "kilobit" formatting scale for Disk sizes (see `docs/DESIGN_HISTORY.md` for the bug that separate scale caused) |
-| `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by ByteFoundryPage's own brief per-size summary chip row and StoragePage's fuller per-size squares rows |
-| `getRelevantDiskSizesForFoundry` | `state → number[]` | Byte Foundry Disks: Foundry Memory's DiskArrayRow sizes — every size from `getDiskSizesToShow` whose tier cost currently matches, plus always the highest shown size even when unmatched (issue #389), ascending. Build button independent; full history on Disks tab / StoragePage |
+| `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by Foundry's continuous DiskArrayRow sections and the thin `StoragePage` wrapper |
+| `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose tier cost currently matches, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `startDiskBuild` | `state → state` | Byte Foundry Disks: requires `isDiskBuildTurnAvailable(state)` (see its own row above); spends `getDiskCost(getDiskSize(state))` bits from `intro.bits` immediately and sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }` — a real TIMED construction rather than an instant grant (an earlier version completed instantly — see `docs/DESIGN_HISTORY.md`). `totalSeconds = getDiskBuildBaseSeconds(size) * ordinal`, where `getDiskBuildBaseSeconds(size) = size / (getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE)` (1 second per real "KB" of size) and `ordinal = disksBuiltTotal[size] + 1` at the moment the build starts (so a size's Nth disk takes N times its own base build time). The array itself only gains the new EMPTY container, and starts accepting IO again, once `tickDiskBuild` finishes the countdown. No-op below cost, or if an array is already mid-build. Only ever queues ONE build at a time |
 | `tickDiskBuild` | `elapsedSeconds → state → state` | Byte Foundry Disks: same-reference no-op when no build is in progress (`intro.diskBuild` is `null`); otherwise counts `remainingSeconds` down by `elapsedSeconds`. Once it crosses (or reaches) 0, increments `intro.disksBuiltTotal[size]` (the container now exists, empty, ready for `tickDiskAutoFill`) and clears `diskBuild` back to `null`, re-enabling every IO operation against that size's array. Called from `tickGame` right after `tickIntroProduction` and before `tickDiskAutoFill` — unconditional, bypasses nothing |
 | `tickDiskAutoFill` | `state → state` | Byte Foundry Disks: two ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's **read cache** toward full in whole-block transfers only when Memory holds ≥ one block (or dump a full-but-sub-block balance when capacity itself is &lt; one block); (2) pour a full read cache into one empty disk per size when `diskCache[size] >= size` and `isDiskRedeemable` is false — tier match blocks ladder use. Same-reference no-op when nothing changed. Called from `tickGame` before and after `tickDiskWriteCache` (and again after a successful `tickDiskAutoRedeem`) — unconditional, bypasses `isProductionFrozen` |

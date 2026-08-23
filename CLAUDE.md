@@ -15,7 +15,8 @@ app switches between top-level screens via a plain `useState` toggle in `App.jsx
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
 then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
-`StoragePage` is not an AppNav destination — disk arrays live under Foundry as Memory | Storage.
+`StoragePage` is not an AppNav destination — disk arrays live under Foundry as continuous Memory +
+Storage sections on the same screen (no second-level tabs).
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
 Foundry gate; only Factory stays progress-gated.
 
@@ -428,10 +429,11 @@ src/
                                model" below). Takes `{ game, focusNonce }` — top-level navigation
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
-                               same as MainPage; Memory | Storage second-level tabs live here
-    StoragePage/index.jsx   ← every-size DiskArrayRow list (also rendered as Foundry's Storage tab);
-                               Build stays on Foundry Memory tab. File kept as a thin reusable
-                               wrapper — not a top-level AppNav destination
+                               same as MainPage; Memory + every DiskArrayRow as continuous sections
+                               (no second-level tabs). After Boosts unlocks, Claim Core and Memory ×10
+                               swap positions (Claim Core beside Bandwidth; Memory ×10 below disks)
+    StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
+                               Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
                                once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
@@ -475,10 +477,9 @@ src/
                                default `'game'`) — not a routing library — plus a shared fixed bottom
                                `AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) and `AppMenu`
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
-                               navigations rewrite to `'foundry'` (Disks are a Foundry tab, not a
+                               navigations rewrite to `'foundry'` (Disks live on Foundry, not a
                                top-level page). Same "local toggle, not real routing" convention
-                               MainPage's own Data | Upgrades tabs and Foundry's Memory | Storage
-                               tabs already use. Which screen actually renders is a derived
+                               MainPage's own Data | Upgrades tabs already use. Which screen actually renders is a derived
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
                                (!intro.mainGameUnlocked || page === 'foundry')` check (where
                                `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`),
@@ -583,26 +584,25 @@ Strict three-layer separation:
    `as="button"` swap on the same styled `FillableStatCard`, calling the identical
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
-   detail (see 4a) is a Foundry Storage tab (and the reusable `StoragePage` wrapper), not a separate
-   AppNav item. Starting the next Disk's build (its own core-loop action, alongside Sacrifice/Invest)
-   and every currently-relevant size's full interactive detail — cache blocks, disk squares,
-   releasing (Disk Fill's manual-release half → Factory Bits only), and redeeming (Disk Fill itself;
-   auto when the matching tier's autobuyer is on, else manual) — both stay here, rendered via the
-   shared `components/DiskArrayRow` (see "Repo layout" above), ascending
-   smallest→largest with Cache of a row immediately above that row's Disks. The Build button always
-   stays visible/usable regardless of eligibility (building ahead of every tier's current cost is a
-   deliberate strategy — see "Economy model" below), but each `DiskArrayRow` renders for every size
-   that currently matches a tier (`getRelevantDiskSizesForFoundry` — matching sizes from
-   `getDiskSizesToShow`) **plus always the highest shown size** even when that size is not yet
-   redeemable (usually the ladder's current / incomplete array — the most useful row to keep
-   tracking while building ahead). Full history stays on the Storage tab / `StoragePage`. Every
-   action — here or on either dedicated screen — stays gated by the forced priority order (see
-   "Economy model" below).
-4a. **`StoragePage/index.jsx`** — Storage's fuller, every-size detail screen: a thin wrapper
-   rendering one `components/DiskArrayRow` per size ever reached (ascending, via
+   detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
+   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Starting the next Disk's
+   build (its own core-loop action, alongside Sacrifice/Invest) and every shown size's full
+   interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half →
+   Factory Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
+   on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
+   layout" above), ascending smallest→largest with Cache of a row immediately above that row's
+   Disks. The Build button always stays visible/usable regardless of eligibility (building ahead of
+   every tier's current cost is a deliberate strategy — see "Economy model" below); each
+   `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
+   the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
+   slots in one unbroken row. After Boosts unlocks (`isComputeCoreConversionUnlocked`), Claim Core
+   and Memory ×10 swap: Claim Core sits beside Bandwidth in the milestones row (while manual claim
+   is still shown), and Memory ×10 moves below the disk section. Every action — here or on either
+   dedicated screen — stays gated by the forced priority order (see "Economy model" below).
+4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
-   `{ game }`. Also rendered as Foundry's Storage second-level tab. A pure renderer, same "engine
-   re-validates, UI just mirrors it" posture as every other page here.
+   `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests.
+   A pure renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
    Reached via AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
    the nine-boundary merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud →
@@ -680,7 +680,9 @@ display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). 
 directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces
 the tier immediately below it, cascading production down the ladder; `tier01` (Kilobytes) is the special
 case where cost is still Bits but production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`,
-displayed as whole `B`) rather than Bits. **Clock Speed** (the global tickspeed multiplier on MainPage,
+displayed as whole `B`) and mirrors the same amount × `BITS_PER_BYTE` into Bits (`MONEY_ID`) so
+MoneyHero / Prestige / tier Buys keep moving — without that mirror, Factory production after #430
+left the headline balance frozen. **Clock Speed** (the global tickspeed multiplier on MainPage,
 formerly "Tickspeed") is funded from that Bytes pool — initial activation costs **10 Bytes** — not Bits.
 Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes

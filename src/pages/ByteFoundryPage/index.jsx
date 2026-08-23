@@ -3,10 +3,10 @@ import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, getRelevantDiskSizesForFoundry, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
-import { useEffect, useState } from 'react'
-import styled, { useTheme } from 'styled-components'
+import { useState } from 'react'
+import styled from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -32,18 +32,6 @@ const Header = styled.header`
   display: flex;
   justify-content: center;
   width: 100%;
-`
-
-// Second-level Foundry tabs: Memory | Storage (peer tabs — not a top-level AppNav destination).
-// Shown once Storage unlocks.
-const SubNav = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-`
-
-const SubNavButton = styled(Button)`
-  flex: 1;
 `
 
 const StatusText = styled.p`
@@ -274,19 +262,13 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
 // still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
-// here is read-only. Storage's every-size history is the Disks second-level tab on this same page
-// (not a separate AppNav destination). Starting the next disk's build and the currently-active
-// size's DiskArrayRow stay on the Memory tab. Forced priority: Disk Fill > Bandwidth > Disk Build >
-// Compute > Memory.
-const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
+// here is read-only. Memory and Storage are continuous sections on this one screen (no
+// second-level tabs). Forced priority: Disk Fill > Bandwidth > Disk Build > Compute > Memory.
+// focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.
+const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
-  const theme = useTheme()
   const { intro } = state
-  const [foundryTab, setFoundryTab] = useState('memory')
   const [sacrificeConfirmOpen, setSacrificeConfirmOpen] = useState(false)
-  useEffect(() => {
-    setFoundryTab('memory')
-  }, [focusNonce])
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
@@ -301,7 +283,13 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   // sacrificing 10 Nodes), Memory → Core conversion resumes automatically and this manual button
   // is removed entirely, not merely disabled — see "Byte Foundry" in CLAUDE.md.
   const canClaimComputeCore = isComputeCoreClaimAvailable(state)
+  const showManualClaimCore = computeCoreRevealed && !intro.autoClaimCoreEnabled
+  // After Boosts (Compute Core conversion) unlocks, Claim Core and Memory ×10 swap: Claim Core
+  // takes the milestones-row slot next to Bandwidth, and Memory ×10 moves below the disk section.
+  const sacrificeInMilestones = !computeCoreRevealed
   const productionRate = getIntroProductionRate(intro)
+  // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
+  // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
   // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute Cores are unlocked,
@@ -330,10 +318,9 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
   const canInvest = isBandwidthTurnAvailable(state)
   const investBlockedByPriority = isBandwidthAvailable(state) && !canInvest
 
-  // Starting the next disk's build stays on this page (the Byte Foundry's own core loop) even
-  // though every-size history lives on the Disks tab — see "Byte Foundry" in CLAUDE.md. Ranked
-  // third in the forced priority order — see isDiskBuildTurnAvailable. Relevant DiskArrayRows
-  // (Cache then Disks per size, ascending) render below while transferable.
+  // Starting the next disk's build stays on this page (the Byte Foundry's own core loop). Ranked
+  // third in the forced priority order — see isDiskBuildTurnAvailable. Every shown size's
+  // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
   const canStartDiskBuild = isDiskBuildTurnAvailable(state)
@@ -343,14 +330,6 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  // Every currently-relevant size (tier cost matches — Cache releasable / Disks redeemable),
-  // ascending smallest→largest — plus always the highest shown size even when it does not match
-  // (usually the ladder's current / incomplete array — see getRelevantDiskSizesForFoundry). Not
-  // only the ladder's current build size among matching rows: an older array that still matches
-  // stays visible here until it stops being transferable. The Build button itself stays
-  // visible/usable regardless (building ahead of the curve is deliberate — see "Economy model"
-  // in CLAUDE.md). Disks tab / StoragePage keep the full history either way.
-  const relevantDiskSizes = storageRevealed ? getRelevantDiskSizesForFoundry(state) : []
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
   // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
@@ -386,45 +365,61 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
     : clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
+  const sacrificeButton = (
+    <Button
+      aria-label="sacrifice all bits for 10x capacity"
+      disabled={!canSacrifice}
+      onClick={handleSacrificeClick}
+      title={
+        isFull && !canSacrifice
+          ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
+          : 'Empty Memory for 10x capacity'
+      }
+      type="button"
+      variant={canSacrifice ? 'prestige' : 'neutral'}
+      $progress={fullProgress}
+    >
+      <MilestoneButtonContent>
+        <span>💥 Memory ×10</span>
+        <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
+      </MilestoneButtonContent>
+      <VisuallyHidden
+        role="progressbar"
+        aria-label="byte foundry sacrifice progress"
+        aria-valuenow={intro.bits}
+        aria-valuemin={0}
+        aria-valuemax={intro.capacity}
+      />
+    </Button>
+  )
+
+  const claimCoreButton = (
+    <Button
+      aria-label="claim a compute core"
+      disabled={!canClaimComputeCore}
+      onClick={actions.claimComputeCore}
+      title={
+        canClaimComputeCore
+          ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
+          : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
+      }
+      type="button"
+      variant={canClaimComputeCore ? 'prestige' : 'neutral'}
+      $progress={fullProgress}
+    >
+      <MilestoneButtonContent>
+        <span>🧮 Claim Core</span>
+        <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
+      </MilestoneButtonContent>
+    </Button>
+  )
+
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
       <Header>
         <Title>🔥 Byte Foundry</Title>
       </Header>
-
-      {storageRevealed && (
-        <SubNav role="tablist" aria-label="foundry view">
-          <SubNavButton
-            aria-label="open memory"
-            aria-selected={foundryTab === 'memory'}
-            color={foundryTab === 'memory' ? theme.color.text : theme.color.textMuted}
-            onClick={() => setFoundryTab('memory')}
-            role="tab"
-            type="button"
-          >
-            Memory
-          </SubNavButton>
-          <SubNavButton
-            aria-label="open storage"
-            aria-selected={foundryTab === 'disks'}
-            color={foundryTab === 'disks' ? theme.color.text : theme.color.textMuted}
-            onClick={() => setFoundryTab('disks')}
-            role="tab"
-            type="button"
-          >
-            Storage
-          </SubNavButton>
-        </SubNav>
-      )}
-
-      {foundryTab === 'disks' && storageRevealed && (
-        diskSizesToShow.map(size => (
-          <DiskArrayRow key={size} actions={actions} size={size} state={state} />
-        ))
-      )}
-
-      {foundryTab === 'memory' && (<>
 
       <TilesRow>
         <FillableStatCard
@@ -486,31 +481,7 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
 
         {intro.byteCreated && (
           <MilestonesRow>
-            <Button
-              aria-label="sacrifice all bits for 10x capacity"
-              disabled={!canSacrifice}
-              onClick={handleSacrificeClick}
-              title={
-                isFull && !canSacrifice
-                  ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
-                  : 'Empty Memory for 10x capacity'
-              }
-              type="button"
-              variant={canSacrifice ? 'prestige' : 'neutral'}
-              $progress={fullProgress}
-            >
-              <MilestoneButtonContent>
-                <span>💥 Memory ×10</span>
-                <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
-              </MilestoneButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry sacrifice progress"
-                aria-valuenow={intro.bits}
-                aria-valuemin={0}
-                aria-valuemax={intro.capacity}
-              />
-            </Button>
+            {sacrificeInMilestones ? sacrificeButton : (showManualClaimCore ? claimCoreButton : null)}
 
             <Button
               aria-label={
@@ -587,29 +558,13 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
             />
           </Button>
 
-          {relevantDiskSizes.map(size => (
+          {diskSizesToShow.map(size => (
             <DiskArrayRow key={size} actions={actions} size={size} state={state} />
           ))}
         </>
       )}
 
-      {computeCoreRevealed && !intro.autoClaimCoreEnabled && (
-        <Button
-          aria-label="claim a compute core"
-          disabled={!canClaimComputeCore}
-          onClick={actions.claimComputeCore}
-          title={
-            canClaimComputeCore
-              ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
-              : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
-          }
-          type="button"
-          variant={canClaimComputeCore ? 'prestige' : 'neutral'}
-          $progress={fullProgress}
-        >
-          <ButtonContent>🧮 Claim Core</ButtonContent>
-        </Button>
-      )}
+      {!sacrificeInMilestones && intro.byteCreated && sacrificeButton}
 
       {showTransferSection && (<>
         <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
@@ -666,8 +621,6 @@ const ByteFoundryPage = ({ game, focusNonce = 0 }) => {
           👆 Tap
         </TapArea>
       )}
-
-      </>)}
 
       <ConfirmDialog
         open={sacrificeConfirmOpen}

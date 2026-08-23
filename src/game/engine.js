@@ -1659,6 +1659,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
+    // Factory Bytes (BYTES_ID) are Clock Speed fuel and the tier-row "+N B" unit — but MoneyHero,
+    // Prestige, and tier Buys still key off Bits (MONEY_ID). Mirror each Byte produced into Bits
+    // at BITS_PER_BYTE so the headline balance and Prestige progress track Byte output (otherwise
+    // Money freezes after #430 redirected tier01 off `base`). Disk-cache releases still add Bits
+    // separately; Clock Speed still spends only the Bytes pool.
+    if (tier.producesResourceId === BYTES_ID && production > 0) {
+      newResources[MONEY_ID] = clampNonNegative(
+        (newResources[MONEY_ID] ?? 0) + production * BITS_PER_BYTE,
+      )
+    }
     // If the produced resource is also a tier (generator), add to owned count — not for the
     // separate Factory Bytes pool (BYTES_ID) or other non-tier resources.
     if (TIER_DEFINITIONS.some(t => t.id === tier.producesResourceId)) {
@@ -2972,13 +2982,12 @@ export const isDiskCacheBlockManualReleaseAvailable = (state, capacityBits) =>
   isDiskCacheBlockReleasable(state, capacityBits) &&
   !isDiskCacheBlockAutoReleaseEligible(state, capacityBits)
 
-// Every Disk size currently relevant on Foundry's Memory tab: any size from getDiskSizesToShow
-// whose current per-unit tier cost matches right now (cache releasable / disk redeemable toward
-// that tier), PLUS always the highest size in that list — even when it does not currently match.
-// The highest row is usually the ladder's current / incomplete array, which is the most useful
-// one to keep tracking on Foundry even while building ahead of redeemability. Ascending — Cache
-// then Disks of each row render smallest→largest. The Build button stays independent of this list;
-// full history stays on the Disks tab / StoragePage.
+// Every Disk size currently "relevant" for a matching-tier Foundry subset: any size from
+// getDiskSizesToShow whose current per-unit tier cost matches right now (cache releasable / disk
+// redeemable toward that tier), PLUS always the highest size in that list — even when it does not
+// currently match (usually the ladder's current / incomplete array). Ascending. The live Foundry
+// UI lists every getDiskSizesToShow size as continuous sections instead; this helper remains for
+// the narrower matching subset (issue #389).
 export const getRelevantDiskSizesForFoundry = state => {
   const shown = getDiskSizesToShow(state)
   if (shown.length === 0) return []
