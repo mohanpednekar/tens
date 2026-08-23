@@ -103,7 +103,8 @@ main game. Once unlocked, Foundry is just another AppNav destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
-produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`), not
+produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`),
+mirroring each Byte × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige keep moving; Bytes are not
 Bits. Bytes are **not** a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
 **Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
