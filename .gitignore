@@ -13,7 +13,7 @@ package-lock.json
 # only generated build output stays ignored — see #70)
 android/app/build/
 android/.gradle/
-android/local.properties/
+android/local.properties
 android/captures/
 android/.idea/
 android/*.iml

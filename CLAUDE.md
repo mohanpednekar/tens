@@ -42,7 +42,7 @@ yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locall
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build → dist/ (GitHub Pages base `/tens/` + PWA service worker)
 yarn build:capacitor # CAPACITOR=1 vite build → dist/ with relative base, no PWA plugin (for native wrap)
-yarn cap:sync     # npx cap sync (no-op until android/ios platforms are added — see #70)
+yarn cap:sync     # npx cap sync (copies web assets; native project update waits until android/ios exist — #70)
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
@@ -898,7 +898,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1489 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1491 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
