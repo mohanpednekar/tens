@@ -188,10 +188,11 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
-// Byte-scale). Cache funds matching main-game tier level blocks via manual release only
-// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size) — it
-// does not pour into disk containers; empty disks fill from Memory directly. Steady state is
-// full; gaps only right after a release or when a size is newly unlocked/built.
+// Byte-scale). Cache funds matching main-game tier level blocks via manual release
+// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size and no
+// full redeemable disk exists). When full, it also flushes into an empty disk over one block's
+// production duration (getDiskReadCacheFlushSeconds). Steady state is full; gaps only right after
+// a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/

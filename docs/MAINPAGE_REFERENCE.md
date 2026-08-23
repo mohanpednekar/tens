@@ -267,7 +267,8 @@ render:
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
+  or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over one
+  cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
   (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
   independently **releasable** (`$releasable`, accent border, clickable) once

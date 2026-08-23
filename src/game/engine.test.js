@@ -215,7 +215,10 @@ import {
   tickDiskAutoReleaseCache,
   tickDiskBuild,
   tickDiskWriteCache,
+  getDiskReadCacheFlush,
+  getDiskReadCacheFlushSeconds,
   getDiskWriteCacheMerge,
+  isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
   tickGame,
   tickIntroAutoInvest,
@@ -1923,7 +1926,7 @@ describe('Disk array IO lockout during a build', () => {
       diskCache: { [level2Size]: level2Size }, // already full — read cache pours into the empty disk
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     // The mid-build size's cache/disks are untouched...
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -1989,7 +1992,7 @@ describe('tickDiskAutoFill', () => {
 
   it('is a same-reference no-op with no built disks', () => {
     const state = withIntro(createInitialGameState(), { bits: 5000, capacity: storageCapacity })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
@@ -1998,7 +2001,7 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('leaves Memory untouched when bits are fewer than one cache block — progress stays visible in Memory', () => {
@@ -2007,7 +2010,7 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('transfers whole cache blocks only, leaving a sub-block remainder in Memory', () => {
@@ -2017,7 +2020,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       disks: { [FIRST_DISK_SIZE]: 1 }, // no empty disk — only cache refill
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 3)
     expect(after.intro.bits).toBe(250)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
@@ -2030,7 +2033,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('fills read cache from Memory, then pours into an empty disk when tier cost no longer matches', () => {
@@ -2039,12 +2042,12 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    const afterPour = tickDiskAutoFill(state)
+    const afterPour = tickDiskAutoFill(1e12)(state)
     expect(afterPour.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(afterPour.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(afterPour.intro.bits).toBe(FIRST_DISK_SIZE)
 
-    const afterRefill = tickDiskAutoFill(afterPour)
+    const afterRefill = tickDiskAutoFill(1e12)(afterPour)
     expect(afterRefill.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(afterRefill.intro.bits).toBe(0)
   })
@@ -2056,7 +2059,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
@@ -2069,7 +2072,7 @@ describe('tickDiskAutoFill', () => {
       capacity: FIRST_DISK_SIZE * 2 + level2Size,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2085,7 +2088,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE, [level2Size]: level2Size },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2101,7 +2104,7 @@ describe('tickDiskAutoFill', () => {
       disks: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(after.intro.bits).toBe(1_000_000)
@@ -2115,7 +2118,7 @@ describe('tickDiskAutoFill', () => {
       disks: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: 0 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 2)
     expect(after.intro.bits).toBe(100)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
@@ -2129,7 +2132,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
       diskCache: { [level2Size]: level2Size },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
     expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2144,9 +2147,76 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [level2Size]: 1 },
       disks: { [level2Size]: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[level2Size]).toBe(5000)
     expect(after.intro.bits).toBe(0)
+  })
+
+  it('starts a timed read-cache flush instead of pouring instantly when an empty disk is ready', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const expectedSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    expect(expectedSeconds).toBe(blockBits) // default production rate is 1 bit/sec
+
+    const started = tickDiskAutoFill(0)(state)
+    expect(started.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(started.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
+    const flush = getDiskReadCacheFlush(started, FIRST_DISK_SIZE)
+    expect(flush).toEqual({ remainingSeconds: expectedSeconds, totalSeconds: expectedSeconds })
+  })
+
+  it('completes the read-cache flush after one cache-block production duration and fills the disk', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const flushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    const mid = tickDiskAutoFill(flushSeconds / 2)(state)
+    expect(getDiskReadCacheFlush(mid, FIRST_DISK_SIZE).remainingSeconds).toBeCloseTo(flushSeconds / 2)
+    expect(mid.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+
+    const done = tickDiskAutoFill(flushSeconds / 2)(mid)
+    expect(getDiskReadCacheFlush(done, FIRST_DISK_SIZE)).toBeNull()
+    expect(done.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(done.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('pauses an in-flight read-cache flush while a tier claim matches that size', () => {
+    const unlocked = withPurchaseLevel(createInitialGameState(), tensTier.id, 2)
+    const state = withIntro(unlocked, {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const flushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    const started = tickDiskAutoFill(0)(state)
+    expect(getDiskReadCacheFlush(started, FIRST_DISK_SIZE)).toBeTruthy()
+
+    // Drop back to level 1 so FIRST_DISK_SIZE matches again — flush must pause.
+    const pausedState = withPurchaseLevel(started, tensTier.id, 1)
+    expect(isDiskReadCacheFlushPaused(pausedState, FIRST_DISK_SIZE)).toBe(true)
+    const afterPauseTick = tickDiskAutoFill(flushSeconds)(pausedState)
+    expect(getDiskReadCacheFlush(afterPauseTick, FIRST_DISK_SIZE).remainingSeconds).toBe(flushSeconds)
+    expect(afterPauseTick.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('scales flush duration with Byte Foundry production rate (one cache block / rate)', () => {
+    const fast = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      productionMultiplier: 8,
+      tickSpeedSeconds: 1,
+    })
+    expect(getDiskReadCacheFlushSeconds(fast, FIRST_DISK_SIZE)).toBe(blockBits / 8)
   })
 })
 
@@ -3771,7 +3841,7 @@ describe('tickGame Disk auto-redeem integration', () => {
     expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
     expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
 
-    const afterFill = tickDiskAutoFill(withPurchaseLevel(afterRedeem, tensTier.id, 2))
+    const afterFill = tickDiskAutoFill(1e12)(withPurchaseLevel(afterRedeem, tensTier.id, 2))
     expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(afterFill.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(afterFill.intro.bits).toBe(FIRST_DISK_SIZE * 2)
