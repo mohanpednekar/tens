@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
+  units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Boosters are bought on
+  the Boosters screen for escalating lake cost (nth purchase costs n units); capacity naturally
+  caps around 44 boosters per tier without a separate inventory limit. Foundry disk rows expose
+  deposit-to-lake actions; a Data Lake summary appears once any lake has content.
+
 ### Fixed
 - **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
   Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at

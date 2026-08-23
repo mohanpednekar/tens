@@ -782,6 +782,18 @@ a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTota
 `diskBuild` are all PERMANENT across every real Prestige, like the Byte generator itself; only
 `diskAutoRedeemedSizes` (which sizes have already auto-redeemed this cycle) resets each cycle.
 
+**Data Lakes** (`intro.dataLakes` in `createInitialGameState`, `DATA_LAKE_*` constants in `layers.js`,
+`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/`getBoosterPurchaseCost`
+in `engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
+`DATA_LAKE_CAPACITY` (999) units deposited from Disks (`9×1 + 9×10 + 9×100` of that tier's
+denomination). Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to QB. A full disk
+deposits via `depositDiskToDataLake` (Foundry disk rows). Booster purchases on ComputePage spend
+lake capacity: the nth purchase at tier *t* costs *n* units of lake *t* and grants 1 of the
+matching compute-ladder entity (`COMPUTE_BOOST_TIER_FIELDS`); triangular total `n×(n+1)/2` naturally
+caps around 44 boosters per full lake — no separate inventory cap on the purchase path (merge/UI
+slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate
+paths. Boost preset multipliers/durations are unchanged.
+
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
 Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
@@ -884,7 +896,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1494 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1504 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
