@@ -4,6 +4,8 @@ import {
   getIntroKilobyteConversionCost,
 } from 'game/engine'
 import {
+  COMPUTE_FLOPS_FIRST_TIER_COST_PP,
+  COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BYTE_COMBINE_COST,
@@ -20,6 +22,7 @@ import {
   ATTENTION_HIGH,
   ATTENTION_NORMAL,
   getNavAttention,
+  hasAffordableComputeFlopsTier,
   hasAffordableFullLevel,
   hasAffordablePpUpgrade,
   hasComputeAttention,
@@ -297,5 +300,37 @@ describe('navAttention', () => {
       autoGlobalTickspeed: false,
     }
     expect(hasAffordablePpUpgrade(state)).toBe(false)
+  })
+
+  it('does not light Compute (Flops) before the page reveals', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      prestige: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP - 1 },
+    }
+    expect(hasAffordableComputeFlopsTier(state)).toBe(false)
+    expect(getNavAttention(state).compute).toBe(false)
+  })
+
+  it('does not light Compute (Flops) when PP is below the first tier cost', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      prestige: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP },
+      computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    }
+    expect(hasAffordableComputeFlopsTier(state)).toBe(false)
+    expect(getNavAttention(state).compute).toBe(false)
+  })
+
+  it('lights Compute (Flops) at normal when a tier buy is affordable', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      prestige: { count: 1, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    }
+    expect(hasAffordableComputeFlopsTier(state)).toBe(true)
+    expect(getNavAttention(state).compute).toBe(ATTENTION_NORMAL)
   })
 })
