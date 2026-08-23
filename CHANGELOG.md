@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
+  `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
+  (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
+  future `android/` / `ios/` build artifacts. Native platform projects and
+  `mobile-build.yml` are deferred to a later slice of #70.
+
 ### Changed
 - **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
   Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**

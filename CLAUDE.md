@@ -40,7 +40,9 @@ Use Yarn for all dependency work, not npm. `package-lock.json` is gitignored so 
 ```sh
 yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locally after lockfile changes
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
-yarn build        # production build → dist/
+yarn build        # production build → dist/ (GitHub Pages base `/tens/` + PWA service worker)
+yarn build:capacitor # CAPACITOR=1 vite build → dist/ with relative base, no PWA plugin (for native wrap)
+yarn cap:sync     # npx cap sync (no-op until android/ios platforms are added — see #70)
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
@@ -499,8 +501,10 @@ src/
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
                                is a no-op in practice today
-vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin. Full PWA
-                               reference: `docs/PWA_REFERENCE.md`
+capacitor.config.json        ← Capacitor app id/name + `webDir: dist` (foundation for #70; no
+                               android/ios platforms checked in yet)
+vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (skipped
+                               when `CAPACITOR=1`). Full PWA reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
                                "Testing" below) — separate from vite.config.js's own `test` block, which
                                only configures Vitest
@@ -834,6 +838,19 @@ in `localStorage` is unaffected by the service worker's precache, are in `docs/P
 it before touching `vite.config.js`'s `VitePWA` block, the manifest fields, or `public/pwa-*`/
 `scripts/generate-pwa-icons.mjs`.
 
+### Capacitor foundation (in progress — #70)
+
+A Capacitor wrap is scaffolding-only so far (not store-ready; no `android/` / `ios/` trees yet):
+
+- `@capacitor/core` (runtime) + `@capacitor/cli` (dev) are dependencies; `capacitor.config.json`
+  names the app **Tens** (`appId: com.mohanpednekar.tens`, `webDir: dist`).
+- `yarn build:capacitor` sets `CAPACITOR=1` so Vite uses `base: './'` and omits `VitePWA` — a
+  Workbox SW under Capacitor's origin is redundant/harmful; the ordinary `yarn build` path is
+  unchanged for GitHub Pages.
+- `.gitignore` already excludes native build artifacts for when `npx cap add android|ios` lands.
+- Remaining for #70: `@capacitor/android` / `@capacitor/ios`, generated platform projects, and
+  `.github/workflows/mobile-build.yml` (debug APK + iOS Simulator artifacts via `workflow_dispatch`).
+
 ## Funding
 
 `.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar`, so the repo shows a native
@@ -881,7 +898,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1488 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1489 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

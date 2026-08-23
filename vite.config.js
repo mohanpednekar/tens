@@ -6,32 +6,41 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const srcPath = fileURLToPath(new URL('./src', import.meta.url))
 
+// Capacitor wraps `dist/` under a capacitor:// / https-local origin. The GitHub Pages base
+// (`/tens/`) and the Workbox service worker are wrong for that shell — use a relative base and
+// skip the PWA plugin when CAPACITOR=1 (native already ships assets locally; see #70).
+const isCapacitorBuild = process.env.CAPACITOR === '1'
+
 export default defineConfig({
-  base: '/tens/',
+  base: isCapacitorBuild ? './' : '/tens/',
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
-      manifest: {
-        name: 'Tens',
-        short_name: 'Tens',
-        description: 'Tens incremental game — every mechanic themed around powers of ten.',
-        display: 'standalone',
-        theme_color: '#0c0d11',
-        background_color: '#0c0d11',
-        icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          {
-            src: 'pwa-maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-    }),
+    ...(isCapacitorBuild
+      ? []
+      : [
+          VitePWA({
+            registerType: 'autoUpdate',
+            includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
+            manifest: {
+              name: 'Tens',
+              short_name: 'Tens',
+              description: 'Tens incremental game — every mechanic themed around powers of ten.',
+              display: 'standalone',
+              theme_color: '#0c0d11',
+              background_color: '#0c0d11',
+              icons: [
+                { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+                { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+                {
+                  src: 'pwa-maskable-512x512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'maskable',
+                },
+              ],
+            },
+          }),
+        ]),
   ],
   resolve: {
     alias: {
