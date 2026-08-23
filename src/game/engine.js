@@ -1495,9 +1495,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
+  // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
+  // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
+  // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
+  // after write-cache ripple.
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
-  const stateAfterStorage = tickDiskAutoFill(elapsedSeconds)(stateAfterWriteCache)
+  const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
   // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps —
   // Bandwidth ranks above Compute, so this runs before Core conversion can claim a full Memory bar.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
@@ -2481,8 +2485,9 @@ export const tickIntroAutoInvest = state => {
 // above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
 // (startDiskBuild) takes real TIME (see tickDiskBuild) and, once complete, only constructs a
 // permanent, EMPTY container of a given size — Memory (intro.bits) then keeps each array's Cache
-// full (whole-block transfers) and auto-fills any empty disk directly from Memory (see
-// tickDiskAutoFill), smallest size first. `intro.disks[size]` counts how many disks of that size
+// full (whole-block transfers) and flushes a full read cache into an empty disk over one
+// cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
+// smallest size first. `intro.disks[size]` counts how many disks of that size
 // are currently FULL (this is
 // what redeemDisk spends); `intro.disksBuiltTotal[size]` is the permanent, never-decremented total
 // ever built — the number of currently EMPTY disks of a size is always

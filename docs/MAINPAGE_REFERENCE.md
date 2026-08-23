@@ -304,9 +304,9 @@ gated per-size by whichever tier currently matches that size having its own unit
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
-tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then fills
-empty disks directly from Memory, smallest size first, whenever there's enough and that size isn't
-mid-build. This page used to show its own live progress row mirroring tier01's
+tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then flushes
+a full read cache into an empty disk over one cache-block production duration when no tier claim
+blocks that size, smallest size first, whenever that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
 current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
 started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
 the only place this progress is shown.

@@ -143,13 +143,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
 // container (after a real build TIME — see below); Memory (intro.bits) then keeps each array's
-// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and auto-fills
-// any empty disk container directly from Memory, smallest size first — leftover Memory stays as
-// its own balance. Redeeming a
+// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and flushes a full
+// read cache into an empty disk over one cache-block production duration when no tier claim
+// blocks that size — leftover Memory stays as its own balance. Redeeming a
 // FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
 // reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
 // bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
-// disk's contents came from Memory via auto-fill, not a further transfer out of it at redeem time.
+// disk's contents came from Memory via the read-cache flush, not a further transfer out of it at redeem time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
