@@ -3,11 +3,13 @@
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' is bought with Bits but produces Bytes (see BYTES_ID below) — the Factory's
-// byte-scale output currency, distinct from the bit-scale Money pool. Bytes themselves are still
-// not a purchasable tier here; the Byte Foundry pre-game screen (see the "Byte Foundry" constants
-// section and `intro` state below) hands the player their first Kilobytes directly once its own
-// bit economy crosses a threshold, replacing the old cheap self-producing tier01 as the game's
-// actual bootstrap. See docs/DESIGN_HISTORY.md for why Bytes was pulled out of this ladder.
+// byte-scale output currency for Clock Speed. `tickGame` also mirrors each Byte into Bits at
+// `BITS_PER_BYTE` so MoneyHero / Prestige / Buys (still Bits-denominated) keep moving. Bytes
+// themselves are still not a purchasable tier here; the Byte Foundry pre-game screen (see the
+// "Byte Foundry" constants section and `intro` state below) hands the player their first
+// Kilobytes directly once its own bit economy crosses a threshold, replacing the old cheap
+// self-producing tier01 as the game's actual bootstrap. See docs/DESIGN_HISTORY.md for why
+// Bytes was pulled out of this ladder.
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a

@@ -3698,10 +3698,10 @@ describe('tickGame Compute Boost integration', () => {
     )
     // tier01's own baseTickSpeedSeconds is 1s, so a 1-second tick completes exactly one full period.
     const after = tickGame(1)(state)
-    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×4, on top of the
-    // 1-money starting balance every fresh state begins with.
+    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×8, and each
+    // Byte is mirrored into Bits at BITS_PER_BYTE on top of the 1-money starting balance.
     expect(after.resources[BYTES_ID]).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
-    expect(after.resources[MONEY_ID]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(1 + COMPUTE_BOOST_PRESETS.standard.multiplier * BITS_PER_BYTE)
     // The second tier (produces tier01 itself) is NOT boosted — its own production this tick (if
     // any) is unmultiplied, so tier01's owned count only ever reflects tier02's own unboosted rate,
     // confirming the boost credit above landed solely via tier01's resource production, not owned.
@@ -5244,6 +5244,18 @@ describe('tickGame', () => {
     expect(after.owned[BYTES_ID]).toBeUndefined()
   })
 
+  it('mirrors Kilobyte Byte production into Bits so MoneyHero / Prestige keep moving', () => {
+    // Regression: #430 redirected tier01 onto BYTES_ID; without a Bits mirror, MoneyHero
+    // (resources.base) and Prestige stayed frozen despite Factory production.
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const after = tickGame(1)(state)
+    expect(after.resources[BYTES_ID]).toBe(state.resources[BYTES_ID] + 5)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 5 * BITS_PER_BYTE)
+    expect(formatMoneyBalance(after.resources[MONEY_ID])).not.toBe(
+      formatMoneyBalance(state.resources[MONEY_ID]),
+    )
+  })
+
   it('produces nothing when no generators are owned', () => {
     const state = createInitialGameState()
     const after = tickGame(1)(state)
@@ -5562,8 +5574,9 @@ describe('tickGame', () => {
     // the tickspeed multiplier at level 0/1 is still ×1, no bonus yet (see
     // getTickspeedProductionMultiplier): per-unit cost at level 1, blockSize 8, is 1000 —
     // 1000 - 1000 (cost) = 0, and tensTier's own 1s tickspeed exactly completes one period within
-    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing 1 Byte.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing 1 Byte
+    // plus 1 × BITS_PER_BYTE Bits mirrored for MoneyHero / Prestige.
+    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(1)
   })
 
@@ -5641,8 +5654,8 @@ describe('tickGame', () => {
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.purchased[thousandsTier.id]).toBe(0)
     // tensTier's own 1s tickspeed exactly completes one period within this single 1s tick, so its
-    // 8 pre-owned generators already produce once — the Bytes pool rises to 8 while Bits stay at $500.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // 8 pre-owned generators already produce once — Bytes +8 and Bits mirrored +8 × BITS_PER_BYTE.
+    expect(after.resources[MONEY_ID]).toBe(500 + 8 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(8)
   })
 
@@ -5659,8 +5672,8 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(1)
     // Per-unit cost at level 1 is $1,000: money spent on the single unit ($1,000 → $0). tensTier's
     // own 1s tickspeed exactly completes one period within this same 1s tick, so that unit already
-    // produces once this tick, landing 1 Byte.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // produces once this tick, landing 1 Byte plus BITS_PER_BYTE Bits mirrored.
+    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(1)
   })
 
@@ -5692,8 +5705,8 @@ describe('tickGame', () => {
     // Cost drains money to $1,000. tensTier's own 1s tickspeed exactly completes one period within
     // this same 1s tick, so the freshly-bought 8 units already produce once — and since this
     // purchase completes the whole level-1 block, the level-2 purchase milestone doubles that
-    // delivery (see getPurchaseMilestoneMultiplier): 8 × 2 = 16 Bytes.
-    expect(after.resources[MONEY_ID]).toBe(1000)
+    // delivery (see getPurchaseMilestoneMultiplier): 8 × 2 = 16 Bytes, mirrored into Bits.
+    expect(after.resources[MONEY_ID]).toBe(1000 + 16 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(16)
   })
 
@@ -5711,8 +5724,8 @@ describe('tickGame', () => {
     // tensTier's own 1s tickspeed exactly completes one period within this same 1s tick, so the
     // freshly-bought 3 units already produce once — and since this purchase completes the whole
     // level-1 block (purchaseLevels reaches 2, asserted above), the level-2 purchase milestone
-    // doubles that delivery (see getPurchaseMilestoneMultiplier): 3 × 2 = 6 Bytes.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // doubles that delivery (see getPurchaseMilestoneMultiplier): 3 × 2 = 6 Bytes, mirrored into Bits.
+    expect(after.resources[MONEY_ID]).toBe(500 + 6 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(6)
   })
 

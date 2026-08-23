@@ -1659,6 +1659,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
+    // Factory Bytes (BYTES_ID) are Clock Speed fuel and the tier-row "+N B" unit — but MoneyHero,
+    // Prestige, and tier Buys still key off Bits (MONEY_ID). Mirror each Byte produced into Bits
+    // at BITS_PER_BYTE so the headline balance and Prestige progress track Byte output (otherwise
+    // Money freezes after #430 redirected tier01 off `base`). Disk-cache releases still add Bits
+    // separately; Clock Speed still spends only the Bytes pool.
+    if (tier.producesResourceId === BYTES_ID && production > 0) {
+      newResources[MONEY_ID] = clampNonNegative(
+        (newResources[MONEY_ID] ?? 0) + production * BITS_PER_BYTE,
+      )
+    }
     // If the produced resource is also a tier (generator), add to owned count — not for the
     // separate Factory Bytes pool (BYTES_ID) or other non-tier resources.
     if (TIER_DEFINITIONS.some(t => t.id === tier.producesResourceId)) {

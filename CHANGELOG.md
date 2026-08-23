@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
+  Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
+  `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
+
 ### Changed
 - **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
   Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**
