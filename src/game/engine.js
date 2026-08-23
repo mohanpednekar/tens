@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -38,6 +38,20 @@ const allResourceIds = () => {
     ids.add(t.producesResourceId)
   })
   return [...ids]
+}
+
+const createEmptyDataLakeTier = () => ({
+  deposits: { 1: 0, 10: 0, 100: 0 },
+  used: 0,
+  purchased: 0,
+})
+
+export const createEmptyDataLakes = () => {
+  const lakes = {}
+  for (let tier = 1; tier <= DATA_LAKE_TIER_COUNT; tier += 1) {
+    lakes[tier] = createEmptyDataLakeTier()
+  }
+  return lakes
 }
 
 export const createInitialGameState = () => ({
@@ -413,6 +427,10 @@ export const createInitialGameState = () => ({
     // size this cycle, capping auto-redeem at one disk per size per cycle — further eligible disks
     // of an already-auto-redeemed size need a manual click for the rest of the cycle.
     diskAutoRedeemedSizes: {},
+    // PERMANENT — one Data Lake per storage denomination (KB … QB), each holding up to
+    // DATA_LAKE_CAPACITY units deposited from Disks and spent on Booster purchases at the matching
+    // compute-ladder tier (see depositDiskToDataLake/purchaseBoosterFromDataLake below).
+    dataLakes: createEmptyDataLakes(),
     // PERMANENT — like the Byte generator/Disks above, carried over every real Prestige
     // (see prestigeGame). Automatically incremented by tickComputeCoreConversion every time Memory
     // is full, once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — each conversion
@@ -3134,6 +3152,161 @@ export const tickDiskAutoReleaseCache = state => {
     .sort((a, b) => a - b)[0]
   if (eligibleSize === undefined) return state
   return releaseDiskCacheBlock(eligibleSize)(state)
+}
+
+// --- Data Lakes --- see DATA_LAKE_* constants in layers.js. Disks deposit into the lake for
+// their storage denomination; Booster purchases at the matching compute tier spend lake capacity.
+
+export const getDiskLadderStep = sizeBits => {
+  if (!(sizeBits > 0) || !Number.isFinite(sizeBits)) return null
+  const ratio = sizeBits / DISK_LADDER_BASE_SIZE_BITS
+  if (ratio < 1) return null
+  const step = Math.round(Math.log10(ratio)) + 1
+  if (step < 1 || getDiskLadderSizeBits(step) !== sizeBits) return null
+  return step
+}
+
+export const getDataLakeTierIndex = sizeBits => {
+  const step = getDiskLadderStep(sizeBits)
+  if (!step || step > DATA_LAKE_MAX_DISK_LADDER_STEP) return null
+  return Math.floor((step - 1) / DATA_LAKE_SUB_SIZES.length) + 1
+}
+
+export const getDataLakeSubSize = sizeBits => {
+  const step = getDiskLadderStep(sizeBits)
+  if (!step || step > DATA_LAKE_MAX_DISK_LADDER_STEP) return null
+  return DATA_LAKE_SUB_SIZES[(step - 1) % DATA_LAKE_SUB_SIZES.length]
+}
+
+export const getDataLakeTierLabel = tierIndex =>
+  DATA_LAKE_TIER_LABELS[tierIndex - 1] ?? null
+
+export const getDataLakeTier = (state, tierIndex) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return null
+  return state.intro?.dataLakes?.[tierIndex] ?? createEmptyDataLakeTier()
+}
+
+export const getDataLakeDepositedUnits = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake) return 0
+  const { deposits } = lake
+  return DATA_LAKE_SUB_SIZES.reduce(
+    (sum, sub) => sum + (deposits[sub] ?? 0) * sub,
+    0,
+  )
+}
+
+export const getDataLakeAvailableUnits = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake) return 0
+  return Math.max(0, getDataLakeDepositedUnits(tierIndex)(state) - (lake.used ?? 0))
+}
+
+export const getBoosterPurchaseCost = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake) return 0
+  return (lake.purchased ?? 0) + 1
+}
+
+export const getBoosterPurchaseTotalCost = n => (n * (n + 1)) / 2
+
+export const getMaxBoosterPurchasesForCapacity = capacityUnits => {
+  let n = 0
+  while (getBoosterPurchaseTotalCost(n + 1) <= capacityUnits) {
+    n += 1
+  }
+  return n
+}
+
+export const canDepositDiskToDataLake = (state, sizeBits) => {
+  const tierIndex = getDataLakeTierIndex(sizeBits)
+  const subSize = getDataLakeSubSize(sizeBits)
+  if (!tierIndex || !subSize) return false
+  if ((state.intro.disks?.[sizeBits] ?? 0) < 1) return false
+  if (state.intro.diskBuild?.size === sizeBits) return false
+  const lake = getDataLakeTier(state, tierIndex)
+  if ((lake.deposits[subSize] ?? 0) >= DATA_LAKE_SLOT_MAX) return false
+  const nextDeposited = getDataLakeDepositedUnits(tierIndex)(state) + subSize
+  return nextDeposited <= DATA_LAKE_CAPACITY
+}
+
+export const depositDiskToDataLake = sizeBits => state => {
+  if (!canDepositDiskToDataLake(state, sizeBits)) return state
+
+  const tierIndex = getDataLakeTierIndex(sizeBits)
+  const subSize = getDataLakeSubSize(sizeBits)
+  const lake = getDataLakeTier(state, tierIndex)
+  const nextDiskCount = (state.intro.disks[sizeBits] ?? 0) - 1
+  const nextDisks = { ...state.intro.disks }
+  if (nextDiskCount > 0) {
+    nextDisks[sizeBits] = nextDiskCount
+  } else {
+    delete nextDisks[sizeBits]
+  }
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      disks: nextDisks,
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          deposits: {
+            ...lake.deposits,
+            [subSize]: (lake.deposits[subSize] ?? 0) + 1,
+          },
+        },
+      },
+    },
+  }
+}
+
+const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
+  const nextCount = (intro[field] ?? 0) + 1
+  const updates = { [field]: nextCount }
+  if (tierIndex === 1) {
+    updates.computeCoresEverEarned = Math.max(intro.computeCoresEverEarned ?? 0, nextCount)
+    updates.computeMergePageUnlocked =
+      (intro.computeMergePageUnlocked ?? false) || updates.computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
+  }
+  return updates
+}
+
+export const canPurchaseBoosterFromDataLake = (state, tierIndex) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return false
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  if (!field) return false
+  const cost = getBoosterPurchaseCost(tierIndex)(state)
+  if (cost <= 0) return false
+  return getDataLakeAvailableUnits(tierIndex)(state) >= cost
+}
+
+export const purchaseBoosterFromDataLake = tierIndex => state => {
+  if (!canPurchaseBoosterFromDataLake(state, tierIndex)) return state
+
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  const lake = getDataLakeTier(state, tierIndex)
+  const cost = getBoosterPurchaseCost(tierIndex)(state)
+  const purchased = (lake.purchased ?? 0) + 1
+  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field)
+
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      ...boosterUpdates,
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          used: (lake.used ?? 0) + cost,
+          purchased,
+        },
+      },
+    },
+  }
 }
 
 // --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in

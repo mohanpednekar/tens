@@ -217,6 +217,18 @@ import {
   tickDiskWriteCache,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushSeconds,
+  canDepositDiskToDataLake,
+  depositDiskToDataLake,
+  purchaseBoosterFromDataLake,
+  canPurchaseBoosterFromDataLake,
+  getDataLakeTierIndex,
+  getDataLakeSubSize,
+  getBoosterPurchaseTotalCost,
+  getMaxBoosterPurchasesForCapacity,
+  getDataLakeAvailableUnits,
+  getDataLakeDepositedUnits,
+  getBoosterPurchaseCost,
+  getDiskLadderStep,
   getDiskWriteCacheMerge,
   isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
@@ -224,7 +236,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -8375,6 +8387,121 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     const after = tickGame(0.1)(state)
     expect(after.computeFlops.owned[flopId]).toBe(0)
     expect(after.prestige.points).toBe(5000)
+  })
+})
+
+describe('Data Lakes', () => {
+  const kb1 = DISK_LADDER_BASE_SIZE_BITS
+  const kb10 = kb1 * 10
+  const kb100 = kb1 * 100
+  const mb1 = kb1 * 1000
+
+  it('maps disk ladder sizes to storage tiers and sub-sizes', () => {
+    expect(getDiskLadderStep(kb1)).toBe(1)
+    expect(getDataLakeTierIndex(kb1)).toBe(1)
+    expect(getDataLakeSubSize(kb1)).toBe(1)
+    expect(getDataLakeTierIndex(kb10)).toBe(1)
+    expect(getDataLakeSubSize(kb10)).toBe(10)
+    expect(getDataLakeTierIndex(kb100)).toBe(1)
+    expect(getDataLakeSubSize(kb100)).toBe(100)
+    expect(getDataLakeTierIndex(mb1)).toBe(2)
+    expect(getDataLakeSubSize(mb1)).toBe(1)
+  })
+
+  it('getMaxBoosterPurchasesForCapacity caps at 44 for a full 999-unit lake', () => {
+    expect(getBoosterPurchaseTotalCost(44)).toBe(990)
+    expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
+    expect(getMaxBoosterPurchasesForCapacity(DATA_LAKE_CAPACITY)).toBe(44)
+  })
+
+  it('depositDiskToDataLake consumes one full disk and credits the matching lake slot', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [kb1]: 2 } })
+    const after = depositDiskToDataLake(kb1)(state)
+    expect(after.intro.disks[kb1]).toBe(1)
+    expect(after.intro.dataLakes[1].deposits[1]).toBe(1)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+  })
+
+  it('depositDiskToDataLake is a no-op at DATA_LAKE_SLOT_MAX for a sub-size', () => {
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 10 },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: {
+          deposits: { 1: DATA_LAKE_SLOT_MAX, 10: 0, 100: 0 },
+          used: 0,
+          purchased: 0,
+        },
+      },
+    })
+    for (let i = 0; i < 3; i += 1) {
+      state = depositDiskToDataLake(kb1)(state)
+    }
+    expect(state.intro.dataLakes[1].deposits[1]).toBe(DATA_LAKE_SLOT_MAX)
+    expect(state.intro.disks[kb1]).toBe(10)
+  })
+
+  it('purchaseBoosterFromDataLake costs n units for the nth purchase and grants the matching booster', () => {
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 3 },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 3, 10: 0, 100: 0 }, used: 0, purchased: 0 },
+      },
+    })
+    expect(getBoosterPurchaseCost(1)(state)).toBe(1)
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.computeCores).toBe(1)
+    expect(state.intro.dataLakes[1].used).toBe(1)
+    expect(state.intro.dataLakes[1].purchased).toBe(1)
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(2)
+
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.computeCores).toBe(2)
+    expect(state.intro.dataLakes[1].used).toBe(3)
+    expect(getBoosterPurchaseCost(1)(state)).toBe(3)
+  })
+
+  it('purchaseBoosterFromDataLake is a no-op when the lake lacks free capacity for the next cost', () => {
+    const state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 1, 10: 0, 100: 0 }, used: 0, purchased: 1 },
+      },
+    })
+    expect(getBoosterPurchaseCost(1)(state)).toBe(2)
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
+  })
+
+  it('purchaseBoosterFromDataLake can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped', () => {
+    let state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP,
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+      },
+    })
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
+  })
+
+  it('tier-1 purchases latch computeMergePageUnlocked via computeCoresEverEarned', () => {
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+      },
+    })
+    for (let i = 0; i < COMPUTE_CORES_PER_NODE; i += 1) {
+      state = purchaseBoosterFromDataLake(1)(state)
+    }
+    expect(state.intro.computeMergePageUnlocked).toBe(true)
+    expect(state.intro.computeCoresEverEarned).toBe(COMPUTE_CORES_PER_NODE)
+  })
+
+  it('createInitialGameState seeds all DATA_LAKE_TIER_COUNT lakes', () => {
+    expect(Object.keys(createInitialGameState().intro.dataLakes)).toHaveLength(DATA_LAKE_TIER_COUNT)
   })
 })
 

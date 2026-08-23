@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canPurchaseBoosterFromDataLake, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getBoosterPurchaseCost, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getDataLakeAvailableUnits, getDataLakeTierLabel, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -703,6 +703,10 @@ const ComputePage = ({ game }) => {
               const autoClaimEnabled = row.autoClaimFlagField ? Boolean(intro[row.autoClaimFlagField]) : false
               const autoClaimCostHeld = row.autoClaimCostField ? (intro[row.autoClaimCostField] ?? 0) : 0
               const canEnableAutoClaim = Boolean(row.enableAutoClaimAction) && !autoClaimEnabled && autoClaimCostHeld >= COMPUTE_ENTITY_CAP
+              const canBuyFromLake = canPurchaseBoosterFromDataLake(state, tierIndex)
+              const buyCost = getBoosterPurchaseCost(tierIndex)(state)
+              const lakeLabel = getDataLakeTierLabel(tierIndex)
+              const lakeAvailable = getDataLakeAvailableUnits(tierIndex)(state)
 
               return (
                 <TierBlock key={row.key} aria-label={`${row.label} tier`}>
@@ -741,9 +745,24 @@ const ComputePage = ({ game }) => {
                     )}
                   </TierHeaderRow>
 
-                  {hasMergeRow && (
-                    <TierMergeRow>
-                      {autoEnabled ? (
+                  <TierMergeRow>
+                    <IconButton
+                      aria-label={`buy 1 ${row.label.toLowerCase().slice(0, -1) || row.label.toLowerCase()} from the ${lakeLabel} Data Lake`}
+                      disabled={!canBuyFromLake}
+                      onClick={() => actions.purchaseBoosterFromDataLake(tierIndex)}
+                      title={
+                        canBuyFromLake
+                          ? `Buy 1 ${singularize(row.label)} for ${formatAmount(buyCost)} ${lakeLabel} from the Data Lake (${formatAmount(lakeAvailable)} ${lakeLabel} free)`
+                          : `Needs ${formatAmount(buyCost)} ${lakeLabel} free in the Data Lake — deposit Disks on Foundry`
+                      }
+                      type="button"
+                      variant="success"
+                    >
+                      <ButtonContent>{`+ ${formatAmount(buyCost)}${lakeLabel}`}</ButtonContent>
+                    </IconButton>
+
+                    {hasMergeRow && (
+                      autoEnabled ? (
                         <ReserveSlotsRow
                           aria-label={
                             merging
@@ -794,9 +813,9 @@ const ComputePage = ({ game }) => {
                             <ButtonContent>🤖</ButtonContent>
                           </IconButton>
                         </>
-                      )}
-                    </TierMergeRow>
-                  )}
+                      )
+                    )}
+                  </TierMergeRow>
                 </TierBlock>
               )
             })}

@@ -339,6 +339,19 @@ export const COMPUTE_BOOST_TIER_FIELDS = [
 // compounds from stacking.
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
+// --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
+// purchaseBoosterFromDataLake in engine.js. Each of the 10 storage denominations (KB … QB) has a
+// Data Lake holding up to DATA_LAKE_CAPACITY units, filled by depositing Disks (9×1 + 9×10 + 9×100
+// of that tier's denomination = 999). Booster purchases at tier N consume units from lake N; the
+// nth purchase costs n units (triangular total n×(n+1)/2), so a full lake naturally caps at 44
+// boosters — no separate inventory limit.
+export const DATA_LAKE_CAPACITY = 999
+export const DATA_LAKE_SLOT_MAX = 9
+export const DATA_LAKE_TIER_COUNT = 10
+export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
+export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
+export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
 // alike — tickGame unconditionally drives both, see applyOfflineProgress) — a courtesy for short

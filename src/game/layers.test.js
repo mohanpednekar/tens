@@ -13,6 +13,10 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DATA_LAKE_CAPACITY,
+  DATA_LAKE_SLOT_MAX,
+  DATA_LAKE_TIER_COUNT,
+  DATA_LAKE_TIER_LABELS,
   COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
   COMPUTE_MERGE_DURATION_UPGRADE_COUNT,
   COMPUTE_MERGE_STEP_MULTIPLIER,
@@ -307,5 +311,12 @@ describe('constants', () => {
       'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
       'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
     ])
+  })
+
+  it('DATA_LAKE constants define 10 KB…QB lakes with 999 capacity and 9 slots per sub-size', () => {
+    expect(DATA_LAKE_TIER_COUNT).toBe(10)
+    expect(DATA_LAKE_CAPACITY).toBe(999)
+    expect(DATA_LAKE_SLOT_MAX).toBe(9)
+    expect(DATA_LAKE_TIER_LABELS).toEqual(['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB'])
   })
 })

@@ -431,6 +431,7 @@ describe('schema merge on load', () => {
         computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
         computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
         foundryResetCaps: null,
+        dataLakes: createInitialGameState().intro.dataLakes,
       },
     }
     saveGameState(state)

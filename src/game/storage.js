@@ -1,4 +1,4 @@
-import { applyFlopsAutobuyerMilestones, createInitialGameState } from './engine'
+import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState } from './engine'
 import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -324,6 +324,20 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
+const mergeDataLakes = (fresh, saved) => {
+  const merged = createEmptyDataLakes()
+  for (const tier of Object.keys(merged)) {
+    const f = merged[tier]
+    const s = saved?.[tier]
+    merged[tier] = {
+      ...f,
+      ...(s ?? {}),
+      deposits: { ...f.deposits, ...(s?.deposits ?? {}) },
+    }
+  }
+  return merged
+}
+
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
 const mergeState = saved => {
@@ -367,7 +381,11 @@ const mergeState = saved => {
       history: Array.isArray(saved.prestigeMuseum?.history) ? saved.prestigeMuseum.history : fresh.prestigeMuseum.history,
       pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
     },
-    intro: { ...fresh.intro, ...(saved.intro ?? {}) },
+    intro: {
+      ...fresh.intro,
+      ...(saved.intro ?? {}),
+      dataLakes: mergeDataLakes(fresh.intro.dataLakes, saved.intro?.dataLakes),
+    },
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
         || Math.max(0, Number(saved.prestige?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
