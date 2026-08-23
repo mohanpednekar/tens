@@ -267,7 +267,8 @@ render:
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
+  or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over one
+  cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
   (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled. While full and
   **no full redeemable disk** of that size exists, a block can be **manually released**
@@ -306,9 +307,9 @@ gated per-size by whichever tier currently matches that size having its own unit
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
-tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then fills
-empty disks directly from Memory, smallest size first, whenever there's enough and that size isn't
-mid-build. This page used to show its own live progress row mirroring tier01's
+tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then flushes
+a full read cache into an empty disk over one cache-block production duration when no tier claim
+blocks that size, smallest size first, whenever that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
 current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
 started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
 the only place this progress is shown.

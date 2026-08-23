@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
+  Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
+  `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
+
 ### Changed
+- **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
+  equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
+  instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
+  the pour. Write-cache timing is unchanged.
 - **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
   Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**
   swap positions (Claim Core beside Bandwidth; Memory ×10 below the disk section). Each disk
@@ -23,10 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry tab label** — *(superseded by the continuous Foundry layout above)* the second-level
   Foundry peer tab formerly labeled **Disks** was briefly **Storage** (Memory | Storage).
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
-  size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
-  size, or from the size below via **write cache** (10 timed segments + one flush equal to a target
-  build duration). Write-cache collect pauses while the source size has an active tier match;
-  flush never pauses. Tier match still gives full disks first claim over read cache.
+  size first). Empty disks fill from a full read cache via a **timed flush** (one cache-block
+  production duration; see #445) when no tier claim blocks that size, or from the size below via
+  **write cache** (10 timed segments + one flush equal to a target build duration). Write-cache
+  collect pauses while the source size has an active tier match; flush never pauses. Tier match
+  still gives full disks first claim over read cache.
 - **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
   immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
   matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no

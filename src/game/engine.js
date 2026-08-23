@@ -383,14 +383,18 @@ export const createInitialGameState = () => ({
     // DISK_ARRAY_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
     disksBuiltTotal: {},
     // PERMANENT — { [capacityBits]: bits currently held } in that size array's own cache. Steady
-    // state is FULL (size bits); dips only right after a manual block release or when a size is
-    // newly unlocked/built. Split into DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array →
-    // 8 × 1 Mb) for display / releaseDiskCacheBlock — Cache funds matching main-game tier level
-    // blocks manually only, and is NOT poured into disk containers (those fill from Memory
-    // directly — see tickDiskAutoFill). Rides through Prestige untouched, same as disks/
-    // disksBuiltTotal above — the cache belongs to the array's own permanent hardware, not to a
-    // single Prestige cycle's Memory balance.
+    // state is FULL (size bits); dips only right after a manual block release, after a completed
+    // read-cache → disk flush, or when a size is newly unlocked/built. Split into
+    // DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array → 8 × 1 Mb) for display /
+    // releaseDiskCacheBlock. When full and no tier claim blocks ladder use, the cache flushes into
+    // an empty disk over getDiskReadCacheFlushSeconds (one block at the current production rate) —
+    // see tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
     diskCache: {},
+    // NOT permanent — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
+    // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
+    // Foundry production rate (see getDiskReadCacheFlushSeconds). Resets every real Prestige —
+    // operational, not banked progress (same posture as diskWriteCache).
+    diskReadCacheFlush: {},
     // NOT permanent — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
     // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
     // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
@@ -1491,9 +1495,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
-  const stateAfterReadCache = tickDiskAutoFill(stateAfterQueuedCapacity)
+  // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
+  // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
+  // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
+  // after write-cache ripple.
+  const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
-  const stateAfterStorage = tickDiskAutoFill(stateAfterWriteCache)
+  const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
   // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps —
   // Bandwidth ranks above Compute, so this runs before Core conversion can claim a full Memory bar.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
@@ -1523,10 +1531,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
   // FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on them, so a disk
   // whose size only just became redeemable once some tier leveled up THIS tick still redeems the
-  // same tick. Auto-fill already ran above (see stateAfterIntro), ahead of tickIntroAutoInvest,
-  // since it has no such dependency on any tier's level. A same-reference no-op when nothing
-  // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
-  // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
+  // same tick. Auto-fill already ran above (see stateAfterStorage / the storage pipeline), ahead of
+  // tickIntroAutoInvest, since it has no such dependency on any tier's level. A same-reference
+  // no-op when nothing qualifies (including whenever the matching tier's own autobuyer isn't
+  // currently active — see tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in
+  // play at all.
   // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
   // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
   // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
@@ -1538,7 +1547,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const tickStorage = state => {
     const afterRedeem = tickDiskAutoRedeem(state)
     const afterCache = tickDiskAutoReleaseCache(afterRedeem)
-    return afterCache === state ? state : tickDiskAutoFill(afterCache)
+    // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
+    // countdown continues on the next ordinary tickGame pass.
+    return afterCache === state ? state : tickDiskAutoFill(0)(afterCache)
   }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
@@ -1659,6 +1670,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * speedUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
+    // Factory Bytes (BYTES_ID) are Clock Speed fuel and the tier-row "+N B" unit — but MoneyHero,
+    // Prestige, and tier Buys still key off Bits (MONEY_ID). Mirror each Byte produced into Bits
+    // at BITS_PER_BYTE so the headline balance and Prestige progress track Byte output (otherwise
+    // Money freezes after #430 redirected tier01 off `base`). Disk-cache releases still add Bits
+    // separately; Clock Speed still spends only the Bytes pool.
+    if (tier.producesResourceId === BYTES_ID && production > 0) {
+      newResources[MONEY_ID] = clampNonNegative(
+        (newResources[MONEY_ID] ?? 0) + production * BITS_PER_BYTE,
+      )
+    }
     // If the produced resource is also a tier (generator), add to owned count — not for the
     // separate Factory Bytes pool (BYTES_ID) or other non-tier resources.
     if (TIER_DEFINITIONS.some(t => t.id === tier.producesResourceId)) {
@@ -2465,8 +2486,9 @@ export const tickIntroAutoInvest = state => {
 // above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
 // (startDiskBuild) takes real TIME (see tickDiskBuild) and, once complete, only constructs a
 // permanent, EMPTY container of a given size — Memory (intro.bits) then keeps each array's Cache
-// full (whole-block transfers) and auto-fills any empty disk directly from Memory (see
-// tickDiskAutoFill), smallest size first. `intro.disks[size]` counts how many disks of that size
+// full (whole-block transfers) and flushes a full read cache into an empty disk over one
+// cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
+// smallest size first. `intro.disks[size]` counts how many disks of that size
 // are currently FULL (this is
 // what redeemDisk spends); `intro.disksBuiltTotal[size]` is the permanent, never-decremented total
 // ever built — the number of currently EMPTY disks of a size is always
@@ -2753,18 +2775,42 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   return { ...state, intro: { ...intro, disks, diskWriteCache } }
 }
 
-// Memory claim for read caches only, then instant read-cache → disk when no tier claim blocks
-// ladder use (tier match keeps first claim on disks/cache for Factory funding). Disks above the
-// smallest ladder size fill only via write-cache flush from the size below — see
-// tickDiskWriteCache. Unconditional, bypasses isProductionFrozen. Same-reference no-op when
-// nothing changed.
-export const tickDiskAutoFill = state => {
+// Memory claim for read caches, then timed read-cache → disk flush when no tier claim blocks
+// ladder use (tier match keeps first claim on disks/cache for Factory funding). Flush duration is
+// the time to fill one read-cache block at the current Byte Foundry production rate (see
+// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size also fill via write-cache
+// flush from the size below — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
+// Same-reference no-op when nothing changed. `elapsedSeconds` advances in-flight flushes (0 is
+// valid — start newly eligible flushes without counting time down).
+export const getDiskReadCacheFlush = (state, size) =>
+  state.intro?.diskReadCacheFlush?.[size] ?? null
+
+export const getDiskReadCacheFlushSeconds = (state, size) => {
+  const blockBits = size / DISK_CACHE_BLOCK_COUNT
+  const rate = getIntroProductionRate(state.intro ?? {})
+  // Rate is >= 1 by construction once intro fields are valid; guard corrupted/partial saves.
+  return blockBits / Math.max(rate, Number.MIN_VALUE)
+}
+
+export const getDiskReadCacheFlushFill = flush => {
+  if (!flush || flush.totalSeconds <= 0) return 0
+  return 1 - flush.remainingSeconds / flush.totalSeconds
+}
+
+export const isDiskReadCacheFlushPaused = (state, size) => {
+  const flush = getDiskReadCacheFlush(state, size)
+  if (!flush) return false
+  return isDiskRedeemable(state, size)
+}
+
+export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
   const capacity = state.intro?.capacity ?? 0
   let bits = state.intro.bits
   let disks = state.intro.disks ?? {}
   let diskCache = state.intro.diskCache ?? {}
+  let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
   const sizes = Object.keys(builtTotal)
@@ -2772,8 +2818,19 @@ export const tickDiskAutoFill = state => {
     .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
     .sort((a, b) => a - b)
 
+  // Drop flushes for sizes that can no longer complete (mid-build, or no empty container left).
+  for (const size of Object.keys(diskReadCacheFlush).map(Number)) {
+    if (size === buildingSize || (builtTotal[size] ?? 0) <= (disks[size] ?? 0)) {
+      const { [size]: _removed, ...rest } = diskReadCacheFlush
+      diskReadCacheFlush = rest
+      changed = true
+    }
+  }
+
   // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible).
+  // Skip sizes mid-flush: their cache is locked full until the pour completes or cancels.
   for (const size of sizes) {
+    if (diskReadCacheFlush[size]) continue
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     for (;;) {
       const cached = diskCache[size] ?? 0
@@ -2800,22 +2857,52 @@ export const tickDiskAutoFill = state => {
     }
   }
 
-  // Pass 2 — instant read-cache → empty disk (all blocks at once) when tier isn't reserving this
-  // size for Factory funding — ripple-friendly; write-cache collect frees slots same tick.
-  // Skip sizes with an active write-cache merge so read-cache pour cannot race flush.
+  // Pass 2 — start timed read-cache → empty disk flushes when tier isn't reserving this size for
+  // Factory funding. Skip sizes with an active write-cache merge so read-cache flush cannot race
+  // write-cache flush. Duration = time to fill one read-cache block at current production rate.
   for (const size of sizes) {
+    if (diskReadCacheFlush[size]) continue
     if (getDiskWriteCacheMerge(state, size)) continue
     const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
     const cached = diskCache[size] ?? 0
     if (!hasEmptyContainer || cached < size) continue
     if (isDiskRedeemable(state, size)) continue
-    diskCache = { ...diskCache, [size]: cached - size }
-    disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+    const totalSeconds = getDiskReadCacheFlushSeconds(state, size)
+    diskReadCacheFlush[size] = { remainingSeconds: totalSeconds, totalSeconds }
+    changed = true
+  }
+
+  // Pass 3 — count down in-flight flushes; pause while tier match claims this size. Completing
+  // empties the full read cache into one disk (same net effect as the former instant pour).
+  for (const size of Object.keys(diskReadCacheFlush).map(Number).sort((a, b) => a - b)) {
+    const flush = diskReadCacheFlush[size]
+    if (!flush) continue
+    if (isDiskRedeemable({ ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }, size)) {
+      continue
+    }
+
+    let remainingSeconds = flush.remainingSeconds - elapsedSeconds
+    if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
+      if (remainingSeconds !== flush.remainingSeconds) {
+        diskReadCacheFlush[size] = { ...flush, remainingSeconds }
+        changed = true
+      }
+      continue
+    }
+
+    const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
+    const cached = diskCache[size] ?? 0
+    if (hasEmptyContainer && cached >= size) {
+      diskCache = { ...diskCache, [size]: cached - size }
+      disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+    }
+    const { [size]: _removed, ...rest } = diskReadCacheFlush
+    diskReadCacheFlush = rest
     changed = true
   }
 
   if (!changed) return state
-  return { ...state, intro: { ...state.intro, bits, disks, diskCache } }
+  return { ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }
 }
 
 // True when a size currently has at least one FULL disk that could redeem right now — Cache is
@@ -2833,6 +2920,7 @@ const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
 // that same size exists (disks always take priority — cache is fallback only).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
+  !getDiskReadCacheFlush(state, capacityBits) &&
   isDiskRedeemable(state, capacityBits) &&
   !hasFullRedeemableDiskAtSize(state, capacityBits) &&
   (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
@@ -2840,9 +2928,10 @@ export const isDiskCacheBlockReleasable = (state, capacityBits) =>
 // Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
 // array into resources.base (Bits) — Cache's only player-facing use: funding the matching
 // main-game tier's current level-block purchases while isDiskRedeemable holds for this size.
-// Disks fill from Memory directly (see tickDiskAutoFill), so releasing a cache block never races
-// a cache→disk pour; tickDiskAutoFill refills the gap in whole-block transfers once Memory has
-// enough again. No-op if nothing releasable (see isDiskCacheBlockReleasable).
+// Disks fill from a timed read-cache flush (see tickDiskAutoFill), so releasing a cache block
+// never races a cache→disk pour while that size is mid-flush (isDiskCacheBlockReleasable is false
+// then); tickDiskAutoFill refills the gap in whole-block transfers once Memory has enough again.
+// No-op if nothing releasable (see isDiskCacheBlockReleasable).
 export const releaseDiskCacheBlock = capacityBits => state => {
   if (!isDiskCacheBlockReleasable(state, capacityBits)) return state
 
@@ -4170,6 +4259,7 @@ export const prestigeGame = state => {
       disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
       diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
       diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
+      diskReadCacheFlush: initial.intro.diskReadCacheFlush,
       diskWriteCache: initial.intro.diskWriteCache,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never

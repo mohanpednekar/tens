@@ -215,13 +215,16 @@ import {
   tickDiskAutoReleaseCache,
   tickDiskBuild,
   tickDiskWriteCache,
+  getDiskReadCacheFlush,
+  getDiskReadCacheFlushSeconds,
   getDiskWriteCacheMerge,
+  isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
   tickGame,
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1923,7 +1926,7 @@ describe('Disk array IO lockout during a build', () => {
       diskCache: { [level2Size]: level2Size }, // already full — read cache pours into the empty disk
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     // The mid-build size's cache/disks are untouched...
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -1989,7 +1992,7 @@ describe('tickDiskAutoFill', () => {
 
   it('is a same-reference no-op with no built disks', () => {
     const state = withIntro(createInitialGameState(), { bits: 5000, capacity: storageCapacity })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
@@ -1998,7 +2001,7 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('leaves Memory untouched when bits are fewer than one cache block — progress stays visible in Memory', () => {
@@ -2007,7 +2010,7 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('transfers whole cache blocks only, leaving a sub-block remainder in Memory', () => {
@@ -2017,7 +2020,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       disks: { [FIRST_DISK_SIZE]: 1 }, // no empty disk — only cache refill
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 3)
     expect(after.intro.bits).toBe(250)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
@@ -2030,7 +2033,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    expect(tickDiskAutoFill(state)).toBe(state)
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('fills read cache from Memory, then pours into an empty disk when tier cost no longer matches', () => {
@@ -2039,12 +2042,12 @@ describe('tickDiskAutoFill', () => {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
     })
-    const afterPour = tickDiskAutoFill(state)
+    const afterPour = tickDiskAutoFill(1e12)(state)
     expect(afterPour.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(afterPour.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(afterPour.intro.bits).toBe(FIRST_DISK_SIZE)
 
-    const afterRefill = tickDiskAutoFill(afterPour)
+    const afterRefill = tickDiskAutoFill(1e12)(afterPour)
     expect(afterRefill.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(afterRefill.intro.bits).toBe(0)
   })
@@ -2056,7 +2059,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
@@ -2069,7 +2072,7 @@ describe('tickDiskAutoFill', () => {
       capacity: FIRST_DISK_SIZE * 2 + level2Size,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2085,7 +2088,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE, [level2Size]: level2Size },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2101,7 +2104,7 @@ describe('tickDiskAutoFill', () => {
       disks: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     expect(after.intro.bits).toBe(1_000_000)
@@ -2115,7 +2118,7 @@ describe('tickDiskAutoFill', () => {
       disks: { [FIRST_DISK_SIZE]: 1 },
       diskCache: { [FIRST_DISK_SIZE]: 0 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 2)
     expect(after.intro.bits).toBe(100)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
@@ -2129,7 +2132,7 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
       diskCache: { [level2Size]: level2Size },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
     expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
@@ -2144,9 +2147,96 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [level2Size]: 1 },
       disks: { [level2Size]: 1 },
     })
-    const after = tickDiskAutoFill(state)
+    const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[level2Size]).toBe(5000)
     expect(after.intro.bits).toBe(0)
+  })
+
+  it('starts a timed read-cache flush instead of pouring instantly when an empty disk is ready', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const expectedSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    expect(expectedSeconds).toBe(blockBits) // default production rate is 1 bit/sec
+
+    const started = tickDiskAutoFill(0)(state)
+    expect(started.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(started.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
+    const flush = getDiskReadCacheFlush(started, FIRST_DISK_SIZE)
+    expect(flush).toEqual({ remainingSeconds: expectedSeconds, totalSeconds: expectedSeconds })
+  })
+
+  it('completes the read-cache flush after one cache-block production duration and fills the disk', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const flushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    const mid = tickDiskAutoFill(flushSeconds / 2)(state)
+    expect(getDiskReadCacheFlush(mid, FIRST_DISK_SIZE).remainingSeconds).toBeCloseTo(flushSeconds / 2)
+    expect(mid.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+
+    const done = tickDiskAutoFill(flushSeconds / 2)(mid)
+    expect(getDiskReadCacheFlush(done, FIRST_DISK_SIZE)).toBeNull()
+    expect(done.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(done.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('pauses an in-flight read-cache flush while a tier claim matches that size', () => {
+    const unlocked = withPurchaseLevel(createInitialGameState(), tensTier.id, 2)
+    const state = withIntro(unlocked, {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const flushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    const started = tickDiskAutoFill(0)(state)
+    expect(getDiskReadCacheFlush(started, FIRST_DISK_SIZE)).toBeTruthy()
+
+    // Drop back to level 1 so FIRST_DISK_SIZE matches again — flush must pause.
+    const pausedState = withPurchaseLevel(started, tensTier.id, 1)
+    expect(isDiskReadCacheFlushPaused(pausedState, FIRST_DISK_SIZE)).toBe(true)
+    const afterPauseTick = tickDiskAutoFill(flushSeconds)(pausedState)
+    expect(getDiskReadCacheFlush(afterPauseTick, FIRST_DISK_SIZE).remainingSeconds).toBe(flushSeconds)
+    expect(afterPauseTick.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('scales flush duration with Byte Foundry production rate (one cache block / rate)', () => {
+    const fast = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      productionMultiplier: 8,
+      tickSpeedSeconds: 1,
+    })
+    expect(getDiskReadCacheFlushSeconds(fast, FIRST_DISK_SIZE)).toBe(blockBits / 8)
+  })
+
+  it('tickGame advances an in-flight read-cache flush by exactly one tick of elapsed time (not twice)', () => {
+    const flushSeconds = 10
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 0,
+      capacity: storageCapacity,
+      byteCreated: true,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      diskReadCacheFlush: {
+        [FIRST_DISK_SIZE]: { remainingSeconds: flushSeconds, totalSeconds: flushSeconds },
+      },
+    })
+    const elapsed = TICK_RATE_MS / 1000
+    const after = tickGame(elapsed)(state)
+    expect(getDiskReadCacheFlush(after, FIRST_DISK_SIZE).remainingSeconds).toBeCloseTo(
+      flushSeconds - elapsed,
+      9,
+    )
   })
 })
 
@@ -3698,10 +3788,10 @@ describe('tickGame Compute Boost integration', () => {
     )
     // tier01's own baseTickSpeedSeconds is 1s, so a 1-second tick completes exactly one full period.
     const after = tickGame(1)(state)
-    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×4, on top of the
-    // 1-money starting balance every fresh state begins with.
+    // tier01 produces 1 unit/period at the starting values; standard multiplies it ×8, and each
+    // Byte is mirrored into Bits at BITS_PER_BYTE on top of the 1-money starting balance.
     expect(after.resources[BYTES_ID]).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier)
-    expect(after.resources[MONEY_ID]).toBe(1)
+    expect(after.resources[MONEY_ID]).toBe(1 + COMPUTE_BOOST_PRESETS.standard.multiplier * BITS_PER_BYTE)
     // The second tier (produces tier01 itself) is NOT boosted — its own production this tick (if
     // any) is unmultiplied, so tier01's owned count only ever reflects tier02's own unboosted rate,
     // confirming the boost credit above landed solely via tier01's resource production, not owned.
@@ -3771,7 +3861,7 @@ describe('tickGame Disk auto-redeem integration', () => {
     expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
     expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
 
-    const afterFill = tickDiskAutoFill(withPurchaseLevel(afterRedeem, tensTier.id, 2))
+    const afterFill = tickDiskAutoFill(1e12)(withPurchaseLevel(afterRedeem, tensTier.id, 2))
     expect(afterFill.intro.disks[FIRST_DISK_SIZE]).toBe(1)
     expect(afterFill.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(afterFill.intro.bits).toBe(FIRST_DISK_SIZE * 2)
@@ -5244,6 +5334,18 @@ describe('tickGame', () => {
     expect(after.owned[BYTES_ID]).toBeUndefined()
   })
 
+  it('mirrors Kilobyte Byte production into Bits so MoneyHero / Prestige keep moving', () => {
+    // Regression: #430 redirected tier01 onto BYTES_ID; without a Bits mirror, MoneyHero
+    // (resources.base) and Prestige stayed frozen despite Factory production.
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const after = tickGame(1)(state)
+    expect(after.resources[BYTES_ID]).toBe(state.resources[BYTES_ID] + 5)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID] + 5 * BITS_PER_BYTE)
+    expect(formatMoneyBalance(after.resources[MONEY_ID])).not.toBe(
+      formatMoneyBalance(state.resources[MONEY_ID]),
+    )
+  })
+
   it('produces nothing when no generators are owned', () => {
     const state = createInitialGameState()
     const after = tickGame(1)(state)
@@ -5562,8 +5664,9 @@ describe('tickGame', () => {
     // the tickspeed multiplier at level 0/1 is still ×1, no bonus yet (see
     // getTickspeedProductionMultiplier): per-unit cost at level 1, blockSize 8, is 1000 —
     // 1000 - 1000 (cost) = 0, and tensTier's own 1s tickspeed exactly completes one period within
-    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing 1 Byte.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing 1 Byte
+    // plus 1 × BITS_PER_BYTE Bits mirrored for MoneyHero / Prestige.
+    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(1)
   })
 
@@ -5641,8 +5744,8 @@ describe('tickGame', () => {
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.purchased[thousandsTier.id]).toBe(0)
     // tensTier's own 1s tickspeed exactly completes one period within this single 1s tick, so its
-    // 8 pre-owned generators already produce once — the Bytes pool rises to 8 while Bits stay at $500.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // 8 pre-owned generators already produce once — Bytes +8 and Bits mirrored +8 × BITS_PER_BYTE.
+    expect(after.resources[MONEY_ID]).toBe(500 + 8 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(8)
   })
 
@@ -5659,8 +5762,8 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(1)
     // Per-unit cost at level 1 is $1,000: money spent on the single unit ($1,000 → $0). tensTier's
     // own 1s tickspeed exactly completes one period within this same 1s tick, so that unit already
-    // produces once this tick, landing 1 Byte.
-    expect(after.resources[MONEY_ID]).toBe(0)
+    // produces once this tick, landing 1 Byte plus BITS_PER_BYTE Bits mirrored.
+    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(1)
   })
 
@@ -5692,8 +5795,8 @@ describe('tickGame', () => {
     // Cost drains money to $1,000. tensTier's own 1s tickspeed exactly completes one period within
     // this same 1s tick, so the freshly-bought 8 units already produce once — and since this
     // purchase completes the whole level-1 block, the level-2 purchase milestone doubles that
-    // delivery (see getPurchaseMilestoneMultiplier): 8 × 2 = 16 Bytes.
-    expect(after.resources[MONEY_ID]).toBe(1000)
+    // delivery (see getPurchaseMilestoneMultiplier): 8 × 2 = 16 Bytes, mirrored into Bits.
+    expect(after.resources[MONEY_ID]).toBe(1000 + 16 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(16)
   })
 
@@ -5711,8 +5814,8 @@ describe('tickGame', () => {
     // tensTier's own 1s tickspeed exactly completes one period within this same 1s tick, so the
     // freshly-bought 3 units already produce once — and since this purchase completes the whole
     // level-1 block (purchaseLevels reaches 2, asserted above), the level-2 purchase milestone
-    // doubles that delivery (see getPurchaseMilestoneMultiplier): 3 × 2 = 6 Bytes.
-    expect(after.resources[MONEY_ID]).toBe(500)
+    // doubles that delivery (see getPurchaseMilestoneMultiplier): 3 × 2 = 6 Bytes, mirrored into Bits.
+    expect(after.resources[MONEY_ID]).toBe(500 + 6 * BITS_PER_BYTE)
     expect(after.resources[BYTES_ID]).toBe(6)
   })
 

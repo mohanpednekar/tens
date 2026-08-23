@@ -2437,3 +2437,30 @@ so large arrays can still progress when Memory capacity cannot hold one block). 
 there is no pour step anymore; Cache simply stays full while disks compete for Memory on their
 own pass.
 
+
+### Factory MoneyHero frozen after Kilobytes → Bytes (#430 / #442)
+
+#430 redirected `tier01` onto `BYTES_ID` so Clock Speed could spend a dedicated Bytes pool, and
+updated the Kilobyte row to show `+N B`. MoneyHero, Prestige, and tier Buys still read
+`resources.base` (Bits). With no Bits income from Factory production, the headline balance sat
+frozen and Prestige was unreachable from the ladder alone — reported from mobile as "Byte Factory
+balance is stuck."
+
+Fix (#442): keep crediting the Bytes pool for Clock Speed, and mirror each Byte into Bits at
+`production × BITS_PER_BYTE` inside `tickGame`. That restores MoneyHero/`formatMoneyBalance` and
+the existing Bits-denominated Prestige threshold without moving Prestige onto the Bytes pool (a
+larger follow-up). Disk-cache releases still add Bits separately; Clock Speed still spends only
+Bytes.
+
+
+### Timed read-cache → disk flush (#445)
+
+#434's read-cache → disk pour was instant once the cache was full and no tier claim blocked ladder
+use. That made the pour hard to see beside write-cache's timed flush, and out of step with how long
+Memory takes to stage one cache block at the current Byte Foundry rate.
+
+Flush duration is now `(size / DISK_CACHE_BLOCK_COUNT) / getIntroProductionRate` — one cache block
+at production rate — stored in `intro.diskReadCacheFlush[size]` for the in-flight countdown.
+Flush pauses while `isDiskRedeemable` is true at that size (tier funding wins), and cancels if the
+array goes mid-build or loses its empty container. UI drains the read-cache row during the pour.
+Write-cache collect/flush timing is unchanged.

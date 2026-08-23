@@ -246,8 +246,9 @@ const InfoPage = () => {
             Memory fills visibly between transfers rather than draining bit-by-bit.
           </li>
           <li>
-            Empty disks fill from Memory directly (smallest array first). Cache does not pour into
-            disks.
+            Empty disks fill from a full read cache when no tier claim blocks that size — the flush
+            takes as long as filling one cache block at your current Byte Foundry production rate
+            (not instant). Larger sizes can also fill via write-cache merges from the size below.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back

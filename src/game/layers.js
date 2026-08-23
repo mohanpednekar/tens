@@ -3,11 +3,13 @@
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' is bought with Bits but produces Bytes (see BYTES_ID below) — the Factory's
-// byte-scale output currency, distinct from the bit-scale Money pool. Bytes themselves are still
-// not a purchasable tier here; the Byte Foundry pre-game screen (see the "Byte Foundry" constants
-// section and `intro` state below) hands the player their first Kilobytes directly once its own
-// bit economy crosses a threshold, replacing the old cheap self-producing tier01 as the game's
-// actual bootstrap. See docs/DESIGN_HISTORY.md for why Bytes was pulled out of this ladder.
+// byte-scale output currency for Clock Speed. `tickGame` also mirrors each Byte into Bits at
+// `BITS_PER_BYTE` so MoneyHero / Prestige / Buys (still Bits-denominated) keep moving. Bytes
+// themselves are still not a purchasable tier here; the Byte Foundry pre-game screen (see the
+// "Byte Foundry" constants section and `intro` state below) hands the player their first
+// Kilobytes directly once its own bit economy crosses a threshold, replacing the old cheap
+// self-producing tier01 as the game's actual bootstrap. See docs/DESIGN_HISTORY.md for why
+// Bytes was pulled out of this ladder.
 // `baseTickSpeedSeconds` is each tier's own independent base production cadence, in seconds (see
 // getTierBaseTickSpeedSeconds/tickGame in engine.js) — a plain per-tier field, not derived from
 // tier order, so any single tier's cadence can be tuned or upgraded directly without touching a
@@ -141,13 +143,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
 // container (after a real build TIME — see below); Memory (intro.bits) then keeps each array's
-// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and auto-fills
-// any empty disk container directly from Memory, smallest size first — leftover Memory stays as
-// its own balance. Redeeming a
+// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and flushes a full
+// read cache into an empty disk over one cache-block production duration when no tier claim
+// blocks that size — leftover Memory stays as its own balance. Redeeming a
 // FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
 // reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
 // bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
-// disk's contents came from Memory via auto-fill, not a further transfer out of it at redeem time.
+// disk's contents came from Memory via the read-cache flush, not a further transfer out of it at redeem time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
@@ -186,10 +188,11 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
-// Byte-scale). Cache funds matching main-game tier level blocks via manual release only
-// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size) — it
-// does not pour into disk containers; empty disks fill from Memory directly. Steady state is
-// full; gaps only right after a release or when a size is newly unlocked/built.
+// Byte-scale). Cache funds matching main-game tier level blocks via manual release
+// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size and no
+// full redeemable disk exists). When full, it also flushes into an empty disk over one block's
+// production duration (getDiskReadCacheFlushSeconds). Steady state is full; gaps only right after
+// a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/

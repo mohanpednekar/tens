@@ -103,8 +103,9 @@ main game. Once unlocked, Foundry is just another AppNav destination.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
-produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`), not
-Bits. Bytes are **not** a purchasable tier — the ladder starts at Kilobytes; a fresh
+produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`),
+mirroring each Byte × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige keep moving. Bytes are still
+not a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
 **Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
 or tickspeed mechanics here** — they're intricate and have changed shape multiple times (see
@@ -118,8 +119,9 @@ cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onw
 player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
 passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
 production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full **read cache** (Memory → read cache → disk when tier allows;
-write-cache upward merges from the size below) as fallback tier funding when no matching disk exists;
+builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
+tier allows; flush duration = one cache block at production rate; write-cache upward merges from
+the size below) as fallback tier funding when no matching disk exists;
 Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).

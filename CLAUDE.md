@@ -680,7 +680,9 @@ display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). 
 directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces
 the tier immediately below it, cascading production down the ladder; `tier01` (Kilobytes) is the special
 case where cost is still Bits but production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`,
-displayed as whole `B`) rather than Bits. **Clock Speed** (the global tickspeed multiplier on MainPage,
+displayed as whole `B`) and mirrors the same amount × `BITS_PER_BYTE` into Bits (`MONEY_ID`) so
+MoneyHero / Prestige / tier Buys keep moving — without that mirror, Factory production after #430
+left the headline balance frozen. **Clock Speed** (the global tickspeed multiplier on MainPage,
 formerly "Tickspeed") is funded from that Bytes pool — initial activation costs **10 Bytes** — not Bits.
 Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
@@ -757,8 +759,9 @@ array has its own always-full **read cache** (`diskCache[size]`, `DISK_CACHE_BLO
 bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
 Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
 full; Memory refills whole blocks when a block was just released or the size was just unlocked
-(so Memory visibly fills between transfers). Read cache pours instantly into an empty disk when all
-8 blocks are full and no tier claim blocks that size. Disks above the smallest built size also fill
+(so Memory visibly fills between transfers). Read cache flushes into an empty disk over the time to
+fill one cache block at the current Byte Foundry production rate when all 8 blocks are full and no
+tier claim blocks that size (pauses while a tier matches). Disks above the smallest built size also fill
 via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
 N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
 disk emptied per segment; collect pauses while the source size has an active tier match), then
@@ -881,7 +884,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1488 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1494 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
