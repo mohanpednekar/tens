@@ -17,10 +17,11 @@ are not a tier here at all** — they're produced entirely within the separate B
 screen (see "Byte Foundry" below), which is what now hands a fresh save its first Kilobytes.
 **Every tier is bought directly with the base currency, displayed as "Bits"** — `costResourceId` is
 `MONEY_ID` (`'base'`) for all of them. Once owned, a tier produces the tier immediately below it
-(`producesResourceId`), cascading production down to the base currency. `tier01` (`Kilobytes`) is the
-special case where `costResourceId === producesResourceId === MONEY_ID`: it's the entry-level
-generator, bought with Bits to produce more Bits (`RESOURCE_SYMBOL(MONEY_ID)` falls back to `b`,
-lowercase — no tier owns a bare uppercase `B` symbol any more, since Bytes isn't a tier).
+(`producesResourceId`), cascading production down the ladder. `tier01` (`Kilobytes`) costs Bits
+but produces Factory Bytes (`BYTES_ID = 'bytes'`, symbol `B`) for Clock Speed funding, and
+`tickGame` mirrors each Byte produced into Bits at `production × BITS_PER_BYTE` so MoneyHero,
+Prestige, and tier Buys (still Bits-denominated) keep advancing. Higher tiers still produce the
+tier below into both `resources` and `owned`.
 
 Each tier's `baseCost` is a fixed PER-UNIT price, independent of block size: `1000^n` for `tier0n`
 (one exponent higher than the tier's own 1-indexed position, since Bytes' old `1000^0 = 1` slot was
