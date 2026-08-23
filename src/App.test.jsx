@@ -3181,13 +3181,16 @@ describe('Byte Foundry Storage', () => {
     vi.useFakeTimers()
 
     // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
-    // level 1 so read cache may pour into the empty disk without an active tier claim at this size.
+    // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
+    // High production rate makes the one-block flush finish within a single tick.
     seedIntroState(
       {
         bits: currentBankSize * 2,
         capacity: INTRO_DISK_UNLOCK_CAPACITY,
         byteCreated: true,
         disksBuiltTotal: { [currentBankSize]: 1 },
+        productionMultiplier: currentBankSize * 2,
+        tickSpeedSeconds: 1,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
@@ -3197,7 +3200,7 @@ describe('Byte Foundry Storage', () => {
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Read cache topped up and poured into the empty disk in the same tick. At tier level 2 the
+    // Read cache topped up and flushed into the empty disk in the same tick. At tier level 2 the
     // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))

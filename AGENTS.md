@@ -119,8 +119,9 @@ cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onw
 player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
 passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
 production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full **read cache** (Memory → read cache → disk when tier allows;
-write-cache upward merges from the size below) as fallback tier funding when no matching disk exists;
+builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
+tier allows; flush duration = one cache block at production rate; write-cache upward merges from
+the size below) as fallback tier funding when no matching disk exists;
 Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
