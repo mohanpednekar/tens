@@ -7,8 +7,8 @@ import {
   ERA_ELIGIBILITY_PP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   PRESTIGE_THRESHOLD,
-  TIER_DEFINITIONS,
 } from 'game/layers'
+import { isEditableScalar, prettifySegment, setValueAtPath } from './stateFields'
 import styled from 'styled-components'
 
 // Dev-only sandbox (see CLAUDE.md → "Dev Mode"). Reached only through App.jsx/AppMenu entry
@@ -16,6 +16,11 @@ import styled from 'styled-components'
 // minified/tree-shaken by `yarn build`, absent — from a production bundle. Everything here
 // operates on a save entirely separate from any real player slot (see game/storage.js's
 // DEV_SLOT_ID); toggling Dev Mode off always resumes the real save untouched.
+//
+// The "Variables" section below is not a hand-maintained field list: it's a recursive walk of the
+// live `game.state` object itself (see FieldNode) — the same object engine.js/storage.js produce
+// for the real game — so every field the game code defines is automatically editable here, and a
+// new field added to createInitialGameState() shows up with zero changes to this file.
 
 const RootDiv = styled.main`
   width: min(560px, calc(100vw - 2rem));
@@ -63,12 +68,14 @@ const FieldRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  padding: 0.15rem 0;
 `
 
-const FieldLabel = styled.label`
+const FieldLabel = styled.span`
   color: ${props => props.theme.color.textMuted};
-  flex: 0 0 9rem;
+  flex: 0 0 auto;
   font-size: 0.85rem;
+  min-width: 8rem;
 `
 
 const NumberInput = styled.input`
@@ -79,8 +86,21 @@ const NumberInput = styled.input`
   flex: 1;
   font-family: ${props => props.theme.font.body};
   font-size: 0.9rem;
-  min-width: 8rem;
-  padding: 0.45rem 0.6rem;
+  min-width: 6rem;
+  padding: 0.4rem 0.55rem;
+`
+
+const Details = styled.details`
+  border-left: 2px solid ${props => props.theme.color.border};
+  padding-left: 0.6rem;
+`
+
+const Summary = styled.summary`
+  color: ${props => props.theme.color.text};
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.2rem 0;
 `
 
 const JsonTextarea = styled.textarea`
@@ -106,9 +126,85 @@ const toNumber = value => {
   return Number.isFinite(n) ? n : 0
 }
 
+const coerceDraft = (draft, valueType) => (valueType === 'number' ? toNumber(draft) : draft)
+
+// One row per scalar leaf, or a nested collapsible <details> per object — recurses over
+// whatever shape `value` actually is, so it never needs updating when the state shape changes.
+// Skips null/undefined (structural "not yet built" sentinels, e.g. intro.diskBuild) and arrays
+// (e.g. prestigeMuseum.history) — those aren't simple scalar variables; edit them via the raw
+// JSON editor below instead.
+const FieldNode = ({ path, value, drafts, onDraftChange, onSetLeaf, onToggleLeaf }) => {
+  const key = path[path.length - 1]
+  const label = prettifySegment(key)
+  const id = path.join('.')
+
+  if (typeof value === 'boolean') {
+    return (
+      <FieldRow>
+        <FieldLabel>{label}</FieldLabel>
+        <Button
+          aria-label={id}
+          onClick={() => onToggleLeaf(path, !value)}
+          type="button"
+          variant={value ? 'success' : 'neutral'}
+        >
+          <ButtonContent>{value ? '✓ true' : '✕ false'}</ButtonContent>
+        </Button>
+      </FieldRow>
+    )
+  }
+
+  if (isEditableScalar(value)) {
+    return (
+      <FieldRow>
+        <FieldLabel>{label}</FieldLabel>
+        <NumberInput
+          aria-label={id}
+          onChange={event => onDraftChange(id, event.target.value)}
+          placeholder={String(value)}
+          type="text"
+          value={drafts[id] ?? ''}
+        />
+        <Button
+          aria-label={`set ${id}`}
+          onClick={() => onSetLeaf(path, drafts[id], typeof value)}
+          type="button"
+          variant="neutral"
+        >
+          <ButtonContent>Set</ButtonContent>
+        </Button>
+      </FieldRow>
+    )
+  }
+
+  if (value === null || value === undefined || Array.isArray(value)) return null
+
+  const entries = Object.entries(value)
+  if (entries.length === 0) return null
+
+  return (
+    <Details>
+      <Summary>{label} ({entries.length})</Summary>
+      {entries.map(([childKey, childValue]) => (
+        <FieldNode
+          drafts={drafts}
+          key={childKey}
+          onDraftChange={onDraftChange}
+          onSetLeaf={onSetLeaf}
+          onToggleLeaf={onToggleLeaf}
+          path={[...path, childKey]}
+          value={childValue}
+        />
+      ))}
+    </Details>
+  )
+}
+
 // Quick-seed presets — each a small, self-explanatory delta on top of whatever state the dev save
 // currently holds, applied via game.setDevState (a direct state-updater escape hatch, not the
-// engine's action reducers — the point of Dev Mode is unvalidated experimentation).
+// engine's action reducers — the point of Dev Mode is unvalidated experimentation). Reference the
+// same layers.js constants the real game reads, so they never drift from what actually gates each
+// milestone.
 const PRESETS = [
   {
     id: 'unlock-factory',
@@ -163,18 +259,8 @@ const PRESETS = [
   },
 ]
 
-const QUICK_FIELDS = [
-  { id: 'base', label: 'Bits', get: state => state.resources?.base ?? 0, set: (state, value) => ({ ...state, resources: { ...state.resources, base: value } }) },
-  { id: 'bytes', label: 'Bytes', get: state => state.resources?.bytes ?? 0, set: (state, value) => ({ ...state, resources: { ...state.resources, bytes: value } }) },
-  { id: 'points', label: 'Prestige Points', get: state => state.prestige?.points ?? 0, set: (state, value) => ({ ...state, prestige: { ...state.prestige, points: value } }) },
-  { id: 'count', label: 'Prestige count', get: state => state.prestige?.count ?? 0, set: (state, value) => ({ ...state, prestige: { ...state.prestige, count: value } }) },
-  { id: 'eons', label: 'Eons', get: state => state.eons?.balance ?? 0, set: (state, value) => ({ ...state, eons: { ...state.eons, balance: value } }) },
-  { id: 'era', label: 'Era count', get: state => state.era?.count ?? 0, set: (state, value) => ({ ...state, era: { ...state.era, count: value } }) },
-]
-
 const DevModePage = ({ game }) => {
   const [fieldDrafts, setFieldDrafts] = useState({})
-  const [ownedDraft, setOwnedDraft] = useState('10')
   const [jsonDraft, setJsonDraft] = useState(() => JSON.stringify(game.state, null, 2))
   const [jsonStatus, setJsonStatus] = useState(null)
 
@@ -195,19 +281,17 @@ const DevModePage = ({ game }) => {
     game.setDevState(preset.apply)
   }
 
-  const handleSetField = field => {
-    const draft = fieldDrafts[field.id]
-    if (draft === undefined) return
-    game.setDevState(state => field.set(state, toNumber(draft)))
+  const handleDraftChange = (id, value) => {
+    setFieldDrafts(prev => ({ ...prev, [id]: value }))
   }
 
-  const handleSetAllOwned = () => {
-    const n = Math.max(0, Math.floor(toNumber(ownedDraft)))
-    game.setDevState(state => ({
-      ...state,
-      owned: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: n }), { ...state.owned }),
-      purchased: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: n }), { ...state.purchased }),
-    }))
+  const handleSetLeaf = (path, draft, valueType) => {
+    if (draft === undefined || draft === '') return
+    game.setDevState(state => setValueAtPath(state, path, coerceDraft(draft, valueType)))
+  }
+
+  const handleToggleLeaf = (path, nextValue) => {
+    game.setDevState(state => setValueAtPath(state, path, nextValue))
   }
 
   const handleRefreshJson = () => {
@@ -220,6 +304,7 @@ const DevModePage = ({ game }) => {
     if (result.ok) {
       setJsonStatus({ error: false, text: 'Applied.' })
       setJsonDraft(JSON.stringify(result.state, null, 2))
+      setFieldDrafts({})
     } else {
       setJsonStatus({ error: true, text: `Could not apply (${result.reason}).` })
     }
@@ -275,41 +360,25 @@ const DevModePage = ({ game }) => {
             </ButtonGrid>
           </Section>
 
-          <Section aria-label="quick edit section">
-            <h2>Quick edit</h2>
-            <p>Current: {formatCurrency(game.state.resources?.base ?? 0)} · {formatAmount(game.state.prestige?.points ?? 0)} PP</p>
-            {QUICK_FIELDS.map(field => (
-              <FieldRow key={field.id}>
-                <FieldLabel htmlFor={`dev-field-${field.id}`}>{field.label}</FieldLabel>
-                <NumberInput
-                  id={`dev-field-${field.id}`}
-                  onChange={event => setFieldDrafts(prev => ({ ...prev, [field.id]: event.target.value }))}
-                  placeholder={String(field.get(game.state))}
-                  type="text"
-                  value={fieldDrafts[field.id] ?? ''}
-                />
-                <Button
-                  aria-label={`set ${field.label}`}
-                  onClick={() => handleSetField(field)}
-                  type="button"
-                  variant="neutral"
-                >
-                  <ButtonContent>Set</ButtonContent>
-                </Button>
-              </FieldRow>
-            ))}
-            <FieldRow>
-              <FieldLabel htmlFor="dev-field-owned">Every tier's Owned</FieldLabel>
-              <NumberInput
-                id="dev-field-owned"
-                onChange={event => setOwnedDraft(event.target.value)}
-                type="text"
-                value={ownedDraft}
+          <Section aria-label="variables section">
+            <h2>Variables</h2>
+            <p>
+              Every field of the live save, read straight off <code>game.state</code> — this list
+              always matches whatever <code>createInitialGameState()</code> currently defines, with
+              nothing hand-maintained here. Booleans toggle on click; numbers/strings need a value
+              and Set. Current: {formatCurrency(game.state.resources?.base ?? 0)} · {formatAmount(game.state.prestige?.points ?? 0)} PP.
+            </p>
+            {Object.entries(game.state).map(([key, value]) => (
+              <FieldNode
+                drafts={fieldDrafts}
+                key={key}
+                onDraftChange={handleDraftChange}
+                onSetLeaf={handleSetLeaf}
+                onToggleLeaf={handleToggleLeaf}
+                path={[key]}
+                value={value}
               />
-              <Button aria-label="set every tier's owned count" onClick={handleSetAllOwned} type="button" variant="neutral">
-                <ButtonContent>Set all</ButtonContent>
-              </Button>
-            </FieldRow>
+            ))}
           </Section>
 
           <Section aria-label="raw state json section">
@@ -318,7 +387,8 @@ const DevModePage = ({ game }) => {
               Edit any field directly, then Apply — missing fields are filled in from a fresh
               state the same way an older save loads, so a small partial object (e.g.{' '}
               <code>{'{ "resources": { "base": 1e50 } }'}</code>) is enough to seed just what you
-              need.
+              need. Also the only way to edit structural fields the Variables list above skips
+              (null-valued fields, arrays).
             </p>
             <JsonTextarea
               aria-label="dev save state json"

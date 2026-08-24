@@ -4295,20 +4295,39 @@ describe('Dev Mode', () => {
     expect(JSON.parse(localStorage.getItem('tens_game_state')).resources.base).toBe(4242)
   })
 
-  it('quick edit fields write directly onto the dev save via setDevState', async () => {
+  it('the Variables tree is read straight off game.state and stays editable via setDevState', async () => {
     const user = userEvent.setup()
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
     await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
 
-    const bitsInput = screen.getByLabelText('Bits')
+    // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
+    // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
+    // the input.
+    await user.click(screen.getByText(/^resources \(\d+\)$/))
+    const bitsInput = screen.getByLabelText('resources.base')
     await user.clear(bitsInput)
     await user.type(bitsInput, '777')
-    await user.click(screen.getByRole('button', { name: /^set bits$/i }))
+    await user.click(screen.getByRole('button', { name: /^set resources\.base$/i }))
 
     expect(screen.getByText(/777 b\b/)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).resources.base).toBe(777)
+  })
+
+  it('boolean leaves in the Variables tree toggle on click', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByText(/^intro \(\d+\)$/))
+    const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
+    expect(toggle).toHaveTextContent('false')
+    await user.click(toggle)
+
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
   })
 
   it('quick-seed presets and the raw JSON editor both stay scoped to the dev save', async () => {
