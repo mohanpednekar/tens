@@ -195,34 +195,34 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
-// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
-// tickComputeCoreConversion in engine.js and
-// intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
-// costed a Compute Core at a fixed 10 MB of Memory, gated on every Disk size being built
-// and full first — superseded by the dynamic model below, which has no relationship to Storage at
-// all; see docs/DESIGN_HISTORY.md for why.
+// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
+// costed a Compute Core at a fixed 10 MB of Memory (gated on every Disk size being built and full),
+// then at a dynamic, capacity-tied Memory flush ("Claim Core") — both superseded by
+// purchaseBoosterFromDataLake in engine.js, which spends deposited Disk stock from the matching
+// Data Lake instead and has no relationship to Memory/Storage at all; see docs/DESIGN_HISTORY.md
+// for why.
 //
-// Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
-// below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
-// step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
-// own reveal (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
+// Capacity threshold at which Compute Cores/the Compute screen reveal — 1 MB in Memory's own
+// B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per step — see getMemoryUnit in
+// ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's own reveal
+// (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
-// How many Compute Cores the separate, unrelated Memory -> Core lifetime-counter latch
-// (computeCoresEverEarned/computeMergePageUnlocked — see mintComputeCoreIfReady in engine.js) uses
-// as its own threshold — NOT the Core -> Node merge boundary itself, which reuses the same ratio
-// via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores and
-// intro.computeNodes are permanent counters, carried over every real
+// How many Compute Cores the separate, unrelated lifetime-counter latch
+// (computeCoresEverEarned/computeMergePageUnlocked — see latchComputeMergePageIfNeeded in
+// engine.js) uses as its own threshold — NOT the Core -> Node merge boundary itself, which reuses
+// the same ratio via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores
+// and intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Disks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
-// entity is at this cap, further production into it pauses entirely (see
-// tickComputeCoreConversion/every mergeCompute*Into*/the reserve-timer system below) rather
-// than overflowing past it or silently discarding progress — Memory (for Cores) or the input
-// entity itself (for every manual merge) simply stays put, waiting for the player to spend the
-// capped entity down via a future spending mechanic, the same "waits, doesn't lose progress"
-// posture Disks already have when nothing can consume them yet.
+// entity is at this cap, further production into it pauses entirely (see every mergeCompute*Into*/
+// the reserve-timer system below) rather than overflowing past it or silently discarding progress —
+// the input entity itself (for every manual merge) simply stays put, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Disks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
 // 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
 // is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
@@ -231,22 +231,14 @@ export const COMPUTE_ENTITY_CAP = 10
 // mergeComputeClustersIntoNetwork/mergeComputeNetworksIntoGrid/mergeComputeGridsIntoFabric/
 // mergeComputeFabricsIntoCloud/mergeComputeCloudsIntoDatacenter/mergeComputeDatacentersIntoSupercomputer/
 // mergeComputeSupercomputersIntoMegacomputer in engine.js — each player-triggered (a button click),
-// never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). This is
-// unrelated to the separate Memory → Core "Claim Core" mechanic (COMPUTE_CORES_PER_NODE above),
-// which still has its own distinct automatic-conversion path. Nothing spends a Megacomputer yet —
-// it's the top of the chain today (see issue #280's "Out of scope").
+// never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). Nothing
+// spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
 // Each of the 9 manual merges above can also be permanently automated (see issues #316/#321,
 // enableAutoMergeCoresIntoNode/enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing
 // ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own output entity — once
 // unlocked, that boundary's merging (both manual and automatic) fully transitions to a timed
 // RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP /
-// getComputeMergeDurationSeconds below). Core's own Memory → Core conversion has the
-// analogous "auto claim" concept instead of "auto merge" (see intro.autoClaimCoreEnabled/
-// claimComputeCore/enableAutoClaimCore in engine.js), since it has no merge INPUT of its own —
-// sacrificing 10 Nodes unlocks it (enableAutoClaimCore). Note this is a genuinely SEPARATE unlock
-// from enableAutoMergeCoresIntoNode, which coincidentally also costs 10 Nodes but automates a
-// completely different step (merging Cores into Nodes, not minting Cores from Memory) — a player
-// can unlock either, both, or neither independently.
+// getComputeMergeDurationSeconds below).
 export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute reserve-merge timers --- see issue #321 / #377. Every one of the 9 tier
