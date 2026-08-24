@@ -483,11 +483,13 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    `computeCores` itself.
 
    Both `computeCores` and `computeNodes` are capped at `COMPUTE_ENTITY_CAP` (10), the same as every
-   other compute-ladder entity (Clusters through Megacomputers, see below) EXCEPT that Booster
-   purchases can push `computeCores` past this cap — capacity there is Data-Lake-limited, not
-   inventory-capped (see "Data Lakes" below). Every merge function below (Core → Node included) caps
-   its own output gain at whatever room remains under the cap, leaving surplus input unconverted
-   rather than letting the output exceed it. Nothing is ever lost while capped; it simply waits for
+   other compute-ladder entity (Clusters through Megacomputers, see below) — EXCEPT on the Data Lake
+   Booster purchase path itself (`purchaseBoosterFromDataLake`, any of the ten tiers, not just
+   Cores), which is Data-Lake-limited rather than inventory-capped and can push a tier's held count
+   past `COMPUTE_ENTITY_CAP` (see "Data Lakes" below). Every merge function below (Core → Node
+   included) caps its own output gain at whatever room remains under the cap, leaving surplus input
+   unconverted rather than letting the output exceed it. Nothing is ever lost while capped; it
+   simply waits for
    the player to spend an entity down via a future spending mechanic.
 
    Compute has its own dedicated screen, `ComputePage` — reached via a "⚡ Compute" nav button on

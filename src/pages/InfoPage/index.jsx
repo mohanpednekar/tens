@@ -316,9 +316,10 @@ const InfoPage = () => {
             boundary).
           </li>
           <li>
-            Every compute entity caps at {COMPUTE_ENTITY_CAP} held, except Cores — a Booster
-            purchase can push the Core count past that cap, since it's limited by Data Lake capacity
-            instead.
+            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
+            Booster purchase path itself (any of the ten tiers, not just Cores), which is
+            Data-Lake-limited rather than inventory-capped and can push a tier's held count past
+            {' '}{COMPUTE_ENTITY_CAP}.
           </li>
         </ul>
 
