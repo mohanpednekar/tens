@@ -18,7 +18,8 @@ then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage
 `StoragePage` is not an AppNav destination — disk arrays live under Foundry as continuous Memory +
 Storage sections on the same screen (no second-level tabs).
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
-Foundry gate; only Factory stays progress-gated.
+Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode** (`DevModePage`),
+renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode" below.
 
 ## Tech stack
 
@@ -388,7 +389,10 @@ src/
                                entitlement (unlock code / dummy checkout), clearSaveSlot /
                                clearAllSaveProgress (never revokes unlock), plus the separately keyed
                                last-save timestamp used to compute offline progress (slot 0 keeps
-                               legacy `tens_game_state` keys).
+                               legacy `tens_game_state` keys). Also owns Dev Mode's own isolated
+                               `'dev'` slot (`isDevModeActive`/`setDevModeActive`/
+                               `clearDevGameState`/`applyDevGameStateJson`) — see "Dev Mode" below;
+                               entirely separate from the numbered player-slot system above.
     save-migration/         ← save-schema assistant only — `adaptSaveForCurrentSchema(raw)` returns
                                current-compatible game state (or failure); runs on every load; see
                                DESIGN_HISTORY.md "Save persistence".
@@ -454,6 +458,10 @@ src/
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension (confirm +
                                Ascend), Ops dashboard, and Reset (Danger zone only). Reached via
                                AppNav → More; always reachable; takes `{ game, onReset }`
+    DevModePage/index.jsx   ← dev-only sandbox — toggle a separate, isolated save; quick-seed
+                               presets; quick numeric field edits; a raw state-JSON editor. Reached
+                               via AppNav → More's Dev Mode entry, itself rendered only when
+                               `import.meta.env.DEV`; see "Dev Mode" below. Takes `{ game }`
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -537,7 +545,12 @@ Strict three-layer separation:
    tick timer and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
    dismissIncompatibleSaveNotice, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
-   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress }`. Every purchase — manual Buy and autobuyer ticks alike — always batches up
+   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
+   devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five
+   back Dev Mode (see "Dev Mode" below); they're always present on the hook's return value (not
+   itself gated by `import.meta.env.DEV`) but every consumer of them lives only in `DevModePage`,
+   whose own rendering *is* dev-build-gated, so they're unreachable from any shipped UI. Every
+   purchase — manual Buy and autobuyer ticks alike — always batches up
    to the current level's cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY`
    constant (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size,
    since the actual cap is applied dynamically inside the engine against the current, possibly-grown
@@ -672,6 +685,57 @@ Strict three-layer separation:
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Ops dashboard, and Reset under
     Danger zone only. Takes `{ game, onReset }` (`onReset` is the confirm-guarded callback owned
     by `App.jsx`). Pure renderer aside from local form state.
+8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode" below for the full
+   mechanism. Reached via AppNav → More (`page = 'dev'`), gate-exempt like Settings/Milestones.
+   Takes `{ game }`.
+
+## Dev Mode
+
+A local testing sandbox for seeding/experimenting with game state — **not** a player-facing
+feature: its entry point (`AppMenu`'s "Dev Mode" button) and page route both render only when
+`import.meta.env.DEV` is true, so `yarn build`'s production bundle contains neither the button nor
+`DevModePage` itself (verified by grepping `dist/assets/*.js` for page-specific strings after a
+build — see this feature's own PR). `yarn dev`/`yarn test` (Vitest defaults `import.meta.env.DEV`
+to true) both expose it normally.
+
+Enabling Dev Mode (`game.toggleDevMode()`) does **not** touch any real player save. `game/storage.js`
+resolves every save read/write through `getActiveSlotId()`, which — while
+`isDevModeActive()` is true — returns a dedicated `'dev'` slot id (its own storage keys,
+`tens_dev_state`/`tens_dev_timestamp`, distinct from any of the `FREE_SLOT_COUNT`/
+`SUPPORTER_SLOT_COUNT` player slots and never counted or listed by `listSaveSlots`) instead of the
+real active slot id, so every existing save/load helper (`loadGameState`, `saveGameState`,
+`clearGameState`, …) is transparently redirected with no changes of its own. Toggling off resumes
+the real save exactly where it was left; toggling on for the first time starts from a fresh
+`createInitialGameState()`. `isDevModeActive`/`setDevModeActive` persist the flag itself
+(`tens_dev_mode_active`) separately from `tens_saves_meta`, so flipping it never touches player
+slot bookkeeping.
+
+`DevModePage` offers three ways to seed/experiment, all ultimately going through
+`useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both no-op outside Dev Mode as a defense-
+in-depth guard, even though the UI only ever renders them while active):
+- **Quick seed** — one-click presets (`PRESETS` in `DevModePage`) applying a small delta directly
+  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Factory gate or setting
+  Bits to the Prestige threshold.
+- **Quick edit** — per-field number inputs (Bits, Bytes, Prestige Points, Prestige count, Eons, Era
+  count) plus a set-every-tier's-Owned control, same `setDevState` path.
+- **Raw state JSON** — a textarea pre-filled with `JSON.stringify(game.state, null, 2)`; Apply calls
+  `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
+  A caller only needs to specify the fields they're changing (e.g.
+  `{ "resources": { "base": 1e50 } }`) — `mergeStateForDevWrite` one-level-deep merges the parsed
+  object onto `currentState` (the live dev-save state) before writing, so untouched top-level fields
+  (and untouched sibling keys inside an edited object field, e.g. `resources.bytes` when only
+  `resources.base` was specified) survive intact. This merge-onto-current-state step is required,
+  not cosmetic: writing the parsed object alone would omit `intro` entirely for a bare
+  `{ "resources": {...} }` payload, which `save-migration/detectLegacy.js`'s
+  `getSaveIncompatibilityReason` treats as a legacy save missing a migration step
+  (`'missing_intro'`) and rejects outright. The merged payload is then re-read through the exact
+  same `adaptSaveForCurrentSchema` + `mergeState` pipeline a real save load uses, so any field still
+  missing after the merge is filled in from `createInitialGameState()` the same way an old/partial
+  player save would be.
+
+`resetDevState` (Settings-style confirm in the UI) wipes the dev save back to fresh via
+`clearDevGameState` (bypasses `clearSaveSlot`'s numbered-slot validation — `'dev'` is never one of
+the numbered player slots it checks against).
 
 ## Economy model
 
@@ -896,7 +960,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1504 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1515 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

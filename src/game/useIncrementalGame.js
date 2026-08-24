@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoSpeedUp, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, claimComputeCore, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, depositDiskToDataLake, enableAutoClaimCore, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, overclockGame, pickIntroCapacityMilestone, pickIntroProductionMilestone, pinMuseumEntry, prestigeGame, purchaseBoosterFromDataLake, reclaimComputeBoost, forfeitComputeBoost, redeemDisk, releaseDiskCacheBlock, resetByteFoundry, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoSpeedUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, speedUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDiskBuild, tapIntroBit, tickGame, unpinMuseumEntry, upgradeComputeMergeDuration } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot } from './storage'
+import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -82,6 +82,10 @@ export const useIncrementalGame = () => {
   const [incompatibleSaveReason, setIncompatibleSaveReason] = useState(initial.incompatibleSaveReason)
   const [savesMeta, setSavesMeta] = useState(() => loadSavesMeta())
   const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
+  // Dev Mode (see pages/DevModePage) — whether the app is currently reading/writing the separate
+  // dev save instead of the real active player slot. Its own entry point is gated behind
+  // import.meta.env.DEV, so this stays inert (and unreachable) in a production build.
+  const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
   // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
   const [opsSamples, setOpsSamples] = useState([])
 
@@ -319,6 +323,56 @@ export const useIncrementalGame = () => {
     return result
   }, [refreshSavesUi])
 
+  // Flips Dev Mode on/off. Same save-then-reload shape as switchSaveSlot above (getActiveSlotId
+  // reroutes to the dev key the instant setDevModeActive flips it), so leaving Dev Mode resumes
+  // the real player save exactly where it was left, and entering it starts from whatever the dev
+  // save last held (or a fresh state, the first time). No offline-progress catch-up either
+  // direction — a dev save experiment shouldn't get free production for however long it sat idle.
+  const toggleDevMode = useCallback(() => {
+    saveGameState(stateRef.current)
+    const next = !isDevModeActive()
+    setDevModeActive(next)
+    setDevModeActiveState(next)
+    const incompatibleReason = discardIncompatibleActiveSaveIfNeeded()
+    const loaded = loadGameState()
+    setState(loaded ?? createInitialGameState())
+    setOfflineProgress(null)
+    setIncompatibleSaveReason(incompatibleReason)
+    setOpsSamples([])
+    refreshSavesUi()
+  }, [refreshSavesUi])
+
+  // Wipes the dev save back to a fresh state. No-ops outside Dev Mode — never touches a real slot.
+  const resetDevState = useCallback(() => {
+    if (!isDevModeActive()) return
+    clearDevGameState()
+    setState(createInitialGameState())
+    setOfflineProgress(null)
+    setIncompatibleSaveReason(null)
+    setOpsSamples([])
+  }, [])
+
+  // Seeds the dev save from a JSON string via storage.js's applyDevGameStateJson, which itself
+  // refuses to run outside Dev Mode — this wrapper just reflects the result into React state.
+  const applyDevStateJson = useCallback(jsonText => {
+    const result = applyDevGameStateJson(jsonText, stateRef.current)
+    if (result.ok) {
+      setState(result.state)
+      setOfflineProgress(null)
+      setIncompatibleSaveReason(null)
+    }
+    return result
+  }, [])
+
+  // Direct state-updater escape hatch for DevModePage's quick-edit fields/presets — bypasses the
+  // engine's action reducers entirely (that's the point: free experimentation, not a validated
+  // purchase). Guarded the same way as resetDevState: a no-op outside Dev Mode so a stray call
+  // can never mutate a real player's live save.
+  const setDevState = useCallback(updater => {
+    if (!isDevModeActive()) return
+    setState(prev => updater(prev))
+  }, [])
+
   const renameActiveSaveSlot = useCallback((slotId, name) => {
     const result = renameSaveSlot(slotId, name)
     if (result.ok) refreshSavesUi()
@@ -339,7 +393,9 @@ export const useIncrementalGame = () => {
 
   return {
     actions,
+    applyDevStateJson,
     clearSlot,
+    devModeActive,
     dismissIncompatibleSaveNotice,
     dismissOfflineProgress,
     eraseAllSaveProgress,
@@ -350,10 +406,13 @@ export const useIncrementalGame = () => {
     redeemUnlockCode,
     renameSaveSlot: renameActiveSaveSlot,
     resetByteFoundry: resetByteFoundryProgress,
+    resetDevState,
     resetGame,
     saveSlots,
     savesMeta,
+    setDevState,
     state,
     switchSaveSlot,
+    toggleDevMode,
   }
 }

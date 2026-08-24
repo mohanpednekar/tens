@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame } from './engine'
-import { ERA_ELIGIBILITY_PP, MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { ERA_ELIGIBILITY_PP, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -669,5 +669,82 @@ describe('theme preference', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadThemePreference()).toBe('dark')
+  })
+})
+
+describe('Dev Mode', () => {
+  it('defaults to inactive', () => {
+    expect(isDevModeActive()).toBe(false)
+    expect(getActiveSlotId()).toBe('0')
+  })
+
+  it('setDevModeActive redirects getActiveSlotId without touching saves meta', () => {
+    setDevModeActive(true)
+    expect(isDevModeActive()).toBe(true)
+    expect(getActiveSlotId()).toBe('dev')
+    expect(loadSavesMeta().activeSlotId).toBe('0')
+    setDevModeActive(false)
+    expect(isDevModeActive()).toBe(false)
+    expect(getActiveSlotId()).toBe('0')
+  })
+
+  it('isolates the dev save from the real active slot', () => {
+    const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+    saveGameState(real)
+
+    setDevModeActive(true)
+    expect(loadGameState()).toBeNull()
+    const dev = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 } }
+    saveGameState(dev)
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+  })
+
+  it('clearDevGameState only wipes the dev save', () => {
+    saveGameState(createInitialGameState())
+    setDevModeActive(true)
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 999 } })
+    clearDevGameState()
+    expect(loadGameState()).toBeNull()
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(MONEY_STARTING_AMOUNT)
+  })
+
+  it('applyDevGameStateJson refuses to run outside Dev Mode', () => {
+    const result = applyDevGameStateJson(JSON.stringify({ resources: { [MONEY_ID]: 5 } }), createInitialGameState())
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('dev_mode_inactive')
+  })
+
+  it('applyDevGameStateJson rejects invalid JSON without touching the dev save', () => {
+    setDevModeActive(true)
+    const currentState = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 42 } }
+    saveGameState(currentState)
+    const result = applyDevGameStateJson('not-json!!!', currentState)
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('invalid_json')
+    expect(loadGameState().resources[MONEY_ID]).toBe(42)
+  })
+
+  it('applyDevGameStateJson merges a partial object onto the current live state, not the parsed object alone', () => {
+    setDevModeActive(true)
+    const currentState = { ...createInitialGameState(), intro: { ...createInitialGameState().intro, mainGameUnlocked: true } }
+    const result = applyDevGameStateJson(
+      JSON.stringify({ resources: { [MONEY_ID]: 5e50 }, prestige: { points: 1000 } }),
+      currentState,
+    )
+    expect(result.ok).toBe(true)
+    expect(result.state.resources[MONEY_ID]).toBe(5e50)
+    expect(result.state.prestige.points).toBe(1000)
+    // A field the caller never mentioned (mainGameUnlocked) survives from currentState — a bare
+    // { resources, prestige } object alone (no intro at all) would otherwise trip
+    // getSaveIncompatibilityReason's 'missing_intro' legacy check and fail outright.
+    expect(result.state.intro.mainGameUnlocked).toBe(true)
+    // A sibling key inside the merged resources object (bytes) also survives, rather than being
+    // dropped by a wholesale replace of the whole `resources` field.
+    expect(result.state.resources.bytes).toBe(currentState.resources.bytes)
+    expect(loadGameState().resources[MONEY_ID]).toBe(5e50)
   })
 })

@@ -8,6 +8,16 @@ const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 const SAVES_META_KEY = 'tens_saves_meta'
 
+// Dev Mode (see pages/DevModePage) — a save entirely separate from the player-facing slot system
+// above (FREE_SLOT_COUNT/SUPPORTER_SLOT_COUNT/tens_saves_meta): its own storage keys, no slot
+// index, not counted against or listed by listSaveSlots. The dev-mode-active flag is itself a
+// tiny piece of persisted state (so the toggle survives a reload) but is deliberately NOT part of
+// tens_saves_meta — flipping it must never touch a real player's slot bookkeeping.
+const DEV_MODE_ACTIVE_KEY = 'tens_dev_mode_active'
+const DEV_SLOT_ID = 'dev'
+const DEV_STATE_KEY = 'tens_dev_state'
+const DEV_TIMESTAMP_KEY = 'tens_dev_timestamp'
+
 /** Free players get one slot; a redeemed supporter unlock code raises this to SUPPORTER_SLOT_COUNT. */
 export const FREE_SLOT_COUNT = 1
 /** Total slots available after redeeming the placeholder supporter unlock code (payment later). */
@@ -18,9 +28,14 @@ export const SUPPORTER_SLOT_COUNT = 3
  */
 export const SUPPORTER_UNLOCK_CODE = 'TENS-SUPPORT'
 
-const slotStateKey = slotId => (slotId === '0' ? STORAGE_KEY : `tens_slot_${slotId}_state`)
-const slotTimestampKey = slotId =>
-  slotId === '0' ? LAST_SAVE_TIMESTAMP_KEY : `tens_slot_${slotId}_timestamp`
+const slotStateKey = slotId => {
+  if (slotId === DEV_SLOT_ID) return DEV_STATE_KEY
+  return slotId === '0' ? STORAGE_KEY : `tens_slot_${slotId}_state`
+}
+const slotTimestampKey = slotId => {
+  if (slotId === DEV_SLOT_ID) return DEV_TIMESTAMP_KEY
+  return slotId === '0' ? LAST_SAVE_TIMESTAMP_KEY : `tens_slot_${slotId}_timestamp`
+}
 
 const defaultSlotName = index => `Save ${index + 1}`
 
@@ -113,7 +128,35 @@ export const loadSavesMeta = () => {
   return coerced
 }
 
-export const getActiveSlotId = () => loadSavesMeta().activeSlotId
+/**
+ * Whether Dev Mode (a separate, isolated save — see pages/DevModePage) is currently active.
+ * Read fresh from localStorage on every call (like loadSavesMeta) rather than cached, since
+ * getActiveSlotId below must reflect a toggle immediately without a plumbed-through re-render.
+ */
+export const isDevModeActive = () => {
+  try {
+    return localStorage.getItem(DEV_MODE_ACTIVE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Flips the Dev Mode flag. Does not touch game state itself — callers must reload after. */
+export const setDevModeActive = active => {
+  try {
+    if (active) localStorage.setItem(DEV_MODE_ACTIVE_KEY, '1')
+    else localStorage.removeItem(DEV_MODE_ACTIVE_KEY)
+  } catch {
+    // Silently ignore (quota / private browsing)
+  }
+}
+
+// Every save/load/clear helper below (loadGameState, saveGameState, clearGameState, ...) reads
+// the active slot id through this one function, so redirecting it to DEV_SLOT_ID while Dev Mode
+// is active transparently isolates every read/write to the dev save without those helpers having
+// to know Dev Mode exists — a real player's slots (0..SUPPORTER_SLOT_COUNT-1) are never touched
+// while it's on, and switching it off resumes exactly where the real save left off.
+export const getActiveSlotId = () => (isDevModeActive() ? DEV_SLOT_ID : loadSavesMeta().activeSlotId)
 
 export const isSupporterUnlocked = () => Boolean(loadSavesMeta().supporterUnlocked)
 
@@ -443,6 +486,71 @@ export const loadLastSaveTimestamp = () => {
 /** Clears only the active save slot's state + timestamp (not other slots or the unlock entitlement). */
 export const clearGameState = () => {
   clearSaveSlot(getActiveSlotId())
+}
+
+/**
+ * Wipes the dev save back to empty (the next loadGameState() call while Dev Mode is active then
+ * falls through to a fresh createInitialGameState()). Bypasses clearSaveSlot's unlockedSlotCount
+ * check — DEV_SLOT_ID is never one of the numbered player slots it validates against.
+ */
+export const clearDevGameState = () => {
+  removeSlotStorage(DEV_SLOT_ID)
+  return { ok: true }
+}
+
+const isPlainObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+// One-level-deep merge of `parsed` onto `base`: an object-valued top-level field (resources,
+// prestige, intro, owned, ...) is shallow-merged key-by-key rather than replaced wholesale, so a
+// caller specifying only `{ resources: { base: 1e50 } }` doesn't silently drop `resources.bytes`
+// (or, more importantly, an entirely untouched top-level field like `intro`) out of the written
+// payload. This also keeps every write shaped like a real save (every top-level field present),
+// which matters beyond tidiness: getSaveIncompatibilityReason (save-migration/detectLegacy.js)
+// treats a payload with tier-map data but no `intro` field at all as a legacy save missing a
+// migration step ('missing_intro') and refuses it outright — a bare `{ resources: {...} }` written
+// as-is would trip that exact check and always fail. Deeper merging (tier maps, disks, etc.) is
+// left to mergeState itself, which loadGameState already runs afterward.
+const mergeStateForDevWrite = (base, parsed) =>
+  Object.keys(parsed).reduce((acc, key) => {
+    const parsedValue = parsed[key]
+    const baseValue = base[key]
+    acc[key] = isPlainObject(parsedValue) && isPlainObject(baseValue)
+      ? { ...baseValue, ...parsedValue }
+      : parsedValue
+    return acc
+  }, { ...base })
+
+/**
+ * Seeds the dev save from a JSON string (see pages/DevModePage's raw state editor). `currentState`
+ * is the live dev-save state the editor was populated from (typically pre-filled with its full
+ * JSON, but a caller only needs to provide the fields they're changing, e.g.
+ * `{ "resources": { "base": 1e50 } }` — see mergeStateForDevWrite above for why the write is
+ * merged onto currentState rather than the parsed object alone). The merged payload is then
+ * re-read through the exact same adaptSaveForCurrentSchema + mergeState pipeline a real save load
+ * uses, so any field still missing after that merge is filled in from createInitialGameState() the
+ * same way an old/partial player save would be. Only ever touches the dev slot: refuses to run
+ * unless Dev Mode is currently active, so a stray call can never overwrite a real player's save.
+ */
+export const applyDevGameStateJson = (jsonText, currentState) => {
+  if (!isDevModeActive()) return { ok: false, reason: 'dev_mode_inactive' }
+  let parsed
+  try {
+    parsed = JSON.parse(jsonText)
+  } catch {
+    return { ok: false, reason: 'invalid_json' }
+  }
+  if (!isPlainObject(parsed)) {
+    return { ok: false, reason: 'invalid_json' }
+  }
+  const toWrite = isPlainObject(currentState) ? mergeStateForDevWrite(currentState, parsed) : parsed
+  try {
+    localStorage.setItem(DEV_STATE_KEY, JSON.stringify(toWrite))
+  } catch {
+    return { ok: false, reason: 'storage_error' }
+  }
+  const loaded = loadGameState()
+  if (!loaded) return { ok: false, reason: 'invalid_state' }
+  return { ok: true, state: loaded }
 }
 
 /** UI theme preference — separate from game save data; survives reset/clearGameState. */
