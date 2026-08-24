@@ -943,8 +943,9 @@ already cover the genuinely useful items on that checklist.
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add two more files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
-  `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics. The remaining two
-  of the 11 files are `scripts/adversarialReviewMarker.test.js` and
+  `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics. Together with
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 9 of the 11 files; the
+  remaining two are `scripts/adversarialReviewMarker.test.js` and
   `scripts/pr-low-risk-eligible.test.js` — Vitest's default glob picks these up alongside `src/`
   since `vite.config.js`'s `test` block sets no custom `include`.
 
