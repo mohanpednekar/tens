@@ -2493,8 +2493,14 @@ test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouch
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 })
 
-test('Sacrifice confirm warns that future Cores cost more only once Compute Cores are unlocked', async () => {
-  const user = userEvent.setup()
+test('Sacrifice confirm warns that future Cores cost more only once Compute Cores are unlocked', () => {
+  // Fake timers (and fireEvent instead of userEvent — see other vi.useFakeTimers() tests in this
+  // file) keep the live tick loop from ever firing between render and the assertions below: the
+  // always-on Kilobyte auto-convert (tickIntroAutoInvest) runs every tick regardless of the forced
+  // priority order gating Sacrifice, and a real tick landing here would drain Memory below full and
+  // — on its first successful conversion — flip intro.mainGameUnlocked, navigating away from
+  // ByteFoundryPage (and this dialog) entirely before the test can observe it.
+  vi.useFakeTimers()
 
   // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
   // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either.
@@ -2507,13 +2513,16 @@ test('Sacrifice confirm warns that future Cores cost more only once Compute Core
     productionMilestoneTierClaims: 0,
     diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
   })
-  render(<App />)
+  const { unmount } = render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   expect(dialog).toHaveTextContent(/every future Core will cost more/i)
-  await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+  fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
@@ -4274,4 +4283,7 @@ test('theme preference in Settings switches mode and persists across remount', a
   expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
   await user.click(screen.getByRole('button', { name: /use system theme/i }))
   expect(localStorage.getItem('tens_theme_preference')).toBe('system')
-})
+// Two full <App/> mount/unmount cycles (each with its own tick-timer/effect setup) in one test
+// legitimately take longer than Vitest's 5s default under a loaded/sandboxed test environment —
+// bumped rather than restructured, since the double-mount itself is the point of the test.
+}, 15000)
