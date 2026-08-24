@@ -12,11 +12,9 @@ shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute 
 is under Foundry as continuous **Memory + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Memory | Storage tabs). Factory uses **Data | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
-during the Byte Foundry gate. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
-Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
-highs; Capacity stays manual; Factory + Prestige kept) live under Settings → Danger zone. No backend
-— state
-lives in React and persists to `localStorage`.
+during the Byte Foundry gate. Reset (full save wipe) and Reset Byte Foundry live under
+Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what each wipes/keeps). No backend
+— state lives in React and persists to `localStorage`.
 
 ## Tech stack
 

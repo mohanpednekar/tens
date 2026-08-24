@@ -6634,6 +6634,7 @@
     {
       "label": "Auto-merge merge method must match the Main ruleset (2026-08-20)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L279",
       "_origin": "ast",
@@ -6645,6 +6646,7 @@
     {
       "label": "Auto-merge (`pr-auto-merge.yml`) \u2014 why the low-risk path is safe even if heuristics mis-fire",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L270",
       "_origin": "ast",
@@ -6656,6 +6658,7 @@
     {
       "label": "Automation design principles",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L129",
       "_origin": "ast",
@@ -6667,6 +6670,7 @@
     {
       "label": "Automation workflows",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L23",
       "_origin": "ast",
@@ -6678,6 +6682,7 @@
     {
       "label": "Orchestration model \u2014 background",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L102",
       "_origin": "ast",
@@ -6689,6 +6694,7 @@
     {
       "label": "Outage: the main prompt tripped GitHub's 21,000-character mixed-expression limit",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L204",
       "_origin": "ast",
@@ -6700,6 +6706,7 @@
     {
       "label": "Permission block reasoning",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L69",
       "_origin": "ast",
@@ -6711,6 +6718,7 @@
     {
       "label": "PR follow-up (`autonomous-pr-followup.yml`) \u2014 security reasoning",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L251",
       "_origin": "ast",
@@ -6722,6 +6730,7 @@
     {
       "label": "Schedule retune (Cursor IST slots + Claude twice-daily) \u2014 2026-08-20",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L38",
       "_origin": "ast",
@@ -6733,6 +6742,7 @@
     {
       "label": "Scheduled maintenance (`autonomous-maintenance.yml`) \u2014 job status reconciliation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L149",
       "_origin": "ast",
@@ -6744,6 +6754,7 @@
     {
       "label": "Stale `blocked` labels after Workflows: write landed \u2014 2026-08-20",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L25",
       "_origin": "ast",
@@ -6755,6 +6766,7 @@
     {
       "label": "Turn-budget history",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L80",
       "_origin": "ast",
@@ -6766,6 +6778,7 @@
     {
       "label": "Why a PAT instead of the default `GITHUB_TOKEN`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L60",
       "_origin": "ast",
@@ -7140,6 +7153,7 @@
     {
       "label": "CHANGELOG.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "CHANGELOG.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7151,6 +7165,7 @@
     {
       "label": "[0.1.0] - 2026-07-05",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L440",
       "_origin": "ast",
@@ -7162,6 +7177,7 @@
     {
       "label": "[0.2.0] - 2026-07-12",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L428",
       "_origin": "ast",
@@ -7173,6 +7189,7 @@
     {
       "label": "[0.3.0] - 2026-07-13",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L411",
       "_origin": "ast",
@@ -7184,6 +7201,7 @@
     {
       "label": "[0.4.0] - 2026-07-13",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L395",
       "_origin": "ast",
@@ -7195,6 +7213,7 @@
     {
       "label": "[0.5.0] - 2026-07-14",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L382",
       "_origin": "ast",
@@ -7206,6 +7225,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L10",
       "_origin": "ast",
@@ -7217,6 +7237,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L186",
       "_origin": "ast",
@@ -7228,6 +7249,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L384",
       "_origin": "ast",
@@ -7239,6 +7261,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L397",
       "_origin": "ast",
@@ -7250,6 +7273,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L413",
       "_origin": "ast",
@@ -7261,6 +7285,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L430",
       "_origin": "ast",
@@ -7272,6 +7297,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L442",
       "_origin": "ast",
@@ -7283,6 +7309,7 @@
     {
       "label": "Added",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L97",
       "_origin": "ast",
@@ -7294,6 +7321,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L42",
       "_origin": "ast",
@@ -7305,6 +7333,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L128",
       "_origin": "ast",
@@ -7316,6 +7345,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L239",
       "_origin": "ast",
@@ -7327,6 +7357,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L388",
       "_origin": "ast",
@@ -7338,6 +7369,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L401",
       "_origin": "ast",
@@ -7349,6 +7381,7 @@
     {
       "label": "Changed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L418",
       "_origin": "ast",
@@ -7360,6 +7393,7 @@
     {
       "label": "Changelog",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7371,6 +7405,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L32",
       "_origin": "ast",
@@ -7382,6 +7417,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L356",
       "_origin": "ast",
@@ -7393,6 +7429,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L392",
       "_origin": "ast",
@@ -7404,6 +7441,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L405",
       "_origin": "ast",
@@ -7415,6 +7453,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L424",
       "_origin": "ast",
@@ -7426,6 +7465,7 @@
     {
       "label": "Fixed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L435",
       "_origin": "ast",
@@ -7437,6 +7477,7 @@
     {
       "label": "Removed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L25",
       "_origin": "ast",
@@ -7448,6 +7489,7 @@
     {
       "label": "Removed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L121",
       "_origin": "ast",
@@ -7459,6 +7501,7 @@
     {
       "label": "Security",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L378",
       "_origin": "ast",
@@ -7470,6 +7513,7 @@
     {
       "label": "[Unreleased]",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CHANGELOG.md",
       "source_location": "L8",
       "_origin": "ast",
@@ -7481,6 +7525,7 @@
     {
       "label": "Adding a new tier",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L99",
       "_origin": "ast",
@@ -7492,6 +7537,7 @@
     {
       "label": "Byte Foundry",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L107",
       "_origin": "ast",
@@ -7503,6 +7549,7 @@
     {
       "label": "Constants (`src/game/layers.js`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2185",
       "_origin": "ast",
@@ -7514,6 +7561,7 @@
     {
       "label": "Economy model reference",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7525,6 +7573,7 @@
     {
       "label": "Game state shape",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1596",
       "_origin": "ast",
@@ -7536,6 +7585,7 @@
     {
       "label": "Key engine functions (`src/game/engine.js`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2031",
       "_origin": "ast",
@@ -7547,6 +7597,7 @@
     {
       "label": "Offline progress",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L835",
       "_origin": "ast",
@@ -7558,6 +7609,7 @@
     {
       "label": "Overclock",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1471",
       "_origin": "ast",
@@ -7569,6 +7621,7 @@
     {
       "label": "PP Compute (Flops)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L897",
       "_origin": "ast",
@@ -7580,6 +7633,7 @@
     {
       "label": "Prestige and the Googol freeze",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1356",
       "_origin": "ast",
@@ -7591,6 +7645,7 @@
     {
       "label": "Prestige info is hidden until first prestige",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1555",
       "_origin": "ast",
@@ -7602,6 +7657,7 @@
     {
       "label": "Prestige Points, autobuyer unlock, and the tickspeed multiplier",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L938",
       "_origin": "ast",
@@ -7613,6 +7669,7 @@
     {
       "label": "Reset",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1574",
       "_origin": "ast",
@@ -7624,6 +7681,7 @@
     {
       "label": "Speed Up",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1400",
       "_origin": "ast",
@@ -7635,6 +7693,7 @@
     {
       "label": "The (configurable) purchase block size and tier levels",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L53",
       "_origin": "ast",
@@ -7646,8 +7705,9 @@
     {
       "label": "Architecture",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L526",
+      "source_location": "L541",
       "_origin": "ast",
       "id": "claude_architecture",
       "community": 24,
@@ -7657,6 +7717,7 @@
     {
       "label": "Automation workflows",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L248",
       "_origin": "ast",
@@ -7668,6 +7729,7 @@
     {
       "label": "Changelog convention",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L333",
       "_origin": "ast",
@@ -7679,6 +7741,7 @@
     {
       "label": "Commands",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L38",
       "_origin": "ast",
@@ -7690,6 +7753,7 @@
     {
       "label": "Documentation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L315",
       "_origin": "ast",
@@ -7701,8 +7765,9 @@
     {
       "label": "Economy model",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L675",
+      "source_location": "L694",
       "_origin": "ast",
       "id": "claude_economy_model",
       "community": 24,
@@ -7712,8 +7777,9 @@
     {
       "label": "End-to-end testing",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L926",
+      "source_location": "L951",
       "_origin": "ast",
       "id": "claude_end_to_end_testing",
       "community": 24,
@@ -7723,8 +7789,9 @@
     {
       "label": "Funding",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L863",
+      "source_location": "L885",
       "_origin": "ast",
       "id": "claude_funding",
       "community": 24,
@@ -7734,8 +7801,9 @@
     {
       "label": "graphify",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L969",
+      "source_location": "L994",
       "_origin": "ast",
       "id": "claude_graphify",
       "community": 24,
@@ -7745,6 +7813,7 @@
     {
       "label": "Interactive session startup",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L59",
       "_origin": "ast",
@@ -7756,8 +7825,9 @@
     {
       "label": "License",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L870",
+      "source_location": "L892",
       "_origin": "ast",
       "id": "claude_license",
       "community": 24,
@@ -7767,6 +7837,7 @@
     {
       "label": "CLAUDE.md",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7778,8 +7849,9 @@
     {
       "label": "Path aliases",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L831",
+      "source_location": "L853",
       "_origin": "ast",
       "id": "claude_path_aliases",
       "community": 24,
@@ -7789,6 +7861,7 @@
     {
       "label": "Project",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L9",
       "_origin": "ast",
@@ -7800,6 +7873,7 @@
     {
       "label": "Pull requests",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L83",
       "_origin": "ast",
@@ -7811,8 +7885,9 @@
     {
       "label": "PWA support",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L852",
+      "source_location": "L874",
       "_origin": "ast",
       "id": "claude_pwa_support",
       "community": 24,
@@ -7822,6 +7897,7 @@
     {
       "label": "Repo layout",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L346",
       "_origin": "ast",
@@ -7833,8 +7909,9 @@
     {
       "label": "Security notes",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L960",
+      "source_location": "L985",
       "_origin": "ast",
       "id": "claude_security_notes",
       "community": 24,
@@ -7844,6 +7921,7 @@
     {
       "label": "Tech stack",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L23",
       "_origin": "ast",
@@ -7855,8 +7933,9 @@
     {
       "label": "Testing",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L882",
+      "source_location": "L904",
       "_origin": "ast",
       "id": "claude_testing",
       "community": 24,
@@ -7866,8 +7945,9 @@
     {
       "label": "Theming",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
-      "source_location": "L838",
+      "source_location": "L860",
       "_origin": "ast",
       "id": "claude_theming",
       "community": 24,
@@ -7877,6 +7957,7 @@
     {
       "label": "AGENTS.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "AGENTS.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7888,8 +7969,9 @@
     {
       "label": "Adding a new tier",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L144",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "agents_adding_a_new_tier",
       "community": 25,
@@ -7899,6 +7981,7 @@
     {
       "label": "AGENTS.md",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -7910,8 +7993,9 @@
     {
       "label": "Architecture",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L88",
+      "source_location": "L86",
       "_origin": "ast",
       "id": "agents_architecture",
       "community": 25,
@@ -7921,8 +8005,9 @@
     {
       "label": "Automation design principles",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L281",
+      "source_location": "L279",
       "_origin": "ast",
       "id": "agents_automation_design_principles",
       "community": 25,
@@ -7932,8 +8017,9 @@
     {
       "label": "Automation engines (Claude now, Cursor successor)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L224",
+      "source_location": "L222",
       "_origin": "ast",
       "id": "agents_automation_engines_claude_now_cursor_successor",
       "community": 25,
@@ -7943,8 +8029,9 @@
     {
       "label": "Budget discipline",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L191",
+      "source_location": "L189",
       "_origin": "ast",
       "id": "agents_budget_discipline",
       "community": 25,
@@ -7954,8 +8041,9 @@
     {
       "label": "Byte Foundry",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L115",
+      "source_location": "L113",
       "_origin": "ast",
       "id": "agents_byte_foundry",
       "community": 25,
@@ -7965,8 +8053,9 @@
     {
       "label": "Changelog convention",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L164",
+      "source_location": "L162",
       "_origin": "ast",
       "id": "agents_changelog_convention",
       "community": 25,
@@ -7976,8 +8065,9 @@
     {
       "label": "Code review tooling",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L257",
+      "source_location": "L255",
       "_origin": "ast",
       "id": "agents_code_review_tooling",
       "community": 25,
@@ -7987,8 +8077,9 @@
     {
       "label": "Commands",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L32",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "agents_commands",
       "community": 25,
@@ -7998,8 +8089,9 @@
     {
       "label": "Cursor Cloud GitHub access",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L205",
+      "source_location": "L203",
       "_origin": "ast",
       "id": "agents_cursor_cloud_github_access",
       "community": 25,
@@ -8009,8 +8101,9 @@
     {
       "label": "Funding",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L295",
+      "source_location": "L293",
       "_origin": "ast",
       "id": "agents_funding",
       "community": 25,
@@ -8020,8 +8113,9 @@
     {
       "label": "Issue-authoring tooling",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L274",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "agents_issue_authoring_tooling",
       "community": 25,
@@ -8031,8 +8125,9 @@
     {
       "label": "Issue tracking conventions",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L171",
+      "source_location": "L169",
       "_origin": "ast",
       "id": "agents_issue_tracking_conventions",
       "community": 25,
@@ -8042,8 +8137,9 @@
     {
       "label": "License",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L300",
+      "source_location": "L298",
       "_origin": "ast",
       "id": "agents_license",
       "community": 25,
@@ -8053,8 +8149,9 @@
     {
       "label": "Path aliases (`vite.config.js`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L151",
+      "source_location": "L149",
       "_origin": "ast",
       "id": "agents_path_aliases_vite_config_js",
       "community": 25,
@@ -8064,6 +8161,7 @@
     {
       "label": "Project",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
       "source_location": "L8",
       "_origin": "ast",
@@ -8075,8 +8173,9 @@
     {
       "label": "Reliability: concurrent runs",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L250",
+      "source_location": "L248",
       "_origin": "ast",
       "id": "agents_reliability_concurrent_runs",
       "community": 25,
@@ -8086,8 +8185,9 @@
     {
       "label": "Reliability: cron dormancy",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L242",
+      "source_location": "L240",
       "_origin": "ast",
       "id": "agents_reliability_cron_dormancy",
       "community": 25,
@@ -8097,8 +8197,9 @@
     {
       "label": "Repo layout",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L48",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "agents_repo_layout",
       "community": 25,
@@ -8108,8 +8209,9 @@
     {
       "label": "Security notes",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L306",
+      "source_location": "L304",
       "_origin": "ast",
       "id": "agents_security_notes",
       "community": 25,
@@ -8119,8 +8221,9 @@
     {
       "label": "Tech stack",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L21",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "agents_tech_stack",
       "community": 25,
@@ -8130,8 +8233,9 @@
     {
       "label": "Testing",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "AGENTS.md",
-      "source_location": "L157",
+      "source_location": "L155",
       "_origin": "ast",
       "id": "agents_testing",
       "community": 25,
@@ -8141,6 +8245,7 @@
     {
       "label": "Byte Foundry",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L33",
       "_origin": "ast",
@@ -8152,6 +8257,7 @@
     {
       "label": "Core economy",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L24",
       "_origin": "ast",
@@ -8163,6 +8269,7 @@
     {
       "label": "Game architecture",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L41",
       "_origin": "ast",
@@ -8174,6 +8281,7 @@
     {
       "label": "Game design",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L22",
       "_origin": "ast",
@@ -8185,6 +8293,7 @@
     {
       "label": "Guide",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L37",
       "_origin": "ast",
@@ -8196,6 +8305,7 @@
     {
       "label": "Scripts",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L12",
       "_origin": "ast",
@@ -8207,6 +8317,7 @@
     {
       "label": "Security notes",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L49",
       "_origin": "ast",
@@ -8218,6 +8329,7 @@
     {
       "label": "Tens",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "README.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8229,8 +8341,14 @@
     {
       "label": "code-reviewer.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L1",
+      "frontmatter": {
+        "name": "code-reviewer",
+        "description": "Comprehensive, adversarial code review of a PR or working diff in this repo. Use before merging any non-trivial change (autonomous or interactive), when asked to review a diff/PR/branch, or as a pre-push self-check. Reports verified, file:line-cited findings with a merge verdict; never edits code itself.",
+        "tools": "Read, Grep, Glob, Bash"
+      },
       "_origin": "ast",
       "id": "claude_agents_code_reviewer",
       "community": 27,
@@ -8240,6 +8358,7 @@
     {
       "label": "1. Establish scope",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L44",
       "_origin": "ast",
@@ -8251,6 +8370,7 @@
     {
       "label": "2. Load the repo's invariants",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L51",
       "_origin": "ast",
@@ -8262,6 +8382,7 @@
     {
       "label": "3. Per-change adversarial pass",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L95",
       "_origin": "ast",
@@ -8273,6 +8394,7 @@
     {
       "label": "4. Cross-cutting checks",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L108",
       "_origin": "ast",
@@ -8284,6 +8406,7 @@
     {
       "label": "5. Verify, then report",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L129",
       "_origin": "ast",
@@ -8295,6 +8418,7 @@
     {
       "label": "Ground rules: factual",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L24",
       "_origin": "ast",
@@ -8306,6 +8430,7 @@
     {
       "label": "Machine-readable marker (required on every report)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L148",
       "_origin": "ast",
@@ -8317,6 +8442,7 @@
     {
       "label": "Procedure",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L39",
       "_origin": "ast",
@@ -8328,6 +8454,7 @@
     {
       "label": "Stance: adversarial",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L12",
       "_origin": "ast",
@@ -8339,6 +8466,7 @@
     {
       "label": "exports.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8350,6 +8478,7 @@
     {
       "label": "graphify reference: extra exports and benchmark",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8361,6 +8490,7 @@
     {
       "label": "Step 6b - Wiki (only if --wiki flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -8372,6 +8502,7 @@
     {
       "label": "Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L15",
       "_origin": "ast",
@@ -8383,6 +8514,7 @@
     {
       "label": "Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L31",
       "_origin": "ast",
@@ -8394,6 +8526,7 @@
     {
       "label": "Step 7b - SVG export (only if --svg flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L47",
       "_origin": "ast",
@@ -8405,6 +8538,7 @@
     {
       "label": "Step 7c - GraphML export (only if --graphml flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L53",
       "_origin": "ast",
@@ -8416,6 +8550,7 @@
     {
       "label": "Step 7d - MCP server (only if --mcp flag)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L59",
       "_origin": "ast",
@@ -8427,6 +8562,7 @@
     {
       "label": "Step 8 - Token reduction benchmark (only if total_words > 5000)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/exports.md",
       "source_location": "L79",
       "_origin": "ast",
@@ -8438,8 +8574,13 @@
     {
       "label": "economy-change-review/SKILL.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L1",
+      "frontmatter": {
+        "name": "economy-change-review",
+        "description": "Cross-checks a PR or working diff that touches TIER_DEFINITIONS or other economy constants (MONEY_ID, GOOGOL, baseCost, costResourceId, producesResourceId, baseTickSpeedSeconds) in src/game/layers.js against its originating issue&#x27;s approved spec table and Explicit Authorizations section, flagging drift between what was authorized and what was actually implemented. Use before merging any economy-touching PR, autonomous or interactive, or when asked to review/check an economy change against its issue."
+      },
       "_origin": "ast",
       "id": "claude_skills_economy_change_review_skill",
       "community": 29,
@@ -8449,6 +8590,7 @@
     {
       "label": "1. Scope check",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L12",
       "_origin": "ast",
@@ -8460,6 +8602,7 @@
     {
       "label": "2. Find the originating issue",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L19",
       "_origin": "ast",
@@ -8471,6 +8614,7 @@
     {
       "label": "3. Field-by-field diff against the approved table",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L33",
       "_origin": "ast",
@@ -8482,6 +8626,7 @@
     {
       "label": "4. Migration coverage for renamed/removed ids",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L48",
       "_origin": "ast",
@@ -8493,6 +8638,7 @@
     {
       "label": "5. Authorization boundary",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L61",
       "_origin": "ast",
@@ -8504,6 +8650,7 @@
     {
       "label": "6. Report",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/economy-change-review/SKILL.md",
       "source_location": "L72",
       "_origin": "ast",
@@ -8537,8 +8684,13 @@
     {
       "label": "file-task-issue/SKILL.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L1",
+      "frontmatter": {
+        "name": "file-task-issue",
+        "description": "Authors a well-formed GitHub issue \u2014 either a claude-task issue for this repo&#x27;s autonomous maintenance backlog, or a plain tracking issue for an interactive session&#x27;s own work \u2014 using the full Goal/Context/Spec/Files/Out-of-scope/Verification/Explicit-authorizations/Dependencies structure, correct size/priority labeling, the conflict-avoidance Blocked-by sequencing heuristic, and the narrow cases where no PR is expected. Use whenever asked to file a claude-task issue, file a tracking issue for int"
+      },
       "_origin": "ast",
       "id": "claude_skills_file_task_issue_skill",
       "community": 30,
@@ -8548,6 +8700,7 @@
     {
       "label": "0. `claude-task` backlog issue vs. interactive tracking issue",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L13",
       "_origin": "ast",
@@ -8559,6 +8712,7 @@
     {
       "label": "1. Use the template, section by section",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L34",
       "_origin": "ast",
@@ -8570,6 +8724,7 @@
     {
       "label": "2. Label conventions",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L63",
       "_origin": "ast",
@@ -8581,6 +8736,7 @@
     {
       "label": "3. Conflict-avoidance sequencing",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L93",
       "_origin": "ast",
@@ -8592,6 +8748,7 @@
     {
       "label": "4. Epics and sub-issues",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L108",
       "_origin": "ast",
@@ -8603,6 +8760,7 @@
     {
       "label": "5. Specs go stale \u2014 write defensively, and re-verify before filing a rewrite",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L124",
       "_origin": "ast",
@@ -8614,6 +8772,7 @@
     {
       "label": "6. When an issue needs no PR",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L140",
       "_origin": "ast",
@@ -8625,6 +8784,7 @@
     {
       "label": "query.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8636,6 +8796,7 @@
     {
       "label": "For /graphify explain",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L254",
       "_origin": "ast",
@@ -8647,6 +8808,7 @@
     {
       "label": "For /graphify path",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L186",
       "_origin": "ast",
@@ -8658,6 +8820,7 @@
     {
       "label": "graphify reference: query, path, explain",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8669,6 +8832,7 @@
     {
       "label": "Step 0 \u2014 Constrained query expansion (REQUIRED before traversal)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L23",
       "_origin": "ast",
@@ -8680,6 +8844,7 @@
     {
       "label": "Step 1 \u2014 Traversal",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L61",
       "_origin": "ast",
@@ -8691,6 +8856,7 @@
     {
       "label": "AUTOMATION.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8702,6 +8868,7 @@
     {
       "label": "Auto-merge (`pr-auto-merge.yml`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L258",
       "_origin": "ast",
@@ -8713,6 +8880,7 @@
     {
       "label": "Automation workflows",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8724,6 +8892,7 @@
     {
       "label": "Cursor-powered successor engine",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L309",
       "_origin": "ast",
@@ -8735,6 +8904,7 @@
     {
       "label": "Orchestration model",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L46",
       "_origin": "ast",
@@ -8746,6 +8916,7 @@
     {
       "label": "PR follow-up (`autonomous-pr-followup.yml`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L244",
       "_origin": "ast",
@@ -8757,6 +8928,7 @@
     {
       "label": "Scheduled maintenance (`autonomous-maintenance.yml`)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/AUTOMATION.md",
       "source_location": "L69",
       "_origin": "ast",
@@ -8768,6 +8940,7 @@
     {
       "label": "COMPONENTS_REFERENCE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8779,6 +8952,7 @@
     {
       "label": "`AppMenu/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L22",
       "_origin": "ast",
@@ -8790,6 +8964,7 @@
     {
       "label": "`AppNav/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L8",
       "_origin": "ast",
@@ -8801,6 +8976,7 @@
     {
       "label": "`Button/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L30",
       "_origin": "ast",
@@ -8812,6 +8988,7 @@
     {
       "label": "`ConfirmDialog/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L65",
       "_origin": "ast",
@@ -8823,6 +9000,7 @@
     {
       "label": "`DiskArrayRow/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L34",
       "_origin": "ast",
@@ -8834,6 +9012,7 @@
     {
       "label": "`IncompatibleSaveNotice/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L108",
       "_origin": "ast",
@@ -8845,6 +9024,7 @@
     {
       "label": "`Money/index.js`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L74",
       "_origin": "ast",
@@ -8856,6 +9036,7 @@
     {
       "label": "`OfflineProgressNotice/index.jsx`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L78",
       "_origin": "ast",
@@ -8867,6 +9048,7 @@
     {
       "label": "Shared components reference",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8878,6 +9060,7 @@
     {
       "label": "`StatCard/index.js`",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L119",
       "_origin": "ast",
@@ -8889,6 +9072,7 @@
     {
       "label": "add-watch.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/add-watch.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8900,6 +9084,7 @@
     {
       "label": "For /graphify add",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/add-watch.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -8911,6 +9096,7 @@
     {
       "label": "For --watch",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/add-watch.md",
       "source_location": "L39",
       "_origin": "ast",
@@ -8922,6 +9108,7 @@
     {
       "label": "graphify reference: add a URL and watch a folder",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/add-watch.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8933,6 +9120,7 @@
     {
       "label": "hooks.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/hooks.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8944,6 +9132,7 @@
     {
       "label": "For git commit hook",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/hooks.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -8955,6 +9144,7 @@
     {
       "label": "For native CLAUDE.md integration",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/hooks.md",
       "source_location": "L21",
       "_origin": "ast",
@@ -8966,6 +9156,7 @@
     {
       "label": "graphify reference: commit hook and native CLAUDE.md integration",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/hooks.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8977,6 +9168,7 @@
     {
       "label": "update.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/update.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -8988,6 +9180,7 @@
     {
       "label": "For --cluster-only",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/update.md",
       "source_location": "L202",
       "_origin": "ast",
@@ -8999,6 +9192,7 @@
     {
       "label": "For --update (incremental re-extraction)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/update.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -9010,6 +9204,7 @@
     {
       "label": "graphify reference: incremental update and cluster-only",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/update.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9021,8 +9216,13 @@
     {
       "label": "simulate-run-times/SKILL.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L1",
+      "frontmatter": {
+        "name": "simulate-run-times",
+        "description": "Simulates full playthroughs of Tens (fresh state through Byte Foundry unlock and on to 1 Googol Money / prestige) using the real engine functions in src/game/engine.js, to show ideal Foundry + prestige cycle lengths, how starting Prestige Point balance / prestige-count autobuyer milestones affect them, and Memory capacity-cap tradeoffs (Storage vs Compute). Use when asked about run times, time-to-prestige, Foundry duration, pacing/balance, ideal Memory capacity, Storage vs Compute, or how PP / autobuyers af"
+      },
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_skill",
       "community": 37,
@@ -9032,6 +9232,7 @@
     {
       "label": "Strategy snapshots (orphan branch) \u2014 required after every run",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L97",
       "_origin": "ast",
@@ -9043,6 +9244,7 @@
     {
       "label": "Usage",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L80",
       "_origin": "ast",
@@ -9054,6 +9256,7 @@
     {
       "label": "What it does",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L26",
       "_origin": "ast",
@@ -9065,6 +9268,7 @@
     {
       "label": "When editing the simulation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L124",
       "_origin": "ast",
@@ -9076,6 +9280,7 @@
     {
       "label": "When to re-run",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L11",
       "_origin": "ast",
@@ -9087,6 +9292,7 @@
     {
       "label": "pull_request_template.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".github/pull_request_template.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9098,6 +9304,7 @@
     {
       "label": "Documentation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".github/pull_request_template.md",
       "source_location": "L14",
       "_origin": "ast",
@@ -9109,6 +9316,7 @@
     {
       "label": "Summary",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".github/pull_request_template.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9120,6 +9328,7 @@
     {
       "label": "Test plan",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".github/pull_request_template.md",
       "source_location": "L7",
       "_origin": "ast",
@@ -9483,6 +9692,7 @@
     {
       "label": "github-and-merge.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/github-and-merge.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9494,6 +9704,7 @@
     {
       "label": "graphify reference: GitHub clone and cross-repo merge",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/github-and-merge.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9505,6 +9716,7 @@
     {
       "label": "Step 0 - Clone GitHub repo(s) (only if a GitHub URL was given)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/github-and-merge.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -9516,6 +9728,7 @@
     {
       "label": "transcribe.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/transcribe.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9527,6 +9740,7 @@
     {
       "label": "graphify reference: transcribe video and audio",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/transcribe.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9538,6 +9752,7 @@
     {
       "label": "Step 2.5 - Transcribe video / audio files (only if video files detected)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/transcribe.md",
       "source_location": "L5",
       "_origin": "ast",
@@ -9549,6 +9764,7 @@
     {
       "label": "copilot-instructions.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".github/copilot-instructions.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9560,6 +9776,7 @@
     {
       "label": "Copilot Instructions",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".github/copilot-instructions.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9571,6 +9788,7 @@
     {
       "label": "Pull Requests",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".github/copilot-instructions.md",
       "source_location": "L3",
       "_origin": "ast",
@@ -9582,6 +9800,7 @@
     {
       "label": "graphify",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/CLAUDE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9593,6 +9812,7 @@
     {
       "label": ".claude/CLAUDE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/CLAUDE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9604,6 +9824,7 @@
     {
       "label": "extraction-spec.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/references/extraction-spec.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9615,6 +9836,7 @@
     {
       "label": "graphify reference: extraction subagent prompt",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/references/extraction-spec.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9626,6 +9848,7 @@
     {
       "label": "MAINPAGE_REFERENCE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/MAINPAGE_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9637,6 +9860,7 @@
     {
       "label": "MainPage reference",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/MAINPAGE_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9648,6 +9872,7 @@
     {
       "label": "PWA_REFERENCE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/PWA_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9659,6 +9884,7 @@
     {
       "label": "PWA support reference",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/PWA_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9670,6 +9896,7 @@
     {
       "label": "THEMING_REFERENCE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/THEMING_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -9681,6 +9908,7 @@
     {
       "label": "Theming reference",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/THEMING_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -10484,6 +10712,7 @@
     {
       "label": "Architecture / MainPage UI decisions",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L288",
       "_origin": "ast",
@@ -10495,6 +10724,7 @@
     {
       "label": "Design history & rationale",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -10506,6 +10736,7 @@
     {
       "label": "Distribution",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2370",
       "_origin": "ast",
@@ -10517,6 +10748,7 @@
     {
       "label": "Documentation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2386",
       "_origin": "ast",
@@ -10528,6 +10760,7 @@
     {
       "label": "Migration in `src/save-migration/`, runs on every load \u2014 2026-08-22",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2335",
       "_origin": "ast",
@@ -10539,6 +10772,7 @@
     {
       "label": "Sacrifice confirm: in-game dialog; Core warning only when unlocked",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3",
       "_origin": "ast",
@@ -10550,6 +10784,7 @@
     {
       "label": "Save persistence",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2333",
       "_origin": "ast",
@@ -10561,6 +10796,7 @@
     {
       "label": "Why a PWA instead of Capacitor/native app-store distribution",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2372",
       "_origin": "ast",
@@ -10572,6 +10808,7 @@
     {
       "label": "Why semver/changelog started at v0.5.0, not v0.1.0-from-inception",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2388",
       "_origin": "ast",
@@ -11958,6 +12195,7 @@
     {
       "label": "Era ascension and Eons (#407)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L956",
       "_origin": "ast",
@@ -11969,6 +12207,7 @@
     {
       "label": "Multiplier overflow safety",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1339",
       "_origin": "ast",
@@ -11980,6 +12219,7 @@
     {
       "label": "Pause/resume for per-tier automations",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1129",
       "_origin": "ast",
@@ -11991,6 +12231,7 @@
     {
       "label": "Pause/resume for the global automations",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1104",
       "_origin": "ast",
@@ -12002,6 +12243,7 @@
     {
       "label": "The global tickspeed multiplier",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1191",
       "_origin": "ast",
@@ -12013,6 +12255,7 @@
     {
       "label": "The last tier's XP-funded tickspeed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1256",
       "_origin": "ast",
@@ -12024,6 +12267,7 @@
     {
       "label": "Tickspeed multiplier",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1161",
       "_origin": "ast",
@@ -12035,6 +12279,7 @@
     {
       "label": "Tier autobuyer/tier-tickspeed-autobuyer milestones",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1068",
       "_origin": "ast",
@@ -12530,6 +12775,7 @@
     {
       "label": "ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2234",
       "_origin": "ast",
@@ -12541,6 +12787,7 @@
     {
       "label": "Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1975",
       "_origin": "ast",
@@ -12552,6 +12799,7 @@
     {
       "label": "Compute Boost tier scaling: 4\u00d7 effect only, no duration enhancement (#363)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1995",
       "_origin": "ast",
@@ -12563,6 +12811,7 @@
     {
       "label": "Compute Cores/Nodes: capping the Storage ladder, and two different meanings of \"MB\" in the same feature",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1750",
       "_origin": "ast",
@@ -12574,6 +12823,7 @@
     {
       "label": "Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1800",
       "_origin": "ast",
@@ -12585,6 +12835,7 @@
     {
       "label": "Compute merge timers from live Core earn \u00d710; Auto-Boost 30 PP; forfeit with confirm (#377/#380)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2012",
       "_origin": "ast",
@@ -12596,6 +12847,7 @@
     {
       "label": "Economy model",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L627",
       "_origin": "ast",
@@ -12607,6 +12859,7 @@
     {
       "label": "Era ascension and Eons \u2014 meta-prestige above Unbounded (#407 / #405)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2269",
       "_origin": "ast",
@@ -12618,6 +12871,7 @@
     {
       "label": "Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1889",
       "_origin": "ast",
@@ -12629,6 +12883,7 @@
     {
       "label": "Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2041",
       "_origin": "ast",
@@ -12640,6 +12895,7 @@
     {
       "label": "Foundry Memory always keeps the highest Disk row (issue #389)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2226",
       "_origin": "ast",
@@ -12651,6 +12907,7 @@
     {
       "label": "`getTierCost`'s division-based split was replaced by a fixed-price-times-blockSize model",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1551",
       "_origin": "ast",
@@ -12662,6 +12919,7 @@
     {
       "label": "`getTierCost` split into per-unit price vs. level-total price",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1483",
       "_origin": "ast",
@@ -12673,6 +12931,7 @@
     {
       "label": "Last tier's XP-funded tickspeed: from a permanent latch to a live owned >= 10 check",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1231",
       "_origin": "ast",
@@ -12684,6 +12943,7 @@
     {
       "label": "Last tier's XP-funded tickspeed: from additive to multiplicative",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1254",
       "_origin": "ast",
@@ -12695,6 +12955,7 @@
     {
       "label": "Main-game access decouples from the \"everything freezes\" flag, and Invest gets its own cost ladder",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L739",
       "_origin": "ast",
@@ -12706,6 +12967,7 @@
     {
       "label": "Multiplier overflow safety: the switch to compounding needed a floor",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1273",
       "_origin": "ast",
@@ -12717,6 +12979,7 @@
     {
       "label": "Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1617",
       "_origin": "ast",
@@ -12728,6 +12991,7 @@
     {
       "label": "Overclock: from a standalone multiplier to a Tickspeed-upgrade step boost",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1584",
       "_origin": "ast",
@@ -12739,6 +13003,7 @@
     {
       "label": "Overclock, once more: back to folding into the Tickspeed multiplier's own step \u2014 now multiplicative and covering milestones too",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1685",
       "_origin": "ast",
@@ -12750,6 +13015,7 @@
     {
       "label": "Prestige history: why PP replaced direct production doubling",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1200",
       "_origin": "ast",
@@ -12761,6 +13027,7 @@
     {
       "label": "Purchase block size became a runtime-configurable, growing value \u2014 `getTierLevel` replaced by direct state tracking",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1407",
       "_origin": "ast",
@@ -12772,6 +13039,7 @@
     {
       "label": "Purchase level resized from 10 to 8, and the cost-epoch sequence changed from Fibonacci to triangular",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1349",
       "_origin": "ast",
@@ -12783,6 +13051,7 @@
     {
       "label": "Reintroducing the 1s-10s tickspeed ladder",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1036",
       "_origin": "ast",
@@ -12794,6 +13063,7 @@
     {
       "label": "Repricing tiers to real-world bit values",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1010",
       "_origin": "ast",
@@ -12805,6 +13075,7 @@
     {
       "label": "Reset button history",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1217",
       "_origin": "ast",
@@ -12816,6 +13087,7 @@
     {
       "label": "Sacrifice for 10x Capacity gated behind every other currently-possible action",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1855",
       "_origin": "ast",
@@ -12827,6 +13099,7 @@
     {
       "label": "`speedUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1327",
       "_origin": "ast",
@@ -12838,6 +13111,7 @@
     {
       "label": "Starting Money reduced from 10 to 1",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1534",
       "_origin": "ast",
@@ -12849,6 +13123,7 @@
     {
       "label": "Storage auto-redeem toggle button removed for now, default flipped to always-on",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L881",
       "_origin": "ast",
@@ -12860,6 +13135,7 @@
     {
       "label": "Storage Banks renamed to Disks: timed builds, a per-array cache, redemption against any tier, and the Kilobit/Kilobyte bug fix",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2092",
       "_origin": "ast",
@@ -12871,6 +13147,7 @@
     {
       "label": "The 1000-Byte Invest tier drops from two claims to one",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1738",
       "_origin": "ast",
@@ -12882,6 +13159,7 @@
     {
       "label": "The Byte Foundry becomes a per-Prestige-cycle mechanic, not a one-time gate",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L654",
       "_origin": "ast",
@@ -12893,6 +13171,7 @@
     {
       "label": "The Byte generator becomes permanent \u2014 only \"Memory\" and the gate reset each Prestige",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L679",
       "_origin": "ast",
@@ -12904,6 +13183,7 @@
     {
       "label": "The per-cycle transfer budget cap was removed \u2014 the transfer row mirrors tier01's own purchase-block progress instead",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L842",
       "_origin": "ast",
@@ -12915,6 +13195,7 @@
     {
       "label": "The transfer-block row looked permanently stuck \u2014 `tickIntroAutoInvest` waited for a whole batch instead of converting live",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L901",
       "_origin": "ast",
@@ -12926,6 +13207,7 @@
     {
       "label": "The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L792",
       "_origin": "ast",
@@ -12937,6 +13219,7 @@
     {
       "label": "`tickDiskAutoFill`: a fully-staged cache could get starved out by an unrelated smaller size",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2190",
       "_origin": "ast",
@@ -12948,6 +13231,7 @@
     {
       "label": "Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1141",
       "_origin": "ast",
@@ -12959,6 +13243,7 @@
     {
       "label": "Transfer-block/Storage-bank cost stops being pinned to tier01's fresh-level-1 price",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L956",
       "_origin": "ast",
@@ -12970,6 +13255,7 @@
     {
       "label": "Why autobuyer unlock is PP-funded only, with no first-tier bypass",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1131",
       "_origin": "ast",
@@ -12981,6 +13267,7 @@
     {
       "label": "Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry intro",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L629",
       "_origin": "ast",
@@ -12992,6 +13279,7 @@
     {
       "label": "Why every tier's tickspeed is uniform at 1s",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1024",
       "_origin": "ast",
@@ -13003,6 +13291,7 @@
     {
       "label": "Why `getTierCost` uses a multiplier form, not a literal power",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1000",
       "_origin": "ast",
@@ -13014,6 +13303,7 @@
     {
       "label": "Why Prestige/PP info is hidden until first prestige",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1208",
       "_origin": "ast",
@@ -13025,6 +13315,7 @@
     {
       "label": "Why \"Smart\" autobuyers exist",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1164",
       "_origin": "ast",
@@ -13036,6 +13327,7 @@
     {
       "label": "Why Speed Up exists, and why its requirement escalates",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1070",
       "_origin": "ast",
@@ -13047,6 +13339,7 @@
     {
       "label": "Why `speedUpCount` now resets on Prestige, reversing the original design",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1112",
       "_origin": "ast",
@@ -13058,6 +13351,7 @@
     {
       "label": "Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L720",
       "_origin": "ast",
@@ -13069,6 +13363,7 @@
     {
       "label": "Why the tick-progress ring was removed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1056",
       "_origin": "ast",
@@ -13080,6 +13375,7 @@
     {
       "label": "Why the tickspeed multiplier no longer affects purchase frequency",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1173",
       "_origin": "ast",
@@ -13091,6 +13387,7 @@
     {
       "label": "Why tickspeed multipliers shrink the delivery period instead of scaling production",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1184",
       "_origin": "ast",
@@ -13102,6 +13399,7 @@
     {
       "label": "XP and everything it funds became run-scoped, not permanent",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1300",
       "_origin": "ast",
@@ -13113,6 +13411,7 @@
     {
       "label": "XP status",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1225",
       "_origin": "ast",
@@ -13124,6 +13423,7 @@
     {
       "label": "CLAUDE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "CLAUDE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -13135,6 +13435,7 @@
     {
       "label": "DESIGN_HISTORY.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -13146,6 +13447,7 @@
     {
       "label": "ECONOMY_REFERENCE.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -13157,6 +13459,7 @@
     {
       "label": "README.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": "README.md",
       "source_location": "L1",
       "_origin": "ast",
@@ -13168,6 +13471,7 @@
     {
       "label": "Multiplier outcomes are floored",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L798",
       "_origin": "ast",
@@ -13179,6 +13483,7 @@
     {
       "label": "Production figure (tick-progress ring removed)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L821",
       "_origin": "ast",
@@ -13190,6 +13495,7 @@
     {
       "label": "Tier production tickspeed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L754",
       "_origin": "ast",
@@ -13520,6 +13826,7 @@
     {
       "label": "Compute Boost base presets: fixing a total-extra-production ordering bug",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2473",
       "_origin": "ast",
@@ -13531,6 +13838,7 @@
     {
       "label": "Data Lake Boosters: spending real deposits, not a separate \"used\" ledger",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2494",
       "_origin": "ast",
@@ -13542,6 +13850,7 @@
     {
       "label": "Data Lake refill gating: staged 9 \u2192 99 \u2192 999 capacity from disk-array completion",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2578",
       "_origin": "ast",
@@ -13553,6 +13862,7 @@
     {
       "label": "Disk Cache: always-full reserve, whole-block Memory transfers, no pour into disks (issue #382)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2428",
       "_origin": "ast",
@@ -13564,6 +13874,7 @@
     {
       "label": "Disk ladder offers every Byte power-of-ten size (issue #368)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2416",
       "_origin": "ast",
@@ -13575,6 +13886,7 @@
     {
       "label": "Factory MoneyHero frozen after Kilobytes \u2192 Bytes (#430 / #442)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2446",
       "_origin": "ast",
@@ -13586,6 +13898,7 @@
     {
       "label": "Removing Claim Core: superseded by Data Lake Boosters",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2522",
       "_origin": "ast",
@@ -13597,6 +13910,7 @@
     {
       "label": "Testing",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2400",
       "_origin": "ast",
@@ -13608,6 +13922,7 @@
     {
       "label": "Timed read-cache \u2192 disk flush (#445)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2461",
       "_origin": "ast",
@@ -14489,8 +14804,13 @@
     {
       "label": "graphify/SKILL.md",
       "file_type": "document",
+      "node_kind": "page",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L1",
+      "frontmatter": {
+        "name": "graphify",
+        "description": "Use for any question about a codebase, its architecture, file relationships, or project content \u2014 especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools."
+      },
       "_origin": "ast",
       "id": "claude_skills_graphify_skill",
       "community": 9,
@@ -14500,6 +14820,7 @@
     {
       "label": "For /graphify add and --watch",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L692",
       "_origin": "ast",
@@ -14511,6 +14832,7 @@
     {
       "label": "For /graphify query",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L680",
       "_origin": "ast",
@@ -14522,6 +14844,7 @@
     {
       "label": "For the commit hook and native CLAUDE.md integration",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L698",
       "_origin": "ast",
@@ -14533,6 +14856,7 @@
     {
       "label": "For --update and --cluster-only",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L674",
       "_origin": "ast",
@@ -14544,6 +14868,7 @@
     {
       "label": "/graphify",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L6",
       "_origin": "ast",
@@ -14555,6 +14880,7 @@
     {
       "label": "Honesty Rules",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L704",
       "_origin": "ast",
@@ -14566,6 +14892,7 @@
     {
       "label": "Interpreter guard for subcommands",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L656",
       "_origin": "ast",
@@ -14577,6 +14904,7 @@
     {
       "label": "Part A - Structural extraction for code files",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L167",
       "_origin": "ast",
@@ -14588,6 +14916,7 @@
     {
       "label": "Part B - Semantic extraction (parallel subagents)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L193",
       "_origin": "ast",
@@ -14599,6 +14928,7 @@
     {
       "label": "Part C - Merge AST + semantic into final extraction",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L356",
       "_origin": "ast",
@@ -14610,6 +14940,7 @@
     {
       "label": "Step 0 - GitHub repos and multi-path merge (only if a URL or several paths)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L61",
       "_origin": "ast",
@@ -14621,6 +14952,7 @@
     {
       "label": "Step 1 - Ensure graphify is installed",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L65",
       "_origin": "ast",
@@ -14632,6 +14964,7 @@
     {
       "label": "Step 2.5 - Video and audio (only if video files detected)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L144",
       "_origin": "ast",
@@ -14643,6 +14976,7 @@
     {
       "label": "Step 2 - Detect files",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L107",
       "_origin": "ast",
@@ -14654,6 +14988,7 @@
     {
       "label": "Step 3 - Extract entities and relationships",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L148",
       "_origin": "ast",
@@ -14665,6 +15000,7 @@
     {
       "label": "Step 4.5 - Graph health check (read-only integrity gate)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L453",
       "_origin": "ast",
@@ -14676,6 +15012,7 @@
     {
       "label": "Step 4 - Build graph, cluster, analyze, generate outputs",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L390",
       "_origin": "ast",
@@ -14687,6 +15024,7 @@
     {
       "label": "Step 5 - Label communities",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L479",
       "_origin": "ast",
@@ -14698,6 +15036,7 @@
     {
       "label": "Step 6 - Generate Obsidian vault (opt-in) + HTML",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L528",
       "_origin": "ast",
@@ -14709,6 +15048,7 @@
     {
       "label": "Step 9 - Save manifest, update cost tracker, clean up, and report",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L554",
       "_origin": "ast",
@@ -14720,6 +15060,7 @@
     {
       "label": "Steps 6b-8 - Wiki, Neo4j, FalkorDB, SVG, GraphML, MCP, benchmark (only on their flags)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L548",
       "_origin": "ast",
@@ -14731,6 +15072,7 @@
     {
       "label": "Usage",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L10",
       "_origin": "ast",
@@ -14742,6 +15084,7 @@
     {
       "label": "What graphify is for",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L45",
       "_origin": "ast",
@@ -14753,6 +15096,7 @@
     {
       "label": "What You Must Do When Invoked",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": ".claude/skills/graphify/SKILL.md",
       "source_location": "L49",
       "_origin": "ast",
@@ -14764,6 +15108,7 @@
     {
       "label": "Cursor Cloud GitHub access",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L175",
       "_origin": "ast",
@@ -14775,6 +15120,7 @@
     {
       "label": "GitHub Milestones (release grouping)",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L236",
       "_origin": "ast",
@@ -14786,6 +15132,7 @@
     {
       "label": "Issue tracking for interactive sessions",
       "file_type": "document",
+      "node_kind": "heading",
       "source_file": "CLAUDE.md",
       "source_location": "L173",
       "_origin": "ast",
@@ -38655,7 +39002,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L157",
+      "source_location": "L155",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38666,7 +39013,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L164",
+      "source_location": "L162",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38677,7 +39024,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L171",
+      "source_location": "L169",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38688,7 +39035,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L191",
+      "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38699,18 +39046,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L205",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "agents_agents_md",
-      "target": "agents_cursor_cloud_github_access",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "AGENTS.md",
-      "source_location": "L21",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38721,7 +39057,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L224",
+      "source_location": "L203",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "agents_agents_md",
+      "target": "agents_cursor_cloud_github_access",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "AGENTS.md",
+      "source_location": "L222",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38732,7 +39079,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L242",
+      "source_location": "L240",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38743,7 +39090,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L250",
+      "source_location": "L248",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38754,7 +39101,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L257",
+      "source_location": "L255",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38765,7 +39112,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L274",
+      "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38776,7 +39123,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L281",
+      "source_location": "L279",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38787,7 +39134,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L295",
+      "source_location": "L293",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38798,7 +39145,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L300",
+      "source_location": "L298",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38809,18 +39156,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L306",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "agents_agents_md",
-      "target": "agents_security_notes",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "AGENTS.md",
-      "source_location": "L32",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38831,7 +39167,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L48",
+      "source_location": "L304",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "agents_agents_md",
+      "target": "agents_security_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "AGENTS.md",
+      "source_location": "L46",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38853,7 +39200,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L88",
+      "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -38864,7 +39211,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L115",
+      "source_location": "L113",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_architecture",
@@ -38875,7 +39222,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L144",
+      "source_location": "L142",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_architecture",
@@ -38886,7 +39233,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L151",
+      "source_location": "L149",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_architecture",
@@ -39458,7 +39805,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L526",
+      "source_location": "L541",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39480,7 +39827,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L675",
+      "source_location": "L694",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39502,7 +39849,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L831",
+      "source_location": "L853",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39513,7 +39860,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L838",
+      "source_location": "L860",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39524,7 +39871,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L852",
+      "source_location": "L874",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39535,7 +39882,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L863",
+      "source_location": "L885",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39546,22 +39893,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L870",
+      "source_location": "L892",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
       "target": "claude_license",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "CLAUDE.md",
-      "source_location": "L882",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "claude_md_claude_claude",
-      "target": "claude_testing",
       "confidence_score": 1.0
     },
     {
@@ -39579,7 +39915,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L960",
+      "source_location": "L904",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude_md_claude_claude",
+      "target": "claude_testing",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L985",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -39590,7 +39937,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L969",
+      "source_location": "L994",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_md_claude_claude",
@@ -40613,7 +40960,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CLAUDE.md",
-      "source_location": "L926",
+      "source_location": "L951",
       "weight": 1.0,
       "_origin": "ast",
       "source": "claude_testing",
@@ -52615,5 +52962,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "ae84db249bec9ba75f190374a613fa8b135e0803"
+  "built_at_commit": "fcdacfb6aec2221c7811db3070a6f538e23429b4"
 }
