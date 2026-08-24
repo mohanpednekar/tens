@@ -69,6 +69,7 @@ import {
   setTierTickspeedAutobuyerEnabled,
   formatAmount,
   formatBitsInNearestUnit,
+  formatBytes,
   formatCurrency,
   formatDiskSize,
   formatMemoryAmount,
@@ -236,7 +237,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -4019,6 +4020,27 @@ describe('formatCurrency', () => {
   })
 })
 
+// ─── formatBytes ───────────────────────────────────────────────────────────
+
+describe('formatBytes', () => {
+  it('formats a comma-grouped amount with a B suffix, just below the exponential threshold', () => {
+    expect(formatBytes(500)).toBe('500 B')
+    expect(formatBytes(999999)).toBe('999,999 B')
+  })
+
+  it('switches to exponential notation at the threshold, like formatCurrency', () => {
+    expect(formatBytes(1000000)).toBe('1e6 B')
+  })
+
+  it('treats negative values as 0', () => {
+    expect(formatBytes(-5)).toBe('0 B')
+  })
+
+  it('floors fractional amounts instead of rounding', () => {
+    expect(formatBytes(1.9)).toBe('1 B')
+  })
+})
+
 // ─── formatMoneyBalance ──────────────────────────────────────────────────────
 // MainPage's own MoneyHero balance readout only — every other formatCurrency call (costs,
 // production rates, the Prestige overlay) is unaffected by this and stays in raw Bits.
@@ -6829,6 +6851,25 @@ describe('prestigeGame', () => {
     expect(pinned.prestigeMuseum.pinnedIds).toEqual(['a'])
     expect(unpinMuseumEntry('a')(pinned).prestigeMuseum.pinnedIds).toEqual([])
     expect(pinMuseumEntry('missing')(withHistory)).toBe(withHistory)
+  })
+
+  it('refuses to pin past MUSEUM_PIN_CAP, leaving state unchanged', () => {
+    const history = Array.from({ length: 11 }, (_, i) => ({
+      id: `entry${i}`,
+      at: i,
+      prestigeNumber: i + 1,
+      pointsAwarded: 1,
+      moneyBits: 1,
+    }))
+    const pinnedIds = history.slice(0, MUSEUM_PIN_CAP).map(entry => entry.id)
+    expect(pinnedIds).toHaveLength(MUSEUM_PIN_CAP)
+    const atCap = {
+      ...createInitialGameState(),
+      prestigeMuseum: { history, pinnedIds },
+    }
+    const result = pinMuseumEntry('entry10')(atCap)
+    expect(result).toBe(atCap)
+    expect(result.prestigeMuseum.pinnedIds).toHaveLength(MUSEUM_PIN_CAP)
   })
 
   it('awards 1 Prestige Point at exactly PRESTIGE_THRESHOLD', () => {
