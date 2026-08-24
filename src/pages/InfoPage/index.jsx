@@ -25,8 +25,9 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
+  INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_MULTIPLIER,
+  INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
@@ -156,7 +157,9 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item.
+          Reopen any time from the bottom nav’s Foundry item. Memory Capacity reads in binary units
+          (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes, Data Lake, caches) stays SI
+          (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
 
         <h3>The loop</h3>
@@ -171,11 +174,14 @@ const InfoPage = () => {
             produces passively forever after.
           </li>
           <li>
-            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_MULTIPLIER} capacity
-            (only when Memory is full and nothing higher-priority is available).
+            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_DOUBLING_STEP} capacity
+            (only when Memory is full and nothing higher-priority is available). Capacity is
+            measured in binary units (KiB, MiB, …) and hard-caps just below the next binary tier —
+            once at the cap, Sacrifice stops being offered for good.
           </li>
           <li>
-            <strong>Invest</strong> spends Memory on an independent cost ladder for permanently
+            <strong>Invest</strong> spends Memory on an independent cost ladder, stepped
+            ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
             ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
             that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
             the next Compute tier (Cores → … → Megacomputers, once each) for the same ×2 — separate

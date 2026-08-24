@@ -1873,6 +1873,14 @@ something to engineer around (e.g. by decoupling the two ladders or exempting In
 since it's exactly what "offer capacity upgrade only after all other upgrades are done" means in
 practice once the two ladders are that closely coupled by construction.
 
+**Update:** the pool 1 byte generator change (#457, see "Pool 1 byte generator" further down this
+section) later did split the two ladders into independent multipliers (`INTRO_CAPACITY_DOUBLING_STEP`
+= 2 for capacity, `INTRO_BANDWIDTH_COST_MULTIPLIER` = 4 for Invest's own cost) — not to "engineer
+around" the coupling described above, but as a side effect of the maintainer's own explicit new spec
+for both ladders independently. They're no longer numerically identical even at tier 0 by
+construction; the "claiming Invest becomes a de facto prerequisite" behavior above may or may not
+still hold in practice under the new numbers and hasn't been re-verified.
+
 This broke several existing tests that had previously (correctly, before this change) asserted
 Sacrifice and Invest were fully independent and simultaneously available from a fresh starting
 balance — those tests were updated to explicitly clear the Invest-claimed gate
@@ -2324,6 +2332,74 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 
 See `docs/ECONOMY_REFERENCE.md` “Era ascension and Eons” for the live constant table; issues #407
 (parent epic), #405 (Unbounded), #410 (engine), #411 (UI).
+
+### Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456)
+
+Requested directly by the maintainer as the first slice of a larger redesign: eventually, each of
+the 10 storage pools (KB…QB, matching the existing Disk-ladder/Tier denominations) gets its own
+independent Byte generator with a hard-capped, binary-unit capacity ladder — but that full 10-pool
+system (new generator instances, an unlock cascade keyed off the previous pool's Disk arrays all
+being complete, and a compacted UI fitting each pool into ~3 lines) is real follow-up work, tracked
+under epic #456. This entry covers only what #457 actually shipped: converting the existing single
+Byte Foundry generator into what will become "pool 1" (the Kilobyte pool) under the new mechanics.
+
+**Binary vs. SI — why split the unit scale at all.** Memory Capacity answers "how much can this
+generator hold," which is a *count* concept the maintainer wanted expressed in the same binary
+(IEC-style) units real memory/RAM specs use — KiB/MiB/…, 1 KiB = 1024 Bytes. Disk *sizes* answer
+"how big is this storage container," a concept the game had already settled on SI units for (see
+the "Disk ladder offers every Byte power-of-ten size" entry below) — SI stayed unchanged rather than
+also moving to binary, since Storage's own ladder (1 KB → 10 KB → 100 KB → …) is fundamentally a
+decimal progression that binary units would only make less readable. Mechanically this meant
+splitting `getMemoryUnit`/`formatBitsInNearestUnit` (now binary-only, backing Memory's own
+capacity/balance/cost displays) from a new internal SI-only pair (`getSiByteUnit`/
+`formatBitsInNearestSiUnit`, backing `formatDiskSize`) — before this change the two were literally
+the same function (`formatDiskSize` was `export const formatDiskSize = formatBitsInNearestUnit`),
+a coupling that only worked because both scales used to be identical.
+
+**Why capacity doubles-and-caps instead of growing ×10 forever.** The old ladder
+(`INTRO_CAPACITY_MULTIPLIER = 10`, unbounded) grew capacity by the same factor forever; the
+maintainer's spec instead wanted "Memory Capacity doubles on each upgrade" with a hard ceiling per
+generator — "a byte generator['s] memory capacity is capped in a way that it cannot go to the next
+capacity tier," worked from the one given example ("MB byte generator shall not reach 1GiB
+capacity," starting at 1 Byte). Generalizing that single example: pool *N*'s generator capacity
+caps at the largest power of two strictly below `1024^(N+1)` bytes — pool 1 (this generator) caps
+below 1 MiB (512 KiB, `INTRO_CAPACITY_CAP_BITS`); pool 2 (MB, not yet built) would cap below 1 GiB,
+matching the example exactly; pool 3 (GB) below 1 TiB; and so on. `INTRO_CAPACITY_MULTIPLIER` split
+into two independent constants — `INTRO_CAPACITY_DOUBLING_STEP` (2, capacity growth) and
+`INTRO_BANDWIDTH_COST_MULTIPLIER` (4, Bandwidth's own cost ladder, see below) — since they'd
+previously shared one constant only because both ladders happened to use the same ×10 step, not
+because they're conceptually linked.
+
+**Why `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` moved.** The old flat threshold (8,000,000 bits, ~1 MB)
+predates this change and sat *above* pool 1's new 512 KiB hard cap — under the new capped-doubling
+model that threshold would have become permanently unreachable, silently locking Compute Cores out
+of the game for anyone who only ever plays pool 1. Retuned to half the new cap (2,097,152 bits, one
+doubling-step short of it), preserving the original's relative position as the last/highest of the
+three capacity-gated Byte Foundry reveals (conversion < storage < compute-core).
+
+**Why Bandwidth's cost ladder moved to ×4 (not ×2, and not left at ×10).** The maintainer's spec
+said Bandwidth "also doubles on each upgrade" (already true — Invest's production-doubling *effect*
+was already ×2 via `INTRO_PRODUCTION_MULTIPLIER_STEP`, unrelated to the old ×10 constant) "but
+offered for every power of 4 instead of 10." Read against the actual code, "offered" maps to the
+cost ladder's own step multiplier (`getIntroProductionMilestoneCost`), not a new gate layered on
+top of the existing bit-affordability check — so this shipped as a straight ×10 → ×4 swap for that
+one constant, keeping every other mechanic (claims-per-tier, the compute-funded overflow path for
+when the bit cost exceeds capacity) structurally unchanged.
+
+**No save migration.** Existing saves' `intro.capacity` values, grown under the old ×10 ladder, can
+already exceed the new 512 KiB cap (e.g. a save that Sacrificed past 800,000 bits). Rather than
+writing a migration to remap those values onto the new doubling sequence, the cap check
+(`isMemoryCapacityAtCap`) is a plain forward-looking `capacity`-vs-`INTRO_CAPACITY_CAP_BITS`
+comparison: a save already past the cap simply can't Sacrifice further from load onward — no crash,
+no data loss, no special-cased migration function. Covered by an explicit test
+(`engine.test.js`, "does not crash on a save whose capacity already exceeds the new cap").
+
+**Deferred to #456's follow-up epic**: the actual per-storage-pool multi-generator system (pools
+2–10, each an independent instance of the mechanics above), the unlock cascade keyed off the
+previous pool's Disk arrays all being complete, and the full 10-pool compact UI. Rebuilding those
+against pool 1's now-shipped mechanics, rather than guessing ahead, was a deliberate scoping choice
+— see file-task-issue's "specs go stale" guidance for why an unbuilt multi-instance state shape is
+better designed after playing with the single-instance version first.
 
 ## Save persistence
 

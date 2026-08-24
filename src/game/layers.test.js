@@ -28,8 +28,12 @@ import {
   DISK_LADDER_SIZE_MULTIPLIER,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
+  INTRO_BANDWIDTH_COST_MULTIPLIER,
+  INTRO_CAPACITY_CAP_BITS,
+  INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
+  MEMORY_BINARY_UNIT_STEP,
   MONEY_ID,
   OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
@@ -246,9 +250,27 @@ describe('constants', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 8,000,000 bits (1 MB in Memory\'s own B/KB/MB display scale)', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(8000000)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(1000 * 1000 * BITS_PER_BYTE)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 2,097,152 bits (256 KiB in Memory\'s own binary display scale) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(2097152)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 1024 * 256)
+  })
+
+  it('INTRO_CAPACITY_CAP_BITS is 4,194,304 bits (512 KiB) — the largest power of two strictly below 1 MiB', () => {
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(4194304)
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 512)
+  })
+
+  it('INTRO_CAPACITY_DOUBLING_STEP is 2 ("Sacrifice for 2x Capacity")', () => {
+    expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
+  })
+
+  it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Bandwidth\'s own cost ladder steps ×4 per tier)', () => {
+    expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
+  })
+
+  it('MEMORY_BINARY_UNIT_STEP is 1024 (Memory Capacity\'s binary unit ladder — 1 KiB = 1024 Bytes)', () => {
+    expect(MEMORY_BINARY_UNIT_STEP).toBe(1024)
   })
 
   it('COMPUTE_CORES_PER_NODE is 8', () => {

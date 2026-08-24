@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 
 ### Changed
+- **Pool 1 byte generator: binary units, doubling capacity cap, ×4 Bandwidth ladder** (#457) — Memory
+  Capacity/balance now render in binary (IEC-style) units (B/KiB/MiB/…, 1 KiB = 1024 Bytes = 1.024
+  KB) instead of SI; Disk sizes, Data Lake, and caches stay SI-denominated, unchanged. "Sacrifice"
+  now doubles capacity per claim (was ×10) and hard-caps at 512 KiB — the largest power of two below
+  1 MiB — after which Sacrifice becomes permanently unavailable. "Invest"/Bandwidth's own cost ladder
+  now steps ×4 per tier (was ×10); its doubling effect on production is unchanged.
+  `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` moved from 8,000,000 to 2,097,152 bits (half the new cap) so
+  it stays reachable. First slice of a larger per-storage-pool generator epic (#456) — see
+  `docs/DESIGN_HISTORY.md`.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during

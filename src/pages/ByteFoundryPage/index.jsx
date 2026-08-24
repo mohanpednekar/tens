@@ -4,8 +4,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -285,8 +285,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // is removed entirely, not merely disabled — see "Byte Foundry" in CLAUDE.md.
   const canClaimComputeCore = isComputeCoreClaimAvailable(state)
   const showManualClaimCore = computeCoreRevealed && !intro.autoClaimCoreEnabled
-  // After Boosts (Compute Core conversion) unlocks, Claim Core and Memory ×10 swap: Claim Core
-  // takes the milestones-row slot next to Bandwidth, and Memory ×10 moves below the disk section.
+  // After Boosts (Compute Core conversion) unlocks, Claim Core and Memory ×2 swap: Claim Core
+  // takes the milestones-row slot next to Bandwidth, and Memory ×2 moves below the disk section.
   const sacrificeInMilestones = !computeCoreRevealed
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
@@ -297,7 +297,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // higher capacity also makes every future Core conversion more expensive — that warning only
   // belongs in the confirm once Cores actually exist. Uses the in-game ConfirmDialog, not
   // window.confirm, so the prompt matches the rest of the UI.
-  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
+  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  const atCapacityCap = isMemoryCapacityAtCap(state)
   const handleSacrificeClick = () => {
     if (!canSacrifice) return
     setSacrificeConfirmOpen(true)
@@ -368,20 +369,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const sacrificeButton = (
     <Button
-      aria-label="sacrifice all bits for 10x capacity"
+      aria-label="sacrifice all bits for 2x capacity"
       disabled={!canSacrifice}
       onClick={handleSacrificeClick}
       title={
-        isFull && !canSacrifice
-          ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
-          : 'Empty Memory for 10x capacity'
+        atCapacityCap
+          ? 'This pool’s Memory Capacity is already at its cap'
+          : isFull && !canSacrifice
+            ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
+            : 'Empty Memory for 2x capacity'
       }
       type="button"
       variant={canSacrifice ? 'prestige' : 'neutral'}
       $progress={fullProgress}
     >
       <MilestoneButtonContent>
-        <span>💥 Memory ×10</span>
+        <span>💥 Memory ×2</span>
         <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
       </MilestoneButtonContent>
       <VisuallyHidden
@@ -635,7 +638,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         onCancel={cancelSacrifice}
       >
         <p>
-          Empty Memory to multiply capacity ×10, from{' '}
+          Empty Memory to multiply capacity ×2, from{' '}
           {formatBitsInNearestUnit(intro.capacity)} to{' '}
           {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
         </p>

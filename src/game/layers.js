@@ -93,9 +93,30 @@ export const TICK_RATE_MS = 100
 // Starting/current cap on the intro's bit balance — both tapping and passive production stop
 // crediting bits once the balance reaches this (see tapIntroBit/tickIntroProduction in engine.js).
 export const INTRO_STARTING_CAPACITY = 8
-// "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
-// 8000 → … (see pickIntroCapacityMilestone in engine.js).
-export const INTRO_CAPACITY_MULTIPLIER = 10
+// "Sacrifice for 2x Capacity" multiplies capacity by this each time it's taken: 8 → 16 → 32 → 64 →
+// … (see pickIntroCapacityMilestone in engine.js). Replaced the old flat ×10-forever ladder — see
+// INTRO_CAPACITY_CAP_BITS below for why growth now also stops at a per-pool ceiling instead of
+// continuing indefinitely; see docs/DESIGN_HISTORY.md.
+export const INTRO_CAPACITY_DOUBLING_STEP = 2
+// Byte Foundry Memory Capacity's own binary-unit ladder step — 1 KiB = 1024 Bytes (vs. a Disk's own
+// SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). Distinct
+// from DISK_LADDER_SIZE_MULTIPLIER/MEMORY_UNIT_SCALE (both still 1000/SI) — Storage stays SI-scaled
+// throughout; only Memory Capacity's own display and growth math switched to binary.
+export const MEMORY_BINARY_UNIT_STEP = 1024
+// Pool 1 (the Kilobyte pool, i.e. today's only Byte generator)'s hard capacity ceiling, in bits —
+// the largest power of two strictly below 1 MiB (1024^2 bytes), so pool 1's generator can grow
+// right up to the edge of "MiB territory" but never cross into it. Once `capacity` would double
+// past this (INTRO_CAPACITY_DOUBLING_STEP applied to an already-at-cap capacity), Sacrifice becomes
+// permanently unavailable (see isMemoryCapacityUpgradeAvailable in engine.js). Derived, not a bare
+// literal, so a future per-pool generator (pool N's own ceiling sits one binary tier higher per
+// pool — see docs/DESIGN_HISTORY.md) can reuse the same halving-below-a-power-of-1024 formula.
+export const INTRO_CAPACITY_CAP_BITS =
+  BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** 2 / INTRO_CAPACITY_DOUBLING_STEP)
+// "Invest for Double Production"'s own cost ladder now steps ×4 per tier instead of ×10 — see
+// getIntroProductionMilestoneCost in engine.js. Deliberately a separate constant from
+// INTRO_CAPACITY_DOUBLING_STEP above even though both ladders once shared the same ×10 multiplier —
+// they're independent progressions that only coincidentally matched before this change.
+export const INTRO_BANDWIDTH_COST_MULTIPLIER = 4
 // The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
 // per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
 // continuous rate). "Invest for Double Production" halves this (see
@@ -203,11 +224,15 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // all; see docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
-// below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
-// step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
-// own reveal (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
-// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
-export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
+// below activates — a later, more advanced-game gate than Storage's own reveal
+// (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same "capacity-magnitude reveal"
+// convention every other Byte Foundry section uses. Was a flat 8,000,000 bits (~1 MB) under the old
+// ×10-forever capacity ladder; retuned to half of pool 1's new hard cap (INTRO_CAPACITY_CAP_BITS) —
+// one Sacrifice doubling-step short of it — since the old value sits ABOVE the new cap and would
+// otherwise be permanently unreachable. Preserves the original's "last/highest of the three
+// capacity-gated reveals" relative ordering (conversion < storage < compute-core); see
+// docs/DESIGN_HISTORY.md.
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
 // How many Compute Cores the separate, unrelated Memory -> Core lifetime-counter latch
 // (computeCoresEverEarned/computeMergePageUnlocked — see mintComputeCoreIfReady in engine.js) uses
 // as its own threshold — NOT the Core -> Node merge boundary itself, which reuses the same ratio

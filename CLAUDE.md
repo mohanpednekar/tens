@@ -430,8 +430,8 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Memory + every DiskArrayRow as continuous sections
-                               (no second-level tabs). After Boosts unlocks, Claim Core and Memory ×10
-                               swap positions (Claim Core beside Bandwidth; Memory ×10 below disks)
+                               (no second-level tabs). After Boosts unlocks, Claim Core and Memory ×2
+                               swap positions (Claim Core beside Bandwidth; Memory ×2 below disks)
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -596,8 +596,8 @@ Strict three-layer separation:
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
    slots in one unbroken row. After Boosts unlocks (`isComputeCoreConversionUnlocked`), Claim Core
-   and Memory ×10 swap: Claim Core sits beside Bandwidth in the milestones row (while manual claim
-   is still shown), and Memory ×10 moves below the disk section. Every action — here or on either
+   and Memory ×2 swap: Claim Core sits beside Bandwidth in the milestones row (while manual claim
+   is still shown), and Memory ×2 moves below the disk section. Every action — here or on either
    dedicated screen — stays gated by the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
@@ -714,8 +714,10 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
-into a permanent, passively-producing Byte generator, then grows via Sacrifice (10x capacity) and
-Invest (double production) on independent cost ladders, plus — once far enough along — Disks
+into a permanent, passively-producing Byte generator, then grows via Sacrifice (2x capacity — binary
+KiB/MiB/… display, hard-capped at 512 KiB, the largest power of two below 1 MiB — see below) and
+Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
+plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
 KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Factory tier;
@@ -739,6 +741,22 @@ tier, once unlocked — "Compute" names the page/feature only, not any individua
 permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
 own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
+
+**Memory's binary units and capacity cap** (`getMemoryUnit`/`formatBitsInNearestUnit`/
+`isMemoryCapacityAtCap` in `engine.js`, `INTRO_CAPACITY_DOUBLING_STEP`/`INTRO_CAPACITY_CAP_BITS`/
+`INTRO_BANDWIDTH_COST_MULTIPLIER`/`MEMORY_BINARY_UNIT_STEP` in `layers.js`) — Memory Capacity and
+balance render in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
+(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
+Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). Sacrifice
+multiplies capacity by `INTRO_CAPACITY_DOUBLING_STEP` (2) each claim, but is hard-capped at
+`INTRO_CAPACITY_CAP_BITS` — the largest power of two strictly below 1 MiB (512 KiB, 4,194,304
+bits) for this generator — after which `isMemoryCapacityUpgradeAvailable` returns `false`
+permanently (`isMemoryCapacityAtCap`); no partial/clamped final step. "Invest for Double
+Production"'s own independent cost ladder (`getIntroProductionMilestoneCost`) now steps by
+`INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier instead of ×10 — its production-doubling effect
+(`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at
+half the cap (2,097,152 bits / 256 KiB) so Compute Cores stay reachable within it. This is the
+first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md`.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
 `getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
@@ -896,7 +914,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1504 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1515 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

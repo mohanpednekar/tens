@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -347,7 +347,7 @@ export const createInitialGameState = () => ({
   intro: {
     bits: 0,                   // "Memory" — always an integer, the tappable/producible balance. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
-    capacity: INTRO_STARTING_CAPACITY,        // PERMANENT — Memory's ceiling, grown by "Sacrifice for 10x Capacity"
+    capacity: INTRO_STARTING_CAPACITY,        // PERMANENT — Memory's ceiling, grown by "Sacrifice for 2x Capacity"
     byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
     tickSpeedSeconds: INTRO_STARTING_TICK_SPEED_SECONDS, // PERMANENT — the delivery period a batch lands every, see getIntroProductionRate
     productionMultiplier: 1,   // PERMANENT — see getIntroProductionRate/pickIntroProductionMilestone
@@ -379,7 +379,7 @@ export const createInitialGameState = () => ({
     // Resets every real Prestige. When true, the next time Memory is full (and Disk Fill /
     // Bandwidth / Disk Build are not available), tickQueuedCapacityUpgrade / the queued fire path
     // erases all held Compute tokens (ladder balances + active boost + in-flight merge timers)
-    // and performs Sacrifice for 10x Capacity — bypassing the normal "Compute blocks Capacity"
+    // and performs Sacrifice for 2x Capacity — bypassing the normal "Compute blocks Capacity"
     // forced-priority gate so Capacity can be committed before the bar is full and not starved
     // by Core claims / Boosts. See queueIntroCapacityUpgrade/eraseAllComputeTokens.
     capacityUpgradeQueued: false,
@@ -606,8 +606,8 @@ export const formatBytes = value => {
 }
 
 // Money (Bits) balance below which this switches out to formatCurrency's raw Bits display — 8000
-// bits, exactly 1000 Bytes (BITS_PER_BYTE), the same real-Byte threshold Memory's own B/KB/MB/…
-// scale considers "1 KB" (see getMemoryUnit). Below this a Bytes reading would round to 0 or read
+// bits, exactly 1000 Bytes (BITS_PER_BYTE), the same real-Byte threshold Disks' own SI B/KB/MB/…
+// scale considers "1 KB" (see getSiByteUnit). Below this a Bytes reading would round to 0 or read
 // as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a
 // full Byte's worth of KB to show.
 const MONEY_BYTES_DISPLAY_THRESHOLD = 8000
@@ -1987,7 +1987,7 @@ export const combineIntroByte = state => {
   }
 }
 
-// Predicate, not a reducer: whether "Sacrifice for 10x Capacity" can actually fire right now.
+// Predicate, not a reducer: whether "Sacrifice for 2x Capacity" can actually fire right now.
 // Forced priority order for the Byte Foundry's five recurring "upgrade" actions — Disk Fill >
 // Bandwidth > Disk Build > Compute > Memory (see CLAUDE.md's "Byte Foundry" section). Each base
 // predicate below is that action's own plain availability check; whenever a higher-ranked one is
@@ -2072,9 +2072,16 @@ export const isComputeUpgradeAvailable = state =>
 // below and directly by ByteFoundryPage to disable/hide the button the same way — the same "engine
 // re-validates, UI just mirrors it" convention every other action in this file already follows
 // (see "Security notes" in CLAUDE.md).
+// Pool 1's generator can never grow past its own hard ceiling (INTRO_CAPACITY_CAP_BITS — see
+// layers.js) — Sacrifice halts for good once the NEXT doubling would meet or exceed it, rather than
+// clamping to a partial step. Exported so ByteFoundryPage can show the cap as a distinct disabled
+// state instead of inferring it from isMemoryCapacityUpgradeAvailable alone.
+export const isMemoryCapacityAtCap = state => (state.intro?.capacity ?? 0) * INTRO_CAPACITY_DOUBLING_STEP > INTRO_CAPACITY_CAP_BITS
+
 export const isMemoryCapacityUpgradeAvailable = state => {
   if (state.intro.bits < state.intro.capacity) return false
   if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
+  if (isMemoryCapacityAtCap(state)) return false
   if (isDiskFillAvailable(state)) return false
   if (isBandwidthAvailable(state)) return false
   if (isDiskBuildAvailable(state)) return false
@@ -2127,9 +2134,9 @@ export const rollbackComputeFundedBandwidth = state => {
   return { ...state, intro }
 }
 
-// "Sacrifice for 10x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
+// "Sacrifice for 2x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
 // availability gate (Memory full AND no other currently-possible action left to take first).
-// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_MULTIPLIER. Once
+// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_DOUBLING_STEP. Once
 // Compute is unlocked, also erases all compute tokens/timers and rolls back compute-funded
 // Bandwidth progress (#324). Clears capacityUpgradeQueued on success.
 export const pickIntroCapacityMilestone = state => {
@@ -2142,7 +2149,7 @@ export const pickIntroCapacityMilestone = state => {
     intro: {
       ...afterWipe.intro,
       bits: 0,
-      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
       capacityUpgradeQueued: false,
     },
   }
@@ -2154,6 +2161,7 @@ export const pickIntroCapacityMilestone = state => {
 // clearIntroCapacityUpgradeQueue.
 export const queueIntroCapacityUpgrade = state => {
   if (state.intro?.capacityUpgradeQueued) return state
+  if (isMemoryCapacityAtCap(state)) return state
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
 }
 
@@ -2218,6 +2226,7 @@ export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
   if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
   if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return state
+  if (isMemoryCapacityAtCap(state)) return state
   if (isDiskFillAvailable(state)) return state
   if (isBandwidthAvailable(state)) return state
   if (isDiskBuildAvailable(state)) return state
@@ -2230,7 +2239,7 @@ export const tickQueuedCapacityUpgrade = state => {
     intro: {
       ...wiped.intro,
       bits: 0,
-      capacity: wiped.intro.capacity * INTRO_CAPACITY_MULTIPLIER,
+      capacity: wiped.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
       capacityUpgradeQueued: false,
     },
   }
@@ -2239,14 +2248,15 @@ export const tickQueuedCapacityUpgrade = state => {
 // "Invest for Double Production"'s own cost ladder — entirely independent of `capacity`/Sacrifice
 // (a separate, permanent progression, keyed off productionMilestoneTier — see
 // createInitialGameState): tier 0 costs INTRO_STARTING_CAPACITY (1 Byte), each tier after that
-// costs INTRO_CAPACITY_MULTIPLIER times the last (10 Bytes, 100 Bytes, 1000 Bytes, …) — the same
-// "×10 per step" shape the capacity ladder happens to share, tracked completely separately.
+// costs INTRO_BANDWIDTH_COST_MULTIPLIER times the last (4, 16, 64, 256 Bytes, …) — was ×10 per step
+// (the same shape the capacity ladder once shared) until this and INTRO_CAPACITY_DOUBLING_STEP
+// split into independent multipliers; see docs/DESIGN_HISTORY.md.
 export const getIntroProductionMilestoneCost = tier =>
-  INTRO_STARTING_CAPACITY * (INTRO_CAPACITY_MULTIPLIER ** clampNonNegative(tier))
+  INTRO_STARTING_CAPACITY * (INTRO_BANDWIDTH_COST_MULTIPLIER ** clampNonNegative(tier))
 
 // How many claims a given productionMilestoneTier grants before advancing to the next: 2 for the
 // three cheapest tiers (0/1/2, i.e. 1/10/100 Bytes), 1 for every tier from there on — unlike
-// "Sacrifice for 10x Capacity"'s own flat one-attempt-per-cost posture, the earliest, cheapest
+// "Sacrifice for 2x Capacity"'s own flat one-attempt-per-cost posture, the earliest, cheapest
 // Invest tiers get a second attempt each before advancing. A previous iteration simplified this to
 // a flat 1 across the board; see docs/DESIGN_HISTORY.md for both that change and this reinstatement.
 export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
@@ -2341,32 +2351,52 @@ export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >
 // deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
 export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_DISK_UNLOCK_CAPACITY
 
-// Byte Foundry "Memory" unit ladder shared by ByteFoundryPage/StoragePage — raw bits below 1 Byte,
-// then B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own tier symbols since
-// Memory is byte-scale themed identically to the main game's tiers.
-const MEMORY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
-const MEMORY_UNIT_SCALE = 1000
+// Byte-scale (SI) unit ladder — B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own
+// tier symbols. Storage (Disk sizes — see formatDiskSize below) stays on this SI scale; Memory
+// Capacity/balance itself moved to the binary ladder further down (see getMemoryUnit) — see
+// CLAUDE.md's "Economy model".
+const SI_BYTE_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol)]
+const SI_BYTE_UNIT_SCALE = 1000
 
 // A parallel, BIT-scale unit ladder for Disk Cache blocks specifically — lowercase 'b'/'Kb'/'Mb'/…
-// (vs. Disks/Memory's own uppercase 'B'/'KB'/'MB'/… above), scaling by MEMORY_UNIT_SCALE directly
-// off the raw bit count with no BITS_PER_BYTE divisor (unlike getMemoryUnit) — a cache block's own
-// bit count already IS the value to denominate, e.g. a 1 KB (8000-bit) disk's cache block is 1000
-// bits = "1 Kb", not "125 B". See formatCacheSize below.
-const BIT_UNIT_SYMBOLS = ['b', ...MEMORY_UNIT_SYMBOLS.slice(1).map(symbol => symbol.replace(/B$/, 'b'))]
+// (vs. Disks' own uppercase 'B'/'KB'/'MB'/… above), scaling by SI_BYTE_UNIT_SCALE directly off the
+// raw bit count with no BITS_PER_BYTE divisor (unlike getSiByteUnit) — a cache block's own bit
+// count already IS the value to denominate, e.g. a 1 KB (8000-bit) disk's cache block is 1000
+// bits = "1 Kb", not "125 B". See formatCacheSize below. Cache stays SI, same as Disks.
+const BIT_UNIT_SYMBOLS = ['b', ...SI_BYTE_UNIT_SYMBOLS.slice(1).map(symbol => symbol.replace(/B$/, 'b'))]
 
 const getBitUnit = bits => {
   let divisor = 1
   let unitIndex = 0
-  while (bits / divisor >= MEMORY_UNIT_SCALE && unitIndex < BIT_UNIT_SYMBOLS.length - 1) {
-    divisor *= MEMORY_UNIT_SCALE
+  while (bits / divisor >= SI_BYTE_UNIT_SCALE && unitIndex < BIT_UNIT_SYMBOLS.length - 1) {
+    divisor *= SI_BYTE_UNIT_SCALE
     unitIndex += 1
   }
   return { symbol: BIT_UNIT_SYMBOLS[unitIndex], divisor }
 }
 
+// SI unit picker — used only by formatDiskSize below (Storage/Disk sizes stay SI-denominated; see
+// getMemoryUnit further down for Memory Capacity's own, now-binary, unit picker).
+const getSiByteUnit = bits => {
+  let divisor = BITS_PER_BYTE
+  let unitIndex = 0
+  while (bits / divisor >= SI_BYTE_UNIT_SCALE && unitIndex < SI_BYTE_UNIT_SYMBOLS.length - 1) {
+    divisor *= SI_BYTE_UNIT_SCALE
+    unitIndex += 1
+  }
+  return { symbol: SI_BYTE_UNIT_SYMBOLS[unitIndex], divisor }
+}
+
+// Memory Capacity's own binary (IEC-style) unit ladder — B/KiB/MiB/… scaling by
+// MEMORY_BINARY_UNIT_STEP (1024) each step, extending TIER_DEFINITIONS' own tier symbols the same
+// "i" way IEC extends SI (KB -> KiB, MB -> MiB, …). 1 KiB = 1024 Bytes = 1.024 KB — distinct from,
+// and deliberately NOT interchangeable with, SI_BYTE_UNIT_SYMBOLS/getSiByteUnit above, which Disk
+// sizes/Data Lake/caches keep using unchanged. See docs/DESIGN_HISTORY.md.
+const MEMORY_BINARY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.symbol.replace(/B$/, 'iB'))]
+
 // The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
 // larger of the two, when comparing a balance against its own capacity) so a balance never shows
-// in a coarser unit than its own capacity — e.g. never "512 B / 1 KB". `byteCreated` gates whether
+// in a coarser unit than its own capacity — e.g. never "512 B / 1 KiB". `byteCreated` gates whether
 // there's anything to denominate in yet at all: before the Byte generator exists, capacity is
 // always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte — capacity can only grow via Sacrifice,
 // itself only reachable once byteCreated), so a capacity-magnitude check alone can never catch
@@ -2377,11 +2407,11 @@ export const getMemoryUnit = (capacityBits, byteCreated) => {
   if (!byteCreated) return null // nothing to denominate in yet — render as raw bits
   let divisor = BITS_PER_BYTE
   let unitIndex = 0
-  while (capacityBits / divisor >= MEMORY_UNIT_SCALE && unitIndex < MEMORY_UNIT_SYMBOLS.length - 1) {
-    divisor *= MEMORY_UNIT_SCALE
+  while (capacityBits / divisor >= MEMORY_BINARY_UNIT_STEP && unitIndex < MEMORY_BINARY_UNIT_SYMBOLS.length - 1) {
+    divisor *= MEMORY_BINARY_UNIT_STEP
     unitIndex += 1
   }
-  return { symbol: MEMORY_UNIT_SYMBOLS[unitIndex], divisor }
+  return { symbol: MEMORY_BINARY_UNIT_SYMBOLS[unitIndex], divisor }
 }
 
 // Floors rather than rounds, same "never overstate" rationale as formatCurrency above — an
@@ -2394,11 +2424,16 @@ export const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
-// Any Memory-denominated cost (Invest, Disk build) reads in whatever B/KB/MB/…/QB unit best
-// fits that specific amount — the same scale Memory's own balance uses. `getMemoryUnit(bits,
-// true)` picks the unit that fits `bits` itself when called this way; the `true` is always safe
-// here since every caller of this helper only renders once `byteCreated`.
+// Any Memory-denominated amount (capacity, balance, Invest cost, Disk build cost paid out of
+// Memory, transfer-block cost, the Sacrifice confirm line) reads in whatever binary B/KiB/MiB/…
+// unit best fits that specific amount. `getMemoryUnit(bits, true)` picks the unit that fits `bits`
+// itself when called this way; the `true` is always safe here since every caller of this helper
+// only renders once `byteCreated`.
 export const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))
+
+// SI counterpart of formatBitsInNearestUnit above, used only by formatDiskSize below — Disk sizes
+// stay SI-denominated (KB/MB/…) even though Memory Capacity itself now reads in binary units.
+const formatBitsInNearestSiUnit = bits => formatMemoryAmount(bits, getSiByteUnit(bits))
 
 // The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
 // per-unit level cost, the exact same value getDiskSize/isDiskRedeemable already key
@@ -2564,12 +2599,13 @@ const getDiskBuildSeconds = (state, capacityBits) => {
   return getDiskBuildBaseSeconds(capacityBits) * ordinal
 }
 
-// Disk sizes are now real, Byte-accurate bit counts (see getDiskSize above) — the exact same scale
-// Memory's own balance/capacity already renders in (see formatBitsInNearestUnit) — so there's no
-// longer a separate "kilobit" formatting scale to maintain (see docs/DESIGN_HISTORY.md for the bug
-// that separate scale caused). A thin, semantically-named alias, kept so call sites read "format
-// this disk's size" rather than reaching for the more general Memory-balance helper directly.
-export const formatDiskSize = formatBitsInNearestUnit
+// Disk sizes are real, Byte-accurate bit counts (see getDiskSize above), rendered in the SI B/KB/
+// MB/… scale — Storage stays SI even though Memory Capacity's own balance/capacity display moved
+// to binary units (see formatBitsInNearestSiUnit/formatBitsInNearestUnit above, and
+// docs/DESIGN_HISTORY.md for the pre-binary-split history, including the "kilobit" formatting bug
+// this same SI scale originally fixed). A thin, semantically-named alias, kept so call sites read
+// "format this disk's size" rather than reaching for the SI helper directly.
+export const formatDiskSize = formatBitsInNearestSiUnit
 
 // Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
 // unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
@@ -3331,7 +3367,7 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // behind that). While capped, Memory simply stays full rather than
 // flushing for nothing — no progress is lost, it just waits for the player to spend a Core/Node
 // down. The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes
-// the entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE
+// the entire balance to 0, exactly like Sacrifice for 2x Capacity's own "drains the ENTIRE
 // balance" behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so
 // there's never a multi-Core batch in one event). This is deliberate, not incidental: since
 // capacity only ever grows via the player's own Sacrifice clicks, a higher capacity makes each
@@ -3416,7 +3452,7 @@ export const isAutoClaimCoreUnlockAvailable = state =>
 
 // Permanently unlocks automatic Memory → Core conversion (see tickComputeCoreConversion above) by
 // sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held Nodes — a one-time, irreversible trade,
-// same shape as Sacrifice for 10x Capacity and the 8 enableAutoMerge* actions further down this
+// same shape as Sacrifice for 2x Capacity and the 8 enableAutoMerge* actions further down this
 // file. A same-reference no-op below isAutoClaimCoreUnlockAvailable's own gate.
 export const enableAutoClaimCore = state => {
   if (!isAutoClaimCoreUnlockAvailable(state)) return state
