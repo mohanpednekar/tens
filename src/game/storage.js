@@ -210,6 +210,12 @@ export const listSaveSlots = () => {
  * (useIncrementalGame) must load after switching. Rejects locked / unknown ids.
  */
 export const setActiveSaveSlot = slotId => {
+  // Refuses to move the REAL active-slot pointer while Dev Mode is active — this bypasses
+  // getActiveSlotId's own dev-mode redirect (it targets an explicit numbered slot id, not "the
+  // active slot"), so without this guard, switching slots from Settings while parked in Dev Mode
+  // would silently repoint a real player's active save with no visible effect on screen (the dev
+  // save keeps rendering) until Dev Mode is later turned off. See CLAUDE.md's "Dev Mode" section.
+  if (isDevModeActive()) return { ok: false, reason: 'dev_mode_active' }
   const id = String(slotId)
   const meta = loadSavesMeta()
   const index = Number(id)
@@ -317,6 +323,13 @@ const removeSlotStorage = slotId => {
  * Returns { ok, clearedActive } so the hook can reload fresh state when the active slot was wiped.
  */
 export const clearSaveSlot = slotId => {
+  // Refuses to wipe a REAL numbered slot while Dev Mode is active — this targets an explicit
+  // slot id, not "the active slot" (getActiveSlotId's own dev-mode redirect never enters into
+  // it), so without this guard, clicking "Clear" on a real slot from Settings while parked in
+  // Dev Mode would permanently erase real player data even though the screen is showing the dev
+  // save the whole time. See CLAUDE.md's "Dev Mode" section / clearGameState below for the
+  // dev-mode-safe equivalent.
+  if (isDevModeActive()) return { ok: false, reason: 'dev_mode_active' }
   const id = String(slotId)
   const meta = loadSavesMeta()
   const index = Number(id)
@@ -332,6 +345,10 @@ export const clearSaveSlot = slotId => {
  * active slot id). Never revokes supporterUnlocked.
  */
 export const clearAllSaveProgress = () => {
+  // Same reasoning as clearSaveSlot above — this iterates every REAL numbered slot id directly,
+  // bypassing getActiveSlotId's dev-mode redirect entirely, so it must refuse to run at all while
+  // Dev Mode is active rather than silently destroying real save data behind the dev save's back.
+  if (isDevModeActive()) return { ok: false, reason: 'dev_mode_active' }
   for (let i = 0; i < SUPPORTER_SLOT_COUNT; i += 1) {
     removeSlotStorage(String(i))
   }
@@ -483,8 +500,19 @@ export const loadLastSaveTimestamp = () => {
   }
 }
 
-/** Clears only the active save slot's state + timestamp (not other slots or the unlock entitlement). */
+/**
+ * Clears only the active save slot's state + timestamp (not other slots or the unlock
+ * entitlement). Routes to clearDevGameState while Dev Mode is active rather than
+ * clearSaveSlot(getActiveSlotId()) — getActiveSlotId returns 'dev' in that case, and
+ * clearSaveSlot now explicitly refuses to run at all while Dev Mode is active (see above), so
+ * this branch is required for resetGame() to actually wipe the dev save it's showing, not
+ * silently no-op.
+ */
 export const clearGameState = () => {
+  if (isDevModeActive()) {
+    clearDevGameState()
+    return
+  }
   clearSaveSlot(getActiveSlotId())
 }
 
@@ -542,7 +570,13 @@ export const applyDevGameStateJson = (jsonText, currentState) => {
   if (!isPlainObject(parsed)) {
     return { ok: false, reason: 'invalid_json' }
   }
-  const toWrite = isPlainObject(currentState) ? mergeStateForDevWrite(currentState, parsed) : parsed
+  const merged = isPlainObject(currentState) ? mergeStateForDevWrite(currentState, parsed) : parsed
+  // Stamped the same way saveGameState stamps every real write — without this, the payload sits
+  // unstamped until the next ordinary tick's save effect re-saves it (harmless in practice, since
+  // adaptSaveForCurrentSchema treats an unstamped-but-current-shaped payload as pass-through
+  // rather than legacy, but stamping here keeps every dev-slot write consistent with every other
+  // save write rather than relying on that fallback).
+  const toWrite = { saveSchemaVersion: SAVE_SCHEMA_VERSION, ...merged }
   try {
     localStorage.setItem(DEV_STATE_KEY, JSON.stringify(toWrite))
   } catch {

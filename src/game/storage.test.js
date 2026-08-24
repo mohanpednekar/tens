@@ -747,4 +747,64 @@ describe('Dev Mode', () => {
     expect(result.state.resources.bytes).toBe(currentState.resources.bytes)
     expect(loadGameState().resources[MONEY_ID]).toBe(5e50)
   })
+
+  it('applyDevGameStateJson stamps the current save schema version on write', () => {
+    setDevModeActive(true)
+    const result = applyDevGameStateJson('{}', createInitialGameState())
+    expect(result.ok).toBe(true)
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
+  })
+
+  // Regression coverage for a real bug an adversarial review caught: these real-slot helpers
+  // iterate/target explicit numbered slot ids directly rather than going through
+  // getActiveSlotId()'s own dev-mode redirect, so without an explicit guard they could silently
+  // destroy or repoint a real player's save while Dev Mode is active and the screen is showing
+  // the (unrelated) dev save the whole time.
+  describe('refuses to touch real player slots while Dev Mode is active', () => {
+    it('clearAllSaveProgress', () => {
+      const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+      saveGameState(real)
+      setDevModeActive(true)
+
+      const result = clearAllSaveProgress()
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+
+      setDevModeActive(false)
+      expect(loadGameState().resources[MONEY_ID]).toBe(111)
+    })
+
+    it('clearSaveSlot', () => {
+      const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+      saveGameState(real)
+      setDevModeActive(true)
+
+      const result = clearSaveSlot('0')
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+
+      setDevModeActive(false)
+      expect(loadGameState().resources[MONEY_ID]).toBe(111)
+    })
+
+    it('setActiveSaveSlot', () => {
+      setDevModeActive(true)
+      const result = setActiveSaveSlot('0')
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+      expect(loadSavesMeta().activeSlotId).toBe('0')
+    })
+  })
+
+  it('clearGameState routes to the dev slot (not a real one) while Dev Mode is active', () => {
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } })
+    setDevModeActive(true)
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 999 } })
+
+    clearGameState()
+    expect(loadGameState()).toBeNull()
+
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+  })
 })

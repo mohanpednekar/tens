@@ -288,13 +288,17 @@ export const useIncrementalGame = () => {
   }, [refreshSavesUi])
 
   const eraseAllSaveProgress = useCallback(() => {
-    clearAllSaveProgress()
+    // clearAllSaveProgress refuses to run (returns ok: false) while Dev Mode is active — it
+    // iterates real numbered slot ids directly, bypassing getActiveSlotId's dev-mode redirect, so
+    // this must bail out here too rather than resetting the (dev) state/UI as if it had succeeded.
+    const result = clearAllSaveProgress()
+    if (!result.ok) return result
     setState(createInitialGameState())
     setOfflineProgress(null)
     setIncompatibleSaveReason(null)
     setOpsSamples([])
     refreshSavesUi()
-    return { ok: true }
+    return result
   }, [refreshSavesUi])
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])

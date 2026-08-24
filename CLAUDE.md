@@ -756,6 +756,29 @@ in-depth guard, even though the UI only ever renders them while active):
 `clearDevGameState` (bypasses `clearSaveSlot`'s numbered-slot validation — `'dev'` is never one of
 the numbered player slots it checks against).
 
+**Real-slot isolation is enforced at the storage layer, not just by hiding UI.** A caller that
+targets an explicit numbered slot id or iterates every real slot directly — `setActiveSaveSlot`,
+`clearSaveSlot`, `clearAllSaveProgress` (all in `storage.js`, reachable from `SettingsPage`'s save-
+slot management) — bypasses `getActiveSlotId`'s own dev-mode redirect entirely (that redirect only
+ever helps callers that go through `getActiveSlotId()` itself, like `loadGameState`/`saveGameState`/
+`clearGameState`). All three now explicitly refuse to run (`{ ok: false, reason: 'dev_mode_active' }`)
+whenever `isDevModeActive()` is true, so Settings' "Play"/"Clear"/"Erase all save progress" can never
+destroy or repoint a real player's save while Dev Mode is showing the (unrelated) dev save on
+screen — this was a real bug caught by adversarial review before merge (see this feature's own PR
+history), not a hypothetical. `useIncrementalGame`'s `eraseAllSaveProgress`/`clearSlot`/
+`switchSaveSlot` all check that `ok` flag before touching React state, so the guard's effect is
+visible end-to-end, not just at the storage layer. `SettingsPage` additionally disables the
+corresponding buttons (`title="Disable Dev Mode first"`) whenever `game.devModeActive` is true, so
+the refusal isn't a silent no-op — that conditional is written as
+`import.meta.env.DEV && Boolean(game.devModeActive)` specifically so Terser/Rollup can fold the
+whole branch (and its "Dev Mode" copy) out of a production build, even though `devModeActive` can
+in practice only ever be true in a dev build already — this closes the same "absent from
+`yarn build`" gap DevModePage itself observes, since `SettingsPage` isn't itself dev-gated the way
+`DevModePage` is. `clearGameState` (used by `resetGame`) separately routes to `clearDevGameState`
+instead of the now-guarded `clearSaveSlot(getActiveSlotId())` while Dev Mode is active, so "Reset
+active save" still correctly wipes the dev save rather than silently no-op-ing against a call that
+would now be refused.
+
 ## Economy model
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
@@ -979,7 +1002,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1516 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1522 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -4347,6 +4347,22 @@ describe('Dev Mode', () => {
     expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
   })
+
+  it('Settings disables real-slot actions (Play/Clear/Erase all) while Dev Mode is active', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({ resources: { base: 4242 } })
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await openSettings(user)
+    // Erase all is the only real-slot action reachable on a free (single-slot) account without a
+    // Supporter unlock — Play/Clear only render per-slot once a slot is unlocked. The underlying
+    // guard itself (storage.js refusing the write regardless of UI state) is covered directly in
+    // storage.test.js's "refuses to touch real player slots while Dev Mode is active" block; this
+    // just confirms the disabled affordance so the no-op isn't silent to whoever's using it.
+    expect(screen.getByRole('button', { name: /^erase all save progress$/i })).toBeDisabled()
+  })
 })
 
 test('theme preference in Settings switches mode and persists across remount', async () => {
