@@ -587,6 +587,12 @@ describe('supporter unlock + save slots', () => {
     expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
   })
 
+  it('refuses to rename a slot to an empty/whitespace-only name', () => {
+    const originalName = listSaveSlots().find(s => s.id === '0').name
+    expect(renameSaveSlot('0', '   ')).toEqual({ ok: false, reason: 'empty' })
+    expect(listSaveSlots().find(s => s.id === '0').name).toBe(originalName)
+  })
+
   it('clearSaveSlot wipes one slot and leaves others + unlock intact', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     saveGameState({
