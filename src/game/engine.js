@@ -2837,7 +2837,8 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     .sort((a, b) => a - b)
 
   // Drop flushes for sizes that can no longer complete (mid-build, or no empty container left).
-  for (const size of Object.keys(diskReadCacheFlush).map(Number)) {
+  for (const sizeStr in diskReadCacheFlush) {
+    const size = Number(sizeStr)
     if (size === buildingSize || (builtTotal[size] ?? 0) <= (disks[size] ?? 0)) {
       const { [size]: _removed, ...rest } = diskReadCacheFlush
       diskReadCacheFlush = rest
@@ -2892,7 +2893,12 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
 
   // Pass 3 — count down in-flight flushes; pause while tier match claims this size. Completing
   // empties the full read cache into one disk (same net effect as the former instant pour).
-  for (const size of Object.keys(diskReadCacheFlush).map(Number).sort((a, b) => a - b)) {
+  const flushSizes = []
+  for (const sizeStr in diskReadCacheFlush) {
+    flushSizes.push(Number(sizeStr))
+  }
+  flushSizes.sort((a, b) => a - b)
+  for (const size of flushSizes) {
     const flush = diskReadCacheFlush[size]
     if (!flush) continue
     if (isDiskRedeemable({ ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }, size)) {
