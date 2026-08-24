@@ -31,13 +31,11 @@ import {
   canActivateComputeBoost,
   canReclaimComputeBoost,
   canStackComputeBoost,
-  claimComputeCore,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
   createInitialGameState,
   eraGame,
-  enableAutoClaimCore,
   enableAutoMergeClustersIntoNetwork,
   enableAutoMergeCloudsIntoDatacenter,
   enableAutoMergeCoresIntoNode,
@@ -128,7 +126,6 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
-  isAutoClaimCoreUnlockAvailable,
   isAutoMergeClustersIntoNetworkUnlockAvailable,
   isAutoMergeCloudsIntoDatacenterUnlockAvailable,
   isAutoMergeCoresIntoNodeUnlockAvailable,
@@ -143,7 +140,6 @@ import {
   isComputeBoostTurnAvailable,
   isComputeCloudsMergeStartAvailable,
   isComputeClustersMergeStartAvailable,
-  isComputeCoreClaimAvailable,
   isComputeCoreConversionUnlocked,
   isComputeCoresMergeStartAvailable,
   isComputeDatacentersMergeStartAvailable,
@@ -210,7 +206,6 @@ import {
   tickAutoMergeNodesIntoCluster,
   tickAutoMergeSupercomputersIntoMegacomputer,
   tickComputeBoost,
-  tickComputeCoreConversion,
   tickDiskAutoFill,
   tickDiskAutoRedeem,
   tickDiskAutoReleaseCache,
@@ -824,7 +819,6 @@ describe('eraseAllComputeTokens', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 4,
       computeNodes: 2,
-      autoClaimCoreEnabled: true,
       autoMergeCoresIntoNode: true,
       computeCoresEverEarned: 20,
       computeBoostType: 'burst',
@@ -839,7 +833,6 @@ describe('eraseAllComputeTokens', () => {
     expect(after.intro.computeBoostType).toBe(null)
     expect(after.intro.computeBoostStacks).toBe(0)
     expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0)
-    expect(after.intro.autoClaimCoreEnabled).toBe(true)
     expect(after.intro.autoMergeCoresIntoNode).toBe(true)
     expect(after.intro.computeCoresEverEarned).toBe(20)
   })
@@ -872,7 +865,6 @@ describe('resetByteFoundry', () => {
         computeCores: 7,
         computeCoresEverEarned: 20,
         computeMergePageUnlocked: true,
-        autoClaimCoreEnabled: true,
       },
     }
 
@@ -2700,293 +2692,6 @@ describe('isComputeCoreConversionUnlocked', () => {
   })
 })
 
-describe('tickComputeCoreConversion', () => {
-  it('is a same-reference no-op below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, even with Memory full', () => {
-    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10
-    const state = withIntro(createInitialGameState(), { capacity, bits: capacity })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('is a same-reference no-op once unlocked but Memory is not yet full', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('flushes the ENTIRE current capacity for exactly 1 Compute Core once unlocked and full — the cost is capacity itself, not a fixed amount', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-    // Capacity itself is untouched by this conversion — only Sacrifice grows it.
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)
-  })
-
-  it('costs more at a higher capacity — the same flush always grants exactly 1 Core regardless of how large capacity has grown', () => {
-    const bigCapacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 100
-    const state = withIntro(createInitialGameState(), { capacity: bigCapacity, autoClaimCoreEnabled: true, bits: bigCapacity })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('accumulates onto any already-permanent Compute Core balance rather than overwriting it', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 4,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(5)
-  })
-
-  it('is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP and the merge-page latch is already set, even with Memory full and unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: true,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  // Regression test for a real bug: computeCores at COMPUTE_ENTITY_CAP with the latch still
-  // unset used to be a same-reference no-op forever (the cap guard short-circuited before the
-  // latch check ever ran) — see the "flips true even when Cores are already at
-  // COMPUTE_ENTITY_CAP" test in the computeMergePageUnlocked latch describe block below.
-
-  it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
-    const state = withMoney(
-      withIntro(createInitialGameState(), {
-        capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-        autoClaimCoreEnabled: true,
-        bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      }),
-      PRESTIGE_THRESHOLD
-    )
-    expect(isProductionFrozen(state)).toBe(true)
-    expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
-  })
-
-  it('is unrelated to Storage — fires regardless of whether any Disk has ever been built', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      disks: {},
-      disksBuiltTotal: {},
-    })
-    expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
-  })
-})
-
-describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnlocked latch', () => {
-  it('increments computeCoresEverEarned on every successful conversion, independently of the live computeCores balance', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 3,
-      computeCoresEverEarned: 5,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(4)
-    expect(after.intro.computeCoresEverEarned).toBe(6)
-  })
-
-  it('stays false while the lifetime-earned total is still below COMPUTE_CORES_PER_NODE', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 2,
-      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 2,
-    })
-    expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(false)
-  })
-
-  it('flips true the instant the lifetime-earned total reaches COMPUTE_CORES_PER_NODE, independently of whether the player has ever merged a Core into a Node', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 1,
-      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 1,
-      byteCreated: true,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeMergePageUnlocked).toBe(true)
-    // Core -> Node is no longer automatic (see issue #321) — the freshly-minted 8th Core stays
-    // held until the player (or an unlocked auto-merge) explicitly merges it.
-    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
-    expect(after.intro.computeNodes).toBe(0)
-  })
-
-  // Regression test for the scenario a human/bot reviewer flagged: computeCores alone can't
-  // represent "ever earned" since activateComputeBoost spends it. A player who never holds 8 at
-  // once — earning a few, spending a Boost, earning a few more — must still unlock the merge
-  // chain once their lifetime total crosses 8, exactly like a player who never spends at all.
-  it('flips true from repeated small earn/spend cycles that never reach 8 Cores live at once', () => {
-    let state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: 0,
-      computeCores: 0,
-      computeCoresEverEarned: 0,
-    })
-    // Earn 3, "spend" 3 (simulating activateComputeBoost, which only touches computeCores).
-    for (let i = 0; i < 3; i++) {
-      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-      state = tickComputeCoreConversion(state)
-    }
-    expect(state.intro.computeCoresEverEarned).toBe(3)
-    state = withIntro(state, { computeCores: 0 }) // spent via a Boost, never held 8 at once
-    expect(state.intro.computeMergePageUnlocked).toBe(false)
-    // Earn 5 more — lifetime total now 8, even though the live balance never exceeded 3.
-    for (let i = 0; i < 5; i++) {
-      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-      state = tickComputeCoreConversion(state)
-    }
-    expect(state.intro.computeCoresEverEarned).toBe(8)
-    expect(state.intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('never re-clears once set, even once Cores/Nodes are later spent back down to 0', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 0,
-      computeMergePageUnlocked: true,
-    })
-    expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('flips true even when Cores are already at COMPUTE_ENTITY_CAP with no room to convert into (a save with Cores AND Nodes both maxed, unable to self-heal via a normal conversion)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeCoresEverEarned: COMPUTE_ENTITY_CAP,
-      computeNodes: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: false,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeMergePageUnlocked).toBe(true)
-    // Cores never actually convert (already at cap) — only the latch changes.
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
-    expect(after.intro.bits).toBe(state.intro.bits)
-  })
-
-  it('stays a same-reference no-op when the lifetime-earned total is below COMPUTE_CORES_PER_NODE and Memory is not full', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: 0,
-      computeCores: 2,
-      computeCoresEverEarned: 2,
-      computeMergePageUnlocked: false,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-})
-
-describe('claimComputeCore / isComputeCoreClaimAvailable / enableAutoClaimCore', () => {
-  it('claimComputeCore is a same-reference no-op below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, even with Memory full', () => {
-    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10
-    const state = withIntro(createInitialGameState(), { capacity, bits: capacity })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('claimComputeCore is a same-reference no-op once unlocked but Memory is not yet full — manual claim needs a full balance like the automatic conversion does', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1,
-    })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('claimComputeCore mints exactly 1 Core from a full Memory balance even while autoClaimCoreEnabled is false — the whole point of a manual claim', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: false,
-    })
-    expect(isComputeCoreClaimAvailable(state)).toBe(true)
-    const after = claimComputeCore(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-    expect(after.intro.computeCoresEverEarned).toBe(1)
-  })
-
-  it('claimComputeCore is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP (latch already set)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: true,
-    })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('tickComputeCoreConversion (the automatic path) stays a same-reference no-op while autoClaimCoreEnabled is false, even with Memory full and unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: false,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('isAutoClaimCoreUnlockAvailable requires COMPUTE_ENTITY_CAP (10) Nodes held and auto-claim not already enabled', () => {
-    const notEnough = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP - 1 })
-    expect(isAutoClaimCoreUnlockAvailable(notEnough)).toBe(false)
-    const enough = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    expect(isAutoClaimCoreUnlockAvailable(enough)).toBe(true)
-    const alreadyEnabled = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP, autoClaimCoreEnabled: true })
-    expect(isAutoClaimCoreUnlockAvailable(alreadyEnabled)).toBe(false)
-  })
-
-  it('enableAutoClaimCore is a same-reference no-op below isAutoClaimCoreUnlockAvailable\'s own gate', () => {
-    const state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP - 1 })
-    expect(enableAutoClaimCore(state)).toBe(state)
-  })
-
-  it('enableAutoClaimCore sacrifices ALL 10 held Nodes and permanently flips autoClaimCoreEnabled', () => {
-    const state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    const after = enableAutoClaimCore(state)
-    expect(after.intro.computeNodes).toBe(0)
-    expect(after.intro.autoClaimCoreEnabled).toBe(true)
-  })
-
-  it('once enableAutoClaimCore has fired, tickComputeCoreConversion resumes automatic minting exactly like before this feature existed', () => {
-    let state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    state = enableAutoClaimCore(state)
-    state = withIntro(state, { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('autoClaimCoreEnabled is permanent — carried over unchanged by a real Prestige', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { autoClaimCoreEnabled: true }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro.autoClaimCoreEnabled).toBe(true)
-  })
-})
-
 describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)', () => {
   it('canReclaimComputeBoost/reclaimComputeBoost are false/a same-reference no-op while no boost is active', () => {
     const state = withIntro(createInitialGameState(), { computeBoostType: null })
@@ -3465,22 +3170,6 @@ describe.each([
 })
 
 describe('tickGame Compute Core/Node integration', () => {
-  it('converts Memory into Compute Cores as part of a regular tick, claiming Memory before tickIntroAutoInvest can convert it to Kilobytes — Core -> Node itself stays held, not automatic, unless autoMergeCoresIntoNode is unlocked (issue #321)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 1,
-      byteCreated: true,
-    })
-    const after = tickGame(1)(state)
-    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
-    expect(after.intro.computeNodes).toBe(0)
-    // Memory was claimed entirely by Compute Core conversion, leaving nothing for
-    // tickIntroAutoInvest's own bit-to-Kilobyte conversion to spend this same tick.
-    expect(after.intro.bits).toBe(0)
-  })
-
   it('carries computeCores/computeCoresEverEarned/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
@@ -8340,7 +8029,6 @@ describe('eraGame carry/reset matrix (#407)', () => {
     intro: {
       byteCreated: true,
       mainGameUnlocked: true,
-      autoClaimCoreEnabled: true,
       autoMergeCoresIntoNode: true,
     },
     prestige: {
@@ -8355,7 +8043,6 @@ describe('eraGame carry/reset matrix (#407)', () => {
     ['autoPrestigeEnabled pause flag', s => s.autoPrestigeEnabled],
     ['tierTickspeedAutobuyer unlock', s => s.tierTickspeedAutobuyer[tier0]],
     ['computeAutoBoostUnlocked', s => s.computeAutoBoostUnlocked],
-    ['autoClaimCoreEnabled', s => s.intro.autoClaimCoreEnabled],
     ['autoMergeCoresIntoNode', s => s.intro.autoMergeCoresIntoNode],
     ['hyperscalerCount', s => s.hyperscalerCount],
     ['prestige.unboundedUnlocked latch', s => s.prestige.unboundedUnlocked],
@@ -8449,14 +8136,46 @@ describe('Data Lakes', () => {
     expect(getDataLakeSubSize(mb1)).toBe(1)
   })
 
-  it('getMaxBoosterPurchasesForCapacity caps at 44 for a full 999-unit lake', () => {
+  it('getMaxBoosterPurchasesForCapacity funds 44 CONSECUTIVE purchases from one full 999-unit lake in a single burst (not the tier\'s lifetime cap — see below)', () => {
     expect(getBoosterPurchaseTotalCost(44)).toBe(990)
     expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
     expect(getMaxBoosterPurchasesForCapacity(DATA_LAKE_CAPACITY)).toBe(44)
   })
 
-  it('depositDiskToDataLake consumes one full disk and credits the matching lake slot', () => {
-    const state = withIntro(createInitialGameState(), { disks: { [kb1]: 2 } })
+  it('a tier\'s true lifetime cap is 999 Boosters, not 44 — redepositing between purchases lets cost climb past the single-burst ceiling', () => {
+    // The 999th purchase costs exactly 999 — a fully-deposited lake can just barely fund it.
+    expect(getBoosterPurchaseCost(1)({
+      intro: { dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 998 } } },
+    })).toBe(999)
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 998 },
+      },
+    })
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(900)
+    // Not enough deposited yet for the 999-cost purchase — redeposit up to the full 999 first.
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(true)
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.dataLakes[1].purchased).toBe(999)
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
+
+    // The 1,000th would cost 1,000 — impossible no matter how much gets redeposited, since a lake
+    // can never hold more than DATA_LAKE_CAPACITY (999) at once.
+    expect(getBoosterPurchaseCost(1)(state)).toBe(1000)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
+  })
+
+  it('depositDiskToDataLake consumes one full disk and credits the matching lake slot, once the array is fully built', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [kb1]: 2 }, disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP } })
     const after = depositDiskToDataLake(kb1)(state)
     expect(after.intro.disks[kb1]).toBe(1)
     expect(after.intro.dataLakes[1].deposits[1]).toBe(1)
@@ -8466,11 +8185,11 @@ describe('Data Lakes', () => {
   it('depositDiskToDataLake is a no-op at DATA_LAKE_SLOT_MAX for a sub-size', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
         1: {
           deposits: { 1: DATA_LAKE_SLOT_MAX, 10: 0, 100: 0 },
-          used: 0,
           purchased: 0,
         },
       },
@@ -8482,24 +8201,62 @@ describe('Data Lakes', () => {
     expect(state.intro.disks[kb1]).toBe(10)
   })
 
-  it('purchaseBoosterFromDataLake costs n units for the nth purchase and grants the matching booster', () => {
+  it('depositDiskToDataLake is a no-op — and canDepositDiskToDataLake false — while the array has a full disk but is not yet COMPLETELY built (disksBuiltTotal below DISK_ARRAY_LADDER_CAP)', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(false)
+    expect(depositDiskToDataLake(kb1)(state)).toBe(state)
+  })
+
+  it('staged Data Lake capacity: a lake\'s effective cap is 9 once only the ×1 array is complete, 99 once the ×10 array is also complete, 999 once the ×100 array is also complete', () => {
+    // Only the ×1 (kb1) array complete — depositing kb10/kb100 disks stays blocked, capping this
+    // lake's deposited total at DATA_LAKE_SLOT_MAX (9) regardless of how many kb10/kb100 disks exist.
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(true)
+    expect(canDepositDiskToDataLake(state, kb10)).toBe(false)
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb1)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(9)
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(false) // sub-slot at DATA_LAKE_SLOT_MAX
+
+    // The ×10 array also completes — its sub-slot opens up, raising the effective cap to 99.
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb10]: DISK_ARRAY_LADDER_CAP } })
+    expect(canDepositDiskToDataLake(state, kb10)).toBe(true)
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb10)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(99)
+
+    // The ×100 array also completes — the lake reaches its full 999 cap.
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb100]: DISK_ARRAY_LADDER_CAP } })
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(true)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb100)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(999)
+  })
+
+  it('purchaseBoosterFromDataLake costs n units for the nth purchase, spends real deposited capacity (not a separate ledger), and grants the matching booster', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 3 },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 3, 10: 0, 100: 0 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(1)
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(1)
-    expect(state.intro.dataLakes[1].used).toBe(1)
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 2, 10: 0, 100: 0 })
     expect(state.intro.dataLakes[1].purchased).toBe(1)
     expect(getDataLakeAvailableUnits(1)(state)).toBe(2)
 
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(2)
-    expect(state.intro.dataLakes[1].used).toBe(3)
+    // 2 - 2 (2nd purchase's cost) = 0 deposited left.
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
     expect(getBoosterPurchaseCost(1)(state)).toBe(3)
   })
 
@@ -8507,7 +8264,7 @@ describe('Data Lakes', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 1, 10: 0, 100: 0 }, used: 0, purchased: 1 },
+        1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 1 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(2)
@@ -8520,7 +8277,7 @@ describe('Data Lakes', () => {
       computeCores: COMPUTE_ENTITY_CAP,
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     state = purchaseBoosterFromDataLake(1)(state)
@@ -8531,7 +8288,7 @@ describe('Data Lakes', () => {
     let state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     for (let i = 0; i < COMPUTE_CORES_PER_NODE; i += 1) {

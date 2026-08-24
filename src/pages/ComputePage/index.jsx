@@ -147,14 +147,6 @@ const IconButton = styled(CompactButton)`
   padding: 0.3em;
 `
 
-const AutoBadge = styled.span`
-  flex: 0 0 auto;
-  width: 1.9em;
-  text-align: center;
-  font-size: 0.85em;
-  color: ${props => props.theme.color.good};
-`
-
 const ReserveSlotsRow = styled.button`
   display: flex;
   flex: 1 1 auto;
@@ -279,10 +271,9 @@ const COMPUTE_BOOST_DISPLAY = {
 // once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… in engine.js) — transitions from an instant manual click to
 // engine.js's timed reserve-pool system (see issue #321). Core → Node is included as an ordinary
-// boundary here, same as every other one — this is unrelated to the separate Memory → Core
-// "Claim Core"/auto-claim mechanic, whose manual action lives on ByteFoundryPage and whose
-// auto-claim unlock control renders as a small badge on Cores' own header row here (autoClaim*
-// fields below), since it doesn't fit the row-2 merge-boundary shape every other control uses.
+// boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
+// the matching Data Lake (purchaseBoosterFromDataLake), not minted from Memory — the earlier
+// "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 // Megacomputer (the last tier) has no merge row at all — nothing to merge into or automate past it
 // (see issue #280's "Out of scope").
 const ENTITY_ROWS = [
@@ -301,11 +292,6 @@ const ENTITY_ROWS = [
     autoAriaLabel: 'enable auto-merge for Cores into Nodes',
     startAction: 'startComputeCoresMerge',
     timerField: 'computeCoresMergeRemainingSeconds',
-    // The separate, unrelated Memory -> Core auto-claim control (see comment above).
-    autoClaimFlagField: 'autoClaimCoreEnabled',
-    autoClaimCostLabel: 'Nodes',
-    autoClaimCostField: 'computeNodes',
-    enableAutoClaimAction: 'enableAutoClaimCore',
   },
   {
     key: 'nodesIntoCluster',
@@ -477,7 +463,7 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
 // (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
 // hidden behind its own later, one-time latch until the player has actually earned enough Cores to
-// use it (see engine.js's tickComputeCoreConversion for where that latch flips).
+// use it (see engine.js's latchComputeMergePageIfNeeded for where that latch flips).
 // ENTITY_ROWS' own labels are always plural ("Cores", "Nodes", …) — strip the trailing "s" for a
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
@@ -700,9 +686,6 @@ const ComputePage = ({ game }) => {
               const merging = remainingSeconds > 0
               const startAvailable = autoEnabled && !merging && count >= COMPUTE_MERGE_RATIO && (intro[row.mergeOutputField] ?? 0) < COMPUTE_ENTITY_CAP
 
-              const autoClaimEnabled = row.autoClaimFlagField ? Boolean(intro[row.autoClaimFlagField]) : false
-              const autoClaimCostHeld = row.autoClaimCostField ? (intro[row.autoClaimCostField] ?? 0) : 0
-              const canEnableAutoClaim = Boolean(row.enableAutoClaimAction) && !autoClaimEnabled && autoClaimCostHeld >= COMPUTE_ENTITY_CAP
               const canBuyFromLake = canPurchaseBoosterFromDataLake(state, tierIndex)
               const buyCost = getBoosterPurchaseCost(tierIndex)(state)
               const lakeLabel = getDataLakeTierLabel(tierIndex)
@@ -727,22 +710,6 @@ const ComputePage = ({ game }) => {
                         ))}
                       </SlotsRow>
                     </TierSelectButton>
-                    {row.enableAutoClaimAction && (
-                      autoClaimEnabled ? (
-                        <AutoBadge title="Auto-claim enabled: Memory automatically converts into a Core whenever full">🤖</AutoBadge>
-                      ) : (
-                        <IconButton
-                          aria-label="enable auto-claim for Cores"
-                          disabled={!canEnableAutoClaim}
-                          onClick={() => actions[row.enableAutoClaimAction]()}
-                          title={`Auto-claim: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoClaimCostLabel} (have ${formatAmount(autoClaimCostHeld)}) to permanently automate Memory -> Core conversion whenever full`}
-                          type="button"
-                          variant="info"
-                        >
-                          <ButtonContent>🤖</ButtonContent>
-                        </IconButton>
-                      )
-                    )}
                   </TierHeaderRow>
 
                   <TierMergeRow>
