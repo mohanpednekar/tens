@@ -2699,6 +2699,16 @@ const decrementFullDiskCount = (disks, size) => {
   return { ...disks, [size]: full - 1 }
 }
 
+let lastDiskWriteCacheForKeys = null
+let cachedDiskWriteCacheKeys = []
+
+const getSortedDiskWriteCacheKeys = diskWriteCache => {
+  if (diskWriteCache === lastDiskWriteCacheForKeys) return cachedDiskWriteCacheKeys
+  lastDiskWriteCacheForKeys = diskWriteCache
+  cachedDiskWriteCacheKeys = Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)
+  return cachedDiskWriteCacheKeys
+}
+
 // Upward ladder merges via per-target write cache — collect 10 segments from the source size
 // (timed; pauses while that source size has an active tier claim), then flush into one target
 // disk (one target build duration; never pauses). Empty at rest. Smallest source sizes first.
@@ -2730,7 +2740,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     changed = true
   }
 
-  for (const targetSize of Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)) {
+  for (const targetSize of getSortedDiskWriteCacheKeys(diskWriteCache)) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
 
