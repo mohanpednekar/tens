@@ -2464,3 +2464,24 @@ at production rate — stored in `intro.diskReadCacheFlush[size]` for the in-fli
 Flush pauses while `isDiskRedeemable` is true at that size (tier funding wins), and cancels if the
 array goes mid-build or loses its empty container. UI drains the read-cache row during the pour.
 Write-cache collect/flush timing is unchanged.
+
+### Compute Boost base presets: fixing a total-extra-production ordering bug
+
+Requested directly, alongside a detailed Booster/Data Lake spec (most of which — `DATA_LAKE_CAPACITY`
+999, the 9×1/9×10/9×100 sub-slot structure, the triangular `n(n+1)/2` cumulative Booster cost with
+no hardcoded cap, and reusing the existing 8:1 compute-ladder merge for Boosters — the codebase
+already matched exactly by the time this was checked, having evolved through #361/#383/#434/#445-446
+independently). One real bug remained: the base (tier 1/Core) `COMPUTE_BOOST_PRESETS` values —
+`burst` ×32/1 minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour — violated the intended design
+invariant that a preset's own total extra production, `(multiplier - 1) * durationSeconds`, should
+strictly increase Burst → Standard → Sustain (a longer commitment should always net more total
+output, or there's no reason to ever pick it over Burst). The old values gave Standard 70
+multiplier-minutes of extra output but Sustain only 60 — Sustain was strictly worse than Standard
+despite committing 6x longer. Replaced with `burst` ×20/10 minutes, `standard` ×5/1 hour, `sustain`
+×2/10 hours — 190/240/600 multiplier-minutes respectively, strictly increasing as intended (see
+`layers.test.js`'s dedicated ordering test). `COMPUTE_BOOST_TIER_POWER_STEP`/
+`COMPUTE_BOOST_TIER_DURATION_STEP` (the per-Booster-tier scaling above these base values) were left
+untouched — the request's own tier-breadth idea (a higher Booster tier applying the effect to more
+resource tiers at once, rather than scaling multiplier/duration further) is a separate, larger
+question still being scoped given `COMPUTE_BOOST_TIER_DURATION_STEP`'s duration-doubling was itself
+a deliberate restoration after #363 had flattened it (see that entry above).

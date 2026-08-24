@@ -305,10 +305,14 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
 // (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
 // decaying back to inactive (see tickComputeBoost).
+// Total extra production (multiplier - 1) × durationSeconds increases Burst → Standard → Sustain
+// by design (190 / 240 / 600 at tier 1) — the earlier 32×/60s, 8×/600s, 2×/3600s values violated
+// this (70 for Standard vs. only 60 for Sustain, i.e. Sustain gave LESS extra output than
+// Standard despite its longer commitment); see docs/DESIGN_HISTORY.md.
 export const COMPUTE_BOOST_PRESETS = {
-  burst: { multiplier: 32, durationSeconds: 60 },
-  standard: { multiplier: 8, durationSeconds: 600 },
-  sustain: { multiplier: 2, durationSeconds: 3600 },
+  burst: { multiplier: 20, durationSeconds: 600 },
+  standard: { multiplier: 5, durationSeconds: 3600 },
+  sustain: { multiplier: 2, durationSeconds: 36000 },
 }
 // Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
 // `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is

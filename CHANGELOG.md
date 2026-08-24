@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   deposit-to-lake actions; a Data Lake summary appears once any lake has content.
 
 ### Fixed
+- **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
+  minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour) gave Sustain less total extra production
+  than Standard despite its much longer commitment. Replaced with `burst` ×20/10 minutes,
+  `standard` ×5/1 hour, `sustain` ×2/10 hours, whose total extra production now strictly increases
+  Burst → Standard → Sustain as intended.
 - **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
   Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).

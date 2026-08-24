@@ -629,8 +629,11 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    **Tier-funded** (issue #326): activating a boost spends 1 token of whichever compute-ladder tier
    the player selects on `ComputePage` — Core through Megacomputer (`COMPUTE_BOOST_TIER_FIELDS` in
    `layers.js`), the only place a Megacomputer has any use at all — rather than always a Compute
-   Core. `COMPUTE_BOOST_PRESETS` in `layers.js` (`burst` ×32/1 minute, `standard` ×8/10 minutes,
-   `sustain` ×2/1 hour) are each preset's BASE values, at tier 1 (Core); a higher tier scales the
+   Core. `COMPUTE_BOOST_PRESETS` in `layers.js` (`burst` ×20/10 minutes, `standard` ×5/1 hour,
+   `sustain` ×2/10 hours — chosen so each preset's own total extra production, `(multiplier - 1) *
+   durationSeconds`, strictly increases Burst → Standard → Sustain: 190/240/600 minutes-worth; see
+   docs/DESIGN_HISTORY.md for the earlier ×32/1 min, ×8/10 min, ×2/1 hour values this replaced,
+   which broke that ordering) are each preset's BASE values, at tier 1 (Core); a higher tier scales the
    multiplier EXPONENTIALLY (`getComputeBoostTierMultiplier(boostType, tierIndex)` =
    `preset.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** (tierIndex - 1)`, `COMPUTE_BOOST_TIER_POWER_STEP`
    = 4) and multiplies duration by `COMPUTE_BOOST_TIER_DURATION_STEP` (2) per tier
