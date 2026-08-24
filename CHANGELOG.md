@@ -10,9 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
   units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Boosters are bought on
-  the Boosters screen for escalating lake cost (nth purchase costs n units); capacity naturally
-  caps around 44 boosters per tier without a separate inventory limit. Foundry disk rows expose
-  deposit-to-lake actions; a Data Lake summary appears once any lake has content.
+  the Boosters screen for escalating lake cost (nth purchase costs n units), spent genuinely out
+  of the lake's own current deposits rather than a separate ledger — spent capacity only returns
+  once more Disks get deposited to replace it. A full, undepleted lake funds 44 purchases in one
+  uninterrupted burst before needing fresh deposits, but redepositing between purchases lets a
+  patient player reach the true lifetime cap of exactly 999 Boosters per tier (the 1,000th would
+  cost 1,000 units, impossible regardless of how much gets redeposited) — no separate inventory
+  limit beyond that. Foundry disk rows expose deposit-to-lake actions; a Data Lake summary appears
+  once any lake has content.
 
 ### Fixed
 - **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1

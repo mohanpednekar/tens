@@ -783,16 +783,22 @@ a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTota
 `diskAutoRedeemedSizes` (which sizes have already auto-redeemed this cycle) resets each cycle.
 
 **Data Lakes** (`intro.dataLakes` in `createInitialGameState`, `DATA_LAKE_*` constants in `layers.js`,
-`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/`getBoosterPurchaseCost`
-in `engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
+`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/
+`getDataLakeAvailableUnits`/`getBoosterPurchaseCost`/`getMaxBoosterPurchasesForCapacity` in
+`engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
 `DATA_LAKE_CAPACITY` (999) units deposited from Disks (`9×1 + 9×10 + 9×100` of that tier's
 denomination). Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to QB. A full disk
 deposits via `depositDiskToDataLake` (Foundry disk rows). Booster purchases on ComputePage spend
-lake capacity: the nth purchase at tier *t* costs *n* units of lake *t* and grants 1 of the
-matching compute-ladder entity (`COMPUTE_BOOST_TIER_FIELDS`); triangular total `n×(n+1)/2` naturally
-caps around 44 boosters per full lake — no separate inventory cap on the purchase path (merge/UI
-slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate
-paths. Boost preset multipliers/durations are unchanged.
+units genuinely OUT of the lake's own current deposits (no separate "used" ledger) — the nth
+purchase at tier *t* costs *n* units of lake *t* and grants 1 of the matching compute-ladder entity
+(`COMPUTE_BOOST_TIER_FIELDS`). Spent capacity only returns the same way it arrived — depositing more
+Disks, once that array rebuilds a replacement through the ordinary build/fill pipeline — so a full,
+undepleted lake can fund 44 purchases in one uninterrupted burst (triangular total `n×(n+1)/2` ≤
+999) before needing fresh deposits, but a patient player redepositing between purchases can reach
+the true lifetime cap of exactly `DATA_LAKE_CAPACITY` (999) Boosters per tier — the 1,000th would
+cost 1,000 units, impossible regardless of how much gets redeposited. No separate inventory cap on
+the purchase path itself (merge/UI slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and
+8:1 merging remain as alternate paths. Boost preset multipliers/durations are unchanged.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
 Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute

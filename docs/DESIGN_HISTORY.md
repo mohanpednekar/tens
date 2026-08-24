@@ -2485,3 +2485,31 @@ untouched — the request's own tier-breadth idea (a higher Booster tier applyin
 resource tiers at once, rather than scaling multiplier/duration further) is a separate, larger
 question still being scoped given `COMPUTE_BOOST_TIER_DURATION_STEP`'s duration-doubling was itself
 a deliberate restoration after #363 had flattened it (see that entry above).
+
+### Data Lake Boosters: spending real deposits, not a separate "used" ledger
+
+A follow-up correction to the same request above: "Data Lake is refillable, in fact refilled soon
+after consumption of cost of each booster. So there is a limit of 999 boosters of each size because
+the 1000th booster costs more than the capacity of the corresponding data lake." The original
+`purchaseBoosterFromDataLake` tracked spend against a separate `lake.used` counter that only ever
+grew, subtracted from the (separately capped-at-999) `deposited` total — so a full lake's
+n×(n+1)/2 ≤ 999 triangular sum naturally capped purchases around 44, permanently, with no way to
+ever buy more from that lake again even after depositing further Disks (`used` never decreased).
+That's not what was actually wanted: a Booster purchase should spend real, currently-deposited
+capacity — capacity that comes back the same way it arrived, by depositing more Disks once that
+array rebuilds a replacement through the ordinary build/fill pipeline (confirmed directly: "using
+same process as array disk refill," i.e. no new bespoke refill timer — reuse `depositDiskToDataLake`
+and the existing disk build/cache/redeem loop as-is).
+
+Fix: `lake.used` is gone. `getDataLakeAvailableUnits` is now simply `getDataLakeDepositedUnits` (no
+subtraction) — spent capacity is genuinely removed from `deposits`, decomposed back down into the
+100s/10s/1s sub-slot digits via a new `decomposeDataLakeDeposits` helper (valid because a deposited
+total 0..999, with each digit place capped at `DATA_LAKE_SLOT_MAX`/9, is always exactly its own
+base-10 hundreds/tens/ones decomposition). This makes `getMaxBoosterPurchasesForCapacity`'s existing
+triangular-sum result (44 for a full lake) a "burst from one full tank" number rather than the
+tier's lifetime cap — a patient player who keeps redepositing between purchases can push the cost
+arbitrarily higher, all the way up to the true ceiling: since a lake can never hold more than
+`DATA_LAKE_CAPACITY` (999) at once, the 1,000th purchase (costing 1,000) can never be funded no
+matter how much gets redeposited, so the real lifetime cap is exactly 999 Boosters per tier — see
+`engine.test.js`'s dedicated test walking a lake from purchase 998 through 999 and confirming 1,000
+is permanently unaffordable.

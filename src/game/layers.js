@@ -346,9 +346,17 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
 // purchaseBoosterFromDataLake in engine.js. Each of the 10 storage denominations (KB … QB) has a
 // Data Lake holding up to DATA_LAKE_CAPACITY units, filled by depositing Disks (9×1 + 9×10 + 9×100
-// of that tier's denomination = 999). Booster purchases at tier N consume units from lake N; the
-// nth purchase costs n units (triangular total n×(n+1)/2), so a full lake naturally caps at 44
-// boosters — no separate inventory limit.
+// of that tier's denomination = 999). Booster purchases at tier N spend units genuinely OUT of lake
+// N's own current deposits (not against a separate ledger) — real capacity that only returns once
+// more Disks get deposited, the same way it arrived, once that array rebuilds a replacement disk
+// through the ordinary build/fill pipeline. The nth purchase costs n units; since no single
+// purchase can ever cost more than a fully-deposited lake could hold at once, the true lifetime cap
+// per tier is exactly DATA_LAKE_CAPACITY (999) Boosters — the 1,000th would need 1,000 units, which
+// no amount of redepositing can ever fund. A full, undepleted lake can only fund 44 of those
+// purchases in one uninterrupted burst (cumulative triangular cost n×(n+1)/2 ≤ 999) before needing
+// fresh deposits — see getMaxBoosterPurchasesForCapacity in engine.js for that distinct "burst"
+// number — but a patient player redepositing between purchases can reach the full 999. No separate
+// inventory limit beyond this.
 export const DATA_LAKE_CAPACITY = 999
 export const DATA_LAKE_SLOT_MAX = 9
 export const DATA_LAKE_TIER_COUNT = 10

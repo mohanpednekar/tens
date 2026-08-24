@@ -8408,10 +8408,42 @@ describe('Data Lakes', () => {
     expect(getDataLakeSubSize(mb1)).toBe(1)
   })
 
-  it('getMaxBoosterPurchasesForCapacity caps at 44 for a full 999-unit lake', () => {
+  it('getMaxBoosterPurchasesForCapacity funds 44 CONSECUTIVE purchases from one full 999-unit lake in a single burst (not the tier\'s lifetime cap — see below)', () => {
     expect(getBoosterPurchaseTotalCost(44)).toBe(990)
     expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
     expect(getMaxBoosterPurchasesForCapacity(DATA_LAKE_CAPACITY)).toBe(44)
+  })
+
+  it('a tier\'s true lifetime cap is 999 Boosters, not 44 — redepositing between purchases lets cost climb past the single-burst ceiling', () => {
+    // The 999th purchase costs exactly 999 — a fully-deposited lake can just barely fund it.
+    expect(getBoosterPurchaseCost(1)({
+      intro: { dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 998 } } },
+    })).toBe(999)
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 998 },
+      },
+    })
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(900)
+    // Not enough deposited yet for the 999-cost purchase — redeposit up to the full 999 first.
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(true)
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.dataLakes[1].purchased).toBe(999)
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
+
+    // The 1,000th would cost 1,000 — impossible no matter how much gets redeposited, since a lake
+    // can never hold more than DATA_LAKE_CAPACITY (999) at once.
+    expect(getBoosterPurchaseCost(1)(state)).toBe(1000)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
   })
 
   it('depositDiskToDataLake consumes one full disk and credits the matching lake slot', () => {
@@ -8429,7 +8461,6 @@ describe('Data Lakes', () => {
         ...createInitialGameState().intro.dataLakes,
         1: {
           deposits: { 1: DATA_LAKE_SLOT_MAX, 10: 0, 100: 0 },
-          used: 0,
           purchased: 0,
         },
       },
@@ -8441,24 +8472,25 @@ describe('Data Lakes', () => {
     expect(state.intro.disks[kb1]).toBe(10)
   })
 
-  it('purchaseBoosterFromDataLake costs n units for the nth purchase and grants the matching booster', () => {
+  it('purchaseBoosterFromDataLake costs n units for the nth purchase, spends real deposited capacity (not a separate ledger), and grants the matching booster', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 3 },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 3, 10: 0, 100: 0 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(1)
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(1)
-    expect(state.intro.dataLakes[1].used).toBe(1)
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 2, 10: 0, 100: 0 })
     expect(state.intro.dataLakes[1].purchased).toBe(1)
     expect(getDataLakeAvailableUnits(1)(state)).toBe(2)
 
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(2)
-    expect(state.intro.dataLakes[1].used).toBe(3)
+    // 2 - 2 (2nd purchase's cost) = 0 deposited left.
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
     expect(getBoosterPurchaseCost(1)(state)).toBe(3)
   })
 
@@ -8466,7 +8498,7 @@ describe('Data Lakes', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 1, 10: 0, 100: 0 }, used: 0, purchased: 1 },
+        1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 1 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(2)
@@ -8479,7 +8511,7 @@ describe('Data Lakes', () => {
       computeCores: COMPUTE_ENTITY_CAP,
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     state = purchaseBoosterFromDataLake(1)(state)
@@ -8490,7 +8522,7 @@ describe('Data Lakes', () => {
     let state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     for (let i = 0; i < COMPUTE_CORES_PER_NODE; i += 1) {

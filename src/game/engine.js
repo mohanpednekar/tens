@@ -42,7 +42,6 @@ const allResourceIds = () => {
 
 const createEmptyDataLakeTier = () => ({
   deposits: { 1: 0, 10: 0, 100: 0 },
-  used: 0,
   purchased: 0,
 })
 
@@ -3196,11 +3195,31 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
   )
 }
 
-export const getDataLakeAvailableUnits = tierIndex => state => {
-  const lake = getDataLakeTier(state, tierIndex)
-  if (!lake) return 0
-  return Math.max(0, getDataLakeDepositedUnits(tierIndex)(state) - (lake.used ?? 0))
+// A lake's `deposits` (sub-slot counts, each 0..DATA_LAKE_SLOT_MAX/9 — see DATA_LAKE_SUB_SIZES in
+// layers.js) are exactly the base-10 hundreds/tens/ones digit decomposition of its own deposited
+// total, since the total is always 0..DATA_LAKE_CAPACITY (999) and each digit place caps at 9. A
+// Booster purchase spends `cost` units by re-deriving this decomposition from (deposited - cost) —
+// see purchaseBoosterFromDataLake below — rather than tracking spend against a separate ledger, so
+// "available" is always just however much is CURRENTLY deposited (see getDataLakeAvailableUnits):
+// spent capacity is genuinely gone, not merely earmarked, and only comes back the same way it got
+// there in the first place — depositDiskToDataLake, once that array rebuilds a replacement disk
+// through the ordinary build/fill pipeline (see docs/DESIGN_HISTORY.md).
+const decomposeDataLakeDeposits = total => {
+  const deposits = {}
+  let remainder = Math.max(0, total)
+  for (const subSize of [...DATA_LAKE_SUB_SIZES].sort((a, b) => b - a)) {
+    deposits[subSize] = Math.floor(remainder / subSize)
+    remainder -= deposits[subSize] * subSize
+  }
+  return deposits
 }
+
+// Simply the lake's own currently-deposited total — there is no separate "used" ledger (see
+// decomposeDataLakeDeposits above): a Booster purchase spends real deposited capacity, so
+// "available" and "deposited" are the same number until more disks get deposited to replace what a
+// purchase spent.
+export const getDataLakeAvailableUnits = tierIndex => state =>
+  getDataLakeDepositedUnits(tierIndex)(state)
 
 export const getBoosterPurchaseCost = tierIndex => state => {
   const lake = getDataLakeTier(state, tierIndex)
@@ -3210,6 +3229,16 @@ export const getBoosterPurchaseCost = tierIndex => state => {
 
 export const getBoosterPurchaseTotalCost = n => (n * (n + 1)) / 2
 
+// How many CONSECUTIVE Boosters (1st, 2nd, 3rd, …) `capacityUnits` of currently-deposited stock
+// can fund in one uninterrupted burst, with no further deposits in between — e.g. a full 999-unit
+// lake funds 44 purchases in a row (cumulative cost 990) before the 45th (cumulative 1,035) needs
+// more deposited first. This is NOT the lifetime cap on a tier's total Boosters: since a spent
+// deposit is replaced the same way it arrived (depositDiskToDataLake, once that array's disk
+// rebuilds), a patient player can keep funding ever-pricier purchases indefinitely — the true
+// ceiling is simply DATA_LAKE_CAPACITY (999) itself, since no single purchase can ever cost more
+// than a fully-deposited lake could ever hold at once (the 1,000th Booster would cost 1,000 units,
+// impossible regardless of how long you wait to redeposit) — see purchaseBoosterFromDataLake and
+// docs/DESIGN_HISTORY.md.
 export const getMaxBoosterPurchasesForCapacity = capacityUnits => {
   let n = 0
   while (getBoosterPurchaseTotalCost(n + 1) <= capacityUnits) {
@@ -3290,6 +3319,7 @@ export const purchaseBoosterFromDataLake = tierIndex => state => {
   const lake = getDataLakeTier(state, tierIndex)
   const cost = getBoosterPurchaseCost(tierIndex)(state)
   const purchased = (lake.purchased ?? 0) + 1
+  const remainingDeposited = getDataLakeDepositedUnits(tierIndex)(state) - cost
   const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field)
 
   return {
@@ -3301,7 +3331,7 @@ export const purchaseBoosterFromDataLake = tierIndex => state => {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
-          used: (lake.used ?? 0) + cost,
+          deposits: decomposeDataLakeDeposits(remainingDeposited),
           purchased,
         },
       },
