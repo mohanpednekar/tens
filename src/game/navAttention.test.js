@@ -239,7 +239,6 @@ describe('navAttention', () => {
       computeNodes: 10,
       autoMergeCoresIntoNode: false,
       autoMergeNodesIntoCluster: true,
-      autoClaimCoreEnabled: true,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
       computeBoostStacks: 10,

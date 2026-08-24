@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
+  units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Depositing a size's disks
+  requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
+  stages each lake's effective capacity: 9 once only the smallest sub-size's array is complete, 99
+  once the next size up is also complete, the full 999 once the largest of the three is complete
+  too. Boosters are bought on the Boosters screen for escalating lake cost (nth purchase costs n
+  units), spent genuinely out of the lake's own current deposits rather than a separate ledger —
+  spent capacity only returns once more Disks get deposited to replace it. A full, undepleted lake
+  funds 44 purchases in one uninterrupted burst before needing fresh deposits, but redepositing
+  between purchases lets a patient player reach the true lifetime cap of exactly 999 Boosters per
+  tier (the 1,000th would cost 1,000 units, impossible regardless of how much gets redeposited) —
+  no separate inventory limit beyond that. Foundry disk rows expose deposit-to-lake actions; a Data
+  Lake summary appears once any lake has content.
+
+### Removed
+- **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
+  minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
+  buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
+  will cost more" warning is also gone (no longer true); the "wipes all held Compute tokens"
+  warning stays.
+
 ### Fixed
+- **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
+  minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour) gave Sustain less total extra production
+  than Standard despite its much longer commitment. Replaced with `burst` ×20/10 minutes,
+  `standard` ×5/1 hour, `sustain` ×2/10 hours, whose total extra production now strictly increases
+  Burst → Standard → Sustain as intended.
 - **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
   Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
@@ -15,10 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
+  equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
+  instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
+  the pour. Write-cache timing is unchanged.
 - **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
-  Memory | Storage second-level tabs). After Boosts unlocks, **Claim Core** and **Memory ×10**
-  swap positions (Claim Core beside Bandwidth; Memory ×10 below the disk section). Each disk
-  array always shows all 10 disk slots in one unbroken row (no mobile wrap).
+  Memory | Storage second-level tabs). **Memory ×10** always stays in the milestones row beside
+  Bandwidth. Each disk array always shows all 10 disk slots in one unbroken row (no mobile wrap).
 - **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
   fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
 - **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
@@ -30,10 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry tab label** — *(superseded by the continuous Foundry layout above)* the second-level
   Foundry peer tab formerly labeled **Disks** was briefly **Storage** (Memory | Storage).
 - **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
-  size first). Empty disks fill instantly from a full read cache when no tier claim blocks that
-  size, or from the size below via **write cache** (10 timed segments + one flush equal to a target
-  build duration). Write-cache collect pauses while the source size has an active tier match;
-  flush never pauses. Tier match still gives full disks first claim over read cache.
+  size first). Empty disks fill from a full read cache via a **timed flush** (one cache-block
+  production duration; see #445) when no tier claim blocks that size, or from the size below via
+  **write cache** (10 timed segments + one flush equal to a target build duration). Write-cache
+  collect pauses while the source size has an active tier match; flush never pauses. Tier match
+  still gives full disks first claim over read cache.
 - **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
   immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
   matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no

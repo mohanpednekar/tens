@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -38,6 +38,19 @@ const allResourceIds = () => {
     ids.add(t.producesResourceId)
   })
   return [...ids]
+}
+
+const createEmptyDataLakeTier = () => ({
+  deposits: { 1: 0, 10: 0, 100: 0 },
+  purchased: 0,
+})
+
+export const createEmptyDataLakes = () => {
+  const lakes = {}
+  for (let tier = 1; tier <= DATA_LAKE_TIER_COUNT; tier += 1) {
+    lakes[tier] = createEmptyDataLakeTier()
+  }
+  return lakes
 }
 
 export const createInitialGameState = () => ({
@@ -383,14 +396,18 @@ export const createInitialGameState = () => ({
     // DISK_ARRAY_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
     disksBuiltTotal: {},
     // PERMANENT — { [capacityBits]: bits currently held } in that size array's own cache. Steady
-    // state is FULL (size bits); dips only right after a manual block release or when a size is
-    // newly unlocked/built. Split into DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array →
-    // 8 × 1 Mb) for display / releaseDiskCacheBlock — Cache funds matching main-game tier level
-    // blocks manually only, and is NOT poured into disk containers (those fill from Memory
-    // directly — see tickDiskAutoFill). Rides through Prestige untouched, same as disks/
-    // disksBuiltTotal above — the cache belongs to the array's own permanent hardware, not to a
-    // single Prestige cycle's Memory balance.
+    // state is FULL (size bits); dips only right after a manual block release, after a completed
+    // read-cache → disk flush, or when a size is newly unlocked/built. Split into
+    // DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array → 8 × 1 Mb) for display /
+    // releaseDiskCacheBlock. When full and no tier claim blocks ladder use, the cache flushes into
+    // an empty disk over getDiskReadCacheFlushSeconds (one block at the current production rate) —
+    // see tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
     diskCache: {},
+    // NOT permanent — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
+    // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
+    // Foundry production rate (see getDiskReadCacheFlushSeconds). Resets every real Prestige —
+    // operational, not banked progress (same posture as diskWriteCache).
+    diskReadCacheFlush: {},
     // NOT permanent — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
     // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
     // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
@@ -409,20 +426,22 @@ export const createInitialGameState = () => ({
     // size this cycle, capping auto-redeem at one disk per size per cycle — further eligible disks
     // of an already-auto-redeemed size need a manual click for the rest of the cycle.
     diskAutoRedeemedSizes: {},
+    // PERMANENT — one Data Lake per storage denomination (KB … QB), each holding up to
+    // DATA_LAKE_CAPACITY units deposited from Disks and spent on Booster purchases at the matching
+    // compute-ladder tier (see depositDiskToDataLake/purchaseBoosterFromDataLake below).
+    dataLakes: createEmptyDataLakes(),
     // PERMANENT — like the Byte generator/Disks above, carried over every real Prestige
-    // (see prestigeGame). Automatically incremented by tickComputeCoreConversion every time Memory
-    // is full, once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — each conversion
-    // flushes the CURRENT capacity (not a fixed cost) for exactly 1 Core, so a higher capacity
-    // makes each future Core more expensive. Spent 1 at a time by activateComputeBoost below —
-    // see the "Byte Foundry Compute Boost" section of layers.js.
+    // (see prestigeGame). Granted by purchaseBoosterFromDataLake (tier 1) below — spending
+    // deposited Kilobyte-size Disk stock from that tier's Data Lake — and spent 1 at a time by
+    // activateComputeBoost — see the "Byte Foundry Compute Boost" section of layers.js.
     computeCores: 0,
     // PERMANENT — a monotonically-increasing lifetime counter, incremented by
-    // tickComputeCoreConversion alongside computeCores itself but NEVER decremented by spending
-    // (activateComputeBoost) or merging (mergeComputeCoresIntoNode/startComputeCoresMerge) — the
-    // actual "CUMULATIVE total of Compute Cores ever earned" computeMergePageUnlocked below needs.
-    // computeCores alone can't serve this purpose: a player who spends a Boost before ever holding
-    // 8 Cores at once would otherwise never trip the latch, even after having earned well past 8 in
-    // total.
+    // latchComputeMergePageIfNeeded (via purchaseBoosterFromDataLake) alongside computeCores itself
+    // but NEVER decremented by spending (activateComputeBoost) or merging
+    // (mergeComputeCoresIntoNode/startComputeCoresMerge) — the actual "CUMULATIVE total of Compute
+    // Cores ever earned" computeMergePageUnlocked below needs. computeCores alone can't serve this
+    // purpose: a player who spends a Boost before ever holding 8 Cores at once would otherwise
+    // never trip the latch, even after having earned well past 8 in total.
     computeCoresEverEarned: 0,
     // PERMANENT — incremented by mergeComputeCoresIntoNode (pre-unlock, instant) or by a completed
     // Core->Node reserve merge (post-unlock — see startComputeCoresMerge/
@@ -458,18 +477,11 @@ export const createInitialGameState = () => ({
     computeMegacomputers: 0,
     // PERMANENT, one-time reveal latch for ComputePage — analogous in spirit to
     // intro.mainGameUnlocked's own "first time" latch, but never re-checked once true (see
-    // tickComputeCoreConversion, the only place this ever flips). Gated on computeCoresEverEarned
-    // (above) reaching COMPUTE_CORES_PER_NODE (8), not the current live computeCores balance —
-    // merging Nodes back down, or spending Cores on a Boost (even before ever holding 8 at once),
-    // must never prevent or re-hide the page once earned.
+    // latchComputeMergePageIfNeeded, the only place this ever flips). Gated on
+    // computeCoresEverEarned (above) reaching COMPUTE_CORES_PER_NODE (8), not the current live
+    // computeCores balance — merging Nodes back down, or spending Cores on a Boost (even before
+    // ever holding 8 at once), must never prevent or re-hide the page once earned.
     computeMergePageUnlocked: false,
-    // PERMANENT — whether Memory → Core conversion (see tickComputeCoreConversion below) currently
-    // fires automatically on tick, or requires a manual claimComputeCore click instead. Defaults
-    // false: a fresh Core-unlock finds Memory→Core gated behind the manual "Claim Core" button on
-    // ByteFoundryPage. Permanently flips true via enableAutoClaimCore, which spends 10 Nodes — the
-    // "next tier up" from Core — the same one-time, irreversible sacrifice-to-automate shape the 8
-    // autoMerge* flags below use for every other tier boundary.
-    autoClaimCoreEnabled: false,
     // PERMANENT — each flips true (via enableAutoMergeNodesIntoCluster etc.) once, by sacrificing
     // ALL COMPUTE_ENTITY_CAP (10) currently-held units of the merge's OWN output entity — e.g.
     // sacrifice 10 Clusters to enable auto-merging Nodes into Clusters. Once set, tickGame also
@@ -1098,7 +1110,6 @@ const buildEraIntroReset = (state, initial) => ({
   productionAccumulator: 0,
   mainGameUnlocked: false,
   foundryResetCaps: {},
-  autoClaimCoreEnabled: state.intro?.autoClaimCoreEnabled ?? initial.intro.autoClaimCoreEnabled,
   autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
   autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
   autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
@@ -1473,36 +1484,33 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // doesn't depend on tier01's level at all (unlike auto-redeem below), so running it this early
   // costs nothing.
   //
-  // Compute Core conversion (tickComputeCoreConversion) runs next, right after auto-fill and
-  // before tickIntroAutoInvest — the same "first claim" priority auto-fill itself has over
-  // ordinary Kilobyte conversion: once capacity has reached INTRO_COMPUTE_CORE_UNLOCK_CAPACITY and
-  // Memory is full (isComputeCoreConversionUnlocked), Memory converts into Compute Cores before any
-  // of it can be converted into Kilobytes instead — unrelated to Storage state entirely.
   // Core -> Node is no longer automatic/unconditional (see issue #321) — it's just the first
-  // boundary in AUTO_MERGE_TICKERS below, same as every other tier boundary.
-  // tickIntroAutoInvest then converts whatever Memory is left
-  // over (in practice usually nothing, once Compute Core conversion is active, since it flushes
-  // the full balance). tickIntroProduction short-circuits to the
+  // boundary in AUTO_MERGE_TICKERS below, same as every other tier boundary. Compute Cores
+  // themselves are no longer minted from Memory at all — they're bought with Data Lake deposits
+  // (see purchaseBoosterFromDataLake), unrelated to Storage or this tick pipeline entirely.
+  // tickIntroAutoInvest then converts whatever Memory is left over. tickIntroProduction short-circuits to the
   // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits can't cover even one
   // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
   const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
-  // Disk auto-fill / Compute Core conversion can spend that full bar — see tickQueuedCapacityUpgrade.
+  // Disk auto-fill can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
-  const stateAfterReadCache = tickDiskAutoFill(stateAfterQueuedCapacity)
+  // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
+  // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
+  // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
+  // after write-cache ripple.
+  const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
-  const stateAfterStorage = tickDiskAutoFill(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps —
-  // Bandwidth ranks above Compute, so this runs before Core conversion can claim a full Memory bar.
+  const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
+  // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
-  const stateAfterComputeCores = tickComputeCoreConversion(stateAfterFoundryConvenience)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
   // AUTO_MERGE_TICKERS and issue #321. Each ticker both auto-starts a reserve merge (once that
   // boundary's input is completely full) and counts down any merge already in flight.
-  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterComputeCores)
+  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterFoundryConvenience)
   // Counts an active Compute Boost's remaining duration down, then optionally auto-activates or
   // stacks from a full compute-ladder tier while a reserve merge is in flight (see
   // tickAutoComputeBoost) — countdown first so an expired boost can be replaced the same tick.
@@ -1523,10 +1531,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
   // FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on them, so a disk
   // whose size only just became redeemable once some tier leveled up THIS tick still redeems the
-  // same tick. Auto-fill already ran above (see stateAfterIntro), ahead of tickIntroAutoInvest,
-  // since it has no such dependency on any tier's level. A same-reference no-op when nothing
-  // qualifies (including whenever the matching tier's own autobuyer isn't currently active — see
-  // tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in play at all.
+  // same tick. Auto-fill already ran above (see stateAfterStorage / the storage pipeline), ahead of
+  // tickIntroAutoInvest, since it has no such dependency on any tier's level. A same-reference
+  // no-op when nothing qualifies (including whenever the matching tier's own autobuyer isn't
+  // currently active — see tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in
+  // play at all.
   // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
   // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
   // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
@@ -1538,7 +1547,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const tickStorage = state => {
     const afterRedeem = tickDiskAutoRedeem(state)
     const afterCache = tickDiskAutoReleaseCache(afterRedeem)
-    return afterCache === state ? state : tickDiskAutoFill(afterCache)
+    // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
+    // countdown continues on the next ordinary tickGame pass.
+    return afterCache === state ? state : tickDiskAutoFill(0)(afterCache)
   }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
@@ -2146,7 +2157,7 @@ const COMPUTE_MERGE_TIMER_FIELDS = [
 ]
 
 // Wipes every held Compute ladder token, any active Boost, and any in-flight reserve-merge timers.
-// Does NOT touch permanent unlock flags (autoClaimCoreEnabled / autoMerge*) or lifetime counters
+// Does NOT touch permanent unlock flags (autoMerge*) or lifetime counters
 // (computeCoresEverEarned / computeMergePageUnlocked). Same-reference no-op when nothing to wipe.
 export const eraseAllComputeTokens = state => {
   const intro = state.intro ?? {}
@@ -2183,8 +2194,8 @@ export const eraseAllComputeTokens = state => {
 // Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
 // except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
 // tokens and rolls back compute-funded Bandwidth (#324), then Sacrifices — bypassing
-// isComputeUpgradeAvailable so Boosts / Core-claim eligibility cannot starve a committed Capacity
-// upgrade. Called from tickGame after intro production. Same-reference no-op otherwise.
+// isComputeUpgradeAvailable so Boost eligibility cannot starve a committed Capacity upgrade.
+// Called from tickGame after intro production. Same-reference no-op otherwise.
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
   if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
@@ -2475,8 +2486,9 @@ export const tickIntroAutoInvest = state => {
 // above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
 // (startDiskBuild) takes real TIME (see tickDiskBuild) and, once complete, only constructs a
 // permanent, EMPTY container of a given size — Memory (intro.bits) then keeps each array's Cache
-// full (whole-block transfers) and auto-fills any empty disk directly from Memory (see
-// tickDiskAutoFill), smallest size first. `intro.disks[size]` counts how many disks of that size
+// full (whole-block transfers) and flushes a full read cache into an empty disk over one
+// cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
+// smallest size first. `intro.disks[size]` counts how many disks of that size
 // are currently FULL (this is
 // what redeemDisk spends); `intro.disksBuiltTotal[size]` is the permanent, never-decremented total
 // ever built — the number of currently EMPTY disks of a size is always
@@ -2763,18 +2775,42 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   return { ...state, intro: { ...intro, disks, diskWriteCache } }
 }
 
-// Memory claim for read caches only, then instant read-cache → disk when no tier claim blocks
-// ladder use (tier match keeps first claim on disks/cache for Factory funding). Disks above the
-// smallest ladder size fill only via write-cache flush from the size below — see
-// tickDiskWriteCache. Unconditional, bypasses isProductionFrozen. Same-reference no-op when
-// nothing changed.
-export const tickDiskAutoFill = state => {
+// Memory claim for read caches, then timed read-cache → disk flush when no tier claim blocks
+// ladder use (tier match keeps first claim on disks/cache for Factory funding). Flush duration is
+// the time to fill one read-cache block at the current Byte Foundry production rate (see
+// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size also fill via write-cache
+// flush from the size below — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
+// Same-reference no-op when nothing changed. `elapsedSeconds` advances in-flight flushes (0 is
+// valid — start newly eligible flushes without counting time down).
+export const getDiskReadCacheFlush = (state, size) =>
+  state.intro?.diskReadCacheFlush?.[size] ?? null
+
+export const getDiskReadCacheFlushSeconds = (state, size) => {
+  const blockBits = size / DISK_CACHE_BLOCK_COUNT
+  const rate = getIntroProductionRate(state.intro ?? {})
+  // Rate is >= 1 by construction once intro fields are valid; guard corrupted/partial saves.
+  return blockBits / Math.max(rate, Number.MIN_VALUE)
+}
+
+export const getDiskReadCacheFlushFill = flush => {
+  if (!flush || flush.totalSeconds <= 0) return 0
+  return 1 - flush.remainingSeconds / flush.totalSeconds
+}
+
+export const isDiskReadCacheFlushPaused = (state, size) => {
+  const flush = getDiskReadCacheFlush(state, size)
+  if (!flush) return false
+  return isDiskRedeemable(state, size)
+}
+
+export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
   const capacity = state.intro?.capacity ?? 0
   let bits = state.intro.bits
   let disks = state.intro.disks ?? {}
   let diskCache = state.intro.diskCache ?? {}
+  let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
   const sizes = Object.keys(builtTotal)
@@ -2782,8 +2818,19 @@ export const tickDiskAutoFill = state => {
     .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
     .sort((a, b) => a - b)
 
+  // Drop flushes for sizes that can no longer complete (mid-build, or no empty container left).
+  for (const size of Object.keys(diskReadCacheFlush).map(Number)) {
+    if (size === buildingSize || (builtTotal[size] ?? 0) <= (disks[size] ?? 0)) {
+      const { [size]: _removed, ...rest } = diskReadCacheFlush
+      diskReadCacheFlush = rest
+      changed = true
+    }
+  }
+
   // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible).
+  // Skip sizes mid-flush: their cache is locked full until the pour completes or cancels.
   for (const size of sizes) {
+    if (diskReadCacheFlush[size]) continue
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     for (;;) {
       const cached = diskCache[size] ?? 0
@@ -2810,22 +2857,52 @@ export const tickDiskAutoFill = state => {
     }
   }
 
-  // Pass 2 — instant read-cache → empty disk (all blocks at once) when tier isn't reserving this
-  // size for Factory funding — ripple-friendly; write-cache collect frees slots same tick.
-  // Skip sizes with an active write-cache merge so read-cache pour cannot race flush.
+  // Pass 2 — start timed read-cache → empty disk flushes when tier isn't reserving this size for
+  // Factory funding. Skip sizes with an active write-cache merge so read-cache flush cannot race
+  // write-cache flush. Duration = time to fill one read-cache block at current production rate.
   for (const size of sizes) {
+    if (diskReadCacheFlush[size]) continue
     if (getDiskWriteCacheMerge(state, size)) continue
     const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
     const cached = diskCache[size] ?? 0
     if (!hasEmptyContainer || cached < size) continue
     if (isDiskRedeemable(state, size)) continue
-    diskCache = { ...diskCache, [size]: cached - size }
-    disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+    const totalSeconds = getDiskReadCacheFlushSeconds(state, size)
+    diskReadCacheFlush[size] = { remainingSeconds: totalSeconds, totalSeconds }
+    changed = true
+  }
+
+  // Pass 3 — count down in-flight flushes; pause while tier match claims this size. Completing
+  // empties the full read cache into one disk (same net effect as the former instant pour).
+  for (const size of Object.keys(diskReadCacheFlush).map(Number).sort((a, b) => a - b)) {
+    const flush = diskReadCacheFlush[size]
+    if (!flush) continue
+    if (isDiskRedeemable({ ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }, size)) {
+      continue
+    }
+
+    let remainingSeconds = flush.remainingSeconds - elapsedSeconds
+    if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
+      if (remainingSeconds !== flush.remainingSeconds) {
+        diskReadCacheFlush[size] = { ...flush, remainingSeconds }
+        changed = true
+      }
+      continue
+    }
+
+    const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
+    const cached = diskCache[size] ?? 0
+    if (hasEmptyContainer && cached >= size) {
+      diskCache = { ...diskCache, [size]: cached - size }
+      disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+    }
+    const { [size]: _removed, ...rest } = diskReadCacheFlush
+    diskReadCacheFlush = rest
     changed = true
   }
 
   if (!changed) return state
-  return { ...state, intro: { ...state.intro, bits, disks, diskCache } }
+  return { ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }
 }
 
 // True when a size currently has at least one FULL disk that could redeem right now — Cache is
@@ -2843,6 +2920,7 @@ const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
 // that same size exists (disks always take priority — cache is fallback only).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
+  !getDiskReadCacheFlush(state, capacityBits) &&
   isDiskRedeemable(state, capacityBits) &&
   !hasFullRedeemableDiskAtSize(state, capacityBits) &&
   (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
@@ -2850,9 +2928,10 @@ export const isDiskCacheBlockReleasable = (state, capacityBits) =>
 // Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
 // array into resources.base (Bits) — Cache's only player-facing use: funding the matching
 // main-game tier's current level-block purchases while isDiskRedeemable holds for this size.
-// Disks fill from Memory directly (see tickDiskAutoFill), so releasing a cache block never races
-// a cache→disk pour; tickDiskAutoFill refills the gap in whole-block transfers once Memory has
-// enough again. No-op if nothing releasable (see isDiskCacheBlockReleasable).
+// Disks fill from a timed read-cache flush (see tickDiskAutoFill), so releasing a cache block
+// never races a cache→disk pour while that size is mid-flush (isDiskCacheBlockReleasable is false
+// then); tickDiskAutoFill refills the gap in whole-block transfers once Memory has enough again.
+// No-op if nothing releasable (see isDiskCacheBlockReleasable).
 export const releaseDiskCacheBlock = capacityBits => state => {
   if (!isDiskCacheBlockReleasable(state, capacityBits)) return state
 
@@ -3057,122 +3136,220 @@ export const tickDiskAutoReleaseCache = state => {
   return releaseDiskCacheBlock(eligibleSize)(state)
 }
 
-// --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
-// createInitialGameState and INTRO_COMPUTE_CORE_UNLOCK_CAPACITY/COMPUTE_CORES_PER_NODE in
-// layers.js. An earlier version costed a Compute Core at a fixed 10 MB of Memory, gated on every
-// Disk size being built and full — superseded (see docs/DESIGN_HISTORY.md) in favor of the
-// dynamic, capacity-tied cost below, which is unrelated to Storage entirely.
+// --- Data Lakes --- see DATA_LAKE_* constants in layers.js. Disks deposit into the lake for
+// their storage denomination; Booster purchases at the matching compute tier spend lake capacity.
 
-// Predicate, not a reducer: whether ByteFoundryPage's "Compute" section — and the automatic
-// conversion below — should be active at all. True once capacity has grown enough to ever hold
-// INTRO_COMPUTE_CORE_UNLOCK_CAPACITY (800,000 bits, "100 KB" in Memory's own B/KB/MB scale) at
-// once — the same "capacity-magnitude reveal gate" convention isIntroConversionUnlocked/
-// isStorageUnlocked already use, one Sacrifice stage later than Storage's own reveal.
-export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
+export const getDiskLadderStep = sizeBits => {
+  if (!(sizeBits > 0) || !Number.isFinite(sizeBits)) return null
+  const ratio = sizeBits / DISK_LADDER_BASE_SIZE_BITS
+  if (ratio < 1) return null
+  const step = Math.round(Math.log10(ratio)) + 1
+  if (step < 1 || getDiskLadderSizeBits(step) !== sizeBits) return null
+  return step
+}
 
-// Once isComputeCoreConversionUnlocked, Memory automatically converts into 1 Compute Core every
-// time it's full — a same-reference no-op once nothing about the state would change: Memory isn't
-// yet full, or intro.computeCores is already at COMPUTE_ENTITY_CAP (10 — see layers.js; in
-// practice Cores rarely reach this on their own, since merging (mergeComputeCoresIntoNode, or the
-// timed reserve merge once unlocked — see issue #321) drains them into a Node at 8 — this guard
-// mainly matters once Nodes themselves are capped and stop accepting more, letting Cores pile up
-// behind that). While capped, Memory simply stays full rather than
-// flushing for nothing — no progress is lost, it just waits for the player to spend a Core/Node
-// down. The cost is always the CURRENT capacity itself (not a fixed amount): converting flushes
-// the entire balance to 0, exactly like Sacrifice for 10x Capacity's own "drains the ENTIRE
-// balance" behavior, and always mints exactly 1 Core per flush (bits can never exceed capacity, so
-// there's never a multi-Core batch in one event). This is deliberate, not incidental: since
-// capacity only ever grows via the player's own Sacrifice clicks, a higher capacity makes each
-// future Core cost more (a bigger flush) without changing what a Core actually grants — the player
-// decides how far to keep Sacrificing before letting this automatic conversion take over instead,
-// trading a smaller-but-more-frequent Core rate against a larger-but-slower one. Called from
-// tickGame right after tickDiskAutoFill and before tickIntroAutoInvest, so it claims Memory
-// ahead of ordinary Kilobyte conversion once unlocked and full — the same "first claim" priority
-// tickDiskAutoFill itself has over tickIntroAutoInvest. Bypasses isProductionFrozen, same
-// posture as every other Byte Foundry mechanic (a separate currency pool, not resources.base).
-// Also the only place intro.computeCoresEverEarned/intro.computeMergePageUnlocked ever change.
-// computeCoresEverEarned increments by 1 every time a conversion actually mints a Core — a true
-// lifetime counter, never decremented by spending (activateComputeBoost) or merging
-// (mergeComputeCoresIntoNode/startComputeCoresMerge) — unlike the live computeCores balance, which
-// both of those do drain. computeMergePageUnlocked flips true the instant that counter reaches
-// COMPUTE_CORES_PER_NODE (8) for the first time; checking the *lifetime* counter rather than the
-// live balance is what makes this genuinely track "ever earned" — a player who spends a Boost
-// before ever holding 8 Cores at once, or whose Cores/Nodes were already capped from before this
-// latch existed, still trips it correctly. The latch check is deliberately evaluated independently
-// of whether a conversion happens THIS tick: a save whose computeCoresEverEarned is already >= 8
-// (from any past tick) but whose computeCores happens to be at COMPUTE_ENTITY_CAP right now (no
-// room left to convert into) would otherwise never re-enter this function's success path at all —
-// permanently hiding the merge chain from a player who has obviously already earned it.
-// Shared by tickComputeCoreConversion (automatic, gated on intro.autoClaimCoreEnabled) and
-// claimComputeCore (manual, player-clicked "Claim Core" button on ByteFoundryPage) below — both
-// mint a Core from a full Memory balance via the exact same rule, including the
-// computeCoresEverEarned/computeMergePageUnlocked latch bookkeeping. Callers are responsible for
-// their own gating (isComputeCoreConversionUnlocked, autoClaimCoreEnabled) before calling this.
-const mintComputeCoreIfReady = state => {
-  const currentCores = state.intro.computeCores ?? 0
-  const currentEverEarned = state.intro.computeCoresEverEarned ?? 0
-  const latchAlreadySet = state.intro.computeMergePageUnlocked ?? false
-  const canConvert = state.intro.bits >= state.intro.capacity && currentCores < COMPUTE_ENTITY_CAP
-  const computeCores = canConvert ? currentCores + 1 : currentCores
-  const computeCoresEverEarned = canConvert ? currentEverEarned + 1 : currentEverEarned
-  const computeMergePageUnlocked = latchAlreadySet || computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
+export const getDataLakeTierIndex = sizeBits => {
+  const step = getDiskLadderStep(sizeBits)
+  if (!step || step > DATA_LAKE_MAX_DISK_LADDER_STEP) return null
+  return Math.floor((step - 1) / DATA_LAKE_SUB_SIZES.length) + 1
+}
 
-  if (!canConvert && computeMergePageUnlocked === latchAlreadySet) return state
+export const getDataLakeSubSize = sizeBits => {
+  const step = getDiskLadderStep(sizeBits)
+  if (!step || step > DATA_LAKE_MAX_DISK_LADDER_STEP) return null
+  return DATA_LAKE_SUB_SIZES[(step - 1) % DATA_LAKE_SUB_SIZES.length]
+}
+
+export const getDataLakeTierLabel = tierIndex =>
+  DATA_LAKE_TIER_LABELS[tierIndex - 1] ?? null
+
+export const getDataLakeTier = (state, tierIndex) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return null
+  return state.intro?.dataLakes?.[tierIndex] ?? createEmptyDataLakeTier()
+}
+
+export const getDataLakeDepositedUnits = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake) return 0
+  const { deposits } = lake
+  return DATA_LAKE_SUB_SIZES.reduce(
+    (sum, sub) => sum + (deposits[sub] ?? 0) * sub,
+    0,
+  )
+}
+
+// A lake's `deposits` (sub-slot counts, each 0..DATA_LAKE_SLOT_MAX/9 — see DATA_LAKE_SUB_SIZES in
+// layers.js) are exactly the base-10 hundreds/tens/ones digit decomposition of its own deposited
+// total, since the total is always 0..DATA_LAKE_CAPACITY (999) and each digit place caps at 9. A
+// Booster purchase spends `cost` units by re-deriving this decomposition from (deposited - cost) —
+// see purchaseBoosterFromDataLake below — rather than tracking spend against a separate ledger, so
+// "available" is always just however much is CURRENTLY deposited (see getDataLakeAvailableUnits):
+// spent capacity is genuinely gone, not merely earmarked, and only comes back the same way it got
+// there in the first place — depositDiskToDataLake, once that array rebuilds a replacement disk
+// through the ordinary build/fill pipeline (see docs/DESIGN_HISTORY.md).
+const decomposeDataLakeDeposits = total => {
+  const deposits = {}
+  let remainder = Math.max(0, total)
+  for (const subSize of [...DATA_LAKE_SUB_SIZES].sort((a, b) => b - a)) {
+    deposits[subSize] = Math.floor(remainder / subSize)
+    remainder -= deposits[subSize] * subSize
+  }
+  return deposits
+}
+
+// Simply the lake's own currently-deposited total — there is no separate "used" ledger (see
+// decomposeDataLakeDeposits above): a Booster purchase spends real deposited capacity, so
+// "available" and "deposited" are the same number until more disks get deposited to replace what a
+// purchase spent.
+export const getDataLakeAvailableUnits = tierIndex => state =>
+  getDataLakeDepositedUnits(tierIndex)(state)
+
+export const getBoosterPurchaseCost = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake) return 0
+  return (lake.purchased ?? 0) + 1
+}
+
+export const getBoosterPurchaseTotalCost = n => (n * (n + 1)) / 2
+
+// How many CONSECUTIVE Boosters (1st, 2nd, 3rd, …) `capacityUnits` of currently-deposited stock
+// can fund in one uninterrupted burst, with no further deposits in between — e.g. a full 999-unit
+// lake funds 44 purchases in a row (cumulative cost 990) before the 45th (cumulative 1,035) needs
+// more deposited first. This is NOT the lifetime cap on a tier's total Boosters: since a spent
+// deposit is replaced the same way it arrived (depositDiskToDataLake, once that array's disk
+// rebuilds), a patient player can keep funding ever-pricier purchases indefinitely — the true
+// ceiling is simply DATA_LAKE_CAPACITY (999) itself, since no single purchase can ever cost more
+// than a fully-deposited lake could ever hold at once (the 1,000th Booster would cost 1,000 units,
+// impossible regardless of how long you wait to redeposit) — see purchaseBoosterFromDataLake and
+// docs/DESIGN_HISTORY.md.
+export const getMaxBoosterPurchasesForCapacity = capacityUnits => {
+  let n = 0
+  while (getBoosterPurchaseTotalCost(n + 1) <= capacityUnits) {
+    n += 1
+  }
+  return n
+}
+
+// A size's disk array must be COMPLETELY built out — every DISK_ARRAY_LADDER_CAP (10) disk ever
+// built at that size — before any of its disks can be deposited to a Data Lake at all. Since a
+// lake's 3 sub-slots (1/10/100 — see DATA_LAKE_SUB_SIZES) map to 3 successive disk sizes, this
+// gate is what actually produces the staged 9 -> 99 -> 999 capacity progression the Data Lake
+// design calls for: depositing the smallest (×1) size unlocks up to 9 units (DATA_LAKE_SLOT_MAX)
+// once that array is complete; the ×10 size then unlocks the next 90 (99 total) once IT completes;
+// the ×100 size unlocks the final 900 (999 total, DATA_LAKE_CAPACITY) once it completes too — no
+// separate staged-capacity field needed, since the sub-slot structure already encodes it. This
+// check is permanent/monotonic (disksBuiltTotal never decreases), unlike the "at least one
+// currently full disk" check below, which fluctuates as disks are deposited and rebuilt.
+const isDiskArrayFullyBuilt = (state, sizeBits) =>
+  (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
+
+export const canDepositDiskToDataLake = (state, sizeBits) => {
+  const tierIndex = getDataLakeTierIndex(sizeBits)
+  const subSize = getDataLakeSubSize(sizeBits)
+  if (!tierIndex || !subSize) return false
+  if (!isDiskArrayFullyBuilt(state, sizeBits)) return false
+  if ((state.intro.disks?.[sizeBits] ?? 0) < 1) return false
+  if (state.intro.diskBuild?.size === sizeBits) return false
+  const lake = getDataLakeTier(state, tierIndex)
+  if ((lake.deposits[subSize] ?? 0) >= DATA_LAKE_SLOT_MAX) return false
+  const nextDeposited = getDataLakeDepositedUnits(tierIndex)(state) + subSize
+  return nextDeposited <= DATA_LAKE_CAPACITY
+}
+
+export const depositDiskToDataLake = sizeBits => state => {
+  if (!canDepositDiskToDataLake(state, sizeBits)) return state
+
+  const tierIndex = getDataLakeTierIndex(sizeBits)
+  const subSize = getDataLakeSubSize(sizeBits)
+  const lake = getDataLakeTier(state, tierIndex)
+  const nextDiskCount = (state.intro.disks[sizeBits] ?? 0) - 1
+  const nextDisks = { ...state.intro.disks }
+  if (nextDiskCount > 0) {
+    nextDisks[sizeBits] = nextDiskCount
+  } else {
+    delete nextDisks[sizeBits]
+  }
 
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: canConvert ? 0 : state.intro.bits,
-      computeCores,
-      computeCoresEverEarned,
-      computeMergePageUnlocked,
+      disks: nextDisks,
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          deposits: {
+            ...lake.deposits,
+            [subSize]: (lake.deposits[subSize] ?? 0) + 1,
+          },
+        },
+      },
     },
   }
 }
 
-export const tickComputeCoreConversion = state => {
-  if (!isComputeCoreConversionUnlocked(state)) return state
-  if (!(state.intro.autoClaimCoreEnabled ?? false)) return state
-  return mintComputeCoreIfReady(state)
+const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
+  const nextCount = (intro[field] ?? 0) + 1
+  const updates = { [field]: nextCount }
+  if (tierIndex === 1) {
+    updates.computeCoresEverEarned = Math.max(intro.computeCoresEverEarned ?? 0, nextCount)
+    updates.computeMergePageUnlocked =
+      (intro.computeMergePageUnlocked ?? false) || updates.computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
+  }
+  return updates
 }
 
-// Manual counterpart to tickComputeCoreConversion above — the "Claim Core" button on
-// ByteFoundryPage, live whenever isComputeCoreConversionUnlocked and Memory is full, regardless of
-// whether autoClaimCoreEnabled is set (harmless either way: with auto-claim on, the tick loop
-// already keeps Memory flushed most of the time, so a manual click here simply mints the same Core
-// a tick would have anyway — there's no double-mint, since canConvert flips false the instant one
-// is minted). The button itself is only ever rendered while !autoClaimCoreEnabled (see
-// ByteFoundryPage) — once auto-claim is unlocked it's removed, not merely disabled.
-export const claimComputeCore = state => {
-  if (!isComputeCoreConversionUnlocked(state)) return state
-  return mintComputeCoreIfReady(state)
+export const canPurchaseBoosterFromDataLake = (state, tierIndex) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return false
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  if (!field) return false
+  const cost = getBoosterPurchaseCost(tierIndex)(state)
+  if (cost <= 0) return false
+  return getDataLakeAvailableUnits(tierIndex)(state) >= cost
 }
 
-// UI mirror of claimComputeCore's own gate — whether clicking "Claim Core" right now would do
-// anything (Compute unlocked, Memory full, computeCores under COMPUTE_ENTITY_CAP).
-export const isComputeCoreClaimAvailable = state =>
-  isComputeCoreConversionUnlocked(state) &&
-  state.intro.bits >= state.intro.capacity &&
-  (state.intro.computeCores ?? 0) < COMPUTE_ENTITY_CAP
+export const purchaseBoosterFromDataLake = tierIndex => state => {
+  if (!canPurchaseBoosterFromDataLake(state, tierIndex)) return state
 
-// Whether enableAutoClaimCore below would do anything right now: at least COMPUTE_ENTITY_CAP (10)
-// Nodes held (the "next tier up" from Core — see intro.autoClaimCoreEnabled's own comment in
-// createInitialGameState), and auto-claim isn't already enabled.
-export const isAutoClaimCoreUnlockAvailable = state =>
-  !(state.intro.autoClaimCoreEnabled ?? false) && (state.intro.computeNodes ?? 0) >= COMPUTE_ENTITY_CAP
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  const lake = getDataLakeTier(state, tierIndex)
+  const cost = getBoosterPurchaseCost(tierIndex)(state)
+  const purchased = (lake.purchased ?? 0) + 1
+  const remainingDeposited = getDataLakeDepositedUnits(tierIndex)(state) - cost
+  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field)
 
-// Permanently unlocks automatic Memory → Core conversion (see tickComputeCoreConversion above) by
-// sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held Nodes — a one-time, irreversible trade,
-// same shape as Sacrifice for 10x Capacity and the 8 enableAutoMerge* actions further down this
-// file. A same-reference no-op below isAutoClaimCoreUnlockAvailable's own gate.
-export const enableAutoClaimCore = state => {
-  if (!isAutoClaimCoreUnlockAvailable(state)) return state
   return {
     ...state,
-    intro: { ...state.intro, computeNodes: 0, autoClaimCoreEnabled: true },
+    intro: {
+      ...state.intro,
+      ...boosterUpdates,
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          deposits: decomposeDataLakeDeposits(remainingDeposited),
+          purchased,
+        },
+      },
+    },
   }
 }
+
+// --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
+// createInitialGameState and INTRO_COMPUTE_CORE_UNLOCK_CAPACITY/COMPUTE_CORES_PER_NODE in
+// layers.js. Earlier versions minted a Compute Core either at a fixed 10 MB of Memory (gated on
+// every Disk size being built and full) or automatically/manually from a full Memory balance once
+// capacity reached this threshold (the "Claim Core" mechanic) — both superseded (see
+// docs/DESIGN_HISTORY.md) in favor of purchaseBoosterFromDataLake above, which spends deposited
+// Disk stock from the matching Data Lake instead and is unrelated to Memory/capacity entirely.
+
+// Predicate, not a reducer: whether ByteFoundryPage's/ComputePage's "Compute" section should be
+// active at all. True once capacity has grown enough to ever hold INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
+// (800,000 bits, "100 KB" in Memory's own B/KB/MB scale) at once — the same "capacity-magnitude
+// reveal gate" convention isIntroConversionUnlocked/isStorageUnlocked already use, one Sacrifice
+// stage later than Storage's own reveal.
+export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →
 // Datacenter → Supercomputer → Megacomputer merge chain below (see ComputePage and issues
@@ -4180,6 +4357,7 @@ export const prestigeGame = state => {
       disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
       diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
       diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
+      diskReadCacheFlush: initial.intro.diskReadCacheFlush,
       diskWriteCache: initial.intro.diskWriteCache,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
@@ -4196,10 +4374,9 @@ export const prestigeGame = state => {
       computeSupercomputers: state.intro?.computeSupercomputers ?? initial.intro.computeSupercomputers,
       computeMegacomputers: state.intro?.computeMegacomputers ?? initial.intro.computeMegacomputers,
       computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
-      // The auto-claim/auto-merge unlock flags (see issue #316) are one-time, irreversible
-      // purchases just like the compute-ladder entities and reveal latch above — carried through a
-      // real Prestige unchanged, never re-locked.
-      autoClaimCoreEnabled: state.intro?.autoClaimCoreEnabled ?? initial.intro.autoClaimCoreEnabled,
+      // The auto-merge unlock flags (see issue #316) are one-time, irreversible purchases just
+      // like the compute-ladder entities and reveal latch above — carried through a real Prestige
+      // unchanged, never re-locked.
       autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
       autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
       autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
