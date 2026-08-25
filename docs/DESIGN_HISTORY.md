@@ -7,6 +7,11 @@ costing more — even before Compute existed. Replaced with `components/ConfirmD
 StatCard overlay). The Core-cost warning line only appears once
 `isComputeCoreConversionUnlocked` is true.
 
+**Superseded (see "Removing Claim Core" below):** the "every future Core will cost more" line
+itself was removed once Cores stopped being minted from a Memory flush at all — the
+`isComputeCoreConversionUnlocked`-gated warning in the dialog now only covers the still-accurate
+"this wipes all held Compute tokens" line.
+
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation
 results, superseded designs, and the reasoning for choices that aren't self-evident from current
 behavior alone. `CLAUDE.md` states what the system currently does and is what loads into every
@@ -2540,3 +2545,147 @@ at production rate — stored in `intro.diskReadCacheFlush[size]` for the in-fli
 Flush pauses while `isDiskRedeemable` is true at that size (tier funding wins), and cancels if the
 array goes mid-build or loses its empty container. UI drains the read-cache row during the pour.
 Write-cache collect/flush timing is unchanged.
+
+### Compute Boost base presets: fixing a total-extra-production ordering bug
+
+Requested directly, alongside a detailed Booster/Data Lake spec (most of which — `DATA_LAKE_CAPACITY`
+999, the 9×1/9×10/9×100 sub-slot structure, the triangular `n(n+1)/2` cumulative Booster cost with
+no hardcoded cap, and reusing the existing 8:1 compute-ladder merge for Boosters — the codebase
+already matched exactly by the time this was checked, having evolved through #361/#383/#434/#445-446
+independently). One real bug remained: the base (tier 1/Core) `COMPUTE_BOOST_PRESETS` values —
+`burst` ×32/1 minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour — violated the intended design
+invariant that a preset's own total extra production, `(multiplier - 1) * durationSeconds`, should
+strictly increase Burst → Standard → Sustain (a longer commitment should always net more total
+output, or there's no reason to ever pick it over Burst). The old values gave Standard 70
+multiplier-minutes of extra output but Sustain only 60 — Sustain was strictly worse than Standard
+despite committing 6x longer. Replaced with `burst` ×20/10 minutes, `standard` ×5/1 hour, `sustain`
+×2/10 hours — 190/240/600 multiplier-minutes respectively, strictly increasing as intended (see
+`layers.test.js`'s dedicated ordering test). `COMPUTE_BOOST_TIER_POWER_STEP`/
+`COMPUTE_BOOST_TIER_DURATION_STEP` (the per-Booster-tier scaling above these base values) were left
+untouched — the request's own tier-breadth idea (a higher Booster tier applying the effect to more
+resource tiers at once, rather than scaling multiplier/duration further) is a separate, larger
+question still being scoped given `COMPUTE_BOOST_TIER_DURATION_STEP`'s duration-doubling was itself
+a deliberate restoration after #363 had flattened it (see that entry above).
+
+### Data Lake Boosters: spending real deposits, not a separate "used" ledger
+
+A follow-up correction to the same request above: "Data Lake is refillable, in fact refilled soon
+after consumption of cost of each booster. So there is a limit of 999 boosters of each size because
+the 1000th booster costs more than the capacity of the corresponding data lake." The original
+`purchaseBoosterFromDataLake` tracked spend against a separate `lake.used` counter that only ever
+grew, subtracted from the (separately capped-at-999) `deposited` total — so a full lake's
+n×(n+1)/2 ≤ 999 triangular sum naturally capped purchases around 44, permanently, with no way to
+ever buy more from that lake again even after depositing further Disks (`used` never decreased).
+That's not what was actually wanted: a Booster purchase should spend real, currently-deposited
+capacity — capacity that comes back the same way it arrived, by depositing more Disks once that
+array rebuilds a replacement through the ordinary build/fill pipeline (confirmed directly: "using
+same process as array disk refill," i.e. no new bespoke refill timer — reuse `depositDiskToDataLake`
+and the existing disk build/cache/redeem loop as-is).
+
+Fix: `lake.used` is gone. `getDataLakeAvailableUnits` is now simply `getDataLakeDepositedUnits` (no
+subtraction) — spent capacity is genuinely removed from `deposits`, decomposed back down into the
+100s/10s/1s sub-slot digits via a new `decomposeDataLakeDeposits` helper (valid because a deposited
+total 0..999, with each digit place capped at `DATA_LAKE_SLOT_MAX`/9, is always exactly its own
+base-10 hundreds/tens/ones decomposition). This makes `getMaxBoosterPurchasesForCapacity`'s existing
+triangular-sum result (44 for a full lake) a "burst from one full tank" number rather than the
+tier's lifetime cap — a patient player who keeps redepositing between purchases can push the cost
+arbitrarily higher, all the way up to the true ceiling: since a lake can never hold more than
+`DATA_LAKE_CAPACITY` (999) at once, the 1,000th purchase (costing 1,000) can never be funded no
+matter how much gets redeposited, so the real lifetime cap is exactly 999 Boosters per tier — see
+`engine.test.js`'s dedicated test walking a lake from purchase 998 through 999 and confirming 1,000
+is permanently unaffordable.
+
+### Removing Claim Core: superseded by Data Lake Boosters
+
+A third follow-up correction to the same Booster/Data Lake request: "Remove the claim core logic
+when memory is full. It is superseded by this change and also remove the button. Also remove the
+warning." The manual "Claim Core" button on `ByteFoundryPage` (`claimComputeCore`, gated by
+`isComputeCoreClaimAvailable`) and its automatic counterpart (`tickComputeCoreConversion`, gated by
+the permanent `intro.autoClaimCoreEnabled` flag, unlockable via `enableAutoClaimCore` by sacrificing
+10 Nodes) minted a Compute Core by flushing the player's ENTIRE current Memory capacity to 0 — the
+second of two now-superseded Core-minting mechanics (see the `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+comment in `layers.js` for the first, a fixed-10-MB/Disk-fullness-gated version predating this one).
+Now that `purchaseBoosterFromDataLake` (added earlier in this same request chain) is the only way to
+obtain a Core — spending deposited Disk stock from the tier-1 Data Lake instead of Memory — the
+Memory-flush path was pure redundancy: worse, even, since Boosters can push `computeCores` past
+`COMPUTE_ENTITY_CAP` while a Memory-flush Core could not.
+
+Removed entirely from `engine.js`: `mintComputeCoreIfReady`, `tickComputeCoreConversion`,
+`claimComputeCore`, `isComputeCoreClaimAvailable`, `isAutoClaimCoreUnlockAvailable`,
+`enableAutoClaimCore`, and the `intro.autoClaimCoreEnabled` state field itself (dropped from
+`createInitialGameState`, `buildEraIntroReset`, and `prestigeGame`'s carry-over list — an old save's
+stray `autoClaimCoreEnabled: true` from before this change is simply ignored, since `mergeState`
+only fills in *missing* fields). `isComputeCoreConversionUnlocked` (the capacity-threshold predicate
+gating `ComputePage`'s reveal and Sacrifice's Compute-token wipe) stays — it was always the broader
+"Compute is unlocked" check, not specific to the Claim Core mechanic. The
+`computeCoresEverEarned`/`computeMergePageUnlocked` reveal-latch bookkeeping (previously done inside
+`mintComputeCoreIfReady`) already had an equivalent path in `latchComputeMergePageIfNeeded` (added
+alongside `purchaseBoosterFromDataLake` itself), so no coverage was lost by deleting the old path —
+confirmed by the pre-existing "tier-1 purchases latch computeMergePageUnlocked via
+computeCoresEverEarned" test in `engine.test.js`.
+
+On `ByteFoundryPage`: the Claim Core button, its `showManualClaimCore`/`canClaimComputeCore`
+variables, and the "Every future Core will cost more" warning line inside the Sacrifice confirm
+dialog (see the entry above) are all gone. Removing Claim Core also removed the *reason* Memory ×10
+(Sacrifice) and Claim Core used to swap positions in the milestones row once Boosts unlocked — with
+only one of the two left, Sacrifice now always renders in the milestones row beside Bandwidth,
+regardless of whether Compute is unlocked, rather than moving below the disk section. On
+`ComputePage`: the small 🤖 auto-claim badge/button on Cores' row 1 (`autoClaimFlagField`/
+`enableAutoClaimAction`/`AutoBadge` and friends) is gone — Cores' row 2 already carries the "buy 1
+Core from the Data Lake" button, so nothing replaces the removed control; it simply wasn't needed.
+
+This also genuinely fixed one of the two flaky `App.test.jsx` tests flagged in the same request
+("Sacrifice confirm warns that future Cores cost more...", timing out or landing on the wrong page
+under the full suite): that test seeded Memory exactly at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+(8,000,000 bits) and used `userEvent` (real timers) to click Sacrifice — but the tick loop's
+always-on Memory → Kilobyte auto-convert (`tickIntroAutoInvest`) isn't gated by the forced priority
+order guarding Sacrifice, so a real tick landing between render and the click could drain Memory and
+flip `intro.mainGameUnlocked` on its first successful conversion, navigating away from
+`ByteFoundryPage` (and the dialog under test) entirely before the assertion ran — reproducible even
+in isolation, not just under the full suite, confirming it was a genuine race rather than ordinary
+cross-test pollution. `main` independently landed the identical root-cause fix and diagnosis
+(switching to `vi.useFakeTimers()` + `fireEvent`, closing #449) while this branch was mid-flight on
+the same test for the warning-removal above; the two were reconciled via a merge rather than
+duplicated. The second flagged flaky test (`theme preference in Settings switches mode and persists
+across remount`) was a genuine `main` fix too, unrelated to Claim Core: two full `<App/>`
+mount/unmount cycles in one test can legitimately exceed Vitest's 5s default under a loaded/sandboxed
+test environment, so its timeout was bumped to 15s rather than the test being restructured.
+
+### Data Lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion
+
+A fourth request in the same chain, delivered alongside the Claim Core removal above: "Data lake is
+refilled only if all the disks in main storage array are all built and full. Data lake capacity is 9
+when built then increases to 99 after adding the next size array and then to 999 using similar
+progression." The prior implementation let a player deposit into a Data Lake sub-slot the moment a
+single full disk of the matching size existed — with the full `DATA_LAKE_CAPACITY` (999) reachable
+from the very first disk built at the smallest sub-size, since nothing checked how far along that
+size's array actually was.
+
+Interpretation: requiring literally ALL `DISK_ARRAY_LADDER_CAP` (10) disks of a size to be
+*simultaneously* full at the moment of deposit would be self-defeating — `depositDiskToDataLake`
+consumes exactly one full disk per call, so the very first deposit would immediately break that
+condition, permanently blocking every further deposit at that size until the whole array somehow
+refilled to 10/10 again (a state the normal build/fill/redeem loop has no way to reach, since
+building a NEW disk at a size whose ladder has already advanced isn't how the ladder works). The
+sensible reading — and the one implemented — is that "built and full" describes the array's
+COMPLETION state, not an instantaneous snapshot: a size's array must have been fully built out at
+least once (`disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, a permanent, monotonically-increasing
+condition, unlike the live `disks[size]` full-count which naturally fluctuates) before ANY of that
+size's disks become deposit-eligible at all — the existing "at least one currently full disk" check
+stays too, as the actual per-deposit condition.
+
+This single gate change turns out to ALSO implement the staged-capacity half of the request for
+free, without any new state field: each Data Lake tier's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10,
+100]`, `DATA_LAKE_SLOT_MAX` = 9 each) already map to 3 successive disk sizes (e.g. tier 1/KB ← the
+1 KB, 10 KB, and 100 KB disk arrays). Gating each sub-slot's deposits on its own size's array
+completion means a lake's deposits literally cannot exceed 9 (the ×1 sub-slot's own cap) until the
+×1 array completes and the ×10 array's sub-slot ALSO opens up — pushing the reachable total to 99 —
+and cannot exceed 99 until the ×100 array completes too, unlocking the final climb to 999. No
+separate "current capacity stage" field was needed; the existing digit-decomposition deposit model
+(see the Data Lake Boosters entry above) already produces exactly this staging as an emergent
+property of the sub-slot structure once each slot's own gate is added.
+
+Implementation: `isDiskArrayFullyBuilt(state, sizeBits)` (a private helper in `engine.js`) checks
+`disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP`; `canDepositDiskToDataLake` calls it first,
+before the existing full-disk/slot-max/lake-cap checks. See `engine.test.js`'s "staged Data Lake
+capacity" test for the full 9 → 99 → 999 walkthrough.

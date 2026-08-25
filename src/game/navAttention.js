@@ -20,7 +20,6 @@ import {
   getSpeedUpRequirement,
   getTierAffordableQuantity,
   getTierSpendableAmount,
-  isAutoClaimCoreUnlockAvailable,
   isAutoMergeCloudsIntoDatacenterUnlockAvailable,
   isAutoMergeClustersIntoNetworkUnlockAvailable,
   isAutoMergeCoresIntoNodeUnlockAvailable,
@@ -33,7 +32,6 @@ import {
   isBandwidthTurnAvailable,
   isComputeCloudsMergeStartAvailable,
   isComputeClustersMergeStartAvailable,
-  isComputeCoreClaimAvailable,
   isComputeCoreConversionUnlocked,
   isComputeCoresMergeStartAvailable,
   isComputeDatacentersMergeStartAvailable,
@@ -208,7 +206,6 @@ export const hasFoundryAttention = state =>
   isMemoryCapacityUpgradeAvailable(state) ||
   isBandwidthTurnAvailable(state) ||
   isDiskBuildTurnAvailable(state) ||
-  isComputeCoreClaimAvailable(state) ||
   isTransferBlockAffordable(state) ||
   isDiskFillAvailable(state)
 
@@ -246,8 +243,7 @@ export const hasComputeAttention = state => {
     isComputeUpgradeTurnAvailable(state) ||
     hasInstantMergeAvailable(state) ||
     COMPUTE_AUTO_MERGE_UNLOCKS.some(fn => fn(state)) ||
-    COMPUTE_RESERVE_MERGE_STARTS.some(fn => fn(state)) ||
-    isAutoClaimCoreUnlockAvailable(state)
+    COMPUTE_RESERVE_MERGE_STARTS.some(fn => fn(state))
   )
 }
 
