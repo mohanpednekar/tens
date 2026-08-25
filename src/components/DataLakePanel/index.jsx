@@ -2,7 +2,6 @@ import StatCard from 'components/StatCard'
 import {
   formatAmount,
   getBoosterPurchaseCost,
-  getDataLakeAvailableUnits,
   getDataLakeDepositedUnits,
   getDataLakeTier,
   getDataLakeTierLabel,
@@ -58,11 +57,17 @@ const DataLakePanel = ({ state }) => {
       <LakeList>
         {visibleTiers.map(tierIndex => {
           const label = getDataLakeTierLabel(tierIndex)
+          // A Booster purchase spends real deposited capacity — there's no separate "available vs.
+          // deposited" distinction any more (see getDataLakeAvailableUnits in engine.js); spent
+          // capacity only returns once more Disks get deposited to replace it.
           const deposited = getDataLakeDepositedUnits(tierIndex)(state)
-          const available = getDataLakeAvailableUnits(tierIndex)(state)
           const lake = getDataLakeTier(state, tierIndex)
           const purchased = lake?.purchased ?? 0
           const nextCost = getBoosterPurchaseCost(tierIndex)(state)
+          // How many MORE purchases the currently-deposited stock alone can fund in a row, before
+          // needing fresh deposits — NOT the tier's lifetime cap (that's DATA_LAKE_CAPACITY itself,
+          // 999, shown against `purchased` below — a patient player redepositing between purchases
+          // can reach it even though no single deposit-load can burst past ~44).
           const maxPurchasable = getMaxBoosterPurchasesForCapacity(deposited)
           const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
 
@@ -70,7 +75,7 @@ const DataLakePanel = ({ state }) => {
             <LakeRow key={tierIndex}>
               <LakeName>{`${label} Data Lake → ${boosterLabel}`}</LakeName>
               <LakeStats>
-                {`${formatAmount(available)}/${formatAmount(deposited)} free · ${formatAmount(purchased)} bought · next ${formatAmount(nextCost)} ${label} · max ${formatAmount(maxPurchasable)} (${formatAmount(DATA_LAKE_CAPACITY)} cap)`}
+                {`${formatAmount(deposited)} deposited · ${formatAmount(purchased)}/${formatAmount(DATA_LAKE_CAPACITY)} bought · next ${formatAmount(nextCost)} ${label} · ${formatAmount(maxPurchasable)} more before next deposit`}
               </LakeStats>
             </LakeRow>
           )

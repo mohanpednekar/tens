@@ -28,8 +28,12 @@ import {
   DISK_LADDER_SIZE_MULTIPLIER,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
+  INTRO_BANDWIDTH_COST_MULTIPLIER,
+  INTRO_CAPACITY_CAP_BITS,
+  INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
+  MEMORY_BINARY_UNIT_STEP,
   MONEY_ID,
   OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
@@ -246,9 +250,27 @@ describe('constants', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 8,000,000 bits (1 MB in Memory\'s own B/KB/MB display scale)', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(8000000)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(1000 * 1000 * BITS_PER_BYTE)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 4,194,304 bits (512 KiB in Memory\'s own binary display scale) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(4194304)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 1024 * 512)
+  })
+
+  it('INTRO_CAPACITY_CAP_BITS is 8,388,608 bits (exactly 1 MiB) — large enough to afford building pool 1\'s own largest (100 KB) Disk', () => {
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(8388608)
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 1024)
+  })
+
+  it('INTRO_CAPACITY_DOUBLING_STEP is 2 ("Sacrifice for 2x Capacity")', () => {
+    expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
+  })
+
+  it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Bandwidth\'s own cost ladder steps ×4 per tier)', () => {
+    expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
+  })
+
+  it('MEMORY_BINARY_UNIT_STEP is 1024 (Memory Capacity\'s binary unit ladder — 1 KiB = 1024 Bytes)', () => {
+    expect(MEMORY_BINARY_UNIT_STEP).toBe(1024)
   })
 
   it('COMPUTE_CORES_PER_NODE is 8', () => {
@@ -270,7 +292,7 @@ describe('constants', () => {
     expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
   })
 
-  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits (10 KB in Memory\'s own B/KB/MB display scale)', () => {
+  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits ("9.765 KiB" in Memory\'s own binary display scale)', () => {
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
   })
@@ -292,10 +314,19 @@ describe('constants', () => {
     expect(DISK_CACHE_BLOCK_COUNT).toBe(8)
   })
 
-  it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 1 minute (Burst x32), 10 minutes (Standard x8), 1 hour (Sustain x2)', () => {
-    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 32, durationSeconds: 60 })
-    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 8, durationSeconds: 600 })
-    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
+  it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 10 minutes (Burst x20), 1 hour (Standard x5), 10 hours (Sustain x2)', () => {
+    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 20, durationSeconds: 600 })
+    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 5, durationSeconds: 3600 })
+    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 36000 })
+  })
+
+  it('total extra production ((multiplier - 1) * durationSeconds) increases Burst -> Standard -> Sustain', () => {
+    const extra = preset => (preset.multiplier - 1) * preset.durationSeconds
+    expect(extra(COMPUTE_BOOST_PRESETS.burst)).toBe(190 * 60) // 190 minutes, in seconds
+    expect(extra(COMPUTE_BOOST_PRESETS.standard)).toBe(240 * 60)
+    expect(extra(COMPUTE_BOOST_PRESETS.sustain)).toBe(600 * 60)
+    expect(extra(COMPUTE_BOOST_PRESETS.burst)).toBeLessThan(extra(COMPUTE_BOOST_PRESETS.standard))
+    expect(extra(COMPUTE_BOOST_PRESETS.standard)).toBeLessThan(extra(COMPUTE_BOOST_PRESETS.sustain))
   })
 
   it('COMPUTE_BOOST_TIER_POWER_STEP is 4 (each compute-ladder tier is 4x as powerful as the previous one)', () => {

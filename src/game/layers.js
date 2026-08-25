@@ -36,11 +36,20 @@ export const TIER_DEFINITIONS = [
 ]
 
 
+// Precompute dictionaries for O(1) lookups rather than O(N) Array.find calls.
+// Keys are tier ids ('tier01', etc).
+const TIER_SYMBOLS = Object.fromEntries(
+  TIER_DEFINITIONS.map(t => [t.id, t.symbol])
+)
+const TIER_TICK_SPEEDS = Object.fromEntries(
+  TIER_DEFINITIONS.map(t => [t.id, t.baseTickSpeedSeconds])
+)
+
 // Falls back to 'b' (lowercase — a bit) for MONEY_ID/an unrecognized resource id.
 export const BYTES_ID = 'bytes'
 export const RESOURCE_SYMBOL = resourceId => {
   if (resourceId === BYTES_ID) return 'B'
-  return TIER_DEFINITIONS.find(t => t.id === resourceId)?.symbol || 'b'
+  return TIER_SYMBOLS[resourceId] || 'b'
 }
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
@@ -51,7 +60,7 @@ export const RESOURCE_SYMBOL = resourceId => {
 // system (getEffectiveTierTickSpeedSeconds) to be offset back down. An unrecognized tier id falls
 // back to 1s rather than throwing.
 export const getTierBaseTickSpeedSeconds = tierId =>
-  TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
+  TIER_TICK_SPEEDS[tierId] ?? 1
 
 // A naming-agnostic key, fully decoupled from the "Bits" display name/symbol — same rationale as
 // each tier's own `id` above.
@@ -93,9 +102,35 @@ export const TICK_RATE_MS = 100
 // Starting/current cap on the intro's bit balance — both tapping and passive production stop
 // crediting bits once the balance reaches this (see tapIntroBit/tickIntroProduction in engine.js).
 export const INTRO_STARTING_CAPACITY = 8
-// "Sacrifice for 10x Capacity" multiplies capacity by this each time it's taken: 8 → 80 → 800 →
-// 8000 → … (see pickIntroCapacityMilestone in engine.js).
-export const INTRO_CAPACITY_MULTIPLIER = 10
+// "Sacrifice for 2x Capacity" multiplies capacity by this each time it's taken: 8 → 16 → 32 → 64 →
+// … (see pickIntroCapacityMilestone in engine.js). Replaced the old flat ×10-forever ladder — see
+// INTRO_CAPACITY_CAP_BITS below for why growth now also stops at a per-pool ceiling instead of
+// continuing indefinitely; see docs/DESIGN_HISTORY.md.
+export const INTRO_CAPACITY_DOUBLING_STEP = 2
+// Byte Foundry Memory Capacity's own binary-unit ladder step — 1 KiB = 1024 Bytes (vs. a Disk's own
+// SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). Distinct
+// from DISK_LADDER_SIZE_MULTIPLIER/SI_BYTE_UNIT_SCALE (both still 1000/SI) — Storage stays SI-scaled
+// throughout; only Memory Capacity's own display and growth math switched to binary.
+export const MEMORY_BINARY_UNIT_STEP = 1024
+// Pool 1 (the Kilobyte pool, i.e. today's only Byte generator)'s hard capacity ceiling, in bits —
+// exactly 1 MiB (1024^2 Bytes), the same binary-tier boundary the next pool up would start at. Set
+// this high on purpose: the pool's own largest buildable Disk (the 100 KB rung, the third and last
+// size before getDiskSize would advance into the next pool — DISK_LADDER_BASE_SIZE_BITS *
+// DISK_LADDER_SIZE_MULTIPLIER ** 2) costs DISK_BUILD_COST_MULTIPLIER times its own face value to
+// build — 8,000,000 bits — spent from Memory in one shot via startDiskBuild, so the cap must be
+// able to hold at least that much at once or the array's last Disk size could never be built. An
+// earlier version capped at half this (the largest power of two strictly BELOW 1 MiB) purely by
+// binary-tier convention, without checking against the pool's own largest Disk's build cost — which
+// left the 100 KB Disk permanently unbuildable, since its 8,000,000-bit cost exceeds that lower cap;
+// see docs/DESIGN_HISTORY.md. Derived, not a bare literal, so a future per-pool generator (pool N's
+// own ceiling sits one binary tier higher per pool, matching that pool's own largest Disk the same
+// way) can reuse the same formula.
+export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 2
+// "Invest for Double Production"'s own cost ladder now steps ×4 per tier instead of ×10 — see
+// getIntroProductionMilestoneCost in engine.js. Deliberately a separate constant from
+// INTRO_CAPACITY_DOUBLING_STEP above even though both ladders once shared the same ×10 multiplier —
+// they're independent progressions that only coincidentally matched before this change.
+export const INTRO_BANDWIDTH_COST_MULTIPLIER = 4
 // The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
 // per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
 // continuous rate). "Invest for Double Production" halves this (see
@@ -154,12 +189,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
-// per step — see ByteFoundryPage's getMemoryUnit, the SAME real-Kilobyte scale a Disk's own size
-// now uses — see getDiskSize in engine.js) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 →
-// 8000 → 80000 via Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed
-// only once the player has grown capacity a bit past the Kilobyte-transfer row's own, earlier
-// 1000-bit reveal.
+// until Memory's own capacity reaches this many bits — 80,000 bits, "9.765 KiB" in Memory's own
+// binary display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
+// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS ceiling, reachable via repeated Sacrifice
+// doublings from INTRO_STARTING_CAPACITY. A deliberate pacing gate: Storage is a later-game
+// mechanic, revealed only once the player has grown capacity a bit past the Kilobyte-transfer
+// row's own, earlier 1000-bit reveal.
 export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
@@ -172,11 +208,13 @@ export const DISK_BUILD_COST_MULTIPLIER = 10
 // Smallest buildable Disk size, in bits — 1 KB Byte-accurate (same face value tier01's own level-1
 // unit cost × BITS_PER_BYTE). See getDiskLadderSizeBits / getDiskSize in engine.js.
 export const DISK_LADDER_BASE_SIZE_BITS = BITS_PER_BYTE * 1000
-// Each ladder step multiplies the previous size by this (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …)
-// so every Byte-scale power-of-ten size is offered — including 1 MB disks that redeem into
-// Tier02/Megabytes at level 1 (issue #368). An earlier ladder walked tier01's level-cost sequence
-// instead and skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB);
-// see docs/DESIGN_HISTORY.md.
+// Each ladder step multiplies the previous size by this — the pure formula covers every
+// Byte-scale power-of-ten size with no gaps (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …, issue #368,
+// fixing an earlier ladder that walked tier01's level-cost sequence instead and skipped sizes
+// whenever cost-epoch exponents jumped — 100 KB → 10 MB, never 1 MB). `getDiskSize` (engine.js)
+// only actually WALKS this formula up to `MAX_ACTIVE_DISK_LADDER_STEP` though — today just pool 1's
+// own 1/10/100 KB, since no pool 2 generator exists yet to fund a 1 MB disk's own build cost; see
+// docs/DESIGN_HISTORY.md.
 export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // How many disks must ever be built at the current ladder size before getDiskSize advances to the
 // next (×DISK_LADDER_SIZE_MULTIPLIER) size. Driven by intro.disksBuiltTotal — cumulative, never
@@ -195,34 +233,38 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
-// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked/
-// tickComputeCoreConversion in engine.js and
-// intro.computeCores/computeNodes in createInitialGameState. An earlier version of this mechanic
-// costed a Compute Core at a fixed 10 MB of Memory, gated on every Disk size being built
-// and full first — superseded by the dynamic model below, which has no relationship to Storage at
-// all; see docs/DESIGN_HISTORY.md for why.
+// --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
+// intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
+// costed a Compute Core at a fixed 10 MB of Memory (gated on every Disk size being built and full),
+// then at a dynamic, capacity-tied Memory flush ("Claim Core") — both superseded by
+// purchaseBoosterFromDataLake in engine.js, which spends deposited Disk stock from the matching
+// Data Lake instead and has no relationship to Memory/Storage at all; see docs/DESIGN_HISTORY.md
+// for why.
 //
-// Capacity threshold at which Compute Cores reveal on ByteFoundryPage and the automatic conversion
-// below activates — 1 MB in Memory's own B/KB/MB/… display scale (BITS_PER_BYTE (8) × 1000² per
-// step — see getMemoryUnit in ByteFoundryPage), 8,000,000 bits: two Sacrifice stages past Storage's
-// own reveal (INTRO_DISK_UNLOCK_CAPACITY, 10 KB) — a later, more advanced-game gate, matching
-// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses.
-export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8E6
-// How many Compute Cores the separate, unrelated Memory -> Core lifetime-counter latch
-// (computeCoresEverEarned/computeMergePageUnlocked — see mintComputeCoreIfReady in engine.js) uses
-// as its own threshold — NOT the Core -> Node merge boundary itself, which reuses the same ratio
-// via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores and
-// intro.computeNodes are permanent counters, carried over every real
+// Capacity threshold at which Compute Cores/the Compute screen reveal — a later, more
+// advanced-game gate than Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching
+// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
+// 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's new
+// hard cap (INTRO_CAPACITY_CAP_BITS, 1 MiB) — one Sacrifice doubling-step short of it, i.e.
+// 4,194,304 bits (512 KiB) — since the old value no longer lines up with any capacity the doubling
+// ladder actually passes through. Preserves the original's "last/highest of the two
+// capacity-gated reveals" relative ordering (conversion < storage < compute); see
+// docs/DESIGN_HISTORY.md.
+export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
+// How many Compute Cores the separate, unrelated lifetime-counter latch
+// (computeCoresEverEarned/computeMergePageUnlocked — see latchComputeMergePageIfNeeded in
+// engine.js) uses as its own threshold — NOT the Core -> Node merge boundary itself, which reuses
+// the same ratio via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores
+// and intro.computeNodes are permanent counters, carried over every real
 // Prestige exactly like the Byte generator/Disks themselves — see prestigeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
-// entity is at this cap, further production into it pauses entirely (see
-// tickComputeCoreConversion/every mergeCompute*Into*/the reserve-timer system below) rather
-// than overflowing past it or silently discarding progress — Memory (for Cores) or the input
-// entity itself (for every manual merge) simply stays put, waiting for the player to spend the
-// capped entity down via a future spending mechanic, the same "waits, doesn't lose progress"
-// posture Disks already have when nothing can consume them yet.
+// entity is at this cap, further production into it pauses entirely (see every mergeCompute*Into*/
+// the reserve-timer system below) rather than overflowing past it or silently discarding progress —
+// the input entity itself (for every manual merge) simply stays put, waiting for the player to
+// spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
+// progress" posture Disks already have when nothing can consume them yet.
 export const COMPUTE_ENTITY_CAP = 10
 // 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
 // is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
@@ -231,22 +273,14 @@ export const COMPUTE_ENTITY_CAP = 10
 // mergeComputeClustersIntoNetwork/mergeComputeNetworksIntoGrid/mergeComputeGridsIntoFabric/
 // mergeComputeFabricsIntoCloud/mergeComputeCloudsIntoDatacenter/mergeComputeDatacentersIntoSupercomputer/
 // mergeComputeSupercomputersIntoMegacomputer in engine.js — each player-triggered (a button click),
-// never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). This is
-// unrelated to the separate Memory → Core "Claim Core" mechanic (COMPUTE_CORES_PER_NODE above),
-// which still has its own distinct automatic-conversion path. Nothing spends a Megacomputer yet —
-// it's the top of the chain today (see issue #280's "Out of scope").
+// never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). Nothing
+// spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
 // Each of the 9 manual merges above can also be permanently automated (see issues #316/#321,
 // enableAutoMergeCoresIntoNode/enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing
 // ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own output entity — once
 // unlocked, that boundary's merging (both manual and automatic) fully transitions to a timed
 // RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP /
-// getComputeMergeDurationSeconds below). Core's own Memory → Core conversion has the
-// analogous "auto claim" concept instead of "auto merge" (see intro.autoClaimCoreEnabled/
-// claimComputeCore/enableAutoClaimCore in engine.js), since it has no merge INPUT of its own —
-// sacrificing 10 Nodes unlocks it (enableAutoClaimCore). Note this is a genuinely SEPARATE unlock
-// from enableAutoMergeCoresIntoNode, which coincidentally also costs 10 Nodes but automates a
-// completely different step (merging Cores into Nodes, not minting Cores from Memory) — a player
-// can unlock either, both, or neither independently.
+// getComputeMergeDurationSeconds below).
 export const COMPUTE_MERGE_RATIO = 8
 
 // --- Byte Foundry Compute reserve-merge timers --- see issue #321 / #377. Every one of the 9 tier
@@ -305,10 +339,14 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
 // (applied as a flat extra factor), `durationSeconds` is how long one activation lasts before
 // decaying back to inactive (see tickComputeBoost).
+// Total extra production (multiplier - 1) × durationSeconds increases Burst → Standard → Sustain
+// by design (190 / 240 / 600 at tier 1) — the earlier 32×/60s, 8×/600s, 2×/3600s values violated
+// this (70 for Standard vs. only 60 for Sustain, i.e. Sustain gave LESS extra output than
+// Standard despite its longer commitment); see docs/DESIGN_HISTORY.md.
 export const COMPUTE_BOOST_PRESETS = {
-  burst: { multiplier: 32, durationSeconds: 60 },
-  standard: { multiplier: 8, durationSeconds: 600 },
-  sustain: { multiplier: 2, durationSeconds: 3600 },
+  burst: { multiplier: 20, durationSeconds: 600 },
+  standard: { multiplier: 5, durationSeconds: 3600 },
+  sustain: { multiplier: 2, durationSeconds: 36000 },
 }
 // Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
 // `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
@@ -342,9 +380,17 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
 // purchaseBoosterFromDataLake in engine.js. Each of the 10 storage denominations (KB … QB) has a
 // Data Lake holding up to DATA_LAKE_CAPACITY units, filled by depositing Disks (9×1 + 9×10 + 9×100
-// of that tier's denomination = 999). Booster purchases at tier N consume units from lake N; the
-// nth purchase costs n units (triangular total n×(n+1)/2), so a full lake naturally caps at 44
-// boosters — no separate inventory limit.
+// of that tier's denomination = 999). Booster purchases at tier N spend units genuinely OUT of lake
+// N's own current deposits (not against a separate ledger) — real capacity that only returns once
+// more Disks get deposited, the same way it arrived, once that array rebuilds a replacement disk
+// through the ordinary build/fill pipeline. The nth purchase costs n units; since no single
+// purchase can ever cost more than a fully-deposited lake could hold at once, the true lifetime cap
+// per tier is exactly DATA_LAKE_CAPACITY (999) Boosters — the 1,000th would need 1,000 units, which
+// no amount of redepositing can ever fund. A full, undepleted lake can only fund 44 of those
+// purchases in one uninterrupted burst (cumulative triangular cost n×(n+1)/2 ≤ 999) before needing
+// fresh deposits — see getMaxBoosterPurchasesForCapacity in engine.js for that distinct "burst"
+// number — but a patient player redepositing between purchases can reach the full 999. No separate
+// inventory limit beyond this.
 export const DATA_LAKE_CAPACITY = 999
 export const DATA_LAKE_SLOT_MAX = 9
 export const DATA_LAKE_TIER_COUNT = 10

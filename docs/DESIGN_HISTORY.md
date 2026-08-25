@@ -7,6 +7,11 @@ costing more — even before Compute existed. Replaced with `components/ConfirmD
 StatCard overlay). The Core-cost warning line only appears once
 `isComputeCoreConversionUnlocked` is true.
 
+**Superseded (see "Removing Claim Core" below):** the "every future Core will cost more" line
+itself was removed once Cores stopped being minted from a Memory flush at all — the
+`isComputeCoreConversionUnlocked`-gated warning in the dialog now only covers the still-accurate
+"this wipes all held Compute tokens" line.
+
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation
 results, superseded designs, and the reasoning for choices that aren't self-evident from current
 behavior alone. `CLAUDE.md` states what the system currently does and is what loads into every
@@ -1873,6 +1878,14 @@ something to engineer around (e.g. by decoupling the two ladders or exempting In
 since it's exactly what "offer capacity upgrade only after all other upgrades are done" means in
 practice once the two ladders are that closely coupled by construction.
 
+**Update:** the pool 1 byte generator change (#457, see "Pool 1 byte generator" further down this
+section) later did split the two ladders into independent multipliers (`INTRO_CAPACITY_DOUBLING_STEP`
+= 2 for capacity, `INTRO_BANDWIDTH_COST_MULTIPLIER` = 4 for Invest's own cost) — not to "engineer
+around" the coupling described above, but as a side effect of the maintainer's own explicit new spec
+for both ladders independently. They're no longer numerically identical even at tier 0 by
+construction; the "claiming Invest becomes a de facto prerequisite" behavior above may or may not
+still hold in practice under the new numbers and hasn't been re-verified.
+
 This broke several existing tests that had previously (correctly, before this change) asserted
 Sacrifice and Invest were fully independent and simultaneously available from a fresh starting
 balance — those tests were updated to explicitly clear the Invest-claimed gate
@@ -2325,6 +2338,162 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 See `docs/ECONOMY_REFERENCE.md` “Era ascension and Eons” for the live constant table; issues #407
 (parent epic), #405 (Unbounded), #410 (engine), #411 (UI).
 
+### Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456)
+
+Requested directly by the maintainer as the first slice of a larger redesign: eventually, each of
+the 10 storage pools (KB…QB, matching the existing Disk-ladder/Tier denominations) gets its own
+independent Byte generator with a hard-capped, binary-unit capacity ladder — but that full 10-pool
+system (new generator instances, an unlock cascade keyed off the previous pool's Disk arrays all
+being complete, and a compacted UI fitting each pool into ~3 lines) is real follow-up work, tracked
+under epic #456. This entry covers only what #457 actually shipped: converting the existing single
+Byte Foundry generator into what will become "pool 1" (the Kilobyte pool) under the new mechanics.
+
+**Binary vs. SI — why split the unit scale at all.** Memory Capacity answers "how much can this
+generator hold," which is a *count* concept the maintainer wanted expressed in the same binary
+(IEC-style) units real memory/RAM specs use — KiB/MiB/…, 1 KiB = 1024 Bytes. Disk *sizes* answer
+"how big is this storage container," a concept the game had already settled on SI units for (see
+the "Disk ladder offers every Byte power-of-ten size" entry below) — SI stayed unchanged rather than
+also moving to binary, since Storage's own ladder (1 KB → 10 KB → 100 KB → …) is fundamentally a
+decimal progression that binary units would only make less readable. Mechanically this meant
+splitting `getMemoryUnit`/`formatBitsInNearestUnit` (now binary-only, backing Memory's own
+capacity/balance/cost displays) from a new internal SI-only pair (`getSiByteUnit`/
+`formatBitsInNearestSiUnit`, backing `formatDiskSize`) — before this change the two were literally
+the same function (`formatDiskSize` was `export const formatDiskSize = formatBitsInNearestUnit`),
+a coupling that only worked because both scales used to be identical.
+
+**Why capacity doubles-and-caps instead of growing ×10 forever.** The old ladder
+(`INTRO_CAPACITY_MULTIPLIER = 10`, unbounded) grew capacity by the same factor forever; the
+maintainer's spec instead wanted "Memory Capacity doubles on each upgrade" with a hard ceiling per
+generator — "a byte generator['s] memory capacity is capped in a way that it cannot go to the next
+capacity tier," worked from the one given example ("MB byte generator shall not reach 1GiB
+capacity," starting at 1 Byte). Generalizing that single example: pool *N*'s generator capacity
+caps at the largest power of two strictly below `1024^(N+1)` bytes — pool 1 (this generator) caps
+below 1 MiB (512 KiB, `INTRO_CAPACITY_CAP_BITS`); pool 2 (MB, not yet built) would cap below 1 GiB,
+matching the example exactly; pool 3 (GB) below 1 TiB; and so on. `INTRO_CAPACITY_MULTIPLIER` split
+into two independent constants — `INTRO_CAPACITY_DOUBLING_STEP` (2, capacity growth) and
+`INTRO_BANDWIDTH_COST_MULTIPLIER` (4, Bandwidth's own cost ladder, see below) — since they'd
+previously shared one constant only because both ladders happened to use the same ×10 step, not
+because they're conceptually linked.
+
+**Why `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` moved.** The old flat threshold (8,000,000 bits, ~1 MB)
+predates this change and sat *above* pool 1's new 512 KiB hard cap — under the new capped-doubling
+model that threshold would have become permanently unreachable, silently locking Compute Cores out
+of the game for anyone who only ever plays pool 1. Retuned to half the new cap (2,097,152 bits, one
+doubling-step short of it), preserving the original's relative position as the last/highest of the
+three capacity-gated Byte Foundry reveals (conversion < storage < compute-core).
+
+**Why Bandwidth's cost ladder moved to ×4 (not ×2, and not left at ×10).** The maintainer's spec
+said Bandwidth "also doubles on each upgrade" (already true — Invest's production-doubling *effect*
+was already ×2 via `INTRO_PRODUCTION_MULTIPLIER_STEP`, unrelated to the old ×10 constant) "but
+offered for every power of 4 instead of 10." Read against the actual code, "offered" maps to the
+cost ladder's own step multiplier (`getIntroProductionMilestoneCost`), not a new gate layered on
+top of the existing bit-affordability check — so this shipped as a straight ×10 → ×4 swap for that
+one constant, keeping claims-per-tier structurally unchanged. The pre-existing compute-funded
+overflow path for when the bit cost exceeds capacity (#323) did need one real change — see below.
+
+**The capacity cap turned a pre-existing overflow valve into a permanent dead-end — caught by
+adversarial review, not by the original design pass.** Issue #323's compute-funded Bandwidth path
+(sacrifice `COMPUTE_ENTITY_CAP` of a compute-ladder tier, Cores through Megacomputers in order, when
+the bit cost exceeds capacity) only ever reset its own walk-through-the-list index via a successful
+Sacrifice — fine when Sacrifice grew capacity unboundedly, since the player could always eventually
+Sacrifice their way back to affordability. Once Sacrifice terminates at `INTRO_CAPACITY_CAP_BITS`,
+that same design permanently dead-ends: once Bandwidth's ever-growing bit cost (×4/tier, unbounded)
+exceeds the now-fixed capacity ceiling **and** all 10 compute-ladder tiers have been spent once each,
+`pickIntroProductionMilestone` becomes a same-reference no-op forever — the only reset path
+(`rollbackComputeFundedBandwidth`, only ever called from a successful Sacrifice) is itself
+permanently blocked by the same cap. Violates this codebase's own "nothing here ever fully freezes"
+invariant. Fixed by wrapping `computeBandwidthSacrificeIndex` modulo `COMPUTE_BOOST_TIER_FIELDS.length`
+instead of letting it terminate at the end of the list (`getEffectiveComputeBandwidthSacrificeIndex`
+in `engine.js`) — Bandwidth can keep progressing indefinitely off compute-ladder tokens, which stay
+earnable forever via `purchaseBoosterFromDataLake` (spending deposited Disk stock, unrelated to
+Memory/capacity), even after Sacrifice itself is permanently exhausted. Also normalizes any
+out-of-range persisted index from a save written before this fix, rather than leaving it stuck at
+the old terminal value. This is the kind of interaction the mandatory adversarial `code-reviewer`
+pass exists to catch (see `CLAUDE.md`'s "Pull requests") — it wasn't visible from the diff of either
+change in isolation (the cap and the overflow valve were both pre-existing, unrelated designs; only
+their combination broke).
+
+**No save migration.** Existing saves' `intro.capacity` values, grown under the old ×10 ladder, can
+already exceed the new 512 KiB cap (e.g. a save that Sacrificed past 800,000 bits). Rather than
+writing a migration to remap those values onto the new doubling sequence, the cap check
+(`isMemoryCapacityAtCap`) is a plain forward-looking `capacity`-vs-`INTRO_CAPACITY_CAP_BITS`
+comparison: a save already past the cap simply can't Sacrifice further from load onward — no crash,
+no data loss, no special-cased migration function. Covered by an explicit test
+(`engine.test.js`, "does not crash on a save whose capacity already exceeds the new cap").
+
+**Update: the cap was wrong — 512 KiB couldn't afford the pool's own largest Disk.** The original cap
+derivation above (largest power of two strictly below the next binary tier — 512 KiB for pool 1)
+matched the maintainer's literal framing ("shall not reach 1GiB capacity" for the MB-pool example)
+but didn't check the number against the pool's own mechanics: pool 1's largest buildable Disk is the
+100 KB rung (the third and last size before `getDiskSize` would advance into pool 2), and
+`startDiskBuild` spends `getDiskCost` — `DISK_BUILD_COST_MULTIPLIER` (10) times that Disk's own
+800,000-bit face value, 8,000,000 bits — from Memory in one shot. Since Memory's balance can never
+exceed `capacity`, a 512 KiB cap (4,194,304 bits) made that Disk permanently unbuildable — the player
+could Sacrifice all the way to the cap and still never afford it. Caught by the maintainer directly,
+with a worked example ("if KB Data lake is AT capacity 64 KB, we can only do KB to Core conversion
+only 64 times unless we upgrade it" for Data Lakes, generalized to "the max memory capacity of MB
+pool should be 1 GiB. So that we can build 100 MB disks" for capacity) — not caught by any of the
+four adversarial review rounds this PR went through, since none of them cross-checked the cap against
+`getDiskCost` for the pool's own ladder. Fixed by changing `INTRO_CAPACITY_CAP_BITS` from `BITS_PER_BYTE
+* (MEMORY_BINARY_UNIT_STEP ** 2 / INTRO_CAPACITY_DOUBLING_STEP)` (512 KiB) to `BITS_PER_BYTE *
+MEMORY_BINARY_UNIT_STEP ** 2` (exactly 1 MiB, 8,388,608 bits) — the smallest value in the doubling
+sequence (`8 * 2^n`) that covers the 8,000,000-bit build cost, which happens to land exactly on the
+next full binary-unit boundary. This generalizes cleanly to the deferred multi-pool system: each
+pool's cap is "one full binary tier" (1 MiB for the KB pool, 1 GiB for the MB pool, matching the
+maintainer's own corrected example, and so on), not "just under" it.
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (still half the cap) moved in lockstep, from 2,097,152 to
+4,194,304 bits (512 KiB) — coincidentally the exact value the *old*, pre-this-PR cap used to be. Every
+doc/test numeric reference to the old 512 KiB/256 KiB values was swept and updated to match.
+
+**Update: Disk build cost now renders in SI, not binary.** Raised in the same round of maintainer
+feedback: `ByteFoundryPage`'s "Build Disk" button and its `title` showed the build cost
+(`getDiskCost`) through `formatBitsInNearestUnit` — Memory's own binary scale — even though that
+cost is `DISK_BUILD_COST_MULTIPLIER` (10) times the Disk's own SI-scaled face value ("Because they
+are exactly 10x of their own capacity which is measured in SI units," in the maintainer's words),
+so it read as e.g. "9.765 KiB" beside the disk's own "1 KB" size label — two different unit systems
+in the same sentence for two numbers that are a fixed multiple of each other. Switched to
+`formatDiskSize` (SI) so the cost renders as "10 KB" instead, matching the Disk's own size scale.
+Memory's own balance/capacity, Sacrifice's cost, and Invest's cost are unaffected — they stay on the
+binary scale, since those are genuinely Memory-denominated (capacity-relative) amounts, not
+Disk-denominated ones.
+
+**Update: fixing the cap only moved the same reachability wall one rung further out — found by
+adversarial review, not by the maintainer.** The cap fix above made pool 1's 100 KB Disk buildable,
+but `getDiskSize` is a single, uncapped, global ladder — nothing in the code actually stops it at a
+"pool boundary"; that's purely a documentation/planning concept until pools 2-10 exist. So once a
+player builds all 10 disks at 100 KB (itself only reachable *because* of the cap fix),
+`getDiskSize` advanced to the next rung, 1 MB, whose own build cost (`getDiskCost` =
+`DISK_BUILD_COST_MULTIPLIER` × 8,000,000 face value = 80,000,000 bits) permanently exceeds
+`INTRO_CAPACITY_CAP_BITS` (8,388,608 bits) — with no pool 2 generator yet to fund it, and unlike
+Bandwidth's own compute-funded overflow valve (#323, fixed in round 2 of this same PR's review),
+Disk Build had no alternate-currency fallback at all. This reproduces, one rung later, the exact
+same "nothing here ever fully freezes" violation the 100 KB fix was meant to close — caught by the
+fifth adversarial review round on this PR, after four prior rounds (including the one that
+confirmed the 100 KB fix itself) all missed it.
+
+Rather than giving Disk Build an overflow valve (which would let pool 1 fund arbitrarily large
+disks with no real pool 2 behind them — semantically wrong, since a "1 MB disk" is supposed to
+belong to the MB pool's own future generator), the fix instead makes the pool boundary a REAL ladder
+limit: `getDiskSize` now stops advancing at `MAX_ACTIVE_DISK_LADDER_STEP` (`DATA_LAKE_SUB_SIZES.length`
+— 3, reusing the exact grouping the Data Lake system already uses to carve the disk ladder into
+per-pool tiers via `getDataLakeTierIndex`, rather than inventing a second, competing "3 sizes per
+pool" constant) — today, pool 1's own 1/10/100 KB sizes — and a new `isDiskLadderExhaustedForActivePools`
+predicate (true once the array at that boundary size is fully built) gates `isDiskBuildAvailable`
+permanently false from that point on. `ByteFoundryPage` shows a distinct "🏦 Pool complete" state
+(disabled, `$progress` pinned to 100, a title explaining more pools are coming) instead of an
+ever-climbing-but-never-affordable idle button. This is a genuine, if narrower, scope tightening:
+Disk-based tier redemption for Megabytes and beyond is not reachable via pool 1 alone until a
+future pool's own generator exists (epic #456) — the ordinary Buy button remains the primary path
+for every tier regardless, as it always has been; Disk redemption was always a bonus path, not the
+only one.
+
+**Deferred to #456's follow-up epic**: the actual per-storage-pool multi-generator system (pools
+2–10, each an independent instance of the mechanics above), the unlock cascade keyed off the
+previous pool's Disk arrays all being complete, and the full 10-pool compact UI. Rebuilding those
+against pool 1's now-shipped mechanics, rather than guessing ahead, was a deliberate scoping choice
+— see file-task-issue's "specs go stale" guidance for why an unbuilt multi-instance state shape is
+better designed after playing with the single-instance version first.
+
 ## Save persistence
 
 ### Migration in `src/save-migration/`, runs on every load — 2026-08-22
@@ -2464,3 +2633,147 @@ at production rate — stored in `intro.diskReadCacheFlush[size]` for the in-fli
 Flush pauses while `isDiskRedeemable` is true at that size (tier funding wins), and cancels if the
 array goes mid-build or loses its empty container. UI drains the read-cache row during the pour.
 Write-cache collect/flush timing is unchanged.
+
+### Compute Boost base presets: fixing a total-extra-production ordering bug
+
+Requested directly, alongside a detailed Booster/Data Lake spec (most of which — `DATA_LAKE_CAPACITY`
+999, the 9×1/9×10/9×100 sub-slot structure, the triangular `n(n+1)/2` cumulative Booster cost with
+no hardcoded cap, and reusing the existing 8:1 compute-ladder merge for Boosters — the codebase
+already matched exactly by the time this was checked, having evolved through #361/#383/#434/#445-446
+independently). One real bug remained: the base (tier 1/Core) `COMPUTE_BOOST_PRESETS` values —
+`burst` ×32/1 minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour — violated the intended design
+invariant that a preset's own total extra production, `(multiplier - 1) * durationSeconds`, should
+strictly increase Burst → Standard → Sustain (a longer commitment should always net more total
+output, or there's no reason to ever pick it over Burst). The old values gave Standard 70
+multiplier-minutes of extra output but Sustain only 60 — Sustain was strictly worse than Standard
+despite committing 6x longer. Replaced with `burst` ×20/10 minutes, `standard` ×5/1 hour, `sustain`
+×2/10 hours — 190/240/600 multiplier-minutes respectively, strictly increasing as intended (see
+`layers.test.js`'s dedicated ordering test). `COMPUTE_BOOST_TIER_POWER_STEP`/
+`COMPUTE_BOOST_TIER_DURATION_STEP` (the per-Booster-tier scaling above these base values) were left
+untouched — the request's own tier-breadth idea (a higher Booster tier applying the effect to more
+resource tiers at once, rather than scaling multiplier/duration further) is a separate, larger
+question still being scoped given `COMPUTE_BOOST_TIER_DURATION_STEP`'s duration-doubling was itself
+a deliberate restoration after #363 had flattened it (see that entry above).
+
+### Data Lake Boosters: spending real deposits, not a separate "used" ledger
+
+A follow-up correction to the same request above: "Data Lake is refillable, in fact refilled soon
+after consumption of cost of each booster. So there is a limit of 999 boosters of each size because
+the 1000th booster costs more than the capacity of the corresponding data lake." The original
+`purchaseBoosterFromDataLake` tracked spend against a separate `lake.used` counter that only ever
+grew, subtracted from the (separately capped-at-999) `deposited` total — so a full lake's
+n×(n+1)/2 ≤ 999 triangular sum naturally capped purchases around 44, permanently, with no way to
+ever buy more from that lake again even after depositing further Disks (`used` never decreased).
+That's not what was actually wanted: a Booster purchase should spend real, currently-deposited
+capacity — capacity that comes back the same way it arrived, by depositing more Disks once that
+array rebuilds a replacement through the ordinary build/fill pipeline (confirmed directly: "using
+same process as array disk refill," i.e. no new bespoke refill timer — reuse `depositDiskToDataLake`
+and the existing disk build/cache/redeem loop as-is).
+
+Fix: `lake.used` is gone. `getDataLakeAvailableUnits` is now simply `getDataLakeDepositedUnits` (no
+subtraction) — spent capacity is genuinely removed from `deposits`, decomposed back down into the
+100s/10s/1s sub-slot digits via a new `decomposeDataLakeDeposits` helper (valid because a deposited
+total 0..999, with each digit place capped at `DATA_LAKE_SLOT_MAX`/9, is always exactly its own
+base-10 hundreds/tens/ones decomposition). This makes `getMaxBoosterPurchasesForCapacity`'s existing
+triangular-sum result (44 for a full lake) a "burst from one full tank" number rather than the
+tier's lifetime cap — a patient player who keeps redepositing between purchases can push the cost
+arbitrarily higher, all the way up to the true ceiling: since a lake can never hold more than
+`DATA_LAKE_CAPACITY` (999) at once, the 1,000th purchase (costing 1,000) can never be funded no
+matter how much gets redeposited, so the real lifetime cap is exactly 999 Boosters per tier — see
+`engine.test.js`'s dedicated test walking a lake from purchase 998 through 999 and confirming 1,000
+is permanently unaffordable.
+
+### Removing Claim Core: superseded by Data Lake Boosters
+
+A third follow-up correction to the same Booster/Data Lake request: "Remove the claim core logic
+when memory is full. It is superseded by this change and also remove the button. Also remove the
+warning." The manual "Claim Core" button on `ByteFoundryPage` (`claimComputeCore`, gated by
+`isComputeCoreClaimAvailable`) and its automatic counterpart (`tickComputeCoreConversion`, gated by
+the permanent `intro.autoClaimCoreEnabled` flag, unlockable via `enableAutoClaimCore` by sacrificing
+10 Nodes) minted a Compute Core by flushing the player's ENTIRE current Memory capacity to 0 — the
+second of two now-superseded Core-minting mechanics (see the `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+comment in `layers.js` for the first, a fixed-10-MB/Disk-fullness-gated version predating this one).
+Now that `purchaseBoosterFromDataLake` (added earlier in this same request chain) is the only way to
+obtain a Core — spending deposited Disk stock from the tier-1 Data Lake instead of Memory — the
+Memory-flush path was pure redundancy: worse, even, since Boosters can push `computeCores` past
+`COMPUTE_ENTITY_CAP` while a Memory-flush Core could not.
+
+Removed entirely from `engine.js`: `mintComputeCoreIfReady`, `tickComputeCoreConversion`,
+`claimComputeCore`, `isComputeCoreClaimAvailable`, `isAutoClaimCoreUnlockAvailable`,
+`enableAutoClaimCore`, and the `intro.autoClaimCoreEnabled` state field itself (dropped from
+`createInitialGameState`, `buildEraIntroReset`, and `prestigeGame`'s carry-over list — an old save's
+stray `autoClaimCoreEnabled: true` from before this change is simply ignored, since `mergeState`
+only fills in *missing* fields). `isComputeCoreConversionUnlocked` (the capacity-threshold predicate
+gating `ComputePage`'s reveal and Sacrifice's Compute-token wipe) stays — it was always the broader
+"Compute is unlocked" check, not specific to the Claim Core mechanic. The
+`computeCoresEverEarned`/`computeMergePageUnlocked` reveal-latch bookkeeping (previously done inside
+`mintComputeCoreIfReady`) already had an equivalent path in `latchComputeMergePageIfNeeded` (added
+alongside `purchaseBoosterFromDataLake` itself), so no coverage was lost by deleting the old path —
+confirmed by the pre-existing "tier-1 purchases latch computeMergePageUnlocked via
+computeCoresEverEarned" test in `engine.test.js`.
+
+On `ByteFoundryPage`: the Claim Core button, its `showManualClaimCore`/`canClaimComputeCore`
+variables, and the "Every future Core will cost more" warning line inside the Sacrifice confirm
+dialog (see the entry above) are all gone. Removing Claim Core also removed the *reason* Memory ×10
+(Sacrifice) and Claim Core used to swap positions in the milestones row once Boosts unlocked — with
+only one of the two left, Sacrifice now always renders in the milestones row beside Bandwidth,
+regardless of whether Compute is unlocked, rather than moving below the disk section. On
+`ComputePage`: the small 🤖 auto-claim badge/button on Cores' row 1 (`autoClaimFlagField`/
+`enableAutoClaimAction`/`AutoBadge` and friends) is gone — Cores' row 2 already carries the "buy 1
+Core from the Data Lake" button, so nothing replaces the removed control; it simply wasn't needed.
+
+This also genuinely fixed one of the two flaky `App.test.jsx` tests flagged in the same request
+("Sacrifice confirm warns that future Cores cost more...", timing out or landing on the wrong page
+under the full suite): that test seeded Memory exactly at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+(8,000,000 bits) and used `userEvent` (real timers) to click Sacrifice — but the tick loop's
+always-on Memory → Kilobyte auto-convert (`tickIntroAutoInvest`) isn't gated by the forced priority
+order guarding Sacrifice, so a real tick landing between render and the click could drain Memory and
+flip `intro.mainGameUnlocked` on its first successful conversion, navigating away from
+`ByteFoundryPage` (and the dialog under test) entirely before the assertion ran — reproducible even
+in isolation, not just under the full suite, confirming it was a genuine race rather than ordinary
+cross-test pollution. `main` independently landed the identical root-cause fix and diagnosis
+(switching to `vi.useFakeTimers()` + `fireEvent`, closing #449) while this branch was mid-flight on
+the same test for the warning-removal above; the two were reconciled via a merge rather than
+duplicated. The second flagged flaky test (`theme preference in Settings switches mode and persists
+across remount`) was a genuine `main` fix too, unrelated to Claim Core: two full `<App/>`
+mount/unmount cycles in one test can legitimately exceed Vitest's 5s default under a loaded/sandboxed
+test environment, so its timeout was bumped to 15s rather than the test being restructured.
+
+### Data Lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion
+
+A fourth request in the same chain, delivered alongside the Claim Core removal above: "Data lake is
+refilled only if all the disks in main storage array are all built and full. Data lake capacity is 9
+when built then increases to 99 after adding the next size array and then to 999 using similar
+progression." The prior implementation let a player deposit into a Data Lake sub-slot the moment a
+single full disk of the matching size existed — with the full `DATA_LAKE_CAPACITY` (999) reachable
+from the very first disk built at the smallest sub-size, since nothing checked how far along that
+size's array actually was.
+
+Interpretation: requiring literally ALL `DISK_ARRAY_LADDER_CAP` (10) disks of a size to be
+*simultaneously* full at the moment of deposit would be self-defeating — `depositDiskToDataLake`
+consumes exactly one full disk per call, so the very first deposit would immediately break that
+condition, permanently blocking every further deposit at that size until the whole array somehow
+refilled to 10/10 again (a state the normal build/fill/redeem loop has no way to reach, since
+building a NEW disk at a size whose ladder has already advanced isn't how the ladder works). The
+sensible reading — and the one implemented — is that "built and full" describes the array's
+COMPLETION state, not an instantaneous snapshot: a size's array must have been fully built out at
+least once (`disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, a permanent, monotonically-increasing
+condition, unlike the live `disks[size]` full-count which naturally fluctuates) before ANY of that
+size's disks become deposit-eligible at all — the existing "at least one currently full disk" check
+stays too, as the actual per-deposit condition.
+
+This single gate change turns out to ALSO implement the staged-capacity half of the request for
+free, without any new state field: each Data Lake tier's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10,
+100]`, `DATA_LAKE_SLOT_MAX` = 9 each) already map to 3 successive disk sizes (e.g. tier 1/KB ← the
+1 KB, 10 KB, and 100 KB disk arrays). Gating each sub-slot's deposits on its own size's array
+completion means a lake's deposits literally cannot exceed 9 (the ×1 sub-slot's own cap) until the
+×1 array completes and the ×10 array's sub-slot ALSO opens up — pushing the reachable total to 99 —
+and cannot exceed 99 until the ×100 array completes too, unlocking the final climb to 999. No
+separate "current capacity stage" field was needed; the existing digit-decomposition deposit model
+(see the Data Lake Boosters entry above) already produces exactly this staging as an emergent
+property of the sub-slot structure once each slot's own gate is added.
+
+Implementation: `isDiskArrayFullyBuilt(state, sizeBits)` (a private helper in `engine.js`) checks
+`disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP`; `canDepositDiskToDataLake` calls it first,
+before the existing full-disk/slot-max/lake-cap checks. See `engine.test.js`'s "staged Data Lake
+capacity" test for the full 9 → 99 → 999 walkthrough.

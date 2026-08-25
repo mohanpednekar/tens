@@ -31,13 +31,11 @@ import {
   canActivateComputeBoost,
   canReclaimComputeBoost,
   canStackComputeBoost,
-  claimComputeCore,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
   createInitialGameState,
   eraGame,
-  enableAutoClaimCore,
   enableAutoMergeClustersIntoNetwork,
   enableAutoMergeCloudsIntoDatacenter,
   enableAutoMergeCoresIntoNode,
@@ -79,6 +77,8 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getComputeBandwidthSacrificeField,
+  getComputeBandwidthSacrificeLabel,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
@@ -128,7 +128,6 @@ import {
   getTierPurchasedCount,
   getTierQuantityCost,
   getTierSpendableAmount,
-  isAutoClaimCoreUnlockAvailable,
   isAutoMergeClustersIntoNetworkUnlockAvailable,
   isAutoMergeCloudsIntoDatacenterUnlockAvailable,
   isAutoMergeCoresIntoNodeUnlockAvailable,
@@ -143,7 +142,6 @@ import {
   isComputeBoostTurnAvailable,
   isComputeCloudsMergeStartAvailable,
   isComputeClustersMergeStartAvailable,
-  isComputeCoreClaimAvailable,
   isComputeCoreConversionUnlocked,
   isComputeCoresMergeStartAvailable,
   isComputeDatacentersMergeStartAvailable,
@@ -155,6 +153,7 @@ import {
   isComputeUpgradeAvailable,
   isComputeUpgradeTurnAvailable,
   isDiskBuildAvailable,
+  isDiskLadderExhaustedForActivePools,
   isDiskBuildTurnAvailable,
   isDiskCacheBlockReleasable,
   isDiskCacheBlockAutoReleaseEligible,
@@ -165,6 +164,7 @@ import {
   isDiskRedeemable,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
+  isMemoryCapacityAtCap,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
   isUnboundedPrestigeUnlocked,
@@ -210,7 +210,6 @@ import {
   tickAutoMergeNodesIntoCluster,
   tickAutoMergeSupercomputersIntoMegacomputer,
   tickComputeBoost,
-  tickComputeCoreConversion,
   tickDiskAutoFill,
   tickDiskAutoRedeem,
   tickDiskAutoReleaseCache,
@@ -237,7 +236,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -682,8 +681,9 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
   })
 
   it('is false while a Compute Boost (higher priority) is currently available', () => {
-    // Cap the Disk Build ladder through 100 KB so the next offer is 1 MB (build cost 10 MB /
-    // 80,000,000 bits) — unaffordable at 1 MB capacity — isolating the Compute check itself.
+    // Fully build 1/10/100 KB so the Disk ladder is permanently exhausted
+    // (isDiskLadderExhaustedForActivePools) — isolating the Compute check itself from Disk Build's
+    // own higher-priority claim.
     const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
@@ -699,14 +699,48 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
+
+  it('is false once pool 1\'s capacity is already at its hard cap (INTRO_CAPACITY_CAP_BITS), even with a full balance and nothing else available', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
+    })
+    expect(isMemoryCapacityAtCap(state)).toBe(true)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is false one doubling-step short of the cap when the NEXT doubling would meet it exactly (no partial step)', () => {
+    // Half the cap — the next doubling lands exactly on INTRO_CAPACITY_CAP_BITS, which is still
+    // allowed (only crossing PAST the cap is blocked).
+    const oneStepShort = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
+    const state = withIntro(createInitialGameState(), { capacity: oneStepShort })
+    expect(isMemoryCapacityAtCap(state)).toBe(false)
+
+    // Push the Disk ladder past what this capacity can afford (100 KB disks cost 8,000,000 bits,
+    // above oneStepShort) so Sacrifice is actually the highest-ranked action left to take.
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const readyToSacrifice = withIntro(createInitialGameState(), {
+      bits: oneStepShort, capacity: oneStepShort, ...noOtherUpgradesLeft,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(isMemoryCapacityUpgradeAvailable(readyToSacrifice)).toBe(true)
+    expect(pickIntroCapacityMilestone(readyToSacrifice).intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+  })
+
+  it('does not crash on a save whose capacity already exceeds the new cap (a value only reachable under the old ×10 ladder) — it just can\'t Sacrifice further', () => {
+    const pastTheNewCap = INTRO_CAPACITY_CAP_BITS * 10
+    const state = withIntro(createInitialGameState(), { bits: pastTheNewCap, capacity: pastTheNewCap, ...noOtherUpgradesLeft })
+    expect(isMemoryCapacityAtCap(state)).toBe(true)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
-  it('requires a full balance, drains it, and multiplies capacity by INTRO_CAPACITY_MULTIPLIER', () => {
+  it('requires a full balance, drains it, and multiplies capacity by INTRO_CAPACITY_DOUBLING_STEP', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
   })
 
   it('is a no-op below a full balance', () => {
@@ -729,7 +763,7 @@ describe('pickIntroCapacityMilestone', () => {
   it('keeps working after mainGameUnlocked — nothing about Sacrifice ever freezes', () => {
     const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
     const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
   })
 
   it('does not touch tickSpeedSeconds/productionMultiplier', () => {
@@ -747,7 +781,7 @@ describe('pickIntroCapacityMilestone', () => {
       PRESTIGE_THRESHOLD
     )
     expect(isProductionFrozen(state)).toBe(true)
-    expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
   })
 
   it('clears capacityUpgradeQueued on a successful manual Sacrifice', () => {
@@ -790,7 +824,7 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     // Holding Cores makes Burst activatable → normal Sacrifice would be blocked.
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
     const after = tickQueuedCapacityUpgrade(state)
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.capacityUpgradeQueued).toBe(false)
     expect(after.intro.computeCores).toBe(0)
@@ -817,6 +851,21 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     })
     expect(tickQueuedCapacityUpgrade(investable)).toBe(investable)
   })
+
+  it('refuses to queue once pool 1 is already at its capacity cap — nothing to commit to', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+    expect(queueIntroCapacityUpgrade(state)).toBe(state)
+  })
+
+  it('a queued upgrade stays a no-op once Memory fills at the cap, rather than crossing it', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_CAPACITY_CAP_BITS,
+      capacity: INTRO_CAPACITY_CAP_BITS,
+      capacityUpgradeQueued: true,
+      ...noOtherUpgradesLeft,
+    })
+    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
+  })
 })
 
 describe('eraseAllComputeTokens', () => {
@@ -824,7 +873,6 @@ describe('eraseAllComputeTokens', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 4,
       computeNodes: 2,
-      autoClaimCoreEnabled: true,
       autoMergeCoresIntoNode: true,
       computeCoresEverEarned: 20,
       computeBoostType: 'burst',
@@ -839,7 +887,6 @@ describe('eraseAllComputeTokens', () => {
     expect(after.intro.computeBoostType).toBe(null)
     expect(after.intro.computeBoostStacks).toBe(0)
     expect(after.intro.computeCoresMergeRemainingSeconds).toBe(0)
-    expect(after.intro.autoClaimCoreEnabled).toBe(true)
     expect(after.intro.autoMergeCoresIntoNode).toBe(true)
     expect(after.intro.computeCoresEverEarned).toBe(20)
   })
@@ -872,7 +919,6 @@ describe('resetByteFoundry', () => {
         computeCores: 7,
         computeCoresEverEarned: 20,
         computeMergePageUnlocked: true,
-        autoClaimCoreEnabled: true,
       },
     }
 
@@ -1041,16 +1087,16 @@ describe('tickFoundryResetConvenience', () => {
 })
 
 describe('getIntroProductionMilestoneCost', () => {
-  it('is INTRO_STARTING_CAPACITY at tier 0, growing by INTRO_CAPACITY_MULTIPLIER per tier', () => {
+  it('is INTRO_STARTING_CAPACITY at tier 0, growing by INTRO_BANDWIDTH_COST_MULTIPLIER per tier', () => {
     expect(getIntroProductionMilestoneCost(0)).toBe(INTRO_STARTING_CAPACITY)
-    expect(getIntroProductionMilestoneCost(1)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
-    expect(getIntroProductionMilestoneCost(2)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 2)
-    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** 3)
+    expect(getIntroProductionMilestoneCost(1)).toBe(INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER)
+    expect(getIntroProductionMilestoneCost(2)).toBe(INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER ** 2)
+    expect(getIntroProductionMilestoneCost(3)).toBe(INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER ** 3)
   })
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/10/100 Bytes), then 1 for every tier after', () => {
+  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/4/16 Bytes), then 1 for every tier after', () => {
     expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
@@ -1100,7 +1146,7 @@ describe('pickIntroProductionMilestone', () => {
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/10/100 Bytes), but only 1 from tier 3 on', () => {
+  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/4/16 Bytes), but only 1 from tier 3 on', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const afterFirstTier0Claim = pickIntroProductionMilestone(state)
     expect(afterFirstTier0Claim.intro.productionMilestoneTier).toBe(0)
@@ -1157,11 +1203,12 @@ describe('pickIntroProductionMilestone', () => {
   })
 
   it('sacrifices COMPUTE_ENTITY_CAP Cores for ×2 when bit cost exceeds capacity (#323)', () => {
-    // Tier 7 costs 8e7 bits; capacity 8e6 → compute path. Rate already at floor from prior invests.
+    // Tier 10 costs 8 * 4^10 = 8,388,608 bits; capacity (INTRO_COMPUTE_CORE_UNLOCK_CAPACITY) is
+    // 4,194,304 bits → compute path. Rate already at floor from prior invests.
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: 0,
-      productionMilestoneTier: 7,
+      productionMilestoneTier: 10,
       productionMilestoneTierClaims: 0,
       tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
       productionMultiplier: 128,
@@ -1183,13 +1230,51 @@ describe('pickIntroProductionMilestone', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: 0,
-      productionMilestoneTier: 7,
+      productionMilestoneTier: 10,
       tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
       productionMultiplier: 128,
       computeCores: COMPUTE_ENTITY_CAP - 1,
     })
     expect(isComputeFundedBandwidthAvailable(state)).toBe(false)
     expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('wraps the sacrifice index back to Cores after Megacomputers instead of permanently dead-ending once pool 1 is capacity-capped', () => {
+    // At INTRO_CAPACITY_CAP_BITS (pool 1's hard cap), Sacrifice can never fire again, so the
+    // compute-funded overflow's own historical "walk the list once, then wait for a Sacrifice
+    // reset" behavior would otherwise make Bandwidth a permanent no-op once every tier from
+    // Megacomputers onward has been used. Wrapping back to Cores keeps it alive indefinitely.
+    const atMegacomputers = withIntro(createInitialGameState(), {
+      capacity: INTRO_CAPACITY_CAP_BITS,
+      bits: 0,
+      productionMilestoneTier: 50,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 128,
+      computeBandwidthSacrificeIndex: 9, // last index (Megacomputers)
+      computeMegacomputers: COMPUTE_ENTITY_CAP,
+    })
+    expect(isComputeFundedBandwidthAvailable(atMegacomputers)).toBe(true)
+    const afterMegacomputers = pickIntroProductionMilestone(atMegacomputers)
+    expect(afterMegacomputers.intro.computeMegacomputers).toBe(0)
+    // Wrapped, not terminated — back to index 0 (Cores), not 10.
+    expect(afterMegacomputers.intro.computeBandwidthSacrificeIndex).toBe(0)
+
+    // The wrapped state can immediately fund another claim off Cores — Bandwidth keeps
+    // progressing even though Sacrifice itself is permanently unavailable at the cap.
+    const withCores = withIntro(afterMegacomputers, { computeCores: COMPUTE_ENTITY_CAP })
+    expect(isComputeFundedBandwidthAvailable(withCores)).toBe(true)
+    const afterCores = pickIntroProductionMilestone(withCores)
+    expect(afterCores.intro.computeCores).toBe(0)
+    expect(afterCores.intro.computeBandwidthSacrificeIndex).toBe(1)
+  })
+
+  it('getComputeBandwidthSacrificeField/Label normalize an out-of-range persisted index instead of returning null forever', () => {
+    // A save written before this fix could have computeBandwidthSacrificeIndex sitting at exactly
+    // COMPUTE_BOOST_TIER_FIELDS.length (10) — the old terminal value. Reads should treat it the
+    // same as index 0 (Cores), not stay permanently out of range.
+    const state = withIntro(createInitialGameState(), { computeBandwidthSacrificeIndex: 10 })
+    expect(getComputeBandwidthSacrificeField(state)).toBe('computeCores')
+    expect(getComputeBandwidthSacrificeLabel(state)).toBe('Cores')
   })
 })
 
@@ -1221,7 +1306,10 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
       tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
       productionMultiplier: 256,
       productionMilestoneTier: 8,
-      productionMilestoneTierClaims: 0,
+      // Already at tier 8's own claim limit (getIntroProductionMilestoneMaxClaims(8) === 1) so
+      // bit-funded Bandwidth stays unavailable regardless of affordability — isolating the
+      // Disk-Build/Compute gating this test actually targets.
+      productionMilestoneTierClaims: 1,
       computeCores: 5,
       computeNodes: 3,
       computeFundedBandwidthClaims: 1,
@@ -1238,7 +1326,7 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.computeNodes).toBe(0)
     expect(after.intro.computeBoostType).toBe(null)
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_MULTIPLIER)
+    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
     expect(after.intro.computeFundedBandwidthClaims).toBe(0)
     expect(after.intro.computeBandwidthSacrificeIndex).toBe(0)
     expect(after.intro.productionMultiplier).toBe(128)
@@ -1303,6 +1391,16 @@ describe('isDiskBuildAvailable', () => {
     const state = withIntro(createInitialGameState(), {
       bits: getDiskCost(FIRST_DISK_SIZE),
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(isDiskBuildAvailable(state)).toBe(false)
+  })
+
+  it('is false once the disk ladder is exhausted for every currently-active pool, even with the (stale) build cost fully affordable', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(size100KB),
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(isDiskBuildAvailable(state)).toBe(false)
   })
@@ -1397,7 +1495,7 @@ describe('isIntroConversionUnlocked', () => {
 })
 
 describe('isStorageUnlocked', () => {
-  it('is false below INTRO_DISK_UNLOCK_CAPACITY (10 KB in Memory\'s own scale)', () => {
+  it('is false below INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory\'s own binary scale)', () => {
     const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY - 1 })
     expect(isStorageUnlocked(state)).toBe(false)
   })
@@ -1413,18 +1511,25 @@ describe('getMemoryUnit', () => {
     expect(getMemoryUnit(INTRO_STARTING_CAPACITY, false)).toBeNull()
   })
 
-  it('stays in raw Bytes (divisor BITS_PER_BYTE) below the KB threshold', () => {
+  it('stays in raw Bytes (divisor BITS_PER_BYTE) below the KiB threshold', () => {
     expect(getMemoryUnit(INTRO_STARTING_CAPACITY, true)).toEqual({ symbol: 'B', divisor: BITS_PER_BYTE })
   })
 
-  it('steps up through multiple units as capacity grows, matching tier symbols', () => {
-    // 8,000,000 bits = 1 MB in Memory's own scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).
-    expect(getMemoryUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, true)).toEqual({ symbol: 'MB', divisor: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
+  it('steps up through multiple binary units as capacity grows, matching tier symbols with an "i"', () => {
+    // 4,194,304 bits = 512 KiB in Memory's own binary scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    // half of pool 1's INTRO_CAPACITY_CAP_BITS / 1 MiB).
+    expect(getMemoryUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, true)).toEqual({ symbol: 'KiB', divisor: BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP })
   })
 
-  it('caps at the largest unit (QB) rather than running off the end of the symbol list', () => {
-    const hugeCapacity = BITS_PER_BYTE * 1000 ** 11
-    expect(getMemoryUnit(hugeCapacity, true)).toEqual({ symbol: 'QB', divisor: BITS_PER_BYTE * 1000 ** 10 })
+  it('caps at the largest unit (QiB) rather than running off the end of the symbol list', () => {
+    const hugeCapacity = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 11
+    expect(getMemoryUnit(hugeCapacity, true)).toEqual({ symbol: 'QiB', divisor: BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 10 })
+  })
+
+  it('1 KiB is 1.024x a real (SI) KB — 1024 Bytes, not 1000', () => {
+    const oneKiB = getMemoryUnit(BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP, true)
+    expect(oneKiB).toEqual({ symbol: 'KiB', divisor: BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP })
+    expect(oneKiB.divisor / BITS_PER_BYTE).toBe(1024)
   })
 })
 
@@ -1435,14 +1540,18 @@ describe('formatMemoryAmount', () => {
   })
 
   it('renders in the given unit, flooring rather than rounding so a balance never overstates', () => {
-    const unit = { symbol: 'KB', divisor: 1000 }
-    expect(formatMemoryAmount(1999, unit)).toBe('1.999 KB')
+    const unit = { symbol: 'KiB', divisor: 1024 }
+    expect(formatMemoryAmount(2047, unit)).toBe('1.999 KiB')
   })
 })
 
 describe('formatBitsInNearestUnit', () => {
-  it('picks the unit that best fits the given amount itself', () => {
-    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('1 MB')
+  it('picks the binary unit that best fits the given amount itself', () => {
+    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('512 KiB')
+  })
+
+  it('renders exactly INTRO_CAPACITY_CAP_BITS (pool 1\'s cap) as 1 MiB', () => {
+    expect(formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)).toBe('1 MiB')
   })
 })
 
@@ -1647,42 +1756,57 @@ describe('getDiskSize', () => {
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER)
   })
 
-  it('advances through 100 KB then 1 MB — every Byte power-of-ten size is offered (issue #368)', () => {
+  it('advances through 10 KB then 100 KB — every size within pool 1\'s own funded ladder is offered (issue #368)', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
+    const after10KB = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(getDiskSize(after10KB)).toBe(size10KB)
+    expect(size10KB).toBe(80000)
+
     const after100KB = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after100KB)).toBe(size100KB)
     expect(size100KB).toBe(800000)
-
-    const after1MB = withIntro(createInitialGameState(), {
-      disksBuiltTotal: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [size10KB]: DISK_ARRAY_LADDER_CAP,
-        [size100KB]: DISK_ARRAY_LADDER_CAP,
-      },
-    })
-    expect(getDiskSize(after1MB)).toBe(size1MB)
-    expect(size1MB).toBe(8000000) // 1 MB — redeems into Tier02 at level 1
   })
 
-  it('keeps advancing indefinitely past 10 MB — the ladder is uncapped', () => {
+  it('never advances past 100 KB — stays at pool 1\'s own funded ceiling instead of reaching a size no currently-unlocked pool could ever afford', () => {
+    // 1 MB's own build cost (8,000,000 bits) would permanently exceed INTRO_CAPACITY_CAP_BITS with
+    // no pool 2 generator yet to fund it — see isDiskLadderExhaustedForActivePools and
+    // docs/DESIGN_HISTORY.md. Replaces an earlier "keeps advancing indefinitely — the ladder is
+    // uncapped" version of this test, from before that reachability gap was found and fixed.
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size10MB = size1MB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
         [size10KB]: DISK_ARRAY_LADDER_CAP,
         [size100KB]: DISK_ARRAY_LADDER_CAP,
-        [size1MB]: DISK_ARRAY_LADDER_CAP,
-        [size10MB]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getDiskSize(state)).toBe(size10MB * DISK_LADDER_SIZE_MULTIPLIER) // 100 MB
+    expect(getDiskSize(state)).toBe(size100KB)
+  })
+})
+
+describe('isDiskLadderExhaustedForActivePools', () => {
+  it('is false before the 100 KB array is fully built', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
+  })
+
+  it('is true once the 100 KB array — pool 1\'s own last funded size — is fully built', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
   })
 })
 
@@ -1696,19 +1820,20 @@ describe('getDiskCost', () => {
 })
 
 describe('formatDiskSize', () => {
-  // Disk sizes are now real, Byte-accurate bit counts (see getDiskSize above) — the exact same
-  // scale Memory's own balance/capacity renders in — so formatDiskSize is a direct alias of
-  // formatBitsInNearestUnit, not the separate "kilobit" formatting scale an earlier version of
-  // this ladder used (see docs/DESIGN_HISTORY.md for that bug and its fix).
-  it('is the same function as formatBitsInNearestUnit', () => {
-    expect(formatDiskSize).toBe(formatBitsInNearestUnit)
+  // Disk sizes are real, Byte-accurate bit counts (see getDiskSize above), rendered in the SI B/KB/
+  // MB/… scale — Storage stays SI even though Memory Capacity's own formatBitsInNearestUnit moved
+  // to binary units (see docs/DESIGN_HISTORY.md). formatDiskSize is deliberately NOT the same
+  // function as formatBitsInNearestUnit any more (it once was, back when both scales were SI — see
+  // that history entry) — a disk size must never render in Ki/Mi units.
+  it('is NOT the same function as formatBitsInNearestUnit (SI vs. binary scale)', () => {
+    expect(formatDiskSize).not.toBe(formatBitsInNearestUnit)
   })
 
   it('renders a fresh cycle\'s disk size (8000 bits) as "1 KB", not a raw bit count', () => {
     expect(formatDiskSize(FIRST_DISK_SIZE)).toBe('1 KB')
   })
 
-  it('renders a fractional Byte below the 1-Byte (8-bit) threshold, matching Memory\'s own scale', () => {
+  it('renders a fractional Byte below the 1-Byte (8-bit) threshold', () => {
     expect(formatDiskSize(4)).toBe('0.5 B')
   })
 
@@ -2700,293 +2825,6 @@ describe('isComputeCoreConversionUnlocked', () => {
   })
 })
 
-describe('tickComputeCoreConversion', () => {
-  it('is a same-reference no-op below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, even with Memory full', () => {
-    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10
-    const state = withIntro(createInitialGameState(), { capacity, bits: capacity })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('is a same-reference no-op once unlocked but Memory is not yet full', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('flushes the ENTIRE current capacity for exactly 1 Compute Core once unlocked and full — the cost is capacity itself, not a fixed amount', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-    // Capacity itself is untouched by this conversion — only Sacrifice grows it.
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)
-  })
-
-  it('costs more at a higher capacity — the same flush always grants exactly 1 Core regardless of how large capacity has grown', () => {
-    const bigCapacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 100
-    const state = withIntro(createInitialGameState(), { capacity: bigCapacity, autoClaimCoreEnabled: true, bits: bigCapacity })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('accumulates onto any already-permanent Compute Core balance rather than overwriting it', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 4,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(5)
-  })
-
-  it('is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP and the merge-page latch is already set, even with Memory full and unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: true,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  // Regression test for a real bug: computeCores at COMPUTE_ENTITY_CAP with the latch still
-  // unset used to be a same-reference no-op forever (the cap guard short-circuited before the
-  // latch check ever ran) — see the "flips true even when Cores are already at
-  // COMPUTE_ENTITY_CAP" test in the computeMergePageUnlocked latch describe block below.
-
-  it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
-    const state = withMoney(
-      withIntro(createInitialGameState(), {
-        capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-        autoClaimCoreEnabled: true,
-        bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      }),
-      PRESTIGE_THRESHOLD
-    )
-    expect(isProductionFrozen(state)).toBe(true)
-    expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
-  })
-
-  it('is unrelated to Storage — fires regardless of whether any Disk has ever been built', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      disks: {},
-      disksBuiltTotal: {},
-    })
-    expect(tickComputeCoreConversion(state).intro.computeCores).toBe(1)
-  })
-})
-
-describe('tickComputeCoreConversion computeCoresEverEarned / computeMergePageUnlocked latch', () => {
-  it('increments computeCoresEverEarned on every successful conversion, independently of the live computeCores balance', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 3,
-      computeCoresEverEarned: 5,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(4)
-    expect(after.intro.computeCoresEverEarned).toBe(6)
-  })
-
-  it('stays false while the lifetime-earned total is still below COMPUTE_CORES_PER_NODE', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 2,
-      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 2,
-    })
-    expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(false)
-  })
-
-  it('flips true the instant the lifetime-earned total reaches COMPUTE_CORES_PER_NODE, independently of whether the player has ever merged a Core into a Node', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 1,
-      computeCoresEverEarned: COMPUTE_CORES_PER_NODE - 1,
-      byteCreated: true,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeMergePageUnlocked).toBe(true)
-    // Core -> Node is no longer automatic (see issue #321) — the freshly-minted 8th Core stays
-    // held until the player (or an unlocked auto-merge) explicitly merges it.
-    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
-    expect(after.intro.computeNodes).toBe(0)
-  })
-
-  // Regression test for the scenario a human/bot reviewer flagged: computeCores alone can't
-  // represent "ever earned" since activateComputeBoost spends it. A player who never holds 8 at
-  // once — earning a few, spending a Boost, earning a few more — must still unlock the merge
-  // chain once their lifetime total crosses 8, exactly like a player who never spends at all.
-  it('flips true from repeated small earn/spend cycles that never reach 8 Cores live at once', () => {
-    let state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: 0,
-      computeCores: 0,
-      computeCoresEverEarned: 0,
-    })
-    // Earn 3, "spend" 3 (simulating activateComputeBoost, which only touches computeCores).
-    for (let i = 0; i < 3; i++) {
-      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-      state = tickComputeCoreConversion(state)
-    }
-    expect(state.intro.computeCoresEverEarned).toBe(3)
-    state = withIntro(state, { computeCores: 0 }) // spent via a Boost, never held 8 at once
-    expect(state.intro.computeMergePageUnlocked).toBe(false)
-    // Earn 5 more — lifetime total now 8, even though the live balance never exceeded 3.
-    for (let i = 0; i < 5; i++) {
-      state = withIntro(state, { bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-      state = tickComputeCoreConversion(state)
-    }
-    expect(state.intro.computeCoresEverEarned).toBe(8)
-    expect(state.intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('never re-clears once set, even once Cores/Nodes are later spent back down to 0', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: 0,
-      computeMergePageUnlocked: true,
-    })
-    expect(tickComputeCoreConversion(state).intro.computeMergePageUnlocked).toBe(true)
-  })
-
-  it('flips true even when Cores are already at COMPUTE_ENTITY_CAP with no room to convert into (a save with Cores AND Nodes both maxed, unable to self-heal via a normal conversion)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeCoresEverEarned: COMPUTE_ENTITY_CAP,
-      computeNodes: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: false,
-    })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeMergePageUnlocked).toBe(true)
-    // Cores never actually convert (already at cap) — only the latch changes.
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
-    expect(after.intro.bits).toBe(state.intro.bits)
-  })
-
-  it('stays a same-reference no-op when the lifetime-earned total is below COMPUTE_CORES_PER_NODE and Memory is not full', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: 0,
-      computeCores: 2,
-      computeCoresEverEarned: 2,
-      computeMergePageUnlocked: false,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-})
-
-describe('claimComputeCore / isComputeCoreClaimAvailable / enableAutoClaimCore', () => {
-  it('claimComputeCore is a same-reference no-op below INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, even with Memory full', () => {
-    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 10
-    const state = withIntro(createInitialGameState(), { capacity, bits: capacity })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('claimComputeCore is a same-reference no-op once unlocked but Memory is not yet full — manual claim needs a full balance like the automatic conversion does', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY - 1,
-    })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('claimComputeCore mints exactly 1 Core from a full Memory balance even while autoClaimCoreEnabled is false — the whole point of a manual claim', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: false,
-    })
-    expect(isComputeCoreClaimAvailable(state)).toBe(true)
-    const after = claimComputeCore(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-    expect(after.intro.computeCoresEverEarned).toBe(1)
-  })
-
-  it('claimComputeCore is a same-reference no-op once computeCores is already at COMPUTE_ENTITY_CAP (latch already set)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeMergePageUnlocked: true,
-    })
-    expect(claimComputeCore(state)).toBe(state)
-    expect(isComputeCoreClaimAvailable(state)).toBe(false)
-  })
-
-  it('tickComputeCoreConversion (the automatic path) stays a same-reference no-op while autoClaimCoreEnabled is false, even with Memory full and unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: false,
-    })
-    expect(tickComputeCoreConversion(state)).toBe(state)
-  })
-
-  it('isAutoClaimCoreUnlockAvailable requires COMPUTE_ENTITY_CAP (10) Nodes held and auto-claim not already enabled', () => {
-    const notEnough = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP - 1 })
-    expect(isAutoClaimCoreUnlockAvailable(notEnough)).toBe(false)
-    const enough = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    expect(isAutoClaimCoreUnlockAvailable(enough)).toBe(true)
-    const alreadyEnabled = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP, autoClaimCoreEnabled: true })
-    expect(isAutoClaimCoreUnlockAvailable(alreadyEnabled)).toBe(false)
-  })
-
-  it('enableAutoClaimCore is a same-reference no-op below isAutoClaimCoreUnlockAvailable\'s own gate', () => {
-    const state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP - 1 })
-    expect(enableAutoClaimCore(state)).toBe(state)
-  })
-
-  it('enableAutoClaimCore sacrifices ALL 10 held Nodes and permanently flips autoClaimCoreEnabled', () => {
-    const state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    const after = enableAutoClaimCore(state)
-    expect(after.intro.computeNodes).toBe(0)
-    expect(after.intro.autoClaimCoreEnabled).toBe(true)
-  })
-
-  it('once enableAutoClaimCore has fired, tickComputeCoreConversion resumes automatic minting exactly like before this feature existed', () => {
-    let state = withIntro(createInitialGameState(), { computeNodes: COMPUTE_ENTITY_CAP })
-    state = enableAutoClaimCore(state)
-    state = withIntro(state, { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY })
-    const after = tickComputeCoreConversion(state)
-    expect(after.intro.computeCores).toBe(1)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('autoClaimCoreEnabled is permanent — carried over unchanged by a real Prestige', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { autoClaimCoreEnabled: true }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro.autoClaimCoreEnabled).toBe(true)
-  })
-})
-
 describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)', () => {
   it('canReclaimComputeBoost/reclaimComputeBoost are false/a same-reference no-op while no boost is active', () => {
     const state = withIntro(createInitialGameState(), { computeBoostType: null })
@@ -3465,22 +3303,6 @@ describe.each([
 })
 
 describe('tickGame Compute Core/Node integration', () => {
-  it('converts Memory into Compute Cores as part of a regular tick, claiming Memory before tickIntroAutoInvest can convert it to Kilobytes — Core -> Node itself stays held, not automatic, unless autoMergeCoresIntoNode is unlocked (issue #321)', () => {
-    const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      autoClaimCoreEnabled: true,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      computeCores: COMPUTE_CORES_PER_NODE - 1,
-      byteCreated: true,
-    })
-    const after = tickGame(1)(state)
-    expect(after.intro.computeCores).toBe(COMPUTE_CORES_PER_NODE)
-    expect(after.intro.computeNodes).toBe(0)
-    // Memory was claimed entirely by Compute Core conversion, leaving nothing for
-    // tickIntroAutoInvest's own bit-to-Kilobyte conversion to spend this same tick.
-    expect(after.intro.bits).toBe(0)
-  })
-
   it('carries computeCores/computeCoresEverEarned/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
@@ -8340,7 +8162,6 @@ describe('eraGame carry/reset matrix (#407)', () => {
     intro: {
       byteCreated: true,
       mainGameUnlocked: true,
-      autoClaimCoreEnabled: true,
       autoMergeCoresIntoNode: true,
     },
     prestige: {
@@ -8355,7 +8176,6 @@ describe('eraGame carry/reset matrix (#407)', () => {
     ['autoPrestigeEnabled pause flag', s => s.autoPrestigeEnabled],
     ['tierTickspeedAutobuyer unlock', s => s.tierTickspeedAutobuyer[tier0]],
     ['computeAutoBoostUnlocked', s => s.computeAutoBoostUnlocked],
-    ['autoClaimCoreEnabled', s => s.intro.autoClaimCoreEnabled],
     ['autoMergeCoresIntoNode', s => s.intro.autoMergeCoresIntoNode],
     ['hyperscalerCount', s => s.hyperscalerCount],
     ['prestige.unboundedUnlocked latch', s => s.prestige.unboundedUnlocked],
@@ -8449,14 +8269,46 @@ describe('Data Lakes', () => {
     expect(getDataLakeSubSize(mb1)).toBe(1)
   })
 
-  it('getMaxBoosterPurchasesForCapacity caps at 44 for a full 999-unit lake', () => {
+  it('getMaxBoosterPurchasesForCapacity funds 44 CONSECUTIVE purchases from one full 999-unit lake in a single burst (not the tier\'s lifetime cap — see below)', () => {
     expect(getBoosterPurchaseTotalCost(44)).toBe(990)
     expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
     expect(getMaxBoosterPurchasesForCapacity(DATA_LAKE_CAPACITY)).toBe(44)
   })
 
-  it('depositDiskToDataLake consumes one full disk and credits the matching lake slot', () => {
-    const state = withIntro(createInitialGameState(), { disks: { [kb1]: 2 } })
+  it('a tier\'s true lifetime cap is 999 Boosters, not 44 — redepositing between purchases lets cost climb past the single-burst ceiling', () => {
+    // The 999th purchase costs exactly 999 — a fully-deposited lake can just barely fund it.
+    expect(getBoosterPurchaseCost(1)({
+      intro: { dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 998 } } },
+    })).toBe(999)
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 998 },
+      },
+    })
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(900)
+    // Not enough deposited yet for the 999-cost purchase — redeposit up to the full 999 first.
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(true)
+    state = purchaseBoosterFromDataLake(1)(state)
+    expect(state.intro.dataLakes[1].purchased).toBe(999)
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
+
+    // The 1,000th would cost 1,000 — impossible no matter how much gets redeposited, since a lake
+    // can never hold more than DATA_LAKE_CAPACITY (999) at once.
+    expect(getBoosterPurchaseCost(1)(state)).toBe(1000)
+    state = withIntro(state, {
+      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
+    })
+    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
+    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
+  })
+
+  it('depositDiskToDataLake consumes one full disk and credits the matching lake slot, once the array is fully built', () => {
+    const state = withIntro(createInitialGameState(), { disks: { [kb1]: 2 }, disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP } })
     const after = depositDiskToDataLake(kb1)(state)
     expect(after.intro.disks[kb1]).toBe(1)
     expect(after.intro.dataLakes[1].deposits[1]).toBe(1)
@@ -8466,11 +8318,11 @@ describe('Data Lakes', () => {
   it('depositDiskToDataLake is a no-op at DATA_LAKE_SLOT_MAX for a sub-size', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
         1: {
           deposits: { 1: DATA_LAKE_SLOT_MAX, 10: 0, 100: 0 },
-          used: 0,
           purchased: 0,
         },
       },
@@ -8482,24 +8334,62 @@ describe('Data Lakes', () => {
     expect(state.intro.disks[kb1]).toBe(10)
   })
 
-  it('purchaseBoosterFromDataLake costs n units for the nth purchase and grants the matching booster', () => {
+  it('depositDiskToDataLake is a no-op — and canDepositDiskToDataLake false — while the array has a full disk but is not yet COMPLETELY built (disksBuiltTotal below DISK_ARRAY_LADDER_CAP)', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(false)
+    expect(depositDiskToDataLake(kb1)(state)).toBe(state)
+  })
+
+  it('staged Data Lake capacity: a lake\'s effective cap is 9 once only the ×1 array is complete, 99 once the ×10 array is also complete, 999 once the ×100 array is also complete', () => {
+    // Only the ×1 (kb1) array complete — depositing kb10/kb100 disks stays blocked, capping this
+    // lake's deposited total at DATA_LAKE_SLOT_MAX (9) regardless of how many kb10/kb100 disks exist.
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(true)
+    expect(canDepositDiskToDataLake(state, kb10)).toBe(false)
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb1)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(9)
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(false) // sub-slot at DATA_LAKE_SLOT_MAX
+
+    // The ×10 array also completes — its sub-slot opens up, raising the effective cap to 99.
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb10]: DISK_ARRAY_LADDER_CAP } })
+    expect(canDepositDiskToDataLake(state, kb10)).toBe(true)
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb10)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(99)
+
+    // The ×100 array also completes — the lake reaches its full 999 cap.
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb100]: DISK_ARRAY_LADDER_CAP } })
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(true)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb100)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(999)
+  })
+
+  it('purchaseBoosterFromDataLake costs n units for the nth purchase, spends real deposited capacity (not a separate ledger), and grants the matching booster', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 3 },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 3, 10: 0, 100: 0 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(1)
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(1)
-    expect(state.intro.dataLakes[1].used).toBe(1)
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 2, 10: 0, 100: 0 })
     expect(state.intro.dataLakes[1].purchased).toBe(1)
     expect(getDataLakeAvailableUnits(1)(state)).toBe(2)
 
     state = purchaseBoosterFromDataLake(1)(state)
     expect(state.intro.computeCores).toBe(2)
-    expect(state.intro.dataLakes[1].used).toBe(3)
+    // 2 - 2 (2nd purchase's cost) = 0 deposited left.
+    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
     expect(getBoosterPurchaseCost(1)(state)).toBe(3)
   })
 
@@ -8507,7 +8397,7 @@ describe('Data Lakes', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 1, 10: 0, 100: 0 }, used: 0, purchased: 1 },
+        1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 1 },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(2)
@@ -8520,7 +8410,7 @@ describe('Data Lakes', () => {
       computeCores: COMPUTE_ENTITY_CAP,
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     state = purchaseBoosterFromDataLake(1)(state)
@@ -8531,7 +8421,7 @@ describe('Data Lakes', () => {
     let state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, used: 0, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
       },
     })
     for (let i = 0; i < COMPUTE_CORES_PER_NODE; i += 1) {

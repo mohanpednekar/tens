@@ -23,10 +23,13 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
+  DATA_LAKE_CAPACITY,
+  DATA_LAKE_SLOT_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
+  INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_MULTIPLIER,
+  INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
@@ -156,7 +159,9 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item.
+          Reopen any time from the bottom nav’s Foundry item. Memory Capacity reads in binary units
+          (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes, Data Lake, caches) stays SI
+          (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
 
         <h3>The loop</h3>
@@ -171,15 +176,19 @@ const InfoPage = () => {
             produces passively forever after.
           </li>
           <li>
-            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_MULTIPLIER} capacity
-            (only when Memory is full and nothing higher-priority is available).
+            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_DOUBLING_STEP} capacity
+            (only when Memory is full and nothing higher-priority is available). Capacity is
+            measured in binary units (KiB, MiB, …) and hard-caps at the next full binary tier —
+            once at the cap, Sacrifice stops being offered for good.
           </li>
           <li>
-            <strong>Invest</strong> spends Memory on an independent cost ladder for permanently
+            <strong>Invest</strong> spends Memory on an independent cost ladder, stepped
+            ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
             ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
             that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
-            the next Compute tier (Cores → … → Megacomputers, once each) for the same ×2 — separate
-            from auto-merge sacrifices. Memory Sacrifice rolls those compute-funded Bandwidth
+            the next Compute tier (Cores → … → Megacomputers, then wrapping back to Cores) for the
+            same ×2 — separate from auto-merge sacrifices, and still usable even once Sacrifice
+            itself is permanently capped. Memory Sacrifice rolls those compute-funded Bandwidth
             claims back.
           </li>
           <li>
@@ -231,8 +240,11 @@ const InfoPage = () => {
           </li>
           <li>
             Up to {DISK_ARRAY_LADDER_CAP} disks can be built at the current size before the ladder
-            advances. Sizes are every Byte power of ten (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …)
-            with no gaps.
+            advances, through every Byte power of ten (1 KB → 10 KB → 100 KB) with no gaps.
+          </li>
+          <li>
+            Building stops for good once the 100 KB array is fully built — a future update adds more
+            storage pools (1 MB and beyond) with their own generators to fund them.
           </li>
           <li>The Build button always stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>
@@ -281,21 +293,44 @@ const InfoPage = () => {
           nav’s Boosters item.
         </p>
 
+        <h3>Data Lakes</h3>
+        <ul>
+          <li>
+            Ten permanent lakes (one per storage denomination, KB … QB) hold deposited Disks and
+            fund Booster purchases at the matching Compute tier.
+          </li>
+          <li>
+            Depositing a size's disks requires that size's array to be completely built (all{' '}
+            {DISK_ARRAY_LADDER_CAP} disks ever built), not just one currently full — deposit from a
+            Foundry disk row once eligible.
+          </li>
+          <li>
+            Each lake's capacity stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
+            once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
+            built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
+          </li>
+          <li>
+            The nth Booster purchase from a lake costs n units of that lake's own current deposits —
+            spent capacity only returns by depositing more Disks.
+          </li>
+        </ul>
+
         <h3>Cores</h3>
         <ul>
           <li>
-            A full Memory converts into 1 Core — the cost is your entire current capacity, so bigger
-            capacity means fewer but pricier Cores.
-          </li>
-          <li>
-            Claim Core is manual on Byte Foundry by default. Sacrificing {COMPUTE_ENTITY_CAP} held
-            Nodes permanently unlocks auto-claim (manual button then disappears).
+            Bought with Boosters from the matching Data Lake — the buy button on the Cores row —
+            there is no other way to obtain a Core.
           </li>
           <li>
             Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
             boundary).
           </li>
-          <li>Every compute entity caps at {COMPUTE_ENTITY_CAP} held.</li>
+          <li>
+            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
+            Booster purchase path itself (any of the ten tiers, not just Cores), which is
+            Data-Lake-limited rather than inventory-capped and can push a tier's held count past
+            {' '}{COMPUTE_ENTITY_CAP}.
+          </li>
         </ul>
 
         <h3>Merge chain</h3>

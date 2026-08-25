@@ -39,10 +39,10 @@ holding a single `FillableStatCard`
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
 = `bits / capacity`), has a "Memory" label above `{bits} / {capacity}` — both numbers scaled into
-the same unit, picked off `capacity` (raw bits before the Byte generator exists, since before that
-capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
-B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier symbols — see
-"Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
+the same binary unit, picked off `capacity` (raw bits before the Byte generator exists, since before
+that capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
+B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier symbols with
+an "i" — see "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
 balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
 paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
@@ -77,10 +77,11 @@ stacked, since they're a paired choice, not a list. Each renders its own two-lin
 `components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
 of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
 activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
-than crammed inline in parentheses. "Sacrifice for 10x Capacity" (top line `💥 Memory ×10` — "Memory"
+than crammed inline in parentheses. "Sacrifice for 2x Capacity" (top line `💥 Memory ×2` — "Memory"
 matching the same term the balance tile above already uses for `capacity`, so the button's purpose
-reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)`, since a
-Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 10x
+reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)` — a binary
+KiB/MiB/… reading, not SI, since Memory Capacity moved off the Disk-size scale — since a
+Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 2x
 capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
 `canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
 Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine, a redeemable Disk
@@ -105,26 +106,18 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Compute lives on its own dedicated screen (`ComputePage` — see below), reached via AppNav once
-revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). One exception to "Compute lives entirely on its own screen":
-Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label `🧮 Claim Core`,
-calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the Memory tile
-above already computes) renders on THIS page once `computeCoreRevealed` AND
-`!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled) once auto-claim is unlocked
-(see issue #316). `disabled={!canClaimComputeCore}` where `canClaimComputeCore =
-isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores under
-`COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that Memory
-needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled. **After Boosts
-unlocks** (`computeCoreRevealed`), Claim Core and Memory ×10 **swap positions**: Claim Core takes
-Memory ×10's former milestones-row slot beside Bandwidth (while manual claim is still shown), and
-Memory ×10 moves below the disk section. Before Boosts unlocks, Memory ×10 stays beside Bandwidth
-and Claim Core is absent.
+Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
+once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by buying Boosters from
+the matching Data Lake (`purchaseBoosterFromDataLake`), not minted from Memory — the earlier manual
+"Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
+Memory ×2 (Sacrifice) always stays in the milestones row beside Bandwidth.
 
 Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
-capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 10 KB in Memory's own scale/80,000 bits, a later,
-more deliberate reveal than `revealed`'s own 8000-bit gate above). Its visible label always tracks
+capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
+scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
+visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
@@ -149,32 +142,43 @@ seconds, a 10 KB array's 6th disk takes 60 seconds), ticked down every tick by `
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array rebuilding." The Build button renders two distinct states off
-`diskBuildInProgress = intro.diskBuild`: **idle** — `aria-label="build disk"`,
+disallowed, "the array rebuilding." The Build button renders three distinct states off
+`diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
+isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="build disk"`,
 `disabled={!canStartDiskBuild}` where `canStartDiskBuild = isDiskBuildTurnAvailable(state)` (below
-the build cost, no build already in progress, OR while a redeemable Disk Fill/an affordable
-Bandwidth claim — both higher priority, see "Forced priority order" in docs/ECONOMY_REFERENCE.md —
-is currently available), `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build
-{size} Disk ({cost})"`, `title` either naming which higher-priority action to take first
-(`"Take Bandwidth (or redeem a full Disk) first"`, when `diskBuildBlockedByPriority`) or — depending
-on whether some tier currently matches this size (`diskRedeemTierName`, from
-`getDiskRedeemTierName(state, diskSize)`) — `"Costs {cost} and takes time to build — builds an empty
-{size} container; its cache auto-fills it, redeemable right away for a free {tierName} once full"` or
-the same sentence ending `"…but it won't be redeemable until some tier's level cost matches it"`; and
-**mid-build** — `aria-label="disk array rebuilding"`, always `disabled`, visible text `"🏦 Building
-{size} Disk — {ceil(remainingSeconds)}s"`, `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`. `$progress` (`diskBuildProgress`) reads
-differently in each state: mid-build, `100 - (remainingSeconds / totalSeconds) * 100` (a genuine "%
-built" fill, using `totalSeconds` as the fixed denominator so the fill only ever climbs toward 100 as
-`remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
-build), paired with a hidden `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
+the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
+pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both higher priority, see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
+`variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build {size} Disk ({cost})"`,
+`title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
+Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether some tier currently
+matches this size (`diskRedeemTierName`, from `getDiskRedeemTierName(state, diskSize)`) — `"Costs
+{cost} and takes time to build — builds an empty {size} container; its cache auto-fills it,
+redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
+be redeemable until some tier's level cost matches it"`; **mid-build** — `aria-label="disk array
+rebuilding"`, always `disabled`, visible text `"🏦 Building {size} Disk — {ceil(remainingSeconds)}s"`,
+`title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`; and **pool complete**
+(`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
+`aria-label="disk ladder complete for this pool"`, always `disabled`, visible text `"🏦 Pool complete
+({size})"`, `title="Every Disk size this pool can fund (up to {size}) is fully built — more storage
+pools are coming in a future update"` — a distinct, permanent "nothing left to build until epic #456
+ships pool 2+" state rather than an ever-climbing but never-affordable idle button (see
+`isDiskLadderExhaustedForActivePools`/`MAX_ACTIVE_DISK_LADDER_STEP` in engine.js). `$progress`
+(`diskBuildProgress`) reads differently in each state: mid-build, `100 - (remainingSeconds /
+totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
+fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
+idle, `(bits / diskCost) * 100` (progress toward affording the next build), paired with a hidden
+`role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
-label and `title` render the disk's size via `formatDiskSize` and the cost via
-`formatBitsInNearestUnit` (see "Numbers are formatted" below). Building only ever constructs an EMPTY
+label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
+formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER`
+× the array's own SI face value), so it renders on the same SI scale as the disk's own size right
+next to it, not Memory's binary Sacrifice-ladder scale. Building only ever constructs an EMPTY
 container — Memory / read cache / write cache fill it afterward (see DiskArrayRow continuous
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
-Below Build (and, after Boosts unlocks, below Memory ×10 when it has moved under the disk section),
+Below Build (and, after Boosts unlocks, below Memory ×2 when it has moved under the disk section),
 once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
@@ -188,8 +192,9 @@ value, not a separately-tracked field) to pick one of three states: **consumed**
 (`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
 Kilobyte"` where `<cost>` is `formatBitsInNearestUnit(transferBlockCost)` and `transferBlockCost =
 getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
-`INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1 KB" at a fresh cycle's level 1, "10 KB" once tier01
-reaches level 2, and so on), `$progress` = the bits-toward-`transferBlockCost` fill,
+`INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1,000 B" (below the binary KiB threshold) at a fresh
+cycle's level 1, "9.765 KiB" once tier01 reaches level 2, and so on), `$progress` = the
+bits-toward-`transferBlockCost` fill,
 `onClick={actions.convertIntroBitsToKilobytes}`, disabled only when `bits < transferBlockCost` —
 **there is no per-cycle cap to run into** — paired with a hidden `role="progressbar"`
 (`aria-label="byte foundry convert progress"`, `aria-valuemax={transferBlockCost}`);
@@ -211,23 +216,28 @@ for that transition itself.
 
 Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file, calling into
 `engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports, shared with `StoragePage`): raw
-bits below 1 Byte, then B/KB/MB/…/QB by 1000 each step once above it (`getMemoryUnit`, reusing
-`TIER_DEFINITIONS`' own tier symbols), floored (not rounded) at up to 3 decimal places once
-converted into a Byte-scale unit — same never-overstate rationale as `formatCurrency` in
-`engine.js`, so a balance never reads as a complete unit ("1 KB") one tick before it actually is —
-a display-only convention, internal state always stores raw bits. Every standalone
-Memory-denominated cost (Sacrifice, Invest, Disk build) reuses this exact scale via
-`engine.js`'s own `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits,
-true))` — calling `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance)
-picks whichever unit fits that specific amount, so a cost keeps scaling into KB/MB/… as it grows
-instead of stopping at a fixed unit. `engine.js`'s own `formatDiskSize` export (shared by
-ByteFoundryPage and StoragePage, used to name a disk's own *size* — "Build 1 KB Disk", the per-size
-summary chips, StoragePage's own size labels) is now literally `formatDiskSize =
-formatBitsInNearestUnit` — the exact same real-Byte scale, not a separate "1000 bits is '1 KB'"
-kilobit-scaled convention the way an earlier version of this ladder used (see
-docs/DESIGN_HISTORY.md for that bug and its fix); a disk's size and any bit amount actually spent
-(including the transfer block's own dynamic cost, the active block's `aria-label`/`title`) now
-render through the identical formatter.
+bits below 1 Byte, then B/KiB/MiB/…/QiB by **1024** each step once above it (`getMemoryUnit`,
+extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Bytes = 1.024 KB`),
+floored (not rounded) at up to 3 decimal places once converted into a binary unit — same
+never-overstate rationale as `formatCurrency` in `engine.js`, so a balance never reads as a complete
+unit ("1 KiB") one tick before it actually is — a display-only convention, internal state always
+stores raw bits. Every standalone Memory-denominated cost (Sacrifice, Invest, the transfer block's
+own dynamic cost) reuses this exact binary scale via `engine.js`'s own
+`formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))` — calling
+`getMemoryUnit` with the cost itself (rather than a capacity paired with a balance) picks whichever
+unit fits that specific amount, so a cost keeps scaling into KiB/MiB/… as it grows instead of
+stopping at a fixed unit. `engine.js`'s own `formatDiskSize` export (shared by ByteFoundryPage and
+StoragePage, used to name a disk's own *size* — "Build 1 KB Disk", the per-size summary chips,
+StoragePage's own size labels) is a **separate, SI (1000-based)** formatter — an alias for the
+internal `formatBitsInNearestSiUnit` helper, deliberately **not** the same function as
+`formatBitsInNearestUnit` any more, so a disk's size never renders in Ki/Mi units even though Memory
+Capacity itself now does (see docs/DESIGN_HISTORY.md for the earlier "kilobit" formatting bug this
+SI scale originally fixed, back when both scales were still identical and `formatDiskSize` really
+was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own build cost both render
+through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
+bit amount actually spent out of Memory's own binary-scaled balance — the transfer block's own
+dynamic cost and the active block's `aria-label`/`title` — renders through `formatBitsInNearestUnit`
+(binary) instead.
 This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
@@ -375,19 +385,15 @@ not at the bottom"):
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
      Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
      array index + 1 IS its Boost `tierIndex`).
-     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`, kept
-       separate from Cores' sibling auto-claim button below to avoid nesting a `<button>` inside a
-       `<button>`) wrapping the tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label
-       (`TierLabel`, e.g. `"Clusters 3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label>
-       slots"`) of `COMPUTE_ENTITY_CAP` (10) `NormalSlot` squares, filled left-to-right up to the
-       current count — the same discrete-square convention `StoragePage`'s own `DiskSquare` uses,
-       just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
-       toggles `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the
-       Boost effects section above (issue #326 — "click any tier row"), highlighted
-       (`$selected`/`aria-pressed`) while armed. Cores' own row 1 additionally carries the separate,
-       unrelated Memory → Core auto-claim control at the end (an `AutoBadge` once
-       `autoClaimCoreEnabled`, otherwise an `IconButton` calling `enableAutoClaimCore`) — it doesn't
-       fit the row-2 merge-boundary shape every other tier uses.
+     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
+       tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters
+       3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
+       (10) `NormalSlot` squares, filled left-to-right up to the current count — the same
+       discrete-square convention `StoragePage`'s own `DiskSquare` uses, just non-interactive (a
+       plain status square, not a button). Clicking `TierSelectButton` toggles
+       `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the Boost
+       effects section above (issue #326 — "click any tier row"), highlighted
+       (`$selected`/`aria-pressed`) while armed.
      - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
        a Megacomputer has any use at all):
