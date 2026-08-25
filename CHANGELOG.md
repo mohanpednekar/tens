@@ -70,7 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   permanently unfundable sizes — Build shows a distinct "🏦 Pool complete" state once that size is
   fully built. First slice of a larger per-storage-pool generator epic (#456) — see
   `docs/DESIGN_HISTORY.md`.
->>>>>>> origin/main
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
