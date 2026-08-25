@@ -36,11 +36,20 @@ export const TIER_DEFINITIONS = [
 ]
 
 
+// Precompute dictionaries for O(1) lookups rather than O(N) Array.find calls.
+// Keys are tier ids ('tier01', etc).
+const TIER_SYMBOLS = Object.fromEntries(
+  TIER_DEFINITIONS.map(t => [t.id, t.symbol])
+)
+const TIER_TICK_SPEEDS = Object.fromEntries(
+  TIER_DEFINITIONS.map(t => [t.id, t.baseTickSpeedSeconds])
+)
+
 // Falls back to 'b' (lowercase — a bit) for MONEY_ID/an unrecognized resource id.
 export const BYTES_ID = 'bytes'
 export const RESOURCE_SYMBOL = resourceId => {
   if (resourceId === BYTES_ID) return 'B'
-  return TIER_DEFINITIONS.find(t => t.id === resourceId)?.symbol || 'b'
+  return TIER_SYMBOLS[resourceId] || 'b'
 }
 
 // How often (in seconds) a tier's production is delivered as a single batch rather than
@@ -51,7 +60,7 @@ export const RESOURCE_SYMBOL = resourceId => {
 // system (getEffectiveTierTickSpeedSeconds) to be offset back down. An unrecognized tier id falls
 // back to 1s rather than throwing.
 export const getTierBaseTickSpeedSeconds = tierId =>
-  TIER_DEFINITIONS.find(t => t.id === tierId)?.baseTickSpeedSeconds ?? 1
+  TIER_TICK_SPEEDS[tierId] ?? 1
 
 // A naming-agnostic key, fully decoupled from the "Bits" display name/symbol — same rationale as
 // each tier's own `id` above.
