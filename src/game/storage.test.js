@@ -37,7 +37,9 @@ describe('loadGameState', () => {
     )
     const loaded = loadGameState()
     expect(loaded.resources[MONEY_ID]).toBe(4242)
+    expect(Object.hasOwn(loaded, '__proto__')).toBe(false)
     expect(Object.hasOwn(loaded, 'constructor')).toBe(false)
+    expect(Object.hasOwn(loaded.resources, '__proto__')).toBe(false)
     expect(Object.prototype.polluted).toBeUndefined()
   })
 })
@@ -753,6 +755,8 @@ describe('Dev Mode', () => {
     )
     expect(result.ok).toBe(true)
     expect(result.state.resources[MONEY_ID]).toBe(777)
+    expect(Object.hasOwn(result.state, '__proto__')).toBe(false)
+    expect(Object.hasOwn(result.state, 'constructor')).toBe(false)
     expect(Object.prototype.polluted).toBeUndefined()
   })
 
