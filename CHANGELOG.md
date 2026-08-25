@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 
 ### Changed
+- **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
+  readers announce only a button's own `aria-label`, not redundant icon content; the offline-
+  progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
+  appears dynamically.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
