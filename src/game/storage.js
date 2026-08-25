@@ -75,9 +75,15 @@ const writeMeta = meta => {
 const withSupporterSlots = meta => {
   const unlockedSlotCount = meta.supporterUnlocked ? SUPPORTER_SLOT_COUNT : FREE_SLOT_COUNT
   const slots = []
+  const slotMap = new Map()
+  if (meta.slots) {
+    for (const s of meta.slots) {
+      slotMap.set(s.id, s)
+    }
+  }
   for (let i = 0; i < unlockedSlotCount; i += 1) {
     const id = String(i)
-    slots.push(meta.slots?.find(s => s.id === id) ?? { id, name: defaultSlotName(i) })
+    slots.push(slotMap.get(id) ?? { id, name: defaultSlotName(i) })
   }
   const activeSlotId = slots.some(s => s.id === meta.activeSlotId) ? meta.activeSlotId : '0'
   return {

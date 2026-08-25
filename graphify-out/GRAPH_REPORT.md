@@ -1,24 +1,24 @@
-# Graph Report - wt-447  (2026-08-25)
+# Graph Report - wt-467  (2026-08-25)
 
 ## Corpus Check
-- 99 files · ~302,944 words
+- 99 files · ~303,192 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1351 nodes · 3383 edges · 91 communities (73 shown, 18 thin omitted)
+- 1351 nodes · 3376 edges · 91 communities (73 shown, 18 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 82 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b7a65742`
+- Built from commit: `781e20b6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- DataLakePanel/index.jsx
+- navAttention.js
 - MainPage/index.jsx
 - layers.js
-- startDiskBuild
+- engine.js
 - App.jsx
 - SettingsPage/index.jsx
 - devDependencies
@@ -49,7 +49,7 @@
 - graphify reference: incremental update and cluster-only
 - simulate-run-times/SKILL.md
 - pull_request_template.md
-- navAttention.js
+- INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - Copilot Instructions
@@ -58,40 +58,40 @@
 - MAINPAGE_REFERENCE.md
 - PWA_REFERENCE.md
 - THEMING_REFERENCE.md
-- MainPage
+- clampNonNegative
 - dependencies
 - ComputePage/index.jsx
 - MilestonesPage/index.jsx
-- isDiskCacheBlockReleasable
+- DevModePage/index.jsx
 - ComputePage
 - Design history & rationale
 - development
 - storage.js
 - Button/index.jsx
-- engine.js
+- buyComputeFlopsTier
 - scripts
 - DiskArrayRow/index.jsx
 - Era ascension and Eons (#407)
-- DevModePage/index.jsx
+- activateComputeBoost
 - App.test.jsx
 - package.json
-- formatAmount
-- activateComputeBoost
-- buyHyperscaler
+- engine.test.js
+- getTierCost
+- DataLakePanel/index.jsx
 - ComputeFlopsPage/index.jsx
-- sentinel.md
+- formatMemoryAmount
 - Tier production tickspeed
-- ConfirmDialog/index.jsx
+- getDiskSizesToShow
 - InfoPage/index.jsx
 - Testing
-- engine.test.js
+- navAttention.test.js
+- sentinel.md
+- depositDiskToDataLake
 - pickIntroProductionMilestone
+- resetByteFoundry
 - backlog-issue-hygiene.sh
-- OfflineProgressNotice/index.jsx
 - epic-407-issue-hygiene.sh
-- clampNonNegative
-- INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-- getTierCost
+- engine.computeFlops.test.js
 - sync-release-milestones.sh
 - adversarialReviewMarker.js
 - Issue tracking for interactive sessions
@@ -129,29 +129,29 @@
 
 ## Communities (91 total, 18 thin omitted)
 
-### Community 0 - "DataLakePanel/index.jsx"
-Cohesion: 0.18
-Nodes (16): DataLakePanel(), getVisibleLakeTierIndexes(), LakeList, LakeName, LakeRow, LakeStats, canDepositDiskToDataLake(), createEmptyDataLakeTier() (+8 more)
+### Community 0 - "navAttention.js"
+Cohesion: 0.05
+Nodes (99): actFoundry(), actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS (+91 more)
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.03
-Nodes (57): Money, BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments (+49 more)
+Nodes (60): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments, CategoryHeading (+52 more)
 
 ### Community 2 - "layers.js"
-Cohesion: 0.06
-Nodes (49): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS (+41 more)
+Cohesion: 0.05
+Nodes (51): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS (+43 more)
 
-### Community 3 - "startDiskBuild"
-Cohesion: 0.18
-Nodes (13): combineIntroByte(), depositDiskToDataLake(), getDataLakeSubSize(), getDataLakeTierIndex(), getDiskBuildBaseSeconds(), getDiskBuildSeconds(), getDiskLadderSizeBits(), getDiskLadderStep() (+5 more)
+### Community 3 - "engine.js"
+Cohesion: 0.07
+Nodes (48): AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, buyHyperscaler(), canBuyHyperscaler(), canStartDiskWriteCacheMerge(), clearIntroCapacityUpgradeQueue(), combineIntroByte(), COMPUTE_MERGE_TIMER_FIELDS (+40 more)
 
 ### Community 4 - "App.jsx"
 Cohesion: 0.05
-Nodes (45): App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), AppMenu(), Backdrop, Icon, MenuButton (+37 more)
+Nodes (42): GATE_EXEMPT_PAGES, PageShell, AppMenu(), Backdrop, Icon, MenuButton, Sheet, SheetTitle (+34 more)
 
 ### Community 5 - "SettingsPage/index.jsx"
-Cohesion: 0.11
-Nodes (17): MUSEUM_PIN_CAP, buildClearSlotConfirmMessage(), buildSparklinePath(), CodeForm, CodeInput, Header, LockedNote, MuseumItem (+9 more)
+Cohesion: 0.10
+Nodes (27): buildEraIntroReset(), eraGame(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEonsAwarded(), isEraEligible() (+19 more)
 
 ### Community 6 - "devDependencies"
 Cohesion: 0.09
@@ -162,8 +162,8 @@ Cohesion: 0.04
 Nodes (55): ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight, Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost tier scaling: 4× effect only, no duration enhancement (#363), Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Economy model, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405) (+47 more)
 
 ### Community 8 - "ByteFoundryPage/index.jsx"
-Cohesion: 0.08
-Nodes (27): floorToDecimals(), formatBitsInNearestSiUnit(), formatBitsInNearestUnit(), formatMemoryAmount(), getMemoryUnit(), getSiByteUnit(), BITS_PER_BYTE, COMPUTE_ENTITY_CAP (+19 more)
+Cohesion: 0.10
+Nodes (20): BITS_PER_BYTE, COMPUTE_ENTITY_CAP, ActionsRow, BalanceText, clampPercent(), FillableStatCard, Header, MilestoneButtonContent (+12 more)
 
 ### Community 9 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -249,13 +249,9 @@ Nodes (5): Strategy snapshots (orphan branch) — required after every run, Usag
 Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
-### Community 39 - "navAttention.js"
-Cohesion: 0.05
-Nodes (100): actFoundry(), actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS (+92 more)
-
-### Community 48 - "MainPage"
-Cohesion: 0.18
-Nodes (17): countGlobalTickspeedMilestones(), getAutoPrestigeCost(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierXpTickspeedMultiplier(), getOverclockMultiplier(), getPrestigeDoublePpUpgradeCost(), getSpeedUpMultiplier() (+9 more)
+### Community 48 - "clampNonNegative"
+Cohesion: 0.15
+Nodes (29): checkMilestones(), clampNonNegative(), countGlobalTickspeedMilestones(), getAutoPrestigeAttemptRate(), getAutoPrestigeCost(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedMultiplierCost(), getGlobalTickspeedProductionMultiplier() (+21 more)
 
 ### Community 49 - "dependencies"
 Cohesion: 0.13
@@ -263,15 +259,15 @@ Nodes (15): @fontsource/inter, @fontsource/space-grotesk, dependencies, @fontsou
 
 ### Community 50 - "ComputePage/index.jsx"
 Cohesion: 0.07
-Nodes (29): COMPUTE_BOOST_MAX_STACKS, COMPUTE_MERGE_STEP_MULTIPLIER, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow, BoostRow, CompactButton (+21 more)
+Nodes (29): COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow, BoostRow, CompactButton (+21 more)
 
 ### Community 51 - "MilestonesPage/index.jsx"
 Cohesion: 0.15
-Nodes (18): seedState(), applyAutobuyerMilestones(), getAutobuyerUnlockMilestone(), getFlopsAutobuyerUnlockEra(), getTierTickspeedAutobuyerMilestone(), isEraEligible(), isUnboundedPrestigeUnlocked(), InfoPage() (+10 more)
+Nodes (16): seedState(), applyAutobuyerMilestones(), getAutobuyerUnlockMilestone(), getFlopsAutobuyerUnlockEra(), getTierTickspeedAutobuyerMilestone(), InfoPage(), Badge, Category (+8 more)
 
-### Community 52 - "isDiskCacheBlockReleasable"
-Cohesion: 0.23
-Nodes (12): getDiskRedeemTierName(), getMatchingTierForDiskSize(), getRelevantDiskSizesForFoundry(), hasFullRedeemableDiskAtSize(), isDiskCacheBlockAutoReleaseEligible(), isDiskCacheBlockManualReleaseAvailable(), isDiskCacheBlockReleasable(), isTierAutobuyerActive() (+4 more)
+### Community 52 - "DevModePage/index.jsx"
+Cohesion: 0.10
+Nodes (23): COMPUTE_FLOPS_TIER_DEFINITIONS, ERA_ELIGIBILITY_PP, TIER_DEFINITIONS, ButtonGrid, coerceDraft(), Details, FieldLabel, FieldNode() (+15 more)
 
 ### Community 53 - "ComputePage"
 Cohesion: 0.24
@@ -287,99 +283,103 @@ Nodes (9): browserslist, development, production, >0.2%, last 1 chrome version, 
 
 ### Community 57 - "storage.js"
 Cohesion: 0.08
-Nodes (61): allResourceIds(), applyFlopsAutobuyerMilestones(), buildEraIntroReset(), createEmptyDataLakes(), createInitialGameState(), eraGame(), PRESTIGE_UNBOUNDED_MIN_COUNT, applyDevGameStateJson() (+53 more)
+Nodes (63): App(), resolveInitialThemeMode(), allResourceIds(), applyFlopsAutobuyerMilestones(), createEmptyDataLakes(), createInitialGameState(), PRESTIGE_UNBOUNDED_MIN_COUNT, applyDevGameStateJson() (+55 more)
 
 ### Community 58 - "Button/index.jsx"
-Cohesion: 0.21
-Nodes (12): Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB (+4 more)
+Cohesion: 0.08
+Nodes (30): Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB (+22 more)
 
-### Community 59 - "engine.js"
-Cohesion: 0.06
-Nodes (50): AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, canStartDiskWriteCacheMerge(), captureFoundryUpgradeCaps(), clearIntroCapacityUpgradeQueue(), COMPUTE_MERGE_TIMER_FIELDS, currencyNumberFormatter, decrementFullDiskCount() (+42 more)
+### Community 59 - "buyComputeFlopsTier"
+Cohesion: 0.83
+Nodes (4): buyComputeFlopsTier(), canBuyComputeFlopsTier(), getComputeFlopsTierCost(), tickComputeFlopsAutobuyers()
 
 ### Community 60 - "scripts"
 Cohesion: 0.22
 Nodes (9): scripts, audit, build, dev, gen-pwa-icons, start, test, test:e2e (+1 more)
 
 ### Community 61 - "DiskArrayRow/index.jsx"
-Cohesion: 0.08
-Nodes (33): CacheBlock, CacheBlocksRow, CacheFlushFill, CellLabel, DepositRow, DiskArrayRow(), DiskSizeRow, DiskSquare (+25 more)
+Cohesion: 0.11
+Nodes (26): CacheBlock, CacheBlocksRow, CacheFlushFill, CellLabel, DepositRow, DiskArrayRow(), DiskSizeRow, DiskSquare (+18 more)
 
 ### Community 62 - "Era ascension and Eons (#407)"
 Cohesion: 0.25
 Nodes (8): Era ascension and Eons (#407), Multiplier overflow safety, Pause/resume for per-tier automations, Pause/resume for the global automations, The global tickspeed multiplier, The last tier's XP-funded tickspeed, Tickspeed multiplier, Tier autobuyer/tier-tickspeed-autobuyer milestones
 
-### Community 63 - "DevModePage/index.jsx"
-Cohesion: 0.10
-Nodes (23): COMPUTE_FLOPS_TIER_DEFINITIONS, ERA_ELIGIBILITY_PP, TIER_DEFINITIONS, ButtonGrid, coerceDraft(), Details, FieldLabel, FieldNode() (+15 more)
+### Community 63 - "activateComputeBoost"
+Cohesion: 0.27
+Nodes (10): activateComputeBoost(), canReclaimComputeBoost(), getComputeBoostMultiplier(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), getComputeBoostTierMultiplier(), isValidComputeBoostTier(), reclaimComputeBoost() (+2 more)
 
 ### Community 64 - "App.test.jsx"
-Cohesion: 0.08
-Nodes (24): ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE (+16 more)
+Cohesion: 0.12
+Nodes (12): ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION (+4 more)
 
 ### Community 65 - "package.json"
 Cohesion: 0.18
 Nodes (10): name, packageManager, private, resolutions, **/fast-uri, **/filelist/minimatch/brace-expansion, **/glob/minimatch/brace-expansion, **/nanoid (+2 more)
 
-### Community 66 - "formatAmount"
-Cohesion: 0.25
-Nodes (14): formatAmount(), formatBytes(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEonsAwarded() (+6 more)
+### Community 66 - "engine.test.js"
+Cohesion: 0.05
+Nodes (26): buySmartAutobuyer(), canForfeitComputeBoost(), forfeitComputeBoost(), getAutobuyerUnlockCost(), getSmartAutobuyerCost(), getTickspeedMultiplierBaseCost(), getTickspeedMultiplierCost(), isComputeCloudsMergeStartAvailable() (+18 more)
 
-### Community 67 - "activateComputeBoost"
-Cohesion: 0.43
-Nodes (7): activateComputeBoost(), canReclaimComputeBoost(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), isValidComputeBoostTier(), reclaimComputeBoost(), stackComputeBoost()
+### Community 67 - "getTierCost"
+Cohesion: 0.13
+Nodes (20): convertIntroBitsToKilobytes(), getCostEpochExponent(), getDiskRedeemTierName(), getIntroKilobyteConversionCost(), getMatchingTierForDiskSize(), getRelevantDiskSizesForFoundry(), getTierCost(), getTierDiskRedeemCost() (+12 more)
 
-### Community 68 - "buyHyperscaler"
-Cohesion: 1.00
-Nodes (3): buyHyperscaler(), canBuyHyperscaler(), getHyperscalerEonCost()
+### Community 68 - "DataLakePanel/index.jsx"
+Cohesion: 0.18
+Nodes (16): DataLakePanel(), getVisibleLakeTierIndexes(), LakeList, LakeName, LakeRow, LakeStats, canDepositDiskToDataLake(), createEmptyDataLakeTier() (+8 more)
 
 ### Community 69 - "ComputeFlopsPage/index.jsx"
 Cohesion: 0.12
-Nodes (16): AUTO_SPEED_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS, FlopsHero (+8 more)
+Nodes (22): Money, formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), getComputeFlopsTierProductionMultiplier(), getComputeFlopsTierWeight(), getComputeFlopsTotal(), getHyperscalerFlopsBoostRate() (+14 more)
+
+### Community 70 - "formatMemoryAmount"
+Cohesion: 0.25
+Nodes (9): floorToDecimals(), formatBitsInNearestSiUnit(), formatBitsInNearestUnit(), formatCacheSize(), formatMemoryAmount(), getBitUnit(), getMemoryUnit(), getSiByteUnit() (+1 more)
 
 ### Community 71 - "Tier production tickspeed"
 Cohesion: 0.67
 Nodes (3): Multiplier outcomes are floored, Production figure (tick-progress ring removed), Tier production tickspeed
 
-### Community 72 - "ConfirmDialog/index.jsx"
-Cohesion: 0.15
-Nodes (12): Actions, Body, Card, ConfirmDialog(), Overlay, Title, Body, Card (+4 more)
+### Community 72 - "getDiskSizesToShow"
+Cohesion: 0.40
+Nodes (5): getDiskSizesToShow(), Header, RootDiv, StoragePage(), Title
 
 ### Community 73 - "InfoPage/index.jsx"
 Cohesion: 0.12
-Nodes (15): COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_LAST_TIER_COST_PP, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_SLOT_MAX, DISK_BUILD_COST_MULTIPLIER (+7 more)
+Nodes (15): COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_LAST_TIER_COST_PP, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_SLOT_MAX, DISK_BUILD_COST_MULTIPLIER (+7 more)
 
 ### Community 74 - "Testing"
 Cohesion: 0.22
 Nodes (9): Compute Boost base presets: fixing a total-extra-production ordering bug, Data Lake Boosters: spending real deposits, not a separate "used" ledger, Data Lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion, Disk Cache: always-full reserve, whole-block Memory transfers, no pour into disks (issue #382), Disk ladder offers every Byte power-of-ten size (issue #368), Factory MoneyHero frozen after Kilobytes → Bytes (#430 / #442), Removing Claim Core: superseded by Data Lake Boosters, Testing (+1 more)
 
-### Community 76 - "engine.test.js"
-Cohesion: 0.05
-Nodes (19): buySmartAutobuyer(), canForfeitComputeBoost(), forfeitComputeBoost(), getAutobuyerUnlockCost(), getComputeBoostMultiplier(), getComputeBoostTierMultiplier(), getSmartAutobuyerCost(), getTickspeedMultiplierBaseCost() (+11 more)
+### Community 75 - "navAttention.test.js"
+Cohesion: 0.15
+Nodes (12): COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, INTRO_BYTE_COMBINE_COST, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, MONEY_ID, TICKSPEED_AUTOBUYER_COST (+4 more)
+
+### Community 77 - "depositDiskToDataLake"
+Cohesion: 0.67
+Nodes (4): depositDiskToDataLake(), getDataLakeSubSize(), getDataLakeTierIndex(), getDiskLadderStep()
 
 ### Community 78 - "pickIntroProductionMilestone"
 Cohesion: 0.22
 Nodes (13): applyIntroProductionDoublingToIntro(), eraseAllComputeTokens(), getComputeBandwidthSacrificeField(), getComputeBandwidthSacrificeLabel(), getEffectiveComputeBandwidthSacrificeIndex(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBitFundedBandwidthAvailable() (+5 more)
 
+### Community 79 - "resetByteFoundry"
+Cohesion: 1.00
+Nodes (3): captureFoundryUpgradeCaps(), mergeFoundryUpgradeCaps(), resetByteFoundry()
+
 ### Community 81 - "backlog-issue-hygiene.sh"
 Cohesion: 0.49
 Nodes (9): add_label_if_missing(), close_if_open(), has_marker_comment(), issue_state(), post_comment_once(), remove_label_if_present(), run(), set_milestone_if_missing() (+1 more)
-
-### Community 82 - "OfflineProgressNotice/index.jsx"
-Cohesion: 0.33
-Nodes (6): VisuallyHidden, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), formatOfflineDuration()
 
 ### Community 83 - "epic-407-issue-hygiene.sh"
 Cohesion: 0.53
 Nodes (8): add_label_if_missing(), close_if_open(), has_marker_comment(), issue_state(), post_comment_once(), run(), set_milestone_if_missing(), epic-407-issue-hygiene.sh script
 
-### Community 84 - "clampNonNegative"
-Cohesion: 0.17
-Nodes (19): checkMilestones(), clampNonNegative(), getAutoPrestigeAttemptRate(), getComputeFlopsTierProductionMultiplier(), getComputeFlopsTierWeight(), getComputeFlopsTotal(), getGlobalTickspeedMultiplierCost(), getHyperscalerFlopsBoostRate() (+11 more)
-
-### Community 87 - "getTierCost"
-Cohesion: 0.20
-Nodes (12): buyComputeFlopsTier(), canBuyComputeFlopsTier(), convertIntroBitsToKilobytes(), getComputeFlopsTierCost(), getCostEpochExponent(), getIntroKilobyteConversionCost(), getTierCost(), getTierDiskRedeemCost() (+4 more)
+### Community 85 - "engine.computeFlops.test.js"
+Cohesion: 0.33
+Nodes (5): AUTO_SPEED_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, PRESTIGE_THRESHOLD, TICK_RATE_MS
 
 ### Community 88 - "sync-release-milestones.sh"
 Cohesion: 0.67
@@ -394,7 +394,7 @@ Cohesion: 0.67
 Nodes (3): Cursor Cloud GitHub access, GitHub Milestones (release grouping), Issue tracking for interactive sessions
 
 ## Knowledge Gaps
-- **540 isolated node(s):** `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS`, `defaultPPValues`, `defaultCareerPrestiges` (+535 more)
+- **542 isolated node(s):** `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS`, `defaultPPValues`, `defaultCareerPrestiges` (+537 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -410,8 +410,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 25 inferred relationships involving `useIncrementalGame()` (e.g. with `buyAutoPrestige()` and `buyAutoPrestigeAutobuyer()`) actually correct?**
   _`useIncrementalGame()` has 25 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS` to the rest of the system?**
-  _540 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _542 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `navAttention.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.053584764749813295 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._
-- **Should `layers.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05568627450980392 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.033844526705446853 - nodes in this community are weakly interconnected._
