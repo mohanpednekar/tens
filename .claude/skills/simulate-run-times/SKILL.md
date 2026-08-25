@@ -50,9 +50,12 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
   sizes (faster early-tier redemption) but each Compute Core costs a full Memory fill, so Core
-  farming and Boost uptime get worse. Default sweep: 1 MB / 10 MB / 100 MB / 1 GB /
-  `unlimited` (grow-forever baseline). Reports end capacity, cores ever earned, and disks built
-  alongside Foundry / Main / total times.
+  farming and Boost uptime get worse. Pool 1's generator now has its own hard ceiling
+  (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never grow past regardless of this
+  flag, so a requested cap at or above that value behaves identically to `unlimited`. Default sweep:
+  `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (stop early, Compute-favoring) / `INTRO_CAPACITY_CAP_BITS`
+  (grow to the hard cap, Storage-favoring) / `unlimited` (same result as the hard cap in practice).
+  Reports end capacity, cores ever earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
   `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
@@ -85,8 +88,8 @@ node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 5 10
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 100 10000
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 --career 0 1
 node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numbers = PP sweep (legacy)
-node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # 1MB/10MB/100MB/1GB/unlimited
-node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap 8000000 80000000 unlimited
+node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # Compute floor/hard cap/unlimited
+node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap 4194304 8388608 unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --strategy-out /tmp/run.md
 ```
 

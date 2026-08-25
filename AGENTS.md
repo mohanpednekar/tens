@@ -125,9 +125,12 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
 cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into "Memory" (capacity-capped), combines the first 8 into a permanent,
-passively-producing Byte generator, then grows it via Sacrifice (10x capacity) and Invest (double
-production) on independent cost ladders, plus — once far enough along — Disks (`StoragePage`, timed
+player taps to accumulate bits into "Memory" (capacity-capped, displayed in binary units — B/KiB/MiB/…,
+1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a permanent,
+passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
+large enough to afford building the pool's own largest Disk)
+and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
+far enough along — Disks (`StoragePage`, timed
 builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
 tier allows; flush duration = one cache block at production rate; write-cache upward merges from
 the size below) as fallback tier funding when no matching disk exists;
