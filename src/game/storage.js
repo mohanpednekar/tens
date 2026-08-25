@@ -4,6 +4,16 @@ import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
+// Prevent prototype pollution vulnerabilities when parsing untrusted JSON
+const safeJsonParse = (text) => {
+  return JSON.parse(text, (key, value) => {
+    if (key === '__proto__' || key === 'constructor') {
+      return undefined;
+    }
+    return value;
+  });
+};
+
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 const SAVES_META_KEY = 'tens_saves_meta'
@@ -58,7 +68,7 @@ const readRawMeta = () => {
   try {
     const raw = localStorage.getItem(SAVES_META_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    return safeJsonParse(raw)
   } catch {
     return null
   }
@@ -375,7 +385,7 @@ const readActiveSavePayload = () => {
   try {
     const raw = localStorage.getItem(slotStateKey(slotId))
     if (!raw) return null
-    return JSON.parse(raw)
+    return safeJsonParse(raw)
   } catch {
     return null
   }
@@ -583,7 +593,7 @@ export const applyDevGameStateJson = (jsonText, currentState) => {
   if (!isDevModeActive()) return { ok: false, reason: 'dev_mode_inactive' }
   let parsed
   try {
-    parsed = JSON.parse(jsonText)
+    parsed = safeJsonParse(jsonText)
   } catch {
     return { ok: false, reason: 'invalid_json' }
   }
