@@ -47,8 +47,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
   Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
+- **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
+  the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
+  readers announce only a button's own `aria-label`, not redundant icon content; the offline-
+  progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
+  appears dynamically.
+- **Pool 1 byte generator: binary units, doubling capacity cap, ×4 Bandwidth ladder** (#457) — Memory
+  Capacity/balance now render in binary (IEC-style) units (B/KiB/MiB/…, 1 KiB = 1024 Bytes = 1.024
+  KB) instead of SI; Disk sizes, Data Lake, and caches stay SI-denominated, unchanged. "Sacrifice"
+  now doubles capacity per claim (was ×10) and hard-caps at exactly 1 MiB — large enough to afford
+  building the pool's own largest (100 KB) Disk — after which Sacrifice becomes permanently
+  unavailable. "Invest"/Bandwidth's own cost ladder
+  now steps ×4 per tier (was ×10); its doubling effect on production is unchanged.
+  `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` moved from 8,000,000 to 4,194,304 bits (half the new cap) so
+  it stays reachable. The pre-existing compute-funded Bandwidth overflow (#323) now wraps back to
+  Cores after Megacomputers instead of permanently dead-ending once Sacrifice itself is capped. The
+  "Build Disk" button/title now show its cost in the same SI scale as the Disk's own size (e.g.
+  "10 KB") instead of Memory's binary scale, since the cost is a fixed multiple of the Disk's own SI
+  face value. The Disk ladder itself now stops advancing once it reaches the highest size any
+  currently-unlocked pool's generator could ever afford (100 KB for pool 1) instead of climbing into
+  permanently unfundable sizes — Build shows a distinct "🏦 Pool complete" state once that size is
+  fully built. First slice of a larger per-storage-pool generator epic (#456) — see
+  `docs/DESIGN_HISTORY.md`.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during

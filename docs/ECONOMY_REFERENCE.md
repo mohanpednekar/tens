@@ -155,47 +155,55 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    bit/sec. Bits are capped at `capacity`; any batch amount a capacity cap actually clips is not
    banked forward, same rule tapping follows.
 4. Whenever Memory is **full** (`bits === capacity`) **and** no other currently-possible action is
-   left to take first, **Sacrifice for 10x Capacity** (`pickIntroCapacityMilestone`) becomes
+   left to take first, **Sacrifice for 2x Capacity** (`pickIntroCapacityMilestone`) becomes
    available: it drains the ENTIRE balance to 0 and multiplies `capacity` by
-   `INTRO_CAPACITY_MULTIPLIER` (10) — 1 Byte → 10 Bytes → 100 Bytes → 1000 Bytes → ….
-   Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`.
+   `INTRO_CAPACITY_DOUBLING_STEP` (2) — 1 Byte → 2 Bytes → 4 Bytes → 8 Bytes → …, hard-capped at
+   `INTRO_CAPACITY_CAP_BITS` (exactly 1 MiB / 8,388,608 bits for this generator — large enough to
+   cover `getDiskCost` for pool 1's own largest, 100 KB, buildable Disk) — once at the cap, Sacrifice is permanently unavailable
+   (`isMemoryCapacityAtCap`, checked before the rest of the priority chain). Capacity/balance are
+   displayed in **binary units** (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
+   `getMemoryUnit`/`formatBitsInNearestUnit`), distinct from Disks/Data Lake/caches, which stay SI
+   (step 1000, unchanged — see "Byte-denominated display units" further down).
+   Repeatable at every tier reached below the cap; doesn't touch `tickSpeedSeconds`/`productionMultiplier`.
    `isMemoryCapacityUpgradeAvailable(state)` is the real gate (enforced inside
    `pickIntroCapacityMilestone` itself, not just a disabled UI button — same "engine re-validates"
-   posture every other action in this game has): besides being full, it also requires that Combine
-   into a Byte (`!byteCreated`, affordable), a currently-redeemable Disk Fill (any built disk
-   both FULL and redeemable — see step 8), the current Invest tier/Bandwidth (step 5 below, affordable
-   and unclaimed), any currently-buildable Disk array (step 8 below), and an activatable Compute
-   Boost (step 9 below, once unlocked) are all NOT currently possible — see "Forced priority order"
-   below for the full five-item ranking this composes. Since Invest's own cost ladder starts at the
-   same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the
-   two stay in lockstep unless the player pulls ahead on one relative to the other — in practice this
-   makes claiming the current Invest tier a prerequisite for Sacrificing again almost every cycle.
+   posture every other action in this game has): besides being full and below the cap, it also
+   requires that Combine into a Byte (`!byteCreated`, affordable), a currently-redeemable Disk Fill
+   (any built disk both FULL and redeemable — see step 8), the current Invest tier/Bandwidth (step 5
+   below, affordable and unclaimed), any currently-buildable Disk array (step 8 below), and an
+   activatable Compute Boost (step 9 below, once unlocked) are all NOT currently possible — see
+   "Forced priority order" below for the full five-item ranking this composes.
    `ByteFoundryPage`'s own button asks for confirmation (in-game `ConfirmDialog`, not
    `window.confirm`) before actually calling `pickIntroCapacityMilestone`, spelling out that it's
-   permanent; the extra line that higher capacity makes every future Compute Core cost more is
-   shown only once Compute Cores are unlocked (`isComputeCoreConversionUnlocked`). Cancelling
-   leaves Memory/capacity untouched. The engine-level gate above is unaffected either way — the
-   confirm dialog is a UI-level checkpoint on top of it, not a replacement for it.
+   permanent; an extra line warning that it also wipes all held Compute tokens and rolls back
+   Bandwidth upgrades bought with Compute tokens is shown only once Compute is unlocked
+   (`isComputeCoreConversionUnlocked`) — Cores are no longer minted from Memory at all (that "every
+   future Core costs more" warning was retired along with Claim Core; see `docs/DESIGN_HISTORY.md`).
+   Cancelling leaves Memory/capacity untouched. The engine-level gate above is unaffected either
+   way — the confirm dialog is a UI-level checkpoint on top of it, not a replacement for it.
    **Queued Capacity** (`queueIntroCapacityUpgrade` / `tickQueuedCapacityUpgrade`): Capacity may be
-   queued before Memory is full. Once queued, the next time Memory is full and Disk Fill / Bandwidth /
-   Disk Build are unavailable, the queued fire path **erases all held Compute tokens** (ladder
+   queued before Memory is full — but not once already at the cap, since there's nothing left to
+   commit to. Once queued, the next time Memory is full and Disk Fill / Bandwidth /
+   Disk Build are unavailable (and the cap hasn't since been reached), the queued fire path
+   **erases all held Compute tokens** (ladder
    balances, active Boost, in-flight merge timers — not permanent auto-claim/auto-merge unlocks or
-   `computeCoresEverEarned`) and performs the ×10 Sacrifice, bypassing the normal "Compute blocks
-   Capacity" gate so Boosts/Core claims cannot starve a committed Capacity upgrade. Clears on
-   Prestige, on successful manual Sacrifice, or via `clearIntroCapacityUpgradeQueue`. `tickGame`
-   runs `tickQueuedCapacityUpgrade` after intro production / disk-build countdown and before Disk
-   auto-fill / Compute Core conversion.
+   `computeCoresEverEarned`) and performs the ×2 Sacrifice, bypassing the normal "Compute blocks
+   Capacity" gate so an activatable Compute Boost cannot starve a committed Capacity upgrade.
+   Clears on Prestige, on successful manual Sacrifice, or via `clearIntroCapacityUpgradeQueue`.
+   `tickGame` runs `tickQueuedCapacityUpgrade` right after intro production / disk-build countdown,
+   before Disk auto-fill claims Memory (Cores are no longer minted from Memory at all — see
+   "Compute Cores/Nodes" below).
 5. **Invest for Double Production** (`pickIntroProductionMilestone`) runs on its own **independent
    cost ladder**, entirely decoupled from `capacity`/Sacrifice — a separate, permanent progression
    tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is
-   `getIntroProductionMilestoneCost(t) = INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** t`
-   (8, 80, 800, 8000, 80000, … bits — the same "×10 per step" shape the capacity ladder happens to
-   share, but a completely separate counter; `ByteFoundryPage` shows this cost in Bytes,
-   `cost / BITS_PER_BYTE`, on the button itself). Because the cost is independent of `capacity`, a
+   `getIntroProductionMilestoneCost(t) = INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER ** t`
+   (8, 32, 128, 512, 2048, … bits — stepped ×4 per tier, its own independent multiplier since this
+   split from Sacrifice's capacity ladder, which now steps ×2; `ByteFoundryPage` shows this cost in
+   binary Memory units on the button itself). Because the cost is independent of `capacity`, a
    claim only ever requires `bits >= cost` — **not** a full balance — which is frequently true well
    before Memory is full, once Sacrifice has grown capacity ahead of this ladder. Each tier grants
    `getIntroProductionMilestoneMaxClaims(t)` claims: **2** for the three cheapest tiers (t = 0, 1, 2 —
-   1/10/100 Bytes), **1** for every tier from there on (an intermediate iteration tightened this to a
+   1/4/16 Bytes), **1** for every tier from there on (an intermediate iteration tightened this to a
    flat 1 across the board, matching Sacrifice's own single-shot posture, before the three-cheapest-
    tiers exception was reinstated — see `docs/DESIGN_HISTORY.md`), tracked by
    `productionMilestoneTierClaims`; a successful claim deducts exactly that tier's cost from `bits`
@@ -288,9 +296,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskBuild: null | { size, remainingSeconds, totalSeconds }`, `diskAutoRedeemedSizes:
    { [capacityBits]: true }`) live as continuous sections on `ByteFoundryPage` once
-   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (10 KB in Memory's
-   own B/KB/MB/… scale, 80,000 bits — a deliberately later, more advanced-game reveal than step 6's
-   own 8000-bit `isIntroConversionUnlocked` gate). Build Disk and every shown size's DiskArrayRow
+   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits,
+   "9.765 KiB" in Memory's own binary display scale — a deliberately later, more advanced-game
+   reveal than step 6's own 8000-bit `isIntroConversionUnlocked` gate). Build Disk and every shown
+   size's DiskArrayRow
    appear on that same Foundry screen (no second-level Storage tab; the thin `StoragePage` wrapper
    remains for reuse/tests). A Disk is a genuine storage **medium**, not a
    one-shot pre-paid item: building one only constructs a permanent, EMPTY container (after a real
@@ -300,14 +309,21 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
 
    `getDiskSize(state)` walks a gapless Byte power-of-ten ladder —
    `DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER^(n-1)` for step 1, 2, 3, … (real,
-   Byte-accurate bits — a real "1 KB" disk is 8000 bits; then 10 KB, 100 KB, **1 MB**, 10 MB, … —
-   see `getDiskLadderSizeBits` / issue #368), advancing to the next size once `DISK_ARRAY_LADDER_CAP`
+   Byte-accurate bits — a real "1 KB" disk is 8000 bits; then 10 KB, 100 KB — see
+   `getDiskLadderSizeBits` / issue #368), advancing to the next size once `DISK_ARRAY_LADDER_CAP`
    (10) disks have *ever* been built at the current one, read from `disksBuiltTotal` (a cumulative
    counter `redeemDisk` never decrements, so the ladder only ever advances; deliberately decoupled
    from `tier01`'s CURRENT level — see `docs/DESIGN_HISTORY.md`). An earlier ladder walked
    `tier01`'s level-cost sequence and skipped sizes whenever cost-epoch exponents jumped (100 KB →
    10 MB, never 1 MB); that blocked the intended "10 MB Memory → build 1 MB disks → redeem Tier02
-   L1" path.
+   L1" path. `getDiskSize` never advances past `MAX_ACTIVE_DISK_LADDER_STEP` (today, pool 1's own
+   3 sizes: 1/10/100 KB) — a 1 MB disk's own build cost (8,000,000 bits) would permanently exceed
+   `INTRO_CAPACITY_CAP_BITS` with no pool 2 generator yet to fund it, so the "10 MB Memory → build
+   1 MB disks" path above is presently unreachable via pool 1 alone; Tier02+ still redeems the
+   ordinary way (the ladder's own Buy button) in the meantime. Once the 100 KB array is fully built,
+   `isDiskLadderExhaustedForActivePools` goes permanently true and Build shows a distinct
+   "Pool complete" state (see `isDiskBuildAvailable`) rather than an ever-unaffordable cost, until a
+   future pool's own generator (epic #456) raises the ceiling.
 
    **Start Disk Build** (`startDiskBuild`) spends `getDiskCost(size) = size *
    DISK_BUILD_COST_MULTIPLIER` bits **immediately** — 10x the array's own face value, already **in
@@ -473,14 +489,14 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    only the smallest (×1) size's array is complete, **99** once the ×10 size's array is also
    complete, and the full **999** (`DATA_LAKE_CAPACITY`) once the ×100 size's array is complete too
    — see `docs/DESIGN_HISTORY.md`. `ComputePage` (page
-   id `'boosters'`) reveals once `capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000
-   bits, "1 MB" in Memory's OWN B/KB/MB display scale — two Sacrifice stages past Disks' own
-   `INTRO_DISK_UNLOCK_CAPACITY` reveal — `isComputeCoreConversionUnlocked`). Every successful
-   tier-1 Booster purchase also increments `intro.computeCoresEverEarned`, a lifetime counter
-   tracked alongside `computeCores` but never decremented by spending (`activateComputeBoost`) or
-   merging (`mergeComputeCoresIntoNode`/`startComputeCoresMerge` and the other merges below) — see
-   the reveal-latch paragraph further down for why this exists as a separate field from
-   `computeCores` itself.
+   id `'boosters'`) reveals once `capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304
+   bits, "512 KiB" in Memory's own binary display scale — half of `INTRO_CAPACITY_CAP_BITS`, one
+   Sacrifice doubling short of pool 1's hard cap — `isComputeCoreConversionUnlocked`). Every
+   successful tier-1 Booster purchase also increments `intro.computeCoresEverEarned`, a lifetime
+   counter tracked alongside `computeCores` but never decremented by spending
+   (`activateComputeBoost`) or merging (`mergeComputeCoresIntoNode`/`startComputeCoresMerge` and the
+   other merges below) — see the reveal-latch paragraph further down for why this exists as a
+   separate field from `computeCores` itself.
 
    Both `computeCores` and `computeNodes` are capped at `COMPUTE_ENTITY_CAP` (10), the same as every
    other compute-ladder entity (Clusters through Megacomputers, see below) — EXCEPT on the Data Lake
@@ -712,13 +728,16 @@ itself via a `FillableStatCard = styled(StatCard)` wrapper): `bits / capacity`, 
 largest unit that comfortably fits `capacity` — raw bits before the Byte generator exists
 (`byteCreated`; before that, capacity is always exactly 8 bits/1 Byte, so there's nothing to
 meaningfully denominate in yet — a fractional Byte reads worse than the raw count for a range this
-small), then B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own `KB`..`QB`
-symbols (every capacity value in the Sacrifice ladder is evenly divisible by `BITS_PER_BYTE`, so this
-never loses precision at the Byte boundary). Both numbers always render in the *same* unit (picked
-off `capacity`, the larger of the two), so a balance never reads in a coarser unit than its own cap.
-The unit conversion (`floorToDecimals`, 3 decimal places — matching `formatAmount`'s own default
+small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
+`KB`..`QB` symbols with an "i" (every capacity value in the Sacrifice ladder is evenly divisible by
+`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Both numbers always render in
+the *same* unit (picked off `capacity`, the larger of the two), so a balance never reads in a
+coarser unit than its own cap. Memory's own balance/capacity render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
+(`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
+Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
+conversion (`floorToDecimals`, 3 decimal places — matching `formatAmount`'s own default
 max-fraction-digits) floors rather than rounds, the same never-overstate rationale as
-`formatCurrency` in `engine.js`: an Intl-rounded 7999/8000 bits would otherwise read as "1 KB"
+`formatCurrency` in `engine.js`: an Intl-rounded 8191/8192 bits would otherwise read as "1 KiB"
 one tick before it's actually full. Once `byteCreated`, the tile also shows the current production
 rate. The Tap button itself carries no `$progress`/hidden progressbar of its own — the Memory tile
 above already shows the identical bits/capacity fill, so a second meter on the tap button would
@@ -727,15 +746,17 @@ just duplicate it.
 Every Memory-denominated cost shown anywhere across ByteFoundryPage/StoragePage — Sacrifice's cost
 (`intro.capacity` itself, since a Sacrifice always drains the current balance in full), Invest's own
 cost (`getIntroProductionMilestoneCost(tier)`), and a Disk array's build cost (`getDiskCost`) —
-renders in whichever B/KB/MB/…/QB unit best fits that specific amount (`formatBitsInNearestUnit`, an
-`engine.js` export — shared by both pages — reusing `getMemoryUnit`/`formatMemoryAmount` directly,
-also both `engine.js` exports: `getMemoryUnit(bits, true)` picks the unit that fits `bits` itself
-when called this way), the same scale Memory's own balance uses, rather than a fixed unit that stops
-scaling once a cost crosses 1000 of it — e.g. Invest's tier-3 cost (8000 bits) reads "1 KB", not
-"1,000 B", and a 1 KB Disk array's 80,000-bit build cost reads "10 KB", not a raw unitless
-"80,000". A Disk's own *size* renders through the same scale too (`formatDiskSize`, a thin alias for
-`formatBitsInNearestUnit` — there is no longer a separate "kilobit" formatting scale for Disk sizes,
-see `docs/DESIGN_HISTORY.md` for the bug that separate scale caused). Sacrifice and Invest each
+renders in whichever binary `B`/`KiB`/`MiB`/…/`QiB` unit best fits that specific amount
+(`formatBitsInNearestUnit`, an `engine.js` export — shared by both pages — reusing
+`getMemoryUnit`/`formatMemoryAmount` directly, also both `engine.js` exports: `getMemoryUnit(bits,
+true)` picks the unit that fits `bits` itself when called this way), the same binary scale Memory's
+own balance uses, rather than a fixed unit that stops scaling once a cost crosses 1024 of it — e.g.
+Invest's tier-5 cost (8,192 bits) reads "1 KiB", not "1,024 B", and a 1 KB Disk array's 80,000-bit
+build cost reads "9.765 KiB", not a raw unitless "80,000". A Disk's own *size*, in contrast, renders
+through the separate, unchanged **SI** scale (`formatDiskSize`, backed by an internal
+`formatBitsInNearestSiUnit` helper — no longer the same function as `formatBitsInNearestUnit` now
+that Memory moved to binary units; see `docs/DESIGN_HISTORY.md` for the earlier "kilobit" formatting
+bug this SI scale originally fixed, back when both scales were still identical). Sacrifice and Invest each
 render their own cost on a second line below the button's
 symbol/label/multiplier (`MilestoneButtonContent`/`MilestoneCostLine`, a local two-line layout — not
 `components/Button`'s single-row `ButtonContent`), in smaller/muted text, rather than crammed inline
@@ -1861,8 +1882,10 @@ disabled while production is frozen at the Prestige threshold.
                                                           // epsilon-tolerant whole-unit-crossing pattern as
                                                           // tierProductionAccumulators above. Resets on Prestige.
     capacity: 8,                                          // PERMANENT. INTRO_STARTING_CAPACITY default (1
-                                                          // Byte); ×= 10 (INTRO_CAPACITY_MULTIPLIER) each
-                                                          // "Sacrifice for 10x Capacity" pick
+                                                          // Byte); ×= 2 (INTRO_CAPACITY_DOUBLING_STEP) each
+                                                          // "Sacrifice for 2x Capacity" pick, hard-capped at
+                                                          // INTRO_CAPACITY_CAP_BITS (1 MiB). Displayed in
+                                                          // binary units (B/KiB/MiB/…), not SI
     byteCreated: false,                                   // PERMANENT. One persistent Byte generator — a
                                                           // flag, not a counter (only ever one)
     tickSpeedSeconds: 1,                                  // PERMANENT. INTRO_STARTING_TICK_SPEED_SECONDS
@@ -1891,7 +1914,7 @@ disabled while production is frozen at the Prestige threshold.
     capacityUpgradeQueued: false,                         // Resets every real Prestige. When true, the next
                                                           // full-Memory tick (Disk Fill / Bandwidth / Disk
                                                           // Build unavailable) erases all Compute tokens and
-                                                          // Sacrifices ×10 capacity — see
+                                                          // Sacrifices ×2 capacity — see
                                                           // queueIntroCapacityUpgrade/tickQueuedCapacityUpgrade
     disks: {},                                            // PERMANENT. { [capacityBits]: count } of
                                                           // currently-FULL Disks of that size — see
@@ -2051,36 +2074,38 @@ purchases were manual or automatic.
 | `isBitFundedBandwidthAvailable` | `state → bool` | Bit-cost Invest affordable and claims remain |
 | `isComputeFundedBandwidthAvailable` | `state → bool` | Issue #323: Invest bit cost exceeds `capacity`, next compute tier holds ≥ `COMPUTE_ENTITY_CAP`, sequential index in range |
 | `isBandwidthTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isBandwidthAvailable(state) && !isDiskFillAvailable(state)` — `pickIntroProductionMilestone`'s own actual gate |
-| `isDiskBuildAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `!state.intro.diskBuild && intro.bits >= getDiskCost(getDiskSize(state))` — matches `startDiskBuild`'s own actual gate (also requiring no build already in progress), which has never itself required `isStorageUnlocked` (that only governs when Foundry shows Build + DiskArrayRows) |
+| `isDiskBuildAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `!state.intro.diskBuild && !isDiskLadderExhaustedForActivePools(state) && intro.bits >= getDiskCost(getDiskSize(state))` — matches `startDiskBuild`'s own actual gate (also requiring no build already in progress and the ladder not yet exhausted for every currently-active pool), which has never itself required `isStorageUnlocked` (that only governs when Foundry shows Build + DiskArrayRows) |
 | `isDiskBuildTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isDiskBuildAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)` — `startDiskBuild`'s own actual gate |
 | `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
 | `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)` — `activateComputeBoost`'s own actual gate |
 | `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)` — `stackComputeBoost`'s own actual gate |
 | `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
-| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 10x Capacity" can actually fire right now — `intro.bits === intro.capacity` **and** none of Combine into a Byte (`!byteCreated`, affordable), `isDiskFillAvailable`, `isBandwidthAvailable` (the current Invest tier affordable/unclaimed), `isDiskBuildAvailable` (a currently-buildable Disk array), or `isComputeUpgradeAvailable` is still possible with that same balance — see "Forced priority order" above, the lowest-ranked action, composing all four base predicates above it. Since Invest's own cost ladder (`getIntroProductionMilestoneCost`) starts at the same `INTRO_STARTING_CAPACITY` and grows by the same `INTRO_CAPACITY_MULTIPLIER` capacity does, the two stay in lockstep by default, so claiming the current Invest tier is effectively a prerequisite for Sacrificing again most cycles. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
-| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 10x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_MULTIPLIER`, clears `capacityUpgradeQueued`. Repeatable at every tier reached; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise. Never freezes |
+| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Byte Foundry predicate (not a reducer): whether "Sacrifice for 2x Capacity" can actually fire right now — `intro.bits === intro.capacity`, **not** already at the cap (`!isMemoryCapacityAtCap(state)`), **and** none of Combine into a Byte (`!byteCreated`, affordable), `isDiskFillAvailable`, `isBandwidthAvailable` (the current Invest tier affordable/unclaimed), `isDiskBuildAvailable` (a currently-buildable Disk array), or `isComputeUpgradeAvailable` is still possible with that same balance — see "Forced priority order" above, the lowest-ranked action, composing all five base predicates above it. Used by `pickIntroCapacityMilestone`'s own guard below and directly by `ByteFoundryPage` to disable/hide the button the same way |
+| `isMemoryCapacityAtCap` | `state → bool` | Byte Foundry predicate: whether pool 1's generator capacity has reached (or the next `INTRO_CAPACITY_DOUBLING_STEP` doubling would cross) `INTRO_CAPACITY_CAP_BITS` — a pure function of `capacity` alone, independent of `bits`/balance. Checked first inside `isMemoryCapacityUpgradeAvailable` and `queueIntroCapacityUpgrade`/`tickQueuedCapacityUpgrade`, so Sacrifice becomes permanently unavailable from the cap onward |
+| `pickIntroCapacityMilestone` | `state → state` | Byte Foundry "Sacrifice for 2x Capacity" — requires `isMemoryCapacityUpgradeAvailable(state)` (see its own row above); drains the entire balance to 0, multiplies `capacity` by `INTRO_CAPACITY_DOUBLING_STEP`, clears `capacityUpgradeQueued`. Repeatable at every tier reached below the cap; doesn't touch `tickSpeedSeconds`/`productionMultiplier`. No-op otherwise (including at the cap). Never freezes |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` (idempotent). May be called before Memory is full — commits the next full-bar spend to Capacity so Compute cannot starve it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears `capacityUpgradeQueued` without Sacrificing. Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Memory/Capacity/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |
 | `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, bit-funded Invest / Bandwidth, and Disk Build up to those caps when their normal turn gates allow. Never auto-Sacrifices Capacity. Same-reference no-op when inactive |
-| `tickQueuedCapacityUpgrade` | `state → state` | If queued and Memory full and Disk Fill/Bandwidth/Disk Build unavailable: `eraseAllComputeTokens` then Sacrifice ×10 and clear the queue (bypasses `isComputeUpgradeAvailable`). Called from `tickGame` after intro production / disk-build countdown, before Disk auto-fill / Compute Core conversion. Same-reference no-op otherwise |
-| `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 80, 800, 8000, 80000, … bits), unrelated to `intro.capacity` |
-| `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/10/100 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
+| `tickQueuedCapacityUpgrade` | `state → state` | If queued, Memory full, not already at the cap (`!isMemoryCapacityAtCap(state)`), and Disk Fill/Bandwidth/Disk Build unavailable: `eraseAllComputeTokens` then Sacrifice ×2 (`INTRO_CAPACITY_DOUBLING_STEP`) and clear the queue (bypasses `isComputeUpgradeAvailable`). Called from `tickGame` after intro production / disk-build countdown, before Disk auto-fill. Same-reference no-op otherwise (including once at the cap) |
+| `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 32, 128, 512, 2048, … bits), unrelated to `intro.capacity` |
+| `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/4/16 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry Bandwidth ×2 — requires `isBandwidthTurnAvailable`. Prefers bit-funded Invest when affordable; otherwise compute-funded overflow (#323): spends `COMPUTE_ENTITY_CAP` of the next `COMPUTE_BOOST_TIER_FIELDS` tier, advances `computeBandwidthSacrificeIndex`, increments `computeFundedBandwidthClaims`, and applies the same rate doubling as bit Invest. No-op while Disk Fill ranks higher |
 | `rollbackComputeFundedBandwidth` | `state → state` | Issue #324: rewinds exactly `computeFundedBandwidthClaims` Invest doubles and resets sacrifice index to 0 |
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
-| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 — 10 KB in Memory's own scale) — reveals Foundry's Build Disk control and continuous DiskArrayRow sections |
-| `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KB/MB/…/QB unit a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits) |
-| `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null` |
-| `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Memory-denominated cost (Sacrifice/Invest/Disk build) in whichever unit best fits that specific amount |
+| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits, "9.765 KiB" in Memory's own binary display scale) — reveals Foundry's Build Disk control and continuous DiskArrayRow sections |
+| `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory Capacity's own **binary** unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KiB/MiB/…/QiB unit (step `MEMORY_BINARY_UNIT_STEP`, 1024) a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits). Distinct from `getSiByteUnit` (internal, SI/step-1000, backs `formatDiskSize`) |
+| `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit` or `getSiByteUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null` |
+| `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Memory-denominated cost (Sacrifice/Invest/Disk build) in whichever **binary** unit best fits that specific amount |
 | `getIntroKilobyteConversionCost` | `state → number` | Byte Foundry: `BITS_PER_BYTE * getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — `BITS_PER_BYTE` times tier01's own CURRENT per-unit level cost, the exact same underlying value `getDiskSize`/`isDiskRedeemable` key off (before the `BITS_PER_BYTE` scaling). Exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) at a fresh cycle's level 1, growing in lockstep with tier01's own price from then on. An earlier version stayed flat at `INTRO_BITS_PER_KILOBYTE_CONVERSION` forever — see `docs/DESIGN_HISTORY.md` |
 | `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `getIntroKilobyteConversionCost(state)` bits (tier01's own CURRENT per-unit level cost, not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op only below cost — **no per-cycle cap**. Sets `mainGameUnlocked: true` on success. Called once per transfer-block click in `ByteFoundryPage`, and once per unit by `tickIntroAutoInvest` below |
 | `tickIntroProduction` | `elapsedSeconds → state → state` | Byte Foundry: passive production for the Byte generator — no-op immediately before `intro.byteCreated`. Delivers one batch of `INTRO_BYTE_BASE_RATE * productionMultiplier` bits every `tickSpeedSeconds` of elapsed time (the same discrete "accumulate, deliver a whole period, bank the remainder" model `tickGame`'s own per-tier production uses — see there), crediting whole bits capped at `capacity`. Never freezes once `byteCreated` |
 | `tickIntroAutoInvest` | `state → state` | Byte Foundry: auto-convert convenience — loops `convertIntroBitsToKilobytes` (so it flips `mainGameUnlocked` and behaves identically to a manual click), converting one `getIntroKilobyteConversionCost(state)`-bit unit at a time (tier01's own CURRENT per-unit cost, re-read every iteration since a completed unit can itself advance tier01's level mid-call — not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) as soon as it's affordable, live rather than waiting for a whole `getPurchaseBlockSize(state)`-sized batch (an earlier version did the latter — see `docs/DESIGN_HISTORY.md`). Capped per call at `getTierBulkQuantity(getPurchaseBlockSize(state), purchaseLevelProgress[tier01], Number.MAX_SAFE_INTEGER)` — at most one tier01 level's worth of units — the same safety bound the tier autobuyers themselves use, so an extreme balance can't loop unboundedly in one call; a bigger jump finishes on a later tick. **No per-cycle cap**, unlike an earlier design |
-| `getDiskSize` | `state → number` | Byte Foundry Disks: walks the gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` × `DISK_LADDER_SIZE_MULTIPLIER^(n-1)` — 1 KB, 10 KB, 100 KB, **1 MB**, 10 MB, …; see `getDiskLadderSizeBits`) rather than tier01's level-cost sequence, advancing every time `DISK_ARRAY_LADDER_CAP` disks have ever been built at the current size (read from `intro.disksBuiltTotal`, cumulative — never decremented by redeeming) — the size `startDiskBuild` currently builds at. Issue #368 replaced the tier01-cost walk, which skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB). Uncapped. Deliberately decoupled from tier01's own CURRENT level cost. |
+| `getDiskSize` | `state → number` | Byte Foundry Disks: walks the gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` × `DISK_LADDER_SIZE_MULTIPLIER^(n-1)` — 1 KB, 10 KB, 100 KB, …; see `getDiskLadderSizeBits`) rather than tier01's level-cost sequence, advancing every time `DISK_ARRAY_LADDER_CAP` disks have ever been built at the current size (read from `intro.disksBuiltTotal`, cumulative — never decremented by redeeming) — the size `startDiskBuild` currently builds at. Issue #368 replaced the tier01-cost walk, which skipped sizes whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB). Never advances past `MAX_ACTIVE_DISK_LADDER_STEP` (today, pool 1's own 3 sizes — 1/10/100 KB) — once that size is fully built, keeps returning it rather than reaching a size no currently-unlocked pool's generator could ever fund (see `isDiskLadderExhaustedForActivePools` below; `docs/DESIGN_HISTORY.md`). Deliberately decoupled from tier01's own CURRENT level cost. |
+| `isDiskLadderExhaustedForActivePools` | `state → bool` | Byte Foundry Disks predicate (not a reducer): true once `DISK_ARRAY_LADDER_CAP` disks have ever been built at `MAX_ACTIVE_DISK_LADDER_STEP`'s own size (100 KB today) — i.e. every size any currently-unlocked pool's generator can ever fund is fully built, so there is genuinely nothing left for `startDiskBuild` to offer until a future pool's own generator (epic #456) raises the ceiling. Distinct from "not affordable yet" — this is permanent. Gates `isDiskBuildAvailable` below |
 | `getDiskCost` | `capacityBits → number` | Byte Foundry Disks: `capacityBits * DISK_BUILD_COST_MULTIPLIER` — 10x the array's own face value, already in bits (`capacityBits`, from `getDiskSize`, is already Byte-accurate — no further `BITS_PER_BYTE` conversion needed, unlike an earlier "kilobit"-scaled version of this ladder — see `docs/DESIGN_HISTORY.md`): a real 1 KB (8000-bit) array costs 80,000 bits to build. Pays only for the empty container — not what fills it |
-| `formatDiskSize` | `bits → string` | Byte Foundry Disks: `formatBitsInNearestUnit` — a thin, semantically-named alias, kept so call sites read "format this disk's size" rather than reaching for the more general Memory-balance helper directly. Disk sizes are real, Byte-accurate bit counts, the exact same scale Memory's own balance/capacity already renders in — there is no longer a separate "kilobit" formatting scale for Disk sizes (see `docs/DESIGN_HISTORY.md` for the bug that separate scale caused) |
+| `formatDiskSize` | `bits → string` | Byte Foundry Disks: an alias for the internal SI-only `formatBitsInNearestSiUnit` helper (**not** `formatBitsInNearestUnit`, which is binary-unit — Storage stays SI even though Memory Capacity moved to binary; see `docs/DESIGN_HISTORY.md`). Disk sizes are real, Byte-accurate bit counts, rendered on the same B/KB/MB/…/QB SI scale disks have always used — no separate "kilobit" formatting scale (see `docs/DESIGN_HISTORY.md` for that earlier bug and its fix) |
 | `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by Foundry's continuous DiskArrayRow sections and the thin `StoragePage` wrapper |
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose tier cost currently matches, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `startDiskBuild` | `state → state` | Byte Foundry Disks: requires `isDiskBuildTurnAvailable(state)` (see its own row above); spends `getDiskCost(getDiskSize(state))` bits from `intro.bits` immediately and sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }` — a real TIMED construction rather than an instant grant (an earlier version completed instantly — see `docs/DESIGN_HISTORY.md`). `totalSeconds = getDiskBuildBaseSeconds(size) * ordinal`, where `getDiskBuildBaseSeconds(size) = size / (getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE)` (1 second per real "KB" of size) and `ordinal = disksBuiltTotal[size] + 1` at the moment the build starts (so a size's Nth disk takes N times its own base build time). The array itself only gains the new EMPTY container, and starts accepting IO again, once `tickDiskBuild` finishes the countdown. No-op below cost, or if an array is already mid-build. Only ever queues ONE build at a time |
@@ -2095,7 +2120,7 @@ purchases were manual or automatic.
 | `getDiskRedeemTierName` | `(state, capacityBits) → string \| null` | Byte Foundry Disks: names which tier a disk of `capacityBits` would actually redeem into right now — the matched tier's display `name` (via the internal `getMatchingTierForDiskSize` helper — the FIRST tier in `TIER_DEFINITIONS` array order whose current per-unit cost exactly matches), or `null` if none currently matches. `ByteFoundryPage`/`StoragePage` call this directly (rather than reimplementing the match) to render e.g. "Redeems 1 10 KB disk for 1 free Megabyte" |
 | `redeemDisk` | `capacityBits → state → state` | Byte Foundry Disks: no-op if no disk of that size is currently full (`intro.disks[capacityBits] <= 0`), if that size's array is currently mid-build (`intro.diskBuild?.size === capacityBits` — IO disallowed), or if no tier currently matches its size (`isDiskRedeemable`); otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants 1 free unit of whichever tier currently matches via `grantTierUnits` — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at redeem time) |
 | `tickDiskAutoRedeem` | `state → state` | Byte Foundry Disks: no-op unless there's an eligible size. A size is eligible if a disk of it is currently FULL, `isDiskRedeemable`, its array isn't currently mid-build, it isn't already in `intro.diskAutoRedeemedSizes` this cycle, AND the currently-matching tier's own unit-buying autobuyer is currently actually running — unlocked (`autobuyers[tier.id]` non-null) and not paused (`autobuyersEnabled[tier.id] ?? true`, via the internal `isTierAutobuyerActive` helper). No more "smallest denomination always auto-redeems regardless" carve-out, and no global enable/disable toggle at all — with no active autobuyer for the matching tier, a full/redeemable disk simply waits for a manual click (`redeemDisk`) instead. Redeems the smallest eligible size and marks it in `diskAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (reset fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemDisk` itself), at the very end, after every other per-tick automation (including `tickDiskAutoFill`, which runs much earlier, right after `tickDiskBuild` — see the `tickGame` row above — and a possible automatic Speed Up), so it always reacts to every tier's truly final level for the tick — a disk filled earlier the same tick can still redeem the same tick |
-| `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (8,000,000 — 1 MB in Memory's own scale) — drives whether `ByteFoundryPage` shows the "⚡ Compute" nav button to `ComputePage` at all. Unrelated to Disks entirely (earlier versions gated on Disk array fullness, then on a dynamic Memory flush — see `docs/DESIGN_HISTORY.md`) |
+| `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304 — 512 KiB in Memory's own binary scale) — drives whether `ByteFoundryPage` shows the "⚡ Compute" nav button to `ComputePage` at all. Unrelated to Disks entirely (earlier versions gated on Disk array fullness, then on a dynamic Memory flush — see `docs/DESIGN_HISTORY.md`) |
 | `mergeComputeCoresIntoNode` / `mergeComputeNodesIntoCluster` / `mergeComputeClustersIntoNetwork` / `mergeComputeNetworksIntoGrid` / `mergeComputeGridsIntoFabric` / `mergeComputeFabricsIntoCloud` / `mergeComputeCloudsIntoDatacenter` / `mergeComputeDatacentersIntoSupercomputer` / `mergeComputeSupercomputersIntoMegacomputer` | `state → state` | ComputePage merge chain (issues #280/#321), each built off a shared `mergeComputeEntities(inputField, outputField, autoFlagField)` factory: player-triggered only, never called from `tickGame`. A permanent same-reference no-op once that boundary's own `autoFlagField` has ever flipped true (merging then fully transitions to the timed reserve system below — see `startComputeMergeReserve`); otherwise same-reference no-op below one full group of `COMPUTE_MERGE_RATIO` (8) of the input, or once the output is already at `COMPUTE_ENTITY_CAP` (10); otherwise converts every complete group into the output, capped at remaining room, leaving surplus input unconverted |
 | `startComputeCoresMerge` / `startComputeNodesMerge` / `startComputeClustersMerge` / `startComputeNetworksMerge` / `startComputeGridsMerge` / `startComputeFabricsMerge` / `startComputeCloudsMerge` / `startComputeDatacentersMerge` / `startComputeSupercomputersMerge` | `state → state` | Reserve-merge timer system (issue #321), each built off a shared `startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, threshold)` factory — the manual, player-clicked ("slots are the button") counterpart to the auto-trigger inside `tickAutoMerge*` below, using `COMPUTE_MERGE_RATIO` (8) as its own threshold rather than `tickAutoMerge*`'s stricter `COMPUTE_ENTITY_CAP` (10). Same-reference no-op while that boundary's auto-merge isn't unlocked, a merge is already in flight (`timerField > 0`), the input is below `threshold`, or the output is already at `COMPUTE_ENTITY_CAP`; otherwise moves exactly `COMPUTE_MERGE_RATIO` out of the input and starts the timer at that boundary's own `COMPUTE_MERGE_DURATIONS_SECONDS` entry. `isComputeCoresMergeStartAvailable`/`isComputeNodesMergeStartAvailable`/… are each a plain UI mirror of the same gate |
 | `tickAutoMergeCoresIntoNode` / `tickAutoMergeNodesIntoCluster` / `tickAutoMergeClustersIntoNetwork` / `tickAutoMergeNetworksIntoGrid` / `tickAutoMergeGridsIntoFabric` / `tickAutoMergeFabricsIntoCloud` / `tickAutoMergeCloudsIntoDatacenter` / `tickAutoMergeDatacentersIntoSupercomputer` / `tickAutoMergeSupercomputersIntoMegacomputer` | `elapsedSeconds → state → state` | Auto-merge + reserve-timer automation (issues #316/#321), each built off a shared `tickComputeMergeBoundary(elapsedSeconds, inputField, outputField, autoFlagField, timerField, durationSeconds)` factory combining two steps: (1) auto-starts a reserve merge (`startComputeMergeReserve`, same as `startCompute*Merge` above but at the stricter `COMPUTE_ENTITY_CAP` (10) auto-trigger threshold, not the manual `COMPUTE_MERGE_RATIO` (8)) if the matching `intro.autoMerge*` flag is set and the input is completely full; (2) counts an in-flight merge's timer down by `elapsedSeconds` (`tickComputeMergeReserveTimer`), granting 1 of the output entity and clearing the timer on completion. Called from `tickGame`'s `AUTO_MERGE_TICKERS.reduce`, each invoked as `tick(elapsedSeconds)(state)`, lowest tier first (Core → Node included), so one tick can cascade both auto-triggering and completion up multiple tiers in a row |
@@ -2175,7 +2200,7 @@ purchases were manual or automatic.
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing the base currency which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — used for every Money amount (costs, production rates, the Prestige-threshold overlay), except `MainPage`'s own headline balance readout once it grows large enough — see `formatMoneyBalance` below |
-| `formatMoneyBalance` | `value → string` | `MainPage`'s `MoneyHero` headline balance only: below `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 bits — module-scoped in `engine.js`, not exported; exactly 1000 Bytes, the same real-Byte threshold Memory's own B/KB/MB/… scale considers "1 KB") renders identically to `formatCurrency`; at/above it, converts into whole Bytes (`÷ BITS_PER_BYTE`, floored, same never-overstate rounding `formatCurrency` itself uses) and renders with a trailing `B` instead of `b`, exponential notation at/above the same `EXPONENTIAL_NOTATION_THRESHOLD` (applied to the converted Byte count). Below the threshold a Bytes reading would round to 0 or read as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a full Byte's worth of KB to show. Every other Money display in the app keeps using `formatCurrency` unchanged |
+| `formatMoneyBalance` | `value → string` | `MainPage`'s `MoneyHero` headline balance only: below `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 bits — module-scoped in `engine.js`, not exported; exactly 1000 Bytes, the same Byte-scale threshold `formatDiskSize`'s SI scale considers "1 KB") renders identically to `formatCurrency`; at/above it, converts into whole Bytes (`÷ BITS_PER_BYTE`, floored, same never-overstate rounding `formatCurrency` itself uses) and renders with a trailing `B` instead of `b`, exponential notation at/above the same `EXPONENTIAL_NOTATION_THRESHOLD` (applied to the converted Byte count). Below the threshold a Bytes reading would round to 0 or read as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a full Byte's worth of KB to show. Every other Money display in the app keeps using `formatCurrency` unchanged |
 | `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, then floors it as-is (100% speed) if at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS`, otherwise scales the entire capped duration by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%) before flooring — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
@@ -2239,7 +2264,10 @@ purchases were manual or automatic.
 
 **Byte Foundry** (see its own section below for the full mechanic):
 - `INTRO_STARTING_CAPACITY = 8` — starting/current cap on the intro's "Memory" bit balance (1 Byte)
-- `INTRO_CAPACITY_MULTIPLIER = 10` — "Sacrifice for 10x Capacity" multiplies capacity by this each pick (8 → 80 → 800 → 8000 → …)
+- `INTRO_CAPACITY_DOUBLING_STEP = 2` — "Sacrifice for 2x Capacity" multiplies capacity by this each pick (8 → 16 → 32 → 64 → …), hard-capped at `INTRO_CAPACITY_CAP_BITS`
+- `INTRO_CAPACITY_CAP_BITS = 8,388,608` (exactly 1 MiB) — pool 1's generator capacity ceiling, large enough to afford `getDiskCost` for the pool's own largest (100 KB) buildable Disk (8,000,000 bits); `isMemoryCapacityUpgradeAvailable` returns `false` from here on
+- `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — "Invest for Double Production"'s own cost ladder steps by this per tier (was 10 before this and `INTRO_CAPACITY_DOUBLING_STEP` split into independent multipliers)
+- `MEMORY_BINARY_UNIT_STEP = 1024` — Memory Capacity's own binary (IEC-style) display-unit ladder step (`getMemoryUnit`) — `1 KiB = 1024 Bytes`; Disks/Data Lake/caches stay on the unchanged SI (1000-based) scale
 - `INTRO_STARTING_TICK_SPEED_SECONDS = 1` — the Byte generator's starting delivery period, in seconds — matches `TIER_DEFINITIONS`' own per-tier `baseTickSpeedSeconds` convention (a fixed period, not a continuous rate)
 - `INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000` (0.1) — floor for `tickSpeedSeconds`: the live tick loop's own real-time resolution. Once "Invest for Double Production" would halve `tickSpeedSeconds` below this, it multiplies `productionMultiplier` instead — see `pickIntroProductionMilestone`
 - `INTRO_PRODUCTION_MULTIPLIER_STEP = 2` — "Invest for Double Production" multiplies by this each pick — either dividing `tickSpeedSeconds` or multiplying `productionMultiplier`, whichever `INTRO_MIN_TICK_SPEED_SECONDS` currently allows; net effect is the same either way, bits/sec doubles
@@ -2247,11 +2275,11 @@ purchases were manual or automatic.
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator
 - `INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000` — `BITS_PER_BYTE` times Kilobytes' own real `baseCost` (1E3 Bits) in `TIER_DEFINITIONS`; the actual live conversion cost is `getIntroKilobyteConversionCost(state)` (`BITS_PER_BYTE` times tier01's CURRENT per-unit level cost, which equals this constant only at a fresh cycle's level 1 and grows from there) — this constant itself is now only used as the (fixed) `INTRO_CONVERSION_UNLOCK_CAPACITY` threshold below and as a test fixture
 - `INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) — capacity threshold at which the manual convert action becomes available
-- `INTRO_DISK_UNLOCK_CAPACITY = 80000` — capacity threshold (10 KB in Memory's own B/KB/MB/… scale — `BITS_PER_BYTE * 1000` per step, the SAME real-Kilobyte scale a Disk's own size now uses — see `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible — a deliberately later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own
+- `INTRO_DISK_UNLOCK_CAPACITY = 80000` — capacity threshold ("9.765 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible — a deliberately later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: an array's build cost is this many times its own face value, already in bits (see `getDiskCost`/`startDiskBuild` — `capacityBits`, from `getDiskSize`, is already Byte-accurate, so no further `BITS_PER_BYTE` conversion is needed here, unlike an earlier "kilobit"-scaled version of this constant — see `docs/DESIGN_HISTORY.md`) — a real 1 KB (8000-bit) array costs 80,000 bits to build, a real 10 KB (80,000-bit) array costs 800,000 bits, and so on
 - `DISK_ARRAY_LADDER_CAP = 10` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits — a full block can be manually released into `resources.base` (Bits) while some tier's current cost matches that size (see `releaseDiskCacheBlock` / `isDiskCacheBlockReleasable`)
-- `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = 8_000_000` — Byte Foundry Compute Cores: capacity threshold (1 MB in Memory's own B/KB/MB/… scale — `BITS_PER_BYTE * 1000 * 1000` per step, same convention `INTRO_DISK_UNLOCK_CAPACITY` uses, NOT the Disk-size ladder's own scale) at which `ByteFoundryPage`'s "Compute" section/`ComputePage` becomes visible — two Sacrifice stages past `INTRO_DISK_UNLOCK_CAPACITY`'s own reveal, unrelated to Disks otherwise (see `isComputeCoreConversionUnlocked`)
+- `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 4_194_304` — Byte Foundry Compute Cores: capacity threshold (512 KiB in Memory's own binary scale, half of pool 1's hard cap — one Sacrifice doubling short of it) at which `ByteFoundryPage`'s "Compute" section/`ComputePage` becomes visible — retuned from a flat `8_000_000` under the old ×10-forever capacity ladder, since that value happened to coincide with the cap under an earlier revision and would otherwise sit oddly close to it; unrelated to Disks (see `isComputeCoreConversionUnlocked`)
 - `COMPUTE_CORES_PER_NODE = 8` — Byte Foundry Compute Cores: how many Compute Cores 1 Compute Node costs via the separate, unrelated `latchComputeMergePageIfNeeded`/`computeCoresEverEarned` lifetime-counter bookkeeping (NOT the Core → Node merge boundary below, which reuses the same ratio via `COMPUTE_MERGE_RATIO` instead)
 - `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) — see every `mergeCompute*Into*` function/the reserve-timer system below. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`), stricter than the manual `COMPUTE_MERGE_RATIO`
 - `COMPUTE_MERGE_RATIO = 8` — ComputePage merge chain (issues #280/#321): how many of one compute-ladder entity merge into 1 of the next tier up (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer) — the manual-trigger threshold either for the old instant merge (pre-unlock) or for starting a reserve merge (post-unlock, via `startCompute*Merge`) — see every `mergeCompute*Into*` function and `startComputeMergeReserve`
