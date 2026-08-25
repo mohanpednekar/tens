@@ -36,8 +36,8 @@
 //   node run-simulation.mjs                         # career table (prestiges 0..10) + PP sweep
 //   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh prestige.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
-//   node run-simulation.mjs --capacity-cap           # default 1MB/10MB/100MB/1GB/unlimited sweep
-//   node run-simulation.mjs --capacity-cap 8000000 80000000 unlimited
+//   node run-simulation.mjs --capacity-cap           # default Compute floor/hard cap/unlimited sweep
+//   node run-simulation.mjs --capacity-cap 4194304 8388608 unlimited
 //   node run-simulation.mjs --strategy-out /tmp/run.md
 //   node run-simulation.mjs --pp 0 --strategy-out ./runs/2026-03-21T120000Z-abc1234.md
 
@@ -88,6 +88,7 @@ import {
 import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   MONEY_ID,
@@ -101,13 +102,16 @@ const MAX_TICKS = 5_000_000
 const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
 // Memory display uses BITS_PER_BYTE × 1000^n (B/KB/MB/…) — same as formatBitsInNearestUnit.
-// Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth).
+// Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth). Pool 1's
+// generator now has its own hard ceiling (INTRO_CAPACITY_CAP_BITS, layers.js) that real Sacrifice can
+// never grow past regardless of this flag — so a sweep point at or above that hard cap behaves
+// identically to `unlimited`, and only points strictly below it (stopping earlier, to trade Storage
+// growth for more Compute farming time) are actually distinct strategies. Only two such points exist
+// for pool 1: the Compute-unlock floor itself, and the hard cap.
 const DEFAULT_CAPACITY_CAPS_BITS = [
-  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // 1 MB — Compute unlock floor
-  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 10, // 10 MB
-  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 100, // 100 MB
-  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * 1000, // 1 GB
-  null, // unlimited — current grow-forever bot
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // stop early at the Compute-unlock floor (Compute-favoring)
+  INTRO_CAPACITY_CAP_BITS, // grow all the way to pool 1's hard cap (Storage-favoring, == unlimited)
+  null, // unlimited — current grow-forever bot; same result as the hard cap above under real Sacrifice
 ]
 
 function formatCapacityLabel(capacityBits) {

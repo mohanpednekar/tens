@@ -68,8 +68,8 @@ styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `B
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
 Foundry actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`ByteFoundryPage` for Sacrifice for 10x Capacity (Core-cost warning in `children` only when Compute
-is unlocked).
+`ByteFoundryPage` for Sacrifice for 2x Capacity (Compute-token-wipe warning in `children` only when
+Compute is unlocked).
 
 ## `Money/index.js`
 
