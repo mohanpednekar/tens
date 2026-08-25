@@ -4305,7 +4305,7 @@ describe('Dev Mode', () => {
     await openDevMode(user)
     await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
 
-    await user.click(screen.getByRole('button', { name: /unlock factory/i }))
+    await user.click(screen.getByRole('button', { name: /unlock ladder/i }))
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
 
     const jsonField = screen.getByLabelText(/dev save state json/i)
